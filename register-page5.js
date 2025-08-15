@@ -127,10 +127,10 @@ function TeamAccommodationAndArrival({
         }
         // Pri zmene času tiež zabezpečiť, že drivers zostanú nezmenení
         const currentTeamArrivalData = team.arrival || {};
-        handleChange(categoryName, teamIndex, 'arrival', { 
+        handleChange(categoryName, teamIndex, 'arrival', {
             ...currentTeamArrivalData, // Zachovať existujúce dáta (napr. drivers)
-            type: arrivalType, 
-            time: timeString || null 
+            type: arrivalType,
+            time: timeString || null
         });
     };
 
@@ -898,7 +898,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleDriverEntryChange = (id, field, value) => {
         setDriverEntries(currentDrivers => { // Use 'currentDrivers' to be clear it's the current state
-            let updatedDrivers = currentDrivers.map(entry => {
+            let newDriversState = currentDrivers.map(entry => { // Rename updatedDrivers to newDriversState to avoid confusion
                 if (entry.id === id) {
                     let newEntryState = { ...entry, [field]: value };
                     let newCategoryName = newEntryState.categoryName;
@@ -931,48 +931,37 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                              newEntryState.id = generateUniqueId(); // Assign a new temporary ID
                         }
                     }
-
-                    // Update parent state for drivers immediately
-                    // Only update parent state if team and gender are selected and count is valid
-                    if (newCategoryName && newTeamIndex !== null && teamsDataFromPage4[newCategoryName] && teamsDataFromPage4[newCategoryName][newTeamIndex] && teamsDataFromPage4[newCategoryName][newTeamIndex].arrival?.type === 'vlastná doprava') {
-                        const currentTeamDrivers = { male: 0, female: 0 };
-                        
-                        // First, add the change from the current entry
-                        const parsedCount = parseInt(newCount, 10);
-                        if (!isNaN(parsedCount) && parsedCount > 0 && newGender) {
-                            if (newGender === 'male') {
-                                currentTeamDrivers.male += parsedCount;
-                            } else {
-                                currentTeamDrivers.female += parsedCount;
-                            }
-                        }
-
-                        // Then, add other existing driver entries for the same team (excluding the current one)
-                        // Make sure to use the 'updatedDrivers' array (which includes the current change) for aggregation
-                        updatedDrivers.forEach(otherEntry => {
-                            if (otherEntry.id !== id && otherEntry.categoryName === newCategoryName && otherEntry.teamIndex === newTeamIndex && otherEntry.gender && otherEntry.count !== '') {
-                                const otherCount = parseInt(otherEntry.count, 10);
-                                if (!isNaN(otherCount) && otherCount > 0) {
-                                    if (otherEntry.gender === 'male') {
-                                        currentTeamDrivers.male += otherCount;
-                                    } else {
-                                        currentTeamDrivers.female += otherCount;
-                                    }
-                                }
-                            }
-                        });
-                        
-                        // Propagate this aggregated drivers object up to the parent using onGranularTeamsDataChange
-                        onGranularTeamsDataChange(newCategoryName, newTeamIndex, 'arrival', {
-                            ...teamsDataFromPage4[newCategoryName][newTeamIndex].arrival, // Preserve other arrival properties
-                            drivers: currentTeamDrivers.male === 0 && currentTeamDrivers.female === 0 ? null : currentTeamDrivers
-                        });
-                    }
-                    return newEntryState;
+                    return newEntryState; // Return the updated entry state for the map
                 }
                 return entry;
             });
-            return updatedDrivers;
+
+            // Now, after map has completed and newDriversState is fully formed, perform aggregation
+            const affectedEntry = newDriversState.find(entry => entry.id === id); // Find the entry that was just updated
+            if (affectedEntry && affectedEntry.categoryName && affectedEntry.teamIndex !== null && teamsDataFromPage4[affectedEntry.categoryName] && teamsDataFromPage4[affectedEntry.categoryName][affectedEntry.teamIndex] && teamsDataFromPage4[affectedEntry.categoryName][affectedEntry.teamIndex].arrival?.type === 'vlastná doprava') {
+                const currentTeamDrivers = { male: 0, female: 0 };
+                
+                // Aggregate counts from the *newly updated* driverEntries (newDriversState)
+                newDriversState.forEach(entry => { // Iterate over newDriversState here
+                    if (entry.categoryName === affectedEntry.categoryName && entry.teamIndex === affectedEntry.teamIndex && entry.gender && entry.count !== '') {
+                        const count = parseInt(entry.count, 10);
+                        if (!isNaN(count) && count > 0) {
+                            if (entry.gender === 'male') {
+                                currentTeamDrivers.male += count;
+                            } else {
+                                currentTeamDrivers.female += count;
+                            }
+                        }
+                    }
+                });
+                
+                // Propagate this aggregated drivers object up to the parent using onGranularTeamsDataChange
+                onGranularTeamsDataChange(affectedEntry.categoryName, affectedEntry.teamIndex, 'arrival', {
+                    ...teamsDataFromPage4[affectedEntry.categoryName][affectedEntry.teamIndex].arrival, // Preserve other arrival properties
+                    drivers: currentTeamDrivers.male === 0 && currentTeamDrivers.female === 0 ? null : currentTeamDrivers
+                });
+            }
+            return newDriversState; // Return the new state for driverEntries
         });
     };
 
@@ -1022,7 +1011,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     ...team,
                     arrival: {
                         ...team.arrival,
-                        drivers: null 
+                        drivers: null
                     }
                 };
             });
@@ -1057,7 +1046,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         for (const team of teamsWithOwnTransport) {
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
-            
+
             // Check if either male or female driver option is still available for this team
             if (!usedCombinations.has(maleCombo) || !usedCombinations.has(femaleCombo)) {
                 return true; // There's at least one combination available
@@ -1136,7 +1125,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             );
             // Ak existujú tímy s "vlastná doprava", ale žiadny platný šofér nebol pridaný, formulár je neplatný.
             if (!hasAnyValidDriverEntry && driverEntries.length === 0) {
-                 return false; 
+                 return false;
             }
             // Ak existujú záznamy šoférov, ale žiadny z nich nie je pre tím s "vlastnou dopravou", tak to tiež nie je ok
             const hasDriverForOwnTransportTeam = driverEntries.some(entry => {
@@ -1178,7 +1167,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         // Validácia formulára sa vykonáva na začiatku, aby sa zabránilo odoslaniu neplatných údajov.
         if (!isFormValidPage5) {
             // Aktualizovaná notifikačná správa, aby zodpovedala novej validácii
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musí byť pridaný aspoň jeden šofér pre niektorý z týchto tímov. Uistite sa, že všetky polia šoférov sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error'); 
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musí byť pridaný aspoň jeden šofér pre niektorý z týchto tímov. Uistite sa, že všetky polia šoférov sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error');
             setNotificationType('error');
             setLoading(false);
             return;
