@@ -286,8 +286,8 @@ function App() {
           setRegistrationEndDate('');
           setDataEditDeadline('');
           setRosterEditDeadline('');
-          setNumberOfPlayers(0);
-          setNumberOfImplementationTeam(0);
+          setNumberOfPlayersInTeam(0); // OPRAVA: Pôvodne numberOfPlayers
+          setNumberOfImplementationTeamMembers(0); // OPRAVA: Pôvodne numberOfImplementationTeam
       }
       setSettingsLoaded(true);
     }, error => {
@@ -433,29 +433,38 @@ function App() {
             if (!newTeamsData[value.categoryName]) {
                 newTeamsData[value.categoryName] = [];
             }
+            // Zabezpečiť, že tím na danom indexe existuje a je objekt
             if (!newTeamsData[value.categoryName][value.teamIndex]) {
                 newTeamsData[value.categoryName][value.teamIndex] = {};
             }
 
-            if (value.field === 'accommodation' || value.field === 'arrival' || value.field === 'packageDetails') {
+            // Špeciálne ošetrenie pre 'arrival' a 'drivers'
+            if (value.field === 'arrival') {
+                const currentArrival = newTeamsData[value.categoryName][value.teamIndex].arrival || {};
+                const updatedArrival = { ...currentArrival, ...value.data };
+                // Ak sa typ dopravy zmení na iný ako 'vlastná doprava', drivers by mali byť null
+                if (updatedArrival.type !== 'vlastná doprava') {
+                    updatedArrival.drivers = null;
+                }
+                newTeamsData[value.categoryName][value.teamIndex] = {
+                    ...newTeamsData[value.categoryName][value.teamIndex],
+                    [value.field]: updatedArrival
+                };
+            } else if (value.field === 'accommodation' || value.field === 'packageDetails') {
                 newTeamsData[value.categoryName][value.teamIndex] = {
                     ...newTeamsData[value.categoryName][value.teamIndex],
                     [value.field]: { ...newTeamsData[value.categoryName][value.teamIndex][value.field], ...value.data }
                 };
-            } else if (value.field === 'packageId') {
+            } else {
                  newTeamsData[value.categoryName][value.teamIndex] = {
                     ...newTeamsData[value.categoryName][value.teamIndex],
                     [value.field]: value.data
                 };
-            } else {
-                newTeamsData[value.categoryName][value.teamIndex] = {
-                    ...newTeamsData[value.categoryName][value.teamIndex],
-                    [value.field]: value.data
-                };
             }
-            console.log("handleChange - granulárna aktualizácia - prevTeamsData:", prevTeamsData); // DEBUG
-            console.log("handleChange - granulárna aktualizácia - value (vstup):", value); // DEBUG
-            console.log("handleChange - granulárna aktualizácia - newTeamsData (po aktualizácii):", newTeamsData); // DEBUG
+            // Konzola pre ladenie
+            console.log("handleChange - granulárna aktualizácia - prevTeamsData:", prevTeamsData);
+            console.log("handleChange - granulárna aktualizácia - value (vstup):", value);
+            console.log("handleChange - granulárna aktualizácia - newTeamsData (po aktualizácii):", newTeamsData);
             return newTeamsData;
         });
     } else if (id === 'billing') {
