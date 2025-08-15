@@ -1272,7 +1272,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'div',
                     { className: 'border-t border-gray-200 pt-4 mt-4' },
                     React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Šoféri pre vlastnú dopravu'),
-                    React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Pridajte informácie o šoféroch pre tímy, ktoré majú zvolenú vlastnú dopravu.'),
+                    React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Pridajte informácie o šoféroch pre tímy, ktoré majú zvolenú vlastnú dopravu. Zvoľte tím, ku ktorému bude priradený/á šofér/ka, ktorý/á je ubytovaný/á a stravuje sa spolu s tímom.'),
 
                     driverEntries.map((entry) => (
                         React.createElement(
