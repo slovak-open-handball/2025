@@ -745,7 +745,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
         for (const categoryName in teamsDataFromPage4) {
-            // Also filter out any undefined/null categories here
+            // Filter out any undefined/null categories at this level
             if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
@@ -1017,6 +1017,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         const aggregatedDrivers = {};
         const usedCombinations = new Set(); // Pre kontrolu duplicitných kombinácií tím-pohlavie v rámci driverEntries
 
+        // 1. Validácia jednotlivých záznamov šoférov (či sú kompletné a majú kladný počet)
         for (const entry of driverEntries) {
             const count = parseInt(entry.count, 10);
             // Ak je count neplatný alebo <= 0, záznam je neplatný
@@ -1032,6 +1033,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
             usedCombinations.add(comboKey);
 
+            // Agregácia počtov (potrebná pre ďalší krok validácie, ak teamsWithOwnTransport > 0)
             if (!aggregatedDrivers[teamId]) {
                 aggregatedDrivers[teamId] = { male: 0, female: 0 };
             }
@@ -1042,18 +1044,20 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         }
 
-        // Skontrolujte, či každý tím s "vlastná doprava" má priradeného aspoň jedného šoféra
-        const teamsRequiringDrivers = teamsWithOwnTransport.map(team => team.id);
-        
-        for (const teamId of teamsRequiringDrivers) {
-            const assigned = aggregatedDrivers[teamId];
-            // Ak tím nemá žiadnych šoférov alebo súčet šoférov je 0
-            if (!assigned || (assigned.male === 0 && assigned.female === 0)) {
-                return false; // Tím s vlastnou dopravou nemá priradených žiadnych šoférov alebo ich počet je 0
+        // 2. Ak existujú tímy, ktoré môžu mať šoférov (t.j. aspoň jeden tím má 'vlastná doprava'),
+        // potom musí existovať aspoň jeden platný záznam o šoférovi celkovo.
+        // ZMENA: Odstránená podmienka, že každý tím s vlastnou dopravou musí mať šoféra.
+        if (teamsWithOwnTransport.length > 0) {
+            const hasAnyValidDriverEntry = Object.values(aggregatedDrivers).some(
+                (drivers) => drivers.male > 0 || drivers.female > 0
+            );
+            if (!hasAnyValidDriverEntry) {
+                // Ak existujú tímy s "vlastná doprava", ale žiadny platný šofér nebol pridaný, formulár je neplatný.
+                return false; 
             }
         }
 
-        return true;
+        return true; // Všetky ostatné validácie prešli
     }, [teamsDataFromPage4, accommodationTypes, accommodationCounts, packages, driverEntries, teamsWithOwnTransport]);
 
 
@@ -1082,7 +1086,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         // Validácia formulára sa vykonáva na začiatku, aby sa zabránilo odoslaniu neplatných údajov.
         if (!isFormValidPage5) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musíte pridať aspoň jedného šoféra a uistite sa, že všetky polia sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error');
+            // Aktualizovaná notifikačná správa, aby zodpovedala novej validácii
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musíte pridať aspoň jedného šoféra pre ľubovoľný tím, uistite sa, že všetky polia sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error'); 
             setNotificationType('error');
             setLoading(false);
             return;
