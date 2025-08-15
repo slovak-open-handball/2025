@@ -54,7 +54,7 @@ function TeamAccommodationAndArrival({
     team,
     categoryName,
     teamIndex,
-    handleChange, // Toto je teraz granulárna handleChange z App.js
+    handleChange, // Toto je prop, cez ktorú sa bude volať onGranularTeamsDataChange z Page5Form
     loading,
     accommodationTypes,
     accommodationCounts,
@@ -93,9 +93,11 @@ function TeamAccommodationAndArrival({
         if (newValue !== 'verejná doprava - vlak' && newValue !== 'verejná doprava - autobus' && newValue !== 'vlastná doprava') {
             setArrivalHours('');
             setArrivalMinutes('');
+            // Keď sa doprava zmení na iný typ ako 'vlastná doprava', drivers by mali byť null
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: null });
         } else if (newValue === 'vlastná doprava') {
-             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: { male: 0, female: 0 } }); // Initialize drivers object
+            // Ak je vlastná doprava, inicializovať drivers
+            handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: { male: 0, female: 0 } });
         } else {
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: timeString, drivers: null });
@@ -123,8 +125,13 @@ function TeamAccommodationAndArrival({
         } else if (currentHours === '' && currentMinutes) {
             timeString = currentMinutes;
         }
-
-        handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString || null, drivers: null });
+        // Pri zmene času tiež zabezpečiť, že drivers zostanú nezmenení
+        const currentTeamArrivalData = team.arrival || {};
+        handleChange(categoryName, teamIndex, 'arrival', { 
+            ...currentTeamArrivalData, // Zachovať existujúce dáta (napr. drivers)
+            type: arrivalType, 
+            time: timeString || null 
+        });
     };
 
     return React.createElement(
@@ -205,7 +212,7 @@ function TeamAccommodationAndArrival({
                         React.createElement('input', {
                             type: 'radio',
                             name: `arrivalType-${categoryName}-${teamIndex}`,
-                            value: 'verejná doprava - vlak', // OPRAVA: Zmenená hodnota
+                            value: 'verejná doprava - vlak',
                             checked: arrivalType === 'verejná doprava - vlak',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
@@ -255,7 +262,7 @@ function TeamAccommodationAndArrival({
                         React.createElement('input', {
                             type: 'radio',
                             name: `arrivalType-${categoryName}-${teamIndex}`,
-                            value: 'verejná doprava - autobus', // OPRAVA: Zmenená hodnota
+                            value: 'verejná doprava - autobus',
                             checked: arrivalType === 'verejná doprava - autobus',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
@@ -333,7 +340,7 @@ function TeamPackageSettings({
     team,
     categoryName,
     teamIndex,
-    handleChange, // Toto je teraz granulárna handleChange z App.js
+    handleChange, // Toto je prop, cez ktorú sa bude volať onGranularTeamsDataChange z Page5Form
     loading,
     packages,
     tournamentDays
@@ -525,7 +532,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
 }
 
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate }) { // Pridaný setTeamsDataFromPage4
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate, onGranularTeamsDataChange }) { // Pridaná prop onGranularTeamsDataChange
     const db = getFirestore();
 
     const [notificationMessage, setNotificationMessage] = React.useState('');
@@ -545,6 +552,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [driverEntries, setDriverEntries] = React.useState([]);
 
     // NOVINKA: useEffect na inicializáciu driverEntries z teamsDataFromPage4
+    // Tento useEffect sa spustí, kedykoľvek sa zmení teamsDataFromPage4 (napr. pri prechode z Page4)
+    // a zabezpečí, že lokálny stav driverEntries sa zosynchronizuje.
     React.useEffect(() => {
         const newLoadedDriverEntries = [];
 
@@ -580,10 +589,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             });
         }
+        
+        // Aktualizovať driverEntries len ak sa zmenili, aby sa predišlo zbytočným re-renderom
+        // a potenciálnemu resetovaniu fokusov, ak nie je nevyhnutné.
+        // Porovnávame dĺžku a potom obsah (jednoduché porovnanie pre zamedzenie duplicitných nastavení)
+        const areEqual = driverEntries.length === newLoadedDriverEntries.length &&
+                         driverEntries.every((entry, i) => entry.id === newLoadedDriverEntries[i].id &&
+                                                            entry.count === newLoadedDriverEntries[i].count &&
+                                                            entry.gender === newLoadedDriverEntries[i].gender);
 
-        // Zjednodušená aktualizácia: Vždy aktualizujte driverEntries, ak sa teamsDataFromPage4 zmení
-        // Tým sa vyhneme potenciálnym problémom s nesprávnou detekciou zmien v areDriverEntriesEqual
-        setDriverEntries(newLoadedDriverEntries);
+        if (!areEqual) {
+             setDriverEntries(newLoadedDriverEntries);
+        }
 
     }, [teamsDataFromPage4]); // Závislosť od teamsDataFromPage4
 
@@ -724,23 +741,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         };
     }, [db]);
 
-
+    // Táto funkcia teraz volá onGranularTeamsDataChange
     const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
-        // Toto volanie teraz použije nový identifikátor, aby handleChange v App.js vedela,
-        // že ide o granulárnu aktualizáciu do teamsDataFromPage4
-        handleChange({
-            target: {
-                id: 'teamsDataFromPage4_granular_update',
-                value: {
-                    categoryName: categoryName,
-                    teamIndex: teamIndex,
-                    field: field,
-                    data: value
-                }
-            }
-        });
+        onGranularTeamsDataChange(categoryName, teamIndex, field, value);
     };
-
 
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
@@ -869,8 +873,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 });
 
-                // Update parent state
-                handleChange(affectedCategoryName, affectedTeamIndex, 'arrival', {
+                // Update parent state via onGranularTeamsDataChange
+                onGranularTeamsDataChange(affectedCategoryName, affectedTeamIndex, 'arrival', {
                     ...teamsDataFromPage4[affectedCategoryName][affectedTeamIndex].arrival,
                     drivers: currentTeamDrivers.male === 0 && currentTeamDrivers.female === 0 ? null : currentTeamDrivers
                 });
@@ -916,7 +920,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         }
                     }
 
-                    // --- NEW LOGIC: Update parent state for drivers immediately ---
+                    // Update parent state for drivers immediately
                     // Only update parent state if team and gender are selected and count is valid
                     if (newCategoryName && newTeamIndex !== null && teamsDataFromPage4[newCategoryName] && teamsDataFromPage4[newCategoryName][newTeamIndex] && teamsDataFromPage4[newCategoryName][newTeamIndex].arrival?.type === 'vlastná doprava') {
                         const currentTeamDrivers = { male: 0, female: 0 };
@@ -945,14 +949,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             }
                         });
                         
-                        // Propagate this aggregated drivers object up to the parent
-                        handleChange(newCategoryName, newTeamIndex, 'arrival', {
+                        // Propagate this aggregated drivers object up to the parent using onGranularTeamsDataChange
+                        onGranularTeamsDataChange(newCategoryName, newTeamIndex, 'arrival', {
                             ...teamsDataFromPage4[newCategoryName][newTeamIndex].arrival, // Preserve other arrival properties
                             drivers: currentTeamDrivers.male === 0 && currentTeamDrivers.female === 0 ? null : currentTeamDrivers
                         });
                     }
-                    // --- END NEW LOGIC ---
-
                     return newEntryState;
                 }
                 return entry;
@@ -1115,7 +1117,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         // 2. Ak existujú tímy, ktoré môžu mať šoférov (t.j. aspoň jeden tím má 'vlastná doprava'),
         // potom musí existovať aspoň jeden platný záznam o šoférovi celkovo.
-        // ZMENA: Odstránená podmienka, že každý tím s vlastnou dopravou musí mať šoféra.
         if (teamsWithOwnTransport.length > 0) {
             const hasAnyValidDriverEntry = Object.values(aggregatedDrivers).some(
                 (drivers) => drivers.male > 0 || drivers.female > 0
@@ -1241,7 +1242,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     team: team,
                                     categoryName: categoryName,
                                     teamIndex: teamIndex,
-                                    handleChange: handleTeamDataChange,
+                                    handleChange: handleTeamDataChange, // Volá handleTeamDataChange v Page5Form
                                     loading: loading,
                                     accommodationTypes: accommodationTypes,
                                     accommodationCounts: accommodationCounts,
@@ -1253,7 +1254,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     team: team,
                                     categoryName: categoryName,
                                     teamIndex: teamIndex,
-                                    handleChange: handleTeamDataChange,
+                                    handleChange: handleTeamDataChange, // Volá handleTeamDataChange v Page5Form
                                     loading: loading,
                                     packages: packages,
                                     tournamentDays: tournamentDays,
@@ -1299,12 +1300,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             type: 'number',
                                             className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                             value: entry.count,
-                                            onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value), // OPRAVA: Používame entry.id pri zmene
-                                            placeholder: 'Zadajte počet', // OPRAVA: Zmenený placeholder
+                                            onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
+                                            placeholder: 'Zadajte počet',
                                             min: 1,
                                             required: true,
                                             disabled: loading,
-                                            id: entry.id // Pridané ID pre ľahšiu manipuláciu
+                                            id: entry.id
                                         })
                                     ),
                                     React.createElement('div', { className: 'w-1/2' },
