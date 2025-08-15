@@ -339,11 +339,11 @@ function TournamentSettingsApp() {
             ),
             'Späť'
           ),
-          React.createElement(
-            'h2',
-            { className: 'text-2xl font-semibold text-gray-700 ml-4' },
-            settingComponents.find(s => s.id === activeSetting)?.title
-          )
+//          React.createElement(
+//            'h2',
+//            { className: 'text-2xl font-semibold text-gray-700 ml-4' },
+//            settingComponents.find(s => s.id === activeSetting)?.title
+//          )
         ),
         React.createElement(
           settingComponents.find(s => s.id === activeSetting).component,
