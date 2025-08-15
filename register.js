@@ -414,61 +414,60 @@ function App() {
     setNotificationType(type);
   }, [setNotificationMessage, setShowNotification, setNotificationType]);
 
-  // HandleChange pre hlavné formData (teraz už NEBUDE spravovať teamsDataFromPage4 pri kompletných objektoch)
+  // NOVÁ FUNKCIA: handleGranularTeamsDataChange
+  // Táto funkcia je určená na priamu aktualizáciu vnorených dát teamsDataFromPage4.
+  const handleGranularTeamsDataChange = React.useCallback((categoryName, teamIndex, field, data) => {
+    setTeamsDataFromPage4(prevTeamsData => {
+        const newTeamsData = { ...prevTeamsData };
+
+        if (typeof categoryName !== 'string' || categoryName.trim() === '') {
+            console.warn("Pokus o aktualizáciu teamsDataFromPage4 s neplatným názvom kategórie:", categoryName);
+            return prevTeamsData;
+        }
+
+        // Zabezpečenie, že kategória existuje ako objekt
+        if (!newTeamsData[categoryName]) {
+            newTeamsData[categoryName] = [];
+        }
+        // Zabezpečenie, že tím na danom indexe existuje a je objekt
+        if (!newTeamsData[categoryName][teamIndex]) {
+            newTeamsData[categoryName][teamIndex] = {};
+        }
+
+        // Špeciálne ošetrenie pre 'arrival' a 'drivers'
+        if (field === 'arrival') {
+            const currentArrival = newTeamsData[categoryName][teamIndex].arrival || {};
+            const updatedArrival = { ...currentArrival, ...data };
+            // Ak sa typ dopravy zmení na iný ako 'vlastná doprava', drivers by mali byť null
+            if (updatedArrival.type !== 'vlastná doprava') {
+                updatedArrival.drivers = null;
+            }
+            newTeamsData[categoryName][teamIndex] = {
+                ...newTeamsData[categoryName][teamIndex],
+                [field]: updatedArrival
+            };
+        } else if (field === 'accommodation' || field === 'packageDetails') {
+            newTeamsData[categoryName][teamIndex] = {
+                ...newTeamsData[categoryName][teamIndex],
+                [field]: { ...newTeamsData[categoryName][teamIndex][field], ...data }
+            };
+        } else {
+            // Pre ostatné polia
+            newTeamsData[categoryName][teamIndex] = {
+                ...newTeamsData[categoryName][teamIndex],
+                [field]: data
+            };
+        }
+        return newTeamsData;
+    });
+  }, []); // Závislosti: setTeamsDataFromPage4 je stabilné, takže tu nie je potrebné ju uvádzať
+
+  // Pôvodná handleChange, teraz spracováva len hlavné formData polia
   const handleChange = (e) => {
-    const { id, value } = e.target;
+    const { id, value } = e.target; // Tento riadok teraz bude vždy dostávať platné `id` a `value`
 
-    // Tento blok je určený pre granulárne aktualizácie prichádzajúce z hlboko vnorených komponentov
-    // ako TeamAccommodationAndArrival alebo TeamPackageSettings.
-    // NEMÁ sa používať na nastavenie celého objektu teamsDataFromPage4.
-    if (id === 'teamsDataFromPage4_granular_update') { // Prekryštalizované ID na jasné oddelenie granulárnych aktualizácií
-        setTeamsDataFromPage4(prevTeamsData => {
-            const newTeamsData = { ...prevTeamsData };
-
-            if (typeof value.categoryName !== 'string' || value.categoryName.trim() === '') {
-                console.warn("Pokus o aktualizáciu teamsDataFromPage4 s neplatným názvom kategórie:", value.categoryName);
-                return prevTeamsData;
-            }
-
-            if (!newTeamsData[value.categoryName]) {
-                newTeamsData[value.categoryName] = [];
-            }
-            // Zabezpečiť, že tím na danom indexe existuje a je objekt
-            if (!newTeamsData[value.categoryName][value.teamIndex]) {
-                newTeamsData[value.categoryName][value.teamIndex] = {};
-            }
-
-            // Špeciálne ošetrenie pre 'arrival' a 'drivers'
-            if (value.field === 'arrival') {
-                const currentArrival = newTeamsData[value.categoryName][value.teamIndex].arrival || {};
-                const updatedArrival = { ...currentArrival, ...value.data };
-                // Ak sa typ dopravy zmení na iný ako 'vlastná doprava', drivers by mali byť null
-                if (updatedArrival.type !== 'vlastná doprava') {
-                    updatedArrival.drivers = null;
-                }
-                newTeamsData[value.categoryName][value.teamIndex] = {
-                    ...newTeamsData[value.categoryName][value.teamIndex],
-                    [value.field]: updatedArrival
-                };
-            } else if (value.field === 'accommodation' || value.field === 'packageDetails') {
-                newTeamsData[value.categoryName][value.teamIndex] = {
-                    ...newTeamsData[value.categoryName][value.teamIndex],
-                    [value.field]: { ...newTeamsData[value.categoryName][value.teamIndex][value.field], ...value.data }
-                };
-            } else {
-                 newTeamsData[value.categoryName][value.teamIndex] = {
-                    ...newTeamsData[value.categoryName][value.teamIndex],
-                    [value.field]: value.data
-                };
-            }
-            // Konzola pre ladenie
-            console.log("handleChange - granulárna aktualizácia - prevTeamsData:", prevTeamsData);
-            console.log("handleChange - granulárna aktualizácia - value (vstup):", value);
-            console.log("handleChange - granulárna aktualizácia - newTeamsData (po aktualizácii):", newTeamsData);
-            return newTeamsData;
-        });
-    } else if (id === 'billing') {
-      // Pôvodná logika pre fakturačné údaje
+    if (id === 'billing') {
+      // Logika pre fakturačné údaje
       setFormData(prev => ({
         ...prev,
         billing: {
@@ -477,7 +476,7 @@ function App() {
         }
       }));
     } else {
-      // Pôvodná logika pre ostatné polia vo formData
+      // Logika pre ostatné polia vo formData
       setFormData(prev => ({ ...prev, [id]: value }));
     }
   };
@@ -1094,8 +1093,9 @@ function App() {
                   loading: loading,
                   setLoading: setLoading,
                   setRegistrationSuccess: setRegistrationSuccess,
-                  handleChange: handleChange, // Tento handleChange je teraz *len* pre formData a nové granulárne aktualizácie teamsDataFromPage4
-                  setTeamsDataFromPage4: setTeamsDataFromPage4, // Explicitne posielame setter pre úplné aktualizácie z Page5Form
+                  handleChange: handleChange, // Tento handleChange je teraz *len* pre formData z App
+                  setTeamsDataFromPage4: setTeamsDataFromPage4, // Explicitne posielame setter pre úplné aktualizácie z Page5Form (napr. na úvod)
+                  onGranularTeamsDataChange: handleGranularTeamsDataChange, // NOVÁ PROP: pre granulárne aktualizácie teamsDataFromPage4
                   isRecaptchaReady: isRecaptchaReady,
                   tournamentStartDate: registrationStartDate,
                   tournamentEndDate: registrationEndDate,
