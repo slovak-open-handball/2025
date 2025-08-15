@@ -1336,13 +1336,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             )
                         )
                     )),
-                    React.createElement(
+                    // Podmienečné zobrazenie tlačidla "+"
+                    (isAddDriverButtonVisible && !loading) && React.createElement(
                         'button',
                         {
                             type: 'button',
                             onClick: handleAddDriverEntry,
                             className: addButtonClasses,
-                            disabled: loading || !isAddDriverButtonVisible,
                         },
                         '+'
                     )
