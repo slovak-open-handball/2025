@@ -552,55 +552,67 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [driverEntries, setDriverEntries] = React.useState([]);
 
     // NOVINKA: useEffect na inicializáciu driverEntries z teamsDataFromPage4
-    // Tento useEffect sa spustí, kedykoľvek sa zmení teamsDataFromPage4 (napr. pri prechode z Page4)
-    // a zabezpečí, že lokálny stav driverEntries sa zosynchronizuje.
     React.useEffect(() => {
-        const newLoadedDriverEntries = [];
+        const driversFromParentData = [];
 
         for (const categoryName in teamsDataFromPage4) {
-            // Filter out any undefined/null categories at this level
             if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
                 const teamStableIdPrefix = `${categoryName}-${teamIndex}`;
 
-                // Male drivers
-                if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers?.male > 0) {
-                    const stableId = `${teamStableIdPrefix}-male`;
-                    newLoadedDriverEntries.push({
-                        id: stableId, // Stable ID
-                        count: team.arrival.drivers.male.toString(),
-                        gender: 'male',
-                        categoryName: categoryName,
-                        teamIndex: teamIndex,
-                    });
-                }
-
-                // Female drivers
-                if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers?.female > 0) {
-                    const stableId = `${teamStableIdPrefix}-female`;
-                    newLoadedDriverEntries.push({
-                        id: stableId, // Stable ID
-                        count: team.arrival.drivers.female.toString(),
-                        gender: 'female',
-                        categoryName: categoryName,
-                        teamIndex: teamIndex,
-                    });
+                if (team.arrival?.type === 'vlastná doprava') {
+                    if (team.arrival?.drivers?.male > 0) {
+                        driversFromParentData.push({
+                            id: `${teamStableIdPrefix}-male`,
+                            count: team.arrival.drivers.male.toString(),
+                            gender: 'male',
+                            categoryName: categoryName,
+                            teamIndex: teamIndex,
+                        });
+                    }
+                    if (team.arrival?.drivers?.female > 0) {
+                        driversFromParentData.push({
+                            id: `${teamStableIdPrefix}-female`,
+                            count: team.arrival.drivers.female.toString(),
+                            gender: 'female',
+                            categoryName: categoryName,
+                            teamIndex: teamIndex,
+                        });
+                    }
                 }
             });
         }
-        
-        // Aktualizovať driverEntries len ak sa zmenili, aby sa predišlo zbytočným re-renderom
-        // a potenciálnemu resetovaniu fokusov, ak nie je nevyhnutné.
-        // Porovnávame dĺžku a potom obsah (jednoduché porovnanie pre zamedzenie duplicitných nastavení)
-        const areEqual = driverEntries.length === newLoadedDriverEntries.length &&
-                         driverEntries.every((entry, i) => entry.id === newLoadedDriverEntries[i].id &&
-                                                            entry.count === newLoadedDriverEntries[i].count &&
-                                                            entry.gender === newLoadedDriverEntries[i].gender);
 
-        if (!areEqual) {
-             setDriverEntries(newLoadedDriverEntries);
-        }
+        setDriverEntries(prevDriverEntries => {
+            const mergedEntries = [...driversFromParentData]; // Začať s položkami z rodičovských dát
+
+            // Pridať akékoľvek existujúce dočasné/neúplné položky z prevDriverEntries
+            // ktoré ešte NIE SÚ pokryté dátami z rodičovských dát (driversFromParentData).
+            prevDriverEntries.forEach(prevEntry => {
+                if (prevEntry.id.startsWith('driver-temp-') || // Ak je to dočasné ID
+                    !driversFromParentData.some(parentEntry => parentEntry.id === prevEntry.id)) { // Alebo ak sa nenachádza medzi "potvrdenými" šoférmi
+                    
+                    // Skontrolovať, či je to platný (vyplnený) dočasný záznam
+                    const isPrevEntryComplete = prevEntry.count !== '' && parseInt(prevEntry.count, 10) > 0 &&
+                                                prevEntry.gender !== '' && prevEntry.categoryName !== '' &&
+                                                prevEntry.teamIndex !== null;
+
+                    // Ak je dočasný záznam a tím, ku ktorému patrí, má stále 'vlastnú doprava', zachovať ho.
+                    const teamForPrevEntry = teamsDataFromPage4[prevEntry.categoryName]?.[prevEntry.teamIndex];
+                    if (prevEntry.id.startsWith('driver-temp-') && teamForPrevEntry?.arrival?.type === 'vlastná doprava') {
+                        mergedEntries.push(prevEntry);
+                    } else if (!prevEntry.id.startsWith('driver-temp-') && !driversFromParentData.some(parentEntry => parentEntry.id === prevEntry.id)) {
+                        // Ak to nie je dočasné ID, ale z nejakého dôvodu nie je v driversFromParentData (mohla nastať zmena, ktorá ho vyradila)
+                        // A tím stále má vlastnú dopravu, tak ho zachovať.
+                        if (teamForPrevEntry?.arrival?.type === 'vlastná doprava' && isPrevEntryComplete) { // Len ak je platný a tím má stále vlastnú dopravu
+                             mergedEntries.push(prevEntry);
+                        }
+                    }
+                }
+            });
+            return mergedEntries;
+        });
 
     }, [teamsDataFromPage4]); // Závislosť od teamsDataFromPage4
 
@@ -885,8 +897,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     const handleDriverEntryChange = (id, field, value) => {
-        setDriverEntries(prev => {
-            const updatedEntries = prev.map(entry => {
+        setDriverEntries(currentDrivers => { // Use 'currentDrivers' to be clear it's the current state
+            let updatedDrivers = currentDrivers.map(entry => {
                 if (entry.id === id) {
                     let newEntryState = { ...entry, [field]: value };
                     let newCategoryName = newEntryState.categoryName;
@@ -936,7 +948,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         }
 
                         // Then, add other existing driver entries for the same team (excluding the current one)
-                        prev.forEach(otherEntry => {
+                        // Make sure to use the 'updatedDrivers' array (which includes the current change) for aggregation
+                        updatedDrivers.forEach(otherEntry => {
                             if (otherEntry.id !== id && otherEntry.categoryName === newCategoryName && otherEntry.teamIndex === newTeamIndex && otherEntry.gender && otherEntry.count !== '') {
                                 const otherCount = parseInt(otherEntry.count, 10);
                                 if (!isNaN(otherCount) && otherCount > 0) {
@@ -959,7 +972,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
                 return entry;
             });
-            return updatedEntries;
+            return updatedDrivers;
         });
     };
 
