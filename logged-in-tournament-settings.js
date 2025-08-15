@@ -190,6 +190,14 @@ function TournamentSettingsApp() {
 
   const [tournamentStartDate, setTournamentStartDate] = React.useState('');
   const [tournamentEndDate, setTournamentEndDate] = React.useState('');
+  const [activeSetting, setActiveSetting] = React.useState(null); // Nový stav pre aktívne nastavenie
+
+  const settingComponents = [
+    { id: 'general', title: 'Všeobecné nastavenia registrácie', component: GeneralRegistrationSettings },
+    { id: 'tshirt', title: 'Nastavenia veľkostí tričiek', component: TShirtSizeSettings },
+    { id: 'accommodation', title: 'Nastavenia ubytovania', component: AccommodationSettings },
+    { id: 'package', title: 'Nastavenia balíčkov', component: PackageSettings },
+  ];
 
 
   React.useEffect(() => {
@@ -312,41 +320,64 @@ function TournamentSettingsApp() {
       'Nastavenia turnaja'
     ),
     
-    React.createElement(GeneralRegistrationSettings, {
-        db: db,
-        userProfileData: userProfileData,
-        tournamentStartDate: tournamentStartDate,
-        setTournamentStartDate: setTournamentStartDate,
-        tournamentEndDate: tournamentEndDate,
-        setTournamentEndDate: setTournamentEndDate,
-        showNotification: showNotification,
-        sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
-        formatDateForDisplay: formatDateForDisplay, // Pridávame format funkcie ako props
-        formatToDatetimeLocal: formatToDatetimeLocal,
-    }),
-
-    React.createElement(TShirtSizeSettings, {
-        db: db,
-        userProfileData: userProfileData,
-        showNotification: showNotification,
-        sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
-    }),
-
-    React.createElement(AccommodationSettings, {
-        db: db,
-        userProfileData: userProfileData,
-        showNotification: showNotification,
-        sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
-    }),
-
-    React.createElement(PackageSettings, {
-        db: db,
-        userProfileData: userProfileData,
-        tournamentStartDate: tournamentStartDate,
-        tournamentEndDate: tournamentEndDate,
-        showNotification: showNotification,
-        sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
-    })
+    activeSetting ? (
+      React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+          'div',
+          { className: 'flex items-center mb-4' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: () => setActiveSetting(null),
+              className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 flex items-center'
+            },
+            React.createElement('svg', { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+              React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M10 19l-7-7m0 0l7-7m-7 7h18' })
+            ),
+            'Späť'
+          ),
+          React.createElement(
+            'h2',
+            { className: 'text-2xl font-semibold text-gray-700 ml-4' },
+            settingComponents.find(s => s.id === activeSetting)?.title
+          )
+        ),
+        React.createElement(
+          settingComponents.find(s => s.id === activeSetting).component,
+          {
+            db: db,
+            userProfileData: userProfileData,
+            tournamentStartDate: tournamentStartDate,
+            setTournamentStartDate: setTournamentStartDate,
+            tournamentEndDate: tournamentEndDate,
+            setTournamentEndDate: setTournamentEndDate,
+            showNotification: showNotification,
+            sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
+            formatDateForDisplay: formatDateForDisplay,
+            formatToDatetimeLocal: formatToDatetimeLocal,
+          }
+        )
+      )
+    ) : (
+      React.createElement(
+        'div',
+        { className: 'space-y-4' },
+        settingComponents.map(setting => (
+          React.createElement(
+            'button',
+            {
+              key: setting.id,
+              onClick: () => setActiveSetting(setting.id),
+              className: 'w-full text-left bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg shadow-md transition-colors duration-200 text-xl'
+            },
+            setting.title
+          )
+        ))
+      )
+    )
   );
 }
 
