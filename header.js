@@ -376,14 +376,14 @@ const setupNotificationListenerForAdmin = () => {
                     
                     let changesMessage = '';
                     if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
-                        const changeLabel = newNotification.changes.length > 1 ? "si zmenil tieto údaje:" : "si zmenil tento údaj:";
+                        const changeLabel = newNotification.changes.length > 1 ? " zmenil tieto údaje:" : "zmenil tento údaj:";
                         changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
                         
                         const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
                         
                         changesMessage += formattedChanges.join('<br>'); // Používame <br> pre zalomenie riadkov
                     } else if (typeof newNotification.changes === 'string') {
-                        changesMessage = `Používateľ ${newNotification.userEmail} si zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
+                        changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
                     } else {
                         changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
                     }
