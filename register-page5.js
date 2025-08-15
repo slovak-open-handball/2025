@@ -1207,7 +1207,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-            'Registrácia - Ubytovanie a Príchod Tímov'
+            'Registrácia - strana 5'
         ),
 
         React.createElement(
@@ -1271,8 +1271,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 React.createElement(
                     'div',
                     { className: 'border-t border-gray-200 pt-4 mt-4' },
-                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Šoféri pre vlastnú dopravu'),
-                    React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Pridajte informácie o šoféroch pre tímy, ktoré majú zvolenú vlastnú dopravu. Zvoľte tím, ku ktorému bude priradený/á šofér/ka, ktorý/á je ubytovaný/á a stravuje sa spolu s tímom.'),
+                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Šoféri pri voľbe vlastná doprava'),
+                    React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Pridajte informácie o šoféroch pre tímy, ktoré majú zvolenú vlastnú dopravu. Zvoľte tím, ku ktorému budú šoféri priradení (ubytovanie a stravovanie spoločné so zvoleným tímom).'),
 
                     driverEntries.map((entry) => (
                         React.createElement(
