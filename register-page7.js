@@ -142,7 +142,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         }
 
                         packageDetailsHtml = React.createElement(React.Fragment, null,
-                            React.createElement('p', null, `Balíček: ${pkg.name || '-'} (${pkg.price || 0}€)`),
+                            React.createElement('p', null, `Balíček: ${pkg.name || '-'} (${pkg.price || 0} €)`),
                             mealsHtml
                         );
                     } else {
