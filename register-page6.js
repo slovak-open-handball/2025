@@ -496,7 +496,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-2 text-center text-gray-800' },
-            'Registrácia - strana 6: Detaily tímu'
+            'Registrácia - strana 6'
         ),
         React.createElement(
             'p',
@@ -505,7 +505,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             React.createElement('strong', null, 'ale je povinné ich vyplniť v sekcii "Moja zóna"'),
             ' po prihlásení sa do svojho turnajového účtu do ',
             React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, dataEditDeadline || 'nezadaný dátum'),
-            '.'
+            ' hod.'
         ),
 
         React.createElement(
