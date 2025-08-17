@@ -69,7 +69,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   if (type === 'success') {
     bgColorClass = 'bg-green-500';
   } else if (type === 'error') {
-    bgColorClass = 'bg-red-600';
+    bgColorClass = 'bg-red-600'; // ZMENENÉ: pre chybu je červené pozadie
   } else {
     bgColorClass = 'bg-blue-500';
   }
@@ -1066,7 +1066,7 @@ function App() {
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         React.createElement(
           'div',
-          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` },
+          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` }, {/* Dynamické nastavenie šírky */}
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
