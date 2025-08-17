@@ -681,9 +681,12 @@ function App() {
   };
 
   // Upravená handlePrev funkcia na prijímanie voliteľných aktualizovaných dát
-  const handlePrev = (updatedData = null) => {
-    if (updatedData) {
-        setTeamsDataFromPage4(updatedData);
+  const handlePrev = (dataToPreserve = null) => {
+    if (dataToPreserve && dataToPreserve.currentFormData) {
+        setFormData(dataToPreserve.currentFormData);
+    }
+    if (dataToPreserve && dataToPreserve.currentTeamsDataFromPage4) {
+        setTeamsDataFromPage4(dataToPreserve.currentTeamsDataFromPage4);
     }
     setPage(prevPage => prevPage - 1);
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
@@ -691,8 +694,11 @@ function App() {
 
   // Nová funkcia pre uloženie dát z Page6Form a následný prechod späť
   const handleSaveTeamsDataAndPrev = (updatedTeamsData) => {
+    // Táto funkcia je volaná z Page6Form a očakáva už len updatedTeamsData
+    // FormData sa v Page6Form nemení, takže ho nemusíme posielať naspäť.
     setTeamsDataFromPage4(updatedTeamsData);
-    handlePrev(); // Zavolajte pôvodnú handlePrev bez argumentu
+    setPage(prevPage => prevPage - 1); // Prechod späť na predchádzajúcu stránku
+    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
   };
 
 
@@ -1165,7 +1171,7 @@ function App() {
           page === 4 ?
               React.createElement(Page4Form, {
                   formData: formData,
-                  handlePrev: (currentTeamsDataFromPage4) => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4 }),
+                  handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                   handleNextPage4: handleNextPage4ToPage5,
                   loading: loading,
                   setLoading: setLoading,
@@ -1190,7 +1196,7 @@ function App() {
                   formData: formData,
                   teamsDataFromPage4: teamsDataFromPage4,
                   availableCategoriesMap: categoriesDataFromFirestore, // Provided for completeness, might not be used directly in Page5Form logic
-                  handlePrev: (currentTeamsDataFromPage4) => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4 }),
+                  handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                   handleSubmit: handleNextPage5ToPage6, // Zmena volanej funkcie
                   loading: loading,
                   setLoading: setLoading,
@@ -1206,7 +1212,7 @@ function App() {
               React.createElement(Page6Form, {
                   formData: formData,
                   teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
-                  handlePrev: (currentTeamsDataFromPage4) => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4 }),
+                  handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                   handleSubmit: handleNextPage6ToPage7, // Nová funkcia pre prechod na Page 7
                   loading: loading,
                   NotificationModal: NotificationModal,
@@ -1225,7 +1231,7 @@ function App() {
               React.createElement(Page7Form, {
                   formData: formData,
                   teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
-                  handlePrev: (currentTeamsDataFromPage4) => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4 }),
+                  handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                   handleSubmit: confirmFinalRegistration, // Funkcia pre finálne odoslanie
                   loading: loading,
                   NotificationModal: NotificationModal,
