@@ -949,7 +949,7 @@ function App() {
 
       // Notifikácia pre používateľa je zobrazená, hoci stav e-mailu je neznámy.
       // Dôležité je, že dáta sú už uložené vo Firestore.
-      dispatchAppNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu by malo byť odoslané na e-mailovú adresu ${formData.email}.`, 'success');
+      dispatchAppNotification(`Ďakujeme za vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
       setRegistrationSuccess(true);
 
       // Resetovanie formulára a prechod na prvú stránku po úspešnej registrácii
