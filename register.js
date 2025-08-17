@@ -687,10 +687,21 @@ function App() {
     setLoading(false);
   };
 
-  const handlePrev = () => {
+  // Upravená handlePrev funkcia na prijímanie voliteľných aktualizovaných dát
+  const handlePrev = (updatedData = null) => {
+    if (updatedData) {
+        setTeamsDataFromPage4(updatedData);
+    }
     setPage(prevPage => prevPage - 1);
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
   };
+
+  // Nová funkcia pre uloženie dát z Page6Form a následný prechod späť
+  const handleSaveTeamsDataAndPrev = (updatedTeamsData) => {
+    setTeamsDataFromPage4(updatedTeamsData);
+    handlePrev(); // Zavolajte pôvodnú handlePrev bez argumentu
+  };
+
 
   // NOVINKA: Nová funkcia pre finálne odoslanie registrácie (volaná z Page7Form)
   const confirmFinalRegistration = async () => {
@@ -1203,6 +1214,7 @@ function App() {
                   dataEditDeadline: dataEditDeadline,
                   setNotificationMessage: setNotificationMessage, // NOVINKA: Pass setter
                   setNotificationType: setNotificationType,     // NOVINKA: Pass setter
+                  onSaveAndPrev: handleSaveTeamsDataAndPrev, // NOVINKA: Odovzdanie funkcie pre uloženie a prechod späť
               }) :
           page === 7 ? // NOVINKA: Renderovanie Page7Form (súhrn)
               React.createElement(Page7Form, {
@@ -1222,7 +1234,7 @@ function App() {
           { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
           React.createElement(
             'h2',
-            { className: 'text-2xl font-bold mb-2 text-red-600' },
+              { className: 'text-2xl font-bold mb-2 text-red-600' },
             'Registrácia na turnaj je už ukončená.'
           ),
           React.createElement(
