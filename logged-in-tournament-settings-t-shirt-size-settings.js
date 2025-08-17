@@ -17,24 +17,18 @@ const parseTshirtSize = (size) => {
   // Mapovanie pre štandardné dospelé veľkosti a ich varianty
   const adultSizeMap = {
     'XS': 0, 'S': 1, 'M': 2, 'L': 3, 'XL': 4, 'XXL': 5,
-    'XXXL': 6, '3XL': 6,
-    'XXXXL': 7, '4XL': 7,
-    'XXXXXL': 8, '5XL': 8,
+    'XXXL': 6, '3XL': 6, // Pridané 3XL, aby mali rovnakú hodnotu ako XXXL
+    'XXXXL': 7, '4XL': 7, // Pridané 4XL, aby mali rovnakú hodnotu ako XXXXL
+    'XXXXXL': 8, '5XL': 8, // Pridané 5XL, aby mali rovnakú hodnotu ako XXXXXL
     // Pridaj ďalšie, ak sú potrebné
   };
 
-  // Pre XXXL, 3XL, atď.
-  const customXlMatch = trimmedSize.match(/^(\d+)XL$/);
-  if (customXlMatch) {
-    const numXl = parseInt(customXlMatch[1], 10);
-    return { type: 'adult', value: 3 + (numXl - 3), original: size }; // Normalizácia pre 3XL, 4XL, atď.
-  }
-
-  // Pre tradičné X-ká (XL, XXL, XXXL)
+  // Pre tradičné X-ká (XL, XXL, XXXL, atď.) a ich numerické varianty (3XL, 4XL, atď.)
   if (adultSizeMap.hasOwnProperty(trimmedSize)) {
     return { type: 'adult', value: adultSizeMap[trimmedSize], original: size };
   }
 
+  // Pôvodná logika pre customXlMatch bola prenesená do adultSizeMap pre lepšiu konsolidáciu
   // Ak sa nezhoduje so známymi formátmi, daj mu nízku prioritu (na koniec)
   // Prípadne by sa sem mohla pridať komplexnejšia logika pre neznáme formáty
   return { type: 'unknown', value: Infinity, original: size };
