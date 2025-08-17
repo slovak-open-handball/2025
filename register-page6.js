@@ -500,9 +500,11 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                 ),
                                             ),
                                             // Nový riadok pre adresné polia
-                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2 mt-4' }, // Pridaný horný okraj
+                                            React.createElement('div', {
+                                                className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
+                                            },
                                                 React.createElement('div', {
-                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                    className: `flex-1 min-w-[120px]`
                                                 },
                                                     React.createElement('label', { htmlFor: `street-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
                                                     React.createElement('input', {
@@ -517,7 +519,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
                                                 ),
                                                 React.createElement('div', {
-                                                    className: `w-24 transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                    className: `w-24`
                                                 },
                                                     React.createElement('label', { htmlFor: `houseNumber-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
                                                     React.createElement('input', {
@@ -532,7 +534,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
                                                 ),
                                                 React.createElement('div', {
-                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                    className: `flex-1 min-w-[120px]`
                                                 },
                                                     React.createElement('label', { htmlFor: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
                                                     React.createElement('input', {
@@ -547,7 +549,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
                                                 ),
                                                 React.createElement('div', {
-                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                    className: `flex-1 min-w-[120px]`
                                                 },
                                                     React.createElement('label', { htmlFor: `postalCode-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ'),
                                                     React.createElement('input', {
@@ -563,7 +565,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
                                                 ),
                                                 React.createElement('div', {
-                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                    className: `flex-1 min-w-[120px]`
                                                 },
                                                     React.createElement('label', { htmlFor: `country-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Štát'),
                                                     React.createElement('input', {
