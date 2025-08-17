@@ -346,8 +346,10 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Číslo'
                                                     }),
-                                                    playerSpecificErrors.jerseyNumber &&
-                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber)
+                                                    // Placeholder pre chybu dresu
+                                                    playerSpecificErrors.jerseyNumber ?
+                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber) :
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Invisible placeholder for consistent spacing
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
@@ -360,8 +362,10 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Meno hráča'
                                                     }),
-                                                    playerSpecificErrors.combination &&
-                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.combination)
+                                                    // Placeholder pre chybu kombinácie
+                                                    playerSpecificErrors.combination ?
+                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.combination) :
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Invisible placeholder
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
@@ -373,7 +377,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'lastName', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko hráča'
-                                                    })
+                                                    }),
+                                                    // Placeholder pre chybu kombinácie
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
                                                     React.createElement('label', { htmlFor: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
@@ -384,7 +390,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         value: player.dateOfBirth || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
                                                         disabled: loading,
-                                                    })
+                                                    }),
+                                                    // Placeholder pre chybu kombinácie
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-initial w-auto flex flex-col items-center justify-center pt-2' }, // Zarovnanie prepínača
                                                     React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
@@ -392,7 +400,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         isOn: player.isRegistered || false,
                                                         handleToggle: () => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', !player.isRegistered),
                                                         disabled: loading,
-                                                    })
+                                                    }),
+                                                    // Prázdny placeholder, ak ToggleSwitch nespôsobuje chyby
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 player.isRegistered && React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo registrácie'),
@@ -404,7 +414,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Číslo'
-                                                    })
+                                                    }),
+                                                    // Placeholder pre chybu kombinácie
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
                                                 )
                                             )
                                         );
@@ -430,7 +442,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'firstName', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Meno členky'
-                                                    })
+                                                    }),
+                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `lastName-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
@@ -442,7 +456,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'lastName', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko členky'
-                                                    })
+                                                    }),
+                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
                                                     React.createElement('label', { htmlFor: `dateOfBirth-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
@@ -453,7 +469,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         value: member.dateOfBirth || '',
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'dateOfBirth', e.target.value),
                                                         disabled: loading,
-                                                    })
+                                                    }),
+                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 )
                                             )
                                         );
@@ -479,7 +497,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'firstName', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Meno člena'
-                                                    })
+                                                    }),
+                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `lastName-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
@@ -491,7 +511,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'lastName', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko člena'
-                                                    })
+                                                    }),
+                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
                                                     React.createElement('label', { htmlFor: `dateOfBirth-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
@@ -502,7 +524,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         value: member.dateOfBirth || '',
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'dateOfBirth', e.target.value),
                                                         disabled: loading,
-                                                    })
+                                                    }),
+                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 )
                                             )
                                         );
