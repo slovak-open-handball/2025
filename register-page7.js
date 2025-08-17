@@ -271,12 +271,12 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 'div',
                 { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
                 React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-800' }, 'Osobné údaje'),
-                React.createElement('p', null, React.createElement('strong', null, 'Meno: '), formData.firstName),
-                React.createElement('p', null, React.createElement('strong', null, 'Priezvisko: '), formData.lastName),
-                React.createElement('p', null, React.createElement('strong', null, 'E-mail: '), formData.email),
-                // Zmenený riadok pre zobrazenie telefónneho čísla
-                // Predvoľba sa zobrazí, ak existuje a je zadané telefónne číslo
-                React.createElement('p', null, React.createElement('strong', null, 'Telefónne číslo: '), 
+                // Upravené pre zobrazenie mena a priezviska v jednom riadku
+                React.createElement('p', null, React.createElement('strong', null, 'Meno a priezvisko kontaktnej osoby: '), `${formData.firstName} ${formData.lastName}`),
+                // Zmenený riadok pre e-mail
+                React.createElement('p', null, React.createElement('strong', null, 'E-mailová adresa kontaktnej osoby: '), formData.email),
+                // Zmenený riadok pre telefónne číslo
+                React.createElement('p', null, React.createElement('strong', null, 'Telefónne číslo kontaktnej osoby: '), 
                     formData.contactPhoneNumber ? 
                         `${selectedCountryDialCode} ${formData.contactPhoneNumber}` : '-'
                 )
