@@ -336,41 +336,8 @@ function TeamAccommodationAndArrival({
                     React.createElement('span', { className: 'ml-3 text-gray-800' }, 'bez dopravy')
                 )
             )
-        )
-    );
-}
+        ),
 
-// Komponent pre nastavenia balíčka tímu
-function TeamPackageSettings({
-    team,
-    categoryName,
-    teamIndex,
-    onGranularTeamsDataChange, // Prop pre aktualizáciu dát v rodičovi
-    loading,
-    packages,
-    tournamentDays
-}) {
-    const [selectedPackageId, setSelectedPackageId] = React.useState(team.packageId || '');
-
-    React.useEffect(() => {
-        setSelectedPackageId(team.packageId || '');
-    }, [team.packageId]);
-
-    const handlePackageChange = (e) => {
-        const newPackageId = e.target.value;
-        setSelectedPackageId(newPackageId);
-        const selectedPkg = packages.find(pkg => pkg.id === newPackageId);
-        onGranularTeamsDataChange(categoryName, teamIndex, 'packageId', newPackageId);
-        onGranularTeamsDataChange(categoryName, teamIndex, 'packageDetails', selectedPkg ? {
-            name: selectedPkg.name,
-            price: selectedPkg.price,
-            meals: selectedPkg.meals
-        } : null);
-    };
-
-    return React.createElement(
-        React.Fragment,
-        null,
         React.createElement(
             'div',
             { className: 'border-t border-gray-200 pt-4 mt-4' },
@@ -1273,7 +1240,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev(), // Teraz stačí volať handlePrev bez argumentov
+                        // NOVINKA: Odovzdávame aktuálne dáta do handlePrev
+                        onClick: () => handlePrev(teamsDataFromPage4),
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
