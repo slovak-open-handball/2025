@@ -610,6 +610,28 @@ function App() {
             // Používame existingTeamData pre zachovanie predtým zadaných detailov
             const existingTeamData = existingCategoryTeams[teamIndex] || {};
 
+            // Helper na vytvorenie prázdneho detailu hráča/člena s adresou
+            const createEmptyPersonDetail = () => ({
+                jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+            });
+
+            // NOVINKA: Zabezpečenie, že playerDetails, womenTeamMemberDetails, menTeamMemberDetails
+            // sa inicializujú správne, buď z existujúcich dát, alebo ako prázdne polia
+            // so správnym počtom osôb.
+            const initialPlayerDetails = existingTeamData.playerDetails && existingTeamData.playerDetails.length === (parseInt(existingTeamData.players, 10) || 0)
+                ? existingTeamData.playerDetails
+                : Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => createEmptyPersonDetail());
+
+            const initialWomenTeamMemberDetails = existingTeamData.womenTeamMemberDetails && existingTeamData.womenTeamMemberDetails.length === (parseInt(existingTeamData.womenTeamMembers, 10) || 0)
+                ? existingTeamData.womenTeamMemberDetails
+                : Array.from({ length: parseInt(existingTeamData.womenTeamMembers, 10) || 0 }).map(() => createEmptyPersonDetail());
+
+            const initialMenTeamMemberDetails = existingTeamData.menTeamMemberDetails && existingTeamData.menTeamMemberDetails.length === (parseInt(existingTeamData.menTeamMembers, 10) || 0)
+                ? existingTeamData.menTeamMemberDetails
+                : Array.from({ length: parseInt(existingTeamData.menTeamMembers, 10) || 0 }).map(() => createEmptyPersonDetail());
+
+
             return {
                 teamName: generatedTeamName,
                 players: existingTeamData.players !== undefined ? existingTeamData.players : '',
@@ -624,18 +646,9 @@ function App() {
                 packageId: existingTeamData.packageId || '',
                 packageDetails: existingTeamData.packageDetails || null,
                 // NOVINKA: Inicializácia polí pre detaily hráčov a realizačného tímu
-                playerDetails: existingTeamData.playerDetails || Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => ({
-                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
-                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre hráča
-                })),
-                womenTeamMemberDetails: existingTeamData.womenTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.womenTeamMembers, 10) || 0 }).map(() => ({
-                    firstName: '', lastName: '', dateOfBirth: '',
-                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre ženu
-                })),
-                menTeamMemberDetails: existingTeamData.menTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.menTeamMembers, 10) || 0 }).map(() => ({
-                    firstName: '', lastName: '', dateOfBirth: '',
-                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre muža
-                })),
+                playerDetails: initialPlayerDetails,
+                womenTeamMemberDetails: initialWomenTeamMemberDetails,
+                menTeamMemberDetails: initialMenTeamMemberDetails,
             };
         });
     });
@@ -693,7 +706,7 @@ function App() {
   // Upravená handlePrev funkcia na prijímanie voliteľných aktualizovaných dát
   const handlePrev = (updatedData = null) => {
     if (updatedData) {
-        setTeamsDataFromPage4(updatedData);
+        setTeamsDataFromPage4(updatedData); // Ak sú odovzdané dáta, aktualizujeme stav teamsDataFromPage4
     }
     setPage(prevPage => prevPage - 1);
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
@@ -1175,7 +1188,7 @@ function App() {
           page === 4 ?
               React.createElement(Page4Form, {
                   formData: formData,
-                  handlePrev: handlePrev,
+                  handlePrev: handlePrev, // Teraz handlePrev akceptuje voliteľné dáta
                   handleNextPage4: handleNextPage4ToPage5,
                   loading: loading,
                   setLoading: setLoading,
