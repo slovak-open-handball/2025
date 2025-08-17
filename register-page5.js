@@ -1273,7 +1273,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev(teamsDataFromPage4), // <--- ZMENA TU
+                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }), // <--- ZMENA TU
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
