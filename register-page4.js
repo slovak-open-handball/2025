@@ -264,7 +264,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 
                 // Súčet objednaných tričiek
                 let teamOrderedTshirts = 0;
-                for (const tshirt of (Array.isArray(team.tshirts) ? team.tshirts : [])) { // Zabezpečenie, že team.tshirts je pole
+                for (const tshirt of (Array.isArray(team.tshirts) ? team.tshirts : [])) { // Zabezpečíme, že team.tshirts je pole
                     teamOrderedTshirts += (isNaN(parseInt(tshirt.quantity, 10)) ? 0 : parseInt(tshirt.quantity, 10));
                 }
 
@@ -551,7 +551,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev(teamsDataFromPage4), // Odoslať aktuálne dáta tímov pri návrate
+                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }), // <--- ZMENA TU
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                         tabIndex: 1
