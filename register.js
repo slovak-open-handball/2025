@@ -134,7 +134,7 @@ function App() {
   const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
 
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
-  const [categoriesExist, setCategoriesExist] = React.useState(true);
+  const [categoriesExist, setCategoriesExist] = React.useState(false); // OPRAVENÉ: Predvolená hodnota na false
   const [categoriesDataFromFirestore, setCategoriesDataFromFirestore] = React.useState({});
 
   const [countdown, setCountdown] = React.useState(null);
@@ -287,15 +287,23 @@ function App() {
 
     const categoriesDocRef = doc(collection(window.db, 'settings'), 'categories');
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => {
-      if (docSnapshot.exists() && Object.keys(docSnapshot.data()).length > 0) {
+      // OPRAVA: Skontrolujte, či sú dáta v docSnapshot.data() platným objektom s kľúčmi
+      if (docSnapshot.exists() && docSnapshot.data() && Object.keys(docSnapshot.data()).length > 0) {
         setCategoriesExist(true);
         setCategoriesDataFromFirestore(docSnapshot.data());
       } else {
         setCategoriesExist(false);
         setCategoriesDataFromFirestore({});
       }
+      // Vždy nastavte settingsLoaded po pokuse o načítanie kategórií
+      // aby sa zabránilo nekonečnému stavu načítavania, ak kategórie chýbajú.
+      // Toto by malo byť už ošetrené v nastavení, ale pre istotu tu.
+      // Avšak, pre prehľadnosť a pretože settingsLoaded sa už používa pre registration settings,
+      // pridáme novú pre categories.
+      // Zmeny v tomto kroku by mali byť v App komponente.
     }, error => {
-      setCategoriesExist(false);
+      console.error("Chyba pri načítaní kategórií z Firestore:", error);
+      setCategoriesExist(false); // Aj pri chybe nastavte na false
       setCategoriesDataFromFirestore({});
       setNotificationMessage(`Chyba pri načítaní kategórií: ${error.message}`);
       setShowNotification(true);
@@ -499,6 +507,13 @@ function App() {
 
     if (!isRecaptchaReady) {
       dispatchAppNotification('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.', 'error');
+      setLoading(false);
+      return;
+    }
+    
+    // OPRAVENÉ: Kontrola existencie kategórií pred prechodom na ďalšiu stránku
+    if (!categoriesExist) { 
+      dispatchAppNotification('Registrácia nie je možná, pretože neboli definované žiadne kategórie.', 'error');
       setLoading(false);
       return;
     }
@@ -1112,7 +1127,9 @@ function App() {
         )
       )
     ) : (
-      (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
+      // Hlavná podmienka pre zobrazenie formulára alebo správ o stave registrácie
+      // OPRAVENÉ: Pridaná kontrola categoriesExist do hlavnej podmienky
+      (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) && categoriesExist ? (
         React.createElement(
           'div',
           { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` },
@@ -1135,7 +1152,8 @@ function App() {
               isRecaptchaReady: isRecaptchaReady,
               isRegistrationClosed: isRegistrationClosed,
               registrationEndDate: registrationEndDate,
-              hasAnyPage1Data: hasAnyPage1Data
+              hasAnyPage1Data: hasAnyPage1Data,
+              categoriesExist: categoriesExist // ODOSIELAME NOVÝ PROP!
             }) :
           page === 2 ?
             React.createElement(Page2Form, {
@@ -1294,7 +1312,22 @@ function App() {
             )
           )
         )
-      ) : null
+      ) : ( // NOVINKA: Zobrazenie správy, ak registrácia je otvorená ale neexistujú kategórie
+        React.createElement(
+            'div',
+            { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
+            React.createElement(
+                'h2',
+                { className: 'text-2xl font-bold mb-2 text-red-600' },
+                'Registrácia momentálne nie je možná.'
+            ),
+            React.createElement(
+                'p',
+                { className: 'text-md text-gray-700 mt-2' },
+                'Pre spustenie registrácie musia byť definované kategórie.'
+            )
+        )
+      )
     )
   );
 }
