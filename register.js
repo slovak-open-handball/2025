@@ -1238,6 +1238,7 @@ function App() {
                   notificationMessage: notificationMessage,
                   closeNotification: closeNotification,
                   notificationType: notificationType,
+                  selectedCountryDialCode: selectedCountryDialCode, // NOVINKA: Odovzdanie selectedCountryDialCode
               }) : null
         )
       ) : isRegistrationClosed ? (
