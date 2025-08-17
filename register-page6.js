@@ -131,7 +131,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
             React.createElement('strong', null, 'ale je povinné ich vyplniť v sekcii "Moja zóna"'),
             ' po prihlásení sa do svojho turnajového účtu do dátumu ',
-            React.createElement('strong', null, dataEditDeadline.replace(' hod.', '') || 'nezadaný dátum'), // Zmenené tu!
+            React.createElement('strong', null, dataEditDeadline || 'nezadaný dátum'),
             '.'
         ),
 
