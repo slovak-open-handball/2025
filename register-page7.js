@@ -85,11 +85,14 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         ? team.tshirts.reduce((sum, t) => sum + (parseInt(t.quantity, 10) || 0), 0)
                         : 0;
 
-                    // NOVINKA: Zostavíme finálny reťazec pre zobrazenie tričiek
+                    // ÚPRAVA: Opravené zobrazenie celkového počtu tričiek
                     const finalTshirtsDisplay = tshirtsDetails === 'žiadne'
                         ? 'žiadne'
-                        // ÚPRAVA: Text "celkom: ... ks" je teraz tučný
-                        : `${tshirtsDetails}, ${React.createElement('strong', null, `celkom: ${totalTshirtQuantity} ks`)}`;
+                        : React.createElement(React.Fragment, null,
+                            tshirtsDetails,
+                            ', ',
+                            React.createElement('strong', null, `celkom: ${totalTshirtQuantity} ks`)
+                          );
 
 
                     // Detaily ubytovania
@@ -145,7 +148,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
                         packageDetailsHtml = React.createElement(React.Fragment, null,
                             // ÚPRAVA: Text "Balíček:" je teraz tučný
-                            React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} €/osoba)`),
+                            React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} €)`),
                             mealsHtml
                         );
                     } else {
