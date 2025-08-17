@@ -76,25 +76,26 @@ const sendAdminNotification = async (db, auth, notificationData) => {
     }
     try {
       const notificationsCollectionRef = collection(db, 'notifications');
-      let changesMessage = '';
+      let changesContent; // Zmenené z changesMessage na changesContent, aby to mohlo byť pole
       const userEmail = auth.currentUser.email;
 
       if (notificationData.type === 'createSize') {
-        changesMessage = `Vytvorenie novej veľkosti trička: '''${notificationData.data.newSizeValue}'`;
+        changesContent = `Vytvorenie novej veľkosti trička: '''${notificationData.data.newSizeValue}'`;
       } else if (notificationData.type === 'editSize') {
-        changesMessage = `Zmena veľkosti trička z: '${notificationData.data.originalSize}' na '${notificationData.data.newSizeValue}'`;
+        changesContent = `Zmena veľkosti trička z: '${notificationData.data.originalSize}' na '${notificationData.data.newSizeValue}'`;
       } else if (notificationData.type === 'deleteSize') {
-        changesMessage = `Zmazanie veľkosti trička: '''${notificationData.data.deletedSize}'`;
+        changesContent = `Zmazanie veľkosti trička: '''${notificationData.data.deletedSize}'`;
       } else if (notificationData.type === 'updateSettings') {
-        changesMessage = `${notificationData.data.changesMade}`; 
+        // Tu je zmena: Rozdelenie reťazca na pole
+        changesContent = notificationData.data.changesMade.split(';').map(change => change.trim()).filter(change => change !== ''); 
       } else if (notificationData.type === 'createAccommodation') { 
-        changesMessage = `Vytvorenie typu ubytovania: '''${notificationData.data.type} s kapacitou ${notificationData.data.capacity}'`;
+        changesContent = `Vytvorenie typu ubytovania: '''${notificationData.data.type} s kapacitou ${notificationData.data.capacity}'`;
       } else if (notificationData.type === 'editAccommodation') { 
-        changesMessage = `Zmena ubytovania z: '${notificationData.data.originalType} (kapacita: ${notificationData.data.originalCapacity})' na '${notificationData.data.newType} (kapacita: ${notificationData.data.newCapacity})'`;
+        changesContent = `Zmena ubytovania z: '${notificationData.data.originalType} (kapacita: ${notificationData.data.originalCapacity})' na '${notificationData.data.newType} (kapacita: ${notificationData.data.newCapacity})'`;
       } else if (notificationData.type === 'deleteAccommodation') { 
-        changesMessage = `Zmazanie typu ubytovania: '''${notificationData.data.deletedType} (kapacita: ${notificationData.data.deletedCapacity})'`;
+        changesContent = `Zmazanie typu ubytovania: '''${notificationData.data.deletedType} (kapacita: ${notificationData.data.deletedCapacity})'`;
       } else if (notificationData.type === 'createPackage') {
-        changesMessage = `Vytvorenie nového balíčka: '''${notificationData.data.name} s cenou ${notificationData.data.price}€'`;
+        changesContent = `Vytvorenie nového balíčka: '''${notificationData.data.name} s cenou ${notificationData.data.price}€'`;
       } else if (notificationData.type === 'editPackage') {
         const originalPackage = notificationData.data.originalPackage;
         const newPackage = notificationData.data.newPackage;
@@ -102,10 +103,10 @@ const sendAdminNotification = async (db, auth, notificationData) => {
 
         if (!originalPackage || !newPackage) {
             console.error("sendAdminNotification: Chýbajú pôvodné alebo nové dáta balíčka pre notifikáciu 'editPackage'.");
-            changesMessage = `Úprava balíčka '${notificationData.data.originalName || 'Neznámy názov'}'. Podrobnosti o zmene nie sú k dispozícii.`;
+            changesContent = [`Úprava balíčka '${notificationData.data.originalName || 'Neznámy názov'}'. Podrobnosti o zmene nie sú k dispozícii.`]; // Pole pre konzistentnosť
             await addDoc(notificationsCollectionRef, {
                 userEmail: userEmail,
-                changes: changesMessage,
+                changes: changesContent,
                 timestamp: Timestamp.fromDate(new Date()),
                 recipientId: 'all_admins'
             });
@@ -155,15 +156,14 @@ const sendAdminNotification = async (db, auth, notificationData) => {
             }
         }
         
-        changesMessage = `Úprava balíčka '${originalPackage.name}':\n${changes.join('\n')}`;
-
+        changesContent = changes; // Už je to pole
       } else if (notificationData.type === 'deletePackage') {
-        changesMessage = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
+        changesContent = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
       }
 
       await addDoc(notificationsCollectionRef, {
         userEmail: userEmail,
-        changes: changesMessage,
+        changes: changesContent, // Tu sa teraz ukladá buď reťazec alebo pole reťazcov
         timestamp: Timestamp.fromDate(new Date()),
         recipientId: 'all_admins'
       });
