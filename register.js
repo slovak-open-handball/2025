@@ -987,12 +987,12 @@ function App() {
                     (team.menTeamMembers !== undefined && team.menTeamMembers !== '') ||
                     (team.tshirts && team.tshirts.some(t => t.size.trim() !== '' || (t.quantity !== undefined && t.quantity !== ''))) ||
                     (team.accommodation?.type && team.accommodation.type.trim() !== '') ||
-                    (team.arrival?.type && team.arrival.type.trim() !== '') ||
+                    (team.arrival?.type && team.arrival.type.type.trim() !== '') ||
                     (team.packageId && team.packageId.trim() !== '') ||
                     (team.arrival?.drivers && (team.arrival.drivers.male !== undefined || team.arrival.drivers.female !== undefined)) ||
                     // NOVINKA: Kontrola pre detaily hráčov/členov realizačného tímu
                     (team.playerDetails && team.playerDetails.some(p =>
-                        p.jerseyNumber.trim() !== '' || p.firstName.trim() !== '' || p.lastName.trim() !== '' || p.dateOfBirth.trim() !== '' || p.registrationNumber.trim() !== ''
+                        p.jerseyNumber !== '' || p.firstName.trim() !== '' || p.lastName.trim() !== '' || p.dateOfBirth.trim() !== '' || p.registrationNumber.trim() !== ''
                     )) ||
                     (team.womenTeamMemberDetails && team.womenTeamMemberDetails.some(m =>
                         m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== ''
@@ -1061,7 +1061,7 @@ function App() {
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-6xl' }, {/* Zmena max-w-md na max-w-6xl */}
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
