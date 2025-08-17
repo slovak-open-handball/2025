@@ -8,19 +8,19 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
     return React.createElement(
         'div',
         {
-            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
-            onClick: disabled ? null : handleToggle,
-            style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' } 
-        },
-        React.createElement(
-            'span',
-            {
-                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`,
-                style: { boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }
-            }
-        )
-    );
-}
+            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,\
+            onClick: disabled ? null : handleToggle,\
+            style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' } // Vnútorný tieň pre efekt "zatlačenia"
+        },\
+        React.createElement(\
+            'span',\
+            {\
+                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`,\
+                style: { boxShadow: '0 2px 5px rgba(0,0,0,0.2)' } // Tieň pre gombík prepínača
+            }\
+        )\
+    );\
+}\
 
 
 // Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
@@ -29,7 +29,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
-    const [playerErrors, setPlayerErrors] = React.useState({}); 
+    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error' } } } }
 
     // Helper pre notifikácie
     const dispatchAppNotification = React.useCallback((message, type = 'info') => {
@@ -303,7 +303,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             const teamHasErrors = validateTeamPlayers(newDetails[categoryName][teamIndex].playerDetails, categoryName, teamIndex);
 
             if (teamHasErrors) {
-                dispatchAppNotification('V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.', 'error');
+                dispatchAppNotification('V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.', 'error'); // Typ 'error' pre červené pozadie
             } else {
                 // Notifikácia sa vyčistí po 10 sekundách, takže tu nemusíme explicitne čistiť,
                 // pokiaľ neboli žiadne chyby predchádzajúci raz
@@ -380,14 +380,14 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         // Dodatočná kontrola validácie pred odoslaním, ak by niekto obišiel okamžitú validáciu
         // Hoci tlačidlo je zakázané, je dobré mať túto kontrolu aj tu
         if (!isFormValidPage6) {
-            dispatchAppNotification('Opravte prosím duplicitné údaje hráčov pred pokračovaním.', 'error');
+            dispatchAppNotification('Opravte prosím duplicitné údaje hráčov pred pokračovaním.', 'error'); // Typ 'error' pre červené pozadie
             return;
         }
 
         const finalTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
         for (const categoryName in localTeamDetails) {
-            (localTeamDetails[categoryName] || []).forEach((localTeam, teamIndex) => {
+            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => { // Pridaná kontrola Array.isArray
                 if (finalTeamsData[categoryName] && finalTeamsData[categoryName][teamIndex]) {
                     finalTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     finalTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
@@ -405,7 +405,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
         // Aktualizujte túto kópiu s dátami z localTeamDetails
         for (const categoryName in localTeamDetails) {
-            (localTeamDetails[categoryName] || []).forEach((localTeam, teamIndex) => {
+            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => { // Pridaná kontrola Array.isArray
                 if (updatedTeamsData[categoryName] && updatedTeamsData[categoryName][teamIndex]) {
                     updatedTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     updatedTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
@@ -421,7 +421,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: 'info' }),
+        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }), {/* Používame notificationType z props */}
 
         React.createElement(
             'h2',
@@ -449,7 +449,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
                         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
-                        (localTeamDetails[categoryName] || []).map((team, teamIndex) => {
+                        (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).map((team, teamIndex) => {
                             const playersCount = parseInt(team.players, 10) || 0;
                             const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                             const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
@@ -652,7 +652,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading || !hasAccommodation,
                                                         placeholder: 'Štát'
                                                     }),
-                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 )
                                             )
                                         );
