@@ -295,12 +295,9 @@ function App() {
         setCategoriesExist(false);
         setCategoriesDataFromFirestore({});
       }
-      // Vždy nastavte settingsLoaded po pokuse o načítanie kategórií
-      // aby sa zabránilo nekonečnému stavu načítavania, ak kategórie chýbajú.
-      // Toto by malo byť už ošetrené v nastavení, ale pre istotu tu.
-      // Avšak, pre prehľadnosť a pretože settingsLoaded sa už používa pre registration settings,
-      // pridáme novú pre categories.
-      // Zmeny v tomto kroku by mali byť v App komponente.
+      // Vždy nastavte categoriesLoadedReceived po pokuse o načítanie kategórií
+      // aby sa initializeRegistrationApp mohla spustiť
+      window.dispatchEvent(new Event('categoriesLoaded')); // Odoslať udalosť po načítaní kategórií
     }, error => {
       console.error("Chyba pri načítaní kategórií z Firestore:", error);
       setCategoriesExist(false); // Aj pri chybe nastavte na false
@@ -308,6 +305,7 @@ function App() {
       setNotificationMessage(`Chyba pri načítaní kategórií: ${error.message}`);
       setShowNotification(true);
       setNotificationType('error');
+      window.dispatchEvent(new Event('categoriesLoaded')); // Odoslať udalosť aj pri chybe
     });
 
 
@@ -1128,8 +1126,75 @@ function App() {
       )
     ) : (
       // Hlavná podmienka pre zobrazenie formulára alebo správ o stave registrácie
-      // OPRAVENÉ: Pridaná kontrola categoriesExist do hlavnej podmienky
-      (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) && categoriesExist ? (
+      isBeforeRegistrationStart ? ( // Prvá priorita: registrácia ešte nezačala
+        React.createElement(
+          'div',
+          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
+          React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
+          registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
+            React.createElement(
+              React.Fragment,
+              null,
+              React.createElement(
+                'p',
+                { className: 'text-md text-gray-700 mt-2' },
+                'Registrácia sa spustí ',
+                React.createElement(
+                  'span',
+                  { style: { whiteSpace: 'nowrap' } },
+                  'dňa ',
+                  registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                  ' o ',
+                  registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
+                  ' hod.'
+                )
+              ),
+              countdown && (
+                  React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdown}`))
+              )
+            )
+          )
+        )
+      ) : isRegistrationClosed ? ( // Druhá priorita: registrácia je ukončená
+        React.createElement(
+          'div',
+          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
+          React.createElement(
+            'h2',
+              { className: 'text-2xl font-bold mb-2 text-red-600' },
+            'Registrácia na turnaj je už ukončená.'
+          ),
+          React.createElement(
+            'p',
+            { className: 'text-md text-gray-700 mt-2' },
+            'Registrácia bola ukončená ',
+            registrationEndDateObj && React.createElement(
+              'span',
+              { style: { whiteSpace: 'nowrap' } },
+              'dňa ',
+              registrationEndDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+              ' o ',
+              registrationEndDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
+              ' hod.'
+            )
+          )
+        )
+      ) : (!categoriesExist && isRegistrationOpen) ? ( // Tretia priorita: registrácia je otvorená, ale chýbajú kategórie
+        React.createElement(
+            'div',
+            { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
+            React.createElement(
+                'h2',
+                { className: 'text-2xl font-bold mb-2 text-red-600' },
+                'Registrácia momentálne nie je možná.'
+            ),
+            React.createElement(
+                'p',
+                { className: 'text-md text-gray-700 mt-2' },
+                'Pre spustenie registrácie musia byť definované kategórie.'
+            )
+        )
+      ) : ( // Štvrtá priorita: Všetky ostatné prípady (zvyčajne registrácia otvorená a kategórie existujú)
         React.createElement(
           'div',
           { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` },
@@ -1151,7 +1216,7 @@ function App() {
               registrationStartDate: registrationStartDate,
               isRecaptchaReady: isRecaptchaReady,
               isRegistrationClosed: isRegistrationClosed,
-              registrationEndDate: registrationEndDate,
+              registrationEndDate: registrationEndDate, // odovzdávame aj endDate do Page1Form
               hasAnyPage1Data: hasAnyPage1Data,
               categoriesExist: categoriesExist // ODOSIELAME NOVÝ PROP!
             }) :
@@ -1258,74 +1323,6 @@ function App() {
                   notificationType: notificationType,
                   selectedCountryDialCode: selectedCountryDialCode, 
               }) : null
-        )
-      ) : isRegistrationClosed ? (
-        React.createElement(
-          'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
-          React.createElement(
-            'h2',
-              { className: 'text-2xl font-bold mb-2 text-red-600' },
-            'Registrácia na turnaj je už ukončená.'
-          ),
-          React.createElement(
-            'p',
-            { className: 'text-md text-gray-700 mt-2' },
-            'Registrácia bola ukončená ',
-            registrationEndDateObj && React.createElement(
-              'span',
-              { style: { whiteSpace: 'nowrap' } },
-              'dňa ',
-              registrationEndDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-              ' o ',
-              registrationEndDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
-              ' hod.'
-            )
-          )
-        )
-      ) : (isRegistrationOpen === false && countdown) ? (
-        React.createElement(
-          'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
-          React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
-          registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
-            React.createElement(
-              React.Fragment,
-              null,
-              React.createElement(
-                'p',
-                { className: 'text-md text-gray-700 mt-2' },
-                'Registrácia sa spustí ',
-                React.createElement(
-                  'span',
-                  { style: { whiteSpace: 'nowrap' } },
-                  'dňa ',
-                  registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-                  ' o ',
-                  registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
-                  ' hod.'
-                )
-              ),
-              countdown && (
-                  React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdown}`))
-              )
-            )
-          )
-        )
-      ) : ( // NOVINKA: Zobrazenie správy, ak registrácia je otvorená ale neexistujú kategórie
-        React.createElement(
-            'div',
-            { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
-            React.createElement(
-                'h2',
-                { className: 'text-2xl font-bold mb-2 text-red-600' },
-                'Registrácia momentálne nie je možná.'
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-md text-gray-700 mt-2' },
-                'Pre spustenie registrácie musia byť definované kategórie.'
-            )
         )
       )
     )
