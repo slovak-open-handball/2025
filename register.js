@@ -13,8 +13,8 @@ import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
 import { Page5Form } from './register-page5.js';
-import { Page6Form } from './register-page6.js'; 
-import { Page7Form } from './register-page7.js';
+import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
+import { Page7Form } from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
@@ -141,7 +141,7 @@ function App() {
 
   const [countdown, setCountdown] = React.useState(null);
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
-  const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
+  const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0); // NOVINKA: Kľúč pre vynútenie re-renderu a prepočtu useMemo
 
   const [countdownEnd, setCountdownEnd] = React.useState(null);
   const countdownEndIntervalRef = React.useRef(null);
@@ -166,7 +166,7 @@ function App() {
       (isRegStartValid ? now >= regStart : true) &&
       (isRegEndValid ? now <= regEnd : true)
     );
-  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
+  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]); // NOVINKA: Pridaný periodicRefreshKey
 
   const isRegistrationClosed = React.useMemo(() => {
     if (!settingsLoaded) return false;
@@ -174,7 +174,7 @@ function App() {
     // ZMENA: regEnd je už Date objekt alebo null
     const regEnd = registrationEndDate; 
     return regEnd instanceof Date && !isNaN(regEnd.getTime()) && now > regEnd;
-  }, [settingsLoaded, registrationEndDate, periodicRefreshKey]);
+  }, [settingsLoaded, registrationEndDate, periodicRefreshKey]); // NOVINKA: Pridaný periodicRefreshKey
 
   const isBeforeRegistrationStart = React.useMemo(() => {
     if (!settingsLoaded) return false;
@@ -182,7 +182,7 @@ function App() {
     // ZMENA: regStart je už Date objekt alebo null
     const regStart = registrationStartDate; 
     return regStart instanceof Date && !isNaN(regStart.getTime()) && now < regStart;
-  }, [settingsLoaded, registrationStartDate, periodicRefreshKey]);
+  }, [settingsLoaded, registrationStartDate, periodicRefreshKey]); // NOVINKA: Pridaný periodicRefreshKey
 
 
   const calculateTimeLeft = React.useCallback(() => {
@@ -269,7 +269,7 @@ function App() {
     const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
       if (docSnapshot.exists()) {
           const data = docSnapshot.data();
-          // ZMENA: Priamo ukladáme Date objekty z Firestore Timestamp
+          // ZMENA: Priamo ukladáme Date objekty z Firestore Timestamp. ODSTRÁNENÁ funkcia formatToDatetimeLocal tu.
           setRegistrationStartDate(data.registrationStartDate ? data.registrationStartDate.toDate() : null);
           setRegistrationEndDate(data.registrationEndDate ? data.registrationEndDate.toDate() : null);
           setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate() : null);
@@ -333,6 +333,7 @@ function App() {
                 clearInterval(countdownIntervalRef.current);
             }
             setForceRegistrationCheck(prev => prev + 1);
+            setPeriodicRefreshKey(prev => prev + 1); // NOVINKA: Spustiť re-render hneď po skončení odpočtu
         }
     };
 
@@ -362,7 +363,7 @@ function App() {
           if (countdownEndIntervalRef.current) {
               clearInterval(countdownEndIntervalRef.current);
           }
-          setPeriodicRefreshKey(prev => prev + 1);
+          setPeriodicRefreshKey(prev => prev + 1); // NOVINKA: Spustiť re-render hneď po skončení odpočtu
       }
     };
 
@@ -385,9 +386,10 @@ function App() {
   }, [registrationEndDate, calculateTimeLeftToEnd]);
 
   React.useEffect(() => {
+    // Tento interval sa spúšťa každých 100ms, aby zabezpečil plynulú aktualizáciu času pre useMemo hooks
     const interval = setInterval(() => {
       setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000);
+    }, 100); // ZMENA: Aktualizácia každých 100ms pre citlivejšie zmeny dátumu/času
 
     return () => clearInterval(interval);
   }, []);
@@ -1142,27 +1144,25 @@ function App() {
           { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
           React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
           // ZMENA: Priamo používame registrationStartDate, ktoré je už Date objekt
-          registrationStartDate && !isNaN(registrationStartDate.getTime()) && now < registrationStartDate && (
+          registrationStartDate && !isNaN(registrationStartDate.getTime()) && React.createElement( 
+            React.Fragment,
+            null,
             React.createElement(
-              React.Fragment,
-              null,
+              'p',
+              { className: 'text-md text-gray-700 mt-2' },
+              'Registrácia sa spustí ',
               React.createElement(
-                'p',
-                { className: 'text-md text-gray-700 mt-2' },
-                'Registrácia sa spustí ',
-                React.createElement(
-                  'span',
-                  { style: { whiteSpace: 'nowrap' } },
-                  'dňa ',
-                  registrationStartDate.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-                  ' o ',
-                  registrationStartDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
-                  ' hod.'
-                )
-              ),
-              countdown && (
-                  React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdown}`))
+                'span',
+                { style: { whiteSpace: 'nowrap' } },
+                'dňa ',
+                registrationStartDate.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                ' o ',
+                registrationStartDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
+                ' hod.'
               )
+            ),
+            countdown && (
+                React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdown}`))
             )
           )
         )
