@@ -1,7 +1,7 @@
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { NotificationModal } from './register-page5.js'; // NOVINKA: Import NotificationModal
+import { NotificationModal } from './register-page5.js'; // Import NotificationModal
 
-export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
+export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) { // Odstránené NotificationModal z props, pretože sa importuje
 
     // Získame referenciu na Firebase Firestore
     const db = getFirestore();
@@ -44,16 +44,16 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 }, (error) => {
                     console.error("Chyba pri načítaní veľkostí tričiek:", error);
                     // Používame props pre notifikácie
-                    setShowNotification(true);
-                    setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
-                    setNotificationType('error');
+                    if (setShowNotification) setShowNotification(true);
+                    if (setNotificationMessage) setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
+                    if (setNotificationType) setNotificationType('error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre veľkosti tričiek:", e);
                 // Používame props pre notifikácie
-                setShowNotification(true);
-                setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
-                setNotificationType('error');
+                if (setShowNotification) setShowNotification(true);
+                if (setNotificationMessage) setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
+                if (setNotificationType) setNotificationType('error');
             }
         };
 
@@ -226,14 +226,13 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
     // Funkcia pre spracovanie odoslania formulára pre túto stránku
     const handlePage4Submit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        // Prístup k setShowNotification, setNotificationMessage, setNotificationType z props
-        closeNotification();
+        if (setLoading) setLoading(true);
+        if (closeNotification) closeNotification();
 
         if (!isFormValidPage4) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím a uistite sa, že počet tričiek zodpovedá počtu členov.", 'error');
-            setNotificationType('error');
-            setLoading(false);
+            if (setNotificationMessage) setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím a uistite sa, že počet tričiek zodpovedá počtu členov.", 'error');
+            if (setNotificationType) setNotificationType('error');
+            if (setLoading) setLoading(false);
             return;
         }
 
@@ -242,10 +241,10 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
             await handleNextPage4(teamsData);
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page4:", error);
-            setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
-            setNotificationType('error');
+            if (setNotificationMessage) setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
+            if (setNotificationType) setNotificationType('error');
         } finally {
-            setLoading(false);
+            if (setLoading) setLoading(false);
         }
     };
 
