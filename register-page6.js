@@ -101,6 +101,35 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         };
                     });
 
+                    // NOVINKA: Zabezpečenie správnej štruktúry pre detaily šoférov
+                    const driversMaleCount = team.arrival?.drivers?.male || 0;
+                    const driversFemaleCount = team.arrival?.drivers?.female || 0;
+
+                    const driverDetailsMale = Array.from({ length: driversMaleCount }).map((_, i) => {
+                        const existingDriver = team.driverDetailsMale?.[i] || {}; // Predpokladajme, že existujú takéto polia
+                        return {
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingDriver,
+                            address: { ...(existingDriver.address || {}) }
+                        };
+                    });
+
+                    const driverDetailsFemale = Array.from({ length: driversFemaleCount }).map((_, i) => {
+                        const existingDriver = team.driverDetailsFemale?.[i] || {}; // Predpokladajme, že existujú takéto polia
+                        return {
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingDriver,
+                            address: { ...(existingDriver.address || {}) }
+                        };
+                    });
+
+
                     return {
                         ...team, // Rozšíri všetky existujúce vlastnosti z pôvodného objektu tímu
                         players: playersCount, // Zabezpečí, aby počty boli čísla
@@ -109,6 +138,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         playerDetails: playerDetails,
                         womenTeamMemberDetails: womenTeamMemberDetails,
                         menTeamMemberDetails: menTeamMemberDetails,
+                        driverDetailsMale: driverDetailsMale, // NOVINKA
+                        driverDetailsFemale: driverDetailsFemale, // NOVINKA
                         // Zabezpečenie, aby accommodation bol vždy objekt s type property
                         accommodation: {
                             type: team.accommodation?.type || '', // Inicializuj type z existujúceho, alebo na prázdny reťazec
@@ -337,6 +368,42 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         });
     };
 
+    // NOVINKA: Funkcia na zmenu detailov šoféra
+    const handleDriverDetailChange = (categoryName, teamIndex, driverIndex, genderType, field, value) => {
+        setLocalTeamDetails(prevDetails => {
+            const newDetails = JSON.parse(JSON.stringify(prevDetails));
+            const detailArrayName = `driverDetails${genderType === 'male' ? 'Male' : 'Female'}`; // 'driverDetailsMale' alebo 'driverDetailsFemale'
+            const driverToUpdate = newDetails[categoryName][teamIndex][detailArrayName][driverIndex];
+
+            if (!driverToUpdate.address) {
+                driverToUpdate.address = { street: '', houseNumber: '', city: '', postalCode: '', country: '' };
+            }
+
+            if (field.startsWith('address.')) {
+                const addressField = field.substring('address.'.length);
+                if (addressField === 'postalCode') {
+                    let rawValue = value.replace(/[^0-9]/g, '');
+                    let formattedValue = rawValue;
+
+                    if (rawValue.length > 5) {
+                        rawValue = rawValue.substring(0, 5);
+                    }
+
+                    if (rawValue.length > 3) {
+                        formattedValue = rawValue.substring(0, 3) + ' ' + rawValue.substring(3, 5);
+                    }
+                    driverToUpdate.address[addressField] = formattedValue;
+                } else {
+                    driverToUpdate.address[addressField] = value;
+                }
+            } else {
+                driverToUpdate[field] = value;
+            }
+            return newDetails;
+        });
+    };
+
+
     // Všetky polia sú teraz nepovinné, takže formulár je vždy "platný" na postup
     const isFormValidPage6 = React.useMemo(() => {
         for (const categoryName in playerErrors) {
@@ -375,6 +442,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     finalTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     finalTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
                     finalTeamsData[categoryName][teamIndex].menTeamMemberDetails = localTeam.menTeamMemberDetails;
+                    finalTeamsData[categoryName][teamIndex].driverDetailsMale = localTeam.driverDetailsMale; // NOVINKA
+                    finalTeamsData[categoryName][teamIndex].driverDetailsFemale = localTeam.driverDetailsFemale; // NOVINKA
                 }
             });
         }
@@ -391,6 +460,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     updatedTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     updatedTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
                     updatedTeamsData[categoryName][teamIndex].menTeamMemberDetails = localTeam.menTeamMemberDetails;
+                    updatedTeamsData[categoryName][teamIndex].driverDetailsMale = localTeam.driverDetailsMale; // NOVINKA
+                    updatedTeamsData[categoryName][teamIndex].driverDetailsFemale = localTeam.driverDetailsFemale; // NOVINKA
                 }
             });
         }
@@ -433,6 +504,9 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                             const playersCount = parseInt(team.players, 10) || 0;
                             const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                             const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
+                            const driversMaleCount = team.arrival?.drivers?.male || 0; // NOVINKA: Počet mužov šoférov
+                            const driversFemaleCount = team.arrival?.drivers?.female || 0; // NOVINKA: Počet žien šoférov
+
 
                             const hasAccommodation = team.accommodation && team.accommodation.type && team.accommodation.type.toLowerCase() !== 'bez ubytovania';
 
@@ -864,6 +938,260 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                             value: member.address?.country || '',
                                                             onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'address.country', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Štát'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    )
+                                                )
+                                            )
+                                        );
+                                    })
+                                ),
+
+                                // NOVINKA: Detaily šoférov (muži)
+                                driversMaleCount > 0 && React.createElement(
+                                    'div',
+                                    null,
+                                    React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (muži)'),
+                                    Array.from({ length: driversMaleCount }).map((_, driverIndex) => {
+                                        const driver = team.driverDetailsMale?.[driverIndex] || {};
+                                        return React.createElement('div', { key: `male-driver-input-${categoryName}-${teamIndex}-${driverIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
+                                            React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Muž šofér ${driverIndex + 1}`),
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                    React.createElement('label', { htmlFor: `firstName-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `firstName-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: driver.firstName || '',
+                                                        onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'firstName', e.target.value),
+                                                        disabled: loading,
+                                                        placeholder: 'Meno šoféra'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                    React.createElement('label', { htmlFor: `lastName-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `lastName-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: driver.lastName || '',
+                                                        onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'lastName', e.target.value),
+                                                        disabled: loading,
+                                                        placeholder: 'Priezvisko šoféra'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' },
+                                                    React.createElement('label', { htmlFor: `dateOfBirth-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
+                                                    React.createElement('input', {
+                                                        type: 'date',
+                                                        id: `dateOfBirth-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: driver.dateOfBirth || '',
+                                                        onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'dateOfBirth', e.target.value),
+                                                        disabled: loading,
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                )
+                                            ),
+                                            // Conditional rendering for address fields
+                                            React.createElement('div', {
+                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`
+                                            },
+                                                hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
+                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}` },
+                                                    React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                        React.createElement('label', { htmlFor: `street-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `street-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.street || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'address.street', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Ulica'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', { className: `w-24` },
+                                                        React.createElement('label', { htmlFor: `houseNumber-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `houseNumber-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.houseNumber || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'address.houseNumber', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Číslo'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                        React.createElement('label', { htmlFor: `city-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `city-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.city || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'address.city', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Mesto'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                        React.createElement('label', { htmlFor: `postalCode-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `postalCode-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.postalCode || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'address.postalCode', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            maxLength: 6,
+                                                            placeholder: '000 00'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                        React.createElement('label', { htmlFor: `country-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Štát'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `country-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.country || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'address.country', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Štát'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    )
+                                                )
+                                            )
+                                        );
+                                    })
+                                ),
+
+                                // NOVINKA: Detaily šoférov (ženy)
+                                driversFemaleCount > 0 && React.createElement(
+                                    'div',
+                                    null,
+                                    React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (ženy)'),
+                                    Array.from({ length: driversFemaleCount }).map((_, driverIndex) => {
+                                        const driver = team.driverDetailsFemale?.[driverIndex] || {};
+                                        return React.createElement('div', { key: `female-driver-input-${categoryName}-${teamIndex}-${driverIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
+                                            React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Žena šofér ${driverIndex + 1}`),
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                    React.createElement('label', { htmlFor: `firstName-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `firstName-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: driver.firstName || '',
+                                                        onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'firstName', e.target.value),
+                                                        disabled: loading,
+                                                        placeholder: 'Meno šoféra'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                    React.createElement('label', { htmlFor: `lastName-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `lastName-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: driver.lastName || '',
+                                                        onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'lastName', e.target.value),
+                                                        disabled: loading,
+                                                        placeholder: 'Priezvisko šoféra'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' },
+                                                    React.createElement('label', { htmlFor: `dateOfBirth-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
+                                                    React.createElement('input', {
+                                                        type: 'date',
+                                                        id: `dateOfBirth-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: driver.dateOfBirth || '',
+                                                        onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'dateOfBirth', e.target.value),
+                                                        disabled: loading,
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                )
+                                            ),
+                                            // Conditional rendering for address fields
+                                            React.createElement('div', {
+                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`
+                                            },
+                                                hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
+                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}` },
+                                                    React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                        React.createElement('label', { htmlFor: `street-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `street-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.street || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'address.street', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Ulica'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', { className: `w-24` },
+                                                        React.createElement('label', { htmlFor: `houseNumber-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `houseNumber-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.houseNumber || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'address.houseNumber', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Číslo'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                        React.createElement('label', { htmlFor: `city-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `city-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.city || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'address.city', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Mesto'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                        React.createElement('label', { htmlFor: `postalCode-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `postalCode-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.postalCode || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'address.postalCode', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            maxLength: 6,
+                                                            placeholder: '000 00'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                        React.createElement('label', { htmlFor: `country-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Štát'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `country-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: driver.address?.country || '',
+                                                            onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'address.country', e.target.value),
                                                             disabled: loading || !hasAccommodation,
                                                             placeholder: 'Štát'
                                                         }),
