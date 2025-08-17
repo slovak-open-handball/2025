@@ -532,7 +532,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
 
 
 // Hlavný komponent Page5Form
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate, onGranularTeamsDataChange }) {
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate, onGranularTeamsDataChange, numberOfPlayersLimit, numberOfTeamMembersLimit }) {
     const db = getFirestore();
 
     const [notificationMessage, setNotificationMessage] = React.useState('');
