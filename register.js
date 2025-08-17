@@ -1021,9 +1021,14 @@ function App() {
   const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null;
   const registrationEndDateObj = registrationEndDate ? new Date(registrationEndDate) : null;
 
+
+  // Dynamické nastavenie triedy pre šírku hlavného kontajnera
+  const mainContainerWidthClass = page === 6 ? 'max-w-6xl' : 'max-w-md';
+
+
   return React.createElement(
     'div',
-    { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
+    { className: `min-h-screen flex items-center justify-center bg-gray-100 p-4` },
     // NotificationModal pre App komponent zostáva tu
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
@@ -1061,7 +1066,7 @@ function App() {
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' }, 
+          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` }, {/* Dynamické nastavenie šírky */}
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
