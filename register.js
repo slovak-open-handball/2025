@@ -1061,7 +1061,7 @@ function App() {
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' }, {/* VRÁTENIE ŠÍRKY NA PÔVODNÚ max-w-md */}
+          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' }, 
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
