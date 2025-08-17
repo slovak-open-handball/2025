@@ -1067,7 +1067,7 @@ function App() {
 
   return React.createElement(
     'div',
-    { className: `min-h-screen flex items-start justify-center bg-gray-100 p-4` }, {/* Zmenené items-center na items-start */}
+    { className: `min-h-screen flex items-start justify-center bg-gray-100 p-4` },
     // NotificationModal pre App komponent zostáva tu
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
