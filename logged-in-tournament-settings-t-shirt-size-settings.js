@@ -1,7 +1,75 @@
-import { doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcie showNotification a sendAdminNotification sa očakávajú ako props z nadradeného komponentu.
 // Preto ich tu neimportujeme ani nedefinujeme.
+
+// Pomocná funkcia na parsovanie a normalizáciu veľkostí pre účely triedenia.
+// Vráti objekt s typom veľkosti (child, adult) a hodnotou pre triedenie.
+const parseTshirtSize = (size) => {
+  const trimmedSize = size.trim().toUpperCase();
+
+  // Regex pre detské veľkosti "číslo - číslo"
+  const childSizeMatch = trimmedSize.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (childSizeMatch) {
+    return { type: 'child', value: parseInt(childSizeMatch[1], 10), original: size };
+  }
+
+  // Mapovanie pre štandardné dospelé veľkosti a ich varianty
+  const adultSizeMap = {
+    'XS': 0, 'S': 1, 'M': 2, 'L': 3, 'XL': 4, 'XXL': 5,
+    'XXXL': 6, '3XL': 6,
+    'XXXXL': 7, '4XL': 7,
+    'XXXXXL': 8, '5XL': 8,
+    // Pridaj ďalšie, ak sú potrebné
+  };
+
+  // Pre XXXL, 3XL, atď.
+  const customXlMatch = trimmedSize.match(/^(\d+)XL$/);
+  if (customXlMatch) {
+    const numXl = parseInt(customXlMatch[1], 10);
+    return { type: 'adult', value: 3 + (numXl - 3), original: size }; // Normalizácia pre 3XL, 4XL, atď.
+  }
+
+  // Pre tradičné X-ká (XL, XXL, XXXL)
+  if (adultSizeMap.hasOwnProperty(trimmedSize)) {
+    return { type: 'adult', value: adultSizeMap[trimmedSize], original: size };
+  }
+
+  // Ak sa nezhoduje so známymi formátmi, daj mu nízku prioritu (na koniec)
+  // Prípadne by sa sem mohla pridať komplexnejšia logika pre neznáme formáty
+  return { type: 'unknown', value: Infinity, original: size };
+};
+
+// Hlavná funkcia na triedenie veľkostí tričiek
+const sortTshirtSizes = (sizes) => {
+  return [...sizes].sort((a, b) => {
+    const parsedA = parseTshirtSize(a);
+    const parsedB = parseTshirtSize(b);
+
+    // Detské veľkosti sú vždy pred dospelými
+    if (parsedA.type === 'child' && parsedB.type !== 'child') {
+      return -1;
+    }
+    if (parsedA.type !== 'child' && parsedB.type === 'child') {
+      return 1;
+    }
+
+    // Triedenie detských veľkostí podľa číselného rozsahu
+    if (parsedA.type === 'child' && parsedB.type === 'child') {
+      return parsedA.value - parsedB.value;
+    }
+
+    // Triedenie dospelých veľkostí podľa mapovania
+    if (parsedA.type === 'adult' && parsedB.type === 'adult') {
+      return parsedA.value - parsedB.value;
+    }
+
+    // Ak sú oba neznáme, alebo jeden je neznámy, zoradíme ich na koniec.
+    // Prípadne sa tu môže pridať abecedné triedenie pre neznáme.
+    return parsedA.value - parsedB.value;
+  });
+};
+
 
 export function TShirtSizeSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
   const [tshirtSizes, setTshirtSizes] = React.useState([]);
@@ -25,21 +93,24 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
         unsubscribeTshirtSizes = onSnapshot(tshirtSizesDocRef, docSnapshot => {
           if (docSnapshot.exists()) {
             const data = docSnapshot.data();
-            setTshirtSizes(data.sizes || []);
+            // Pri načítaní dát hneď zoraďte
+            setTshirtSizes(sortTshirtSizes(data.sizes || []));
           } else {
+            // Predvolené veľkosti už sú zoradené
+            const defaultSizes = [
+              '134 - 140',
+              '146 - 152',
+              '158 - 164',
+              'XS',
+              'S',
+              'M',
+              'L',
+              'XL',
+              'XXL',
+              'XXXL'
+            ];
             setDoc(tshirtSizesDocRef, {
-              sizes: [
-                '134 - 140',
-                '146 - 152',
-                '158 - 164',
-                'XS',
-                'S',
-                'M',
-                'L',
-                'XL',
-                'XXL',
-                'XXXL'
-              ]
+              sizes: sortTshirtSizes(defaultSizes) // Uistite sa, že aj predvolené sú zoradené pri prvom vytvorení
             }).then(() => {
               // Notifikácia pri úspešnom vytvorení predvolených veľkostí
               if (typeof showNotification === 'function') {
@@ -77,7 +148,7 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
     };
 
     fetchTshirtSizes();
-  }, [db, userProfileData, showNotification]); // Zabezpečujeme re-render ak sa zmení showNotification (ak by sa menilo)
+  }, [db, userProfileData, showNotification]);
 
   const handleOpenAddSizeModal = () => {
     setModalMode('add');
@@ -101,7 +172,6 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
   };
 
   const handleSaveSize = async () => {
-    // Obranná kontrola
     if (typeof showNotification !== 'function') {
         console.error("DEBUG: showNotification prop is not a function in handleSaveSize!");
         return; 
@@ -122,36 +192,42 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
     }
 
     const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts');
+    let updatedSizes = [...tshirtSizes]; // Skúška na aktuálnom stave
 
     try {
       if (modalMode === 'add') {
-        if (tshirtSizes.includes(trimmedNewSize)) {
+        if (updatedSizes.includes(trimmedNewSize)) {
           showNotification(`Veľkosť "${trimmedNewSize}" už existuje.`, 'error');
           return;
         }
-        await updateDoc(tshirtSizesDocRef, {
-          sizes: arrayUnion(trimmedNewSize)
-        });
+        updatedSizes.push(trimmedNewSize);
         showNotification(`Veľkosť "${trimmedNewSize}" úspešne pridaná!`, 'success');
         if (typeof sendAdminNotification === 'function') {
             await sendAdminNotification({ type: 'createSize', data: { newSizeValue: trimmedNewSize } });
         }
       } else if (modalMode === 'edit') {
-        if (trimmedNewSize !== currentSizeEdit && tshirtSizes.includes(trimmedNewSize)) {
+        if (trimmedNewSize !== currentSizeEdit && updatedSizes.includes(trimmedNewSize)) {
             showNotification(`Veľkosť "${trimmedNewSize}" už existuje.`, 'error');
             return;
         }
-        await updateDoc(tshirtSizesDocRef, {
-          sizes: arrayRemove(currentSizeEdit)
-        });
-        await updateDoc(tshirtSizesDocRef, {
-          sizes: arrayUnion(trimmedNewSize)
-        });
-        showNotification(`Veľkosť "${currentSizeEdit}" úspešne zmenená na "${trimmedNewSize}"!`, 'success');
-        if (typeof sendAdminNotification === 'function') {
-            await sendAdminNotification({ type: 'editSize', data: { originalSize: currentSizeEdit, newSizeValue: trimmedNewSize } });
+        // Nájdite index pôvodnej veľkosti a nahraďte ju novou
+        const index = updatedSizes.indexOf(currentSizeEdit);
+        if (index > -1) {
+          updatedSizes[index] = trimmedNewSize;
+          showNotification(`Veľkosť "${currentSizeEdit}" úspešne zmenená na "${trimmedNewSize}"!`, 'success');
+          if (typeof sendAdminNotification === 'function') {
+              await sendAdminNotification({ type: 'editSize', data: { originalSize: currentSizeEdit, newSizeValue: trimmedNewSize } });
+          }
+        } else {
+            showNotification(`Pôvodná veľkosť "${currentSizeEdit}" sa nenašla.`, 'error');
+            return;
         }
       }
+      
+      // Zoradenie a uloženie celého zoznamu do databázy
+      await updateDoc(tshirtSizesDocRef, {
+        sizes: sortTshirtSizes(updatedSizes)
+      });
       handleCloseSizeModal();
     } catch (e) {
       showNotification(`Chyba pri ukladaní veľkosti trička: ${e.message}`, 'error');
@@ -169,17 +245,14 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
   };
 
   const handleDeleteSize = async () => {
-    // Obranná kontrola (toto je riadok 160, ak je kód nekomprimovaný)
     if (typeof showNotification !== 'function') {
         console.error("DEBUG: showNotification prop is not a function in handleDeleteSize!");
-        // Ak showNotification nie je funkcia, aspoň zalogujeme chybu
         console.error("Chyba: Nemáte oprávnenie na zmazanie veľkosti trička (showNotification not available).");
-        return; // Zastaví ďalšie vykonávanie funkcie
+        return;
     }
     if (typeof sendAdminNotification !== 'function') {
         console.error("DEBUG: sendAdminNotification prop is not a function in handleDeleteSize!");
     }
-
 
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       showNotification("Nemáte oprávnenie na zmazanie veľkosti trička.", 'error');
@@ -189,8 +262,11 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
 
     try {
       const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts');
+      const updatedSizes = tshirtSizes.filter(size => size !== sizeToDelete); // Odstránenie veľkosti
+      
+      // Zoradenie a uloženie celého zoznamu do databázy
       await updateDoc(tshirtSizesDocRef, {
-        sizes: arrayRemove(sizeToDelete)
+        sizes: sortTshirtSizes(updatedSizes)
       });
       showNotification(`Veľkosť "${sizeToDelete}" úspešne zmazaná!`, 'success');
       if (typeof sendAdminNotification === 'function') {
