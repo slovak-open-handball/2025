@@ -1219,26 +1219,26 @@ function App() {
                   notificationMessage: notificationMessage,
                   closeNotification: closeNotification,
                   numberOfPlayersLimit: numberOfPlayersInTeam, // Potrebné pre validáciu v Page6Form
-                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // Potrebné pre validáciu v Page6Form
+                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers,
                   // Posielame dataEditDeadline ako prop
                   dataEditDeadline: dataEditDeadline,
-                  setNotificationMessage: setNotificationMessage, // NOVINKA: Pass setter
-                  setNotificationType: setNotificationType,     // NOVINKA: Pass setter
-                  notificationType: notificationType, // PRIDANÉ: Posielame aktuálny notificationType
-                  onSaveAndPrev: handleSaveTeamsDataAndPrev, // OPRAVENÉ: Použitie správneho názvu funkcie
+                  setNotificationMessage: setNotificationMessage,
+                  setNotificationType: setNotificationType,
+                  notificationType: notificationType,
+                  onSaveAndPrev: handleSaveTeamsDataAndPrev, 
               }) :
           page === 7 ? // NOVINKA: Renderovanie Page7Form (súhrn)
               React.createElement(Page7Form, {
                   formData: formData,
-                  teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
+                  teamsDataFromPage4: teamsDataFromPage4, 
                   handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
-                  handleSubmit: confirmFinalRegistration, // Funkcia pre finálne odoslanie
+                  handleSubmit: confirmFinalRegistration, 
                   loading: loading,
                   NotificationModal: NotificationModal,
                   notificationMessage: notificationMessage,
                   closeNotification: closeNotification,
                   notificationType: notificationType,
-                  selectedCountryDialCode: selectedCountryDialCode, // NOVINKA: Odovzdanie selectedCountryDialCode
+                  selectedCountryDialCode: selectedCountryDialCode, 
               }) : null
         )
       ) : isRegistrationClosed ? (
