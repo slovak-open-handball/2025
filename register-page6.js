@@ -425,7 +425,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-2 text-center text-gray-800' },
-            'Registrácia - strana 6: Detaily tímu'
+            'Registrácia - strana 6'
         ),
         React.createElement(
             'p',
