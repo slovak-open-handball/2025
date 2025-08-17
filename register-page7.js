@@ -1,7 +1,7 @@
-// register-page6.js
+// register-page7.js
 // Obsahuje komponent pre poslednú stránku registračného formulára - zhrnutie zadaných údajov.
 
-export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification }) {
+export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification }) {
 
     // Funkcia na formátovanie dát tímu pre zobrazenie
     const formatTeamsData = (teams) => {
