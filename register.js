@@ -1064,7 +1064,7 @@ function App() {
 
 
   // Dynamické nastavenie triedy pre šírku hlavného kontajnera
-  const mainContainerWidthClass = page === 6 ? 'max-w-6xl' : 'max-w-md';
+  const mainContainerWidthClass = (page === 6 || page === 7) ? 'max-w-6xl' : 'max-w-md';
 
   // NOVINKA: useEffect na posúvanie sa na začiatok pri zmene stránky
   React.useEffect(() => {
