@@ -214,29 +214,30 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         
                         // Zobrazenie tabuľky pre všetkých účastníkov
                         allParticipants.length > 0 ? (
-                            React.createElement('div', { className: 'overflow-x-auto' },
-                                React.createElement('table', { className: 'min-w-full bg-white border border-gray-300 rounded-lg shadow-sm' },
+                            // Odstránený overflow-x-auto pre dynamickú šírku a upravené štýly stĺpcov
+                            React.createElement('div', null, 
+                                React.createElement('table', { className: 'min-w-full bg-white border border-gray-300 rounded-lg shadow-sm table-fixed' }, // Pridané table-fixed
                                     React.createElement('thead', null,
                                         React.createElement('tr', { className: 'bg-gray-200 text-gray-700 uppercase text-sm leading-normal' },
-                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Typ'),
-                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Číslo dresu'),
-                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Meno'),
-                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Priezvisko'),
-                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Dátum narodenia'),
-                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Číslo registrácie'),
-                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Adresa trvalého bydliska')
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Typ'), // Upravené px a minWidth
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, 'Dres'), // Upravené px a minWidth
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Meno'), // Upravené px a minWidth
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Priezvisko'), // Upravené px a minWidth
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Dátum narodenia'), // Upravené px a minWidth
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Registrácia'), // Upravené px a minWidth
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '200px', whiteSpace: 'nowrap' } }, 'Adresa bydliska') // Upravené px a minWidth
                                         )
                                     ),
                                     React.createElement('tbody', { className: 'text-gray-600 text-sm font-light' },
                                         allParticipants.map((participant, pIdx) => (
                                             React.createElement('tr', { key: pIdx, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                                React.createElement('td', { className: 'py-3 px-4 text-left whitespace-nowrap' }, participant.type),
-                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.jerseyNumber),
-                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.firstName),
-                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.lastName),
-                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.dateOfBirth),
-                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.registrationNumber),
-                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.address)
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.type), // Upravené py a px, pridané minHeight
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumber), // Upravené py a px
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.firstName), // Upravené py a px
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.lastName), // Upravené py a px
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.dateOfBirth), // Upravené py a px
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.registrationNumber), // Upravené py a px
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.address) // Upravené py a px
                                             )
                                         ))
                                     )
@@ -292,8 +293,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 React.createElement('p', null, React.createElement('strong', null, 'Krajina: '), formData.country || '-')
             ),
 
-            // Odstránený blok "Hlavné informácie (registranta)"
-
             React.createElement(
                 'div',
                 { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
@@ -308,7 +307,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     'button',
                     {
                         type: 'button',
-                        // NOVINKA: Odovzdávame aktuálne dáta do handlePrev
                         onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
