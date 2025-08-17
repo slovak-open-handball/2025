@@ -1,3 +1,5 @@
+import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // NOVINKA: Import doc a onSnapshot
+
 // Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
 
 export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit }) {
