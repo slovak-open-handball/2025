@@ -12,7 +12,7 @@ import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js'
 import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
-import { Page5Form, NotificationModal } from './register-page5.js'; // Import NotificationModal
+import { Page5Form } from './register-page5.js'; // Import NotificationModal
 import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
 import { Page7Form } from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
 
