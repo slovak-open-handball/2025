@@ -206,24 +206,24 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         const player = team.playerDetails?.[playerIndex] || {};
                                         return React.createElement('div', { key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
                                             React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Hráč ${playerIndex + 1}`),
-                                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-                                                React.createElement('div', null,
-                                                    React.createElement('label', { htmlFor: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo dresu'),
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' }, {/* Changed grid to flex */ }
+                                                React.createElement('div', { className: 'w-24' }, {/* Added width for smaller input */ }
+                                                    React.createElement('label', { htmlFor: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dres'),
                                                     React.createElement('input', {
-                                                        type: 'text', // Text to allow empty string and then validate for numbers only
+                                                        type: 'text',
                                                         id: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`,
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: player.jerseyNumber || '',
                                                         onChange: (e) => {
-                                                            const value = e.target.value.replace(/[^0-9]/g, ''); // Len číselný údaj
+                                                            const value = e.target.value.replace(/[^0-9]/g, '');
                                                             handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumber', value);
                                                         },
                                                         required: true,
                                                         disabled: loading,
-                                                        placeholder: 'Napr. 10'
+                                                        placeholder: 'Číslo'
                                                     })
                                                 ),
-                                                React.createElement('div', null,
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' }, {/* Flexible width */ }
                                                     React.createElement('label', { htmlFor: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -236,7 +236,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         placeholder: 'Meno hráča'
                                                     })
                                                 ),
-                                                React.createElement('div', null,
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' }, {/* Flexible width */ }
                                                     React.createElement('label', { htmlFor: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -249,7 +249,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         placeholder: 'Priezvisko hráča'
                                                     })
                                                 ),
-                                                React.createElement('div', null,
+                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' }, {/* Flexible width */ }
                                                     React.createElement('label', { htmlFor: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
                                                     React.createElement('input', {
                                                         type: 'date',
@@ -261,18 +261,18 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                     })
                                                 ),
-                                                React.createElement('div', { className: 'flex items-center mt-2' },
+                                                React.createElement('div', { className: 'flex-initial w-auto' }, {/* Checkbox takes less space */ }
+                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
                                                     React.createElement('input', {
                                                         type: 'checkbox',
                                                         id: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded',
+                                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded mt-2',
                                                         checked: player.isRegistered || false,
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', e.target.checked),
                                                         disabled: loading,
-                                                    }),
-                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'ml-2 text-gray-700 font-bold text-sm' }, 'Registrovaný')
+                                                    })
                                                 ),
-                                                player.isRegistered && React.createElement('div', null,
+                                                player.isRegistered && React.createElement('div', { className: 'flex-1 min-w-[120px]' }, {/* Flexible width */ }
                                                     React.createElement('label', { htmlFor: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo registrácie'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -282,7 +282,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
                                                         required: true,
                                                         disabled: loading,
-                                                        placeholder: 'Číslo registrácie'
+                                                        placeholder: 'Číslo'
                                                     })
                                                 )
                                             )
@@ -298,8 +298,8 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         const member = team.womenTeamMemberDetails?.[memberIndex] || {};
                                         return React.createElement('div', { key: `woman-member-input-${categoryName}-${teamIndex}-${memberIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
                                             React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Žena ${memberIndex + 1}`),
-                                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-                                                React.createElement('div', null,
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' }, {/* Changed grid to flex */ }
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `firstName-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -312,7 +312,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         placeholder: 'Meno členky'
                                                     })
                                                 ),
-                                                React.createElement('div', null,
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `lastName-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -325,7 +325,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         placeholder: 'Priezvisko členky'
                                                     })
                                                 ),
-                                                React.createElement('div', null,
+                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' },
                                                     React.createElement('label', { htmlFor: `dateOfBirth-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
                                                     React.createElement('input', {
                                                         type: 'date',
@@ -350,8 +350,8 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         const member = team.menTeamMemberDetails?.[memberIndex] || {};
                                         return React.createElement('div', { key: `man-member-input-${categoryName}-${teamIndex}-${memberIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
                                             React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Muž ${memberIndex + 1}`),
-                                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-                                                React.createElement('div', null,
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' }, {/* Changed grid to flex */ }
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `firstName-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -364,7 +364,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         placeholder: 'Meno člena'
                                                     })
                                                 ),
-                                                React.createElement('div', null,
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `lastName-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -377,7 +377,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         placeholder: 'Priezvisko člena'
                                                     })
                                                 ),
-                                                React.createElement('div', null,
+                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' },
                                                     React.createElement('label', { htmlFor: `dateOfBirth-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
                                                     React.createElement('input', {
                                                         type: 'date',
