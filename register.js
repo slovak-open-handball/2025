@@ -1098,23 +1098,6 @@ function App() {
     });
   }, [page]); // Spustí sa vždy, keď sa zmení `page`
 
-  // --- DEBUGGING LOGS ---
-  console.log("--- App Component Render Debug ---");
-  console.log("Current Page:", page);
-  console.log("settingsLoaded:", settingsLoaded);
-  console.log("isAuthReady:", isAuthReady);
-  console.log("registrationStartDate (Date object):", registrationStartDate);
-  console.log("registrationEndDate (Date object):", registrationEndDate);
-  console.log("now (current time):", now.toLocaleString('sk-SK'));
-  console.log("isBeforeRegistrationStart:", isBeforeRegistrationStart);
-  console.log("isRegistrationOpen:", isRegistrationOpen);
-  console.log("isRegistrationClosed:", isRegistrationClosed);
-  console.log("categoriesExist:", categoriesExist);
-  console.log("hasAnyPage1Data (či sú dáta v formulári):", hasAnyPage1Data);
-  console.log("--- End App Component Render Debug ---");
-  // --- END DEBUGGING LOGS ---
-
-
   return React.createElement(
     'div',
     { className: `min-h-screen flex flex-col items-center justify-start bg-gray-100 p-4` },
