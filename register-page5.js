@@ -202,7 +202,7 @@ function TeamAccommodationAndArrival({
             React.createElement(
                 'p',
                 { className: 'text-sm text-gray-600 mb-4' },
-                `Ak budete prichádzať verejnou dopravou a je potrebné pre Vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${tournamentStartDateDisplay} do Žiliny. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
+                `Ak budete prichádzať verejnou dopravou a je potrebné pre Vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${tournamentStartDateDisplay}. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
             ),
             React.createElement(
                 'div',
@@ -769,7 +769,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
         for (const categoryName in teamsDataFromPage4) {
-            // Filter out any undefined/null categories at this level
+            // Filter out any undefined or null categories at this level
             if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
@@ -965,9 +965,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
 
-            // Ak pre tento tím nie je obsadené ani mužské ani ženské pohlavie, môžeš pridať ďalšieho šoféra
-            if (!usedCombinations.has(maleCombo) || !usedCombinations.has(femaleCombo)) {
-                return true;
+            // Ak je aktuálny záznam šoféra už priradený k tomuto tímu, vždy zobraz tento tím.
+            // Inak zobraz tím, ak je pre neho voľné aspoň jedno pohlavie (muž/žena).
+            if (currentEntry?.id && currentEntry.categoryName === team.categoryName && currentEntry.teamIndex === team.teamIndex) {
+                 options.push(team);
+            } else if (!usedCombinations.has(maleCombo) || !usedCombinations.has(femaleCombo)) {
+                 return true; // Ak nájdeme aspoň jednu voľnú kombináciu, povoliť tlačidlo
             }
         }
         return false; // Žiadne ďalšie kombinácie nie je možné pridať
@@ -978,6 +981,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (!teamsDataFromPage4 || Object.keys(teamsDataFromPage4).length === 0) {
             return false;
         }
+
+        let hasTeamWithOwnTransport = false; // Nová premenná na sledovanie, či existuje tím s vlastnou dopravou
 
         // Overenie, či sú všetky tímy a ich dáta platné
         for (const categoryName in teamsDataFromPage4) {
@@ -1008,19 +1013,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     return false; // Čas príchodu musí byť zadaný pre verejnú dopravu
                 }
 
-                // Validácia šoférov pre "vlastná doprava"
+                // Označenie, ak tím má vlastnú dopravu
                 if (team.arrival?.type === 'vlastná doprava') {
-                    const maleDrivers = team.arrival.drivers?.male || 0;
-                    const femaleDrivers = team.arrival.drivers?.female || 0;
-                    if (maleDrivers === 0 && femaleDrivers === 0) {
-                        return false; // Ak je vlastná doprava, musia byť šoféri (aspoň 1)
-                    }
+                    hasTeamWithOwnTransport = true;
                 }
             }
         }
 
-        // Validácia duplicitných záznamov šoférov v rámci driverEntries
+        // Validácia duplicitných záznamov šoférov v rámci driverEntries a neúplných záznamov
         const usedDriverEntryCombinations = new Set();
+        let hasValidDriverEntry = false; // Nová premenná na sledovanie, či existuje aspoň jeden platný šofér
+
         for (const entry of driverEntries) {
             const count = parseInt(entry.count, 10);
             if (isNaN(count) || count <= 0 || entry.gender === '' || entry.categoryName === '' || entry.teamIndex === null) {
@@ -1032,19 +1035,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 return false; // Nájdeme duplicitnú kombináciu tím-pohlavie v rámci driverEntries
             }
             usedDriverEntryCombinations.add(comboKey);
+
+            // Ak záznam o šoférovi patrí k tímu s vlastnou dopravou a má kladný počet, označíme ho ako platný
+            const teamId = `${entry.categoryName}-${entry.teamIndex}`;
+            if (teamsWithOwnTransport.some(team => team.id === teamId) && count > 0) {
+                hasValidDriverEntry = true;
+            }
         }
 
-        // Ak existujú tímy s vlastnou dopravou, musí existovať aspoň jeden záznam šoféra v driverEntries
-        // ktorý patrí k nejakému tímu s vlastnou dopravou a má kladný počet šoférov.
-        if (teamsWithOwnTransport.length > 0) {
-            const hasAnyValidDriverEntryForOwnTransportTeam = driverEntries.some(entry => {
-                const teamId = `${entry.categoryName}-${entry.teamIndex}`;
-                const count = parseInt(entry.count, 10);
-                return (teamsWithOwnTransport.some(team => team.id === teamId) && count > 0);
-            });
-            if (!hasAnyValidDriverEntryForOwnTransportTeam) {
-                return false;
-            }
+        // FINÁLNA VALIDÁCIA PRE ŠOFÉROV S VLASTNOU DOPRAVOU
+        // Ak existuje aspoň jeden tím s vlastnou dopravou, musí existovať aspoň jeden platný záznam o šoférovi
+        if (hasTeamWithOwnTransport && !hasValidDriverEntry) {
+            return false;
         }
         
         return true; // Všetky validácie prešli
@@ -1075,7 +1077,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification();
 
         if (!isFormValidPage5) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musí byť pridaný aspoň jeden šofér pre niektorý z týchto tímov. Uistite sa, že všetky polia šoférov sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error');
+            // Updated error message to reflect the new validation rule
+            let errorMessage = "Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod).";
+            if (teamsWithOwnTransport.length > 0) {
+                errorMessage += " Ak existuje tím s 'vlastnou dopravou', musí byť zadaný aspoň jeden šofér s kladným počtom pre ľubovoľný z týchto tímov. Uistite sa, že všetky polia šoférov sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.";
+            }
+            setNotificationMessage(errorMessage, 'error');
             setNotificationType('error');
             setLoading(false);
             return;
