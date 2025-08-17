@@ -804,17 +804,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         });
     }, []); // Empty dependency array means this function is created once
 
-    // Volá sa pri zmene vnútri Page4Form, aby sa aktualizoval nadradený stav
-    React.useEffect(() => {
-        // Iba ak je `teamsData` (lokálny stav) odlišný od `teamsDataFromPage4` (prop),
-        // vykonáme aktualizáciu rodičovského stavu, aby sme predišli nekonečnej slučke.
-        // Hlboká kontrola rovnosti objektov je dôležitá.
-        if (JSON.stringify(teamsData) !== JSON.stringify(teamsDataFromPage4)) {
-            setTeamsDataFromPage4(teamsData);
-        }
-    }, [teamsDataFromPage4, setTeamsDataFromPage4, teamsDataFromPage4]);
-
-
     // Validácia formulára pre Page4Form
     const isFormValidPage4 = React.useMemo(() => {
         if (!teamsData || Object.keys(teamsData).length === 0) {
