@@ -1,5 +1,57 @@
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { NotificationModal } from './register-page5.js'; // Import NotificationModal
+
+// Komponent pre zobrazenie notifikácií (presunutý sem z register-page5.js)
+function NotificationModal({ message, onClose, type = 'info' }) {
+    const [show, setShow] = React.useState(false);
+    const timerRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (message) {
+            setShow(true);
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+            timerRef.current = setTimeout(() => {
+                setShow(false);
+                setTimeout(onClose, 500);
+            }, 10000); // Zobraziť na 10 sekúnd
+        } else {
+            setShow(false);
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+        }
+
+        return () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+        };
+    }, [message, onClose]);
+
+    if (!show && !message) return null;
+
+    let bgColorClass;
+    if (type === 'success') {
+        bgColorClass = 'bg-green-500';
+    } else if (type === 'error') {
+        bgColorClass = 'bg-red-600';
+    } else {
+        bgColorClass = 'bg-blue-500';
+    }
+
+    return React.createElement(
+        'div',
+        {
+            className: `fixed bottom-4 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-xl transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'} ease-out duration-300 z-50`
+        },
+        React.createElement('div', { className: 'flex justify-between items-center' },
+            React.createElement('span', { className: 'font-semibold' }, message),
+            React.createElement('button', { onClick: onClose, className: 'ml-4 text-white hover:text-gray-200' }, '×')
+        )
+    );
+}
 
 export function Page4Form({
     formData,
@@ -7,21 +59,28 @@ export function Page4Form({
     handleNextPage4,
     loading,
     setLoading = () => {}, // Predvolená prázdna funkcia
-    notificationMessage,
-    setShowNotification = () => {}, // Predvolená prázdna funkcia
-    setNotificationType = () => {}, // Predvolená prázdna funkcia
     setRegistrationSuccess,
     isRecaptchaReady,
     selectedCountryDialCode,
     numberOfPlayersLimit,
     numberOfTeamMembersLimit,
     teamsDataFromPage4,
-    setTeamsDataFromPage4,
-    closeNotification = () => {} // Predvolená prázdna funkcia
-}) { // Odstránené NotificationModal z props, pretože sa importuje
-
+    setTeamsDataFromPage4
+}) {
     // Získame referenciu na Firebase Firestore
     const db = getFirestore();
+
+    // Lokálne stavy pre notifikácie
+    const [notificationMessage, setNotificationMessage] = React.useState('');
+    const [showNotification, setShowNotification] = React.useState(false);
+    const [notificationType, setNotificationType] = React.useState('info');
+
+    // Callback funkcia na zatvorenie notifikácie
+    const closeNotification = React.useCallback(() => {
+        setShowNotification(false);
+        setNotificationMessage('');
+        setNotificationType('info');
+    }, []);
 
     // Stav pre dynamicky načítané veľkosti tričiek z Firestore
     const [tshirtSizes, setTshirtSizes] = React.useState([]);
@@ -29,17 +88,6 @@ export function Page4Form({
     // Lokálny stav pre dáta tímov v rámci Page4Form
     // Inicializujeme ho buď existujúcimi dátami z props (teamsDataFromPage4), alebo prázdnym objektom.
     const [teamsData, setTeamsData] = React.useState(teamsDataFromPage4 || {});
-
-    // Vytvorenie lokálnych aliasov pre funkcie propov, aby sa predišlo ReferenceError
-    // Aj keď sú propom undefined, samotná premenná bude definovaná (s hodnotou undefined).
-    // Tieto aliasy už nie sú striktne potrebné, ak sú props definované s predvolenými hodnotami,
-    // ale ponechávam ich pre konzistenciu a explicitnosť.
-    const _setNotificationMessage = setNotificationMessage;
-    const _setShowNotification = setShowNotification;
-    const _setNotificationType = setNotificationType;
-    const _closeNotification = closeNotification;
-    const _setLoading = setLoading;
-
 
     // Effect pre synchronizáciu teamsDataFromPage4 prop s lokálnym stavom teamsData
     React.useEffect(() => {
@@ -71,17 +119,17 @@ export function Page4Form({
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní veľkostí tričiek:", error);
-                    // Používame lokálne aliasy pre notifikácie
-                    _setShowNotification(true);
-                    _setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
-                    _setNotificationType('error');
+                    // Používame lokálne definované notifikačné funkcie
+                    setShowNotification(true);
+                    setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
+                    setNotificationType('error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre veľkosti tričiek:", e);
-                // Používame lokálne aliasy pre notifikácie
-                _setShowNotification(true);
-                _setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
-                _setNotificationType('error');
+                // Používame lokálne definované notifikačné funkcie
+                setShowNotification(true);
+                setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
+                setNotificationType('error');
             }
         };
 
@@ -92,7 +140,7 @@ export function Page4Form({
                 unsubscribe();
             }
         };
-    }, [db, _setShowNotification, _setNotificationMessage, _setNotificationType]); // Pridaná závislosť na aliasoch
+    }, [db, setShowNotification, setNotificationMessage, setNotificationType]); // Pridaná závislosť na lokálnych funkciách
 
     // Spravuje zmeny v údajoch o tímoch, vrátane hráčov a členov realizačného tímu
     const handleTeamDetailsChange = React.useCallback((categoryName, teamIndex, field, value) => {
@@ -254,13 +302,13 @@ export function Page4Form({
     // Funkcia pre spracovanie odoslania formulára pre túto stránku
     const handlePage4Submit = async (e) => {
         e.preventDefault();
-        _setLoading(true);
-        _closeNotification();
+        setLoading(true);
+        closeNotification(); // Voláme lokálne definovanú funkciu
 
         if (!isFormValidPage4) {
-            _setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím a uistite sa, že počet tričiek zodpovedá počtu členov.", 'error');
-            _setNotificationType('error');
-            _setLoading(false);
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím a uistite sa, že počet tričiek zodpovedá počtu členov.", 'error');
+            setNotificationType('error');
+            setLoading(false);
             return;
         }
 
@@ -269,10 +317,10 @@ export function Page4Form({
             await handleNextPage4(teamsData);
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page4:", error);
-            _setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
-            _setNotificationType('error');
+            setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
+            setNotificationType('error');
         } finally {
-            _setLoading(false);
+            setLoading(false);
         }
     };
 
@@ -686,7 +734,7 @@ export function Page4Form({
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(NotificationModal, { message: notificationMessage, onClose: _closeNotification, type: notificationType }),
+        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
         React.createElement(
             'h2',
