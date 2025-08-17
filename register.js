@@ -987,7 +987,7 @@ function App() {
                     (team.menTeamMembers !== undefined && team.menTeamMembers !== '') ||
                     (team.tshirts && team.tshirts.some(t => t.size.trim() !== '' || (t.quantity !== undefined && t.quantity !== ''))) ||
                     (team.accommodation?.type && team.accommodation.type.trim() !== '') ||
-                    (team.arrival?.type && team.arrival.type.type.trim() !== '') ||
+                    (team.arrival?.type && team.arrival.type.trim() !== '') ||
                     (team.packageId && team.packageId.trim() !== '') ||
                     (team.arrival?.drivers && (team.arrival.drivers.male !== undefined || team.arrival.drivers.female !== undefined)) ||
                     // NOVINKA: Kontrola pre detaily hráčov/členov realizačného tímu
@@ -1061,7 +1061,7 @@ function App() {
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-6xl' },
+          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' }, {/* VRÁTENIE ŠÍRKY NA PÔVODNÚ max-w-md */}
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
@@ -1166,6 +1166,8 @@ function App() {
                   closeNotification: closeNotification,
                   numberOfPlayersLimit: numberOfPlayersInTeam, // Potrebné pre validáciu v Page6Form
                   numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // Potrebné pre validáciu v Page6Form
+                  // Posielame dataEditDeadline ako prop
+                  dataEditDeadline: dataEditDeadline, 
               }) :
           page === 7 ? // NOVINKA: Renderovanie Page7Form (súhrn)
               React.createElement(Page7Form, {
