@@ -622,13 +622,16 @@ function App() {
                 packageDetails: existingTeamData.packageDetails || null,
                 // NOVINKA: Inicializácia polí pre detaily hráčov a realizačného tímu
                 playerDetails: existingTeamData.playerDetails || Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => ({
-                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: ''
+                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre hráča
                 })),
                 womenTeamMemberDetails: existingTeamData.womenTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.womenTeamMembers, 10) || 0 }).map(() => ({
-                    firstName: '', lastName: '', dateOfBirth: ''
+                    firstName: '', lastName: '', dateOfBirth: '',
+                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre ženu
                 })),
                 menTeamMemberDetails: existingTeamData.menTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.menTeamMembers, 10) || 0 }).map(() => ({
-                    firstName: '', lastName: '', dateOfBirth: ''
+                    firstName: '', lastName: '', dateOfBirth: '',
+                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre muža
                 })),
             };
         });
@@ -801,6 +804,7 @@ function App() {
                 if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
 
                 // Normalizácia detailov hráčov a členov realizačného tímu - prázdne polia na prázdne reťazce
+                // A zabezpečenie, že adresa je prítomná a normalizovaná
                 updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
                     ...p,
                     jerseyNumber: p.jerseyNumber || '',
@@ -808,6 +812,13 @@ function App() {
                     lastName: p.lastName || '',
                     dateOfBirth: p.dateOfBirth || '',
                     registrationNumber: p.registrationNumber || '',
+                    address: { 
+                        street: p.address?.street || '',
+                        houseNumber: p.address?.houseNumber || '',
+                        city: p.address?.city || '',
+                        postalCode: p.address?.postalCode || '',
+                        country: p.address?.country || '',
+                    }
                 })) || [];
 
                 updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
@@ -815,6 +826,13 @@ function App() {
                     firstName: m.firstName || '',
                     lastName: m.lastName || '',
                     dateOfBirth: m.dateOfBirth || '',
+                    address: { 
+                        street: m.address?.street || '',
+                        houseNumber: m.address?.houseNumber || '',
+                        city: m.address?.city || '',
+                        postalCode: m.address?.postalCode || '',
+                        country: m.address?.country || '',
+                    }
                 })) || [];
 
                 updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
@@ -822,6 +840,13 @@ function App() {
                     firstName: m.firstName || '',
                     lastName: m.lastName || '',
                     dateOfBirth: m.dateOfBirth || '',
+                    address: { 
+                        street: m.address?.street || '',
+                        houseNumber: m.address?.houseNumber || '',
+                        city: m.address?.city || '',
+                        postalCode: m.address?.postalCode || '',
+                        country: m.address?.country || '',
+                    }
                 })) || [];
 
                 return updatedTeam;
@@ -992,13 +1017,16 @@ function App() {
                     (team.arrival?.drivers && (team.arrival.drivers.male !== undefined || team.arrival.drivers.female !== undefined)) ||
                     // NOVINKA: Kontrola pre detaily hráčov/členov realizačného tímu
                     (team.playerDetails && team.playerDetails.some(p =>
-                        p.jerseyNumber !== '' || p.firstName.trim() !== '' || p.lastName.trim() !== '' || p.dateOfBirth.trim() !== '' || p.registrationNumber.trim() !== ''
+                        p.jerseyNumber !== '' || p.firstName.trim() !== '' || p.lastName.trim() !== '' || p.dateOfBirth.trim() !== '' || p.registrationNumber.trim() !== '' ||
+                        (p.address && (p.address.street.trim() !== '' || p.address.houseNumber.trim() !== '' || p.address.city.trim() !== '' || p.address.postalCode.trim() !== '' || p.address.country.trim() !== ''))
                     )) ||
                     (team.womenTeamMemberDetails && team.womenTeamMemberDetails.some(m =>
-                        m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== ''
+                        m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== '' ||
+                        (m.address && (m.address.street.trim() !== '' || m.address.houseNumber.trim() !== '' || m.address.city.trim() !== '' || m.address.postalCode.trim() !== '' || m.address.country.trim() !== ''))
                     )) ||
                     (team.menTeamMemberDetails && team.menTeamMemberDetails.some(m =>
-                        m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== ''
+                        m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== '' ||
+                        (m.address && (m.address.street.trim() !== '' || m.address.houseNumber.trim() !== '' || m.address.city.trim() !== '' || m.address.postalCode.trim() !== '' || m.address.country.trim() !== ''))
                     ))
                 );
                 if (hasTeamDetails) {
