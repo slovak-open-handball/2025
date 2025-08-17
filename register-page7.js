@@ -88,7 +88,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     // NOVINKA: Zostavíme finálny reťazec pre zobrazenie tričiek
                     const finalTshirtsDisplay = tshirtsDetails === 'žiadne'
                         ? 'žiadne'
-                        : `${tshirtsDetails} (celkom: ${totalTshirtQuantity} ks)`;
+                        : `${tshirtsDetails}, celkom: ${totalTshirtQuantity} ks`;
 
                     // Detaily ubytovania
                     const accommodationDetails = team.accommodation?.type || 'Bez ubytovania';
