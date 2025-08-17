@@ -812,7 +812,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (JSON.stringify(teamsData) !== JSON.stringify(teamsDataFromPage4)) {
             setTeamsDataFromPage4(teamsData);
         }
-    }, [teamsData, setTeamsDataFromPage4, teamsDataFromPage4]);
+    }, [teamsDataFromPage4, setTeamsDataFromPage4, teamsDataFromPage4]);
 
 
     // Validácia formulára pre Page4Form
