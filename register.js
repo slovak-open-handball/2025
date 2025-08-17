@@ -1166,7 +1166,7 @@ function App() {
             )
           )
         )
-      ) : isRegistrationClosed ? ( // Druhá priorita: registrácia je ukončená
+      ) : isRegistrationClosed && !hasAnyPage1Data ? ( // Druhá priorita: registrácia je uzavretá A používateľ nezadal žiadne údaje
         React.createElement(
           'div',
           { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
@@ -1206,7 +1206,7 @@ function App() {
                 'Pre spustenie registrácie musia byť definované kategórie.'
             )
         )
-      ) : ( // Štvrtá priorita: Všetky ostatné prípady (zvyčajne registrácia otvorená a kategórie existujú)
+      ) : ( // Štvrtá priorita: Všetky ostatné prípady (zvyčajne registrácia otvorená a kategórie existujú, ALEBO registrácia je uzavretá, ale sú zadané údaje)
         React.createElement(
           'div',
           { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` },
@@ -1229,8 +1229,8 @@ function App() {
               isRecaptchaReady: isRecaptchaReady,
               isRegistrationClosed: isRegistrationClosed,
               registrationEndDate: registrationEndDate, // Teraz už Date objekt
-              hasAnyPage1Data: hasAnyPage1Data,
-              categoriesExist: categoriesExist // ODOSIELAME NOVÝ PROP!
+              hasAnyPage1Data: hasAnyPage1Data, // ODOSIELAME NOVÝ PROP!
+              categoriesExist: categoriesExist
             }) :
           page === 2 ?
             React.createElement(Page2Form, {
