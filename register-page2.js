@@ -225,8 +225,8 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             value: formData.postalCode || '', // This is a direct formData field
             onChange: handleBillingChange, // Use handleBillingChange for PSČ formatting
             required: true,
-            placeholder: 'Zadajte PSČ (napr. 123 45)',
-            maxLength: 6, // Max length for 5 digits + 1 space
+            placeholder: 'Zadajte PSČ',
+            maxLength: 6, 
             tabIndex: 16,
             disabled: loading
           })
