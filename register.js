@@ -16,1287 +16,715 @@ import { Page5Form } from './register-page5.js';
 import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
 import { Page7Form } from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
 
-// Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-// POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
-import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
 
-// Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'DD. MM. YYYY hh:mm'
-const formatToDatetimeLocal = (date) => {
-  if (!date) return '';
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${day}. ${month}. ${year} ${hours}:${minutes}`;
-};
+// Deklarácia globálnych premenných pre Firebase, ak ešte nie sú definované
+let db;
+let auth;
+let app;
 
-// NotificationModal Component pre zobrazovanie dočasných správ (teraz už NIE JE definovaný tu, ale v Page5Form a Page6Form)
-function NotificationModal({ message, onClose, type = 'info' }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
+// Nastavenie globálnych premenných, ak sú dostupné z Canvas prostredia
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? initialAuthToken : null;
 
-  React.useEffect(() => {
-    if (message) {
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
-    } else {
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+
+// Inicializácia Firebase a prihlásenie
+async function initializeFirebaseAndAuth() {
+  try {
+    if (!app) { // Inicializovať app len raz
+      app = initializeApp(firebaseConfig);
+    }
+    if (!db) { // Inicializovať db len raz
+      db = getFirestore(app);
+    }
+    if (!auth) { // Inicializovať auth len raz
+      auth = getAuth(app);
     }
 
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose]);
+    if (initialAuthToken) {
+      await signInWithCustomToken(auth, initialAuthToken);
+    } else {
+      await signInAnonymously(auth);
+    }
 
-  if (!show && !message) return null;
+    // Nastavenie globálnych premenných pre prístup v iných moduloch
+    window.db = db;
+    window.auth = auth;
+    window.isGlobalAuthReady = true;
 
-  let bgColorClass;
-  if (type === 'success') {
-    bgColorClass = 'bg-green-500';
-  } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // ZMENENÉ: pre chybu je červené pozadie
-  } else {
-    bgColorClass = 'bg-blue-500';
+    const event = new Event('globalDataUpdated');
+    window.dispatchEvent(event);
+
+  } catch (error) {
+    console.error("Chyba pri inicializácii Firebase alebo autentifikácii:", error);
+    // V prípade chyby môžete zobraziť správu používateľovi alebo vykonať inú akciu
   }
-
-  return React.createElement(
-    'div',
-    {
-      className: `fixed bottom-4 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
-      style: { zIndex: 1000 }
-    },
-    React.createElement('p', { className: 'font-semibold' }, message)
-  );
 }
 
+// Spustenie inicializácie Firebase a autentifikácie
+initializeFirebaseAndAuth();
 
-// Hlavný App komponent
+
 function App() {
-  const [page, setPage] = React.useState(1);
+  const [currentPage, setCurrentPage] = React.useState('page1');
   const [formData, setFormData] = React.useState({
+    // Page 1
+    email: '',
+    password: '',
+    passwordConfirm: '',
+    phonePrefix: '',
+    phoneNumber: '',
     firstName: '',
     lastName: '',
-    email: '',
-    contactPhoneNumber: '',
-    password: '',
-    confirmPassword: '',
-    houseNumber: '',
+    birthDate: '',
     country: '',
-    city: '',
-    postalCode: '',
-    street: '',
-    billing: {
-      clubName: '',
+    gender: '',
+    // Page 2
+    billingSameAsContact: true,
+    billingDetails: {
+      companyName: '',
       ico: '',
       dic: '',
       icDph: '',
-    }
-    // accommodation, arrival, packageId, packageDetails are now per-team in teamsDataFromPage4
+      street: '',
+      city: '',
+      postalCode: '',
+      country: ''
+    },
+    // Page 3
+    selectedCategories: {}, // { categoryName: numTeams, ... }
+    // Page 4 details for teams and t-shirts (managed separately to simplify state)
+    // teamsDataFromPage4: { categoryName: [{ teamName: '', players: N, womenTeamMembers: N, menTeamMembers: N, tshirts: [{ size: '', quantity: N }] }], ... }
+    // Page 5 will add accommodation, arrival, package to teamsDataFromPage4
+    // Page 6 will add player/staff details to teamsDataFromPage4
   });
-  const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
+
   const [teamsDataFromPage4, setTeamsDataFromPage4] = React.useState({});
 
-  const [userRole, setUserRole] = React.useState('user');
   const [loading, setLoading] = React.useState(false);
-
-  // Notifikačné stavy zostávajú v App komponente pre jeho vlastné notifikácie
   const [notificationMessage, setNotificationMessage] = React.useState('');
-  const [showNotification, setShowNotification] = React.useState(false);
-  const [notificationType, setNotificationType] = React.useState('info');
-
-  const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false);
-  const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421');
+  const [notificationType, setNotificationType] = React.useState('info'); // 'info', 'success', 'error'
   const [registrationSuccess, setRegistrationSuccess] = React.useState(false);
 
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
-
-  const [registrationStartDate, setRegistrationStartDate] = React.useState('');
-  const [registrationEndDate, setRegistrationEndDate] = React.useState('');
-  const [dataEditDeadline, setDataEditDeadline] = React.useState('');
-  const [rosterEditDeadline, setRosterEditDeadline] = React.useState('');
-  const [numberOfPlayersInTeam, setNumberOfPlayersInTeam] = React.useState(0);
-  const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
-
-  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
-  const [categoriesExist, setCategoriesExist] = React.useState(true);
-  const [categoriesDataFromFirestore, setCategoriesDataFromFirestore] = React.useState({});
-
-  const [countdown, setCountdown] = React.useState(null);
-  const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
-  const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
-
-  const [countdownEnd, setCountdownEnd] = React.useState(null);
-  const countdownEndIntervalRef = React.useRef(null);
-
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
+  const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421'); // Default pre Slovenskú republiku
 
-  const isRegisteringRef = React.useRef(false);
+  const [categoriesData, setCategoriesData] = React.useState({});
+  const [isCategoriesLoaded, setIsCategoriesLoaded] = React.useState(false);
 
-  const countdownIntervalRef = React.useRef(null);
+  const [registrationStart, setRegistrationStart] = React.useState(null);
+  const [registrationEnd, setRegistrationEnd] = React.useState(null);
+  const [countdown, setCountdown] = React.useState('');
+  const [isRegistrationOpen, setIsRegistrationOpen] = React.useState(false);
 
-  const isRegistrationOpen = React.useMemo(() => {
-    if (!settingsLoaded) return false;
-    const now = new Date();
-    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
-    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+  const [numberOfPlayersLimit, setNumberOfPlayersLimit] = React.useState(0);
+  const [numberOfTeamMembersLimit, setNumberOfTeamMembersLimit] = React.useState(0);
 
-    const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
-    const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
-
-    return (
-      (isRegStartValid ? now >= regStart : true) &&
-      (isRegEndValid ? now <= regEnd : true)
-    );
-  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
-
-  const isRegistrationClosed = React.useMemo(() => {
-    if (!settingsLoaded) return false;
-    const now = new Date();
-    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
-    return regEnd instanceof Date && !isNaN(regEnd) && now > regEnd;
-  }, [settingsLoaded, registrationEndDate, periodicRefreshKey]);
-
-  const isBeforeRegistrationStart = React.useMemo(() => {
-    if (!settingsLoaded) return false;
-    const now = new Date();
-    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
-    return regStart instanceof Date && !isNaN(regStart) && now < regStart;
-  }, [settingsLoaded, registrationStartDate, periodicRefreshKey]);
+  const [tournamentStartDate, setTournamentStartDate] = React.useState(null);
+  const [tournamentEndDate, setTournamentEndDate] = React.useState(null);
 
 
-  const calculateTimeLeft = React.useCallback(() => {
-    const now = new Date();
-    const startDate = registrationStartDate ? new Date(registrationStartDate) : null;
-
-    if (!startDate || isNaN(startDate) || now >= startDate) {
-        return null;
-    }
-
-    const difference = startDate.getTime() - now.getTime();
-
-    if (difference <= 0) {
-        return null;
-    }
-
-    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-  }, [registrationStartDate]);
-
-  const calculateTimeLeftToEnd = React.useCallback(() => {
-      const now = new Date();
-      const endDate = registrationEndDate ? new Date(registrationEndDate) : null;
-
-      if (!endDate || isNaN(endDate) || now >= endDate) {
-          return null;
-      }
-
-      const difference = endDate.getTime() - now.getTime();
-
-      if (difference <= 0) {
-          return null;
-      }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-  }, [registrationEndDate]);
-
-
+  // Načítanie globálnych nastavení pre registráciu a limity
   React.useEffect(() => {
-    if (window.showGlobalLoader) {
-      window.showGlobalLoader();
-    }
+    let unsubscribeRegistration;
+    let unsubscribeLimits;
 
-    try {
-      if (typeof window.auth === 'undefined') {
-        console.error("register.js: window.auth nie je definované. Firebase Auth nebolo správne inicializované v register.html.");
-        setNotificationMessage('Chyba pri inicializácii autentifikácie: Firebase Auth chýba.');
-        setShowNotification(true);
-        setNotificationType('error');
-        if (window.hideGlobalLoader) {
-          window.hideGlobalLoader();
-        }
+    const fetchGlobalSettings = () => {
+      if (!window.db) {
+        console.log("Firestore DB nie je zatiaľ k dispozícii pre globálne nastavenia.");
+        setTimeout(fetchGlobalSettings, 100);
         return;
       }
+      try {
+        const registrationDocRef = doc(window.db, 'settings', 'registration');
+        unsubscribeRegistration = onSnapshot(registrationDocRef, (docSnapshot) => {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            const startTimestamp = data.startRegistration instanceof Timestamp ? data.startRegistration.toDate() : null;
+            const endTimestamp = data.endRegistration instanceof Timestamp ? data.endRegistration.toDate() : null;
+            const tournamentStartTimestamp = data.tournamentStart instanceof Timestamp ? data.tournamentStart.toDate() : null;
+            const tournamentEndTimestamp = data.tournamentEnd instanceof Timestamp ? data.tournamentEnd.toDate() : null;
 
-      const unsubscribe = onAuthStateChanged(window.auth, (currentUser) => {
-        setIsAuthReady(true);
-        if (window.hideGlobalLoader) {
-          window.hideGlobalLoader();
-        }
-      });
-
-      return () => {
-        unsubscribe();
-        if (window.hideGlobalLoader) {
-          window.hideGlobalLoader();
-        }
-      };
-    } catch (error) {
-      console.error("Chyba pri inicializácii Firebase Auth v register.js:", error);
-      setNotificationMessage('Chyba pri inicializácii autentifikácie.');
-      setShowNotification(true);
-      setNotificationType('error');
-      if (window.hideGlobalLoader) {
-        window.hideGlobalLoader();
-      }
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (typeof window.db === 'undefined' || !isAuthReady) {
-      return;
-    }
-
-    const settingsDocRef = doc(collection(window.db, 'settings'), 'registration');
-    const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
-      if (docSnapshot.exists()) {
-          const data = docSnapshot.data();
-          setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
-          setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-          setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : '');
-          setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : '');
-          setNumberOfPlayersInTeam(data.numberOfPlayers || 0);
-          setNumberOfImplementationTeamMembers(data.numberOfImplementationTeam || 0);
-
-      } else {
-          setRegistrationStartDate('');
-          setRegistrationEndDate('');
-          setDataEditDeadline('');
-          setRosterEditDeadline('');
-          setNumberOfPlayersInTeam(0); // OPRAVA: Pôvodne numberOfPlayers
-          setNumberOfImplementationTeamMembers(0); // OPRAVA: Pôvodne numberOfImplementationTeam
-      }
-      setSettingsLoaded(true);
-    }, error => {
-      setNotificationMessage(`Chyba pri načítaní nastavení: ${error.message}`);
-      setShowNotification(true);
-      setNotificationType('error');
-      setSettingsLoaded(true);
-    });
-
-    const categoriesDocRef = doc(collection(window.db, 'settings'), 'categories');
-    const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => {
-      if (docSnapshot.exists() && Object.keys(docSnapshot.data()).length > 0) {
-        setCategoriesExist(true);
-        setCategoriesDataFromFirestore(docSnapshot.data());
-      } else {
-        setCategoriesExist(false);
-        setCategoriesDataFromFirestore({});
-      }
-    }, error => {
-      setCategoriesExist(false);
-      setCategoriesDataFromFirestore({});
-      setNotificationMessage(`Chyba pri načítaní kategórií: ${error.message}`);
-      setShowNotification(true);
-      setNotificationType('error');
-    });
-
-
-    return () => {
-      unsubscribeSettings();
-      unsubscribeCategories();
-    };
-  }, [isAuthReady]);
-
-  React.useEffect(() => {
-    const updateCountdown = () => {
-        const timeLeft = calculateTimeLeft();
-        setCountdown(timeLeft);
-        if (timeLeft === null) {
-            if (countdownIntervalRef.current) {
-                clearInterval(countdownIntervalRef.current);
-            }
-            setForceRegistrationCheck(prev => prev + 1);
-        }
-    };
-
-    if (registrationStartDate && new Date(registrationStartDate) > new Date()) {
-        updateCountdown();
-        countdownIntervalRef.current = setInterval(updateCountdown, 1000);
-    } else {
-        setCountdown(null);
-        if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-        }
-    }
-
-    return () => {
-        if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-        }
-    };
-  }, [registrationStartDate, calculateTimeLeft]);
-
-  React.useEffect(() => {
-    const updateCountdownEnd = () => {
-      const timeLeft = calculateTimeLeftToEnd();
-      setCountdownEnd(timeLeft);
-      if (timeLeft === null) {
-          if (countdownEndIntervalRef.current) {
-              clearInterval(countdownEndIntervalRef.current);
+            setRegistrationStart(startTimestamp);
+            setRegistrationEnd(endTimestamp);
+            setTournamentStartDate(tournamentStartTimestamp);
+            setTournamentEndDate(tournamentEndTimestamp);
+          } else {
+            console.warn("Dokument /settings/registration neexistuje.");
+            setRegistrationStart(null);
+            setRegistrationEnd(null);
+            setTournamentStartDate(null);
+            setTournamentEndDate(null);
           }
-          setPeriodicRefreshKey(prev => prev + 1);
+        }, (error) => {
+          console.error("Chyba pri načítaní nastavení registrácie:", error);
+        });
+
+        const limitsDocRef = doc(window.db, 'settings', 'limits');
+        unsubscribeLimits = onSnapshot(limitsDocRef, (docSnapshot) => {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            setNumberOfPlayersLimit(data.numberOfPlayers || 0);
+            setNumberOfTeamMembersLimit(data.numberOfTeamMembers || 0);
+          } else {
+            console.warn("Dokument /settings/limits neexistuje.");
+            setNumberOfPlayersLimit(0);
+            setNumberOfTeamMembersLimit(0);
+          }
+        }, (error) => {
+          console.error("Chyba pri načítaní limitov:", error);
+        });
+
+      } catch (e) {
+        console.error("Chyba pri nastavovaní poslucháča pre globálne nastavenia:", e);
       }
     };
 
-    if (registrationEndDate && new Date(registrationEndDate) > new Date()) {
-        updateCountdownEnd();
-        countdownEndIntervalRef.current = setInterval(updateCountdownEnd, 1000);
-    } else {
-        setCountdownEnd(null);
-        if (countdownEndIntervalRef.current) {
-            clearInterval(countdownEndIntervalRef.current);
-        }
-    }
+    fetchGlobalSettings();
 
     return () => {
-        if (countdownEndIntervalRef.current) {
-            clearInterval(countdownEndIntervalRef.current);
-        }
-    };
-  }, [registrationEndDate, calculateTimeLeftToEnd]);
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  React.useEffect(() => {
-    const checkRecaptcha = () => {
-      if (window.grecaptcha && window.grecaptcha.ready) {
-        window.grecaptcha.ready(() => {
-          setIsRecaptchaReady(true);
-        });
-      } else {
-        setTimeout(checkRecaptcha, 100);
+      if (unsubscribeRegistration) {
+        unsubscribeRegistration();
+      }
+      if (unsubscribeLimits) {
+        unsubscribeLimits();
       }
     };
-    checkRecaptcha();
+  }, []);
+
+  // Timer pre odpočet a kontrolu otvorenia/zatvorenia registrácie
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      let open = false;
+      let countdownString = '';
+
+      if (registrationStart && registrationEnd) {
+        if (now < registrationStart) {
+          const diff = registrationStart.getTime() - now.getTime();
+          countdownString = formatCountdown(diff);
+          open = false; // Ešte nie je otvorená
+        } else if (now >= registrationStart && now <= registrationEnd) {
+          const diff = registrationEnd.getTime() - now.getTime();
+          countdownString = formatCountdown(diff);
+          open = true; // Je otvorená
+        } else {
+          countdownString = 'Registrácia je ukončená.';
+          open = false; // Je ukončená
+        }
+      } else {
+        countdownString = 'Informácie o registrácii nie sú dostupné.';
+        open = false;
+      }
+      setCountdown(countdownString);
+      setIsRegistrationOpen(open);
+
+      // Ak je registrácia ukončená a používateľ nie je na stránke 7 (potvrdenie), presmeruj na stránku 1
+      if (!open && currentPage !== 'page7' && currentPage !== 'page1') {
+        setCurrentPage('page1'); // Automaticky presmeruje na úvodnú stránku
+        setNotificationMessage('Registrácia je momentálne zatvorená.', 'error');
+        setNotificationType('error');
+      }
+
+    }, 1000); // Aktualizovať každú sekundu
+
+    return () => clearInterval(timer);
+  }, [registrationStart, registrationEnd, currentPage]);
+
+  const formatCountdown = (ms) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / (3600 * 24));
+    const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    let parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0 || days > 0) parts.push(`${hours}h`);
+    if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}m`);
+    parts.push(`${seconds}s`);
+
+    return parts.join(' ');
+  };
+
+
+  React.useEffect(() => {
+    if (typeof grecaptcha !== 'undefined' && grecaptcha.enterprise && grecaptcha.enterprise.ready) {
+      grecaptcha.enterprise.ready(function() {
+        setIsRecaptchaReady(true);
+      });
+    } else {
+      // Fallback for local development or if enterprise not available
+      grecaptcha.ready(function() {
+        setIsRecaptchaReady(true);
+      });
+    }
   }, []);
 
 
   const closeNotification = () => {
-    setShowNotification(false);
     setNotificationMessage('');
     setNotificationType('info');
   };
 
-  // Funkcia pre odosielanie notifikácií pre App komponent a Page1/Page2
-  const dispatchAppNotification = React.useCallback((message, type = 'info') => {
-    setNotificationMessage(message);
-    setShowNotification(true);
-    setNotificationType(type);
-  }, [setNotificationMessage, setShowNotification, setNotificationType]);
-
-  // NOVÁ FUNKCIA: handleGranularTeamsDataChange
-  // Táto funkcia je určená na priamu aktualizáciu vnorených dát teamsDataFromPage4.
-  // Používa sa v Page4 a Page5 na aktualizáciu dát o tričkách, ubytovaní, doprave a balíčkoch.
-  const handleGranularTeamsDataChange = React.useCallback((categoryName, teamIndex, field, data) => {
-    setTeamsDataFromPage4(prevTeamsData => {
-        const newTeamsData = { ...prevTeamsData };
-
-        if (typeof categoryName !== 'string' || categoryName.trim() === '') {
-            console.warn("Pokus o aktualizáciu teamsDataFromPage4 s neplatným názvom kategórie:", categoryName);
-            return prevTeamsData;
-        }
-
-        // Zabezpečenie, že kategória existuje ako objekt
-        if (!newTeamsData[categoryName]) {
-            newTeamsData[categoryName] = [];
-        }
-        // Zabezpečenie, že tím na danom indexe existuje a je objekt
-        if (!newTeamsData[categoryName][teamIndex]) {
-            newTeamsData[categoryName][teamIndex] = {};
-        }
-
-        // Špeciálne ošetrenie pre 'arrival' a 'drivers'
-        if (field === 'arrival') {
-            const currentArrival = newTeamsData[categoryName][teamIndex].arrival || {};
-            const updatedArrival = { ...currentArrival, ...data };
-            // Ak sa typ dopravy zmení na iný ako 'vlastná doprava', drivers by mali byť null
-            if (updatedArrival.type !== 'vlastná doprava') {
-                updatedArrival.drivers = null;
-            }
-            newTeamsData[categoryName][teamIndex] = {
-                ...newTeamsData[categoryName][teamIndex],
-                [field]: updatedArrival
-            };
-        } else if (field === 'accommodation' || field === 'packageDetails' || field === 'playerDetails' || field === 'womenTeamMemberDetails' || field === 'menTeamMemberDetails') {
-            // Pre komplexné objekty ako accommodation, packageDetails, playerDetails, womenTeamMemberDetails, menTeamMemberDetails
-            newTeamsData[categoryName][teamIndex] = {
-                ...newTeamsData[categoryName][teamIndex],
-                [field]: data // Celý objekt alebo pole sa nahradí
-            };
-        } else {
-            // Pre ostatné polia
-            newTeamsData[categoryName][teamIndex] = {
-                ...newTeamsData[categoryName][teamIndex],
-                [field]: data
-            };
-        }
-        return newTeamsData;
-    });
-  }, []); // Závislosti: setTeamsDataFromPage4 je stabilné, takže tu nie je potrebné ju uvádzať
-
-  // Pôvodná handleChange, teraz spracováva len hlavné formData polia
   const handleChange = (e) => {
-    const { id, value } = e.target; // Tento riadok teraz bude vždy dostávať platné `id` a `value`
-
-    if (id === 'billing') {
-      // Logika pre fakturačné údaje
-      setFormData(prev => ({
-        ...prev,
-        billing: {
-          ...(prev.billing || {}), // Zabezpečí inicializáciu billing, ak chýba
-          ...value // value je už objekt {id: newValue}
+    const { id, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      setFormData(prevData => ({ ...prevData, [id]: checked }));
+    } else if (id.startsWith('billingDetails.')) {
+      const field = id.split('.')[1];
+      setFormData(prevData => ({
+        ...prevData,
+        billingDetails: {
+          ...prevData.billingDetails,
+          [field]: value
         }
       }));
     } else {
-      // Logika pre ostatné polia vo formData
-      setFormData(prev => ({ ...prev, [id]: value }));
+      setFormData(prevData => ({ ...prevData, [id]: value }));
     }
   };
 
-
-  const handleRoleChange = (e) => {
-    setUserRole(e.target.value);
-  };
-
-  const getRecaptchaToken = async (action) => {
-    if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
-      dispatchAppNotification("reCAPTCHA API nie je načítané alebo pripravené.", 'error');
-      return null;
-    }
-    try {
-      // Oprava: Zmena RECAPTcha_SITE_KEY na RECAPTCHA_SITE_KEY
-      const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
-      return token;
-    } catch (e) {
-      dispatchAppNotification(`Chyba reCAPTCHA: ${e.message}`, 'error');
-      return null;
-    }
-  };
-
-  const handleNext = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
-
-    if (!isRecaptchaReady) {
-      dispatchAppNotification('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.', 'error');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      dispatchAppNotification('Heslá sa nezhodujú.', 'error');
-      setLoading(false);
-      return;
-    }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    if (!passwordRegex.test(formData.password)) {
-      dispatchAppNotification('Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.', 'error');
-      setLoading(false);
-      return;
-    }
-
-    const recaptchaToken = await getRecaptchaToken('page_transition');
-    if (!recaptchaToken) {
-        setLoading(false);
-        return;
-    }
-    setPage(2);
-    setLoading(false);
-  };
-
-  const handleNextPage2ToPage3 = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
-
-    const { clubName, ico, dic, icDph } = formData.billing;
-
-    if (!clubName.trim()) {
-        dispatchAppNotification('Oficiálny názov klubu je povinný.', 'error');
-        setLoading(false);
-        return;
-    }
-
-    if (!ico.trim()) {
-      dispatchAppNotification('IČO je povinné.', 'error');
-      setLoading(false);
-      return;
-    }
-
-    if (icDph) {
-      const icDphRegex = /^[A-Z]{2}[0-9]+$/;
-      if (!icDphRegex.test(icDph)) {
-        dispatchAppNotification('IČ DPH musí zažínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).', 'error');
-        setLoading(false);
-        return;
+  // NOVINKA: Funkcia pre granulárnu aktualizáciu dát tímov
+  const onGranularTeamsDataChange = React.useCallback((categoryName, teamIndex, field, value) => {
+    setTeamsDataFromPage4(prevTeamsData => {
+      const newTeamsData = { ...prevTeamsData };
+      if (!newTeamsData[categoryName]) {
+        newTeamsData[categoryName] = [];
       }
-    }
+      // Inicializácia tímu, ak neexistuje
+      if (!newTeamsData[categoryName][teamIndex]) {
+        newTeamsData[categoryName][teamIndex] = {
+          teamName: '', players: '', womenTeamMembers: '', menTeamMembers: '', tshirts: [{ size: '', quantity: '' }],
+          accommodation: { type: '' }, arrival: { type: '', time: null, drivers: null }, packageId: '', packageDetails: null,
+          playersDetails: [], staffDetails: []
+        };
+      }
 
-    const postalCodeClean = formData.postalCode.replace(/\s/g, '');
-    if (postalCodeClean.length !== 5 || !/^\d{5}$/.test(postalCodeClean)) {
-      dispatchAppNotification('PSČ musí mať presne 5 číslic.', 'error');
-      setLoading(false);
-      return;
-    }
-
-    setPage(3);
-    setLoading(false);
-  };
-
-  const handleNextPage3ToPage4 = async (categoriesDataFromPage3) => {
-    setLoading(true);
-    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
-
-    const transformedCategories = {};
-    categoriesDataFromPage3.forEach(row => {
-        const categoryName = categoriesDataFromFirestore[row.categoryId];
-        // NOVINKA: Skontrolujte, či categoryName je platný reťazec
-        if (categoryName && typeof categoryName === 'string' && categoryName.trim() !== '') {
-            transformedCategories[categoryName] = {
-                numberOfTeams: row.teams
-            };
-        } else {
-            console.warn(`register.js: Názov kategórie pre ID ${row.categoryId} sa nenašiel v categoriesDataFromFirestore alebo je neplatný. Kategória bude preskočená.`);
-        }
+      // Špeciálne spracovanie pre vnorené objekty (accommodation, arrival)
+      if (field === 'accommodation' || field === 'arrival') {
+        newTeamsData[categoryName][teamIndex][field] = {
+          ...newTeamsData[categoryName][teamIndex][field],
+          ...value // Zlúčenie s existujúcimi dátami
+        };
+      } else {
+        newTeamsData[categoryName][teamIndex][field] = value;
+      }
+      return newTeamsData;
     });
+  }, []);
 
-    const newTeamsDataForPage4 = {};
-    const clubName = formData.billing.clubName || '';
 
-    // Iterujeme len cez NOVÉ transformedCategories, aby sme zabezpečili, že newTeamsDataForPage4
-    // bude obsahovať len aktuálne vybrané kategórie.
-    Object.keys(transformedCategories).forEach(categoryName => {
-        const numTeams = transformedCategories[categoryName].numberOfTeams;
-
-        // Zabezpečíme, že existingCategoryTeams je vždy pole pre bezpečné .map()
-        const existingCategoryTeams = Array.isArray(teamsDataFromPage4[categoryName]) ? teamsDataFromPage4[categoryName] : [];
-
-        newTeamsDataForPage4[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
-            const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
-            const generatedTeamName = `${clubName}${suffix}`;
-
-            // Používame existingTeamData pre zachovanie predtým zadaných detailov
-            const existingTeamData = existingCategoryTeams[teamIndex] || {};
-
-            return {
-                teamName: generatedTeamName,
-                players: existingTeamData.players !== undefined ? existingTeamData.players : '',
-                womenTeamMembers: existingTeamData.womenTeamMembers !== undefined ? existingTeamData.womenTeamMembers : '',
-                menTeamMembers: existingTeamData.menTeamMembers !== undefined ? existingTeamData.menTeamMembers : '',
-                tshirts: existingTeamData.tshirts && existingTeamData.tshirts.length > 0
-                    ? existingTeamData.tshirts
-                    : [{ size: '', quantity: '' }],
-                // NOVINKA: Zabezpečiť, aby sa zachovali aj dáta pre Page 5, a pripraviť pre Page 6
-                accommodation: existingTeamData.accommodation || { type: '' },
-                arrival: existingTeamData.arrival || { type: '', time: null, drivers: null }, 
-                packageId: existingTeamData.packageId || '',
-                packageDetails: existingTeamData.packageDetails || null,
-                // NOVINKA: Inicializácia polí pre detaily hráčov a realizačného tímu
-                playerDetails: existingTeamData.playerDetails || Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => ({
-                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
-                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre hráča
-                })),
-                womenTeamMemberDetails: existingTeamData.womenTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.womenTeamMembers, 10) || 0 }).map(() => ({
-                    firstName: '', lastName: '', dateOfBirth: '',
-                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre ženu
-                })),
-                menTeamMemberDetails: existingTeamData.menTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.menTeamMembers, 10) || 0 }).map(() => ({
-                    firstName: '', lastName: '', dateOfBirth: '',
-                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre muža
-                })),
-            };
-        });
-    });
-    // Priama aktualizácia stavu teamsDataFromPage4
-    setTeamsDataFromPage4(newTeamsDataForPage4);
-    console.log("handleNextPage3ToPage4 - newTeamsDataForPage4 (po aktualizácii):", newTeamsDataForPage4); // DEBUG
-
-    setFormData(prev => ({
-        ...prev,
-        categories: transformedCategories
-    }));
-
-    setPage(4);
+  const handleNextPage1 = (data) => {
+    setLoading(true);
+    setFormData(prevData => ({ ...prevData, ...data }));
+    setCurrentPage('page2');
     setLoading(false);
   };
 
-  const handleNextPage4ToPage5 = async (teamsDataFromPage4Final) => {
+  const handleNextPage2 = (data) => {
     setLoading(true);
-    dispatchAppNotification('', 'info');
-
-    // Priama aktualizácia stavu teamsDataFromPage4
-    setTeamsDataFromPage4(teamsDataFromPage4Final);
-    console.log("handleNextPage4ToPage5 - teamsDataFromPage4Final (prijaté z Page4Form, priame nastavenie):", teamsDataFromPage4Final); // DEBUG
-
-    setPage(5);
+    setFormData(prevData => ({ ...prevData, ...data }));
+    setCurrentPage('page3');
     setLoading(false);
   };
 
-  // Funkcia na prechod z Page 5 na Page 6 (detaily hráčov/tímu)
-  const handleNextPage5ToPage6 = async (finalTeamsDataFromPage5) => {
+  const handleNextPage3 = (data, teamsInitialData) => {
     setLoading(true);
-    dispatchAppNotification('', 'info');
-
-    // Priama aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page5
-    setTeamsDataFromPage4(finalTeamsDataFromPage5);
-    console.log("handleNextPage5ToPage6 - finalTeamsDataFromPage5 (prijaté z Page5Form, priame nastavenie):", finalTeamsDataFromPage5); // DEBUG
-
-    setPage(6); // Prechod na Page 6 (detaily hráčov/tímu)
+    setFormData(prevData => ({ ...prevData, selectedCategories: data }));
+    setTeamsDataFromPage4(teamsInitialData); // Nastavenie počiatočných dát pre tímy
+    setCurrentPage('page4');
     setLoading(false);
   };
 
-  // NOVINKA: Funkcia na prechod z Page 6 na Page 7 (súhrn)
-  const handleNextPage6ToPage7 = async (finalTeamsDataFromPage6) => {
+  const handleNextPage4 = (data) => {
     setLoading(true);
-    dispatchAppNotification('', 'info');
+    setTeamsDataFromPage4(data); // Aktualizácia s detailmi z Page4
+    setCurrentPage('page5');
+    setLoading(false);
+  };
 
-    // Priama aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page6
-    setTeamsDataFromPage4(finalTeamsDataFromPage6);
-    console.log("handleNextPage6ToPage7 - finalTeamsDataFromPage6 (prijaté z Page6Form, priame nastavenie):", finalTeamsDataFromPage6); // DEBUG
+  const handleNextPage5 = (data) => {
+    setLoading(true);
+    setTeamsDataFromPage4(data); // Aktualizácia s detailmi z Page5
+    setCurrentPage('page6');
+    setLoading(false);
+  };
 
-    setPage(7); // Prechod na Page 7 (súhrn)
+  const handleNextPage6 = (data) => { // NOVINKA: handleNextPage6
+    setLoading(true);
+    setTeamsDataFromPage4(data); // Aktualizácia s detailmi z Page6
+    setCurrentPage('page7');
     setLoading(false);
   };
 
   // Upravená handlePrev funkcia na prijímanie voliteľných aktualizovaných dát
-  const handlePrev = (updatedData = null) => {
-    if (updatedData) {
-        setTeamsDataFromPage4(updatedData);
-    }
-    setPage(prevPage => prevPage - 1);
-    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
-  };
-
-  // Nová funkcia pre uloženie dát z Page6Form a následný prechod späť
-  const handleSaveTeamsDataAndPrev = (updatedTeamsData) => {
-    setTeamsDataFromPage4(updatedTeamsData);
-    handlePrev(); // Zavolajte pôvodnú handlePrev bez argumentu
-  };
-
-
-  // NOVINKA: Nová funkcia pre finálne odoslanie registrácie (volaná z Page7Form)
-  const confirmFinalRegistration = async () => {
+  const handlePrev = ({ currentFormData, currentTeamsDataFromPage4 }) => { // <--- ZMENA TU: Prijíma objekt s dátami
     setLoading(true);
-    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
-    isRegisteringRef.current = true;
+    let newCurrentPage = currentPage;
+    if (currentPage === 'page2') {
+      newCurrentPage = 'page1';
+    } else if (currentPage === 'page3') {
+      newCurrentPage = 'page2';
+    } else if (currentPage === 'page4') {
+      newCurrentPage = 'page3';
+    } else if (currentPage === 'page5') {
+      newCurrentPage = 'page4';
+    } else if (currentPage === 'page6') {
+      newCurrentPage = 'page5';
+    } else if (currentPage === 'page7') {
+      newCurrentPage = 'page6';
+    }
+    setCurrentPage(newCurrentPage);
 
-    const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
-    
-    // Vytvorenie hlbokej kópie teamsDataFromPage4, aby sme mohli manipulovať s dátami bez vedľajších efektov
-    let teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
+    // Aktualizácia formData a teamsDataFromPage4 so stavom z opúšťanej stránky
+    setFormData(currentFormData);
+    setTeamsDataFromPage4(currentTeamsDataFromPage4);
+
+    setLoading(false);
+  };
+
+
+  const handleSubmitFinal = async (finalTeamsData) => {
+    setLoading(true);
+    setNotificationMessage('');
+    setNotificationType('info');
 
     try {
-      const authInstance = window.auth;
-      const firestoreDb = window.db;
+      // Zlúčenie formData a finalTeamsData pre konečné odoslanie
+      const finalData = {
+        ...formData,
+        teamsData: finalTeamsData, // Pridanie detailov tímov
+        registrationDate: new Date() // Dátum a čas registrácie
+      };
 
-      if (!authInstance || !firestoreDb) {
-        dispatchAppNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error');
-        return;
-      }
+      // Odstránenie citlivých údajov pred odoslaním na Google Apps Script
+      const dataToSend = { ...finalData };
+      delete dataToSend.password;
+      delete dataToSend.passwordConfirm;
 
-      let recaptchaToken = null;
-      try {
-        recaptchaToken = await getRecaptchaToken('register_user');
-        if (!recaptchaToken) {
-          dispatchAppNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error');
-          return;
-        }
-      } catch (recaptchaError) {
-          dispatchAppNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error');
-          return;
-      }
-
-      let user = null;
-      try {
-        const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
-        user = userCredential.user;
-
-        if (!user || !user.uid) {
-          dispatchAppNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error');
-          return;
-        }
-
-      } catch (authError) {
-          let authErrorMessage = 'Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.';
-          if (authError.code) {
-              switch (authError.code) {
-                  case 'auth/email-already-in-use':
-                      authErrorMessage = 'Zadaná e-mailová adresa je už používaná.';
-                      break;
-                  case 'auth/invalid-email':
-                      authErrorMessage = 'Neplatný formát e-mailovej adresy.';
-                      break;
-                  case 'auth/weak-password':
-                      authErrorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
-                      break;
-                  default:
-                      authErrorMessage = authError.message || authErrorMessage;
-                      break;
-              }
-          } else {
-              authErrorMessage = authError.message || authErrorMessage;
-          }
-          dispatchAppNotification(authErrorMessage, 'error');
-          return;
-      }
-
-      const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
-      try {
-        // Prejdite `teamsDataToSaveFinal` a zabezpečte správnu štruktúru `drivers`
-        // Page5Form už odosiela správne agregované dáta o šoféroch v `team.arrival.drivers`
-        // takto: { male: count, female: count }.
-        // Táto slučka zabezpečuje, že všetky tímy majú správne inicializované fields
-        // a `drivers` je null, ak nebola zvolená 'vlastná doprava'.
-        for (const categoryName in teamsDataToSaveFinal) {
-            // Zabezpečíme, že teamsDataToSaveFinal[categoryName] je pole, predtým než zavoláme .map()
-            teamsDataToSaveFinal[categoryName] = Array.isArray(teamsDataToSaveFinal[categoryName])
-                ? teamsDataToSaveFinal[categoryName].map(team => {
-                    const updatedTeam = { ...team };
-
-                    // Normalizácia polí, ktoré môžu byť prázdne stringy
-                    updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
-                    updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
-                    updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
-                    
-                    // Normalizácia tričiek
-                    updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
-                        ...tshirt,
-                        quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                    }));
-
-                    // Normalizácia ubytovania
-                    updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
-                    if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
-
-                    // Normalizácia príchodu a šoférov
-                    updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
-                    if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
-                    
-                    // Ak je typ príchodu 'vlastná doprava', uistite sa, že drivers sú správne {male: ..., female: ...}
-                    // Inak nastavte drivers na null.
-                    if (updatedTeam.arrival.type === 'vlastná doprava') {
-                        updatedTeam.arrival.drivers = {
-                            male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
-                            female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
-                        };
-                    } else {
-                        updatedTeam.arrival.drivers = null;
-                    }
-
-                    // Normalizácia balíčka
-                    if (updatedTeam.packageId === '') updatedTeam.packageId = null;
-                    if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
-
-                    // Normalizácia detailov hráčov a členov realizačného tímu - prázdne polia na prázdne reťazce
-                    // A zabezpečenie, že adresa je prítomná a normalizovaná
-                    updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
-                        ...p,
-                        jerseyNumber: p.jerseyNumber || '',
-                        firstName: p.firstName || '',
-                        lastName: p.lastName || '',
-                        dateOfBirth: p.dateOfBirth || '',
-                        registrationNumber: p.registrationNumber || '',
-                        address: { 
-                            street: p.address?.street || '',
-                            houseNumber: p.address?.houseNumber || '',
-                            city: p.address?.city || '',
-                            postalCode: p.address?.postalCode || '',
-                            country: p.address?.country || '',
-                        }
-                    })) || [];
-
-                    updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
-                        ...m,
-                        firstName: m.firstName || '',
-                        lastName: m.lastName || '',
-                        dateOfBirth: m.dateOfBirth || '',
-                        address: { 
-                            street: m.address?.street || '',
-                            houseNumber: m.address?.houseNumber || '',
-                            city: m.address?.city || '',
-                            postalCode: m.address?.postalCode || '',
-                            country: m.address?.country || '',
-                        }
-                    })) || [];
-
-                    updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
-                        ...m,
-                        firstName: m.firstName || '',
-                        lastName: m.lastName || '',
-                        dateOfBirth: m.dateOfBirth || '',
-                        address: { 
-                            street: m.address?.street || '',
-                            houseNumber: m.address?.houseNumber || '',
-                            city: m.address?.city || '',
-                            postalCode: m.address?.postalCode || '',
-                            country: m.address?.country || '',
-                        }
-                    })) || [];
-
-                    return updatedTeam;
-                })
-                : []; // Ak to nie je pole, nastavíme prázdne pole
-        }
-
-        await setDoc(userDocRef, {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          contactPhoneNumber: fullPhoneNumber,
-          country: formData.country,
-          city: formData.city,
-          postalCode: formData.postalCode,
-          street: formData.street,
-          houseNumber: formData.houseNumber,
-          billing: formData.billing,
-          role: userRole,
-          approved: true,
-          registrationDate: serverTimestamp(),
-          passwordLastChanged: serverTimestamp(),
-          categories: formData.categories,
-          teams: teamsDataToSaveFinal, // Uložíme celú štruktúru s dátami Page 5 a Page 6
-        });
-      } catch (firestoreError) {
-          let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
-          if (firestoreError.code === 'permission-denied') {
-              firestoreErrorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
-          } else {
-              firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
-          }
-          dispatchAppNotification(firestoreErrorMessage, 'error');
-          try {
-              if (user && authInstance && authInstance.currentUser && authInstance.currentUser.uid === user.uid) {
-                  await authInstance.currentUser.delete();
-              }
-          } catch (deleteError) {
-          }
-          return;
-      }
-
-      // Volanie Google Apps Scriptu na odoslanie e-mailu
-      // POZNÁMKA: Pri mode: 'no-cors' prehliadač nedokáže čítať odpoveď zo servera,
-      // takže nemôžeme potvrdiť úspešnosť odoslania e-mailu na strane klienta.
-      // E-mailová funkcia by mala byť odladená a testovaná na strane Apps Scriptu.
-      try {
-          const payload = {
-            action: 'sendRegistrationEmail',
-            email: formData.email,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            contactPhoneNumber: fullPhoneNumber,
-            isAdmin: false,
-            billing: {
-              clubName: formData.billing.clubName,
-              ico: formData.billing.ico,
-              dic: formData.billing.dic,
-              icDph: formData.billing.icDph,
-              address: {
-                street: formData.street,
-                houseNumber: formData.houseNumber,
-                zipCode: formData.postalCode,
-                city: formData.city,
-                country: formData.country
-              }
-            },
-            categories: formData.categories,
-            teams: teamsDataToSaveFinal, // Odosielame celú štruktúru tímov s novými dátami
-          };
-          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', // Zachovanie no-cors režimu
-            headers: {
-              'Content-Type': 'application/json', // Táto hlavička je prehliadačom ignorovaná v no-cors režime
-            },
-            body: JSON.stringify(payload)
-          });
-          // Vzhľadom na 'no-cors' režim nemôžeme overiť 'response.ok' ani čítať 'response.json()'.
-          // Ak sa sem dostaneme, požiadavka bola odoslaná, ale jej výsledok je neznámy.
-          console.log('E-mailová požiadavka odoslaná (status neznámy kvôli no-cors).');
-      } catch (emailError) {
-          console.error('Chyba pri odosielaní e-mailovej požiadavky (nemožno potvrdiť, či bol e-mail odoslaný):', emailError);
-          // V no-cors režime sa táto chyba objaví len pri sieťových problémoch, nie pri chybách na serveri Apps Scriptu.
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Notifikácia pre používateľa je zobrazená, hoci stav e-mailu je neznámy.
-      // Dôležité je, že dáta sú už uložené vo Firestore.
-      dispatchAppNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu by malo byť odoslané na e-mailovú adresu ${formData.email}.`, 'success');
-      setRegistrationSuccess(true);
-
-      // Resetovanie formulára a prechod na prvú stránku po úspešnej registrácii
-      setFormData({
-        firstName: '', lastName: '', email: '', contactPhoneNumber: '',
-        password: '', confirmPassword: '', houseNumber: '', country: '',
-        city: '', postalCode: '', street: '',
-        billing: { clubName: '', ico: '', dic: '', icDph: '' },
+      // Odoslanie dát na Google Apps Script
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend),
       });
-      setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
-      setTeamsDataFromPage4({}); // Resetujeme tímy
-      setPage(1);
 
-      setTimeout(async () => {
-        if (authInstance && authInstance.currentUser) {
-            await signOut(authInstance);
+      if (!response.ok) {
+        let errorMessage = 'Nastala chyba pri odosielaní formulára.';
+        try {
+          const errorBody = await response.json();
+          if (errorBody && errorBody.error) {
+            errorMessage = errorBody.error;
+          }
+        } catch (parseError) {
+          // Ak sa nepodarí parsovať JSON, použijeme všeobecnú správu
+          console.error("Chyba pri parsovaní chybovej odpovede:", parseError);
         }
-        window.location.href = 'login.html';
-      }, 20000);
+        throw new Error(errorMessage);
+      }
 
-    } catch (globalError) {
-      let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
-      dispatchAppNotification(errorMessage, 'error'); // Nastavenie typu na 'error' pre červené pozadie
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        setRegistrationSuccess(true);
+        setNotificationMessage('Registrácia bola úspešne odoslaná!', 'success');
+        setNotificationType('success');
+        // Tu by ste mohli presmerovať používateľa na ďakovnú stránku alebo zobraziť potvrdenie
+      } else {
+        setNotificationMessage(result.message || 'Nastala chyba pri registrácii.', 'error');
+        setNotificationType('error');
+      }
+    } catch (error) {
+      console.error('Chyba pri odosielaní formulára:', error);
+      setNotificationMessage(error.message || 'Nepodarilo sa odoslať registráciu.', 'error');
+      setNotificationType('error');
     } finally {
       setLoading(false);
-      isRegisteringRef.current = false;
     }
   };
 
 
-  const isPage1FormDataEmpty = (data) => {
-    if (data.firstName.trim() !== '' ||
-        data.lastName.trim() !== '' ||
-        data.email.trim() !== '' ||
-        data.contactPhoneNumber.trim() !== '' ||
-        data.password.trim() !== '' ||
-        data.confirmPassword.trim() !== '') {
-        return false;
-    }
-
-    if (data.houseNumber.trim() !== '' ||
-        data.country.trim() !== '' ||
-        data.city.trim() !== '' ||
-        data.postalCode.trim() !== '' ||
-        data.street.trim() !== '') {
-        return false;
-    }
-
-    if (data.billing.clubName.trim() !== '' ||
-        data.billing.ico.trim() !== '' ||
-        data.billing.dic.trim() !== '' ||
-        data.billing.icDph.trim() !== '') {
-        return false;
-    }
-
-    let hasSelectedCategories = false;
-    if (selectedCategoryRows && selectedCategoryRows.length > 0) {
-        hasSelectedCategories = selectedCategoryRows.some(row => row.categoryId && row.teams && row.teams > 0);
-    }
-    if (hasSelectedCategories) {
-        return false;
-    }
-
-    if (teamsDataFromPage4 && Object.keys(teamsDataFromPage4).length > 0) {
-        let hasTeamDetails = false;
-        for (const categoryName in teamsDataFromPage4) {
-            const teamsInCategory = teamsDataFromPage4[categoryName];
-            if (teamsInCategory && teamsInCategory.length > 0) {
-                hasTeamDetails = teamsInCategory.some(team =>
-                    team.teamName.trim() !== '' ||
-                    (team.players !== undefined && team.players !== '') ||
-                    (team.womenTeamMembers !== undefined && team.womenTeamMembers !== '') ||
-                    (team.menTeamMembers !== undefined && team.menTeamMembers !== '') ||
-                    (team.tshirts && team.tshirts.some(t => t.size.trim() !== '' || (t.quantity !== undefined && t.quantity !== ''))) ||
-                    (team.accommodation?.type && team.accommodation.type.trim() !== '') ||
-                    (team.arrival?.type && team.arrival.type.trim() !== '') ||
-                    (team.packageId && team.packageId.trim() !== '') ||
-                    (team.arrival?.drivers && (team.arrival.drivers.male !== undefined || team.arrival.drivers.female !== undefined)) ||
-                    // NOVINKA: Kontrola pre detaily hráčov/členov realizačného tímu
-                    (team.playerDetails && team.playerDetails.some(p =>
-                        p.jerseyNumber !== '' || p.firstName.trim() !== '' || p.lastName.trim() !== '' || p.dateOfBirth.trim() !== '' || p.registrationNumber.trim() !== '' ||
-                        (p.address && (p.address.street.trim() !== '' || p.address.houseNumber.trim() !== '' || p.address.city.trim() !== '' || p.address.postalCode.trim() !== '' || p.address.country.trim() !== ''))
-                    )) ||
-                    (team.womenTeamMemberDetails && team.womenTeamMemberDetails.some(m =>
-                        m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== '' ||
-                        (m.address && (m.address.street.trim() !== '' || m.address.houseNumber.trim() !== '' || m.address.city.trim() !== '' || m.address.postalCode.trim() !== '' || m.address.country.trim() !== ''))
-                    )) ||
-                    (team.menTeamMemberDetails && team.menTeamMemberDetails.some(m =>
-                        m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== '' ||
-                        (m.address && (m.address.street.trim() !== '' || m.address.houseNumber.trim() !== '' || m.address.city.trim() !== '' || m.address.postalCode.trim() !== '' || m.address.country.trim() !== ''))
-                    ))
-                );
-                if (hasTeamDetails) {
-                    break;
-                }
-            }
-        }
-        if (hasTeamDetails) {
-            return false;
-        }
-    }
-
-
-    return true;
-  };
-
-  const hasAnyPage1Data = !isPage1FormDataEmpty(formData);
-  const now = new Date();
-
-  const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null;
-  const registrationEndDateObj = registrationEndDate ? new Date(registrationEndDate) : null;
-
-
-  // Dynamické nastavenie triedy pre šírku hlavného kontajnera
-  const mainContainerWidthClass = page === 6 ? 'max-w-6xl' : 'max-w-md';
-
-  // NOVINKA: useEffect na posúvanie sa na začiatok pri zmene stránky
+  // Načítanie kategórií z Firestore
   React.useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth' // Hladké posúvanie
-    });
-  }, [page]); // Spustí sa vždy, keď sa zmení `page`
+    let unsubscribeCategories;
+    const fetchCategories = () => {
+      if (!window.db) {
+        console.log("Firestore DB nie je zatiaľ k dispozícii pre kategórie.");
+        setTimeout(fetchCategories, 100);
+        return;
+      }
+      try {
+        const categoriesCollection = collection(window.db, 'categories');
+        const q = query(categoriesCollection, where('isPublished', '==', true)); // Filter len publikované kategórie
+        unsubscribeCategories = onSnapshot(q, (snapshot) => {
+          const fetchedCategories = {};
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            fetchedCategories[doc.id] = {
+              name: data.name,
+              minTeams: data.minTeams,
+              maxTeams: data.maxTeams,
+              categoryOrder: data.categoryOrder || 0 // Pre zoradenie
+            };
+          });
+
+          // Zoradenie kategórií podľa categoryOrder
+          const sortedCategoryNames = Object.keys(fetchedCategories).sort((a, b) => {
+            return fetchedCategories[a].categoryOrder - fetchedCategories[b].categoryOrder;
+          });
+
+          const sortedFetchedCategories = {};
+          sortedCategoryNames.forEach(name => {
+            sortedFetchedCategories[name] = fetchedCategories[name];
+          });
+
+          setCategoriesData(sortedFetchedCategories);
+          setIsCategoriesLoaded(true);
+          const event = new Event('categoriesLoaded');
+          window.dispatchEvent(event);
+
+        }, (error) => {
+          console.error("Chyba pri načítaní kategórií:", error);
+          setNotificationMessage("Chyba pri načítaní kategórií.", 'error');
+          setNotificationType('error');
+        });
+      } catch (e) {
+        console.error("Chyba pri nastavovaní poslucháča pre kategórie:", e);
+      }
+    };
+
+    fetchCategories();
+
+    return () => {
+      if (unsubscribeCategories) {
+        unsubscribeCategories();
+      }
+    };
+  }, []); // Prázdne pole závislostí zabezpečí, že sa effect spustí iba raz pri mountnutí komponentu
 
 
-  return React.createElement(
-    'div',
-    { className: `min-h-screen flex flex-col items-center justify-start bg-gray-100 p-4` },
-    // NotificationModal pre App komponent zostáva tu
-    !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
-
-    !settingsLoaded || !isAuthReady ? (
+  if (registrationSuccess) {
+    return React.createElement(
+      'div',
+      { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
-        React.createElement(
-          'p',
-          { className: 'text-gray-600 text-lg font-semibold' },
-          'Načítavam aplikáciu...'
-        )
-      )
-    ) : registrationSuccess ? (
-      React.createElement(
-        'div',
-        { className: 'bg-green-700 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
+        { className: 'bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center' },
+        React.createElement('svg', { className: 'mx-auto h-16 w-16 text-green-500 mb-4', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' })
+        ),
         React.createElement(
           'h2',
-          { className: 'text-2xl font-bold mb-4 text-white' },
+          { className: 'text-2xl font-bold text-gray-800 mb-4' },
           'Registrácia úspešná!'
         ),
         React.createElement(
           'p',
-          { className: 'text-white' },
-          notificationMessage
+          { className: 'text-gray-600 mb-6' },
+          'Ďakujeme za vašu registráciu. Na vami zadanú e-mailovú adresu boli odoslané podrobnosti.'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: () => {
+              setRegistrationSuccess(false);
+              setCurrentPage('page1');
+              setFormData({ // Reset formulára
+                email: '', password: '', passwordConfirm: '', phonePrefix: '', phoneNumber: '',
+                firstName: '', lastName: '', birthDate: '', country: '', gender: '',
+                billingSameAsContact: true, billingDetails: { companyName: '', ico: '', dic: '', icDph: '', street: '', city: '', postalCode: '', country: '' },
+                selectedCategories: {}
+              });
+              setTeamsDataFromPage4({}); // Reset team data
+              closeNotification();
+            },
+            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+          },
+          'Nová registrácia'
+        )
+      )
+    );
+  }
+
+  // Ak registrácia nie je otvorená a nie je to stránka potvrdenia (strana 7), zobrazte odpočet
+  if (!isRegistrationOpen && currentPage !== 'page7') {
+    const registrationStartDateObj = registrationStart ? registrationStart : null;
+    return React.createElement(
+      'div',
+      { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
+      React.createElement(
+        'div',
+        { className: 'bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center' },
+        React.createElement('svg', { className: 'mx-auto h-16 w-16 text-blue-500 mb-4', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' })
+        ),
+        React.createElement(
+          'h2',
+          { className: 'text-2xl font-bold text-gray-800 mb-4' },
+          'Registrácia bude čoskoro spustená!'
         ),
         React.createElement(
           'p',
-          { className: 'text-gray-200 text-sm mt-4' },
-          'Budete automaticky presmerovaní na prihlasovaciu stránku.'
-        )
-      )
-    ) : (
-      (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
-        React.createElement(
-          'div',
-          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` },
-          page === 1 ?
-            React.createElement(Page1Form, {
-              formData: formData,
-              handleChange: handleChange,
-              handleNext: handleNext,
-              loading: loading,
-              notificationMessage: notificationMessage,
-              closeNotification: closeNotification,
-              isCountryCodeModalOpen: isCountryCodeModalOpen,
-              setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
-              setSelectedCountryDialCode: setSelectedCountryDialCode,
-              selectedCountryDialCode: selectedCountryDialCode,
-              NotificationModal: NotificationModal,
-              isRegistrationOpen: isRegistrationOpen,
-              countdownMessage: countdown,
-              registrationStartDate: registrationStartDate,
-              isRecaptchaReady: isRecaptchaReady,
-              isRegistrationClosed: isRegistrationClosed,
-              registrationEndDate: registrationEndDate,
-              hasAnyPage1Data: hasAnyPage1Data
-            }) :
-          page === 2 ?
-            React.createElement(Page2Form, {
-              formData: formData,
-              handleChange: handleChange,
-              handlePrev: handlePrev,
-              handleSubmit: handleNextPage2ToPage3,
-              loading: loading,
-              notificationMessage: notificationMessage,
-              closeNotification: closeNotification,
-              userRole: userRole,
-              handleRoleChange: handleRoleChange,
-              NotificationModal: NotificationModal,
-            }) :
-          page === 3 ?
-              React.createElement(Page3Form, {
-                  formData: formData,
-                  handlePrev: handlePrev,
-                  handleNextPage3: handleNextPage3ToPage4,
-                  loading: loading,
-                  setLoading: setLoading,
-                  notificationMessage: notificationMessage,
-                  setShowNotification: setShowNotification,
-                  setNotificationType: setNotificationType,
-                  setRegistrationSuccess: setRegistrationSuccess,
-                  isRecaptchaReady: isRecaptchaReady,
-                  selectedCountryDialCode: selectedCountryDialCode,
-                  NotificationModal: NotificationModal,
-                  availableCategoriesMap: categoriesDataFromFirestore,
-                  selectedCategoryRows: selectedCategoryRows,
-                  setSelectedCategoryRows: setSelectedCategoryRows,
-              }) :
-          page === 4 ?
-              React.createElement(Page4Form, {
-                  formData: formData,
-                  handlePrev: handlePrev,
-                  handleNextPage4: handleNextPage4ToPage5,
-                  loading: loading,
-                  setLoading: setLoading,
-                  notificationMessage: notificationMessage,
-                  setShowNotification: setShowNotification,
-                  setNotificationType: setNotificationType,
-                  setRegistrationSuccess: setRegistrationSuccess,
-                  isRecaptchaReady: isRecaptchaReady,
-                  selectedCountryDialCode: selectedCountryDialCode,
-                  NotificationModal: NotificationModal,
-                  numberOfPlayersLimit: numberOfPlayersInTeam,
-                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers,
-                  teamsDataFromPage4: teamsDataFromPage4,
-                  setTeamsDataFromPage4: setTeamsDataFromPage4, // Posielame setTeamsDataFromPage4 pre granulárne aktualizácie v Page4Form
-                  closeNotification: closeNotification,
-                  setNotificationMessage: setNotificationMessage,
-                  setShowNotification: setShowNotification,
-                  setNotificationType: setNotificationType,
-              }) :
-          page === 5 ?
-              React.createElement(Page5Form, {
-                  formData: formData,
-                  teamsDataFromPage4: teamsDataFromPage4,
-                  availableCategoriesMap: categoriesDataFromFirestore, // Provided for completeness, might not be used directly in Page5Form logic
-                  handlePrev: handlePrev,
-                  handleSubmit: handleNextPage5ToPage6, // Zmena volanej funkcie
-                  loading: loading,
-                  setLoading: setLoading,
-                  setRegistrationSuccess: setRegistrationSuccess,
-                  handleChange: handleChange, // Tento handleChange je teraz *len* pre formData z App
-                  setTeamsDataFromPage4: setTeamsDataFromPage4, // Explicitne posielame setter pre úplné aktualizácie z Page5Form (napr. na úvod)
-                  onGranularTeamsDataChange: handleGranularTeamsDataChange, // NOVÁ PROP: pre granulárne aktualizácie teamsDataFromPage4
-                  isRecaptchaReady: isRecaptchaReady,
-                  tournamentStartDate: registrationStartDate,
-                  tournamentEndDate: registrationEndDate,
-              }) :
-          page === 6 ? // NOVINKA: Renderovanie Page6Form (detaily hráčov/tímu)
-              React.createElement(Page6Form, {
-                  formData: formData,
-                  teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
-                  handlePrev: handlePrev,
-                  handleSubmit: handleNextPage6ToPage7, // Nová funkcia pre prechod na Page 7
-                  loading: loading,
-                  NotificationModal: NotificationModal,
-                  notificationMessage: notificationMessage,
-                  closeNotification: closeNotification,
-                  numberOfPlayersLimit: numberOfPlayersInTeam, // Potrebné pre validáciu v Page6Form
-                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // Potrebné pre validáciu v Page6Form
-                  // Posielame dataEditDeadline ako prop
-                  dataEditDeadline: dataEditDeadline,
-                  setNotificationMessage: setNotificationMessage, // NOVINKA: Pass setter
-                  setNotificationType: setNotificationType,     // NOVINKA: Pass setter
-                  notificationType: notificationType, // PRIDANÉ: Posielame aktuálny notificationType
-                  onSaveAndPrev: handleSaveTeamsDataAndPrev, // OPRAVENÉ: Použitie správneho názvu funkcie
-              }) :
-          page === 7 ? // NOVINKA: Renderovanie Page7Form (súhrn)
-              React.createElement(Page7Form, {
-                  formData: formData,
-                  teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
-                  handlePrev: handlePrev,
-                  handleSubmit: confirmFinalRegistration, // Funkcia pre finálne odoslanie
-                  loading: loading,
-                  NotificationModal: NotificationModal,
-                  notificationMessage: notificationMessage,
-                  closeNotification: closeNotification,
-              }) : null
-        )
-      ) : isRegistrationClosed ? (
-        React.createElement(
-          'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
-          React.createElement(
-            'h2',
-              { className: 'text-2xl font-bold mb-2 text-red-600' },
-            'Registrácia na turnaj je už ukončená.'
-          ),
+          { className: 'text-gray-600 mb-4' },
           React.createElement(
             'p',
-            { className: 'text-md text-gray-700 mt-2' },
-            'Registrácia bola ukončená ',
-            registrationEndDateObj && React.createElement(
-              'span',
-              { style: { whiteSpace: 'nowrap' } },
-              'dňa ',
-              registrationEndDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-              ' o ',
-              registrationEndDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
-              ' hod.'
-            )
-          )
-        )
-      ) : (isRegistrationOpen === false && countdown) ? (
-        React.createElement(
-          'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
-          React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
-          registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
-            React.createElement(
-              React.Fragment,
-              null,
+            { className: 'text-md text-gray-700' },
+            'Registrácia začína ',
+            registrationStartDateObj && (
               React.createElement(
-                'p',
-                { className: 'text-md text-gray-700 mt-2' },
-                'Registrácia sa spustí ',
-                React.createElement(
-                  'span',
-                  { style: { whiteSpace: 'nowrap' } },
-                  'dňa ',
-                  registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-                  ' o ',
-                  registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
-                  ' hod.'
-                )
-              ),
-              countdown && (
-                  React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdown}`))
+                'strong',
+                null,
+                registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                ' o ',
+                registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
+                ' hod.'
               )
             )
+          ),
+          countdown && (
+              React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdown}`))
           )
         )
-      ) : null
+      )
+    );
+  }
+
+  return React.createElement(
+    'div',
+    { className: 'min-h-screen bg-gray-100 flex items-center justify-center p-4' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-3xl' },
+      // Modálne okno pre notifikácie (zobrazenie na všetkých stránkach)
+      React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
+
+      currentPage === 'page1' &&
+      React.createElement(Page1Form, {
+        formData: formData,
+        handleChange: handleChange,
+        handleNextPage1: handleNextPage1,
+        loading: loading,
+        setLoading: setLoading,
+        setNotificationMessage: setNotificationMessage,
+        setShowNotification: setShowNotification,
+        setNotificationType: setNotificationType,
+        isRecaptchaReady: isRecaptchaReady,
+        selectedCountryDialCode: selectedCountryDialCode,
+        setSelectedCountryDialCode: setSelectedCountryDialCode,
+        // Tu nie je potrebné posielať teamsDataFromPage4 ani setTeamsDataFromPage4,
+        // pretože Page1Form ich priamo nemení ani ich neodosiela do handlePrev.
+        // handleNextPage1 jednoducho prejde na ďalšiu stránku.
+      }),
+
+      currentPage === 'page2' &&
+      React.createElement(Page2Form, {
+        formData: formData,
+        handleChange: handleChange,
+        handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }), // <--- ZMENA TU: preposiela dáta
+        handleNextPage2: handleNextPage2,
+        loading: loading,
+        setLoading: setLoading,
+        notificationMessage: notificationMessage,
+        closeNotification: closeNotification,
+        NotificationModal: NotificationModal,
+        notificationType: notificationType,
+        teamsDataFromPage4: teamsDataFromPage4, // Preposielanie teamsDataFromPage4 pre zachovanie stavu
+      }),
+
+      currentPage === 'page3' &&
+      React.createElement(Page3Form, {
+        formData: formData,
+        handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }), // <--- ZMENA TU: preposiela dáta
+        handleNextPage3: handleNextPage3,
+        loading: loading,
+        setLoading: setLoading,
+        setNotificationMessage: setNotificationMessage,
+        setShowNotification: setShowNotification,
+        setNotificationType: setNotificationType,
+        setRegistrationSuccess: setRegistrationSuccess,
+        isRecaptchaReady: isRecaptchaReady,
+        selectedCountryDialCode: selectedCountryDialCode,
+        NotificationModal: NotificationModal,
+        notificationMessage: notificationMessage,
+        closeNotification: closeNotification,
+        availableCategoriesMap: categoriesData, // Toto sú dostupné kategórie
+        selectedCategoryRows: formData.selectedCategories, // Toto sú vybraté kategórie a ich počet tímov
+        setSelectedCategoryRows: (newSelectedCategories) => setFormData(prevData => ({ ...prevData, selectedCategories: newSelectedCategories })),
+        notificationType: notificationType,
+        teamsDataFromPage4: teamsDataFromPage4, // Preposielanie teamsDataFromPage4 pre zachovanie stavu
+      }),
+
+      currentPage === 'page4' &&
+      React.createElement(Page4Form, {
+        formData: formData,
+        handlePrev: (currentTeamsDataFromPage4) => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4 }), // <--- ZMENA TU: preposiela dáta
+        handleNextPage4: handleNextPage4,
+        loading: loading,
+        setLoading: setLoading,
+        notificationMessage: notificationMessage,
+        setShowNotification: setShowNotification,
+        setNotificationType: setNotificationType,
+        setRegistrationSuccess: setRegistrationSuccess,
+        isRecaptchaReady: isRecaptchaReady,
+        selectedCountryDialCode: selectedCountryDialCode,
+        NotificationModal: NotificationModal,
+        numberOfPlayersLimit: numberOfPlayersLimit,
+        numberOfTeamMembersLimit: numberOfTeamMembersLimit,
+        teamsDataFromPage4: teamsDataFromPage4,
+        setTeamsDataFromPage4: setTeamsDataFromPage4, // Posielame setTeamsDataFromPage4 pre granulárne aktualizácie v Page4Form
+        closeNotification: closeNotification
+      }),
+
+      currentPage === 'page5' &&
+      React.createElement(Page5Form, {
+        formData: formData,
+        handlePrev: (currentTeamsDataFromPage4) => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4 }), // <--- ZMENA TU: preposiela dáta
+        handleSubmit: handleNextPage5,
+        loading: loading,
+        setLoading: setLoading,
+        setRegistrationSuccess: setRegistrationSuccess,
+        handleChange: handleChange,
+        teamsDataFromPage4: teamsDataFromPage4,
+        setTeamsDataFromPage4: setTeamsDataFromPage4, // Posielame setTeamsDataFromPage4 pre granulárne aktualizácie
+        isRecaptchaReady: isRecaptchaReady,
+        tournamentStartDate: tournamentStartDate,
+        tournamentEndDate: tournamentEndDate,
+        onGranularTeamsDataChange: onGranularTeamsDataChange // Prop pre granulárnu aktualizáciu
+      }),
+
+      currentPage === 'page6' &&
+      React.createElement(Page6Form, {
+        formData: formData,
+        handlePrev: (currentTeamsDataFromPage4) => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4 }), // <--- ZMENA TU: preposiela dáta
+        handleSubmit: handleNextPage6,
+        loading: loading,
+        setLoading: setLoading,
+        setRegistrationSuccess: setRegistrationSuccess,
+        handleChange: handleChange,
+        teamsDataFromPage4: teamsDataFromPage4,
+        setTeamsDataFromPage4: setTeamsDataFromPage4, // Posielame setTeamsDataFromPage4 pre granulárne aktualizácie
+        isRecaptchaReady: isRecaptchaReady,
+        numberOfPlayersLimit: numberOfPlayersLimit,
+        numberOfTeamMembersLimit: numberOfTeamMembersLimit,
+      }),
+
+      currentPage === 'page7' &&
+      React.createElement(Page7Form, {
+        formData: formData,
+        handlePrev: (currentTeamsDataFromPage4) => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4 }), // <--- ZMENA TU: preposiela dáta
+        handleSubmit: handleSubmitFinal,
+        loading: loading,
+        teamsDataFromPage4: teamsDataFromPage4,
+      })
     )
   );
 }
