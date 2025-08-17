@@ -8,19 +8,19 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
     return React.createElement(
         'div',
         {
-            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
-            onClick: disabled ? null : handleToggle,
+            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,\
+            onClick: disabled ? null : handleToggle,\
             style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' } // Vnútorný tieň pre efekt "zatlačenia"
-        },
-        React.createElement(
-            'span',
-            {
-                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`,
+        },\
+        React.createElement(\
+            'span',\
+            {\
+                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`,\
                 style: { boxShadow: '0 2px 5px rgba(0,0,0,0.2)' } // Tieň pre gombík prepínača
-            }
-        )
-    );
-}
+            }\
+        )\
+    );\
+}\
 
 
 // Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
@@ -41,80 +41,88 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     React.useEffect(() => {
         const initialDetails = {};
         for (const categoryName in teamsDataFromPage4) {
-            initialDetails[categoryName] = (teamsDataFromPage4[categoryName] || []).map(team => {
-                const playersCount = parseInt(team.players, 10) || 0;
-                const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
-                const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
+            const teamsInCurrentCategory = teamsDataFromPage4[categoryName];
+            // Explicitná kontrola, či je teamsInCurrentCategory pole pred volaním .map()
+            if (Array.isArray(teamsInCurrentCategory)) {
+                initialDetails[categoryName] = teamsInCurrentCategory.map(team => {
+                    const playersCount = parseInt(team.players, 10) || 0;
+                    const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
+                    const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
-                // Ensure playerDetails are correctly structured, merging existing data
-                const playerDetails = Array.from({ length: playersCount }).map((_, i) => {
-                    const existingPlayer = team.playerDetails?.[i] || {};
+                    // Ensure playerDetails are correctly structured, merging existing data
+                    const playerDetails = Array.from({ length: playersCount }).map((_, i) => {
+                        const existingPlayer = team.playerDetails?.[i] || {};
+                        return {
+                            jerseyNumber: '',
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            isRegistered: false,
+                            registrationNumber: '',
+                            address: { // Always ensure address object exists with default values
+                                street: '',
+                                houseNumber: '',
+                                city: '',
+                                postalCode: '',
+                                country: '',
+                            },
+                            ...existingPlayer, // Override defaults with existing player data
+                            address: { // Deep merge address to ensure all sub-fields exist
+                                street: '',
+                                houseNumber: '',
+                                city: '',
+                                postalCode: '',
+                                country: '',
+                                ...(existingPlayer.address || {}) // Override address defaults with existing address data (use {} if existingPlayer.address is undefined)
+                            }
+                        };
+                    });
+
+                    // Ensure team member details are correctly structured
+                    const womenTeamMemberDetails = Array.from({ length: womenMembersCount }).map((_, i) => {
+                        const existingMember = team.womenTeamMemberDetails?.[i] || {};
+                        return {
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }, // Inicializácia adresy
+                            ...existingMember,
+                            address: { ...(existingMember.address || {}) } // Deep merge address
+                        };
+                    });
+
+                    const menTeamMemberDetails = Array.from({ length: menMembersCount }).map((_, i) => {
+                        const existingMember = team.menTeamMemberDetails?.[i] || {};
+                        return {
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }, // Inicializácia adresy
+                            ...existingMember,
+                            address: { ...(existingMember.address || {}) } // Deep merge address
+                        };
+                    });
+
                     return {
-                        jerseyNumber: '',
-                        firstName: '',
-                        lastName: '',
-                        dateOfBirth: '',
-                        isRegistered: false,
-                        registrationNumber: '',
-                        address: { // Always ensure address object exists with default values
-                            street: '',
-                            houseNumber: '',
-                            city: '',
-                            postalCode: '',
-                            country: '',
-                        },
-                        ...existingPlayer, // Override defaults with existing player data
-                        address: { // Deep merge address to ensure all sub-fields exist
-                            street: '',
-                            houseNumber: '',
-                            city: '',
-                            postalCode: '',
-                            country: '',
-                            ...(existingPlayer.address || {}) // Override address defaults with existing address data (use {} if existingPlayer.address is undefined)
+                        ...team, // Spread all existing properties from the original team object
+                        players: playersCount, // Ensure counts are numbers
+                        womenTeamMembers: womenMembersCount,
+                        menTeamMembers: menMembersCount,
+                        playerDetails: playerDetails,
+                        womenTeamMemberDetails: womenTeamMemberDetails,
+                        menTeamMemberDetails: menTeamMemberDetails,
+                        // Zabezpečenie, aby accommodation bol vždy objekt s type property
+                        accommodation: {
+                            type: team.accommodation?.type || '', // Inicializuj type z existujúceho, alebo na prázdny reťazec
+                            ...(team.accommodation || {}) // Rozšír ostatné potenciálne properties ubytovania
                         }
                     };
                 });
-
-                // Ensure team member details are correctly structured
-                const womenTeamMemberDetails = Array.from({ length: womenMembersCount }).map((_, i) => {
-                    const existingMember = team.womenTeamMemberDetails?.[i] || {};
-                    return {
-                        firstName: '',
-                        lastName: '',
-                        dateOfBirth: '',
-                        address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }, // Inicializácia adresy
-                        ...existingMember,
-                        address: { ...(existingMember.address || {}) } // Deep merge address
-                    };
-                });
-
-                const menTeamMemberDetails = Array.from({ length: menMembersCount }).map((_, i) => {
-                    const existingMember = team.menTeamMemberDetails?.[i] || {};
-                    return {
-                        firstName: '',
-                        lastName: '',
-                        dateOfBirth: '',
-                        address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }, // Inicializácia adresy
-                        ...existingMember,
-                        address: { ...(existingMember.address || {}) } // Deep merge address
-                    };
-                });
-
-                return {
-                    ...team, // Spread all existing properties from the original team object
-                    players: playersCount, // Ensure counts are numbers
-                    womenTeamMembers: womenMembersCount,
-                    menTeamMembers: menMembersCount,
-                    playerDetails: playerDetails,
-                    womenTeamMemberDetails: womenTeamMemberDetails,
-                    menTeamMemberDetails: menTeamMemberDetails,
-                    // Zabezpečenie, aby accommodation bol vždy objekt s type property
-                    accommodation: {
-                        type: team.accommodation?.type || '', // Inicializuj type z existujúceho, alebo na prázdny reťazec
-                        ...(team.accommodation || {}) // Rozšír ostatné potenciálne properties ubytovania
-                    }
-                };
-            });
+            } else {
+                // Ak teamsDataFromPage4[categoryName] nie je pole, nastavte prázdne pole pre túto kategóriu
+                console.warn(`teamsDataFromPage4[${categoryName}] is not an array. Resetting to empty array.`);
+                initialDetails[categoryName] = [];
+            }
         }
         setLocalTeamDetails(initialDetails);
     }, [teamsDataFromPage4]);
@@ -425,7 +433,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             { className: 'text-center text-sm text-gray-600 mb-6 px-4' },
             'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
             React.createElement('strong', null, 'ale je povinné ich vyplniť v sekcii "Moja zóna"'),
-            ' po prihlásení sa do svojho turnajového účtu do ',
+            ' po prihlásení sa do svojho turnajového účtu do dátumu ',
             React.createElement('strong', null, dataEditDeadline || 'nezadaný dátum'),
             '.'
         ),
@@ -446,7 +454,17 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                             const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
+                            // URČENIE, ČI TÍM MÁ VYBRANÉ UBYTOVANIE (INÉ AKO "BEZ UBYTOVANIA")
+                            // Použi toLowerCase() pre case-insensitive porovnanie a ošetri prázdne reťazce
                             const hasAccommodation = team.accommodation && team.accommodation.type && team.accommodation.type.toLowerCase() !== 'bez ubytovania';
+
+
+                            // Debugging logs - Pomôžu ti pochopiť stav dát
+                            console.log(`Page6Form - Processing Team: ${team.teamName}`);
+                            console.log(`  Accommodation Object:`, team.accommodation);
+                            console.log(`  Accommodation Type:`, team.accommodation?.type);
+                            console.log(`  Has Accommodation (boolean):`, hasAccommodation);
+
 
                             return React.createElement(
                                 'div',
