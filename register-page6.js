@@ -383,7 +383,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             { className: 'text-center text-sm text-gray-600 mb-6 px-4' },
             'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
             React.createElement('strong', null, 'ale je povinné ich vyplniť v sekcii "Moja zóna"'),
-            ' po prihlásení sa do svojho turnajového účtu do ',
+            ' po prihlásení sa do svojho turnajového účtu do dátumu ',
             React.createElement('strong', null, dataEditDeadline || 'nezadaný dátum'),
             '.'
         ),
@@ -525,6 +525,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                             React.createElement('div', {
                                                 className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
                                             },
+                                                hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
                                                 React.createElement('div', {
                                                     className: `flex-1 min-w-[120px]`
                                                 },
@@ -658,6 +659,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                             React.createElement('div', {
                                                 className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
                                             },
+                                                hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
                                                 React.createElement('div', { className: `flex-1 min-w-[120px]` },
                                                     React.createElement('label', { htmlFor: `street-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
                                                     React.createElement('input', {
@@ -781,6 +783,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                             React.createElement('div', {
                                                 className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
                                             },
+                                                hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
                                                 React.createElement('div', { className: `flex-1 min-w-[120px]` },
                                                     React.createElement('label', { htmlFor: `street-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
                                                     React.createElement('input', {
