@@ -76,7 +76,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 teamsInCategory.map((team, index) => {
                     const tshirtsDetails = team.tshirts && team.tshirts.length > 0
                         ? team.tshirts.filter(t => t.size && t.quantity > 0)
-                                    .map(t => `${t.quantity}x ${t.size}`)
+                                    // ZMENA: Použitie znaku násobenia '×' namiesto 'x'
+                                    .map(t => `${t.quantity}× ${t.size}`)
                                     .join(', ')
                         : 'žiadne';
 
@@ -147,7 +148,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         }
 
                         packageDetailsHtml = React.createElement(React.Fragment, null,
-                            React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} €/osoba)`),
+                            // ÚPRAVA: Text "Balíček:" je teraz tučný
+                            React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} €)`),
                             mealsHtml
                         );
                     } else {
