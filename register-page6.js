@@ -29,7 +29,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
-    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error' } } } }
+    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error' } } } }
 
     // Helper pre notifikácie
     const dispatchAppNotification = React.useCallback((message, type = 'info') => {
@@ -183,6 +183,23 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             }
         }
 
+        // Validácia duplicitného registračného čísla
+        const registeredNumbers = new Set();
+        const registeredNumberErrors = new Set();
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const regNum = player.registrationNumber.trim();
+            if (player.isRegistered && regNum !== '') {
+                if (registeredNumbers.has(regNum)) {
+                    registeredNumberErrors.add(regNum);
+                    teamHasErrors = true;
+                } else {
+                    registeredNumbers.add(regNum);
+                }
+            }
+        }
+
+
         // Nastav chybové správy pre kombinácie údajov hráča
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
@@ -205,6 +222,12 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             if (combinationErrors.has(combinationKey)) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
                 newPlayerErrorsForTeam[i].combination = 'Duplicitný hráč v tíme.';
+            }
+
+            // Nastav chybovú správu pre duplicitné registračné číslo
+            if (player.isRegistered && registeredNumberErrors.has(player.registrationNumber.trim())) {
+                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
+                newPlayerErrorsForTeam[i].registrationNumber = 'Duplicitné číslo registrácie v tíme.';
             }
         }
 
@@ -326,7 +349,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         for (const categoryName in playerErrors) {
             for (const teamIndex in playerErrors[categoryName]) {
                 for (const playerIndex in playerErrors[categoryName][teamIndex]) {
-                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || playerErrors[categoryName][teamIndex][playerIndex].combination) {
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || playerErrors[categoryName][teamIndex][playerIndex].combination || playerErrors[categoryName][teamIndex][playerIndex].registrationNumber) {
                         return false;
                     }
                 }
@@ -511,14 +534,16 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? 'border-red-500' : ''}`, // Pridaná podmienka pre registracne cislo
                                                         value: player.registrationNumber || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
                                                         disabled: loading || !player.isRegistered, // Zakázané, ak nie je registrovaný
                                                         placeholder: 'Číslo'
                                                     }),
-                                                    // Placeholder pre chybu kombinácie
-                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
+                                                    // Placeholder pre chybu kombinácie a registračné číslo
+                                                    playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ?
+                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber) :
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                             ),
                                             // Nový riadok pre adresné polia
