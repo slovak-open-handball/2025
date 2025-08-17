@@ -14,10 +14,10 @@ import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
 import { Page5Form } from './register-page5.js';
 import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
+import { Page7Form } from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
-// OPRAVENÁ CHYBA: Zmenené '=>' na 'from'
 import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -416,6 +416,7 @@ function App() {
 
   // NOVÁ FUNKCIA: handleGranularTeamsDataChange
   // Táto funkcia je určená na priamu aktualizáciu vnorených dát teamsDataFromPage4.
+  // Používa sa v Page4 a Page5 na aktualizáciu dát o tričkách, ubytovaní, doprave a balíčkoch.
   const handleGranularTeamsDataChange = React.useCallback((categoryName, teamIndex, field, data) => {
     setTeamsDataFromPage4(prevTeamsData => {
         const newTeamsData = { ...prevTeamsData };
@@ -446,10 +447,11 @@ function App() {
                 ...newTeamsData[categoryName][teamIndex],
                 [field]: updatedArrival
             };
-        } else if (field === 'accommodation' || field === 'packageDetails') {
+        } else if (field === 'accommodation' || field === 'packageDetails' || field === 'playerDetails' || field === 'womenTeamMemberDetails' || field === 'menTeamMemberDetails') {
+            // Pre komplexné objekty ako accommodation, packageDetails, playerDetails, womenTeamMemberDetails, menTeamMemberDetails
             newTeamsData[categoryName][teamIndex] = {
                 ...newTeamsData[categoryName][teamIndex],
-                [field]: { ...newTeamsData[categoryName][teamIndex][field], ...data }
+                [field]: data // Celý objekt alebo pole sa nahradí
             };
         } else {
             // Pre ostatné polia
@@ -608,18 +610,26 @@ function App() {
             return {
                 teamName: generatedTeamName,
                 players: existingTeamData.players !== undefined ? existingTeamData.players : '',
-                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : '',
                 womenTeamMembers: existingTeamData.womenTeamMembers !== undefined ? existingTeamData.womenTeamMembers : '',
                 menTeamMembers: existingTeamData.menTeamMembers !== undefined ? existingTeamData.menTeamMembers : '',
                 tshirts: existingTeamData.tshirts && existingTeamData.tshirts.length > 0
                     ? existingTeamData.tshirts
                     : [{ size: '', quantity: '' }],
-                // NOVINKA: Zabezpečiť, aby sa zachovali aj dáta pre Page 5
+                // NOVINKA: Zabezpečiť, aby sa zachovali aj dáta pre Page 5, a pripraviť pre Page 6
                 accommodation: existingTeamData.accommodation || { type: '' },
-                // Zachovávame existujúce dáta 'arrival' vrátane 'drivers'
                 arrival: existingTeamData.arrival || { type: '', time: null, drivers: null }, 
                 packageId: existingTeamData.packageId || '',
-                packageDetails: existingTeamData.packageDetails || null
+                packageDetails: existingTeamData.packageDetails || null,
+                // NOVINKA: Inicializácia polí pre detaily hráčov a realizačného tímu
+                playerDetails: existingTeamData.playerDetails || Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => ({
+                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: ''
+                })),
+                womenTeamMemberDetails: existingTeamData.womenTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.womenTeamMembers, 10) || 0 }).map(() => ({
+                    firstName: '', lastName: '', dateOfBirth: ''
+                })),
+                menTeamMemberDetails: existingTeamData.menTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.menTeamMembers, 10) || 0 }).map(() => ({
+                    firstName: '', lastName: '', dateOfBirth: ''
+                })),
             };
         });
     });
@@ -648,7 +658,7 @@ function App() {
     setLoading(false);
   };
 
-  // NOVINKA: Funkcia na prechod z Page 5 na Page 6
+  // Funkcia na prechod z Page 5 na Page 6 (detaily hráčov/tímu)
   const handleNextPage5ToPage6 = async (finalTeamsDataFromPage5) => {
     setLoading(true);
     dispatchAppNotification('', 'info');
@@ -657,7 +667,20 @@ function App() {
     setTeamsDataFromPage4(finalTeamsDataFromPage5);
     console.log("handleNextPage5ToPage6 - finalTeamsDataFromPage5 (prijaté z Page5Form, priame nastavenie):", finalTeamsDataFromPage5); // DEBUG
 
-    setPage(6); // Prechod na Page 6 (súhrn)
+    setPage(6); // Prechod na Page 6 (detaily hráčov/tímu)
+    setLoading(false);
+  };
+
+  // NOVINKA: Funkcia na prechod z Page 6 na Page 7 (súhrn)
+  const handleNextPage6ToPage7 = async (finalTeamsDataFromPage6) => {
+    setLoading(true);
+    dispatchAppNotification('', 'info');
+
+    // Priama aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page6
+    setTeamsDataFromPage4(finalTeamsDataFromPage6);
+    console.log("handleNextPage6ToPage7 - finalTeamsDataFromPage6 (prijaté z Page6Form, priame nastavenie):", finalTeamsDataFromPage6); // DEBUG
+
+    setPage(7); // Prechod na Page 7 (súhrn)
     setLoading(false);
   };
 
@@ -666,7 +689,7 @@ function App() {
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
   };
 
-  // NOVINKA: Nová funkcia pre finálne odoslanie registrácie (volaná z Page6Form)
+  // NOVINKA: Nová funkcia pre finálne odoslanie registrácie (volaná z Page7Form)
   const confirmFinalRegistration = async () => {
     setLoading(true);
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
@@ -777,6 +800,30 @@ function App() {
                 if (updatedTeam.packageId === '') updatedTeam.packageId = null;
                 if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
 
+                // Normalizácia detailov hráčov a členov realizačného tímu - prázdne polia na prázdne reťazce
+                updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
+                    ...p,
+                    jerseyNumber: p.jerseyNumber || '',
+                    firstName: p.firstName || '',
+                    lastName: p.lastName || '',
+                    dateOfBirth: p.dateOfBirth || '',
+                    registrationNumber: p.registrationNumber || '',
+                })) || [];
+
+                updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
+                    ...m,
+                    firstName: m.firstName || '',
+                    lastName: m.lastName || '',
+                    dateOfBirth: m.dateOfBirth || '',
+                })) || [];
+
+                updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
+                    ...m,
+                    firstName: m.firstName || '',
+                    lastName: m.lastName || '',
+                    dateOfBirth: m.dateOfBirth || '',
+                })) || [];
+
                 return updatedTeam;
             });
         }
@@ -797,7 +844,7 @@ function App() {
           registrationDate: serverTimestamp(),
           passwordLastChanged: serverTimestamp(),
           categories: formData.categories,
-          teams: teamsDataToSaveFinal, // Uložíme celú štruktúru s dátami Page 5 vrátane šoférov
+          teams: teamsDataToSaveFinal, // Uložíme celú štruktúru s dátami Page 5 a Page 6
         });
       } catch (firestoreError) {
           let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
@@ -936,16 +983,23 @@ function App() {
                 hasTeamDetails = teamsInCategory.some(team =>
                     team.teamName.trim() !== '' ||
                     (team.players !== undefined && team.players !== '') ||
-                    (team.teamMembers !== undefined && team.teamMembers !== '') ||
                     (team.womenTeamMembers !== undefined && team.womenTeamMembers !== '') ||
                     (team.menTeamMembers !== undefined && team.menTeamMembers !== '') ||
                     (team.tshirts && team.tshirts.some(t => t.size.trim() !== '' || (t.quantity !== undefined && t.quantity !== ''))) ||
-                    // NOVINKA: Kontrola pre dáta Page 5
                     (team.accommodation?.type && team.accommodation.type.trim() !== '') ||
                     (team.arrival?.type && team.arrival.type.trim() !== '') ||
                     (team.packageId && team.packageId.trim() !== '') ||
-                    // NOVINKA: Kontrola pre šoférov v Page 5 - teraz drivers je objekt
-                    (team.arrival?.drivers && (team.arrival.drivers.male !== undefined || team.arrival.drivers.female !== undefined))
+                    (team.arrival?.drivers && (team.arrival.drivers.male !== undefined || team.arrival.drivers.female !== undefined)) ||
+                    // NOVINKA: Kontrola pre detaily hráčov/členov realizačného tímu
+                    (team.playerDetails && team.playerDetails.some(p =>
+                        p.jerseyNumber.trim() !== '' || p.firstName.trim() !== '' || p.lastName.trim() !== '' || p.dateOfBirth.trim() !== '' || p.registrationNumber.trim() !== ''
+                    )) ||
+                    (team.womenTeamMemberDetails && team.womenTeamMemberDetails.some(m =>
+                        m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== ''
+                    )) ||
+                    (team.menTeamMemberDetails && team.menTeamMemberDetails.some(m =>
+                        m.firstName.trim() !== '' || m.lastName.trim() !== '' || m.dateOfBirth.trim() !== ''
+                    ))
                 );
                 if (hasTeamDetails) {
                     break;
@@ -1100,12 +1154,25 @@ function App() {
                   tournamentStartDate: registrationStartDate,
                   tournamentEndDate: registrationEndDate,
               }) :
-          page === 6 ? // NOVINKA: Renderovanie Page6Form
+          page === 6 ? // NOVINKA: Renderovanie Page6Form (detaily hráčov/tímu)
               React.createElement(Page6Form, {
                   formData: formData,
-                  teamsDataFromPage4: teamsDataFromPage4,
+                  teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
                   handlePrev: handlePrev,
-                  handleSubmit: confirmFinalRegistration,
+                  handleSubmit: handleNextPage6ToPage7, // Nová funkcia pre prechod na Page 7
+                  loading: loading,
+                  NotificationModal: NotificationModal,
+                  notificationMessage: notificationMessage,
+                  closeNotification: closeNotification,
+                  numberOfPlayersLimit: numberOfPlayersInTeam, // Potrebné pre validáciu v Page6Form
+                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // Potrebné pre validáciu v Page6Form
+              }) :
+          page === 7 ? // NOVINKA: Renderovanie Page7Form (súhrn)
+              React.createElement(Page7Form, {
+                  formData: formData,
+                  teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
+                  handlePrev: handlePrev,
+                  handleSubmit: confirmFinalRegistration, // Funkcia pre finálne odoslanie
                   loading: loading,
                   NotificationModal: NotificationModal,
                   notificationMessage: notificationMessage,
