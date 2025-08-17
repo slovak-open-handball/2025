@@ -828,11 +828,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         const options = [];
         teamsWithOwnTransport.forEach(team => {
-            const maleComboKey = `${team.id}-male`;
-            const femaleComboKey = `${team.id}-female`;
+            const maleCombo = `${team.id}-male`;
+            const femaleCombo = `${team.id}-female`;
 
-            const isMaleTaken = usedTeamGenderCombinations.has(maleComboKey);
-            const isFemaleTaken = usedTeamGenderCombinations.has(femaleComboKey);
+            const isMaleTaken = usedTeamGenderCombinations.has(maleCombo);
+            const isFemaleTaken = usedTeamGenderCombinations.has(femaleCombo);
 
             const currentEntryTeamId = currentEntry ? `${currentEntry.categoryName}-${currentEntry.teamIndex}` : null;
 
@@ -1273,7 +1273,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev(), // Teraz stačí volať handlePrev bez argumentov
+                        onClick: () => handlePrev(teamsDataFromPage4), // <--- ZMENA TU
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
