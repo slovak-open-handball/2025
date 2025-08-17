@@ -14,7 +14,7 @@ import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
 import { Page5Form } from './register-page5.js';
 import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
-import { Page7Form } from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
+import { Page7Form } = from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
@@ -23,8 +23,9 @@ import { collection, doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from 
 
 
 // Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'DD. MM. YYYY hh:mm'
+// Táto funkcia je teraz určená len na formátovanie pre zobrazenie, nie na ukladanie do stavu.
 const formatToDatetimeLocal = (date) => {
-  if (!date) return '';
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
@@ -126,10 +127,11 @@ function App() {
   // Zmena: isAuthReady bude teraz získavané z globálneho window.isGlobalAuthReady
   const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady || false);
 
-  const [registrationStartDate, setRegistrationStartDate] = React.useState('');
-  const [registrationEndDate, setRegistrationEndDate] = React.useState('');
-  const [dataEditDeadline, setDataEditDeadline] = React.useState('');
-  const [rosterEditDeadline, setRosterEditDeadline] = React.useState('');
+  // ZMENA: Ukladanie Date objektov namiesto formátovaných reťazcov
+  const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
+  const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
+  const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
+  const [rosterEditDeadline, setRosterEditDeadline] = React.useState(null);
   const [numberOfPlayersInTeam, setNumberOfPlayersInTeam] = React.useState(0);
   const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
 
@@ -153,11 +155,12 @@ function App() {
   const isRegistrationOpen = React.useMemo(() => {
     if (!settingsLoaded) return false;
     const now = new Date();
-    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
-    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+    // ZMENA: regStart a regEnd sú už Date objekty alebo null
+    const regStart = registrationStartDate; 
+    const regEnd = registrationEndDate;   
 
-    const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
-    const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
+    const isRegStartValid = regStart instanceof Date && !isNaN(regStart.getTime());
+    const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd.getTime());
 
     return (
       (isRegStartValid ? now >= regStart : true) &&
@@ -168,23 +171,26 @@ function App() {
   const isRegistrationClosed = React.useMemo(() => {
     if (!settingsLoaded) return false;
     const now = new Date();
-    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
-    return regEnd instanceof Date && !isNaN(regEnd) && now > regEnd;
+    // ZMENA: regEnd je už Date objekt alebo null
+    const regEnd = registrationEndDate; 
+    return regEnd instanceof Date && !isNaN(regEnd.getTime()) && now > regEnd;
   }, [settingsLoaded, registrationEndDate, periodicRefreshKey]);
 
   const isBeforeRegistrationStart = React.useMemo(() => {
     if (!settingsLoaded) return false;
     const now = new Date();
-    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
-    return regStart instanceof Date && !isNaN(regStart) && now < regStart;
+    // ZMENA: regStart je už Date objekt alebo null
+    const regStart = registrationStartDate; 
+    return regStart instanceof Date && !isNaN(regStart.getTime()) && now < regStart;
   }, [settingsLoaded, registrationStartDate, periodicRefreshKey]);
 
 
   const calculateTimeLeft = React.useCallback(() => {
     const now = new Date();
-    const startDate = registrationStartDate ? new Date(registrationStartDate) : null;
+    // ZMENA: startDate je už Date objekt alebo null
+    const startDate = registrationStartDate; 
 
-    if (!startDate || isNaN(startDate) || now >= startDate) {
+    if (!startDate || !(startDate instanceof Date) || isNaN(startDate.getTime()) || now >= startDate) { 
         return null;
     }
 
@@ -204,9 +210,10 @@ function App() {
 
   const calculateTimeLeftToEnd = React.useCallback(() => {
       const now = new Date();
-      const endDate = registrationEndDate ? new Date(registrationEndDate) : null;
+      // ZMENA: endDate je už Date objekt alebo null
+      const endDate = registrationEndDate; 
 
-      if (!endDate || isNaN(endDate) || now >= endDate) {
+      if (!endDate || !(endDate instanceof Date) || isNaN(endDate.getTime()) || now >= endDate) { 
           return null;
       }
 
@@ -262,18 +269,19 @@ function App() {
     const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
       if (docSnapshot.exists()) {
           const data = docSnapshot.data();
-          setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
-          setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-          setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : '');
-          setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : '');
+          // ZMENA: Priamo ukladáme Date objekty z Firestore Timestamp
+          setRegistrationStartDate(data.registrationStartDate ? data.registrationStartDate.toDate() : null);
+          setRegistrationEndDate(data.registrationEndDate ? data.registrationEndDate.toDate() : null);
+          setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate() : null);
+          setRosterEditDeadline(data.rosterEditDeadline ? data.rosterEditDeadline.toDate() : null);
           setNumberOfPlayersInTeam(data.numberOfPlayers || 0);
           setNumberOfImplementationTeamMembers(data.numberOfImplementationTeam || 0);
 
       } else {
-          setRegistrationStartDate('');
-          setRegistrationEndDate('');
-          setDataEditDeadline('');
-          setRosterEditDeadline('');
+          setRegistrationStartDate(null);
+          setRegistrationEndDate(null);
+          setDataEditDeadline(null);
+          setRosterEditDeadline(null);
           setNumberOfPlayersInTeam(0); // OPRAVA: Pôvodne numberOfPlayers
           setNumberOfImplementationTeamMembers(0); // OPRAVA: Pôvodne numberOfImplementationTeam
       }
@@ -328,7 +336,8 @@ function App() {
         }
     };
 
-    if (registrationStartDate && new Date(registrationStartDate) > new Date()) {
+    // ZMENA: Priama kontrola Date objektu
+    if (registrationStartDate && (registrationStartDate instanceof Date) && !isNaN(registrationStartDate.getTime()) && new Date() < registrationStartDate) {
         updateCountdown();
         countdownIntervalRef.current = setInterval(updateCountdown, 1000);
     } else {
@@ -357,7 +366,8 @@ function App() {
       }
     };
 
-    if (registrationEndDate && new Date(registrationEndDate) > new Date()) {
+    // ZMENA: Priama kontrola Date objektu
+    if (registrationEndDate && (registrationEndDate instanceof Date) && !isNaN(registrationEndDate.getTime()) && new Date() < registrationEndDate) {
         updateCountdownEnd();
         countdownEndIntervalRef.current = setInterval(updateCountdownEnd, 1000);
     } else {
@@ -1072,8 +1082,9 @@ function App() {
   const hasAnyPage1Data = !isPage1FormDataEmpty(formData);
   const now = new Date();
 
-  const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null;
-  const registrationEndDateObj = registrationEndDate ? new Date(registrationEndDate) : null;
+  // ZMENA: registrationStartDateObj a registrationEndDateObj už nie sú potrebné, priamo používame stav
+  // const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null;
+  // const registrationEndDateObj = registrationEndDate ? new Date(registrationEndDate) : null;
 
 
   // Dynamické nastavenie triedy pre šírku hlavného kontajnera
@@ -1092,14 +1103,14 @@ function App() {
   console.log("Current Page:", page);
   console.log("settingsLoaded:", settingsLoaded);
   console.log("isAuthReady:", isAuthReady);
-  console.log("registrationStartDate:", registrationStartDate);
-  console.log("registrationEndDate:", registrationEndDate);
+  console.log("registrationStartDate (Date object):", registrationStartDate);
+  console.log("registrationEndDate (Date object):", registrationEndDate);
   console.log("now (current time):", now.toLocaleString('sk-SK'));
   console.log("isBeforeRegistrationStart:", isBeforeRegistrationStart);
   console.log("isRegistrationOpen:", isRegistrationOpen);
   console.log("isRegistrationClosed:", isRegistrationClosed);
   console.log("categoriesExist:", categoriesExist);
-  console.log("hasAnyPage1Data (czy s\u0105 dane w formularzu):", hasAnyPage1Data);
+  console.log("hasAnyPage1Data (či sú dáta v formulári):", hasAnyPage1Data);
   console.log("--- End App Component Render Debug ---");
   // --- END DEBUGGING LOGS ---
 
@@ -1147,7 +1158,8 @@ function App() {
           'div',
           { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
           React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
-          registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
+          // ZMENA: Priamo používame registrationStartDate, ktoré je už Date objekt
+          registrationStartDate && !isNaN(registrationStartDate.getTime()) && now < registrationStartDate && (
             React.createElement(
               React.Fragment,
               null,
@@ -1159,9 +1171,9 @@ function App() {
                   'span',
                   { style: { whiteSpace: 'nowrap' } },
                   'dňa ',
-                  registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                  registrationStartDate.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
                   ' o ',
-                  registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
+                  registrationStartDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
                   ' hod.'
                 )
               ),
@@ -1184,13 +1196,14 @@ function App() {
             'p',
             { className: 'text-md text-gray-700 mt-2' },
             'Registrácia bola ukončená ',
-            registrationEndDateObj && React.createElement(
+            // ZMENA: Priamo používame registrationEndDate, ktoré je už Date objekt
+            registrationEndDate && !isNaN(registrationEndDate.getTime()) && React.createElement(
               'span',
               { style: { whiteSpace: 'nowrap' } },
               'dňa ',
-              registrationEndDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+              registrationEndDate.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
               ' o ',
-              registrationEndDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
+              registrationEndDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
               ' hod.'
             )
           )
@@ -1229,10 +1242,10 @@ function App() {
               NotificationModal: NotificationModal,
               isRegistrationOpen: isRegistrationOpen,
               countdownMessage: countdown,
-              registrationStartDate: registrationStartDate,
+              registrationStartDate: registrationStartDate, // Teraz už Date objekt
               isRecaptchaReady: isRecaptchaReady,
               isRegistrationClosed: isRegistrationClosed,
-              registrationEndDate: registrationEndDate, // odovzdávame aj endDate do Page1Form
+              registrationEndDate: registrationEndDate, // Teraz už Date objekt
               hasAnyPage1Data: hasAnyPage1Data,
               categoriesExist: categoriesExist // ODOSIELAME NOVÝ PROP!
             }) :
