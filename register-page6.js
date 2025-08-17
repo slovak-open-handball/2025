@@ -82,7 +82,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         firstName: '',
                         lastName: '',
                         dateOfBirth: '',
-                        ...existingMember
+                        address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }, // Inicializácia adresy
+                        ...existingMember,
+                        address: { ...(existingMember.address || {}) } // Deep merge address
                     };
                 });
 
@@ -92,7 +94,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         firstName: '',
                         lastName: '',
                         dateOfBirth: '',
-                        ...existingMember
+                        address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }, // Inicializácia adresy
+                        ...existingMember,
+                        address: { ...(existingMember.address || {}) } // Deep merge address
                     };
                 });
 
@@ -104,7 +108,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     playerDetails: playerDetails,
                     womenTeamMemberDetails: womenTeamMemberDetails,
                     menTeamMemberDetails: menTeamMemberDetails,
-                    // NOVINKA: Zabezpečenie, aby accommodation bol vždy objekt s type property
+                    // Zabezpečenie, aby accommodation bol vždy objekt s type property
                     accommodation: {
                         type: team.accommodation?.type || '', // Inicializuj type z existujúceho, alebo na prázdny reťazec
                         ...(team.accommodation || {}) // Rozšír ostatné potenciálne properties ubytovania
@@ -282,18 +286,36 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     const handleTeamMemberDetailChange = (categoryName, teamIndex, memberIndex, type, field, value) => {
         setLocalTeamDetails(prevDetails => {
-            const newDetails = { ...prevDetails };
+            const newDetails = JSON.parse(JSON.stringify(prevDetails)); // Deep copy pre bezpečnú mutáciu
             const detailArrayName = `${type}TeamMemberDetails`;
+            const memberToUpdate = newDetails[categoryName][teamIndex][detailArrayName][memberIndex];
 
-            if (!newDetails[categoryName]?.[teamIndex]?.[detailArrayName]?.[memberIndex]) {
-                if (!newDetails[categoryName][teamIndex][detailArrayName]) {
-                    newDetails[categoryName][teamIndex][detailArrayName] = [];
-                }
-                newDetails[categoryName][teamIndex][detailArrayName][memberIndex] = {
-                    firstName: '', lastName: '', dateOfBirth: ''
-                };
+            // Zabezpečenie inicializácie adresy
+            if (!memberToUpdate.address) {
+                memberToUpdate.address = { street: '', houseNumber: '', city: '', postalCode: '', country: '' };
             }
-            newDetails[categoryName][teamIndex][detailArrayName][memberIndex][field] = value;
+
+            if (field.startsWith('address.')) {
+                const addressField = field.substring('address.'.length);
+                if (addressField === 'postalCode') {
+                    let rawValue = value.replace(/[^0-9]/g, ''); // Ponechaj iba číslice
+                    let formattedValue = rawValue;
+
+                    if (rawValue.length > 5) { // Obmedz na maximálne 5 číslic
+                        rawValue = rawValue.substring(0, 5);
+                    }
+
+                    if (rawValue.length > 3) {
+                        // Aplikuj formát "xxx xx"
+                        formattedValue = rawValue.substring(0, 3) + ' ' + rawValue.substring(3, 5);
+                    }
+                    memberToUpdate.address[addressField] = formattedValue;
+                } else {
+                    memberToUpdate.address[addressField] = value;
+                }
+            } else {
+                memberToUpdate[field] = value;
+            }
             return newDetails;
         });
     };
@@ -604,7 +626,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Meno členky'
                                                     }),
-                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
@@ -618,7 +639,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko členky'
                                                     }),
-                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
@@ -631,7 +651,77 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'dateOfBirth', e.target.value),
                                                         disabled: loading,
                                                     }),
-                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                )
+                                            ),
+                                            // Nový riadok pre adresné polia pre ženy
+                                            React.createElement('div', {
+                                                className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
+                                            },
+                                                React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                    React.createElement('label', { htmlFor: `street-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `street-woman-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.street || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'address.street', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Ulica'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: `w-24` },
+                                                    React.createElement('label', { htmlFor: `houseNumber-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `houseNumber-woman-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.houseNumber || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'address.houseNumber', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Číslo'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                    React.createElement('label', { htmlFor: `city-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `city-woman-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.city || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'address.city', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Mesto'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                    React.createElement('label', { htmlFor: `postalCode-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `postalCode-woman-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.postalCode || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'address.postalCode', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        maxLength: 6,
+                                                        placeholder: '000 00'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                    React.createElement('label', { htmlFor: `country-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Štát'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `country-woman-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.country || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'address.country', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Štát'
+                                                    }),
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 )
                                             )
@@ -659,7 +749,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Meno člena'
                                                     }),
-                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
@@ -673,7 +762,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko člena'
                                                     }),
-                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
@@ -686,7 +774,77 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'dateOfBirth', e.target.value),
                                                         disabled: loading,
                                                     }),
-                                                    // V realnom scenari by tu mohla byt validacia, pridany placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                )
+                                            ),
+                                            // Nový riadok pre adresné polia pre mužov
+                                            React.createElement('div', {
+                                                className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
+                                            },
+                                                React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                    React.createElement('label', { htmlFor: `street-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `street-man-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.street || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'address.street', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Ulica'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: `w-24` },
+                                                    React.createElement('label', { htmlFor: `houseNumber-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `houseNumber-man-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.houseNumber || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'address.houseNumber', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Číslo'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                    React.createElement('label', { htmlFor: `city-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `city-man-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.city || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'address.city', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Mesto'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                    React.createElement('label', { htmlFor: `postalCode-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `postalCode-man-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.postalCode || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'address.postalCode', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        maxLength: 6,
+                                                        placeholder: '000 00'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: `flex-1 min-w-[120px]` },
+                                                    React.createElement('label', { htmlFor: `country-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Štát'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `country-man-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.address?.country || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'address.country', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Štát'
+                                                    }),
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 )
                                             )
