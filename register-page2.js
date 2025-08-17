@@ -2,7 +2,7 @@
 // Obsahuje komponenty a logiku pre druhú stránku registračného formulára.
 
 // Page2Form Component
-export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, notificationMessage, closeNotification, NotificationModal }) { // Zmenený prop handleSubmit na handleNextPage3
+export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, notificationMessage, closeNotification, NotificationModal, notificationType }) { // Pridaný notificationType prop
   // handleBillingChange pre vnorené fakturačné údaje a špecifické formátovanie
   const handleBillingChange = (e) => {
     const { id, value } = e.target;
@@ -62,7 +62,8 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
       { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
       'Registrácia - strana 2'
     ),
-    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
+    // Notifikácie teraz používajú prop 'type'
+    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
     React.createElement(
       'form',
       { onSubmit: handleSubmit, className: 'space-y-4' }, // handleSubmit teraz volá handleNextPage2ToPage3 z App.js
