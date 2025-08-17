@@ -1,7 +1,24 @@
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { NotificationModal } from './register-page5.js'; // Import NotificationModal
 
-export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) { // Odstránené NotificationModal z props, pretože sa importuje
+export function Page4Form({
+    formData,
+    handlePrev,
+    handleNextPage4,
+    loading,
+    setLoading = () => {}, // Predvolená prázdna funkcia
+    notificationMessage,
+    setShowNotification = () => {}, // Predvolená prázdna funkcia
+    setNotificationType = () => {}, // Predvolená prázdna funkcia
+    setRegistrationSuccess,
+    isRecaptchaReady,
+    selectedCountryDialCode,
+    numberOfPlayersLimit,
+    numberOfTeamMembersLimit,
+    teamsDataFromPage4,
+    setTeamsDataFromPage4,
+    closeNotification = () => {} // Predvolená prázdna funkcia
+}) { // Odstránené NotificationModal z props, pretože sa importuje
 
     // Získame referenciu na Firebase Firestore
     const db = getFirestore();
@@ -15,6 +32,8 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
 
     // Vytvorenie lokálnych aliasov pre funkcie propov, aby sa predišlo ReferenceError
     // Aj keď sú propom undefined, samotná premenná bude definovaná (s hodnotou undefined).
+    // Tieto aliasy už nie sú striktne potrebné, ak sú props definované s predvolenými hodnotami,
+    // ale ponechávam ich pre konzistenciu a explicitnosť.
     const _setNotificationMessage = setNotificationMessage;
     const _setShowNotification = setShowNotification;
     const _setNotificationType = setNotificationType;
@@ -53,16 +72,16 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 }, (error) => {
                     console.error("Chyba pri načítaní veľkostí tričiek:", error);
                     // Používame lokálne aliasy pre notifikácie
-                    if (_setShowNotification) _setShowNotification(true);
-                    if (_setNotificationMessage) _setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
-                    if (_setNotificationType) _setNotificationType('error');
+                    _setShowNotification(true);
+                    _setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
+                    _setNotificationType('error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre veľkosti tričiek:", e);
                 // Používame lokálne aliasy pre notifikácie
-                if (_setShowNotification) _setShowNotification(true);
-                if (_setNotificationMessage) _setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
-                if (_setNotificationType) _setNotificationType('error');
+                _setShowNotification(true);
+                _setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
+                _setNotificationType('error');
             }
         };
 
@@ -235,13 +254,13 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
     // Funkcia pre spracovanie odoslania formulára pre túto stránku
     const handlePage4Submit = async (e) => {
         e.preventDefault();
-        if (_setLoading) _setLoading(true);
-        if (_closeNotification) _closeNotification();
+        _setLoading(true);
+        _closeNotification();
 
         if (!isFormValidPage4) {
-            if (_setNotificationMessage) _setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím a uistite sa, že počet tričiek zodpovedá počtu členov.", 'error');
-            if (_setNotificationType) _setNotificationType('error');
-            if (_setLoading) _setLoading(false);
+            _setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím a uistite sa, že počet tričiek zodpovedá počtu členov.", 'error');
+            _setNotificationType('error');
+            _setLoading(false);
             return;
         }
 
@@ -250,10 +269,10 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
             await handleNextPage4(teamsData);
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page4:", error);
-            if (_setNotificationMessage) _setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
-            if (_setNotificationType) _setNotificationType('error');
+            _setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
+            _setNotificationType('error');
         } finally {
-            if (_setLoading) _setLoading(false);
+            _setLoading(false);
         }
     };
 
@@ -412,7 +431,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                         },
                                         required: true,
                                         disabled: loading,
-                                        tabIndex: 7 + teamIndex * 10 + pIndex * 10
+                                        tabIndex: 7 + teamId * 10 + pIndex * 10
                                     })
                                 ),
                                 React.createElement(
@@ -667,7 +686,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
+        React.createElement(NotificationModal, { message: notificationMessage, onClose: _closeNotification, type: notificationType }),
 
         React.createElement(
             'h2',
