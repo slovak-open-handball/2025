@@ -414,10 +414,10 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         }
 
         if (hasAnyPlayerErrors) {
-            dispatchAppNotification('V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.', 'error');
+            dispatchAppNotification('Boli nájdené duplicitné údaje. Prosím, opravte chyby.', 'error');
         } else {
             // Iba ak je aktuálna notifikácia o duplicitných údajoch, tak ju zrušíme
-            if (notificationMessage === 'V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.') {
+            if (notificationMessage === 'Boli nájdené duplicitné údaje. Prosím, opravte chyby.') {
                 dispatchAppNotification('', 'info');
             }
         }
