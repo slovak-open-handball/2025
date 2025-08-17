@@ -57,7 +57,14 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         lastName: '',
                         dateOfBirth: '',
                         isRegistered: false,
-                        registrationNumber: ''
+                        registrationNumber: '',
+                        address: { // Inicializácia adresy pre každého hráča
+                            street: '',
+                            houseNumber: '',
+                            city: '',
+                            postalCode: '',
+                            country: '',
+                        }
                     })),
                     womenTeamMemberDetails: team.womenTeamMemberDetails || Array.from({ length: womenMembersCount }).map(() => ({
                         firstName: '',
@@ -179,12 +186,14 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     const handlePlayerDetailChange = (categoryName, teamIndex, playerIndex, field, value) => {
         setLocalTeamDetails(prevDetails => {
             const newDetails = JSON.parse(JSON.stringify(prevDetails)); // Deep copy pre bezpečnú mutáciu
+            // Zabezpečenie inicializácie hráča a jeho adresy, ak neexistujú
             if (!newDetails[categoryName]?.[teamIndex]?.playerDetails?.[playerIndex]) {
                 if (!newDetails[categoryName][teamIndex].playerDetails) {
                     newDetails[categoryName][teamIndex].playerDetails = [];
                 }
                 newDetails[categoryName][teamIndex].playerDetails[playerIndex] = {
-                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: ''
+                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                 };
             }
             const playerToUpdate = newDetails[categoryName][teamIndex].playerDetails[playerIndex];
@@ -195,7 +204,30 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 if (!value) {
                     playerToUpdate.registrationNumber = '';
                 }
-            } else {
+            } else if (field.startsWith('address.')) {
+                const addressField = field.substring('address.'.length);
+                if (!playerToUpdate.address) { // Zabezpečenie inicializácie objektu adresy
+                    playerToUpdate.address = { street: '', houseNumber: '', city: '', postalCode: '', country: '' };
+                }
+
+                if (addressField === 'postalCode') {
+                    let rawValue = value.replace(/[^0-9]/g, ''); // Ponechaj iba číslice
+                    let formattedValue = rawValue;
+
+                    if (rawValue.length > 5) { // Obmedz na maximálne 5 číslic
+                        rawValue = rawValue.substring(0, 5);
+                    }
+
+                    if (rawValue.length > 3) {
+                        // Aplikuj formát "xxx xx"
+                        formattedValue = rawValue.substring(0, 3) + ' ' + rawValue.substring(3, 5);
+                    }
+                    playerToUpdate.address[addressField] = formattedValue;
+                } else {
+                    playerToUpdate.address[addressField] = value;
+                }
+            }
+            else {
                 playerToUpdate[field] = value;
             }
 
@@ -208,7 +240,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 // Notifikácia sa vyčistí po 10 sekundách, takže tu nemusíme explicitne čistiť,
                 // pokiaľ neboli žiadne chyby predchádzajúci raz
                 if (notificationMessage === 'V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.') {
-                    dispatchAppNotification('', 'info'); // Clear specific notification
+                    dispatchAppNotification('', 'info'); // Vymaž špecifickú notifikáciu
                 }
             }
             return newDetails;
@@ -317,6 +349,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                             const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
+                            // Určenie, či tím má vybrané ubytovanie (iné ako "Bez ubytovania")
+                            const hasAccommodation = team.accommodation && team.accommodation.type !== 'Bez ubytovania' && team.accommodation.type !== '';
+
                             return React.createElement(
                                 'div',
                                 { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
@@ -420,6 +455,84 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     }),
                                                     // Placeholder pre chybu kombinácie
                                                     React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
+                                                ),
+
+                                                // Nové polia pre adresu trvalého pobytu
+                                                React.createElement('div', {
+                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                },
+                                                    React.createElement('label', { htmlFor: `street-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `street-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: player.address?.street || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.street', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Ulica'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                ),
+                                                React.createElement('div', {
+                                                    className: `w-24 transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                },
+                                                    React.createElement('label', { htmlFor: `houseNumber-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `houseNumber-addr-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: player.address?.houseNumber || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.houseNumber', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Číslo'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                ),
+                                                React.createElement('div', {
+                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                },
+                                                    React.createElement('label', { htmlFor: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: player.address?.city || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.city', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Mesto'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                ),
+                                                React.createElement('div', {
+                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                },
+                                                    React.createElement('label', { htmlFor: `postalCode-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `postalCode-addr-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: player.address?.postalCode || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.postalCode', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        maxLength: 6, // "XXX XX" is 6 characters
+                                                        placeholder: '000 00'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                ),
+                                                React.createElement('div', {
+                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                },
+                                                    React.createElement('label', { htmlFor: `country-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Štát'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `country-addr-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: player.address?.country || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.country', e.target.value),
+                                                        disabled: loading || !hasAccommodation,
+                                                        placeholder: 'Štát'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
                                                 )
                                             )
                                         );
