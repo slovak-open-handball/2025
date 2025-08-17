@@ -104,6 +104,11 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     playerDetails: playerDetails,
                     womenTeamMemberDetails: womenTeamMemberDetails,
                     menTeamMemberDetails: menTeamMemberDetails,
+                    // NOVINKA: Zabezpečenie, aby accommodation bol vždy objekt s type property
+                    accommodation: {
+                        type: team.accommodation?.type || '', // Inicializuj type z existujúceho, alebo na prázdny reťazec
+                        ...(team.accommodation || {}) // Rozšír ostatné potenciálne properties ubytovania
+                    }
                 };
             });
         }
@@ -379,6 +384,13 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
                             // Určenie, či tím má vybrané ubytovanie (iné ako "Bez ubytovania")
                             const hasAccommodation = team.accommodation && team.accommodation.type !== 'Bez ubytovania' && team.accommodation.type !== '';
+
+                            // Debugging logs - Pomôžu ti pochopiť stav dát
+                            console.log(`Page6Form - Processing Team: ${team.teamName}`);
+                            console.log(`  Accommodation Object:`, team.accommodation);
+                            console.log(`  Accommodation Type:`, team.accommodation?.type);
+                            console.log(`  Has Accommodation (boolean):`, hasAccommodation);
+
 
                             return React.createElement(
                                 'div',
