@@ -667,7 +667,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('div', {
                                                         className: `flex-1 min-w-[120px]`
                                                     },
-                                                        React.createElement('label', { htmlFor: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                        React.createElement('label', { htmlFor: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Obec'),
                                                         React.createElement('input', {
                                                             type: 'text',
                                                             id: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`,
@@ -675,7 +675,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             value: player.address?.city || '',
                                                             onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.city', e.target.value),
                                                             disabled: loading || !hasAccommodation,
-                                                            placeholder: 'Mesto'
+                                                            placeholder: 'Obec'
                                                         }),
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
@@ -797,7 +797,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
                                                     React.createElement('div', { className: `flex-1 min-w-[120px]` },
-                                                        React.createElement('label', { htmlFor: `city-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                        React.createElement('label', { htmlFor: `city-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Obec'),
                                                         React.createElement('input', {
                                                             type: 'text',
                                                             id: `city-woman-${categoryName}-${teamIndex}-${memberIndex}`,
@@ -805,7 +805,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             value: member.address?.city || '',
                                                             onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'address.city', e.target.value),
                                                             disabled: loading || !hasAccommodation,
-                                                            placeholder: 'Mesto'
+                                                            placeholder: 'Obec'
                                                         }),
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
@@ -923,7 +923,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
                                                     React.createElement('div', { className: `flex-1 min-w-[120px]` },
-                                                        React.createElement('label', { htmlFor: `city-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                        React.createElement('label', { htmlFor: `city-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Obec'),
                                                         React.createElement('input', {
                                                             type: 'text',
                                                             id: `city-man-${categoryName}-${teamIndex}-${memberIndex}`,
@@ -931,7 +931,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             value: member.address?.city || '',
                                                             onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'address.city', e.target.value),
                                                             disabled: loading || !hasAccommodation,
-                                                            placeholder: 'Mesto'
+                                                            placeholder: 'Obec'
                                                         }),
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
@@ -1050,7 +1050,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
                                                     React.createElement('div', { className: `flex-1 min-w-[120px]` },
-                                                        React.createElement('label', { htmlFor: `city-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                        React.createElement('label', { htmlFor: `city-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Obec'),
                                                         React.createElement('input', {
                                                             type: 'text',
                                                             id: `city-male-driver-${categoryName}-${teamIndex}-${driverIndex}`,
@@ -1058,7 +1058,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             value: driver.address?.city || '',
                                                             onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'male', 'address.city', e.target.value),
                                                             disabled: loading || !hasAccommodation,
-                                                            placeholder: 'Mesto'
+                                                            placeholder: 'Obec'
                                                         }),
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
@@ -1177,7 +1177,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
                                                     React.createElement('div', { className: `flex-1 min-w-[120px]` },
-                                                        React.createElement('label', { htmlFor: `city-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto'),
+                                                        React.createElement('label', { htmlFor: `city-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Obec'),
                                                         React.createElement('input', {
                                                             type: 'text',
                                                             id: `city-female-driver-${categoryName}-${teamIndex}-${driverIndex}`,
@@ -1185,7 +1185,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             value: driver.address?.city || '',
                                                             onChange: (e) => handleDriverDetailChange(categoryName, teamIndex, driverIndex, 'female', 'address.city', e.target.value),
                                                             disabled: loading || !hasAccommodation,
-                                                            placeholder: 'Mesto'
+                                                            placeholder: 'Obec'
                                                         }),
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
