@@ -25,7 +25,7 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
 
 // Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
 
-export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType }) {
+export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev }) { // Pridaný onSaveAndPrev prop
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
@@ -390,6 +390,25 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         handleSubmit(finalTeamsData);
     };
 
+    // Nová funkcia na uloženie dát a prechod späť
+    const handleSaveAndPrev = () => {
+        // Vytvorte kópiu teamsDataFromPage4
+        const updatedTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
+
+        // Aktualizujte túto kópiu s dátami z localTeamDetails
+        for (const categoryName in localTeamDetails) {
+            (localTeamDetails[categoryName] || []).forEach((localTeam, teamIndex) => {
+                if (updatedTeamsData[categoryName] && updatedTeamsData[categoryName][teamIndex]) {
+                    updatedTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
+                    updatedTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
+                    updatedTeamsData[categoryName][teamIndex].menTeamMemberDetails = localTeam.menTeamMemberDetails;
+                }
+            });
+        }
+        // Zavolajte prop funkciu na uloženie dát a prechod späť
+        onSaveAndPrev(updatedTeamsData);
+    };
+
 
     return React.createElement(
         React.Fragment,
@@ -406,7 +425,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             { className: 'text-center text-sm text-gray-600 mb-6 px-4' },
             'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
             React.createElement('strong', null, 'ale je povinné ich vyplniť v sekcii "Moja zóna"'),
-            ' po prihlásení sa do svojho turnajového účtu do ',
+            ' po prihlásení sa do svojho turnajového účtu do dátumu ',
             React.createElement('strong', null, dataEditDeadline || 'nezadaný dátum'),
             '.'
         ),
@@ -892,7 +911,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     'button',
                     {
                         type: 'button',
-                        onClick: handlePrev,
+                        onClick: handleSaveAndPrev, // Zmena funkcie pre tlačidlo "Späť"
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
