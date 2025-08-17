@@ -3,6 +3,59 @@
 
 export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification }) {
 
+    // Funkcia na formátovanie dátumu narodenia
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            // Pre istotu skontrolujeme, či je dátum platný po parsovaní
+            if (isNaN(date.getTime())) {
+                return ''; // Ak je neplatný, vrátime prázdny reťazec
+            }
+            return date.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch (e) {
+            console.error("Chyba pri formátovaní dátumu:", e);
+            return ''; // V prípade chyby formátovania
+        }
+    };
+
+    // Pomocná funkcia pre zobrazenie adresy v jednom riadku
+    const formatAddress = (address) => {
+        if (!address || Object.values(address).every(val => !val)) {
+            return ''; // Ak je adresa prázdna, vrátiť prázdny reťazec
+        }
+        const parts = [];
+        if (address.street) parts.push(address.street);
+        if (address.houseNumber) parts.push(address.houseNumber);
+        
+        let firstLine = parts.join(' ');
+
+        const secondParts = [];
+        if (address.postalCode) secondParts.push(address.postalCode);
+        if (address.city) secondParts.push(address.city);
+        
+        let secondLine = secondParts.join(' ');
+
+        let fullAddress = '';
+        if (firstLine && secondLine) {
+            fullAddress = `${firstLine}, ${secondLine}`;
+        } else if (firstLine) {
+            fullAddress = firstLine;
+        } else if (secondLine) {
+            fullAddress = secondLine;
+        }
+
+        if (address.country) {
+            if (fullAddress) {
+                fullAddress += `, ${address.country}`;
+            } else {
+                fullAddress = address.country;
+            }
+        }
+
+        return fullAddress;
+    };
+
     // Funkcia na formátovanie dát tímu pre zobrazenie
     const formatTeamsData = (teams) => {
         if (!teams || Object.keys(teams).length === 0) {
@@ -29,8 +82,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
                     // Detaily ubytovania
                     const accommodationDetails = team.accommodation?.type || 'Bez ubytovania';
-                    const teamHasAccommodation = accommodationDetails.toLowerCase() !== 'bez ubytovania';
-
+                    // const teamHasAccommodation = accommodationDetails.toLowerCase() !== 'bez ubytovania'; // Nepotrebné, adresa sa zobrazuje podmienečne podľa hasAccommodation na Page6
 
                     // Detaily dopravy
                     let arrivalDetails = team.arrival?.type || 'Nezadaný';
@@ -55,6 +107,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                 React.createElement('strong', null, 'Stravovanie:'),
                                 mealDates.length > 0 ? (
                                     mealDates.map(date => {
+                                        const dateObj = new Date(date + 'T00:00:00'); // Ensure correct date parsing
+                                        const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
                                         const mealsForDay = pkg.meals[date];
                                         const includedItems = [];
                                         if (mealsForDay?.breakfast === 1) includedItems.push('Raňajky');
@@ -63,8 +117,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         if (mealsForDay?.refreshment === 1) includedItems.push('Občerstvenie');
 
                                         if (includedItems.length > 0) {
-                                            const dateObj = new Date(date + 'T00:00:00');
-                                            const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
                                             return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
                                         }
                                         return null;
@@ -87,80 +139,88 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         packageDetailsHtml = React.createElement('p', null, 'Balíček: Nezadaný');
                     }
 
-                    // Pomocná funkcia pre zobrazenie adresy
-                    const renderAddress = (address) => {
-                        if (!address || (Object.values(address).every(val => !val))) { // Ak je adresa prázdna
-                            return null;
-                        }
-                        return React.createElement('div', { className: 'mt-2 border-t pt-2 border-gray-200' },
-                            React.createElement('p', { className: 'font-semibold text-gray-700 text-sm mb-1' }, 'Adresa:'),
-                            React.createElement('div', { className: 'ml-4 text-xs text-gray-600' },
-                                address.street && React.createElement('p', null, `Ulica: ${address.street || '-'}`),
-                                address.houseNumber && React.createElement('p', null, `Popisné číslo: ${address.houseNumber || '-'}`),
-                                address.city && React.createElement('p', null, `Mesto: ${address.city || '-'}`),
-                                address.postalCode && React.createElement('p', null, `PSČ: ${address.postalCode || '-'}`),
-                                address.country && React.createElement('p', null, `Štát: ${address.country || '-'}`)
+                    // Zozbieranie všetkých osôb do jedného poľa pre tabuľku
+                    const allParticipants = [];
+
+                    // Pridanie hráčov
+                    (team.playerDetails || []).forEach(player => {
+                        allParticipants.push({
+                            type: 'Hráč',
+                            jerseyNumber: player.jerseyNumber || '',
+                            firstName: player.firstName || '',
+                            lastName: player.lastName || '',
+                            dateOfBirth: formatDate(player.dateOfBirth),
+                            registrationNumber: (player.isRegistered && player.registrationNumber) ? player.registrationNumber : '',
+                            address: formatAddress(player.address)
+                        });
+                    });
+
+                    // Pridanie ženských členov realizačného tímu
+                    (team.womenTeamMemberDetails || []).forEach(member => {
+                        allParticipants.push({
+                            type: 'Realizačný tím (žena)',
+                            jerseyNumber: '', // Realizačný tím nemá dres
+                            firstName: member.firstName || '',
+                            lastName: member.lastName || '',
+                            dateOfBirth: formatDate(member.dateOfBirth),
+                            registrationNumber: '', // Realizačný tím nemá registráciu
+                            address: formatAddress(member.address)
+                        });
+                    });
+
+                    // Pridanie mužských členov realizačného tímu
+                    (team.menTeamMemberDetails || []).forEach(member => {
+                        allParticipants.push({
+                            type: 'Realizačný tím (muž)',
+                            jerseyNumber: '', // Realizačný tím nemá dres
+                            firstName: member.firstName || '',
+                            lastName: member.lastName || '',
+                            dateOfBirth: formatDate(member.dateOfBirth),
+                            registrationNumber: '', // Realizačný tím nemá registráciu
+                            address: formatAddress(member.address)
+                        });
+                    });
+
+
+                    return React.createElement('div', { key: index, className: 'mb-4 ml-4 p-4 bg-gray-50 rounded-lg shadow-sm' },
+                        React.createElement('p', { className: 'font-semibold text-blue-800 mb-2' }, `Tím ${index + 1}: ${team.teamName || '-'}`),
+                        React.createElement('p', { className: 'text-sm text-gray-700 mb-4' }, `Počet hráčov: ${team.players || 0}, Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}, Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}`),
+                        
+                        // Zobrazenie tabuľky pre všetkých účastníkov
+                        allParticipants.length > 0 ? (
+                            React.createElement('div', { className: 'overflow-x-auto' },
+                                React.createElement('table', { className: 'min-w-full bg-white border border-gray-300 rounded-lg shadow-sm' },
+                                    React.createElement('thead', null,
+                                        React.createElement('tr', { className: 'bg-gray-200 text-gray-700 uppercase text-sm leading-normal' },
+                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Typ'),
+                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Číslo dresu'),
+                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Meno'),
+                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Priezvisko'),
+                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Dátum narodenia'),
+                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Číslo registrácie'),
+                                            React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Adresa trvalého bydliska')
+                                        )
+                                    ),
+                                    React.createElement('tbody', { className: 'text-gray-600 text-sm font-light' },
+                                        allParticipants.map((participant, pIdx) => (
+                                            React.createElement('tr', { key: pIdx, className: 'border-b border-gray-200 hover:bg-gray-100' },
+                                                React.createElement('td', { className: 'py-3 px-4 text-left whitespace-nowrap' }, participant.type),
+                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.jerseyNumber),
+                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.firstName),
+                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.lastName),
+                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.dateOfBirth),
+                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.registrationNumber),
+                                                React.createElement('td', { className: 'py-3 px-4 text-left' }, participant.address)
+                                            )
+                                        ))
+                                    )
+                                )
                             )
-                        );
-                    };
+                        ) : React.createElement('p', { className: 'ml-4 text-gray-600 text-sm' }, 'Žiadni účastníci zadaní pre tento tím.'),
 
-                    // Dynamické generovanie riadkov pre hráčov
-                    const playersRows = Array.from({ length: team.players || 0 }).map((_, playerIndex) => {
-                        const player = team.playerDetails?.[playerIndex] || {};
-                        return React.createElement('div', { key: `player-${index}-${playerIndex}`, className: 'mb-2 ml-4 p-2 bg-gray-100 rounded-md shadow-sm' },
-                            React.createElement('p', null, React.createElement('strong', null, `Hráč ${playerIndex + 1}:`)),
-                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-2 text-sm' },
-                                React.createElement('p', null, `Číslo dresu: ${player.jerseyNumber || '-'}`),
-                                React.createElement('p', null, `Meno: ${player.firstName || '-'}`),
-                                React.createElement('p', null, `Priezvisko: ${player.lastName || '-'}`),
-                                React.createElement('p', null, `Dátum narodenia: ${player.dateOfBirth || '-'}`),
-                                React.createElement('p', null, `Registrovaný: ${player.isRegistered ? 'Áno' : 'Nie'}`),
-                                player.isRegistered && React.createElement('p', null, `Číslo registrácie: ${player.registrationNumber || '-'}`)
-                            ),
-                            teamHasAccommodation && renderAddress(player.address) // Zobrazenie adresy pre hráča
-                        );
-                    });
-
-                    // Dynamické generovanie riadkov pre členov realizačného tímu (ženy)
-                    const womenTeamMembersRows = Array.from({ length: team.womenTeamMembers || 0 }).map((_, memberIndex) => {
-                        const member = team.womenTeamMemberDetails?.[memberIndex] || {};
-                        return React.createElement('div', { key: `woman-member-${index}-${memberIndex}`, className: 'mb-2 ml-4 p-2 bg-gray-100 rounded-md shadow-sm' },
-                            React.createElement('p', null, React.createElement('strong', null, `Člen realizačného tímu (žena) ${memberIndex + 1}:`)),
-                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-2 text-sm' },
-                                React.createElement('p', null, `Meno: ${member.firstName || '-'}`),
-                                React.createElement('p', null, `Priezvisko: ${member.lastName || '-'}`),
-                                React.createElement('p', null, `Dátum narodenia: ${member.dateOfBirth || '-'}`)
-                            ),
-                            teamHasAccommodation && renderAddress(member.address) // Zobrazenie adresy pre ženu
-                        );
-                    });
-
-                    // Dynamické generovanie riadkov pre členov realizačného tímu (muži)
-                    const menTeamMembersRows = Array.from({ length: team.menTeamMembers || 0 }).map((_, memberIndex) => {
-                        const member = team.menTeamMemberDetails?.[memberIndex] || {};
-                        return React.createElement('div', { key: `man-member-${index}-${memberIndex}`, className: 'mb-2 ml-4 p-2 bg-gray-100 rounded-md shadow-sm' },
-                            React.createElement('p', null, React.createElement('strong', null, `Člen realizačného tímu (muž) ${memberIndex + 1}:`)),
-                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-2 text-sm' },
-                                React.createElement('p', null, `Meno: ${member.firstName || '-'}`),
-                                React.createElement('p', null, `Priezvisko: ${member.lastName || '-'}`),
-                                React.createElement('p', null, `Dátum narodenia: ${member.dateOfBirth || '-'}`)
-                            ),
-                            teamHasAccommodation && renderAddress(member.address) // Zobrazenie adresy pre muža
-                        );
-                    });
-
-
-                    return React.createElement('div', { key: index, className: 'mb-2 ml-4 p-2 bg-gray-50 rounded-md shadow-sm' },
-                        React.createElement('p', null, React.createElement('strong', null, `Tím ${index + 1}: `), team.teamName || '-'),
-                        React.createElement('p', null, `Počet hráčov: ${team.players || 0}`),
-                        playersRows.length > 0 ? playersRows : React.createElement('p', { className: 'ml-4 text-gray-600 text-sm' }, 'Žiadni hráči zadaní.'), // Zobrazenie riadkov hráčov
-                        React.createElement('p', null, `Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}`),
-                        womenTeamMembersRows.length > 0 ? womenTeamMembersRows : React.createElement('p', { className: 'ml-4 text-gray-600 text-sm' }, 'Žiadne členky realizačného tímu zadané.'), // Zobrazenie riadkov ženského realizačného tímu
-                        React.createElement('p', null, `Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}`),
-                        menTeamMembersRows.length > 0 ? menTeamMembersRows : React.createElement('p', { className: 'ml-4 text-gray-600 text-sm' }, 'Žiadni členovia realizačného tímu zadaní.'), // Zobrazenie riadkov mužského realizačného tímu
-                        React.createElement('p', null, `Tričká: ${tshirtsDetails}`),
-                        React.createElement('p', null, `Ubytovanie: ${accommodationDetails}`),
-                        React.createElement('p', null, `Doprava: ${arrivalDetails}`),
+                        React.createElement('p', { className: 'mt-4 text-gray-700' }, React.createElement('strong', null, 'Tričká: '), tshirtsDetails),
+                        React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Ubytovanie: '), accommodationDetails),
+                        React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Doprava: '), arrivalDetails),
                         packageDetailsHtml
                     );
                 })
@@ -171,7 +231,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: 'info' }),
+        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
         React.createElement(
             'h2',
@@ -206,18 +266,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 React.createElement('p', null, React.createElement('strong', null, 'Krajina: '), formData.country || '-')
             ),
 
-            // Informácie o ubytovaní (pôvodne pre formData, zachované)
-            // Tieto sekcie zostávajú, ak reprezentujú celkové klubové preferencie, nie tímu
-            // Dôležité: Tieto sú len pre hlavné údaje formulára, nie pre každý tím
-            React.createElement(
-                'div',
-                { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
-                React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-800' }, 'Hlavné informácie (registranta)'),
-                React.createElement('p', null, React.createElement('strong', null, 'Typ ubytovania (registranta): '), formData.accommodation?.type || 'Nezadané'),
-                React.createElement('p', null, React.createElement('strong', null, 'Typ dopravy (registranta): '), formData.arrival?.type || 'Nezadané'),
-                (formData.arrival?.type === 'vlaková doprava' || formData.arrival?.type === 'autobusová doprava') && formData.arrival?.time &&
-                React.createElement('p', null, React.createElement('strong', null, 'Plánovaný čas príchodu (registranta): '), formData.arrival.time)
-            ),
+            // Odstránený blok "Hlavné informácie (registranta)"
 
             React.createElement(
                 'div',
@@ -234,7 +283,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     {
                         type: 'button',
                         // NOVINKA: Odovzdávame aktuálne dáta do handlePrev
-                        onClick: () => handlePrev(teamsDataFromPage4),
+                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
