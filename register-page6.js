@@ -545,7 +545,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Hráč ${playerIndex + 1}`),
                                             React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
                                                 React.createElement('div', { className: 'w-24' },
-                                                    React.createElement('label', { htmlFor: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dres'),
+                                                    React.createElement('label', { htmlFor: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo dresu'),
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`,
