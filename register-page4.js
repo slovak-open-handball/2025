@@ -13,6 +13,15 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
     // Inicializujeme ho buď existujúcimi dátami z props (teamsDataFromPage4), alebo prázdnym objektom.
     const [teamsData, setTeamsData] = React.useState(teamsDataFromPage4 || {});
 
+    // Vytvorenie lokálnych aliasov pre funkcie propov, aby sa predišlo ReferenceError
+    // Aj keď sú propom undefined, samotná premenná bude definovaná (s hodnotou undefined).
+    const _setNotificationMessage = setNotificationMessage;
+    const _setShowNotification = setShowNotification;
+    const _setNotificationType = setNotificationType;
+    const _closeNotification = closeNotification;
+    const _setLoading = setLoading;
+
+
     // Effect pre synchronizáciu teamsDataFromPage4 prop s lokálnym stavom teamsData
     React.useEffect(() => {
         // Kontrolujeme, či sa teamsDataFromPage4 skutočne zmenili, aby sme predišli nekonečnej slučke
@@ -43,17 +52,17 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní veľkostí tričiek:", error);
-                    // Používame props pre notifikácie
-                    if (setShowNotification) setShowNotification(true);
-                    if (setNotificationMessage) setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
-                    if (setNotificationType) setNotificationType('error');
+                    // Používame lokálne aliasy pre notifikácie
+                    if (_setShowNotification) _setShowNotification(true);
+                    if (_setNotificationMessage) _setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
+                    if (_setNotificationType) _setNotificationType('error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre veľkosti tričiek:", e);
-                // Používame props pre notifikácie
-                if (setShowNotification) setShowNotification(true);
-                if (setNotificationMessage) setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
-                if (setNotificationType) setNotificationType('error');
+                // Používame lokálne aliasy pre notifikácie
+                if (_setShowNotification) _setShowNotification(true);
+                if (_setNotificationMessage) _setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
+                if (_setNotificationType) _setNotificationType('error');
             }
         };
 
@@ -64,7 +73,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 unsubscribe();
             }
         };
-    }, [db, setShowNotification, setNotificationMessage, setNotificationType]); // Pridaná závislosť na db
+    }, [db, _setShowNotification, _setNotificationMessage, _setNotificationType]); // Pridaná závislosť na aliasoch
 
     // Spravuje zmeny v údajoch o tímoch, vrátane hráčov a členov realizačného tímu
     const handleTeamDetailsChange = React.useCallback((categoryName, teamIndex, field, value) => {
@@ -226,13 +235,13 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
     // Funkcia pre spracovanie odoslania formulára pre túto stránku
     const handlePage4Submit = async (e) => {
         e.preventDefault();
-        if (setLoading) setLoading(true);
-        if (closeNotification) closeNotification();
+        if (_setLoading) _setLoading(true);
+        if (_closeNotification) _closeNotification();
 
         if (!isFormValidPage4) {
-            if (setNotificationMessage) setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím a uistite sa, že počet tričiek zodpovedá počtu členov.", 'error');
-            if (setNotificationType) setNotificationType('error');
-            if (setLoading) setLoading(false);
+            if (_setNotificationMessage) _setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím a uistite sa, že počet tričiek zodpovedá počtu členov.", 'error');
+            if (_setNotificationType) _setNotificationType('error');
+            if (_setLoading) _setLoading(false);
             return;
         }
 
@@ -241,10 +250,10 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
             await handleNextPage4(teamsData);
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page4:", error);
-            if (setNotificationMessage) setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
-            if (setNotificationType) setNotificationType('error');
+            if (_setNotificationMessage) _setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
+            if (_setNotificationType) _setNotificationType('error');
         } finally {
-            if (setLoading) setLoading(false);
+            if (_setLoading) _setLoading(false);
         }
     };
 
