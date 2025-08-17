@@ -1237,6 +1237,7 @@ function App() {
                   NotificationModal: NotificationModal,
                   notificationMessage: notificationMessage,
                   closeNotification: closeNotification,
+                  notificationType: notificationType,
               }) : null
         )
       ) : isRegistrationClosed ? (
