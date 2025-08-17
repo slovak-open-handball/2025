@@ -888,20 +888,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const newDrivers = currentDrivers.map(entry => ({ ...entry }));
 
             let updatedEntry = null;
+            let updatedEntryIndex = -1; // New: Keep track of the index
 
             // Nájdeme a aktualizujeme konkrétny záznam v skopírovanom poli
             for (let i = 0; i < newDrivers.length; i++) {
                 if (newDrivers[i].id === id) {
                     updatedEntry = newDrivers[i]; // Referencia na objekt v newDrivers poli
-
-                    if (field === 'teamId') {
-                        const [catName, teamIdxStr] = value.split('-');
-                        updatedEntry.categoryName = catName || '';
-                        updatedEntry.teamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
-                        updatedEntry.gender = ''; // Reset gender when team changes
-                    } else {
-                        updatedEntry[field] = value;
-                    }
+                    updatedEntryIndex = i; // New: Store the index
                     break;
                 }
             }
@@ -910,6 +903,80 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 // Tento prípad by sa nemal stať, ak je 'id' platné
                 console.warn("Pokus o zmenu záznamu šoféra s neznámym ID:", id);
                 return currentDrivers; 
+            }
+
+            // Store the original gender before potential change for validation
+            const originalGender = updatedEntry.gender;
+
+            if (field === 'teamId') {
+                const [catName, teamIdxStr] = value.split('-');
+                updatedEntry.categoryName = catName || '';
+                updatedEntry.teamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
+
+                // New logic: Check if the original gender is still available for the new team
+                const dummyEntryForGenderCheck = { // Create a dummy entry representing the new state to check gender availability
+                    id: updatedEntry.id, // Use its own ID so getAvailableGenderOptions ignores it
+                    categoryName: updatedEntry.categoryName,
+                    teamIndex: updatedEntry.teamIndex,
+                    gender: '' // Temporarily set gender to empty for the options generation
+                };
+                // To get correct available options, we need to pass a temporary `driverEntries` array
+                // that includes the `updatedEntry` with its new `categoryName` and `teamIndex`
+                // but without its current `gender` interfering.
+                const tempDriverEntriesForGenderCheck = newDrivers.map((d, idx) => {
+                    if (idx === updatedEntryIndex) {
+                        return { ...d, gender: '' }; // Temporarily clear gender for gender option check
+                    }
+                    return d;
+                });
+                
+                // Temporarily override driverEntries for the useCallback call
+                const getAvailableGenderOptionsForNewState = (entry) => {
+                    const allOptions = [
+                        React.createElement('option', { key: "placeholder", value: "" }, "Vyberte"),
+                        React.createElement('option', { key: "male", value: "male" }, "Muži"),
+                        React.createElement('option', { key: "female", value: "female" }, "Ženy")
+                    ];
+                
+                    if (!entry || entry.categoryName === '' || entry.teamIndex === null) {
+                        return allOptions;
+                    }
+                
+                    const currentTeamId = `${entry.categoryName}-${entry.teamIndex}`;
+                    const usedGendersForCurrentTeam = new Set();
+                
+                    tempDriverEntriesForGenderCheck.forEach(tempEntry => { // Use tempDriverEntriesForGenderCheck here
+                        if (tempEntry.id !== entry.id && tempEntry.categoryName && tempEntry.teamIndex !== null && tempEntry.gender !== '') {
+                            if (`${tempEntry.categoryName}-${tempEntry.teamIndex}` === currentTeamId) {
+                                usedGendersForCurrentTeam.add(tempEntry.gender);
+                            }
+                        }
+                    });
+                
+                    return allOptions.filter(option => {
+                        const optionValue = option.props.value;
+                        if (optionValue === '') {
+                            return true;
+                        }
+                        return !usedGendersForCurrentTeam.has(optionValue) || optionValue === entry.gender;
+                    });
+                };
+
+                const availableGendersForNewTeam = getAvailableGenderOptionsForNewState(dummyEntryForGenderCheck).map(opt => opt.props.value);
+
+                if (originalGender && !availableGendersForNewTeam.includes(originalGender)) {
+                    // If original gender is not valid for the new team, then reset it
+                    updatedEntry.gender = '';
+                } else if (originalGender) {
+                    // If original gender is still valid, keep it
+                    updatedEntry.gender = originalGender;
+                } else {
+                    // If no original gender was selected, keep it empty
+                    updatedEntry.gender = '';
+                }
+
+            } else {
+                updatedEntry[field] = value;
             }
 
             // Agregácia dát pre rodičovský stav (teamsDataFromPage4)
