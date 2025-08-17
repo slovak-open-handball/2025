@@ -1,10 +1,42 @@
 import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// Komponent pre prepínač (Toggle Switch)
+function ToggleSwitch({ isOn, handleToggle, disabled }) {
+    const bgColorClass = isOn ? 'bg-green-500' : 'bg-red-500';
+    const togglePositionClass = isOn ? 'translate-x-full' : 'translate-x-0';
+
+    return React.createElement(
+        'div',
+        {
+            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
+            onClick: disabled ? null : handleToggle,
+            style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' } // Vnútorný tieň pre efekt "zatlačenia"
+        },
+        React.createElement(
+            'span',
+            {
+                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`,
+                style: { boxShadow: '0 2px 5px rgba(0,0,0,0.2)' } // Tieň pre gombík prepínača
+            }
+        )
+    );
+}
+
+
 // Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
 
-export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline }) {
+export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType }) {
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
+    // Nový stav pre chyby hráčov
+    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error' } } } }
+
+    // Helper pre notifikácie
+    const dispatchAppNotification = React.useCallback((message, type = 'info') => {
+        setNotificationMessage(message);
+        setNotificationType(type);
+    }, [setNotificationMessage, setNotificationType]);
+
 
     React.useEffect(() => {
         const initialDetails = {};
@@ -43,9 +75,110 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         setLocalTeamDetails(initialDetails);
     }, [teamsDataFromPage4]);
 
+
+    const validateTeamPlayers = React.useCallback((currentTeamPlayers, categoryName, teamIndex) => {
+        const newPlayerErrorsForTeam = {}; // Chyby pre aktuálny tím
+        let teamHasErrors = false;
+
+        // Validácia čísla dresu
+        const jerseyNumbers = new Set();
+        const jerseyNumberErrors = new Set(); // Sleduje čísla dresov, ktoré už vyvolali chybu
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const jersey = player.jerseyNumber.trim();
+
+            if (jersey !== '') {
+                if (jerseyNumbers.has(jersey)) {
+                    jerseyNumberErrors.add(jersey); // Označ duplicitné číslo dresu
+                    teamHasErrors = true;
+                } else {
+                    jerseyNumbers.add(jersey);
+                }
+            }
+        }
+
+        // Nastav chybové správy pre čísla dresu
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            if (jerseyNumberErrors.has(player.jerseyNumber.trim())) {
+                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
+                newPlayerErrorsForTeam[i].jerseyNumber = 'Duplicitné číslo dresu v tíme.';
+            }
+        }
+
+
+        // Validácia kombinácie údajov hráča
+        const playerCombinations = new Set();
+        const combinationErrors = new Set(); // Sleduje kombinácie, ktoré už vyvolali chybu
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const firstName = player.firstName.trim().toLowerCase();
+            const lastName = player.lastName.trim().toLowerCase();
+            const dateOfBirth = player.dateOfBirth.trim();
+            const registrationNumber = player.registrationNumber.trim().toLowerCase();
+
+            // Ak sú všetky kľúčové polia prázdne, ignoruj pre kontrolu duplicít
+            if (firstName === '' && lastName === '' && dateOfBirth === '' && registrationNumber === '') {
+                continue;
+            }
+
+            let combinationKey;
+            if (player.isRegistered && registrationNumber !== '') {
+                // Registrovaný hráč s číslom registrácie
+                combinationKey = `${firstName}-${lastName}-${dateOfBirth}-${registrationNumber}`;
+            } else {
+                // Neregistrovaný hráč alebo registrovaný bez čísla registrácie
+                combinationKey = `${firstName}-${lastName}-${dateOfBirth}`;
+            }
+
+            if (playerCombinations.has(combinationKey)) {
+                combinationErrors.add(combinationKey); // Označ duplicitnú kombináciu
+                teamHasErrors = true;
+            } else {
+                playerCombinations.add(combinationKey);
+            }
+        }
+
+        // Nastav chybové správy pre kombinácie údajov hráča
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const firstName = player.firstName.trim().toLowerCase();
+            const lastName = player.lastName.trim().toLowerCase();
+            const dateOfBirth = player.dateOfBirth.trim();
+            const registrationNumber = player.registrationNumber.trim().toLowerCase();
+
+            if (firstName === '' && lastName === '' && dateOfBirth === '' && registrationNumber === '') {
+                 continue; // Preskoč prázdne záznamy
+            }
+
+            let combinationKey;
+            if (player.isRegistered && registrationNumber !== '') {
+                combinationKey = `${firstName}-${lastName}-${dateOfBirth}-${registrationNumber}`;
+            } else {
+                combinationKey = `${firstName}-${lastName}-${dateOfBirth}`;
+            }
+
+            if (combinationErrors.has(combinationKey)) {
+                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
+                newPlayerErrorsForTeam[i].combination = 'Duplicitný hráč v tíme.';
+            }
+        }
+
+        // Aktualizuj globálny stav chýb
+        setPlayerErrors(prevPlayerErrors => ({
+            ...prevPlayerErrors,
+            [categoryName]: {
+                ...(prevPlayerErrors[categoryName] || {}),
+                [teamIndex]: newPlayerErrorsForTeam
+            }
+        }));
+
+        return teamHasErrors; // Vráti, či boli nájdené chyby v tíme
+    }, []); // Bez závislostí, aby sa funkcia re-renderovala len pri zmene chybových stavov.
+
     const handlePlayerDetailChange = (categoryName, teamIndex, playerIndex, field, value) => {
         setLocalTeamDetails(prevDetails => {
-            const newDetails = { ...prevDetails };
+            const newDetails = JSON.parse(JSON.stringify(prevDetails)); // Deep copy pre bezpečnú mutáciu
             if (!newDetails[categoryName]?.[teamIndex]?.playerDetails?.[playerIndex]) {
                 if (!newDetails[categoryName][teamIndex].playerDetails) {
                     newDetails[categoryName][teamIndex].playerDetails = [];
@@ -54,13 +187,28 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: ''
                 };
             }
+            const playerToUpdate = newDetails[categoryName][teamIndex].playerDetails[playerIndex];
+
             if (field === 'isRegistered') {
-                newDetails[categoryName][teamIndex].playerDetails[playerIndex].isRegistered = value;
+                playerToUpdate.isRegistered = value;
                 if (!value) {
-                    newDetails[categoryName][teamIndex].playerDetails[playerIndex].registrationNumber = '';
+                    playerToUpdate.registrationNumber = '';
                 }
             } else {
-                newDetails[categoryName][teamIndex].playerDetails[playerIndex][field] = value;
+                playerToUpdate[field] = value;
+            }
+
+            // Spusti validáciu pre aktuálny tím
+            const teamHasErrors = validateTeamPlayers(newDetails[categoryName][teamIndex].playerDetails, categoryName, teamIndex);
+
+            if (teamHasErrors) {
+                dispatchAppNotification('V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.', 'error');
+            } else {
+                // Notifikácia sa vyčistí po 10 sekundách, takže tu nemusíme explicitne čistiť,
+                // pokiaľ neboli žiadne chyby predchádzajúci raz
+                if (notificationMessage === 'V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.') {
+                    dispatchAppNotification('', 'info'); // Clear specific notification
+                }
             }
             return newDetails;
         });
@@ -86,12 +234,22 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     // Všetky polia sú teraz nepovinné, takže formulár je vždy "platný" na postup
     const isFormValidPage6 = React.useMemo(() => {
-        return true;
-    }, [localTeamDetails]);
+        // Skontroluj, či sú nejaké chyby v playerErrors, ak sú, formulár nie je "validný" pre pokračovanie
+        for (const categoryName in playerErrors) {
+            for (const teamIndex in playerErrors[categoryName]) {
+                for (const playerIndex in playerErrors[categoryName][teamIndex]) {
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || playerErrors[categoryName][teamIndex][playerIndex].combination) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true; // Vráti true, ak neexistujú žiadne duplicitné chyby
+    }, [playerErrors]);
 
     const nextButtonClasses = `
         font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
-        ${loading
+        ${loading || !isFormValidPage6 // Tlačidlo je zakázané, ak je loading alebo sú duplicitné chyby
             ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
             : 'bg-blue-500 hover:bg-blue-700 text-white'
         }
@@ -99,6 +257,14 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     const handlePage6Submit = (e) => {
         e.preventDefault();
+
+        // Dodatočná kontrola validácie pred odoslaním, ak by niekto obišiel okamžitú validáciu
+        // Hoci tlačidlo je zakázané, je dobré mať túto kontrolu aj tu
+        if (!isFormValidPage6) {
+            dispatchAppNotification('Opravte prosím duplicitné údaje hráčov pred pokračovaním.', 'error');
+            return;
+        }
+
         const finalTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
         for (const categoryName in localTeamDetails) {
@@ -115,8 +281,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
 
     return React.createElement(
-        // Odstránený wrapper div s triedami šírky, lebo to rieši rodičovský register.js
-        React.Fragment, // Použijeme React.Fragment, aby nebol zbytočný div
+        React.Fragment,
         null,
         React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: 'info' }),
 
@@ -162,6 +327,8 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                     React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
                                     Array.from({ length: playersCount }).map((_, playerIndex) => {
                                         const player = team.playerDetails?.[playerIndex] || {};
+                                        const playerSpecificErrors = playerErrors?.[categoryName]?.[teamIndex]?.[playerIndex] || {};
+
                                         return React.createElement('div', { key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
                                             React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Hráč ${playerIndex + 1}`),
                                             React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
@@ -170,7 +337,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumber ? 'border-red-500' : ''}`,
                                                         value: player.jerseyNumber || '',
                                                         onChange: (e) => {
                                                             const value = e.target.value.replace(/[^0-9]/g, '');
@@ -178,26 +345,30 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         },
                                                         disabled: loading,
                                                         placeholder: 'Číslo'
-                                                    })
+                                                    }),
+                                                    playerSpecificErrors.jerseyNumber &&
+                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber)
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
                                                         value: player.firstName || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'firstName', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Meno hráča'
-                                                    })
+                                                    }),
+                                                    playerSpecificErrors.combination &&
+                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.combination)
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
                                                         value: player.lastName || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'lastName', e.target.value),
                                                         disabled: loading,
@@ -209,20 +380,17 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('input', {
                                                         type: 'date',
                                                         id: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
                                                         value: player.dateOfBirth || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
                                                         disabled: loading,
                                                     })
                                                 ),
-                                                React.createElement('div', { className: 'flex-initial w-auto' },
+                                                React.createElement('div', { className: 'flex-initial w-auto flex flex-col items-center justify-center pt-2' }, // Zarovnanie prepínača
                                                     React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
-                                                    React.createElement('input', {
-                                                        type: 'checkbox',
-                                                        id: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded mt-2',
-                                                        checked: player.isRegistered || false,
-                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', e.target.checked),
+                                                    React.createElement(ToggleSwitch, {
+                                                        isOn: player.isRegistered || false,
+                                                        handleToggle: () => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', !player.isRegistered),
                                                         disabled: loading,
                                                     })
                                                 ),
@@ -231,7 +399,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
                                                         value: player.registrationNumber || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
                                                         disabled: loading,
@@ -364,7 +532,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     {
                         type: 'submit',
                         className: nextButtonClasses,
-                        disabled: loading,
+                        disabled: loading || !isFormValidPage6, // Znova aktivované na základe validácie duplicity
                     },
                     loading ? React.createElement(
                         'div',
