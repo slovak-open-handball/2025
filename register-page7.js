@@ -208,41 +208,41 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     });
 
 
-                    return React.createElement('div', { key: index, className: 'mb-4 p-4 bg-gray-50 rounded-lg shadow-sm' }, // Removed ml-4
+                    return React.createElement('div', { key: index, className: 'mb-4 p-4 bg-gray-50 rounded-lg shadow-sm' },
                         React.createElement('p', { className: 'font-semibold text-blue-800 mb-2' }, `Tím ${index + 1}: ${team.teamName || '-'}`),
                         React.createElement('p', { className: 'text-sm text-gray-700 mb-4' }, `Počet hráčov: ${team.players || 0}, Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}, Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}, Šoféri (muži): ${team.arrival?.drivers?.male || 0}, Šoféri (ženy): ${team.arrival?.drivers?.female || 0}`),
                         
                         // Zobrazenie tabuľky pre všetkých účastníkov
                         allParticipants.length > 0 ? (
-                            React.createElement('div', { className: 'w-full' }, // Ensure full width for table container
-                                React.createElement('table', { className: 'bg-white border border-gray-300 rounded-lg shadow-sm' }, // Removed min-w-full and table-fixed
+                            React.createElement('div', { className: 'w-full overflow-x-auto box-border' }, // Added overflow-x-auto and box-border
+                                React.createElement('table', { className: 'bg-white border border-gray-300 rounded-lg shadow-sm w-max' }, // Changed w-full to w-max
                                     React.createElement('thead', null,
                                         React.createElement('tr', { className: 'bg-gray-200 text-gray-700 uppercase text-sm leading-normal' },
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Typ'), // Upravené px a minWidth
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, 'Dres'), // Upravené px a minWidth
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Meno'), // Upravené px a minWidth
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Priezvisko'), // Upravené px a minWidth
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Dátum narodenia'), // Upravené px a minWidth
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Registrácia'), // Upravené px a minWidth
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '200px', whiteSpace: 'nowrap' } }, 'Adresa bydliska') // Upravené px a minWidth
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Typ'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, 'Dres'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Meno'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Priezvisko'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Dátum narodenia'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Registrácia'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '200px', whiteSpace: 'nowrap' } }, 'Adresa bydliska')
                                         )
                                     ),
                                     React.createElement('tbody', { className: 'text-gray-600 text-sm font-light' },
                                         allParticipants.map((participant, pIdx) => (
                                             React.createElement('tr', { key: pIdx, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.type), // Upravené py a px, pridané minHeight
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumber), // Upravené py a px
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.firstName), // Upravené py a px
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.lastName), // Upravené py a px
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.dateOfBirth), // Upravené py a px
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.registrationNumber), // Upravené py a px
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.address) // Upravené py a px
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.type),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumber),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.firstName),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.lastName),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.dateOfBirth),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.registrationNumber),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.address)
                                             )
                                         ))
                                     )
                                 )
                             )
-                        ) : React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Žiadni účastníci zadaní pre tento tím.'), // Removed ml-4 from this paragraph
+                        ) : React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Žiadni účastníci zadaní pre tento tím.'),
                         React.createElement('p', { className: 'mt-4 text-gray-700' }, React.createElement('strong', null, 'Tričká: '), tshirtsDetails),
                         React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Ubytovanie: '), accommodationDetails),
                         React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Doprava: '), arrivalDetails),
