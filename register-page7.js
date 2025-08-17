@@ -121,10 +121,10 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
                                         const mealsForDay = pkg.meals[date];
                                         const includedItems = [];
-                                        if (mealsForDay?.breakfast === 1) includedItems.push('Raňajky');
-                                        if (mealsForDay?.lunch === 1) includedItems.push('Obed');
-                                        if (mealsForDay?.dinner === 1) includedItems.push('Večera');
-                                        if (mealsForDay?.refreshment === 1) includedItems.push('Občerstvenie');
+                                        if (mealsForDay?.breakfast === 1) includedItems.push('raňajky');
+                                        if (mealsForDay?.lunch === 1) includedItems.push('obed');
+                                        if (mealsForDay?.dinner === 1) includedItems.push('večera');
+                                        if (mealsForDay?.refreshment === 1) includedItems.push('občerstvenie');
 
                                         if (includedItems.length > 0) {
                                             return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
