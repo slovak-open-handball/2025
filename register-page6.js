@@ -420,7 +420,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }), {/* Používame notificationType z props */}
+        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
         React.createElement(
             'h2',
