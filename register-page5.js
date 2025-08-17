@@ -562,6 +562,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Toto ID bude slúžiť ako React key a nemalo by sa meniť po inicializácii záznamu.
     const generateUniqueTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Ref pre sledovanie, či už boli šoféri inicializovaní z parent dát
+    const isInitialDriversLoad = React.useRef(true);
+
+
     // Funkcia na re-agregáciu dát šoférov pre konkrétny tím a aktualizáciu rodičovského stavu
     const updateTeamDriversInParent = React.useCallback((currentEntries, categoryName, teamIndex) => {
         const currentTeamDrivers = { male: 0, female: 0 };
@@ -587,45 +591,41 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     // useEffect na inicializáciu driverEntries z teamsDataFromPage4
+    // Spúšťa sa iba raz pri mountnutí komponentu.
     React.useEffect(() => {
-        const driversFromParentData = [];
+        if (isInitialDriversLoad.current) {
+            const driversFromParentData = [];
 
-        for (const categoryName in teamsDataFromPage4) {
-            // Filter out any undefined/null categories at this level
-            if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
+            for (const categoryName in teamsDataFromPage4) {
+                if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
-            (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
-                if (team.arrival?.type === 'vlastná doprava') {
-                    // Pre existujúce záznamy šoférov vytvoríme stabilné ID, ktoré sa nebude meniť
-                    if (team.arrival?.drivers?.male > 0) {
-                        driversFromParentData.push({
-                            id: generateUniqueTempId(), // Použiť nové dočasné ID, aby sa zabránilo kolíziám
-                            count: team.arrival.drivers.male.toString(),
-                            gender: 'male',
-                            categoryName: categoryName,
-                            teamIndex: teamIndex,
-                        });
+                (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
+                    if (team.arrival?.type === 'vlastná doprava') {
+                        if (team.arrival?.drivers?.male > 0) {
+                            driversFromParentData.push({
+                                id: generateUniqueTempId(),
+                                count: team.arrival.drivers.male.toString(),
+                                gender: 'male',
+                                categoryName: categoryName,
+                                teamIndex: teamIndex,
+                            });
+                        }
+                        if (team.arrival?.drivers?.female > 0) {
+                            driversFromParentData.push({
+                                id: generateUniqueTempId(),
+                                count: team.arrival.drivers.female.toString(),
+                                gender: 'female',
+                                categoryName: categoryName,
+                                teamIndex: teamIndex,
+                            });
+                        }
                     }
-                    if (team.arrival?.drivers?.female > 0) {
-                        driversFromParentData.push({
-                            id: generateUniqueTempId(), // Použiť nové dočasné ID
-                            count: team.arrival.drivers.female.toString(),
-                            gender: 'female',
-                            categoryName: categoryName,
-                            teamIndex: teamIndex,
-                        });
-                    }
-                }
-            });
-        }
-        
-        // Len ak je teamsDataFromPage4 plne načítané (t.j. už to nie je prázdny počiatočný stav),
-        // tak aktualizujeme driverEntries. Inak ponecháme pôvodný stav.
-        if (Object.keys(teamsDataFromPage4).length > 0 || (Object.keys(teamsDataFromPage4).length === 0 && driverEntries.length === 0)) {
+                });
+            }
             setDriverEntries(driversFromParentData);
+            isInitialDriversLoad.current = false;
         }
-        
-    }, [teamsDataFromPage4]); // Závislosť od teamsDataFromPage4
+    }, []); // Prázdne pole závislostí zabezpečuje, že sa useEffect spustí len raz
 
 
     const getDaysBetween = (start, end) => {
@@ -888,105 +888,38 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const newDrivers = currentDrivers.map(entry => ({ ...entry }));
 
             let updatedEntry = null;
-            let updatedEntryIndex = -1; // New: Keep track of the index
+            let updatedEntryIndex = -1; 
 
             // Nájdeme a aktualizujeme konkrétny záznam v skopírovanom poli
             for (let i = 0; i < newDrivers.length; i++) {
                 if (newDrivers[i].id === id) {
-                    updatedEntry = newDrivers[i]; // Referencia na objekt v newDrivers poli
-                    updatedEntryIndex = i; // New: Store the index
+                    updatedEntry = newDrivers[i]; 
+                    updatedEntryIndex = i; 
                     break;
                 }
             }
 
             if (!updatedEntry) {
-                // Tento prípad by sa nemal stať, ak je 'id' platné
                 console.warn("Pokus o zmenu záznamu šoféra s neznámym ID:", id);
                 return currentDrivers; 
             }
 
-            // Store the original gender before potential change for validation
-            const originalGender = updatedEntry.gender;
-
+            // NOVINKA: Jednoduchšie resetovanie pohlavia, ak sa zmení tím
             if (field === 'teamId') {
                 const [catName, teamIdxStr] = value.split('-');
                 updatedEntry.categoryName = catName || '';
                 updatedEntry.teamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
-
-                // New logic: Check if the original gender is still available for the new team
-                const dummyEntryForGenderCheck = { // Create a dummy entry representing the new state to check gender availability
-                    id: updatedEntry.id, // Use its own ID so getAvailableGenderOptions ignores it
-                    categoryName: updatedEntry.categoryName,
-                    teamIndex: updatedEntry.teamIndex,
-                    gender: '' // Temporarily set gender to empty for the options generation
-                };
-                // To get correct available options, we need to pass a temporary `driverEntries` array
-                // that includes the `updatedEntry` with its new `categoryName` and `teamIndex`
-                // but without its current `gender` interfering.
-                const tempDriverEntriesForGenderCheck = newDrivers.map((d, idx) => {
-                    if (idx === updatedEntryIndex) {
-                        return { ...d, gender: '' }; // Temporarily clear gender for gender option check
-                    }
-                    return d;
-                });
-                
-                // Temporarily override driverEntries for the useCallback call
-                const getAvailableGenderOptionsForNewState = (entry) => {
-                    const allOptions = [
-                        React.createElement('option', { key: "placeholder", value: "" }, "Vyberte"),
-                        React.createElement('option', { key: "male", value: "male" }, "Muži"),
-                        React.createElement('option', { key: "female", value: "female" }, "Ženy")
-                    ];
-                
-                    if (!entry || entry.categoryName === '' || entry.teamIndex === null) {
-                        return allOptions;
-                    }
-                
-                    const currentTeamId = `${entry.categoryName}-${entry.teamIndex}`;
-                    const usedGendersForCurrentTeam = new Set();
-                
-                    tempDriverEntriesForGenderCheck.forEach(tempEntry => { // Use tempDriverEntriesForGenderCheck here
-                        if (tempEntry.id !== entry.id && tempEntry.categoryName && tempEntry.teamIndex !== null && tempEntry.gender !== '') {
-                            if (`${tempEntry.categoryName}-${tempEntry.teamIndex}` === currentTeamId) {
-                                usedGendersForCurrentTeam.add(tempEntry.gender);
-                            }
-                        }
-                    });
-                
-                    return allOptions.filter(option => {
-                        const optionValue = option.props.value;
-                        if (optionValue === '') {
-                            return true;
-                        }
-                        return !usedGendersForCurrentTeam.has(optionValue) || optionValue === entry.gender;
-                    });
-                };
-
-                const availableGendersForNewTeam = getAvailableGenderOptionsForNewState(dummyEntryForGenderCheck).map(opt => opt.props.value);
-
-                if (originalGender && !availableGendersForNewTeam.includes(originalGender)) {
-                    // If original gender is not valid for the new team, then reset it
-                    updatedEntry.gender = '';
-                } else if (originalGender) {
-                    // If original gender is still valid, keep it
-                    updatedEntry.gender = originalGender;
-                } else {
-                    // If no original gender was selected, keep it empty
-                    updatedEntry.gender = '';
-                }
-
+                updatedEntry.gender = ''; // Resetovať pohlavie pri zmene tímu
             } else {
                 updatedEntry[field] = value;
             }
 
             // Agregácia dát pre rodičovský stav (teamsDataFromPage4)
             const affectedTeams = new Set();
-            // Pridáme pôvodný tím (pred zmenou, ak existoval)
             const originalEntryFromCurrentDrivers = currentDrivers.find(entry => entry.id === id);
             if (originalEntryFromCurrentDrivers && originalEntryFromCurrentDrivers.categoryName && originalEntryFromCurrentDrivers.teamIndex !== null) {
                 affectedTeams.add(`${originalEntryFromCurrentDrivers.categoryName}-${originalEntryFromCurrentDrivers.teamIndex}`);
             }
-            // Pridáme nový tím (po zmene, ak existuje)
             if (updatedEntry.categoryName && updatedEntry.teamIndex !== null) {
                 affectedTeams.add(`${updatedEntry.categoryName}-${updatedEntry.teamIndex}`);
             }
@@ -995,12 +928,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 const [catName, teamIdxStr] = teamIdStr.split('-');
                 const teamIdx = parseInt(teamIdxStr, 10);
                 if (teamsDataFromPage4[catName] && teamsDataFromPage4[catName][teamIdx] && teamsDataFromPage4[catName][teamIdx].arrival?.type === 'vlastná doprava') {
-                    // Odovzdáme potenciálne modifikované `newDrivers` pole agregačnej funkcii
                     updateTeamDriversInParent(newDrivers, catName, teamIdx);
                 }
             });
             
-            return newDrivers; // Vrátime nové, aktualizované pole pre setDriverEntries
+            return newDrivers; 
         });
     };
 
