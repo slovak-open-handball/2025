@@ -191,6 +191,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
             if (field === 'isRegistered') {
                 playerToUpdate.isRegistered = value;
+                // Keď sa prepínač vypne, vymaž registračné číslo
                 if (!value) {
                     playerToUpdate.registrationNumber = '';
                 }
@@ -404,7 +405,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     // Prázdny placeholder, ak ToggleSwitch nespôsobuje chyby
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
-                                                player.isRegistered && React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                React.createElement('div', { // Tento div drží input pre registračné číslo
+                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${player.isRegistered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                },
                                                     React.createElement('label', { htmlFor: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo registrácie'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -412,7 +415,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
                                                         value: player.registrationNumber || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
-                                                        disabled: loading,
+                                                        disabled: loading || !player.isRegistered, // Zakázané, ak nie je registrovaný
                                                         placeholder: 'Číslo'
                                                     }),
                                                     // Placeholder pre chybu kombinácie
