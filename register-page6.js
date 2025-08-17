@@ -484,8 +484,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     // Placeholder pre chybu kombinácie
                                                     React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
-
-                                                // Nové polia pre adresu trvalého pobytu
+                                            ),
+                                            // Nový riadok pre adresné polia
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2 mt-4' }, // Pridaný horný okraj
                                                 React.createElement('div', {
                                                     className: `flex-1 min-w-[120px] transition-opacity duration-200 ${hasAccommodation ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
                                                 },
