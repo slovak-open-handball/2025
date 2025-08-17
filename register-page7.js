@@ -88,7 +88,9 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     // NOVINKA: Zostavíme finálny reťazec pre zobrazenie tričiek
                     const finalTshirtsDisplay = tshirtsDetails === 'žiadne'
                         ? 'žiadne'
+                        // ÚPRAVA: Text "celkom: ... ks" je teraz tučný
                         : `${tshirtsDetails}, ${React.createElement('strong', null, `celkom: ${totalTshirtQuantity} ks`)}`;
+
 
                     // Detaily ubytovania
                     const accommodationDetails = team.accommodation?.type || 'Bez ubytovania';
@@ -142,11 +144,13 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         }
 
                         packageDetailsHtml = React.createElement(React.Fragment, null,
-                            React.createElement('p', null, `Balíček: ${pkg.name || '-'} (${pkg.price || 0} €)`),
+                            // ÚPRAVA: Text "Balíček:" je teraz tučný
+                            React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} €)`),
                             mealsHtml
                         );
                     } else {
-                        packageDetailsHtml = React.createElement('p', null, 'Balíček: Nezadaný');
+                        // ÚPRAVA: Text "Balíček:" je teraz tučný
+                        packageDetailsHtml = React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), 'Nezadaný');
                     }
 
                     // Zozbieranie všetkých osôb do jedného poľa pre tabuľku
