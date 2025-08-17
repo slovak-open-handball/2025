@@ -208,15 +208,14 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     });
 
 
-                    return React.createElement('div', { key: index, className: 'mb-4 ml-4 p-4 bg-gray-50 rounded-lg shadow-sm' },
+                    return React.createElement('div', { key: index, className: 'mb-4 p-4 bg-gray-50 rounded-lg shadow-sm' }, // Removed ml-4
                         React.createElement('p', { className: 'font-semibold text-blue-800 mb-2' }, `Tím ${index + 1}: ${team.teamName || '-'}`),
                         React.createElement('p', { className: 'text-sm text-gray-700 mb-4' }, `Počet hráčov: ${team.players || 0}, Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}, Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}, Šoféri (muži): ${team.arrival?.drivers?.male || 0}, Šoféri (ženy): ${team.arrival?.drivers?.female || 0}`),
                         
                         // Zobrazenie tabuľky pre všetkých účastníkov
                         allParticipants.length > 0 ? (
-                            // Odstránený overflow-x-auto pre dynamickú šírku a upravené štýly stĺpcov
-                            React.createElement('div', null, 
-                                React.createElement('table', { className: 'min-w-full bg-white border border-gray-300 rounded-lg shadow-sm table-fixed' }, // Pridané table-fixed
+                            React.createElement('div', { className: 'w-full' }, // Ensure full width for table container
+                                React.createElement('table', { className: 'bg-white border border-gray-300 rounded-lg shadow-sm' }, // Removed min-w-full and table-fixed
                                     React.createElement('thead', null,
                                         React.createElement('tr', { className: 'bg-gray-200 text-gray-700 uppercase text-sm leading-normal' },
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Typ'), // Upravené px a minWidth
@@ -243,8 +242,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                     )
                                 )
                             )
-                        ) : React.createElement('p', { className: 'ml-4 text-gray-600 text-sm' }, 'Žiadni účastníci zadaní pre tento tím.'),
-
+                        ) : React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Žiadni účastníci zadaní pre tento tím.'), // Removed ml-4 from this paragraph
                         React.createElement('p', { className: 'mt-4 text-gray-700' }, React.createElement('strong', null, 'Tričká: '), tshirtsDetails),
                         React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Ubytovanie: '), accommodationDetails),
                         React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Doprava: '), arrivalDetails),
