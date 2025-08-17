@@ -529,7 +529,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
                             className: optionClasses + (option.id === value ? ' bg-blue-200' : '')
                         },
                         // Zmena formátu pre zobrazenie v rozbaľovacom zozname
-                        `${option.categoryName} - ${option.teamName}`
+                        `${option.categoryName} - ${option.categoryName} - ${option.teamName}` // ZMENA: Duplicitný categoryName
                     )
                 ))
             )
@@ -947,6 +947,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             entry.gender === '' ||
             entry.categoryName === '' ||
             entry.teamIndex === null ||
+            // The check below was problematic as currentEntry was undefined in this scope.
+            // It's meant to ensure that the gender for a given team isn't duplicated in the *same* driver entry being edited.
+            // For checking if a NEW entry can be added, this specific check is not directly applicable.
+            // We need to check if there are any *available* slots in total.
             (entry.gender !== '' && !teamsWithOwnTransport.some(t => `${t.categoryName}-${t.teamIndex}` === `${entry.categoryName}-${entry.teamIndex}`))
         );
         if (hasIncompleteEntry) {
@@ -961,15 +965,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         });
 
+        // Loop through all teams with own transport and check if there's any available male or female slot
         for (const team of teamsWithOwnTransport) {
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
 
-            // Ak je aktuálny záznam šoféra už priradený k tomuto tímu, vždy zobraz tento tím.
-            // Inak zobraz tím, ak je pre neho voľné aspoň jedno pohlavie (muž/žena).
-            if (currentEntry?.id && currentEntry.categoryName === team.categoryName && currentEntry.teamIndex === team.teamIndex) {
-                 options.push(team);
-            } else if (!usedCombinations.has(maleCombo) || !usedCombinations.has(femaleCombo)) {
+            // If either male or female combo for this team is not yet used, a new driver can be added
+            if (!usedCombinations.has(maleCombo) || !usedCombinations.has(femaleCombo)) {
                  return true; // Ak nájdeme aspoň jednu voľnú kombináciu, povoliť tlačidlo
             }
         }
