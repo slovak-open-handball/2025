@@ -46,36 +46,64 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                 const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
-                return {
-                    teamName: team.teamName,
-                    players: playersCount,
-                    womenTeamMembers: womenMembersCount,
-                    menTeamMembers: menMembersCount,
-                    playerDetails: team.playerDetails || Array.from({ length: playersCount }).map(() => ({
+                // Ensure playerDetails are correctly structured, merging existing data
+                const playerDetails = Array.from({ length: playersCount }).map((_, i) => {
+                    const existingPlayer = team.playerDetails?.[i] || {};
+                    return {
                         jerseyNumber: '',
                         firstName: '',
                         lastName: '',
                         dateOfBirth: '',
                         isRegistered: false,
                         registrationNumber: '',
-                        address: { // Inicializácia adresy pre každého hráča
+                        address: { // Always ensure address object exists with default values
                             street: '',
                             houseNumber: '',
                             city: '',
                             postalCode: '',
                             country: '',
+                        },
+                        ...existingPlayer, // Override defaults with existing player data
+                        address: { // Deep merge address to ensure all sub-fields exist
+                            street: '',
+                            houseNumber: '',
+                            city: '',
+                            postalCode: '',
+                            country: '',
+                            ...(existingPlayer.address || {}) // Override address defaults with existing address data (use {} if existingPlayer.address is undefined)
                         }
-                    })),
-                    womenTeamMemberDetails: team.womenTeamMemberDetails || Array.from({ length: womenMembersCount }).map(() => ({
+                    };
+                });
+
+                // Ensure team member details are correctly structured
+                const womenTeamMemberDetails = Array.from({ length: womenMembersCount }).map((_, i) => {
+                    const existingMember = team.womenTeamMemberDetails?.[i] || {};
+                    return {
                         firstName: '',
                         lastName: '',
-                        dateOfBirth: ''
-                    })),
-                    menTeamMemberDetails: team.menTeamMemberDetails || Array.from({ length: menMembersCount }).map(() => ({
+                        dateOfBirth: '',
+                        ...existingMember
+                    };
+                });
+
+                const menTeamMemberDetails = Array.from({ length: menMembersCount }).map((_, i) => {
+                    const existingMember = team.menTeamMemberDetails?.[i] || {};
+                    return {
                         firstName: '',
                         lastName: '',
-                        dateOfBirth: ''
-                    })),
+                        dateOfBirth: '',
+                        ...existingMember
+                    };
+                });
+
+                return {
+                    ...team, // Spread all existing properties from the original team object
+                    players: playersCount, // Ensure counts are numbers
+                    womenTeamMembers: womenMembersCount,
+                    menTeamMembers: menMembersCount,
+                    playerDetails: playerDetails,
+                    womenTeamMemberDetails: womenTeamMemberDetails,
+                    menTeamMemberDetails: menTeamMemberDetails,
                 };
             });
         }
