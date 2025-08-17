@@ -210,7 +210,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
                     return React.createElement('div', { key: index, className: 'mb-4 p-4 bg-gray-50 rounded-lg shadow-sm' },
                         React.createElement('p', { className: 'font-semibold text-blue-800 mb-2' }, `Tím ${index + 1}: ${team.teamName || '-'}`),
-                        React.createElement('p', { className: 'text-sm text-gray-700 mb-4' }, `Počet hráčov: ${team.players || 0}, Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}, Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}, Šoféri (muži): ${team.arrival?.drivers?.male || 0}, Šoféri (ženy): ${team.arrival?.drivers?.female || 0}`),
+                        React.createElement('p', { className: 'text-sm text-gray-700 mb-4' }, `Počet hráčov: ${team.players || 0}, členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}, členovia realizačného tímu (muži): ${team.menTeamMembers || 0}, šoféri (ženy): ${team.arrival?.drivers?.female || 0}, šoféri (muži): ${team.arrival?.drivers?.male || 0}`),
                         
                         // Zobrazenie tabuľky pre všetkých účastníkov
                         allParticipants.length > 0 ? (
