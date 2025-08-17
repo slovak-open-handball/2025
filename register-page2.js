@@ -31,7 +31,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
       // Predpokladáme, že formData.billing je už inicializované ako objekt
       handleChange({ target: { id: 'billing', value: { ...(formData.billing || {}), [id]: newValue } } });
     } else {
-      // Pre ostatné polia (ulica, popisné číslo, mesto, PSČ, štát)
+      // Pre ostatné polia (ulica, popisné číslo, Obec, PSČ, štát)
       handleChange({ target: { id: id, value: newValue } });
     }
   };
@@ -196,7 +196,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
           'div',
           { className: 'mb-4' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' }, 
-            'Mesto',
+            'Obec',
             React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
           ),
           React.createElement('input', {
@@ -206,7 +206,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             value: formData.city || '', // This is a direct formData field
             onChange: handleChange, // Use general handleChange
             required: true,
-            placeholder: 'Zadajte mesto',
+            placeholder: 'Zadajte obec',
             tabIndex: 15,
             disabled: loading
           })
