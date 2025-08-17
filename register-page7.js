@@ -1,7 +1,7 @@
 // register-page7.js
 // Obsahuje komponent pre poslednú stránku registračného formulára - zhrnutie zadaných údajov.
 
-export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType }) { // Pridaný notificationType prop
+export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode }) { // Pridaný notificationType a selectedCountryDialCode prop
 
     // Funkcia na formátovanie dátumu narodenia
     const formatDate = (dateString) => {
@@ -274,7 +274,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 React.createElement('p', null, React.createElement('strong', null, 'Meno: '), formData.firstName),
                 React.createElement('p', null, React.createElement('strong', null, 'Priezvisko: '), formData.lastName),
                 React.createElement('p', null, React.createElement('strong', null, 'E-mail: '), formData.email),
-                React.createElement('p', null, React.createElement('strong', null, 'Telefónne číslo: '), formData.contactPhoneNumber)
+                // Zmenený riadok pre zobrazenie telefónneho čísla
+                React.createElement('p', null, React.createElement('strong', null, 'Telefónne číslo: '), selectedCountryDialCode ? `${selectedCountryDialCode} ${formData.contactPhoneNumber}` : formData.contactPhoneNumber)
             ),
 
             React.createElement(
