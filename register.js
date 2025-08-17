@@ -1073,7 +1073,7 @@ function App() {
 
   return React.createElement(
     'div',
-    { className: `min-h-screen flex flex-col items-center justify-start bg-gray-100 p-4` }, 
+    { className: `min-h-screen flex flex-col items-center justify-start bg-gray-100 p-4` }, {/* Zmenené flex-col, items-center a justify-start */}
     // NotificationModal pre App komponent zostáva tu
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
@@ -1221,7 +1221,7 @@ function App() {
                   setNotificationMessage: setNotificationMessage, // NOVINKA: Pass setter
                   setNotificationType: setNotificationType,     // NOVINKA: Pass setter
                   notificationType: notificationType, // PRIDANÉ: Posielame aktuálny notificationType
-                  onSaveAndPrev: handleSaveTeamsDataAndPrev, // OPRAVENÉ: Použitie správneho názvu funkcie
+                  onSaveAndPrev: handleSaveAndPrev, // OPRAVENÉ: Použitie správneho názvu funkcie
               }) :
           page === 7 ? // NOVINKA: Renderovanie Page7Form (súhrn)
               React.createElement(Page7Form, {
