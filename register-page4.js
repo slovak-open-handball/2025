@@ -1,4 +1,5 @@
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { NotificationModal } from './register-page5.js'; // NOVINKA: Import NotificationModal
 
 export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
 
@@ -42,12 +43,14 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní veľkostí tričiek:", error);
+                    // Používame props pre notifikácie
                     setShowNotification(true);
                     setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
                     setNotificationType('error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre veľkosti tričiek:", e);
+                // Používame props pre notifikácie
                 setShowNotification(true);
                 setNotificationMessage("Chyba pri načítaní veľkostí tričiek.", 'error');
                 setNotificationType('error');
@@ -224,6 +227,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
     const handlePage4Submit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        // Prístup k setShowNotification, setNotificationMessage, setNotificationType z props
         closeNotification();
 
         if (!isFormValidPage4) {
