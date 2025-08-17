@@ -1066,7 +1066,7 @@ function App() {
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         React.createElement(
           'div',
-          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` },
+          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` }, {/* Dynamické nastavenie šírky */}
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
@@ -1172,7 +1172,9 @@ function App() {
                   numberOfPlayersLimit: numberOfPlayersInTeam, // Potrebné pre validáciu v Page6Form
                   numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // Potrebné pre validáciu v Page6Form
                   // Posielame dataEditDeadline ako prop
-                  dataEditDeadline: dataEditDeadline, 
+                  dataEditDeadline: dataEditDeadline,
+                  setNotificationMessage: setNotificationMessage, // NOVINKA: Pass setter
+                  setNotificationType: setNotificationType,     // NOVINKA: Pass setter
               }) :
           page === 7 ? // NOVINKA: Renderovanie Page7Form (súhrn)
               React.createElement(Page7Form, {
