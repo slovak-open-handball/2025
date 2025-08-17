@@ -460,7 +460,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                         'div',
                                         { className: 'flex items-center font-bold mb-2 space-x-2' },
                                         React.createElement('span', { className: 'w-1/3 text-gray-700' }, 'Veľkosť'), 
-                                        React.createElement('span', { className: 'w-1/2 text-left text-gray-700' }, 'Množstvo'), 
+                                        React.createElement('span', { className: 'w-1/2 text-left text-gray-700' }, 'Počet'), 
                                         React.createElement('span', { className: 'w-8' })
                                     ),
                                     // Mapovanie cez riadky s tričkami
