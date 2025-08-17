@@ -529,7 +529,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 value: formData.firstName,
                 onChange: handleChange,
                 required: true,
-                placeholder: 'Zadajte vaše meno',
+                placeholder: 'Zadajte meno',
                 tabIndex: 1,
                 // NOVINKA: inputy sú disabled len ak nie je registrácia otvorená A zároveň NIE sú žiadne dáta.
                 // Ak sú dáta (pre nedokončený formulár), inputy sú povolené na editáciu.
@@ -554,7 +554,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 value: formData.lastName,
                 onChange: handleChange,
                 required: true,
-                placeholder: 'Zadajte vaše priezvisko',
+                placeholder: 'Zadajte priezvisko',
                 tabIndex: 2,
                 disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady
               })
@@ -579,7 +579,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 onChange: handleChange,
                 onFocus: () => setEmailTouched(true), // NOVINKA: Nastaví touched stav
                 required: true,
-                placeholder: 'Zadajte svoju e-mailovú adresu',
+                placeholder: 'Zadajte e-mailovú adresu',
                 autoComplete: 'email',
                 tabIndex: 3,
                 disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady
