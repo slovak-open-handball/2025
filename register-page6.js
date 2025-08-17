@@ -1,6 +1,5 @@
 import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Komponent pre prepínač (Toggle Switch)
 function ToggleSwitch({ isOn, handleToggle, disabled }) {
     const bgColorClass = isOn ? 'bg-green-500' : 'bg-red-500';
     const togglePositionClass = isOn ? 'translate-x-full' : 'translate-x-0';
@@ -8,19 +7,19 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
     return React.createElement(
         'div',
         {
-            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,\
-            onClick: disabled ? null : handleToggle,\
-            style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' } // Vnútorný tieň pre efekt "zatlačenia"
-        },\
-        React.createElement(\
-            'span',\
-            {\
-                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`,\
-                style: { boxShadow: '0 2px 5px rgba(0,0,0,0.2)' } // Tieň pre gombík prepínača
-            }\
-        )\
-    );\
-}\
+            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
+            onClick: disabled ? null : handleToggle,
+            style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' } 
+        },
+        React.createElement(
+            'span',
+            {
+                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`,
+                style: { boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }
+            }
+        )
+    );
+}
 
 
 // Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
