@@ -290,10 +290,16 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 React.createElement('p', null, React.createElement('strong', null, 'IČO: '), formData.billing?.ico || '-'),
                 React.createElement('p', null, React.createElement('strong', null, 'DIČ: '), formData.billing?.dic || '-'),
                 React.createElement('p', null, React.createElement('strong', null, 'IČ DPH: '), formData.billing?.icDph || '-'),
-                React.createElement('p', null, React.createElement('strong', null, 'Ulica a číslo: '), `${formData.street || '-'} ${formData.houseNumber || '-'}`),
-                React.createElement('p', null, React.createElement('strong', null, 'Mesto: '), formData.city || '-'),
-                React.createElement('p', null, React.createElement('strong', null, 'PSČ: '), formData.postalCode || '-'),
-                React.createElement('p', null, React.createElement('strong', null, 'Krajina: '), formData.country || '-')
+                // Upravené pre zobrazenie adresy v jednom riadku
+                React.createElement('p', null, React.createElement('strong', null, 'Fakturačná adresa: '), 
+                    formatAddress({
+                        street: formData.street,
+                        houseNumber: formData.houseNumber,
+                        city: formData.city,
+                        postalCode: formData.postalCode,
+                        country: formData.country
+                    }) || '-'
+                )
             ),
 
             React.createElement(
