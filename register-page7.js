@@ -80,6 +80,16 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                     .join(', ')
                         : 'žiadne';
 
+                    // NOVINKA: Vypočítame celkový počet tričiek
+                    const totalTshirtQuantity = team.tshirts && team.tshirts.length > 0
+                        ? team.tshirts.reduce((sum, t) => sum + (parseInt(t.quantity, 10) || 0), 0)
+                        : 0;
+
+                    // NOVINKA: Zostavíme finálny reťazec pre zobrazenie tričiek
+                    const finalTshirtsDisplay = tshirtsDetails === 'žiadne'
+                        ? 'žiadne'
+                        : `${tshirtsDetails} (celkom: ${totalTshirtQuantity} ks)`;
+
                     // Detaily ubytovania
                     const accommodationDetails = team.accommodation?.type || 'Bez ubytovania';
                     // const teamHasAccommodation = accommodationDetails.toLowerCase() !== 'bez ubytovania'; // Nepotrebné, adresa sa zobrazuje podmienečne podľa hasAccommodation na Page6
@@ -243,7 +253,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                 )
                             )
                         ) : React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Žiadni účastníci zadaní pre tento tím.'),
-                        React.createElement('p', { className: 'mt-4 text-gray-700' }, React.createElement('strong', null, 'Tričká: '), tshirtsDetails),
+                        React.createElement('p', { className: 'mt-4 text-gray-700' }, React.createElement('strong', null, 'Tričká: '), finalTshirtsDisplay),
                         React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Ubytovanie: '), accommodationDetails),
                         React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Doprava: '), arrivalDetails),
                         packageDetailsHtml
