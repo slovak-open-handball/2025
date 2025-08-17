@@ -115,8 +115,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
 
     return React.createElement(
-        'div', // Wrapper div pre Page6Form
-        { className: 'w-full max-w-6xl mx-auto' }, // Nastavuje šírku a centruje len pre túto stránku
+        // Odstránený wrapper div s triedami šírky, lebo to rieši rodičovský register.js
+        React.Fragment, // Použijeme React.Fragment, aby nebol zbytočný div
+        null,
         React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: 'info' }),
 
         React.createElement(
@@ -175,7 +176,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                             const value = e.target.value.replace(/[^0-9]/g, '');
                                                             handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumber', value);
                                                         },
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                         placeholder: 'Číslo'
                                                     })
@@ -188,7 +188,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: player.firstName || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'firstName', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                         placeholder: 'Meno hráča'
                                                     })
@@ -201,7 +200,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: player.lastName || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'lastName', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko hráča'
                                                     })
@@ -214,7 +212,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: player.dateOfBirth || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                     })
                                                 ),
@@ -237,7 +234,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: player.registrationNumber || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
-                                                        // required: true, // Odstránené required, ak je podmienené, tak ostáva len táto podmienka
                                                         disabled: loading,
                                                         placeholder: 'Číslo'
                                                     })
@@ -264,7 +260,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: member.firstName || '',
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'firstName', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                         placeholder: 'Meno členky'
                                                     })
@@ -277,7 +272,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: member.lastName || '',
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'lastName', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko členky'
                                                     })
@@ -290,7 +284,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: member.dateOfBirth || '',
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'dateOfBirth', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                     })
                                                 )
@@ -316,7 +309,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: member.firstName || '',
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'firstName', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                         placeholder: 'Meno člena'
                                                     })
@@ -329,7 +321,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: member.lastName || '',
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'lastName', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko člena'
                                                     })
@@ -342,7 +333,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                                         value: member.dateOfBirth || '',
                                                         onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'men', 'dateOfBirth', e.target.value),
-                                                        // required: true, // Odstránené required
                                                         disabled: loading,
                                                     })
                                                 )
@@ -374,7 +364,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     {
                         type: 'submit',
                         className: nextButtonClasses,
-                        disabled: loading, // Tlačidlo je zakázané len ak je loading true
+                        disabled: loading,
                     },
                     loading ? React.createElement(
                         'div',
