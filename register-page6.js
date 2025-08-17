@@ -1,12 +1,12 @@
-// register-page6.js
 // Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
 
 export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit }) {
 
-    // Lokálny stav pre detaily hráčov a realizačného tímu pre všetky tímy
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
 
-    // Inicializácia lokálneho stavu pri prvom načítaní alebo zmene teamsDataFromPage4
+    // NOVINKA: Stav pre dataEditDeadline
+    const [dataEditDeadline, setDataEditDeadline] = React.useState('');
+
     React.useEffect(() => {
         const initialDetails = {};
         for (const categoryName in teamsDataFromPage4) {
@@ -20,7 +20,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     players: playersCount,
                     womenTeamMembers: womenMembersCount,
                     menTeamMembers: menMembersCount,
-                    // Inicializácia polí detailov hráčov a členov tímu, ak neexistujú
                     playerDetails: team.playerDetails || Array.from({ length: playersCount }).map(() => ({
                         jerseyNumber: '',
                         firstName: '',
@@ -45,13 +44,40 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         setLocalTeamDetails(initialDetails);
     }, [teamsDataFromPage4]);
 
+    // NOVINKA: Načítanie dataEditDeadline z Firestore
+    React.useEffect(() => {
+        const db = window.db; // Predpokladáme, že window.db je globálne dostupné
+        if (!db) {
+            console.error("Firestore DB nie je k dispozícii pre načítanie dataEditDeadline.");
+            return;
+        }
 
-    // Handler pre zmeny v detailoch hráča
+        const settingsDocRef = doc(db, 'settings', 'registration');
+        const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const data = docSnapshot.data();
+                if (data.dataEditDeadline) {
+                    const date = data.dataEditDeadline.toDate();
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    setDataEditDeadline(`${day}. ${month}. ${year} ${hours}:${minutes} hod.`);
+                }
+            }
+        }, (error) => {
+            console.error("Chyba pri načítaní dataEditDeadline:", error);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+
     const handlePlayerDetailChange = (categoryName, teamIndex, playerIndex, field, value) => {
         setLocalTeamDetails(prevDetails => {
             const newDetails = { ...prevDetails };
             if (!newDetails[categoryName]?.[teamIndex]?.playerDetails?.[playerIndex]) {
-                // Ak detail ešte neexistuje, inicializujte ho
                 if (!newDetails[categoryName][teamIndex].playerDetails) {
                     newDetails[categoryName][teamIndex].playerDetails = [];
                 }
@@ -59,10 +85,8 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: ''
                 };
             }
-            // Špeciálne ošetrenie pre 'isRegistered'
             if (field === 'isRegistered') {
                 newDetails[categoryName][teamIndex].playerDetails[playerIndex].isRegistered = value;
-                // Ak sa prepne na neregistrovaný, vyčistite číslo registrácie
                 if (!value) {
                     newDetails[categoryName][teamIndex].playerDetails[playerIndex].registrationNumber = '';
                 }
@@ -73,14 +97,12 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         });
     };
 
-    // Handler pre zmeny v detailoch člena realizačného tímu (ženy/muži)
     const handleTeamMemberDetailChange = (categoryName, teamIndex, memberIndex, type, field, value) => {
         setLocalTeamDetails(prevDetails => {
             const newDetails = { ...prevDetails };
-            const detailArrayName = `${type}TeamMemberDetails`; // 'womenTeamMemberDetails' alebo 'menTeamMemberDetails'
+            const detailArrayName = `${type}TeamMemberDetails`;
 
             if (!newDetails[categoryName]?.[teamIndex]?.[detailArrayName]?.[memberIndex]) {
-                // Ak detail ešte neexistuje, inicializujte ho
                 if (!newDetails[categoryName][teamIndex][detailArrayName]) {
                     newDetails[categoryName][teamIndex][detailArrayName] = [];
                 }
@@ -93,25 +115,22 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         });
     };
 
-    // Validácia formulára na Page6
     const isFormValidPage6 = React.useMemo(() => {
         for (const categoryName in localTeamDetails) {
             for (const team of localTeamDetails[categoryName]) {
-                // Validácia hráčov
                 for (let i = 0; i < team.players; i++) {
                     const player = team.playerDetails?.[i];
                     if (!player ||
                         !player.firstName.trim() ||
                         !player.lastName.trim() ||
                         !player.dateOfBirth.trim() ||
-                        !/^\d+$/.test(player.jerseyNumber) || // Číslo dresu musí byť len číselný údaj
-                        (player.isRegistered && !player.registrationNumber.trim()) // Ak je registrovaný, číslo registrácie je povinné
+                        !/^\d+$/.test(player.jerseyNumber) ||
+                        (player.isRegistered && !player.registrationNumber.trim())
                     ) {
                         return false;
                     }
                 }
 
-                // Validácia ženských členov realizačného tímu
                 for (let i = 0; i < team.womenTeamMembers; i++) {
                     const member = team.womenTeamMemberDetails?.[i];
                     if (!member ||
@@ -123,7 +142,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     }
                 }
 
-                // Validácia mužských členov realizačného tímu
                 for (let i = 0; i < team.menTeamMembers; i++) {
                     const member = team.menTeamMemberDetails?.[i];
                     if (!member ||
@@ -139,7 +157,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         return true;
     }, [localTeamDetails]);
 
-    // CSS triedy pre tlačidlo "Ďalej"
     const nextButtonClasses = `
         font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
         ${!isFormValidPage6 || loading
@@ -150,8 +167,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     const handlePage6Submit = (e) => {
         e.preventDefault();
-        // Spojíme lokálne detaily s pôvodnými dátami z teamsDataFromPage4
-        const finalTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4)); // Hlboká kópia
+        const finalTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
         for (const categoryName in localTeamDetails) {
             (localTeamDetails[categoryName] || []).forEach((localTeam, teamIndex) => {
@@ -162,7 +178,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 }
             });
         }
-        handleSubmit(finalTeamsData); // Odovzdáme finálne dáta do App.js
+        handleSubmit(finalTeamsData);
     };
 
 
@@ -173,8 +189,18 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
         React.createElement(
             'h2',
-            { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
+            { className: 'text-2xl font-bold mb-2 text-center text-gray-800' },
             'Registrácia - strana 6: Detaily tímu'
+        ),
+        // NOVINKA: Informačný text
+        React.createElement(
+            'p',
+            { className: 'text-center text-sm text-gray-600 mb-6 px-4' },
+            'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
+            React.createElement('strong', null, 'ale je povinné ich vyplniť v sekcii "Moja zóna"'),
+            ' po prihlásení sa do svojho turnajového účtu do dátumu ',
+            React.createElement('strong', null, dataEditDeadline || 'nezadaný dátum'),
+            '.'
         ),
 
         React.createElement(
@@ -206,7 +232,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         const player = team.playerDetails?.[playerIndex] || {};
                                         return React.createElement('div', { key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
                                             React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Hráč ${playerIndex + 1}`),
-                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' }, 
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
                                                 React.createElement('div', { className: 'w-24' },
                                                     React.createElement('label', { htmlFor: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dres'),
                                                     React.createElement('input', {
@@ -223,7 +249,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         placeholder: 'Číslo'
                                                     })
                                                 ),
-                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' }, 
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
                                                     React.createElement('input', {
                                                         type: 'text',
@@ -249,7 +275,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         placeholder: 'Priezvisko hráča'
                                                     })
                                                 ),
-                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' }, 
+                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' },
                                                     React.createElement('label', { htmlFor: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
                                                     React.createElement('input', {
                                                         type: 'date',
@@ -261,7 +287,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                     })
                                                 ),
-                                                React.createElement('div', { className: 'flex-initial w-auto' }, 
+                                                React.createElement('div', { className: 'flex-initial w-auto' },
                                                     React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
                                                     React.createElement('input', {
                                                         type: 'checkbox',
@@ -272,7 +298,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                     })
                                                 ),
-                                                player.isRegistered && React.createElement('div', { className: 'flex-1 min-w-[120px]' }, 
+                                                player.isRegistered && React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo registrácie'),
                                                     React.createElement('input', {
                                                         type: 'text',
