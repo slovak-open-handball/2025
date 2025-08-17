@@ -32,9 +32,15 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
                     // Detaily dopravy
                     let arrivalDetails = team.arrival?.type || 'Nezadaný';
-                    if ((team.arrival?.type === 'vlaková doprava' || team.arrival?.type === 'autobusová doprava') && team.arrival?.time) {
+                    if ((team.arrival?.type === 'verejná doprava - vlak' || team.arrival?.type === 'verejná doprava - autobus') && team.arrival?.time) {
                         arrivalDetails += ` (čas príchodu: ${team.arrival.time})`;
+                    } else if (team.arrival?.type === 'vlastná doprava' && (team.arrival?.drivers?.male > 0 || team.arrival?.drivers?.female > 0)) {
+                        const driversInfo = [];
+                        if (team.arrival.drivers.male > 0) driversInfo.push(`${team.arrival.drivers.male} muž`);
+                        if (team.arrival.drivers.female > 0) driversInfo.push(`${team.arrival.drivers.female} žena`);
+                        arrivalDetails += ` (šoféri: ${driversInfo.join(', ')})`;
                     }
+
 
                     // Detaily balíčka
                     let packageDetailsHtml = null;
@@ -79,12 +85,54 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         packageDetailsHtml = React.createElement('p', null, 'Balíček: Nezadaný');
                     }
 
+                    // Dynamické generovanie riadkov pre hráčov
+                    const playersRows = Array.from({ length: team.players || 0 }).map((_, playerIndex) => (
+                        React.createElement('div', { key: `player-${index}-${playerIndex}`, className: 'mb-2 ml-4 p-2 bg-gray-100 rounded-md shadow-sm' },
+                            React.createElement('p', null, React.createElement('strong', null, `Hráč ${playerIndex + 1}:`)),
+                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-2 text-sm' },
+                                React.createElement('p', null, `Číslo dresu: ${team.playerDetails?.[playerIndex]?.jerseyNumber || '-'}`),
+                                React.createElement('p', null, `Meno: ${team.playerDetails?.[playerIndex]?.firstName || '-'}`),
+                                React.createElement('p', null, `Priezvisko: ${team.playerDetails?.[playerIndex]?.lastName || '-'}`),
+                                React.createElement('p', null, `Dátum narodenia: ${team.playerDetails?.[playerIndex]?.dateOfBirth || '-'}`),
+                                React.createElement('p', null, `Registrovaný: ${team.playerDetails?.[playerIndex]?.isRegistered ? 'Áno' : 'Nie'}`),
+                                team.playerDetails?.[playerIndex]?.isRegistered && React.createElement('p', null, `Číslo registrácie: ${team.playerDetails?.[playerIndex]?.registrationNumber || '-'}`)
+                            )
+                        )
+                    ));
+
+                    // Dynamické generovanie riadkov pre členov realizačného tímu (ženy)
+                    const womenTeamMembersRows = Array.from({ length: team.womenTeamMembers || 0 }).map((_, memberIndex) => (
+                        React.createElement('div', { key: `woman-member-${index}-${memberIndex}`, className: 'mb-2 ml-4 p-2 bg-gray-100 rounded-md shadow-sm' },
+                            React.createElement('p', null, React.createElement('strong', null, `Člen realizačného tímu (žena) ${memberIndex + 1}:`)),
+                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-2 text-sm' },
+                                React.createElement('p', null, `Meno: ${team.womenTeamMemberDetails?.[memberIndex]?.firstName || '-'}`),
+                                React.createElement('p', null, `Priezvisko: ${team.womenTeamMemberDetails?.[memberIndex]?.lastName || '-'}`),
+                                React.createElement('p', null, `Dátum narodenia: ${team.womenTeamMemberDetails?.[memberIndex]?.dateOfBirth || '-'}`)
+                            )
+                        )
+                    ));
+
+                    // Dynamické generovanie riadkov pre členov realizačného tímu (muži)
+                    const menTeamMembersRows = Array.from({ length: team.menTeamMembers || 0 }).map((_, memberIndex) => (
+                        React.createElement('div', { key: `man-member-${index}-${memberIndex}`, className: 'mb-2 ml-4 p-2 bg-gray-100 rounded-md shadow-sm' },
+                            React.createElement('p', null, React.createElement('strong', null, `Člen realizačného tímu (muž) ${memberIndex + 1}:`)),
+                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-2 text-sm' },
+                                React.createElement('p', null, `Meno: ${team.menTeamMemberDetails?.[memberIndex]?.firstName || '-'}`),
+                                React.createElement('p', null, `Priezvisko: ${team.menTeamMemberDetails?.[memberIndex]?.lastName || '-'}`),
+                                React.createElement('p', null, `Dátum narodenia: ${team.menTeamMemberDetails?.[memberIndex]?.dateOfBirth || '-'}`)
+                            )
+                        )
+                    ));
+
 
                     return React.createElement('div', { key: index, className: 'mb-2 ml-4 p-2 bg-gray-50 rounded-md shadow-sm' },
                         React.createElement('p', null, React.createElement('strong', null, `Tím ${index + 1}: `), team.teamName || '-'),
                         React.createElement('p', null, `Počet hráčov: ${team.players || 0}`),
+                        playersRows, // Zobrazenie riadkov hráčov
                         React.createElement('p', null, `Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}`),
+                        womenTeamMembersRows, // Zobrazenie riadkov ženského realizačného tímu
                         React.createElement('p', null, `Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}`),
+                        menTeamMembersRows, // Zobrazenie riadkov mužského realizačného tímu
                         React.createElement('p', null, `Tričká: ${tshirtsDetails}`),
                         React.createElement('p', null, `Ubytovanie: ${accommodationDetails}`),
                         React.createElement('p', null, `Doprava: ${arrivalDetails}`),
