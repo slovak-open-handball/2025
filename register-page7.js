@@ -136,7 +136,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             if (pkg.meals.participantCard === 1) {
                                 mealsHtml = React.createElement(React.Fragment, null,
                                     mealsHtml,
-                                    React.createElement('p', { className: 'font-bold text-gray-700 ml-4 mt-1' }, 'Zahŕňa účastnícku kartu')
+                                    React.createElement('p', { className: 'font-bold text-gray-700 ml-4 mt-1' }, 'Zahŕňa účastnícku kartu.')
                                 );
                             }
                         }
