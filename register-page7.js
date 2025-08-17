@@ -145,7 +145,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
                         packageDetailsHtml = React.createElement(React.Fragment, null,
                             // ÚPRAVA: Text "Balíček:" je teraz tučný
-                            React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} €)`),
+                            React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} €/osoba)`),
                             mealsHtml
                         );
                     } else {
