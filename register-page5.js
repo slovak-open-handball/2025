@@ -888,72 +888,95 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleDriverEntryChange = (id, field, value) => {
         setDriverEntries(currentDrivers => {
-            let newDriversState = currentDrivers.map(entry => {
-                if (entry.id === id) {
-                    let newEntryState = { ...entry, [field]: value };
-                    let newCategoryName = newEntryState.categoryName;
-                    let newTeamIndex = newEntryState.teamIndex;
-                    let newGender = newEntryState.gender;
-                    let newCount = newEntryState.count;
+            // Create a mutable copy of the current entries to perform updates
+            const newDrivers = currentDrivers.map(entry => ({ ...entry }));
+
+            let updatedEntryIndex = -1;
+            let updatedEntry = null;
+
+            // Find and update the specific entry in the copied array
+            for (let i = 0; i < newDrivers.length; i++) {
+                if (newDrivers[i].id === id) {
+                    updatedEntryIndex = i;
+                    updatedEntry = newDrivers[i]; // Reference to the object in newDrivers array
 
                     if (field === 'teamId') {
                         const [catName, teamIdxStr] = value.split('-');
-                        newCategoryName = catName || '';
-                        newTeamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
-                        newEntryState.categoryName = newCategoryName;
-                        newEntryState.teamIndex = newTeamIndex;
-                        newEntryState.gender = ''; // Reset gender when team changes
-                        newGender = '';
-                    } else if (field === 'gender') {
-                        newGender = value;
-                        newEntryState.gender = newGender;
-                    } else if (field === 'count') {
-                        newCount = value;
-                        newEntryState.count = newCount;
+                        updatedEntry.categoryName = catName || '';
+                        updatedEntry.teamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
+                        updatedEntry.gender = ''; // Reset gender when team changes
+                    } else {
+                        updatedEntry[field] = value;
                     }
-
-                    // Pre-aktualizujeme ID na základe vybraného tímu a pohlavia, ak sú dostupné
-                    const potentialNewId = generateStableDriverId(newCategoryName, newTeamIndex, newGender);
-                    if (potentialNewId !== entry.id) { // Len ak sa ID naozaj mení, aby sa predišlo zbytočným re-renderom
-                        // Skontrolujeme, či nové ID už neexistuje v rámci driverEntries (duplikát)
-                        const isDuplicateId = newDriversState.some(existingEntry => 
-                            existingEntry.id !== id && existingEntry.id === potentialNewId
-                        );
-                        if (!isDuplicateId) {
-                            newEntryState.id = potentialNewId;
-                        } else {
-                            // Ak je to duplikát, môžeme ponechať dočasné ID alebo vygenerovať nové dočasné
-                            // Tým zabránime, aby React použil rovnaký kľúč pre rôzne komponenty
-                             newEntryState.id = generateStableDriverId(null, null, null); // Nové dočasné ID
-                             // Môžeš tu tiež dispatchovať notifikáciu o chybe duplicitného vstupu
-                        }
-                    }
-                    return newEntryState;
+                    break;
                 }
-                return entry;
+            }
+
+            if (!updatedEntry) {
+                // This case should ideally not be reached if the `id` is valid
+                console.warn("Attempted to change driver entry with unknown ID:", id);
+                return currentDrivers; 
+            }
+
+            // After updating the fields, re-evaluate its ID
+            const newCategoryName = updatedEntry.categoryName;
+            const newTeamIndex = updatedEntry.teamIndex;
+            const newGender = updatedEntry.gender;
+            const currentEntryOriginalId = id; // Store the original ID for comparison
+
+            const potentialNewId = generateStableDriverId(newCategoryName, newTeamIndex, newGender);
+
+            // Check if this potential new ID clashes with any other existing entry's ID
+            // OR if it clashes with another entry's *stable* ID that it would become
+            const isDuplicateId = newDrivers.some((existingEntry, index) => {
+                // Don't compare with the entry being currently updated
+                if (index === updatedEntryIndex) return false; 
+
+                // Check against existing entry's current ID
+                if (existingEntry.id === potentialNewId) return true;
+
+                // Also consider if the existingEntry *would* take this stable ID
+                // (if it has the same categoryName, teamIndex, and gender)
+                const existingEntryStableId = generateStableDriverId(existingEntry.categoryName, existingEntry.teamIndex, existingEntry.gender);
+                if (existingEntryStableId === potentialNewId) return true;
+
+                return false;
             });
 
-            // Nájdeme všetky tímy, ktoré sú ovplyvnené zmenou (tím, ktorý bol zmenený + tím, na ktorý sa mohol prepnúť)
-            const affectedTeams = new Set();
-            const originalEntry = currentDrivers.find(entry => entry.id === id); // Pôvodný záznam pred zmenou
-            if (originalEntry && originalEntry.categoryName && originalEntry.teamIndex !== null) {
-                affectedTeams.add(`${originalEntry.categoryName}-${originalEntry.teamIndex}`);
+            // Determine the final ID for the updatedEntry
+            if (potentialNewId !== currentEntryOriginalId && !isDuplicateId) {
+                // If the new stable ID is different from its current ID AND not a duplicate, assign it
+                updatedEntry.id = potentialNewId;
+            } else if (isDuplicateId && potentialNewId !== currentEntryOriginalId) {
+                // If the potential new stable ID is a duplicate, AND it's not its own current stable ID,
+                // then we must revert to a temporary ID to avoid key conflicts.
+                updatedEntry.id = generateStableDriverId(null, null, null);
             }
-            const updatedEntry = newDriversState.find(entry => entry.id === id); // Aktualizovaný záznam
+            // If potentialNewId === currentEntryOriginalId, no change to ID is needed.
+            // If it was already a temporary ID, it remains temporary unless it becomes stable.
+
+
+            // The `newDrivers` array now contains the updated entry with its final ID.
+            // Now, handle the parent state update (aggregation)
+            const affectedTeams = new Set();
+            const originalEntryFromCurrentDrivers = currentDrivers.find(entry => entry.id === id);
+            if (originalEntryFromCurrentDrivers && originalEntryFromCurrentDrivers.categoryName && originalEntryFromCurrentDrivers.teamIndex !== null) {
+                affectedTeams.add(`${originalEntryFromCurrentDrivers.categoryName}-${originalEntryFromCurrentDrivers.teamIndex}`);
+            }
             if (updatedEntry && updatedEntry.categoryName && updatedEntry.teamIndex !== null) {
                 affectedTeams.add(`${updatedEntry.categoryName}-${updatedEntry.teamIndex}`);
             }
 
-            // Pre každý ovplyvnený tím re-agregujeme dáta a aktualizujeme rodičovský stav
             affectedTeams.forEach(teamIdStr => {
                 const [catName, teamIdxStr] = teamIdStr.split('-');
                 const teamIdx = parseInt(teamIdxStr, 10);
                 if (teamsDataFromPage4[catName] && teamsDataFromPage4[catName][teamIdx] && teamsDataFromPage4[catName][teamIdx].arrival?.type === 'vlastná doprava') {
-                    updateTeamDriversInParent(newDriversState, catName, teamIdx);
+                    // Pass the potentially modified `newDrivers` array to the aggregation function
+                    updateTeamDriversInParent(newDrivers, catName, teamIdx);
                 }
             });
             
-            return newDriversState;
+            return newDrivers; // Return the new, updated array to setDriverEntries
         });
     };
 
