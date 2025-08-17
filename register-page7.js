@@ -235,13 +235,13 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             React.createElement('div', { className: 'w-full overflow-x-auto box-border' }, // Added overflow-x-auto and box-border
                                 React.createElement('table', { className: 'bg-white border border-gray-300 rounded-lg shadow-sm w-max' }, // Changed w-full to w-max
                                     React.createElement('thead', null,
-                                        React.createElement('tr', { className: 'bg-gray-200 text-gray-700 uppercase text-sm leading-normal' },
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Typ'),
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, 'Dres'),
+                                        React.createElement('tr', { className: 'bg-gray-200 text-gray-700 text-sm leading-normal' },
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Osoba'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, 'Číslo dresu'),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Meno'),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Priezvisko'),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Dátum narodenia'),
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Registrácia'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Číslo registrácie'),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '200px', whiteSpace: 'nowrap' } }, 'Adresa bydliska')
                                         )
                                     ),
