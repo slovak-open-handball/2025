@@ -16,7 +16,7 @@ const getRecaptchaToken = async (action) => {
   }
 };
 
-export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification, availableCategoriesMap, selectedCategoryRows, setSelectedCategoryRows }) {
+export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification, availableCategoriesMap, selectedCategoryRows, setSelectedCategoryRows, notificationType }) { // Pridaný notificationType prop
   const [categoriesData, setCategoriesData] = React.useState({});
   const [isCategoriesLoaded, setIsCategoriesLoaded] = React.useState(false);
 
@@ -128,7 +128,7 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
   return React.createElement(
     React.Fragment,
     null,
-    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: "error" }),
+    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }), // Používame prop 'type'
 
     React.createElement(
       'h2',
