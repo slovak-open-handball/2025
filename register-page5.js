@@ -336,87 +336,113 @@ function TeamAccommodationAndArrival({
                     React.createElement('span', { className: 'ml-3 text-gray-800' }, 'bez dopravy')
                 )
             )
-        ),
+        )
+    );
+}
 
+// NOVÝ KOMPONENT: TeamPackageSettings
+function TeamPackageSettings({
+    team,
+    categoryName,
+    teamIndex,
+    onGranularTeamsDataChange,
+    loading,
+    packages,
+    tournamentDays
+}) {
+    const [selectedPackageId, setSelectedPackageId] = React.useState(team.packageId || '');
+
+    React.useEffect(() => {
+        setSelectedPackageId(team.packageId || '');
+    }, [team.packageId]);
+
+    const handlePackageChange = (e) => {
+        const newPackageId = e.target.value;
+        setSelectedPackageId(newPackageId);
+        const selectedPackageDetails = packages.find(pkg => pkg.id === newPackageId);
+        onGranularTeamsDataChange(categoryName, teamIndex, 'packageId', newPackageId);
+        onGranularTeamsDataChange(categoryName, teamIndex, 'packageDetails', selectedPackageDetails);
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'border-t border-gray-200 pt-4 mt-4' },
+        React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber balíčka'),
+        React.createElement(
+            'p',
+            { className: 'text-sm text-gray-600 mb-4' },
+            `Uvedená cena je pre jednu osobu.`
+        ),
         React.createElement(
             'div',
-            { className: 'border-t border-gray-200 pt-4 mt-4' },
-            React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber balíčka'),
-            React.createElement(
-                'p',
-                { className: 'text-sm text-gray-600 mb-4' },
-                `Uvedená cena je pre jednu osobu.`
-            ),
-            React.createElement(
-                'div',
-                { className: 'mb-4 space-y-2' },
-                packages.length > 0 ? (
-                    packages.map((pkg) => (
+            { className: 'mb-4 space-y-2' },
+            packages.length > 0 ? (
+                packages.map((pkg) => (
+                    React.createElement(
+                        'label',
+                        {
+                            key: pkg.id,
+                            className: `flex flex-col p-3 rounded-lg border cursor-pointer ${selectedPackageId === pkg.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} ${loading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors duration-200`,
+                        },
                         React.createElement(
-                            'label',
-                            {
-                                key: pkg.id,
-                                className: `flex flex-col p-3 rounded-lg border cursor-pointer ${selectedPackageId === pkg.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} ${loading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors duration-200`,
-                            },
+                            'div',
+                            { className: 'flex items-center justify-between w-full' },
                             React.createElement(
                                 'div',
-                                { className: 'flex items-center justify-between w-full' },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center' },
-                                    React.createElement('input', {
-                                        type: 'radio',
-                                        name: `selectedPackage-${categoryName}-${teamIndex}`,
-                                        value: pkg.id,
-                                        checked: selectedPackageId === pkg.id,
-                                        onChange: handlePackageChange,
-                                        className: 'form-radio h-5 w-5 text-blue-600',
-                                        disabled: loading,
-                                    }),
-                                    React.createElement('span', { className: 'ml-3 font-semibold text-gray-800' }, pkg.name)
-                                ),
-                                React.createElement('span', { className: 'font-bold text-gray-900' }, `${pkg.price} €`)
+                                { className: 'flex items-center' },
+                                React.createElement('input', {
+                                    type: 'radio',
+                                    name: `selectedPackage-${categoryName}-${teamIndex}`,
+                                    value: pkg.id,
+                                    checked: selectedPackageId === pkg.id,
+                                    onChange: handlePackageChange,
+                                    className: 'form-radio h-5 w-5 text-blue-600',
+                                    disabled: loading,
+                                }),
+                                React.createElement('span', { className: 'ml-3 font-semibold text-gray-800' }, pkg.name)
                             ),
-                            React.createElement(
-                                'div',
-                                { className: 'ml-8 text-sm text-gray-600 mt-2' },
-                                (pkg.meals && (tournamentDays.length > 0 || Object.keys(pkg.meals).length > 0)) ? (
-                                    [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {}).filter(key => key !== 'participantCard')])].sort().map(date => {
-                                        const mealsForDay = pkg.meals[date];
-                                        const includedItems = [];
+                            React.createElement('span', { className: 'font-bold text-gray-900' }, `${pkg.price} €`)
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'ml-8 text-sm text-gray-600 mt-2' },
+                            (pkg.meals && (tournamentDays.length > 0 || Object.keys(pkg.meals).length > 0)) ? (
+                                [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {}).filter(key => key !== 'participantCard')])].sort().map(date => {
+                                    const mealsForDay = pkg.meals[date];
+                                    const includedItems = [];
 
-                                        // Kontrola, či je dátum platný
-                                        if (isNaN(new Date(date).getTime())) {
-                                            return null;
-                                        }
-
-                                        if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('raňajky');
-                                        if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('obed');
-                                        if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('večera');
-                                        if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('občerstvenie');
-
-                                        if (includedItems.length > 0) {
-                                            const dateObj = new Date(date + 'T00:00:00'); // Ensure date is parsed correctly
-                                            const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
-                                            return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
-                                        }
+                                    // Kontrola, či je dátum platný
+                                    if (isNaN(new Date(date).getTime())) {
                                         return null;
-                                    }).filter(item => item !== null)
-                                ) : (
-                                    React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
-                                ),
-                                (pkg.meals && pkg.meals.participantCard === 1) &&
-                                    React.createElement('p', { className: 'font-bold text-gray-700 mt-1' }, 'zahŕňa účastnícku kartu')
-                            )
+                                    }
+
+                                    if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('raňajky');
+                                    if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('obed');
+                                    if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('večera');
+                                    if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('občerstvenie');
+
+                                    if (includedItems.length > 0) {
+                                        const dateObj = new Date(date + 'T00:00:00'); // Ensure date is parsed correctly
+                                        const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
+                                        return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
+                                    }
+                                    return null;
+                                }).filter(item => item !== null)
+                            ) : (
+                                React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
+                            ),
+                            (pkg.meals && pkg.meals.participantCard === 1) &&
+                                React.createElement('p', { className: 'font-bold text-gray-700 mt-1' }, 'zahŕňa účastnícku kartu')
                         )
-                    ))
-                ) : (
-                    React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 'Nie sú dostupné žiadne balíčky.')
-                )
+                    )
+                ))
+            ) : (
+                React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 'Nie sú dostupné žiadne balíčky.')
             )
         )
     );
 }
+
 
 // Komponent pre vlastný selectbox tímu s možnosťou zalamovania textu
 function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
@@ -519,7 +545,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
-    const [packages, setPackages] = React.useState([]);
+    const [packages, setPackages] = React.useState([]); // Packages state is still needed here for fetching
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
     // Lokálny stav pre záznamy šoférov - teraz inicializovaný z teamsDataFromPage4 v useEffect
