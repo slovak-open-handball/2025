@@ -275,7 +275,11 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 React.createElement('p', null, React.createElement('strong', null, 'Priezvisko: '), formData.lastName),
                 React.createElement('p', null, React.createElement('strong', null, 'E-mail: '), formData.email),
                 // Zmenený riadok pre zobrazenie telefónneho čísla
-                React.createElement('p', null, React.createElement('strong', null, 'Telefónne číslo: '), selectedCountryDialCode ? `${selectedCountryDialCode} ${formData.contactPhoneNumber}` : formData.contactPhoneNumber)
+                // Predvoľba sa zobrazí, ak existuje a je zadané telefónne číslo
+                React.createElement('p', null, React.createElement('strong', null, 'Telefónne číslo: '), 
+                    formData.contactPhoneNumber ? 
+                        `${selectedCountryDialCode} ${formData.contactPhoneNumber}` : '-'
+                )
             ),
 
             React.createElement(
