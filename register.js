@@ -33,58 +33,6 @@ const formatToDatetimeLocal = (date) => {
   return `${day}. ${month}. ${year} ${hours}:${minutes}`;
 };
 
-// NotificationModal Component pre zobrazovanie dočasných správ (teraz už NIE JE definovaný tu, ale v Page5Form a Page6Form)
-function NotificationModal({ message, onClose, type = 'info' }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (message) {
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
-    } else {
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose]);
-
-  if (!show && !message) return null;
-
-  let bgColorClass;
-  if (type === 'success') {
-    bgColorClass = 'bg-green-500';
-  } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // ZMENENÉ: pre chybu je červené pozadie
-  } else {
-    bgColorClass = 'bg-blue-500';
-  }
-
-  return React.createElement(
-    'div',
-    {
-      className: `fixed bottom-4 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
-      style: { zIndex: 1000 }
-    },
-    React.createElement('p', { className: 'font-semibold' }, message)
-  );
-}
-
-
 // Hlavný App komponent
 function App() {
   const [page, setPage] = React.useState(1);
