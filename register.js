@@ -708,7 +708,7 @@ function App() {
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
     isRegisteringRef.current = true;
 
-    const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
+    const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
     
     // Vytvorenie hlbokej kópie teamsDataFromPage4, aby sme mohli manipulovať s dátami bez vedľajších efektov
     let teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
