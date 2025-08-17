@@ -13,8 +13,8 @@ import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
 import { Page5Form } from './register-page5.js';
-import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
-import { Page7Form } = from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
+import { Page6Form } from './register-page6.js'; 
+import { Page7Form } from './register-page7.js';
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
