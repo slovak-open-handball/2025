@@ -12,7 +12,7 @@ import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js'
 import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
-import { Page5Form } from './register-page5.js'; // Import NotificationModal
+import { Page5Form } from './register-page5.js';
 import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
 import { Page7Form } from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
 
@@ -32,6 +32,58 @@ const formatToDatetimeLocal = (date) => {
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${day}. ${month}. ${year} ${hours}:${minutes}`;
 };
+
+// NotificationModal Component pre zobrazovanie dočasných správ (teraz už NIE JE definovaný tu, ale v Page5Form a Page6Form)
+function NotificationModal({ message, onClose, type = 'info' }) {
+  const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (message) {
+      setShow(true);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        setShow(false);
+        setTimeout(onClose, 500);
+      }, 10000);
+    } else {
+      setShow(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [message, onClose]);
+
+  if (!show && !message) return null;
+
+  let bgColorClass;
+  if (type === 'success') {
+    bgColorClass = 'bg-green-500';
+  } else if (type === 'error') {
+    bgColorClass = 'bg-red-600'; // ZMENENÉ: pre chybu je červené pozadie
+  } else {
+    bgColorClass = 'bg-blue-500';
+  }
+
+  return React.createElement(
+    'div',
+    {
+      className: `fixed bottom-4 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
+      style: { zIndex: 1000 }
+    },
+    React.createElement('p', { className: 'font-semibold' }, message)
+  );
+}
+
 
 // Hlavný App komponent
 function App() {
@@ -558,28 +610,6 @@ function App() {
             // Používame existingTeamData pre zachovanie predtým zadaných detailov
             const existingTeamData = existingCategoryTeams[teamIndex] || {};
 
-            // Helper na vytvorenie prázdneho detailu hráča/člena s adresou
-            const createEmptyPersonDetail = () => ({
-                jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
-                address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
-            });
-
-            // NOVINKA: Zabezpečenie, že playerDetails, womenTeamMemberDetails, menTeamMemberDetails
-            // sa inicializujú správne, buď z existujúcich dát, alebo ako prázdne polia
-            // so správnym počtom osôb.
-            const initialPlayerDetails = existingTeamData.playerDetails && existingTeamData.playerDetails.length === (parseInt(existingTeamData.players, 10) || 0)
-                ? existingTeamData.playerDetails
-                : Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => createEmptyPersonDetail());
-
-            const initialWomenTeamMemberDetails = existingTeamData.womenTeamMemberDetails && existingTeamData.womenTeamMemberDetails.length === (parseInt(existingTeamData.womenTeamMembers, 10) || 0)
-                ? existingTeamData.womenTeamMemberDetails
-                : Array.from({ length: parseInt(existingTeamData.womenTeamMembers, 10) || 0 }).map(() => createEmptyPersonDetail());
-
-            const initialMenTeamMemberDetails = existingTeamData.menTeamMemberDetails && existingTeamData.menTeamMemberDetails.length === (parseInt(existingTeamData.menTeamMembers, 10) || 0)
-                ? existingTeamData.menTeamMemberDetails
-                : Array.from({ length: parseInt(existingTeamData.menTeamMembers, 10) || 0 }).map(() => createEmptyPersonDetail());
-
-
             return {
                 teamName: generatedTeamName,
                 players: existingTeamData.players !== undefined ? existingTeamData.players : '',
@@ -594,9 +624,18 @@ function App() {
                 packageId: existingTeamData.packageId || '',
                 packageDetails: existingTeamData.packageDetails || null,
                 // NOVINKA: Inicializácia polí pre detaily hráčov a realizačného tímu
-                playerDetails: initialPlayerDetails,
-                womenTeamMemberDetails: initialWomenTeamMemberDetails,
-                menTeamMemberDetails: initialMenTeamMemberDetails,
+                playerDetails: existingTeamData.playerDetails || Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => ({
+                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre hráča
+                })),
+                womenTeamMemberDetails: existingTeamData.womenTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.womenTeamMembers, 10) || 0 }).map(() => ({
+                    firstName: '', lastName: '', dateOfBirth: '',
+                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre ženu
+                })),
+                menTeamMemberDetails: existingTeamData.menTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.menTeamMembers, 10) || 0 }).map(() => ({
+                    firstName: '', lastName: '', dateOfBirth: '',
+                    address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' } // Inicializácia adresy pre muža
+                })),
             };
         });
     });
@@ -654,7 +693,7 @@ function App() {
   // Upravená handlePrev funkcia na prijímanie voliteľných aktualizovaných dát
   const handlePrev = (updatedData = null) => {
     if (updatedData) {
-        setTeamsDataFromPage4(updatedData); // Ak sú odovzdané dáta, aktualizujeme stav teamsDataFromPage4
+        setTeamsDataFromPage4(updatedData);
     }
     setPage(prevPage => prevPage - 1);
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
@@ -1136,7 +1175,7 @@ function App() {
           page === 4 ?
               React.createElement(Page4Form, {
                   formData: formData,
-                  handlePrev: handlePrev, // Teraz handlePrev akceptuje voliteľné dáta
+                  handlePrev: handlePrev,
                   handleNextPage4: handleNextPage4ToPage5,
                   loading: loading,
                   setLoading: setLoading,
@@ -1172,8 +1211,6 @@ function App() {
                   isRecaptchaReady: isRecaptchaReady,
                   tournamentStartDate: registrationStartDate,
                   tournamentEndDate: registrationEndDate,
-                  numberOfPlayersLimit: numberOfPlayersInTeam, // Pridané ako prop
-                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers // Pridané ako prop
               }) :
           page === 6 ? // NOVINKA: Renderovanie Page6Form (detaily hráčov/tímu)
               React.createElement(Page6Form, {
