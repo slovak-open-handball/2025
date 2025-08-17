@@ -542,7 +542,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     'button',
                     {
                         type: 'button',
-                        onClick: handlePrev,
+                        onClick: () => handlePrev(teamsDataFromPage4), // <--- ZMENA TU
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                         tabIndex: 1
