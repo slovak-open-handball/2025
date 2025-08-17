@@ -97,6 +97,43 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 ...newDetails[categoryName][teamIndex],
                 [field]: newValue
             };
+
+            // NOVINKA: Ak sa zmení počet hráčov/členov realizačného tímu, aktualizujeme aj detaily osôb
+            if (field === 'players') {
+                const currentPlayersCount = (newDetails[categoryName][teamIndex].playerDetails || []).length;
+                const newPlayersCount = parseInt(newValue, 10) || 0;
+                if (newPlayersCount !== currentPlayersCount) {
+                    newDetails[categoryName][teamIndex].playerDetails = Array.from({ length: newPlayersCount }).map((_, i) => {
+                        return (newDetails[categoryName][teamIndex].playerDetails && newDetails[categoryName][teamIndex].playerDetails[i]) || {
+                            jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                        };
+                    });
+                }
+            } else if (field === 'womenTeamMembers') {
+                const currentWomenCount = (newDetails[categoryName][teamIndex].womenTeamMemberDetails || []).length;
+                const newWomenCount = parseInt(newValue, 10) || 0;
+                if (newWomenCount !== currentWomenCount) {
+                    newDetails[categoryName][teamIndex].womenTeamMemberDetails = Array.from({ length: newWomenCount }).map((_, i) => {
+                        return (newDetails[categoryName][teamIndex].womenTeamMemberDetails && newDetails[categoryName][teamIndex].womenTeamMemberDetails[i]) || {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                        };
+                    });
+                }
+            } else if (field === 'menTeamMembers') {
+                const currentMenCount = (newDetails[categoryName][teamIndex].menTeamMemberDetails || []).length;
+                const newMenCount = parseInt(newValue, 10) || 0;
+                if (newMenCount !== currentMenCount) {
+                    newDetails[categoryName][teamIndex].menTeamMemberDetails = Array.from({ length: newMenCount }).map((_, i) => {
+                        return (newDetails[categoryName][teamIndex].menTeamMemberDetails && newDetails[categoryName][teamIndex].menTeamMemberDetails[i]) || {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                        };
+                    });
+                }
+            }
+
             return newDetails;
         });
     };
@@ -542,7 +579,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     'button',
                     {
                         type: 'button',
-                        onClick: handlePrev,
+                        onClick: () => handlePrev(teamsDataFromPage4), // NOVINKA: Odovzdávame aktuálne dáta do handlePrev
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                         tabIndex: 1
