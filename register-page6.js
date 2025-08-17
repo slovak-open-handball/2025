@@ -24,7 +24,7 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
 
 // Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
 
-export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev }) { // Pridaný onSaveAndPrev prop
+export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType }) { // Pridaný notificationType prop
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
