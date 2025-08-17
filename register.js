@@ -592,6 +592,7 @@ function App() {
         // Zabezpečíme, že existingCategoryTeams je vždy pole pre bezpečné .map()
         const existingCategoryTeams = Array.isArray(teamsDataFromPage4[categoryName]) ? teamsDataFromPage4[categoryName] : [];
 
+        // Zabezpečíme, že newTeamsDataForPage4[categoryName] je pole
         newTeamsDataForPage4[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
             const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
             const generatedTeamName = `${clubName}${suffix}`;
