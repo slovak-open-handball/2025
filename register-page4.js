@@ -151,9 +151,9 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
 
     // Získanie dostupných veľkostí tričiek (aby sa neopakovali už vybrané)
     const getAvailableTshirtSizeOptions = (teamTshirts, currentIndex = -1) => {
-        const selectedSizesInOtherRows = teamTshirts
-            .filter((tshirt, idx) => idx !== currentIndex && tshirt.size !== '')
-            .map(tshirt => tshirt.size);
+        const selectedSizesInOtherRows = Array.isArray(teamTshirts) // Zabezpečenie, že teamTshirts je pole
+            ? teamTshirts.filter((tshirt, idx) => idx !== currentIndex && tshirt.size !== '').map(tshirt => tshirt.size)
+            : [];
 
         // Používame dynamicky načítané veľkosti tričiek
         return tshirtSizes.filter(size => !selectedSizesInOtherRows.includes(size));
@@ -216,7 +216,12 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
 
         // Prechádzame všetky kategórie a tímy
         for (const categoryName in teamsDataFromPage4) {
-            for (const team of (teamsDataFromPage4[categoryName] || []).filter(t => t)) {
+            // Zabezpečíme, že teamsDataFromPage4[categoryName] je pole, alebo použijeme prázdne pole
+            const teamsInCategory = Array.isArray(teamsDataFromPage4[categoryName])
+                ? teamsDataFromPage4[categoryName]
+                : [];
+
+            for (const team of teamsInCategory.filter(t => t)) { // OPRAVA: Používame teamsInCategory
                 // Kontrola názvu tímu
                 if (!team || typeof team.teamName !== 'string' || !team.teamName.trim()) {
                     console.error("Validácia zlyhala: Názov tímu je neplatný alebo chýba pre kategóriu:", categoryName, "Tím:", team);
@@ -246,7 +251,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 }
 
                 // Validácia detailov tričiek
-                for (const tshirt of (team.tshirts || [])) {
+                for (const tshirt of (Array.isArray(team.tshirts) ? team.tshirts : [])) { // Zabezpečenie, že team.tshirts je pole
                     if (tshirt.size === '' || isNaN(parseInt(tshirt.quantity, 10)) || parseInt(tshirt.quantity, 10) < 0) {
                         return false;
                     }
@@ -259,7 +264,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 
                 // Súčet objednaných tričiek
                 let teamOrderedTshirts = 0;
-                for (const tshirt of (team.tshirts || [])) {
+                for (const tshirt of (Array.isArray(team.tshirts) ? team.tshirts : [])) { // Zabezpečenie, že team.tshirts je pole
                     teamOrderedTshirts += (isNaN(parseInt(tshirt.quantity, 10)) ? 0 : parseInt(tshirt.quantity, 10));
                 }
 
@@ -305,15 +310,17 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
         // Používame teamsDataFromPage4 zo stavu komponentu, nie z parametra
         const teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
         for (const categoryName in teamsDataToSaveFinal) {
-            teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => ({
+            // Zabezpečíme, že je to pole, pred tým ako na ňom voláme map
+            const currentTeamsInCategory = Array.isArray(teamsDataToSaveFinal[categoryName]) ? teamsDataToSaveFinal[categoryName] : [];
+            teamsDataToSaveFinal[categoryName] = currentTeamsInCategory.map(team => ({
                 ...team,
                 players: team.players === '' ? 0 : team.players,
                 womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers,       // Konverzia
                 menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,         // Konverzia
-                tshirts: team.tshirts.map(tshirt => ({
+                tshirts: Array.isArray(team.tshirts) ? team.tshirts.map(tshirt => ({ // Zabezpečíme, že team.tshirts je pole
                     ...tshirt,
                     quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                }))
+                })) : []
             }));
         }
 
@@ -348,14 +355,15 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
                         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
-                        (teamsDataFromPage4[categoryName] || []).filter(t => t).map((team, teamIndex) => {
+                        // OPRAVENÉ: Zabezpečenie, že teamsDataFromPage4[categoryName] je pole
+                        (Array.isArray(teamsDataFromPage4[categoryName]) ? teamsDataFromPage4[categoryName] : []).filter(t => t).map((team, teamIndex) => {
                             // Výpočet potrebných tričiek pre každý tím
                             const teamRequiredTshirts = (isNaN(parseInt(team.players, 10)) ? 0 : parseInt(team.players, 10)) + 
                                                         (isNaN(parseInt(team.womenTeamMembers, 10)) ? 0 : parseInt(team.womenTeamMembers, 10)) +
                                                         (isNaN(parseInt(team.menTeamMembers, 10)) ? 0 : parseInt(team.menTeamMembers, 10));
                             
                             let teamOrderedTshirts = 0;
-                            for (const tshirt of (team.tshirts || [])) {
+                            for (const tshirt of (Array.isArray(team.tshirts) ? team.tshirts : [])) { // Zabezpečíme, že team.tshirts je pole
                                 teamOrderedTshirts += (isNaN(parseInt(tshirt.quantity, 10)) ? 0 : parseInt(tshirt.quantity, 10));
                             }
                             const teamTshirtDifference = teamRequiredTshirts - teamOrderedTshirts;
@@ -456,7 +464,8 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                         React.createElement('span', { className: 'w-8' })
                                     ),
                                     // Mapovanie cez riadky s tričkami
-                                    (team.tshirts || [{ size: '', quantity: '' }]).map((tshirt, tshirtIndex) => (
+                                    // OPRAVENÉ: Zabezpečenie, že team.tshirts je pole
+                                    (Array.isArray(team.tshirts) ? team.tshirts : [{ size: '', quantity: '' }]).map((tshirt, tshirtIndex) => (
                                         React.createElement(
                                             'div',
                                             { key: tshirtIndex, className: 'flex items-center space-x-2 mb-2' },
@@ -504,7 +513,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                         )
                                     )),
                                     // Tlačidlo na pridanie riadku trička (zobrazí sa len ak sú ešte dostupné veľkosti)
-                                    getAvailableTshirtSizeOptions(team.tshirts).length > 0 && React.createElement(
+                                    getAvailableTshirtSizeOptions(Array.isArray(team.tshirts) ? team.tshirts : []).length > 0 && React.createElement( // Zabezpečenie, že team.tshirts je pole
                                         'button',
                                         {
                                             type: 'button',
@@ -512,12 +521,12 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                             className: `
                                                 font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
                                                 transition-colors duration-200 focus:outline-none focus:shadow-outline
-                                                ${isTshirtSectionDisabled || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0
+                                                ${isTshirtSectionDisabled || (Array.isArray(team.tshirts) && team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10)))) || getAvailableTshirtSizeOptions(Array.isArray(team.tshirts) ? team.tshirts : []).length === 0 // Zabezpečenie Array.isArray
                                                     ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
                                                     : 'bg-blue-500 hover:bg-blue-700 text-white'
                                                 }
                                             `.trim(),
-                                            disabled: isTshirtSectionDisabled || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0, // Tlačidlo na pridanie tiež zablokované
+                                            disabled: isTshirtSectionDisabled || (Array.isArray(team.tshirts) && team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10)))) || getAvailableTshirtSizeOptions(Array.isArray(team.tshirts) ? team.tshirts : []).length === 0, // Zabezpečenie Array.isArray
                                         },
                                         '+'
                                     )
@@ -542,7 +551,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev(teamsDataFromPage4), // <--- ZMENA TU
+                        onClick: () => handlePrev(teamsDataFromPage4), // Odoslať aktuálne dáta tímov pri návrate
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                         tabIndex: 1
