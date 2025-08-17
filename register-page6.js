@@ -382,8 +382,10 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                             const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
-                            // Určenie, či tím má vybrané ubytovanie (iné ako "Bez ubytovania")
-                            const hasAccommodation = team.accommodation && team.accommodation.type !== 'Bez ubytovania' && team.accommodation.type !== '';
+                            // URČENIE, ČI TÍM MÁ VYBRANÉ UBYTOVANIE (INÉ AKO "BEZ UBYTOVANIA")
+                            // Použi toLowerCase() pre case-insensitive porovnanie a ošetri prázdne reťazce
+                            const hasAccommodation = team.accommodation && team.accommodation.type && team.accommodation.type.toLowerCase() !== 'bez ubytovania';
+
 
                             // Debugging logs - Pomôžu ti pochopiť stav dát
                             console.log(`Page6Form - Processing Team: ${team.teamName}`);
