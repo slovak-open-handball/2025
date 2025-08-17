@@ -22,15 +22,15 @@ import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "htt
 import { collection, doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
-// Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'YYYY-MM-DDTHH:mm'
+// Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'DD. MM. YYYY hh:mm'
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
-  const hours = (date.getHours()).toString().padStart(2, '0');
-  const minutes = (date.getMinutes()).toString().padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${day}. ${month}. ${year} ${hours}:${minutes}`;
 };
 
 // NotificationModal Component pre zobrazovanie dočasných správ (teraz už NIE JE definovaný tu, ale v Page5Form a Page6Form)
@@ -1066,7 +1066,7 @@ function App() {
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         React.createElement(
           'div',
-          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` },
+          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` }, {/* Dynamické nastavenie šírky */}
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
