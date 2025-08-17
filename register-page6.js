@@ -101,7 +101,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         };
                     });
 
-                    // NOVINKA: Zabezpečenie správnej štruktúry pre detaily šoférov
+                    // Zabezpečenie správnej štruktúry pre detaily šoférov
                     const driversMaleCount = team.arrival?.drivers?.male || 0;
                     const driversFemaleCount = team.arrival?.drivers?.female || 0;
 
@@ -138,8 +138,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         playerDetails: playerDetails,
                         womenTeamMemberDetails: womenTeamMemberDetails,
                         menTeamMemberDetails: menTeamMemberDetails,
-                        driverDetailsMale: driverDetailsMale, // NOVINKA
-                        driverDetailsFemale: driverDetailsFemale, // NOVINKA
+                        driverDetailsMale: driverDetailsMale,
+                        driverDetailsFemale: driverDetailsFemale,
                         // Zabezpečenie, aby accommodation bol vždy objekt s type property
                         accommodation: {
                             type: team.accommodation?.type || '', // Inicializuj type z existujúceho, alebo na prázdny reťazec
@@ -321,15 +321,9 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             }
 
             // Spusti validáciu pre aktuálny tím
-            const teamHasErrors = validateTeamPlayers(newDetails[categoryName][teamIndex].playerDetails, categoryName, teamIndex);
+            // Volanie dispatchAppNotification presunuté do useEffect, aby sa predišlo varovaniu "Cannot update a component while rendering"
+            validateTeamPlayers(newDetails[categoryName][teamIndex].playerDetails, categoryName, teamIndex);
 
-            if (teamHasErrors) {
-                dispatchAppNotification('V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.', 'error');
-            } else {
-                if (notificationMessage === 'V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.') {
-                    dispatchAppNotification('', 'info');
-                }
-            }
             return newDetails;
         });
     };
@@ -368,7 +362,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         });
     };
 
-    // NOVINKA: Funkcia na zmenu detailov šoféra
+    // Funkcia na zmenu detailov šoféra
     const handleDriverDetailChange = (categoryName, teamIndex, driverIndex, genderType, field, value) => {
         setLocalTeamDetails(prevDetails => {
             const newDetails = JSON.parse(JSON.stringify(prevDetails));
@@ -403,8 +397,33 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         });
     };
 
+    // NOVINKA: useEffect pre spracovanie notifikácií na základe playerErrors
+    React.useEffect(() => {
+        let hasAnyPlayerErrors = false;
+        for (const categoryName in playerErrors) {
+            for (const teamIndex in playerErrors[categoryName]) {
+                for (const playerIndex in playerErrors[categoryName][teamIndex]) {
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || playerErrors[categoryName][teamIndex][playerIndex].combination || playerErrors[categoryName][teamIndex][playerIndex].registrationNumber) {
+                        hasAnyPlayerErrors = true;
+                        break;
+                    }
+                }
+                if (hasAnyPlayerErrors) break;
+            }
+            if (hasAnyPlayerErrors) break;
+        }
 
-    // Všetky polia sú teraz nepovinné, takže formulár je vždy "platný" na postup
+        if (hasAnyPlayerErrors) {
+            dispatchAppNotification('V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.', 'error');
+        } else {
+            // Iba ak je aktuálna notifikácia o duplicitných údajoch, tak ju zrušíme
+            if (notificationMessage === 'V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.') {
+                dispatchAppNotification('', 'info');
+            }
+        }
+    }, [playerErrors, dispatchAppNotification, notificationMessage]);
+
+
     const isFormValidPage6 = React.useMemo(() => {
         for (const categoryName in playerErrors) {
             for (const teamIndex in playerErrors[categoryName]) {
@@ -442,8 +461,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     finalTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     finalTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
                     finalTeamsData[categoryName][teamIndex].menTeamMemberDetails = localTeam.menTeamMemberDetails;
-                    finalTeamsData[categoryName][teamIndex].driverDetailsMale = localTeam.driverDetailsMale; // NOVINKA
-                    finalTeamsData[categoryName][teamIndex].driverDetailsFemale = localTeam.driverDetailsFemale; // NOVINKA
+                    finalTeamsData[categoryName][teamIndex].driverDetailsMale = localTeam.driverDetailsMale;
+                    finalTeamsData[categoryName][teamIndex].driverDetailsFemale = localTeam.driverDetailsFemale;
                 }
             });
         }
@@ -460,8 +479,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     updatedTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     updatedTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
                     updatedTeamsData[categoryName][teamIndex].menTeamMemberDetails = localTeam.menTeamMemberDetails;
-                    updatedTeamsData[categoryName][teamIndex].driverDetailsMale = localTeam.driverDetailsMale; // NOVINKA
-                    updatedTeamsData[categoryName][teamIndex].driverDetailsFemale = localTeam.driverDetailsFemale; // NOVINKA
+                    updatedTeamsData[categoryName][teamIndex].driverDetailsMale = localTeam.driverDetailsMale;
+                    updatedTeamsData[categoryName][teamIndex].driverDetailsFemale = localTeam.driverDetailsFemale;
                 }
             });
         }
@@ -504,8 +523,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                             const playersCount = parseInt(team.players, 10) || 0;
                             const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                             const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
-                            const driversMaleCount = team.arrival?.drivers?.male || 0; // NOVINKA: Počet mužov šoférov
-                            const driversFemaleCount = team.arrival?.drivers?.female || 0; // NOVINKA: Počet žien šoférov
+                            const driversMaleCount = team.arrival?.drivers?.male || 0;
+                            const driversFemaleCount = team.arrival?.drivers?.female || 0;
 
 
                             const hasAccommodation = team.accommodation && team.accommodation.type && team.accommodation.type.toLowerCase() !== 'bez ubytovania';
