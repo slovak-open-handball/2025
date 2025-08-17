@@ -558,14 +558,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Lokálny stav pre záznamy šoférov - teraz inicializovaný z teamsDataFromPage4 v useEffect
     const [driverEntries, setDriverEntries] = React.useState([]);
 
-    // Pomocná funkcia na generovanie unikátneho ID pre dočasné záznamy šoférov
-    // ID by malo byť stabilné, ak už záznam existuje, inak sa vygeneruje nové.
-    const generateStableDriverId = (categoryName, teamIndex, gender) => {
-        if (categoryName && teamIndex !== null && gender) {
-            return `${categoryName}-${teamIndex}-${gender}`;
-        }
-        return `driver-temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    };
+    // Pomocná funkcia na generovanie unikátneho ID pre dočasné záznamy šoférov.
+    // Toto ID bude slúžiť ako React key a nemalo by sa meniť po inicializácii záznamu.
+    const generateUniqueTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Funkcia na re-agregáciu dát šoférov pre konkrétny tím a aktualizáciu rodičovského stavu
     const updateTeamDriversInParent = React.useCallback((currentEntries, categoryName, teamIndex) => {
@@ -601,9 +596,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
                 if (team.arrival?.type === 'vlastná doprava') {
+                    // Pre existujúce záznamy šoférov vytvoríme stabilné ID, ktoré sa nebude meniť
                     if (team.arrival?.drivers?.male > 0) {
                         driversFromParentData.push({
-                            id: generateStableDriverId(categoryName, teamIndex, 'male'), // Použiť stabilné ID
+                            id: generateUniqueTempId(), // Použiť nové dočasné ID, aby sa zabránilo kolíziám
                             count: team.arrival.drivers.male.toString(),
                             gender: 'male',
                             categoryName: categoryName,
@@ -612,7 +608,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                     if (team.arrival?.drivers?.female > 0) {
                         driversFromParentData.push({
-                            id: generateStableDriverId(categoryName, teamIndex, 'female'), // Použiť stabilné ID
+                            id: generateUniqueTempId(), // Použiť nové dočasné ID
                             count: team.arrival.drivers.female.toString(),
                             gender: 'female',
                             categoryName: categoryName,
@@ -851,7 +847,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleAddDriverEntry = () => {
         setDriverEntries(prev => {
             const newEntry = {
-                id: generateStableDriverId(null, null, null), // Generujeme dočasné ID
+                id: generateUniqueTempId(), // Používame generátor dočasného unikátneho ID pre React key
                 count: '',
                 gender: '',
                 categoryName: '',
@@ -888,17 +884,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleDriverEntryChange = (id, field, value) => {
         setDriverEntries(currentDrivers => {
-            // Create a mutable copy of the current entries to perform updates
+            // Vytvoríme novú kópiu poľa, aby sme neupravovali priamo pôvodný stav
             const newDrivers = currentDrivers.map(entry => ({ ...entry }));
 
-            let updatedEntryIndex = -1;
             let updatedEntry = null;
 
-            // Find and update the specific entry in the copied array
+            // Nájdeme a aktualizujeme konkrétny záznam v skopírovanom poli
             for (let i = 0; i < newDrivers.length; i++) {
                 if (newDrivers[i].id === id) {
-                    updatedEntryIndex = i;
-                    updatedEntry = newDrivers[i]; // Reference to the object in newDrivers array
+                    updatedEntry = newDrivers[i]; // Referencia na objekt v newDrivers poli
 
                     if (field === 'teamId') {
                         const [catName, teamIdxStr] = value.split('-');
@@ -913,57 +907,20 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
 
             if (!updatedEntry) {
-                // This case should ideally not be reached if the `id` is valid
-                console.warn("Attempted to change driver entry with unknown ID:", id);
+                // Tento prípad by sa nemal stať, ak je 'id' platné
+                console.warn("Pokus o zmenu záznamu šoféra s neznámym ID:", id);
                 return currentDrivers; 
             }
 
-            // After updating the fields, re-evaluate its ID
-            const newCategoryName = updatedEntry.categoryName;
-            const newTeamIndex = updatedEntry.teamIndex;
-            const newGender = updatedEntry.gender;
-            const currentEntryOriginalId = id; // Store the original ID for comparison
-
-            const potentialNewId = generateStableDriverId(newCategoryName, newTeamIndex, newGender);
-
-            // Check if this potential new ID clashes with any other existing entry's ID
-            // OR if it clashes with another entry's *stable* ID that it would become
-            const isDuplicateId = newDrivers.some((existingEntry, index) => {
-                // Don't compare with the entry being currently updated
-                if (index === updatedEntryIndex) return false; 
-
-                // Check against existing entry's current ID
-                if (existingEntry.id === potentialNewId) return true;
-
-                // Also consider if the existingEntry *would* take this stable ID
-                // (if it has the same categoryName, teamIndex, and gender)
-                const existingEntryStableId = generateStableDriverId(existingEntry.categoryName, existingEntry.teamIndex, existingEntry.gender);
-                if (existingEntryStableId === potentialNewId) return true;
-
-                return false;
-            });
-
-            // Determine the final ID for the updatedEntry
-            if (potentialNewId !== currentEntryOriginalId && !isDuplicateId) {
-                // If the new stable ID is different from its current ID AND not a duplicate, assign it
-                updatedEntry.id = potentialNewId;
-            } else if (isDuplicateId && potentialNewId !== currentEntryOriginalId) {
-                // If the potential new stable ID is a duplicate, AND it's not its own current stable ID,
-                // then we must revert to a temporary ID to avoid key conflicts.
-                updatedEntry.id = generateStableDriverId(null, null, null);
-            }
-            // If potentialNewId === currentEntryOriginalId, no change to ID is needed.
-            // If it was already a temporary ID, it remains temporary unless it becomes stable.
-
-
-            // The `newDrivers` array now contains the updated entry with its final ID.
-            // Now, handle the parent state update (aggregation)
+            // Agregácia dát pre rodičovský stav (teamsDataFromPage4)
             const affectedTeams = new Set();
+            // Pridáme pôvodný tím (pred zmenou, ak existoval)
             const originalEntryFromCurrentDrivers = currentDrivers.find(entry => entry.id === id);
             if (originalEntryFromCurrentDrivers && originalEntryFromCurrentDrivers.categoryName && originalEntryFromCurrentDrivers.teamIndex !== null) {
                 affectedTeams.add(`${originalEntryFromCurrentDrivers.categoryName}-${originalEntryFromCurrentDrivers.teamIndex}`);
             }
-            if (updatedEntry && updatedEntry.categoryName && updatedEntry.teamIndex !== null) {
+            // Pridáme nový tím (po zmene, ak existuje)
+            if (updatedEntry.categoryName && updatedEntry.teamIndex !== null) {
                 affectedTeams.add(`${updatedEntry.categoryName}-${updatedEntry.teamIndex}`);
             }
 
@@ -971,12 +928,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 const [catName, teamIdxStr] = teamIdStr.split('-');
                 const teamIdx = parseInt(teamIdxStr, 10);
                 if (teamsDataFromPage4[catName] && teamsDataFromPage4[catName][teamIdx] && teamsDataFromPage4[catName][teamIdx].arrival?.type === 'vlastná doprava') {
-                    // Pass the potentially modified `newDrivers` array to the aggregation function
+                    // Odovzdáme potenciálne modifikované `newDrivers` pole agregačnej funkcii
                     updateTeamDriversInParent(newDrivers, catName, teamIdx);
                 }
             });
             
-            return newDrivers; // Return the new, updated array to setDriverEntries
+            return newDrivers; // Vrátime nové, aktualizované pole pre setDriverEntries
         });
     };
 
