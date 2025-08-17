@@ -595,17 +595,20 @@ function App() {
     const newTeamsDataForPage4 = {};
     const clubName = formData.billing.clubName || '';
 
+    // Iterujeme len cez NOVÉ transformedCategories, aby sme zabezpečili, že newTeamsDataForPage4
+    // bude obsahovať len aktuálne vybrané kategórie.
     Object.keys(transformedCategories).forEach(categoryName => {
         const numTeams = transformedCategories[categoryName].numberOfTeams;
+
+        // Zabezpečíme, že existingCategoryTeams je vždy pole pre bezpečné .map()
+        const existingCategoryTeams = Array.isArray(teamsDataFromPage4[categoryName]) ? teamsDataFromPage4[categoryName] : [];
+
         newTeamsDataForPage4[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
             const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
             const generatedTeamName = `${clubName}${suffix}`;
 
-            // Načítame existujúce dáta tímu pre zachovanie (ak existujú)
-            // Uistite sa, že existujúce dáta kategórie a tímu sú platné objekty pred prístupom
-            const existingCategoryTeams = teamsDataFromPage4[categoryName];
-            const existingTeamData = (existingCategoryTeams && Array.isArray(existingCategoryTeams) && existingCategoryTeams[teamIndex])
-                                     ? existingCategoryTeams[teamIndex] : {};
+            // Používame existingTeamData pre zachovanie predtým zadaných detailov
+            const existingTeamData = existingCategoryTeams[teamIndex] || {};
 
             return {
                 teamName: generatedTeamName,
@@ -777,91 +780,94 @@ function App() {
         // Táto slučka zabezpečuje, že všetky tímy majú správne inicializované fields
         // a `drivers` je null, ak nebola zvolená 'vlastná doprava'.
         for (const categoryName in teamsDataToSaveFinal) {
-            teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => {
-                const updatedTeam = { ...team };
+            // Zabezpečíme, že teamsDataToSaveFinal[categoryName] je pole, predtým než zavoláme .map()
+            teamsDataToSaveFinal[categoryName] = Array.isArray(teamsDataToSaveFinal[categoryName])
+                ? teamsDataToSaveFinal[categoryName].map(team => {
+                    const updatedTeam = { ...team };
 
-                // Normalizácia polí, ktoré môžu byť prázdne stringy
-                updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
-                updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
-                updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
-                
-                // Normalizácia tričiek
-                updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
-                    ...tshirt,
-                    quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                }));
+                    // Normalizácia polí, ktoré môžu byť prázdne stringy
+                    updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
+                    updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
+                    updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
+                    
+                    // Normalizácia tričiek
+                    updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
+                        ...tshirt,
+                        quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
+                    }));
 
-                // Normalizácia ubytovania
-                updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
-                if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
+                    // Normalizácia ubytovania
+                    updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
+                    if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
 
-                // Normalizácia príchodu a šoférov
-                updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
-                if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
-                
-                // Ak je typ príchodu 'vlastná doprava', uistite sa, že drivers sú správne {male: ..., female: ...}
-                // Inak nastavte drivers na null.
-                if (updatedTeam.arrival.type === 'vlastná doprava') {
-                    updatedTeam.arrival.drivers = {
-                        male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
-                        female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
-                    };
-                } else {
-                    updatedTeam.arrival.drivers = null;
-                }
-
-                // Normalizácia balíčka
-                if (updatedTeam.packageId === '') updatedTeam.packageId = null;
-                if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
-
-                // Normalizácia detailov hráčov a členov realizačného tímu - prázdne polia na prázdne reťazce
-                // A zabezpečenie, že adresa je prítomná a normalizovaná
-                updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
-                    ...p,
-                    jerseyNumber: p.jerseyNumber || '',
-                    firstName: p.firstName || '',
-                    lastName: p.lastName || '',
-                    dateOfBirth: p.dateOfBirth || '',
-                    registrationNumber: p.registrationNumber || '',
-                    address: { 
-                        street: p.address?.street || '',
-                        houseNumber: p.address?.houseNumber || '',
-                        city: p.address?.city || '',
-                        postalCode: p.address?.postalCode || '',
-                        country: p.address?.country || '',
+                    // Normalizácia príchodu a šoférov
+                    updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
+                    if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
+                    
+                    // Ak je typ príchodu 'vlastná doprava', uistite sa, že drivers sú správne {male: ..., female: ...}
+                    // Inak nastavte drivers na null.
+                    if (updatedTeam.arrival.type === 'vlastná doprava') {
+                        updatedTeam.arrival.drivers = {
+                            male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
+                            female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
+                        };
+                    } else {
+                        updatedTeam.arrival.drivers = null;
                     }
-                })) || [];
 
-                updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
-                    ...m,
-                    firstName: m.firstName || '',
-                    lastName: m.lastName || '',
-                    dateOfBirth: m.dateOfBirth || '',
-                    address: { 
-                        street: m.address?.street || '',
-                        houseNumber: m.address?.houseNumber || '',
-                        city: m.address?.city || '',
-                        postalCode: m.address?.postalCode || '',
-                        country: m.address?.country || '',
-                    }
-                })) || [];
+                    // Normalizácia balíčka
+                    if (updatedTeam.packageId === '') updatedTeam.packageId = null;
+                    if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
 
-                updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
-                    ...m,
-                    firstName: m.firstName || '',
-                    lastName: m.lastName || '',
-                    dateOfBirth: m.dateOfBirth || '',
-                    address: { 
-                        street: m.address?.street || '',
-                        houseNumber: m.address?.houseNumber || '',
-                        city: m.address?.city || '',
-                        postalCode: m.address?.postalCode || '',
-                        country: m.address?.country || '',
-                    }
-                })) || [];
+                    // Normalizácia detailov hráčov a členov realizačného tímu - prázdne polia na prázdne reťazce
+                    // A zabezpečenie, že adresa je prítomná a normalizovaná
+                    updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
+                        ...p,
+                        jerseyNumber: p.jerseyNumber || '',
+                        firstName: p.firstName || '',
+                        lastName: p.lastName || '',
+                        dateOfBirth: p.dateOfBirth || '',
+                        registrationNumber: p.registrationNumber || '',
+                        address: { 
+                            street: p.address?.street || '',
+                            houseNumber: p.address?.houseNumber || '',
+                            city: p.address?.city || '',
+                            postalCode: p.address?.postalCode || '',
+                            country: p.address?.country || '',
+                        }
+                    })) || [];
 
-                return updatedTeam;
-            });
+                    updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
+                        ...m,
+                        firstName: m.firstName || '',
+                        lastName: m.lastName || '',
+                        dateOfBirth: m.dateOfBirth || '',
+                        address: { 
+                            street: m.address?.street || '',
+                            houseNumber: m.address?.houseNumber || '',
+                            city: m.address?.city || '',
+                            postalCode: m.address?.postalCode || '',
+                            country: m.address?.country || '',
+                        }
+                    })) || [];
+
+                    updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
+                        ...m,
+                        firstName: m.firstName || '',
+                        lastName: m.lastName || '',
+                        dateOfBirth: m.dateOfBirth || '',
+                        address: { 
+                            street: m.address?.street || '',
+                            houseNumber: m.address?.houseNumber || '',
+                            city: m.address?.city || '',
+                            postalCode: m.address?.postalCode || '',
+                            country: m.address?.country || '',
+                        }
+                    })) || [];
+
+                    return updatedTeam;
+                })
+                : []; // Ak to nie je pole, nastavíme prázdne pole
         }
 
         await setDoc(userDocRef, {
@@ -970,7 +976,7 @@ function App() {
 
     } catch (globalError) {
       let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
-      dispatchAppNotification(errorMessage, 'error');
+      dispatchAppNotification(errorMessage, 'error'); // Nastavenie typu na 'error' pre červené pozadie
     } finally {
       setLoading(false);
       isRegisteringRef.current = false;
@@ -1067,7 +1073,7 @@ function App() {
 
   return React.createElement(
     'div',
-    { className: `min-h-screen flex flex-col items-center justify-start bg-gray-100 p-4` }, {/* Zmenené flex-col, items-center a justify-start */}
+    { className: `min-h-screen flex flex-col items-center justify-start bg-gray-100 p-4` }, 
     // NotificationModal pre App komponent zostáva tu
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
