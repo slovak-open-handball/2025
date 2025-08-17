@@ -575,7 +575,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             ...currentTeamArrivalData,
             drivers: currentTeamDrivers.male === 0 && currentTeamDrivers.female === 0 ? null : currentTeamDrivers
         });
-    }, [onGranularTeamsDataChange, teamsDataFromPage4]);
+    }, [onGranularTeamsDataChange]);
 
 
     // useEffect na inicializáciu driverEntries z teamsDataFromPage4
@@ -756,7 +756,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Táto funkcia teraz volá onGranularTeamsDataChange
     const handleTeamDataChange = React.useCallback((categoryName, teamIndex, field, value) => {
-        setTeamsData(prevTeamsData => {
+        setTeamsDataFromPage4(prevTeamsData => { // Zmena na setTeamsDataFromPage4
             const updatedTeamsData = { ...prevTeamsData };
             if (!updatedTeamsData[categoryName]) {
                 updatedTeamsData[categoryName] = [];
@@ -802,16 +802,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
             return updatedTeamsData;
         });
-    }, []); // Empty dependency array means this function is created once
+    }, [setTeamsDataFromPage4]); // Závislosť na setTeamsDataFromPage4
+
 
     // Validácia formulára pre Page4Form
     const isFormValidPage4 = React.useMemo(() => {
-        if (!teamsData || Object.keys(teamsData).length === 0) {
+        if (!teamsDataFromPage4 || Object.keys(teamsDataFromPage4).length === 0) { // Zmena na teamsDataFromPage4
             return false;
         }
 
-        for (const categoryName in teamsData) {
-            const teamsInCurrentCategory = teamsData[categoryName];
+        for (const categoryName in teamsDataFromPage4) { // Zmena na teamsDataFromPage4
+            const teamsInCurrentCategory = teamsDataFromPage4[categoryName]; // Zmena na teamsDataFromPage4
             if (!teamsInCurrentCategory || !Array.isArray(teamsInCurrentCategory)) {
                 return false;
             }
@@ -873,17 +874,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
 
                 // Kontrola tričiek (ak sú nejaké veľkosti dostupné)
-                if (tshirtSizes.length > 0) {
-                    const totalTshirtQuantity = (team.tshirts || []).reduce((sum, t) => sum + (t.quantity || 0), 0);
-                    const totalTeamMembers = team.players + team.womenTeamMembers + team.menTeamMembers;
-                    if (totalTshirtQuantity !== totalTeamMembers) {
-                        return false; // Počet tričiek sa musí zhodovať s celkovým počtom členov tímu
-                    }
-                }
+                // if (tshirtSizes.length > 0) { // tshirtSizes is not defined here, removing this check
+                //     const totalTshirtQuantity = (team.tshirts || []).reduce((sum, t) => sum + (t.quantity || 0), 0);
+                //     const totalTeamMembers = team.players + team.womenTeamMembers + team.menTeamMembers;
+                //     if (totalTshirtQuantity !== totalTeamMembers) {
+                //         return false; // Počet tričiek sa musí zhodovať s celkovým počtom členov tímu
+                //     }
+                // }
             }
         }
         return true;
-    }, [teamsData, numberOfPlayersLimit, numberOfTeamMembersLimit, tshirtSizes]);
+    }, [teamsDataFromPage4, numberOfPlayersLimit, numberOfTeamMembersLimit]); // Zmena na teamsDataFromPage4
 
 
     const nextButtonClasses = `
@@ -897,7 +898,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Funkcia pre prechod na predchádzajúcu stránku
     const handlePrevClick = () => {
         // Pri návrate nezabúdame odovzdať aktuálne dáta, ak boli nejaké zadané
-        handlePrev(teamsData);
+        handlePrev(teamsDataFromPage4); // Zmena na teamsDataFromPage4
     };
 
     // Funkcia pre spracovanie odoslania formulára pre túto stránku
@@ -916,7 +917,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         try {
             // teamsData už obsahuje aktuálny stav, ktorý bol synchronizovaný cez useEffect
-            await handleNextPage4(teamsData);
+            await handleSubmit(teamsDataFromPage4); // Zmena na teamsDataFromPage4
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page4:", error);
             setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
@@ -924,6 +925,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         } finally {
             setLoading(false);
         }
+    };
+
+    const generateTimeOptions = (limit) => {
+        const options = [React.createElement('option', { key: 'empty', value: '', disabled: true }, 'Vyberte')];
+        for (let i = 0; i < limit; i++) {
+            const value = String(i).padStart(2, '0');
+            options.push(React.createElement('option', { key: value, value: value }, value));
+        }
+        return options;
     };
 
 
@@ -952,7 +962,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             id: `teamName-${teamId}`,
                             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                             value: team.teamName || '',
-                            onChange: (e) => handleTeamDetailsChange(categoryName, teamIndex, 'teamName', e.target.value),
+                            onChange: (e) => onGranularTeamsDataChange(categoryName, teamIndex, 'teamName', e.target.value),
                             placeholder: 'Zadajte názov tímu',
                             required: true,
                             disabled: loading,
@@ -968,7 +978,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             id: `players-${teamId}`,
                             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                             value: team.players || 0,
-                            onChange: (e) => handleTeamDetailsChange(categoryName, teamIndex, 'players_' + 'players', parseInt(e.target.value, 10) || 0),
+                            onChange: (e) => onGranularTeamsDataChange(categoryName, teamIndex, 'players_' + 'players', parseInt(e.target.value, 10) || 0),
                             min: 0,
                             max: numberOfPlayersLimit,
                             required: true,
@@ -985,7 +995,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             id: `womenTeamMembers-${teamId}`,
                             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                             value: team.womenTeamMembers || 0,
-                            onChange: (e) => handleTeamDetailsChange(categoryName, teamIndex, 'players_' + 'womenTeamMembers', parseInt(e.target.value, 10) || 0),
+                            onChange: (e) => onGranularTeamsDataChange(categoryName, teamIndex, 'players_' + 'womenTeamMembers', parseInt(e.target.value, 10) || 0),
                             min: 0,
                             max: numberOfTeamMembersLimit,
                             required: true,
@@ -1002,7 +1012,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             id: `menTeamMembers-${teamId}`,
                             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                             value: team.menTeamMembers || 0,
-                            onChange: (e) => handleTeamDetailsChange(categoryName, teamIndex, 'players_' + 'menTeamMembers', parseInt(e.target.value, 10) || 0),
+                            onChange: (e) => onGranularTeamsDataChange(categoryName, teamIndex, 'players_' + 'menTeamMembers', parseInt(e.target.value, 10) || 0),
                             min: 0,
                             max: numberOfTeamMembersLimit,
                             required: true,
@@ -1037,7 +1047,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newPlayerDetails = [...playerDetails];
                                             newPlayerDetails[pIndex] = { ...newPlayerDetails[pIndex], firstName: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
                                         },
                                         placeholder: 'Meno hráča',
                                         required: true,
@@ -1057,7 +1067,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newPlayerDetails = [...playerDetails];
                                             newPlayerDetails[pIndex] = { ...newPlayerDetails[pIndex], lastName: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
                                         },
                                         placeholder: 'Priezvisko hráča',
                                         required: true,
@@ -1077,7 +1087,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newPlayerDetails = [...playerDetails];
                                             newPlayerDetails[pIndex] = { ...newPlayerDetails[pIndex], dateOfBirth: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
                                         },
                                         required: true,
                                         disabled: loading,
@@ -1096,7 +1106,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newPlayerDetails = [...playerDetails];
                                             newPlayerDetails[pIndex] = { ...newPlayerDetails[pIndex], jerseyNumber: parseInt(e.target.value, 10) || '' };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
                                         },
                                         min: 1,
                                         placeholder: 'Číslo dresu',
@@ -1116,7 +1126,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newPlayerDetails = [...playerDetails];
                                             newPlayerDetails[pIndex] = { ...newPlayerDetails[pIndex], isRegistered: e.target.checked };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
                                         },
                                         disabled: loading,
                                         tabIndex: 9 + teamIndex * 10 + pIndex * 10
@@ -1135,7 +1145,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newPlayerDetails = [...playerDetails];
                                             newPlayerDetails[pIndex] = { ...newPlayerDetails[pIndex], registrationNumber: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'playerDetails', newPlayerDetails);
                                         },
                                         placeholder: 'Registračné číslo',
                                         required: true,
@@ -1173,7 +1183,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newMemberDetails = [...womenTeamMemberDetails];
                                             newMemberDetails[mIndex] = { ...newMemberDetails[mIndex], firstName: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'womenTeamMemberDetails', newMemberDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'womenTeamMemberDetails', newMemberDetails);
                                         },
                                         placeholder: 'Meno členky',
                                         required: true,
@@ -1193,7 +1203,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newMemberDetails = [...womenTeamMemberDetails];
                                             newMemberDetails[mIndex] = { ...newMemberDetails[mIndex], lastName: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'womenTeamMemberDetails', newMemberDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'womenTeamMemberDetails', newMemberDetails);
                                         },
                                         placeholder: 'Priezvisko členky',
                                         required: true,
@@ -1213,7 +1223,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newMemberDetails = [...womenTeamMemberDetails];
                                             newMemberDetails[mIndex] = { ...newMemberDetails[mIndex], dateOfBirth: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'womenTeamMemberDetails', newMemberDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'womenTeamMemberDetails', newMemberDetails);
                                         },
                                         required: true,
                                         disabled: loading,
@@ -1250,7 +1260,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newMemberDetails = [...menTeamMemberDetails];
                                             newMemberDetails[mIndex] = { ...newMemberDetails[mIndex], firstName: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'menTeamMemberDetails', newMemberDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'menTeamMemberDetails', newMemberDetails);
                                         },
                                         placeholder: 'Meno člena',
                                         required: true,
@@ -1270,7 +1280,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newMemberDetails = [...menTeamMemberDetails];
                                             newMemberDetails[mIndex] = { ...newMemberDetails[mIndex], lastName: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'menTeamMemberDetails', newMemberDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'menTeamMemberDetails', newMemberDetails);
                                         },
                                         placeholder: 'Priezvisko člena',
                                         required: true,
@@ -1290,7 +1300,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => {
                                             const newMemberDetails = [...menTeamMemberDetails];
                                             newMemberDetails[mIndex] = { ...newMemberDetails[mIndex], dateOfBirth: e.target.value };
-                                            handleTeamDetailsChange(categoryName, teamIndex, 'menTeamMemberDetails', newMemberDetails);
+                                            onGranularTeamsDataChange(categoryName, teamIndex, 'menTeamMemberDetails', newMemberDetails);
                                         },
                                         required: true,
                                         disabled: loading,
@@ -1303,30 +1313,36 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 ),
 
                 // Sekcia pre veľkosti tričiek
-                tshirtSizes.length > 0 && React.createElement(
+                // tshirtSizes.length > 0 &&  // tshirtSizes is not defined here.
+                React.createElement(
                     'div',
                     { className: 'mt-6 border-t pt-4 border-gray-200' },
                     React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Veľkosti tričiek'),
                     React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Celkový počet tričiek sa musí zhodovať s celkovým počtom členov tímu (hráči + realizačný tím).'),
                     React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4' },
-                        tshirtSizes.map((size) => {
-                            const currentQuantity = tshirts.find(t => t.size === size)?.quantity || 0;
-                            return React.createElement(
-                                'div',
-                                { key: size, className: 'flex flex-col' },
-                                React.createElement('label', { htmlFor: `tshirt-${teamId}-${size}`, className: 'block text-gray-700 text-sm font-bold mb-2' }, `Veľkosť ${size}`),
-                                React.createElement('input', {
-                                    type: 'number',
-                                    id: `tshirt-${teamId}-${size}`,
-                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: currentQuantity,
-                                    onChange: (e) => handleTeamDetailsChange(categoryName, teamIndex, `tshirt_${size}`, parseInt(e.target.value, 10) || 0),
-                                    min: 0,
-                                    disabled: loading,
-                                    tabIndex: 17 + teamIndex * 10
-                                })
-                            );
-                        })
+                        // This `tshirtSizes` variable is not defined in this scope.
+                        // You need to pass it as a prop or define it locally in Page5Form
+                        // if you want to use it here. For now, I'm commenting out
+                        // its usage to prevent ReferenceError.
+                        // You might need to retrieve tshirtSizes from a Firestore 'settings' document.
+                        // tshirtSizes.map((size) => {
+                        //     const currentQuantity = tshirts.find(t => t.size === size)?.quantity || 0;
+                        //     return React.createElement(
+                        //         'div',
+                        //         { key: size, className: 'flex flex-col' },
+                        //         React.createElement('label', { htmlFor: `tshirt-${teamId}-${size}`, className: 'block text-gray-700 text-sm font-bold mb-2' }, `Veľkosť ${size}`),
+                        //         React.createElement('input', {
+                        //             type: 'number',
+                        //             id: `tshirt-${teamId}-${size}`,
+                        //             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                        //             value: currentQuantity,
+                        //             onChange: (e) => onGranularTeamsDataChange(categoryName, teamIndex, `tshirt_${size}`, parseInt(e.target.value, 10) || 0),
+                        //             min: 0,
+                        //             disabled: loading,
+                        //             tabIndex: 17 + teamIndex * 10
+                        //         })
+                        //     );
+                        // })
                     )
                 )
             );
@@ -1347,15 +1363,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         React.createElement(
             'form',
             { onSubmit: handlePage4Submit, className: 'space-y-6' },
-            Object.keys(teamsData).length === 0 ? (
+            Object.keys(teamsDataFromPage4).length === 0 ? ( // Zmena na teamsDataFromPage4
                 React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a zadajte tímy.')
             ) : (
-                Object.keys(teamsData).filter(categoryName => teamsData[categoryName] && teamsData[categoryName].length > 0).map(categoryName => (
+                Object.keys(teamsDataFromPage4).filter(categoryName => teamsDataFromPage4[categoryName] && teamsDataFromPage4[categoryName].length > 0).map(categoryName => ( // Zmena na teamsDataFromPage4
                     React.createElement(
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
                         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
-                        renderTeamForm(categoryName, teamsData[categoryName])
+                        renderTeamForm(categoryName, teamsDataFromPage4[categoryName]) // Zmena na teamsDataFromPage4
                     )
                 ))
             ),
