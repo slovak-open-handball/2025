@@ -1,5 +1,6 @@
 import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// Komponent pre prepínač (toggle switch)
 function ToggleSwitch({ isOn, handleToggle, disabled }) {
     const bgColorClass = isOn ? 'bg-green-500' : 'bg-red-500';
     const togglePositionClass = isOn ? 'translate-x-full' : 'translate-x-0';
@@ -9,7 +10,7 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
         {
             className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
             onClick: disabled ? null : handleToggle,
-            style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' } 
+            style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' }
         },
         React.createElement(
             'span',
@@ -21,10 +22,8 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
     );
 }
 
-
-// Obsahuje komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
-
-export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType }) { // Pridaný notificationType prop
+// Hlavný komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
+export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType }) {
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
@@ -37,18 +36,18 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     }, [setNotificationMessage, setNotificationType]);
 
 
+    // Inicializácia localTeamDetails z teamsDataFromPage4 pri zmene teamsDataFromPage4
     React.useEffect(() => {
         const initialDetails = {};
         for (const categoryName in teamsDataFromPage4) {
             const teamsInCurrentCategory = teamsDataFromPage4[categoryName];
-            // Explicitná kontrola, či je teamsInCurrentCategory pole pred volaním .map()
             if (Array.isArray(teamsInCurrentCategory)) {
                 initialDetails[categoryName] = teamsInCurrentCategory.map(team => {
                     const playersCount = parseInt(team.players, 10) || 0;
                     const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                     const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
-                    // Ensure playerDetails are correctly structured, merging existing data
+                    // Zabezpečenie správnej štruktúry pre playerDetails, zlúčenie existujúcich dát
                     const playerDetails = Array.from({ length: playersCount }).map((_, i) => {
                         const existingPlayer = team.playerDetails?.[i] || {};
                         return {
@@ -58,35 +57,35 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             dateOfBirth: '',
                             isRegistered: false,
                             registrationNumber: '',
-                            address: { // Always ensure address object exists with default values
+                            address: { // Vždy zabezpečiť existenciu objektu adresy s predvolenými hodnotami
                                 street: '',
                                 houseNumber: '',
                                 city: '',
                                 postalCode: '',
                                 country: '',
                             },
-                            ...existingPlayer, // Override defaults with existing player data
-                            address: { // Deep merge address to ensure all sub-fields exist
+                            ...existingPlayer, // Prepíše predvolené hodnoty existujúcimi dátami hráča
+                            address: { // Hlboké zlúčenie adresy pre zabezpečenie všetkých podpolí
                                 street: '',
                                 houseNumber: '',
                                 city: '',
                                 postalCode: '',
                                 country: '',
-                                ...(existingPlayer.address || {}) // Override address defaults with existing address data (use {} if existingPlayer.address is undefined)
+                                ...(existingPlayer.address || {}) // Prepíše predvolené hodnoty adresy existujúcimi dátami adresy
                             }
                         };
                     });
 
-                    // Ensure team member details are correctly structured
+                    // Zabezpečenie správnej štruktúry pre detaily členov tímu
                     const womenTeamMemberDetails = Array.from({ length: womenMembersCount }).map((_, i) => {
                         const existingMember = team.womenTeamMemberDetails?.[i] || {};
                         return {
                             firstName: '',
                             lastName: '',
                             dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }, // Inicializácia adresy
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
                             ...existingMember,
-                            address: { ...(existingMember.address || {}) } // Deep merge address
+                            address: { ...(existingMember.address || {}) }
                         };
                     });
 
@@ -96,15 +95,15 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             firstName: '',
                             lastName: '',
                             dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }, // Inicializácia adresy
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
                             ...existingMember,
-                            address: { ...(existingMember.address || {}) } // Deep merge address
+                            address: { ...(existingMember.address || {}) }
                         };
                     });
 
                     return {
-                        ...team, // Spread all existing properties from the original team object
-                        players: playersCount, // Ensure counts are numbers
+                        ...team, // Rozšíri všetky existujúce vlastnosti z pôvodného objektu tímu
+                        players: playersCount, // Zabezpečí, aby počty boli čísla
                         womenTeamMembers: womenMembersCount,
                         menTeamMembers: menMembersCount,
                         playerDetails: playerDetails,
@@ -118,8 +117,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     };
                 });
             } else {
-                // Ak teamsDataFromPage4[categoryName] nie je pole, nastavte prázdne pole pre túto kategóriu
-                console.warn(`teamsDataFromPage4[${categoryName}] is not an array. Resetting to empty array.`);
+                console.warn(`teamsDataFromPage4[${categoryName}] nie je pole. Nastavujem na prázdne pole.`);
                 initialDetails[categoryName] = [];
             }
         }
@@ -127,20 +125,21 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     }, [teamsDataFromPage4]);
 
 
+    // Funkcia na validáciu hráčov v tíme
     const validateTeamPlayers = React.useCallback((currentTeamPlayers, categoryName, teamIndex) => {
         const newPlayerErrorsForTeam = {}; // Chyby pre aktuálny tím
         let teamHasErrors = false;
 
         // Validácia čísla dresu
         const jerseyNumbers = new Set();
-        const jerseyNumberErrors = new Set(); // Sleduje čísla dresov, ktoré už vyvolali chybu
+        const jerseyNumberErrors = new Set();
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
             const jersey = player.jerseyNumber.trim();
 
             if (jersey !== '') {
                 if (jerseyNumbers.has(jersey)) {
-                    jerseyNumberErrors.add(jersey); // Označ duplicitné číslo dresu
+                    jerseyNumberErrors.add(jersey);
                     teamHasErrors = true;
                 } else {
                     jerseyNumbers.add(jersey);
@@ -157,10 +156,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             }
         }
 
-
         // Validácia kombinácie údajov hráča
         const playerCombinations = new Set();
-        const combinationErrors = new Set(); // Sleduje kombinácie, ktoré už vyvolali chybu
+        const combinationErrors = new Set();
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
             const firstName = player.firstName.trim().toLowerCase();
@@ -168,22 +166,19 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             const dateOfBirth = player.dateOfBirth.trim();
             const registrationNumber = player.registrationNumber.trim().toLowerCase();
 
-            // Ak sú všetky kľúčové polia prázdne, ignoruj pre kontrolu duplicít
             if (firstName === '' && lastName === '' && dateOfBirth === '' && registrationNumber === '') {
                 continue;
             }
 
             let combinationKey;
             if (player.isRegistered && registrationNumber !== '') {
-                // Registrovaný hráč s číslom registrácie
                 combinationKey = `${firstName}-${lastName}-${dateOfBirth}-${registrationNumber}`;
             } else {
-                // Neregistrovaný hráč alebo registrovaný bez čísla registrácie
                 combinationKey = `${firstName}-${lastName}-${dateOfBirth}`;
             }
 
             if (playerCombinations.has(combinationKey)) {
-                combinationErrors.add(combinationKey); // Označ duplicitnú kombináciu
+                combinationErrors.add(combinationKey);
                 teamHasErrors = true;
             } else {
                 playerCombinations.add(combinationKey);
@@ -206,7 +201,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             }
         }
 
-
         // Nastav chybové správy pre kombinácie údajov hráča
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
@@ -216,7 +210,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             const registrationNumber = player.registrationNumber.trim().toLowerCase();
 
             if (firstName === '' && lastName === '' && dateOfBirth === '' && registrationNumber === '') {
-                 continue; // Preskoč prázdne záznamy
+                continue;
             }
 
             let combinationKey;
@@ -250,14 +244,14 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         return teamHasErrors; // Vráti, či boli nájdené chyby v tíme
     }, []); // Bez závislostí, aby sa funkcia re-renderovala len pri zmene chybových stavov.
 
+
     const handlePlayerDetailChange = (categoryName, teamIndex, playerIndex, field, value) => {
         setLocalTeamDetails(prevDetails => {
-            const newDetails = JSON.parse(JSON.stringify(prevDetails)); // Deep copy pre bezpečnú mutáciu
-            // Zabezpečenie inicializácie hráča a jeho adresy, ak neexistujú
-            if (!newDetails[categoryName]?.[teamIndex]?.playerDetails?.[playerIndex]) {
-                if (!newDetails[categoryName][teamIndex].playerDetails) {
-                    newDetails[categoryName][teamIndex].playerDetails = [];
-                }
+            const newDetails = JSON.parse(JSON.stringify(prevDetails));
+            if (!newDetails[categoryName]?.[teamIndex]?.playerDetails) {
+                newDetails[categoryName][teamIndex].playerDetails = [];
+            }
+            if (!newDetails[categoryName][teamIndex].playerDetails[playerIndex]) {
                 newDetails[categoryName][teamIndex].playerDetails[playerIndex] = {
                     jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
                     address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
@@ -267,34 +261,31 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
             if (field === 'isRegistered') {
                 playerToUpdate.isRegistered = value;
-                // Keď sa prepínač vypne, vymaž registračné číslo
                 if (!value) {
                     playerToUpdate.registrationNumber = '';
                 }
             } else if (field.startsWith('address.')) {
                 const addressField = field.substring('address.'.length);
-                if (!playerToUpdate.address) { // Zabezpečenie inicializácie objektu adresy
+                if (!playerToUpdate.address) {
                     playerToUpdate.address = { street: '', houseNumber: '', city: '', postalCode: '', country: '' };
                 }
 
                 if (addressField === 'postalCode') {
-                    let rawValue = value.replace(/[^0-9]/g, ''); // Ponechaj iba číslice
+                    let rawValue = value.replace(/[^0-9]/g, '');
                     let formattedValue = rawValue;
 
-                    if (rawValue.length > 5) { // Obmedz na maximálne 5 číslic
+                    if (rawValue.length > 5) {
                         rawValue = rawValue.substring(0, 5);
                     }
 
                     if (rawValue.length > 3) {
-                        // Aplikuj formát "xxx xx"
                         formattedValue = rawValue.substring(0, 3) + ' ' + rawValue.substring(3, 5);
                     }
                     playerToUpdate.address[addressField] = formattedValue;
                 } else {
                     playerToUpdate.address[addressField] = value;
                 }
-            }
-            else {
+            } else {
                 playerToUpdate[field] = value;
             }
 
@@ -302,12 +293,10 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             const teamHasErrors = validateTeamPlayers(newDetails[categoryName][teamIndex].playerDetails, categoryName, teamIndex);
 
             if (teamHasErrors) {
-                dispatchAppNotification('V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.', 'error'); // Typ 'error' pre červené pozadie
+                dispatchAppNotification('V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.', 'error');
             } else {
-                // Notifikácia sa vyčistí po 10 sekundách, takže tu nemusíme explicitne čistiť,
-                // pokiaľ neboli žiadne chyby predchádzajúci raz
                 if (notificationMessage === 'V tíme boli nájdené duplicitné údaje. Prosím, skontrolujte chyby.') {
-                    dispatchAppNotification('', 'info'); // Vymaž špecifickú notifikáciu
+                    dispatchAppNotification('', 'info');
                 }
             }
             return newDetails;
@@ -316,11 +305,10 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     const handleTeamMemberDetailChange = (categoryName, teamIndex, memberIndex, type, field, value) => {
         setLocalTeamDetails(prevDetails => {
-            const newDetails = JSON.parse(JSON.stringify(prevDetails)); // Deep copy pre bezpečnú mutáciu
+            const newDetails = JSON.parse(JSON.stringify(prevDetails));
             const detailArrayName = `${type}TeamMemberDetails`;
             const memberToUpdate = newDetails[categoryName][teamIndex][detailArrayName][memberIndex];
 
-            // Zabezpečenie inicializácie adresy
             if (!memberToUpdate.address) {
                 memberToUpdate.address = { street: '', houseNumber: '', city: '', postalCode: '', country: '' };
             }
@@ -328,15 +316,14 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             if (field.startsWith('address.')) {
                 const addressField = field.substring('address.'.length);
                 if (addressField === 'postalCode') {
-                    let rawValue = value.replace(/[^0-9]/g, ''); // Ponechaj iba číslice
+                    let rawValue = value.replace(/[^0-9]/g, '');
                     let formattedValue = rawValue;
 
-                    if (rawValue.length > 5) { // Obmedz na maximálne 5 číslic
+                    if (rawValue.length > 5) {
                         rawValue = rawValue.substring(0, 5);
                     }
 
                     if (rawValue.length > 3) {
-                        // Aplikuj formát "xxx xx"
                         formattedValue = rawValue.substring(0, 3) + ' ' + rawValue.substring(3, 5);
                     }
                     memberToUpdate.address[addressField] = formattedValue;
@@ -352,7 +339,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     // Všetky polia sú teraz nepovinné, takže formulár je vždy "platný" na postup
     const isFormValidPage6 = React.useMemo(() => {
-        // Skontroluj, či sú nejaké chyby v playerErrors, ak sú, formulár nie je "validný" pre pokračovanie
         for (const categoryName in playerErrors) {
             for (const teamIndex in playerErrors[categoryName]) {
                 for (const playerIndex in playerErrors[categoryName][teamIndex]) {
@@ -362,12 +348,12 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 }
             }
         }
-        return true; // Vráti true, ak neexistujú žiadne duplicitné chyby
+        return true;
     }, [playerErrors]);
 
     const nextButtonClasses = `
         font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
-        ${loading || !isFormValidPage6 // Tlačidlo je zakázané, ak je loading alebo sú duplicitné chyby
+        ${loading || !isFormValidPage6
             ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
             : 'bg-blue-500 hover:bg-blue-700 text-white'
         }
@@ -376,17 +362,15 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     const handlePage6Submit = (e) => {
         e.preventDefault();
 
-        // Dodatočná kontrola validácie pred odoslaním, ak by niekto obišiel okamžitú validáciu
-        // Hoci tlačidlo je zakázané, je dobré mať túto kontrolu aj tu
         if (!isFormValidPage6) {
-            dispatchAppNotification('Opravte prosím duplicitné údaje hráčov pred pokračovaním.', 'error'); // Typ 'error' pre červené pozadie
+            dispatchAppNotification('Opravte prosím duplicitné údaje hráčov pred pokračovaním.', 'error');
             return;
         }
 
         const finalTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
         for (const categoryName in localTeamDetails) {
-            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => { // Pridaná kontrola Array.isArray
+            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => {
                 if (finalTeamsData[categoryName] && finalTeamsData[categoryName][teamIndex]) {
                     finalTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     finalTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
@@ -399,12 +383,10 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     // Nová funkcia na uloženie dát a prechod späť
     const handleSaveAndPrev = () => {
-        // Vytvorte kópiu teamsDataFromPage4
         const updatedTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
-        // Aktualizujte túto kópiu s dátami z localTeamDetails
         for (const categoryName in localTeamDetails) {
-            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => { // Pridaná kontrola Array.isArray
+            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => {
                 if (updatedTeamsData[categoryName] && updatedTeamsData[categoryName][teamIndex]) {
                     updatedTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     updatedTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
@@ -412,7 +394,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 }
             });
         }
-        // Zavolajte prop funkciu na uloženie dát a prechod späť
         onSaveAndPrev(updatedTeamsData);
     };
 
@@ -425,7 +406,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-2 text-center text-gray-800' },
-            'Registrácia - strana 6'
+            'Registrácia - strana 6: Detaily tímu'
         ),
         React.createElement(
             'p',
@@ -453,17 +434,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
                             const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
-                            // URČENIE, ČI TÍM MÁ VYBRANÉ UBYTOVANIE (INÉ AKO "BEZ UBYTOVANIA")
-                            // Použi toLowerCase() pre case-insensitive porovnanie a ošetri prázdne reťazce
                             const hasAccommodation = team.accommodation && team.accommodation.type && team.accommodation.type.toLowerCase() !== 'bez ubytovania';
-
-
-                            // Debugging logs - Pomôžu ti pochopiť stav dát
-                            console.log(`Page6Form - Processing Team: ${team.teamName}`);
-                            console.log(`  Accommodation Object:`, team.accommodation);
-                            console.log(`  Accommodation Type:`, team.accommodation?.type);
-                            console.log(`  Has Accommodation (boolean):`, hasAccommodation);
-
 
                             return React.createElement(
                                 'div',
@@ -495,10 +466,9 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Číslo'
                                                     }),
-                                                    // Placeholder pre chybu dresu
                                                     playerSpecificErrors.jerseyNumber ?
                                                         React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber) :
-                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Invisible placeholder for consistent spacing
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
@@ -511,10 +481,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Meno hráča'
                                                     }),
-                                                    // Placeholder pre chybu kombinácie
-                                                    playerSpecificErrors.combination ?
-                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.combination) :
-                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Invisible placeholder
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
@@ -527,7 +494,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko hráča'
                                                     }),
-                                                    // Placeholder pre chybu kombinácie
                                                     React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
@@ -540,39 +506,33 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
                                                         disabled: loading,
                                                     }),
-                                                    // Placeholder pre chybu kombinácie
                                                     React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
-                                                React.createElement('div', { className: 'flex-initial w-auto flex flex-col items-center justify-center pt-2' }, // Zarovnanie prepínača
+                                                React.createElement('div', { className: 'flex-initial w-auto flex flex-col items-center justify-center pt-2' },
                                                     React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
                                                     React.createElement(ToggleSwitch, {
                                                         isOn: player.isRegistered || false,
                                                         handleToggle: () => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', !player.isRegistered),
                                                         disabled: loading,
                                                     }),
-                                                    // Prázdny placeholder, ak ToggleSwitch nespôsobuje chyby
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
-                                                React.createElement('div', { // Tento div drží input pre registračné číslo
+                                                React.createElement('div', {
                                                     className: `flex-1 min-w-[120px] transition-opacity duration-200 ${player.isRegistered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
                                                 },
                                                     React.createElement('label', { htmlFor: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo registrácie'),
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? 'border-red-500' : ''}`, // Pridaná podmienka pre registracne cislo
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? 'border-red-500' : ''}`,
                                                         value: player.registrationNumber || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
-                                                        disabled: loading || !player.isRegistered, // Zakázané, ak nie je registrovaný
+                                                        disabled: loading || !player.isRegistered,
                                                         placeholder: 'Číslo'
                                                     }),
-                                                    // Placeholder pre chybu kombinácie a registračné číslo
-                                                    playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ?
-                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber) :
-                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
                                                 ),
                                             ),
-                                            // Nový riadok pre adresné polia
                                             React.createElement('div', {
                                                 className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
                                             },
@@ -590,7 +550,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading || !hasAccommodation,
                                                         placeholder: 'Ulica'
                                                     }),
-                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', {
                                                     className: `w-24`
@@ -605,7 +565,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading || !hasAccommodation,
                                                         placeholder: 'Číslo'
                                                     }),
-                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', {
                                                     className: `flex-1 min-w-[120px]`
@@ -620,7 +580,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         disabled: loading || !hasAccommodation,
                                                         placeholder: 'Mesto'
                                                     }),
-                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', {
                                                     className: `flex-1 min-w-[120px]`
@@ -633,10 +593,10 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                         value: player.address?.postalCode || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.postalCode', e.target.value),
                                                         disabled: loading || !hasAccommodation,
-                                                        maxLength: 6, // "XXX XX" is 6 characters
+                                                        maxLength: 6,
                                                         placeholder: '000 00'
                                                     }),
-                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0') // Placeholder
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', {
                                                     className: `flex-1 min-w-[120px]`
@@ -706,7 +666,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 )
                                             ),
-                                            // Nový riadok pre adresné polia pre ženy
                                             React.createElement('div', {
                                                 className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
                                             },
@@ -830,7 +789,6 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 )
                                             ),
-                                            // Nový riadok pre adresné polia pre mužov
                                             React.createElement('div', {
                                                 className: `flex flex-wrap items-end gap-x-4 gap-y-2 mt-4 transition-all duration-300 ${hasAccommodation ? 'h-auto opacity-100 pointer-events-auto' : 'h-0 overflow-hidden opacity-0 pointer-events-none'}`
                                             },
@@ -918,7 +876,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     'button',
                     {
                         type: 'button',
-                        onClick: handleSaveAndPrev, // Zmena funkcie pre tlačidlo "Späť"
+                        onClick: handleSaveAndPrev,
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
@@ -929,7 +887,7 @@ export function Page6Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     {
                         type: 'submit',
                         className: nextButtonClasses,
-                        disabled: loading || !isFormValidPage6, // Znova aktivované na základe validácie duplicity
+                        disabled: loading || !isFormValidPage6,
                     },
                     loading ? React.createElement(
                         'div',
