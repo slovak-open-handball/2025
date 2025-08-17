@@ -502,7 +502,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             'p',
             { className: 'text-center text-sm text-gray-600 mb-6 px-4' },
             'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
-            React.createElement('strong', null, 'ale je povinné ich vyplniť v sekcii "Moja zóna"'),
+            React.createElement('strong', null, 'ale je povinné ich vyplniť v\u00A0sekcii "Moja zóna"'),
             ' po prihlásení sa do svojho turnajového účtu do ',
             React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, (dataEditDeadline || 'nezadaný dátum') + ' hod.')
         ),
