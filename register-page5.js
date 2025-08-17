@@ -559,7 +559,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [driverEntries, setDriverEntries] = React.useState([]);
 
     // Pomocná funkcia na generovanie unikátneho ID pre dočasné záznamy šoférov
-    const generateUniqueId = () => `driver-temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // ID by malo byť stabilné, ak už záznam existuje, inak sa vygeneruje nové.
+    const generateStableDriverId = (categoryName, teamIndex, gender) => {
+        if (categoryName && teamIndex !== null && gender) {
+            return `${categoryName}-${teamIndex}-${gender}`;
+        }
+        return `driver-temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    };
 
     // Funkcia na re-agregáciu dát šoférov pre konkrétny tím a aktualizáciu rodičovského stavu
     const updateTeamDriversInParent = React.useCallback((currentEntries, categoryName, teamIndex) => {
@@ -594,12 +600,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
-                const teamStableIdPrefix = `${categoryName}-${teamIndex}`;
-
                 if (team.arrival?.type === 'vlastná doprava') {
                     if (team.arrival?.drivers?.male > 0) {
                         driversFromParentData.push({
-                            id: `${teamStableIdPrefix}-male`,
+                            id: generateStableDriverId(categoryName, teamIndex, 'male'), // Použiť stabilné ID
                             count: team.arrival.drivers.male.toString(),
                             gender: 'male',
                             categoryName: categoryName,
@@ -608,7 +612,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                     if (team.arrival?.drivers?.female > 0) {
                         driversFromParentData.push({
-                            id: `${teamStableIdPrefix}-female`,
+                            id: generateStableDriverId(categoryName, teamIndex, 'female'), // Použiť stabilné ID
                             count: team.arrival.drivers.female.toString(),
                             gender: 'female',
                             categoryName: categoryName,
@@ -831,14 +835,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
 
-            const isMaleTaken = usedTeamGenderCombinations.has(maleCombo);
-            const isFemaleTaken = usedTeamGenderCombinations.has(femaleCombo);
-
-            const currentEntryTeamId = currentEntry ? `${currentEntry.categoryName}-${currentEntry.teamIndex}` : null;
-
             // Ak je aktuálny záznam šoféra už priradený k tomuto tímu, vždy zobraz tento tím.
             // Inak zobraz tím, ak je pre neho voľné aspoň jedno pohlavie (muž/žena).
-            if (currentEntryTeamId === team.id || (!isMaleTaken || !isFemaleTaken)) {
+            if (currentEntry?.id && currentEntry.categoryName === team.categoryName && currentEntry.teamIndex === team.teamIndex) {
+                 options.push(team);
+            } else if (!usedTeamGenderCombinations.has(maleCombo) || !usedTeamGenderCombinations.has(femaleCombo)) {
                  options.push(team);
             }
         });
@@ -850,7 +851,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleAddDriverEntry = () => {
         setDriverEntries(prev => {
             const newEntry = {
-                id: generateUniqueId(), // Temporary ID for initial creation
+                id: generateStableDriverId(null, null, null), // Generujeme dočasné ID
                 count: '',
                 gender: '',
                 categoryName: '',
@@ -869,9 +870,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         setDriverEntries(prev => {
             const updatedEntries = prev.filter(entry => {
                 if (entry.id === idToRemove) {
-                    removedEntryTeamInfo = teamsDataFromPage4[entry.categoryName]?.[entry.teamIndex];
                     removedEntryCategoryName = entry.categoryName;
                     removedEntryTeamIndex = entry.teamIndex;
+                    removedEntryTeamInfo = teamsDataFromPage4[entry.categoryName]?.[entry.teamIndex];
                     return false; // Remove this entry
                 }
                 return true; // Keep other entries
@@ -911,13 +912,20 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         newEntryState.count = newCount;
                     }
 
-                    // Dynamicky aktualizujeme ID na základe vybraného tímu a pohlavia, ak sú dostupné
-                    if (newCategoryName && newTeamIndex !== null && newGender) {
-                        newEntryState.id = `${newCategoryName}-${newTeamIndex}-${newGender}`;
-                    } else {
-                        // Ak chýba niektorá z identifikačných častí, vrátime sa k dočasnému ID alebo vygenerujeme nové
-                        if (!entry.id.startsWith('driver-temp-')) {
-                            newEntryState.id = generateUniqueId();
+                    // Pre-aktualizujeme ID na základe vybraného tímu a pohlavia, ak sú dostupné
+                    const potentialNewId = generateStableDriverId(newCategoryName, newTeamIndex, newGender);
+                    if (potentialNewId !== entry.id) { // Len ak sa ID naozaj mení, aby sa predišlo zbytočným re-renderom
+                        // Skontrolujeme, či nové ID už neexistuje v rámci driverEntries (duplikát)
+                        const isDuplicateId = newDriversState.some(existingEntry => 
+                            existingEntry.id !== id && existingEntry.id === potentialNewId
+                        );
+                        if (!isDuplicateId) {
+                            newEntryState.id = potentialNewId;
+                        } else {
+                            // Ak je to duplikát, môžeme ponechať dočasné ID alebo vygenerovať nové dočasné
+                            // Tým zabránime, aby React použil rovnaký kľúč pre rôzne komponenty
+                             newEntryState.id = generateStableDriverId(null, null, null); // Nové dočasné ID
+                             // Môžeš tu tiež dispatchovať notifikáciu o chybe duplicitného vstupu
                         }
                     }
                     return newEntryState;
@@ -927,11 +935,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
             // Nájdeme všetky tímy, ktoré sú ovplyvnené zmenou (tím, ktorý bol zmenený + tím, na ktorý sa mohol prepnúť)
             const affectedTeams = new Set();
-            const originalEntry = currentDrivers.find(entry => entry.id === id);
+            const originalEntry = currentDrivers.find(entry => entry.id === id); // Pôvodný záznam pred zmenou
             if (originalEntry && originalEntry.categoryName && originalEntry.teamIndex !== null) {
                 affectedTeams.add(`${originalEntry.categoryName}-${originalEntry.teamIndex}`);
             }
-            const updatedEntry = newDriversState.find(entry => entry.id === id);
+            const updatedEntry = newDriversState.find(entry => entry.id === id); // Aktualizovaný záznam
             if (updatedEntry && updatedEntry.categoryName && updatedEntry.teamIndex !== null) {
                 affectedTeams.add(`${updatedEntry.categoryName}-${updatedEntry.teamIndex}`);
             }
@@ -1223,10 +1231,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             value: entry.count,
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
                                             placeholder: 'Zadajte počet',
-                                            min: 1,
+                                            min: 0, // Zmena na min: 0
                                             required: true,
                                             disabled: loading,
-                                            id: entry.id
+                                            id: `count-${entry.id}` // Unikátne ID pre input
                                         })
                                     ),
                                     React.createElement('div', { className: 'w-1/2' },
@@ -1237,6 +1245,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
                                             required: true,
                                             disabled: loading,
+                                            id: `gender-${entry.id}` // Unikátne ID pre select
                                         }, getAvailableGenderOptions(entry)) // getAvailableGenderOptions teraz vracia React elementy
                                     )
                                 )
