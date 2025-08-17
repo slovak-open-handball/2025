@@ -46,7 +46,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
                     // Detaily balíčka
                     let packageDetailsHtml = null;
-                    if (team.packageDetails) {
+                    if (team.packageId && team.packageDetails) { // Podmienka: musí byť vybrané packageId a packageDetails
                         const pkg = team.packageDetails;
                         let mealsHtml = null;
                         if (pkg.meals) {
@@ -233,7 +233,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     'button',
                     {
                         type: 'button',
-                        onClick: handlePrev,
+                        // NOVINKA: Odovzdávame aktuálne dáta do handlePrev
+                        onClick: () => handlePrev(teamsDataFromPage4),
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
