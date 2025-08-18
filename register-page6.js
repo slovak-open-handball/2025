@@ -23,11 +23,11 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
 }
 
 // Hlavný komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
-export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType }) {
+export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType, availableCategoriesMap }) { // Pridaná availableCategoriesMap
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
-    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error' } } } }
+    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error', dateOfBirth: 'error' } } } }
 
     // Helper pre notifikácie
     const dispatchAppNotification = React.useCallback((message, type = 'info') => {
@@ -232,6 +232,44 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             }
         }
 
+        // Validácia dátumu narodenia pre hráča
+        const categoryData = Object.values(availableCategoriesMap || {}).find(cat => cat.name === categoryName);
+        const categoryDateFrom = categoryData ? new Date(categoryData.dateFrom) : null;
+        const categoryDateTo = categoryData ? new Date(categoryData.dateTo) : null;
+
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const dob = player.dateOfBirth;
+            let dateOfBirthError = '';
+
+            if (dob) {
+                const playerDob = new Date(dob);
+                // Nastavíme dátum na začiatok dňa, aby sa predišlo problémom s časovými pásmami pri porovnávaní
+                playerDob.setUTCHours(0, 0, 0, 0); 
+                if (categoryDateFrom) {
+                    const from = new Date(categoryDateFrom);
+                    from.setUTCHours(0,0,0,0);
+                    if (playerDob < from) {
+                        dateOfBirthError = `Dátum narodenia je príliš skorý pre kategóriu ${categoryName}. (Od: ${from.toLocaleDateString('sk-SK')})`;
+                        teamHasErrors = true;
+                    }
+                }
+                if (categoryDateTo) {
+                    const to = new Date(categoryDateTo);
+                    to.setUTCHours(0,0,0,0);
+                    if (playerDob > to) {
+                        dateOfBirthError = `Dátum narodenia je príliš neskorý pre kategóriu ${categoryName}. (Do: ${to.toLocaleDateString('sk-SK')})`;
+                        teamHasErrors = true;
+                    }
+                }
+            }
+            if (dateOfBirthError) {
+                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
+                newPlayerErrorsForTeam[i].dateOfBirth = dateOfBirthError;
+            }
+        }
+
+
         // Nastav chybové správy pre kombinácie údajov hráča
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
@@ -273,7 +311,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         }));
 
         return teamHasErrors; // Vráti, či boli nájdené chyby v tíme
-    }, []); // Bez závislostí, aby sa funkcia re-renderovala len pri zmene chybových stavov.
+    }, [availableCategoriesMap]); // Pridaná závislosť availableCategoriesMap
 
 
     const handlePlayerDetailChange = (categoryName, teamIndex, playerIndex, field, value) => {
@@ -403,7 +441,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         for (const categoryName in playerErrors) {
             for (const teamIndex in playerErrors[categoryName]) {
                 for (const playerIndex in playerErrors[categoryName][teamIndex]) {
-                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || playerErrors[categoryName][teamIndex][playerIndex].combination || playerErrors[categoryName][teamIndex][playerIndex].registrationNumber) {
+                    // Kontrolujeme všetky typy chýb
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || 
+                        playerErrors[categoryName][teamIndex][playerIndex].combination || 
+                        playerErrors[categoryName][teamIndex][playerIndex].registrationNumber ||
+                        playerErrors[categoryName][teamIndex][playerIndex].dateOfBirth // Pridaná kontrola pre chybu dátumu narodenia
+                    ) {
                         hasAnyPlayerErrors = true;
                         break;
                     }
@@ -414,10 +457,10 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         }
 
         if (hasAnyPlayerErrors) {
-            dispatchAppNotification('Boli nájdené duplicitné údaje. Prosím, opravte chyby.', 'error');
+            dispatchAppNotification('Boli nájdené duplicitné alebo neplatné údaje. Prosím, opravte chyby.', 'error');
         } else {
-            // Iba ak je aktuálna notifikácia o duplicitných údajoch, tak ju zrušíme
-            if (notificationMessage === 'Boli nájdené duplicitné údaje. Prosím, opravte chyby.') {
+            // Iba ak je aktuálna notifikácia o chybách, tak ju zrušíme
+            if (notificationMessage === 'Boli nájdené duplicitné alebo neplatné údaje. Prosím, opravte chyby.') {
                 dispatchAppNotification('', 'info');
             }
         }
@@ -428,7 +471,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         for (const categoryName in playerErrors) {
             for (const teamIndex in playerErrors[categoryName]) {
                 for (const playerIndex in playerErrors[categoryName][teamIndex]) {
-                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || playerErrors[categoryName][teamIndex][playerIndex].combination || playerErrors[categoryName][teamIndex][playerIndex].registrationNumber) {
+                    // Kontrolujeme všetky typy chýb
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || 
+                        playerErrors[categoryName][teamIndex][playerIndex].combination || 
+                        playerErrors[categoryName][teamIndex][playerIndex].registrationNumber ||
+                        playerErrors[categoryName][teamIndex][playerIndex].dateOfBirth // Pridaná kontrola pre chybu dátumu narodenia
+                    ) {
                         return false;
                     }
                 }
@@ -449,7 +497,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         e.preventDefault();
 
         if (!isFormValidPage6) {
-            dispatchAppNotification('Opravte prosím duplicitné údaje hráčov pred pokračovaním.', 'error');
+            dispatchAppNotification('Opravte prosím duplicitné alebo neplatné údaje pred pokračovaním.', 'error');
             return;
         }
 
@@ -593,12 +641,14 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('input', {
                                                         type: 'date',
                                                         id: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.dateOfBirth ? 'border-red-500' : ''}`, // Aplikuj border, ak je chyba
                                                         value: player.dateOfBirth || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
                                                         disabled: loading,
                                                     }),
-                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
+                                                    playerSpecificErrors.dateOfBirth ? // Zobrazenie chybovej správy pre dátum narodenia
+                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.dateOfBirth) :
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 // Upravený kontajner pre ToggleSwitch
                                                 React.createElement('div', { className: 'flex-initial w-auto flex flex-col pt-2' }, // Odstránené items-center a justify-center
