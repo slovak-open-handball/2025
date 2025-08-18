@@ -22,9 +22,19 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
 
   React.useEffect(() => {
     if (availableCategoriesMap && Object.keys(availableCategoriesMap).length > 0) {
-      setCategoriesData(availableCategoriesMap);
+      // Spracovanie availableCategoriesMap tak, aby vždy obsahovalo objekt { name: "..." }
+      const formattedCategories = {};
+      Object.entries(availableCategoriesMap).forEach(([id, value]) => {
+        if (typeof value === 'object' && value !== null && value.name) {
+          formattedCategories[id] = value;
+        } else if (typeof value === 'string') {
+          formattedCategories[id] = { name: value }; // Konvertuje starý formát na nový
+        }
+        // Ak je formát iný, bude ignorovaný alebo je možné pridať logiku pre chyby
+      });
+      setCategoriesData(formattedCategories);
       setIsCategoriesLoaded(true);
-      console.log("Kategórie prijaté z props:", availableCategoriesMap);
+      console.log("Kategórie prijaté a spracované z props v Page3Form:", formattedCategories);
     } else if (availableCategoriesMap) {
       setCategoriesData({});
       setIsCategoriesLoaded(true);
@@ -76,7 +86,17 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
 
     return allCategoryIds
       .filter(catId => !selectedIdsInOtherRows.includes(catId))
-      .map(catId => ({ id: catId, name: categoriesData[catId] }))
+      .map(catId => {
+        const categoryValue = categoriesData[catId];
+        // Zabezpečenie, že categoryValue je objekt s vlastnosťou 'name'
+        if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
+            return { id: catId, name: categoryValue.name };
+        } else if (typeof categoryValue === 'string') {
+            return { id: catId, name: categoryValue }; // Ak je to len reťazec, použijeme ho ako názov
+        }
+        return null; // Ignorovať neplatné formáty
+      })
+      .filter(cat => cat !== null) // Odstrániť null hodnoty
       .sort((a, b) => a.name.localeCompare(b.name));
   };
 
