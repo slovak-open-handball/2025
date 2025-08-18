@@ -50,15 +50,15 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 
 // NEW LOGIC: Extract year from appId or default
 const getAppBasePath = () => {
-    const appYearMatch = appId.match(/(\d{4})/); // Nájde prvú štvorcifernú skupinu
-    const appYear = appYearMatch ? appYearMatch[1] : '2025'; // Použije nájdený rok alebo predvolené '2025'
+    const appYearMatch = appId.match(/(\d{4})/); // Finds the first four-digit group
+    const appYear = appYearMatch ? appYearMatch[1] : '2025'; // Uses the found year or defaults to '2025'
     return `/${appYear}`;
 };
 
-const appBasePath = getAppBasePath(); // Získanie dynamickej základnej cesty
+const appBasePath = getAppBasePath(); // Getting the dynamic base path
 
 
-// Inicializácia Firebase aplikácie
+// Initialization of Firebase application
 let app;
 let db;
 let auth;
@@ -68,9 +68,9 @@ const setupFirebase = () => {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        console.log("AuthManager: Firebase inicializovaný.");
+        console.log("AuthManager: Firebase initialized.");
 
-        // Pridáme globálne sprístupnené funkcie
+        // Add globally accessible functions
         window.auth = auth;
         window.db = db;
         window.reauthenticateWithCredential = reauthenticateWithCredential;
@@ -78,7 +78,7 @@ const setupFirebase = () => {
         window.EmailAuthProvider = EmailAuthProvider;
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
     } catch (e) {
-        console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
+        console.error("AuthManager: Error initializing Firebase:", e);
     }
 };
 
@@ -87,9 +87,9 @@ const handleAuthState = async () => {
         window.isGlobalAuthReady = true;
 
         if (user) {
-            console.log("AuthManager: Používateľ prihlásený:", user.uid);
+            console.log("AuthManager: User logged in:", user.uid);
             
-            // Správna cesta k profilovému dokumentu na základe poskytnutých pravidiel
+            // Correct path to the profile document based on provided rules
             const userDocRef = doc(db, `users/${user.uid}`);
             
             // Unsubscribe from previous snapshot listener if it exists
@@ -108,8 +108,8 @@ const handleAuthState = async () => {
                         signOut(auth).then(() => {
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                            // Redirect to the specified login page using the dynamic base path
-                            window.location.href = `${appBasePath}/login.html`; 
+                            // Redirect to the specified login page using the dynamic base path and add status parameter
+                            window.location.href = `${appBasePath}/login.html?status=unapproved_admin`; 
                         }).catch((error) => {
                             console.error("AuthManager: Chyba pri odhlasovaní neschváleného administrátora:", error);
                         });
