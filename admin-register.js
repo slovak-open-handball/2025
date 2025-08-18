@@ -1,6 +1,7 @@
 // admin-register.js (now uses global Firebase instances from authentication.js)
+// Explicitly import functions for Firebase Auth and Firestore for modular access (SDK v11)
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -9,7 +10,7 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 // Added 'validationStatus' prop for detailed visual indication of password validity
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Added onFocus prop
-  // SVG icons for eye (show password) and crossed-out eye (hide password) - UNIFIED WITH REGISTER.JS
+  // SVG icons for eye (show password) and crossed-out eye (hide password)
   const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -299,14 +300,6 @@ function App() {
     try {
       // Corrected: Use createUserWithEmailAndPassword as a top-level function with 'auth' instance
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Add passwordLastChanged to updateProfile to record password change time
-      // Note: updateProfile does not accept custom fields like firstName, lastName.
-      // These fields are saved to the Firestore document.
-      // updateProfile is used for fields like displayName, photoURL.
-      // await userCredential.user.updateProfile({ 
-      //     firstName: firstName,
-      //     lastName: lastName,
-      // });
 
       // CHANGE: Set role to 'admin' and approved to 'false' directly on first write
       const userDataToSave = {
@@ -324,8 +317,9 @@ function App() {
       console.log("Attempting to save user to Firestore with initial data:", userDataToSave);
 
       try {
-        // Using Firebase SDK v9 syntax for Firestore operations
-        await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
+        // Corrected: Use doc and setDoc functions
+        const userDocRef = doc(db, 'users', userCredential.user.uid);
+        await setDoc(userDocRef, userDataToSave);
         console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved.`);
 
         // Attempt to send email via Apps Script immediately after saving initial data
@@ -366,8 +360,9 @@ function App() {
             const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
             const notificationRecipientId = 'all_admins'; 
 
-            // Using Firebase SDK v9 syntax for Firestore operations
-            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+            // Corrected: Use collection and addDoc functions for nested path
+            const adminNotificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
+            await addDoc(adminNotificationsCollectionRef, {
                 message: notificationMessage,
                 timestamp: serverTimestamp(), // Corrected: Use serverTimestamp() from modular import
                 recipientId: notificationRecipientId,
