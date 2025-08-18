@@ -173,9 +173,16 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
 
   // Kontrola, či názov kategórie už existuje (case-insensitive) aj s dátumami
   const categoryExists = React.useMemo(() => {
+    // Pridanie kontroly, či je 'category' definované
+    if (!category) {
+      return false; 
+    }
+
     const trimmedName = editedCategoryName.trim().toLowerCase();
+    const currentCategoryId = category.id; 
+
     return existingCategories.some(cat => 
-        cat.id !== category.id && // Neberieme do úvahy aktuálne upravovanú kategóriu
+        cat.id !== currentCategoryId && 
         cat.name.toLowerCase() === trimmedName &&
         cat.dateFrom === editedDateFrom &&
         cat.dateTo === editedDateTo
