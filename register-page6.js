@@ -243,6 +243,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             // Nastavíme dátumy z kategórie na začiatok dňa v UTC
             categoryDateFrom.setUTCHours(0, 0, 0, 0);
             categoryDateTo.setUTCHours(0, 0, 0, 0);
+            console.log(`[Validation Debug] Kategória '${categoryName}': Dátum od: ${categoryDateFrom.toISOString()}, Dátum do: ${categoryDateTo.toISOString()}`);
         }
 
         for (let i = 0; i < currentTeamPlayers.length; i++) {
@@ -250,30 +251,44 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             const dob = player.dateOfBirth;
             let dateOfBirthError = '';
 
+            console.log(`[Validation Debug] Hráč ${i + 1} (${categoryName} - Tím ${teamIndex}): Zadaný DOB: '${dob}'`);
+
             if (dob) {
                 // Pre input type="date" prehliadač už vracia YYYY-MM-DD
                 const playerDob = new Date(dob);
                 
+                console.log(`[Validation Debug] Hráč ${i + 1}: Parsed DOB (Date object): ${playerDob.toISOString()}`);
+
                 // Kontrola, či je dátum platný po parsovaní
                 if (isNaN(playerDob.getTime())) {
                     dateOfBirthError = `Zadajte, prosím, platný dátum narodenia.`;
                     teamHasErrors = true;
+                    console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Neplatný dátum.`);
                 } else {
                     // Nastavíme dátum na začiatok dňa, aby sa predišlo problémom s časovými pásmami pri porovnávaní
                     playerDob.setUTCHours(0, 0, 0, 0); 
+                    console.log(`[Validation Debug] Hráč ${i + 1}: DOB (UTC Midnight): ${playerDob.toISOString()}`);
+
                     if (categoryDateFrom && playerDob < categoryDateFrom) {
                         dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
                         teamHasErrors = true;
+                        console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš skorý.`);
                     }
                     if (categoryDateTo && playerDob > categoryDateTo) {
                         dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
                         teamHasErrors = true;
+                        console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš neskorý.`);
                     }
                 }
             }
             if (dateOfBirthError) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
                 newPlayerErrorsForTeam[i].dateOfBirth = dateOfBirthError;
+            } else {
+                // Ak bola chyba predtým, ale teraz už nie je, vyčistíme ju
+                if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].dateOfBirth) {
+                    delete newPlayerErrorsForTeam[i].dateOfBirth;
+                }
             }
         }
 
@@ -300,12 +315,20 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             if (combinationErrors.has(combinationKey)) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
                 newPlayerErrorsForTeam[i].combination = 'Duplicitný hráč v tíme.';
+            } else {
+                if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].combination) {
+                    delete newPlayerErrorsForTeam[i].combination;
+                }
             }
 
             // Nastav chybovú správu pre duplicitné registračné číslo
             if (player.isRegistered && registeredNumberErrors.has(player.registrationNumber.trim())) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
                 newPlayerErrorsForTeam[i].registrationNumber = 'Duplicitné číslo registrácie v tíme.';
+            } else {
+                if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].registrationNumber) {
+                    delete newPlayerErrorsForTeam[i].registrationNumber;
+                }
             }
         }
 
@@ -318,7 +341,17 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             }
         }));
 
-        return teamHasErrors; // Vráti, či boli nájdené chyby v tíme
+        // Znovu prepočítaj teamHasErrors po aktualizácii newPlayerErrorsForTeam
+        // Toto je dôležité, aby sa správne zistilo, či existujú nejaké chyby v tíme.
+        let updatedTeamHasErrors = false;
+        for (const playerIndex in newPlayerErrorsForTeam) {
+            if (Object.keys(newPlayerErrorsForTeam[playerIndex]).length > 0) {
+                updatedTeamHasErrors = true;
+                break;
+            }
+        }
+
+        return updatedTeamHasErrors; // Vráti, či boli nájdené chyby v tíme
     }, [availableCategoriesMap]); // Pridaná závislosť availableCategoriesMap
 
 
