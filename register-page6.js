@@ -304,19 +304,13 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     console.log(`[Validation Debug] Hráč ${i + 1}: DOB (UTC Midnight): ${playerDob.toISOString()}`);
 
                     // Nové logy pre porovnanie
-                    if (categoryDateFrom) {
-                        console.log(`[Validation Debug] Hráč ${i + 1}: Player DOB (${playerDob.toISOString()}) < Category FROM (${categoryDateFrom.toISOString()})? ${playerDob < categoryDateFrom}`);
-                    }
                     if (categoryDateTo) {
                         console.log(`[Validation Debug] Hráč ${i + 1}: Player DOB (${playerDob.toISOString()}) > Category TO (${categoryDateTo.toISOString()})? ${playerDob > categoryDateTo}`);
                     }
 
                     // Aplikujeme chybu len ak máme kategórie dátumu
-                    if (categoryDateFrom && playerDob < categoryDateFrom) {
-                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Min: ${formatDateToDDMMYYYY(categoryData.dateFrom)})`;
-                        teamHasErrors = true;
-                        console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš skorý.`);
-                    }
+                    // Pôvodná kontrola: if (categoryDateFrom && playerDob < categoryDateFrom) { ... } bola odstránená
+                    
                     if (categoryDateTo && playerDob > categoryDateTo) {
                         // Ak je už jedna chyba, pridáme ju k existujúcej
                         if (dateOfBirthError) {
@@ -767,7 +761,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 ),
                                                 // Upravený kontajner pre ToggleSwitch
                                                 React.createElement('div', { className: 'flex-initial w-auto flex flex-col pt-2' }, // Odstránené items-center a justify-center
-                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný vo zväze'),
+                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
                                                     React.createElement('div', { className: 'mt-[11px] flex justify-center items-center w-full' }, // Pridané flex, justify-center, items-center, w-full
                                                         React.createElement(ToggleSwitch, {
                                                             isOn: player.isRegistered || false,
