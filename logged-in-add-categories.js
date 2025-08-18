@@ -461,12 +461,30 @@ function AddCategoriesApp() {
           if (docSnapshot.exists()) { // Firebase v9 syntax: docSnapshot.exists()
             const data = docSnapshot.data();
             // Konvertujeme objekt na pole objektov { id, name, dateFrom, dateTo }
-            let fetchedCategories = Object.entries(data).map(([id, categoryData]) => ({ 
-                id, 
-                name: categoryData.name,
-                dateFrom: categoryData.dateFrom,
-                dateTo: categoryData.dateTo
-            }));
+            let fetchedCategories = Object.entries(data).map(([id, categoryValue]) => { 
+                let name = '';
+                let dateFrom = '';
+                let dateTo = '';
+
+                if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
+                    // Nový formát: { name: "...", dateFrom: "...", dateTo: "..." }
+                    name = categoryValue.name;
+                    dateFrom = categoryValue.dateFrom || '';
+                    dateTo = categoryValue.dateTo || '';
+                } else if (typeof categoryValue === 'string') {
+                    // Starý formát: "CategoryName" - pre spätnú kompatibilitu
+                    name = categoryValue;
+                    dateFrom = '';
+                    dateTo = '';
+                } else {
+                    // Spracovanie neočakávaného formátu, napr. zalogovanie varovania
+                    console.warn(`Neočakávaný formát dát kategórie pre ID ${id}:`, categoryValue);
+                    name = `Neznáma kategória (${id})`; // Záložný názov
+                    dateFrom = '';
+                    dateTo = '';
+                }
+                return { id, name, dateFrom, dateTo };
+            });
             
             // Triedenie kategórií podľa názvu (abecedne/číselne)
             fetchedCategories.sort((a, b) => {
