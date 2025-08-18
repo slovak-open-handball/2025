@@ -832,7 +832,7 @@ function AddCategoriesApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-3xl p-4' }, {/* Zmenené z max-w-md na max-w-3xl */}
+      { className: 'w-full max-w-3xl p-4' },
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
@@ -868,8 +868,8 @@ function AddCategoriesApp() {
                                 'tr',
                                 { key: cat.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.name),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatDateDisplay(cat.dateFrom)), {/* Použitie formátovacej funkcie */}
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatDateDisplay(cat.dateTo)), {/* Použitie formátovacej funkcie */}
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatDateDisplay(cat.dateFrom)),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatDateDisplay(cat.dateTo)),
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
