@@ -653,7 +653,7 @@ function App() {
     });
     // Priama aktualizácia stavu teamsDataFromPage4
     setTeamsDataFromPage4(newTeamsDataForPage4);
-    console.log("handleNextPage3ToPage4 - newTeamsDataForPage4 (po aktualizácii):", newTeamsDataForPage4); // DEBUG
+//    console.log("handleNextPage3ToPage4 - newTeamsDataForPage4 (po aktualizácii):", newTeamsDataForPage4); // DEBUG
 
     setFormData(prev => ({
         ...prev,
@@ -670,7 +670,7 @@ function App() {
 
     // Priama aktualizácia stavu teamsDataFromPage4
     setTeamsDataFromPage4(teamsDataFromPage4Final);
-    console.log("handleNextPage4ToPage5 - teamsDataFromPage4Final (prijaté z Page4Form, priame nastavenie):", teamsDataFromPage4Final); // DEBUG
+//    console.log("handleNextPage4ToPage5 - teamsDataFromPage4Final (prijaté z Page4Form, priame nastavenie):", teamsDataFromPage4Final); // DEBUG
 
     setPage(5);
     setLoading(false);
@@ -683,7 +683,7 @@ function App() {
 
     // Priama aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page5
     setTeamsDataFromPage4(finalTeamsDataFromPage5);
-    console.log("handleNextPage5ToPage6 - finalTeamsDataFromPage5 (prijaté z Page5Form, priame nastavenie):", finalTeamsDataFromPage5); // DEBUG
+//    console.log("handleNextPage5ToPage6 - finalTeamsDataFromPage5 (prijaté z Page5Form, priame nastavenie):", finalTeamsDataFromPage5); // DEBUG
 
     setPage(6); // Prechod na Page 6 (detaily hráčov/tímu)
     setLoading(false);
@@ -696,7 +696,7 @@ function App() {
 
     // Priama aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page6
     setTeamsDataFromPage4(finalTeamsDataFromPage6);
-    console.log("handleNextPage6ToPage7 - finalTeamsDataFromPage6 (prijaté z Page6Form, priame nastavenie):", finalTeamsDataFromPage6); // DEBUG
+//    console.log("handleNextPage6ToPage7 - finalTeamsDataFromPage6 (prijaté z Page6Form, priame nastavenie):", finalTeamsDataFromPage6); // DEBUG
 
     setPage(7); // Prechod na Page 7 (súhrn)
     setLoading(false);
