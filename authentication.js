@@ -51,7 +51,7 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// NEW LOGIC: Extract year from appId or default
+// Extrahovanie roku z appId alebo predvolené nastavenie
 const getAppBasePath = () => {
     const appYearMatch = appId.match(/(\d{4})/); // Nájde prvú štvorcifernú skupinu
     const appYear = appYearMatch ? appYearMatch[1] : '2025'; // Použije nájdený rok alebo predvolené '2025'
@@ -104,16 +104,14 @@ const handleAuthState = async () => {
                 if (docSnap.exists()) {
                     const userProfileData = { id: docSnap.id, ...docSnap.data() };
                     
-                    // Logic for unapproved admin
+                    // Logika pre neschváleného administrátora
                     if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                         console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa a posielam e-mail s pripomenutím.");
 
-                        // Extract firstName, lastName for the email reminder
                         const adminEmail = userProfileData.email;
                         const adminFirstName = userProfileData.firstName || '';
                         const adminLastName = userProfileData.lastName || '';
 
-                        // Send email reminder via Google Apps Script
                         const emailPayload = {
                             action: 'sendAdminApprovalReminder',
                             email: adminEmail,
@@ -121,7 +119,6 @@ const handleAuthState = async () => {
                             lastName: adminLastName,
                         };
 
-                        // Use exponential backoff for the API call
                         let retryCount = 0;
                         const maxRetries = 3;
                         const baseDelay = 1000; // 1 second
@@ -137,8 +134,6 @@ const handleAuthState = async () => {
                                     mode: 'no-cors', // Dôležité pre Apps Script, aby sa predišlo CORS chybám
                                     body: JSON.stringify(emailPayload)
                                 });
-                                // Keďže je režim 'no-cors', response.ok bude vždy false a status 0.
-                                // Predpokladáme úspech, ak fetch nevyhodí sieťovú chybu.
                                 console.log("AuthManager: Apps Script odpoveď pre pripomenutie schválenia (no-cors):", response);
                             } catch (emailError) {
                                 console.error("AuthManager: Chyba pri odosielaní e-mailu s pripomenutím schválenia:", emailError);
@@ -163,24 +158,24 @@ const handleAuthState = async () => {
                         });
                         return; // Zastaví ďalšie spracovanie pre tohto používateľa
                     } 
-                    // NEW LOGIC: Redirect approved users (admin, user, hall with approved: true)
+                    // NOVÁ LOGIKA: Presmerovanie schválených používateľov (admin, user, hall s approved: true)
                     else if (userProfileData.approved === true) {
-                        console.log("AuthManager: Schválený používateľ detekovaný. Presmerovávam na logged-in-my-data.html.");
-                        // Only redirect if not already on the target page to avoid infinite loops
-                        // Also check if current path is login.html, to ensure redirect happens after successful login.
                         const currentPath = window.location.pathname;
                         const targetPath = `${appBasePath}/logged-in-my-data.html`;
-                        const loginPath = `${appBasePath}/login.html`; // Full login path
+                        const loginPath = `${appBasePath}/login.html`; // Plná cesta k prihlasovacej stránke
 
-                        // Redirect if not already on the target page and not currently on the login page (to prevent redirect loops)
-                        // Or if currently on the login page and just successfully logged in
-                        if (currentPath !== targetPath && currentPath === loginPath) {
-                             window.location.href = targetPath;
-                        } else if (currentPath !== targetPath && userProfileData.id === user.uid) { // If user logs in successfully on another page, redirect
-                             // This condition handles cases where a user might be on a different page
-                             // (not login.html) and their auth state changes (e.g., re-authentication or session refresh).
-                             // We ensure we redirect only if their profile data matches the current user.
+                        // Skontroluje, či aktuálna cesta ZAČÍNA predponou '/logged-in-' (napr. /2025/logged-in-profile.html)
+                        const isOnAnyLoggedInPage = currentPath.startsWith(`${appBasePath}/logged-in-`);
+
+                        // Ak je používateľ na prihlasovacej stránke, alebo nie je na žiadnej "logged-in" stránke
+                        // a nie je už na cieľovej stránke, presmeruje ho na cieľovú stránku.
+                        if (currentPath === loginPath || (!isOnAnyLoggedInPage && currentPath !== targetPath)) {
+                            console.log("AuthManager: Schválený používateľ je na prihlasovacej stránke alebo inej verejnej stránke. Presmerovávam na logged-in-my-data.html.");
                             window.location.href = targetPath;
+                        } else {
+                            // Používateľ je schválený a je už na stránke, ktorá začína na 'logged-in-'
+                            // (alebo už je na targetPath), takže zostane na aktuálnej stránke.
+                            console.log("AuthManager: Schválený používateľ je už na 'logged-in-...' stránke. Zostávam na aktuálnej stránke.");
                         }
                     }
 
