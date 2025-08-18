@@ -251,13 +251,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             let dateOfBirthError = '';
 
             if (dob) {
-                // Konvertuj dd. mm. rrrr na YYYY-MM-DD pre správne parsovanie
-                const parsedDob = dob.replace(/(\d{2})\.\s*(\d{2})\.\s*(\d{4})/, '$3-$2-$1');
-                const playerDob = new Date(parsedDob);
+                // Pre input type="date" prehliadač už vracia YYYY-MM-DD
+                const playerDob = new Date(dob);
                 
                 // Kontrola, či je dátum platný po parsovaní
                 if (isNaN(playerDob.getTime())) {
-                    dateOfBirthError = `Zadajte, prosím, platný dátum narodenia (DD. MM. RRRR).`;
+                    dateOfBirthError = `Zadajte, prosím, platný dátum narodenia.`;
                     teamHasErrors = true;
                 } else {
                     // Nastavíme dátum na začiatok dňa, aby sa predišlo problémom s časovými pásmami pri porovnávaní
@@ -665,13 +664,13 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
                                                     React.createElement('label', { htmlFor: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
                                                     React.createElement('input', {
-                                                        type: 'text', // Zmenené z 'date' na 'text'
+                                                        type: 'date', // Zmenené späť na 'date'
                                                         id: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`,
                                                         className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.dateOfBirth ? 'border-red-500' : ''}`.trim(), // Aplikuj border, ak je chyba
                                                         value: player.dateOfBirth || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
                                                         disabled: loading,
-                                                        placeholder: 'DD. MM. RRRR' // Pridaný placeholder
+                                                        // placeholder: 'DD. MM. RRRR' - Odstránené, prehliadač poskytne vlastné UI
                                                     }),
                                                     playerSpecificErrors.dateOfBirth ? // Zobrazenie chybovej správy pre dátum narodenia
                                                         React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.dateOfBirth) :
