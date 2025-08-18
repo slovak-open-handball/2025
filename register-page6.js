@@ -535,6 +535,23 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         onSaveAndPrev(updatedTeamsData);
     };
 
+    // Funkcia na formátovanie dátumu a času (DD. MM. YYYY hh:mm)
+    const formatDateAndTime = (date) => {
+        if (!date) return 'nezadaný dátum';
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            date = new Date(date); // Skúsime previesť na Date objekt, ak to ešte nie je
+            if (isNaN(date.getTime())) {
+                return 'nezadaný dátum'; // Ak sa nedá previesť, vráť pôvodný text
+            }
+        }
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Mesiace sú 0-11
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day}. ${month}. ${year} ${hours}:${minutes}`;
+    };
+
 
     return React.createElement(
         React.Fragment,
@@ -552,7 +569,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
             React.createElement('strong', null, 'ale je povinné ich vyplniť v\u00A0sekcii "Moja zóna"'),
             ' po prihlásení sa do svojho turnajového účtu do ',
-            React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, (dataEditDeadline || 'nezadaný dátum') + ' hod.')
+            React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, formatDateAndTime(dataEditDeadline) + ' hod.') {/* Použitie novej formátovacej funkcie */}
         ),
 
         React.createElement(
