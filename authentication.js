@@ -48,6 +48,16 @@ const firebaseConfig = {
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
+// NEW LOGIC: Extract year from appId or default
+const getAppBasePath = () => {
+    const appYearMatch = appId.match(/(\d{4})/); // Nájde prvú štvorcifernú skupinu
+    const appYear = appYearMatch ? appYearMatch[1] : '2025'; // Použije nájdený rok alebo predvolené '2025'
+    return `/${appYear}`;
+};
+
+const appBasePath = getAppBasePath(); // Získanie dynamickej základnej cesty
+
+
 // Inicializácia Firebase aplikácie
 let app;
 let db;
@@ -98,8 +108,8 @@ const handleAuthState = async () => {
                         signOut(auth).then(() => {
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                            // Optional: Redirect to login or show a message
-                            window.location.href = '/login.html'; // Redirect to login page
+                            // Redirect to the specified login page using the dynamic base path
+                            window.location.href = `${appBasePath}/login.html`; 
                         }).catch((error) => {
                             console.error("AuthManager: Chyba pri odhlasovaní neschváleného administrátora:", error);
                         });
