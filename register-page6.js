@@ -243,7 +243,9 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             // Nastavíme dátumy z kategórie na začiatok dňa v UTC
             categoryDateFrom.setUTCHours(0, 0, 0, 0);
             categoryDateTo.setUTCHours(0, 0, 0, 0);
-            console.log(`[Validation Debug] Kategória '${categoryName}': Dátum od: ${categoryDateFrom.toISOString()}, Dátum do: ${categoryDateTo.toISOString()}`);
+            console.log(`[Validation Debug] Kategória '${categoryName}': Dátum od (UTC Midnight): ${categoryDateFrom.toISOString()}, Dátum do (UTC Midnight): ${categoryDateTo.toISOString()}`);
+        } else {
+            console.log(`[Validation Debug] Kategória '${categoryName}' nebola nájdená v availableCategoriesMap.`);
         }
 
         for (let i = 0; i < currentTeamPlayers.length; i++) {
@@ -268,6 +270,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     // Nastavíme dátum na začiatok dňa, aby sa predišlo problémom s časovými pásmami pri porovnávaní
                     playerDob.setUTCHours(0, 0, 0, 0); 
                     console.log(`[Validation Debug] Hráč ${i + 1}: DOB (UTC Midnight): ${playerDob.toISOString()}`);
+
+                    // Nové logy pre porovnanie
+                    if (categoryDateFrom) {
+                        console.log(`[Validation Debug] Hráč ${i + 1}: Player DOB (${playerDob.toISOString()}) < Category FROM (${categoryDateFrom.toISOString()})? ${playerDob < categoryDateFrom}`);
+                    }
+                    if (categoryDateTo) {
+                        console.log(`[Validation Debug] Hráč ${i + 1}: Player DOB (${playerDob.toISOString()}) > Category TO (${categoryDateTo.toISOString()})? ${playerDob > categoryDateTo}`);
+                    }
+
 
                     if (categoryDateFrom && playerDob < categoryDateFrom) {
                         dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
