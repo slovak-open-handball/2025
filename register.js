@@ -297,8 +297,19 @@ function App() {
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => {
       // OPRAVA: Skontrolujte, či sú dáta v docSnapshot.data() platným objektom s kľúčmi
       if (docSnapshot.exists() && docSnapshot.data() && Object.keys(docSnapshot.data()).length > 0) {
+        // NOVINKA: Formátovanie dát kategórií pre konzistentné ukladanie (objekt s .name)
+        const rawCategoriesData = docSnapshot.data();
+        const formattedCategories = {};
+        Object.entries(rawCategoriesData).forEach(([id, value]) => {
+          if (typeof value === 'object' && value !== null && value.name) {
+            formattedCategories[id] = value;
+          } else if (typeof value === 'string') {
+            formattedCategories[id] = { name: value }; // Konvertuje starý formát na nový
+          }
+          // Ak je formát iný, bude ignorovaný
+        });
         setCategoriesExist(true);
-        setCategoriesDataFromFirestore(docSnapshot.data());
+        setCategoriesDataFromFirestore(formattedCategories); // Ukladá preformátované kategórie
       } else {
         setCategoriesExist(false);
         setCategoriesDataFromFirestore({});
@@ -595,7 +606,13 @@ function App() {
 
     const transformedCategories = {};
     categoriesDataFromPage3.forEach(row => {
-        const categoryName = categoriesDataFromFirestore[row.categoryId];
+        // ZMENA: Správne získavanie názvu kategórie z categoriesDataFromFirestore
+        // Ak je uložená ako objekt { name: '...' }, použijeme .name, inak priamo hodnotu (starý formát)
+        const categoryData = categoriesDataFromFirestore[row.categoryId];
+        const categoryName = (typeof categoryData === 'object' && categoryData !== null && categoryData.name)
+            ? categoryData.name
+            : categoryData; // Použije sa priama hodnota, ak to nie je objekt (predpokladá sa reťazec)
+
         // NOVINKA: Skontrolujte, či categoryName je platný reťazec
         if (categoryName && typeof categoryName === 'string' && categoryName.trim() !== '') {
             transformedCategories[categoryName] = {
