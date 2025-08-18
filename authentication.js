@@ -11,7 +11,7 @@ window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych noti
 window.reauthenticateWithCredential = null; // Funkcia pre re-autentifikáciu
 window.as = null; // Funkcia na zmenu emailu
 window.EmailAuthProvider = null; // Poskytovateľ autentifikácie pre email
-window.verifyBeforeUpdateEmail = null; // Funkcia na overenie emailu pred zmenou
+window.verifyBeforeUpdateEmail = null; // Funkcia na overenie emailu pred zmenu
 
 // Import necessary Firebase functions
 import {
@@ -20,12 +20,12 @@ import {
 import {
     getAuth,
     onAuthStateChanged,
-    signOut,
+    signOut, // Import signOut function
     signInWithEmailAndPassword,
-    reauthenticateWithCredential, // Dôležité: pridaný import
-    updateEmail, // Dôležité: pridaný import
-    EmailAuthProvider, // Dôležité: pridaný import
-    verifyBeforeUpdateEmail // Dôležité: pridaný import pre overenie e-mailu
+    reauthenticateWithCredential,
+    updateEmail,
+    EmailAuthProvider,
+    verifyBeforeUpdateEmail
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore,
@@ -66,7 +66,7 @@ const setupFirebase = () => {
         window.reauthenticateWithCredential = reauthenticateWithCredential;
         window.updateEmail = updateEmail;
         window.EmailAuthProvider = EmailAuthProvider;
-        window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail; // Pridané
+        window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
     }
@@ -82,9 +82,30 @@ const handleAuthState = async () => {
             // Správna cesta k profilovému dokumentu na základe poskytnutých pravidiel
             const userDocRef = doc(db, `users/${user.uid}`);
             
+            // Unsubscribe from previous snapshot listener if it exists
+            if (window.unsubscribeUserDoc) {
+                window.unsubscribeUserDoc();
+            }
+
             window.unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const userProfileData = { id: docSnap.id, ...docSnap.data() };
+                    
+                    // NEW LOGIC: Check if user is an unapproved admin and sign them out
+                    if (userProfileData.role === 'admin' && userProfileData.approved === false) {
+                        console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa.");
+                        // Perform signOut and then clear global data
+                        signOut(auth).then(() => {
+                            window.globalUserProfileData = null;
+                            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                            // Optional: Redirect to login or show a message
+                            window.location.href = '/login.html'; // Redirect to login page
+                        }).catch((error) => {
+                            console.error("AuthManager: Chyba pri odhlasovaní neschváleného administrátora:", error);
+                        });
+                        return; // Stop further processing for this user
+                    }
+
                     window.globalUserProfileData = userProfileData;
                     console.log("AuthManager: Používateľské dáta načítané:", userProfileData);
                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
