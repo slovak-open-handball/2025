@@ -44,6 +44,9 @@ const firebaseConfig = {
     appId: "1:367316414164:web:fce079e1c7f4223292490b"
 };
 
+// URL adresa Google Apps Scriptu na odosielanie e-mailov
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+
 // Definovanie globálnych premenných, ktoré sú poskytnuté z Canvas prostredia
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -103,7 +106,54 @@ const handleAuthState = async () => {
                     
                     // Logic for unapproved admin
                     if (userProfileData.role === 'admin' && userProfileData.approved === false) {
-                        console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa.");
+                        console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa a posielam e-mail s pripomenutím.");
+
+                        // Extract firstName, lastName for the email reminder
+                        const adminEmail = userProfileData.email;
+                        const adminFirstName = userProfileData.firstName || '';
+                        const adminLastName = userProfileData.lastName || '';
+
+                        // Send email reminder via Google Apps Script
+                        const emailPayload = {
+                            action: 'sendAdminApprovalReminder',
+                            email: adminEmail,
+                            firstName: adminFirstName,
+                            lastName: adminLastName,
+                        };
+
+                        // Use exponential backoff for the API call
+                        let retryCount = 0;
+                        const maxRetries = 3;
+                        const baseDelay = 1000; // 1 second
+
+                        const sendReminderEmail = async () => {
+                            try {
+                                console.log("AuthManager: Pokúšam sa odoslať e-mail s pripomenutím schválenia admina...");
+                                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    mode: 'no-cors', // Dôležité pre Apps Script, aby sa predišlo CORS chybám
+                                    body: JSON.stringify(emailPayload)
+                                });
+                                // Keďže je režim 'no-cors', response.ok bude vždy false a status 0.
+                                // Predpokladáme úspech, ak fetch nevyhodí sieťovú chybu.
+                                console.log("AuthManager: Apps Script odpoveď pre pripomenutie schválenia (no-cors):", response);
+                            } catch (emailError) {
+                                console.error("AuthManager: Chyba pri odosielaní e-mailu s pripomenutím schválenia:", emailError);
+                                if (retryCount < maxRetries) {
+                                    retryCount++;
+                                    const delay = baseDelay * Math.pow(2, retryCount - 1);
+                                    console.log(`AuthManager: Opakujem pokus o odoslanie e-mailu za ${delay / 1000} sekúnd (pokus ${retryCount}/${maxRetries}).`);
+                                    setTimeout(sendReminderEmail, delay);
+                                } else {
+                                    console.error("AuthManager: Maximálny počet pokusov na odoslanie e-mailu s pripomenutím schválenia dosiahnutý.");
+                                }
+                            }
+                        };
+                        sendReminderEmail(); // Iniciovanie odoslania e-mailu
+
                         signOut(auth).then(() => {
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
@@ -111,7 +161,7 @@ const handleAuthState = async () => {
                         }).catch((error) => {
                             console.error("AuthManager: Chyba pri odhlasovaní neschváleného administrátora:", error);
                         });
-                        return; // Stop further processing for this user
+                        return; // Zastaví ďalšie spracovanie pre tohto používateľa
                     } 
                     // NEW LOGIC: Redirect approved users (admin, user, hall with approved: true)
                     else if (userProfileData.approved === true) {
