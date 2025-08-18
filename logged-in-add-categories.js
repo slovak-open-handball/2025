@@ -785,6 +785,18 @@ function AddCategoriesApp() {
     }
   };
 
+  // Pomocná funkcia pre formátovanie dátumu
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const [year, month, day] = dateString.split('-');
+      return `${day}. ${month}. ${year}`;
+    } catch (e) {
+      console.error("Chyba pri formátovaní dátumu pre zobrazenie:", dateString, e);
+      return dateString; // Vráti pôvodný reťazec v prípade chyby
+    }
+  };
+
   // Display loading state
   // Táto časť bola odstránená, pretože globálny loader.js sa stará o zobrazenie počas počiatočného načítavania.
   // Lokálny stav 'loading' sa stále používa na riadenie interakcií v rámci komponentu (napr. disabled tlačidlá).
@@ -820,7 +832,7 @@ function AddCategoriesApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-3xl p-4' },
+      { className: 'w-full max-w-3xl p-4' }, {/* Zmenené z max-w-md na max-w-3xl */}
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
@@ -856,8 +868,8 @@ function AddCategoriesApp() {
                                 'tr',
                                 { key: cat.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.name),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.dateFrom),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.dateTo),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatDateDisplay(cat.dateFrom)), {/* Použitie formátovacej funkcie */}
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatDateDisplay(cat.dateTo)), {/* Použitie formátovacej funkcie */}
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
