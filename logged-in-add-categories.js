@@ -820,7 +820,7 @@ function AddCategoriesApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-3xl p-4' }, {/* Zmenené z max-w-md na max-w-3xl */}
+      { className: 'w-full max-w-3xl p-4' },
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
