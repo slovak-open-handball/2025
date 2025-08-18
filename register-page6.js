@@ -767,7 +767,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 ),
                                                 // Upravený kontajner pre ToggleSwitch
                                                 React.createElement('div', { className: 'flex-initial w-auto flex flex-col pt-2' }, // Odstránené items-center a justify-center
-                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
+                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný vo zväze'),
                                                     React.createElement('div', { className: 'mt-[11px] flex justify-center items-center w-full' }, // Pridané flex, justify-center, items-center, w-full
                                                         React.createElement(ToggleSwitch, {
                                                             isOn: player.isRegistered || false,
