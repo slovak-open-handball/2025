@@ -250,7 +250,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     const from = new Date(categoryDateFrom);
                     from.setUTCHours(0,0,0,0);
                     if (playerDob < from) {
-                        dateOfBirthError = `Dátum narodenia je príliš skorý pre kategóriu ${categoryName}. (Od: ${from.toLocaleDateString('sk-SK')})`;
+                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
                         teamHasErrors = true;
                     }
                 }
@@ -258,7 +258,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     const to = new Date(categoryDateTo);
                     to.setUTCHours(0,0,0,0);
                     if (playerDob > to) {
-                        dateOfBirthError = `Dátum narodenia je príliš neskorý pre kategóriu ${categoryName}. (Do: ${to.toLocaleDateString('sk-SK')})`;
+                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
                         teamHasErrors = true;
                     }
                 }
