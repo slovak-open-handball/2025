@@ -1,4 +1,7 @@
 // admin-register.js (now uses global Firebase instances from authentication.js)
+import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -294,7 +297,8 @@ function App() {
 
 
     try {
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      // Corrected: Use createUserWithEmailAndPassword as a top-level function with 'auth' instance
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       // Add passwordLastChanged to updateProfile to record password change time
       // Note: updateProfile does not accept custom fields like firstName, lastName.
       // These fields are saved to the Firestore document.
@@ -312,15 +316,15 @@ function App() {
         displayName: `${firstName} ${lastName}`, // Added displayName
         role: 'admin', // Directly set as admin
         approved: false, // Directly set as unapproved admin
-        registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
+        registrationDate: serverTimestamp(), // Corrected: Use serverTimestamp() from modular import
         displayNotifications: true,
-        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp() // Added for password change tracking
+        passwordLastChanged: serverTimestamp() // Corrected: Use serverTimestamp() from modular import
       };
 
       console.log("Attempting to save user to Firestore with initial data:", userDataToSave);
 
       try {
-        // Using Firebase SDK v8 syntax for FieldValue.serverTimestamp()
+        // Using Firebase SDK v9 syntax for Firestore operations
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
         console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved.`);
 
@@ -362,10 +366,10 @@ function App() {
             const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
             const notificationRecipientId = 'all_admins'; 
 
-            // Using Firebase SDK v8 syntax for FieldValue.serverTimestamp()
+            // Using Firebase SDK v9 syntax for Firestore operations
             await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
                 message: notificationMessage,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                timestamp: serverTimestamp(), // Corrected: Use serverTimestamp() from modular import
                 recipientId: notificationRecipientId,
                 read: false
             });
