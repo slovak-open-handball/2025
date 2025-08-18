@@ -1,9 +1,255 @@
-// admin-register.js (teraz používa globálne Firebase inštancie z authentication.js)
+// admin-register.js (now uses global Firebase instances from authentication.js)
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
+// Added 'validationStatus' prop for detailed visual indication of password validity
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Added onFocus prop
+  // SVG icons for eye (show password) and crossed-out eye (hide password) - UNIFIED WITH REGISTER.JS
+  const EyeIcon = React.createElement(
+    'svg',
+    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
+  );
+
+  const EyeOffIcon = React.createElement(
+    'svg',
+    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+    React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+    React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
+  );
+
+  // Input border will always be default (border-gray-300)
+  const borderClass = 'border-gray-300';
+
+  return React.createElement(
+    'div',
+    { className: 'mb-4' }, // Added mb-4 class for consistent spacing
+    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
+    React.createElement(
+      'div',
+      { className: 'relative' },
+      React.createElement('input', {
+        type: showPassword ? 'text' : 'password',
+        id: id,
+        // Using only the default border class
+        className: `shadow appearance-none border ${borderClass} rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10`,
+        value: value,
+        onChange: onChange,
+        onCopy: (e) => e.preventDefault(), // Prevent copying
+        onPaste: (e) => e.preventDefault(), // Prevent pasting
+        onCut: (e) => e.preventDefault(),   // Prevent cutting
+        required: true,
+        placeholder: placeholder,
+        autoComplete: autoComplete,
+        disabled: disabled,
+        onFocus: onFocus // Added onFocus prop
+      }),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: toggleShowPassword,
+          className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 focus:outline-none',
+          disabled: disabled,
+        },
+        showPassword ? EyeIcon : EyeOffIcon
+      )
+    ),
+    // CHANGE: Condition for displaying password description - only shown if validationStatus is defined
+    validationStatus && React.createElement(
+      'div',
+      { className: `text-xs italic mt-1 text-gray-600` }, // Text "Heslo musí obsahovať" is always gray
+      'Heslo musí obsahovať:',
+      React.createElement(
+        'ul',
+        { className: 'list-none pl-4' }, // Using list-none and custom bullets for dynamism
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.minLength ? '✔' : '•'),
+          'aspoň 10 znakov,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasUpperCase ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasUpperCase ? '✔' : '•'),
+          'aspoň jedno veľké písmeno,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasLowerCase ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasLowerCase ? '✔' : '•'),
+          'aspoň jedno malé písmeno,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasNumber ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasNumber ? '✔' : '•'),
+          'aspoň jednu číslicu.'
+        )
+      )
+    )
+  );
+}
+
+// NotificationModal Component for displaying temporary messages (converted to React.createElement)
+function NotificationModal({ message, onClose, type = 'info' }) { // Added 'type' prop
+  const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (message) {
+      setShow(true);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        setShow(false);
+        setTimeout(onClose, 500);
+      }, 10000);
+    } else {
+      setShow(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [message, onClose]);
+
+  if (!show && !message) return null;
+
+  // Dynamic classes for background color based on message type
+  let bgColorClass;
+  if (type === 'success') {
+    bgColorClass = 'bg-green-500';
+  } else if (type === 'error') {
+    bgColorClass = 'bg-red-600'; // Setting red for errors
+  } else {
+    bgColorClass = 'bg-blue-500'; // Default blue for info
+  }
+
+  return React.createElement(
+    'div',
+    {
+      className: `fixed bottom-4 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
+      style: { zIndex: 1000 }
+    },
+    React.createElement('p', { className: 'font-semibold' }, message)
+  );
+}
+
+// Main React component for the admin registration page
+function App() {
+  // Get references to Firebase services and global data from authentication.js
+  const auth = window.auth;
+  const db = window.db;
+  const user = window.globalUserProfileData; // Use global user profile
+  const isAuthReady = window.isGlobalAuthReady; // Use global authentication ready state
+
+  const [pageLoading, setPageLoading] = React.useState(true); // New state for initial page loading
+  const [formSubmitting, setFormSubmitting] = React.useState(false); // New state for form submission
+
+  // CHANGE: Using 'errorMessage' for errors and 'successMessage' for the success page message
+  const [errorMessage, setErrorMessage] = React.useState(''); // For errors (red box and modal)
+  const [successMessage, setSuccessMessage] = React.useState(''); // For the green success page
+
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
+
+  const [showPasswordReg, setShowPasswordReg] = React.useState(false);
+  const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
+
+  // New states for password validation
+  const [passwordValidationStatus, setPasswordValidationStatus] = React.useState({
+    minLength: false,
+    maxLength: false, // maxLength is still checked, but not displayed in the list
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    isValid: false, // Overall password validity
+  });
+  const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
+  // NEW: State for tracking whether the "Confirm password" input has been touched
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
+  // NEW: State for tracking whether the "Email" input has been touched
+  const [emailTouched, setEmailTouched] = React.useState(false);
+
+
+  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  React.useEffect(() => {
+    // Wait until auth and db instances are available from authentication.js
+    if (auth && db && isAuthReady) { // Also wait for isAuthReady
+      setPageLoading(false); // Page is now fully loaded (auth and db are ready)
+    } else {
+        console.log("AdminRegisterApp: Waiting for Auth and DB initialization in authentication.js.");
+    }
+  }, [auth, db, isAuthReady]); // Depends on auth, db, and isAuthReady (global instances)
+
+
+  const getRecaptchaToken = async (action) => {
+    if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
+      setErrorMessage("reCAPTCHA API is not loaded or ready.");
+      return null;
+    }
+    try {
+      const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
+      return token;
+    } catch (e) {
+      console.error("Error getting reCAPTCHA token:", e);
+      setErrorMessage(`reCAPTCHA Error: ${e.message}`);
+      return null;
+    }
+  };
+
+  // CHANGE: validatePassword now returns an object with individual requirement statuses
+  const validatePassword = (pwd) => {
+    const status = {
+      minLength: pwd.length >= 10,
+      maxLength: pwd.length <= 4096, // This condition is still checked
+      hasUpperCase: /[A-Z]/.test(pwd),
+      hasLowerCase: /[a-z]/.test(pwd),
+      hasNumber: /[0-9]/.test(pwd),
+    };
+    // Overall validity depends on all conditions including maxLength
+    status.isValid = status.minLength && status.maxLength && status.hasUpperCase && status.hasLowerCase && status.hasNumber;
+    return status;
+  };
+
+  // NEW: Function to validate email
+  const validateEmail = (email) => {
+    // Check for '@'
+    const atIndex = email.indexOf('@');
+    if (atIndex === -1) return false;
+
+    // Check for '.' after '@'
+    const domainPart = email.substring(atIndex + 1);
+    const dotIndexInDomain = domainPart.indexOf('.');
+    if (dotIndexInDomain === -1) return false;
+
+    // Check for at least two characters after the last dot in the domain
+    const lastDotIndex = email.lastIndexOf('.');
+    if (lastDotIndex === -1 || lastDotIndex < atIndex) return false; // Dot must be after @
+    
+    const charsAfterLastDot = email.substring(lastDotIndex + 1);
+    return charsAfterL// admin-register.js (teraz používa globálne Firebase inštancie z authentication.js)
+
+const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+
+// Komponent PasswordInput pre polia s heslom s prepínačom viditeľnosti (prevedené na React.createElement)
 // Pridaný prop 'validationStatus' pre detailnú vizuálnu indikáciu platnosti hesla
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Pridaný onFocus prop
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo) - ZJEDNOTENÉ S REGISTER.JS
@@ -39,9 +285,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         className: `shadow appearance-none border ${borderClass} rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10`,
         value: value,
         onChange: onChange,
-        onCopy: (e) => e.preventDefault(), // Prevent copying
-        onPaste: (e) => e.preventDefault(), // Prevent pasting
-        onCut: (e) => e.preventDefault(),   // Prevent cutting
+        onCopy: (e) => e.preventDefault(), // Zabrániť kopírovaniu
+        onPaste: (e) => e.preventDefault(), // Zabrániť vkladaniu
+        onCut: (e) => e.preventDefault(),   // Zabrániť vyrezávaniu
         required: true,
         placeholder: placeholder,
         autoComplete: autoComplete,
@@ -96,7 +342,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   );
 }
 
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
+// Komponent NotificationModal pre zobrazenie dočasných správ (prevedené na React.createElement)
 function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný prop 'type'
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -148,7 +394,7 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
   );
 }
 
-// Main React component for the admin registration page
+// Hlavný React komponent pre stránku registrácie administrátora
 function App() {
   // Získame referencie na Firebase služby a globálne dáta z authentication.js
   const auth = window.auth;
@@ -156,8 +402,8 @@ function App() {
   const user = window.globalUserProfileData; // Používame globálny profil používateľa
   const isAuthReady = window.isGlobalAuthReady; // Používame globálny stav pripravenosti autentifikácie
 
-  const [pageLoading, setPageLoading] = React.useState(true); // New state for initial page loading
-  const [formSubmitting, setFormSubmitting] = React.useState(false); // New state for form submission
+  const [pageLoading, setPageLoading] = React.useState(true); // Nový stav pre počiatočné načítanie stránky
+  const [formSubmitting, setFormSubmitting] = React.useState(false); // Nový stav pre odosielanie formulára
 
   // ZMENA: Používame 'errorMessage' pre chyby a 'successMessage' pre správu na zelenej stránke
   const [errorMessage, setErrorMessage] = React.useState(''); // Pre chyby (červený box a modál)
@@ -188,15 +434,15 @@ function App() {
   const [emailTouched, setEmailTouched] = React.useState(false);
 
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // Efekt pre inicializáciu Firebase a nastavenie Auth Listener (spustí sa iba raz)
   React.useEffect(() => {
-    // Čakáme, kým budú auth a db inštancie dostupné z authentication.js
-    if (auth && db) {
-      setPageLoading(false); // Page is now fully loaded (auth and db are ready)
+    // Čakáme, kým budú auth a db inštancie dostupné z authentication.js a isAuthReady bude true
+    if (auth && db && isAuthReady) {
+      setPageLoading(false); // Stránka je teraz plne načítaná (auth a db sú pripravené)
     } else {
         console.log("AdminRegisterApp: Čakám na inicializáciu Auth a DB v authentication.js.");
     }
-  }, [auth, db]); // Závisí od auth a db (globálnych inštancií)
+  }, [auth, db, isAuthReady]); // Závisí od auth, db a isAuthReady (globálnych inštancií)
 
 
   const getRecaptchaToken = async (action) => {
@@ -247,7 +493,7 @@ function App() {
     return charsAfterLastDot.length >= 2;
   };
 
-  // Effect pre validáciu hesla pri zmene 'password' alebo 'confirmPassword'
+  // Efekt pre validáciu hesla pri zmene 'password' alebo 'confirmPassword'
   React.useEffect(() => {
     const pwdStatus = validatePassword(password);
     setPasswordValidationStatus(pwdStatus);
@@ -284,30 +530,32 @@ function App() {
     const recaptchaToken = await getRecaptchaToken('admin_register');
     if (!recaptchaToken) {
       setErrorMessage("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
-      return; // Return here as there's an error
+      return; // Vrátiť sa, pretože došlo k chybe
     }
     console.log("reCAPTCHA Token pre registráciu admina:", recaptchaToken);
 
-    setFormSubmitting(true); // Show loading indicator for form submission
-    setErrorMessage(''); // Clear previous errors
-    setSuccessMessage(''); // Clear any previous success message
+    setFormSubmitting(true); // Zobraziť indikátor načítania pre odosielanie formulára
+    setErrorMessage(''); // Vymazať predchádzajúce chyby
+    setSuccessMessage(''); // Vymazať akúkoľvek predchádzajúcu správu o úspechu
 
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       // Pridáme passwordLastChanged k updateProfile, aby sa zaznamenal čas zmeny hesla
-      await userCredential.user.updateProfile({ 
-          firstName: firstName,
-          lastName: lastName,
-      });
+      // Poznámka: updateProfile neakceptuje vlastné polia ako firstName, lastName.
+      // Tieto polia sa uložia do Firestore dokumentu.
+      // updateProfile sa používa pre polia ako displayName, photoURL.
+      // await userCredential.user.updateProfile({ 
+      //     firstName: firstName,
+      //     lastName: lastName,
+      // });
 
       // ZMENA: Nastavenie role na 'admin' a approved na 'false' priamo pri prvom zápise
       const userDataToSave = {
-//        uid: userCredential.user.uid,
         email: email,
         firstName: firstName,
         lastName: lastName,
-//        displayName: `${firstName} ${lastName}`,
+        displayName: `${firstName} ${lastName}`, // Pridané displayName
         role: 'admin', // Priamo nastavené ako admin
         approved: false, // Priamo nastavené ako neschválený admin
         registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
@@ -318,10 +566,11 @@ function App() {
       console.log("Pokus o uloženie používateľa do Firestore s počiatočnými dátami:", userDataToSave);
 
       try {
+        // Používame Firebase SDK v8 syntax pre FieldValue.serverTimestamp()
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
         console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením 'false' bol uložený.`);
 
-        // Attempt to send email via Apps Script immediately after saving initial data
+        // Pokus o odoslanie e-mailu cez Apps Script ihneď po uložení počiatočných dát
         try {
           const payload = {
             action: 'sendRegistrationEmail',
@@ -359,6 +608,7 @@ function App() {
             const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
             const notificationRecipientId = 'all_admins'; 
 
+            // Používame Firebase SDK v8 syntax pre FieldValue.serverTimestamp()
             await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
                 message: notificationMessage,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -380,13 +630,13 @@ function App() {
 
       // ZMENA: Nastavíme successMessage až po všetkých úspešných krokoch
       setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
-      setFormSubmitting(false); // Stop loading so the message is visible on the form
+      setFormSubmitting(false); // Zastaviť načítavanie, aby bola správa viditeľná vo formulári
 
-      // Now sign out and redirect after a delay
+      // Teraz sa odhláste a presmerujte po oneskorení
       await auth.signOut();
-      // user will be null after signOut, no need to set explicitly
+      // user bude null po signOut, netreba nastavovať explicitne
 
-      // Redirect after 5 seconds
+      // Presmerovať po 5 sekundách
       setTimeout(() => {
         window.location.href = 'login.html';
       }, 5000);
@@ -414,7 +664,7 @@ function App() {
                       passwordValidationStatus.isValid &&
                       isConfirmPasswordMatching;
 
-  // Display initial page loading state
+  // Zobrazenie počiatočného stavu načítavania stránky
   if (pageLoading) {
     return React.createElement(
       'div',
@@ -423,7 +673,7 @@ function App() {
     );
   }
 
-  // Priority display of successful registration message (zelená stránka)
+  // Prioritné zobrazenie správy o úspešnej registrácii (zelená stránka)
   // ZMENA: Kontrolujeme 'successMessage' namiesto 'message' a 'notificationType'
   if (successMessage) { 
     return React.createElement(
@@ -435,7 +685,7 @@ function App() {
         React.createElement(
           'div',
           { className: 'bg-green-700 text-white p-8 rounded-lg shadow-xl w-full text-center' }, // Zmenené pozadie na tmavšiu zelenú (green-700)
-          React.createElement('h1', { className: 'text-3xl font-bold text-black mb-4' }, 'Registrácia úspešná!'), // Zmenená farba textu nadpisu na čiernu
+          React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' }, 'Registrácia úspešná!'), // Zmenená farba textu nadpisu na čiernu
           React.createElement(
             'p',
             { className: 'text-white' }, // Text zostáva biely pre kontrast
@@ -456,7 +706,7 @@ function App() {
     }
   `;
 
-  // Display registration form
+  // Zobrazenie registračného formulára
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -585,7 +835,7 @@ function App() {
               className: buttonClasses, // Použitie dynamických tried
               disabled: formSubmitting || successMessage || !isFormValid, // ZMENA: Používame isFormValid
             },
-            formSubmitting ? ( // Use formSubmitting
+            formSubmitting ? ( // Použiť formSubmitting
               React.createElement(
                 'div',
                 { className: 'flex items-center justify-center' },
