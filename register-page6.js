@@ -313,16 +313,16 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
                     // Aplikujeme chybu len ak máme kategórie dátumu
                     if (categoryDateFrom && playerDob < categoryDateFrom) {
-                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Min: ${formatDateToDDMMYYYY(categoryData.dateFrom)})`;
+                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu (min: ${formatDateToDDMMYYYY(categoryData.dateFrom)}).`;
                         teamHasErrors = true;
                         console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš skorý.`);
                     }
                     if (categoryDateTo && playerDob > categoryDateTo) {
                         // Ak je už jedna chyba, pridáme ju k existujúcej
                         if (dateOfBirthError) {
-                            dateOfBirthError += ` (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`; // Pridáme info o hornej hranici
+                            dateOfBirthError += ` (max: ${formatDateToDDMMYYYY(categoryData.dateTo)}).`; // Pridáme info o hornej hranici
                         } else {
-                            dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`;
+                            dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu (max: ${formatDateToDDMMYYYY(categoryData.dateTo)}).`;
                         }
                         teamHasErrors = true;
                         console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš neskorý.`);
