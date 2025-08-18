@@ -1322,7 +1322,7 @@ function App() {
               }) :
           page === 6 ? // NOVINKA: Renderovanie Page6Form (detaily hráčov/tímu)
               React.createElement(Page6Form, {
-                  formData: formData,
+                  // formData: formData, // ODSTRÁNENÉ: Page6Form už nepotrebuje celý formData
                   teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
                   handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                   handleSubmit: handleNextPage6ToPage7, // Nová funkcia pre prechod na Page 7
@@ -1337,7 +1337,8 @@ function App() {
                   setNotificationMessage: setNotificationMessage,
                   setNotificationType: setNotificationType,
                   notificationType: notificationType,
-                  onSaveAndPrev: handleSaveTeamsDataAndPrev, 
+                  onSaveAndPrev: handleSaveTeamsDataAndPrev,
+                  availableCategoriesMap: categoriesDataFromFirestore, // NOVINKA: Posielame mapu kategórií
               }) :
           page === 7 ? // NOVINKA: Renderovanie Page7Form (súhrn)
               React.createElement(Page7Form, {
