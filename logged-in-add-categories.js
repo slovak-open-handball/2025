@@ -608,7 +608,8 @@ function AddCategoriesApp() {
 
       // Kontrola duplicity názvu kategórie (case-insensitive) aj s dátumami
       if (Object.values(currentCategoriesData).some(cat => 
-        cat.name.toLowerCase() === trimmedCategoryName.toLowerCase() &&
+        // Zabezpečenie, že cat.name existuje pred volaním toLowerCase()
+        (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase() &&
         cat.dateFrom === dateFrom &&
         cat.dateTo === dateTo
       )) {
@@ -678,7 +679,8 @@ function AddCategoriesApp() {
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
       if (Object.entries(currentCategoriesData).some(([id, catData]) => 
-            catData.name.toLowerCase() === trimmedNewName.toLowerCase() &&
+            // Zabezpečenie, že catData je objekt a má vlastnosť 'name' pred volaním toLowerCase()
+            (typeof catData === 'object' && catData !== null && catData.name || '').toLowerCase() === trimmedNewName.toLowerCase() &&
             catData.dateFrom === newDateFrom &&
             catData.dateTo === newDateTo &&
             id !== categoryId
