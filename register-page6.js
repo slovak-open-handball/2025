@@ -161,6 +161,11 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         const newPlayerErrorsForTeam = {}; // Chyby pre aktuálny tím
         let teamHasErrors = false;
 
+        // NOVINKA: Debug log pre availableCategoriesMap a categoryName
+        console.log(`[Validation Debug] Vstupná availableCategoriesMap pre kategóriu '${categoryName}':`, availableCategoriesMap);
+        console.log(`[Validation Debug] Hľadám kategóriu s názvom: '${categoryName}'`);
+
+
         // Validácia čísla dresu
         const jerseyNumbers = new Set();
         const jerseyNumberErrors = new Set();
@@ -233,7 +238,16 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         }
 
         // Validácia dátumu narodenia pre hráča
-        const categoryData = Object.values(availableCategoriesMap || {}).find(cat => cat.name === categoryName);
+        // ZMENA: Namiesto Object.values().find() iterujeme cez kľúče availableCategoriesMap,
+        // keďže štruktúra je { id: { name: '...', dateFrom: '...', dateTo: '...' } }
+        let categoryData = null;
+        for (const id in availableCategoriesMap) {
+            if (availableCategoriesMap[id].name === categoryName) {
+                categoryData = availableCategoriesMap[id];
+                break;
+            }
+        }
+
         let categoryDateFrom = null;
         let categoryDateTo = null;
 
@@ -245,7 +259,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             categoryDateTo.setUTCHours(0, 0, 0, 0);
             console.log(`[Validation Debug] Kategória '${categoryName}': Dátum od (UTC Midnight): ${categoryDateFrom.toISOString()}, Dátum do (UTC Midnight): ${categoryDateTo.toISOString()}`);
         } else {
-            console.log(`[Validation Debug] Kategória '${categoryName}' nebola nájdená v availableCategoriesMap.`);
+            console.log(`[Validation Debug] Kategória '${categoryName}' nebola nájdená v availableCategoriesMap. Validácia dátumu narodenia pre túto kategóriu bude preskočená.`);
         }
 
         for (let i = 0; i < currentTeamPlayers.length; i++) {
@@ -279,14 +293,19 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         console.log(`[Validation Debug] Hráč ${i + 1}: Player DOB (${playerDob.toISOString()}) > Category TO (${categoryDateTo.toISOString()})? ${playerDob > categoryDateTo}`);
                     }
 
-
+                    // Aplikujeme chybu len ak máme kategórie dátumu
                     if (categoryDateFrom && playerDob < categoryDateFrom) {
-                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
+                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Min: ${categoryData.dateFrom})`;
                         teamHasErrors = true;
                         console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš skorý.`);
                     }
                     if (categoryDateTo && playerDob > categoryDateTo) {
-                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
+                        // Ak je už jedna chyba, pridáme ju k existujúcej
+                        if (dateOfBirthError) {
+                            dateOfBirthError += ` (Max: ${categoryData.dateTo})`; // Pridáme info o hornej hranici
+                        } else {
+                            dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Max: ${categoryData.dateTo})`;
+                        }
                         teamHasErrors = true;
                         console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš neskorý.`);
                     }
