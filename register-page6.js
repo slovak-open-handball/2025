@@ -569,7 +569,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
             React.createElement('strong', null, 'ale je povinné ich vyplniť v\u00A0sekcii "Moja zóna"'),
             ' po prihlásení sa do svojho turnajového účtu do ',
-            React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, formatDateAndTime(dataEditDeadline) + ' hod.') {/* Použitie novej formátovacej funkcie */}
+            React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, formatDateAndTime(dataEditDeadline) + ' hod.')
         ),
 
         React.createElement(
