@@ -129,7 +129,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                             firstName: '',
                             lastName: '',
                             dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
                             ...existingDriver,
                             address: { ...(existingDriver.address || {}) }
                         };
@@ -141,7 +141,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                             firstName: '',
                             lastName: '',
                             dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
                             ...existingDriver,
                             address: { ...(existingDriver.address || {}) }
                         };
@@ -313,16 +313,16 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
                     // Aplikujeme chybu len ak máme kategórie dátumu
                     if (categoryDateFrom && playerDob < categoryDateFrom) {
-                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu (min: ${formatDateToDDMMYYYY(categoryData.dateFrom)}).`;
+                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Min: ${formatDateToDDMMYYYY(categoryData.dateFrom)})`;
                         teamHasErrors = true;
                         console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš skorý.`);
                     }
                     if (categoryDateTo && playerDob > categoryDateTo) {
                         // Ak je už jedna chyba, pridáme ju k existujúcej
                         if (dateOfBirthError) {
-                            dateOfBirthError += ` (max: ${formatDateToDDMMYYYY(categoryData.dateTo)}).`; // Pridáme info o hornej hranici
+                            dateOfBirthError += ` (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`; // Pridáme info o hornej hranici
                         } else {
-                            dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu (max: ${formatDateToDDMMYYYY(categoryData.dateTo)}).`;
+                            dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`;
                         }
                         teamHasErrors = true;
                         console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš neskorý.`);
@@ -396,6 +396,14 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             if (Object.keys(newPlayerErrorsForTeam[playerIndex]).length > 0) {
                 updatedTeamHasErrors = true;
                 break;
+            }
+            // Kontrola, či sa podarilo vyčistiť všetky chyby pre daného hráča
+            // Ak je newPlayerErrorsForTeam[playerIndex] prázdny objekt, znamená to, že chyby boli vyčistené
+            if (Object.keys(newPlayerErrorsForTeam[playerIndex] || {}).length === 0) {
+                // Pokračovať v iterácii, ak je prázdny
+            } else {
+                // Ak sú tam stále chyby, nastav updatedTeamHasErrors na true
+                updatedTeamHasErrors = true;
             }
         }
 
@@ -472,7 +480,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     let formattedValue = rawValue;
 
                     if (rawValue.length > 5) {
-                        rawValue = rawValue.substring(0, 5);
+                        rawValue = rawValue.length > 5 ? rawValue.substring(0, 5) : rawValue; // Ensure max 5 digits
                     }
 
                     if (rawValue.length > 3) {
@@ -507,7 +515,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     let formattedValue = rawValue;
 
                     if (rawValue.length > 5) {
-                        rawValue = rawValue.substring(0, 5);
+                        rawValue = rawValue.length > 5 ? rawValue.substring(0, 5) : rawValue; // Ensure max 5 digits
                     }
 
                     if (rawValue.length > 3) {
@@ -759,8 +767,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 ),
                                                 // Upravený kontajner pre ToggleSwitch
                                                 React.createElement('div', { className: 'flex-initial w-auto flex flex-col pt-2' }, // Odstránené items-center a justify-center
-                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný vo zväze'),
-                                                    React.createElement('div', { className: 'mt-[11px]' }, // Upravený margin-top pre zarovnanie
+                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
+                                                    React.createElement('div', { className: 'mt-[11px] flex justify-center items-center w-full' }, // Pridané flex, justify-center, items-center, w-full
                                                         React.createElement(ToggleSwitch, {
                                                             isOn: player.isRegistered || false,
                                                             handleToggle: () => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', !player.isRegistered),
