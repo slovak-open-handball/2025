@@ -12,9 +12,8 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            /* padding-top: 64px; /* Odsadenie pre pevnú hlavičku - už nie je potrebné, keďže hlavička sa nezobrazuje */
         }
-        /* Štýly pre modálne okná (ak by sa používali v budúcnosti) */
+        /* Styles for modal windows (if used in the future) */
         .modal {
             position: fixed;
             z-index: 100;
@@ -39,10 +38,6 @@
             text-align: left;
         }
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <!-- React and ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -50,17 +45,19 @@
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
 </head>
 <body class="bg-gray-100">
-    <!-- Hlavička sa načíta dynamicky -->
+    <!-- Header will be loaded dynamically -->
     <div id="header-placeholder"></div>
 
     <div id="root">
-        <!-- React aplikácia sa tu vykreslí -->
+        <!-- React application will be rendered here -->
     </div>
 
-    <!-- Načítanie hlavného React komponentu pre túto stránku -->
+    <!-- Load authentication.js first to ensure Firebase is initialized and globally available -->
+    <script type="module" src="authentication.js"></script> 
+    <!-- Then load the main React component for this page -->
     <script src="admin-register.js"></script>
     <script>
-        // Funkcia na načítanie hlavičky (ak je potrebná, inak ju môžete odstrániť)
+        // Function to load the header (if needed, otherwise you can remove it)
         async function loadHeader() {
             try {
                 const response = await fetch('header.html');
@@ -70,33 +67,37 @@
                 const headerHtml = await response.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
             } catch (error) {
-                console.error("Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+                console.error("Error loading header:", error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Error loading header.</div>';
             }
         }
 
-        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane admin-register.js
+        // This script runs after DOM is loaded and all scripts, including admin-register.js
         window.onload = function() {
-            // Načítanie hlavičky bolo odstránené z pôvodného admin-register.html, takže ho tu tiež vynechávame
-            // Ak by ste ju chceli späť, odkomentujte loadHeader().then(...)
-            // loadHeader().then(() => { 
+            // Wait for global authentication to be ready
+            const renderApp = () => {
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    console.error("Error: React or ReactDOM are not loaded. Check script order.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading application. Please try again later.</div>';
                     return;
                 }
-                // Už nepotrebujeme kontrolovať App.js, pretože App je definovaný v admin-register.js
                 if (typeof App === 'undefined') {
-                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte admin-register.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    console.error("Error: App component is not defined. Check admin-register.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading application component.</div>';
+                    return;
+                }
+                if (!window.isGlobalAuthReady) {
+                    console.log("Waiting for global authentication to be ready...");
+                    setTimeout(renderApp, 100); // Retry after 100ms
                     return;
                 }
 
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(App, null));
-            // }).catch(error => {
-            //     console.error("Chyba pri inicializácii stránky:", error);
-            // });
+            };
+
+            // Initial call to render the app
+            renderApp();
         };
     </script>
 </body>
