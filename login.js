@@ -248,25 +248,28 @@ const App = () => {
     const isButtonDisabled = loading || !isEmailValid(email) || !isPasswordValid(password);
 
     React.useEffect(() => {
-        // Tento listener bol prenesený do authentication.js, kde sa spravuje globálne.
-        // Tu ho už nepotrebujeme, pretože authentication.js sa postará o presmerovanie.
-        // const authListener = onAuthStateChanged(window.auth, (user) => {
-        //     if (user) {
-        //         console.log("login.js: Používateľ je prihlásený. Presmerovávam na index.html.");
-        //         window.location.href = 'index.html';
-        //     }
-        // });
-
         // Analýza URL pre parameter stavu pri načítaní komponentu
         const urlParams = new URLSearchParams(window.location.search);
         const status = urlParams.get('status');
         if (status === 'unapproved_admin') {
             setUnapprovedAdminMessage("Váš účet bol zaregistrovaný ako administrátorský. Prosím, počkajte na schválenie. O stave vášho účtu vás budeme informovať.");
-            // Voliteľné: Vymazať URL parameter, aby sa znova nezobrazil pri obnovení stránky
-            const newUrl = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, document.title, newUrl);
-        }
+            
+            // Nastaví časovač na vymazanie správy po 10 sekundách
+            const timer = setTimeout(() => {
+                setUnapprovedAdminMessage(''); // Vymaže správu
+                // Voliteľné: Ak chcete vyčistiť aj URL parameter, môžete to urobiť znova tu,
+                // ale je to už vyriešené na začiatku, takže to nie je nevyhnutné.
+                const newUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }, 10000); // 10 sekúnd
 
+            // Vymaže časovač pri odpojení komponentu alebo pred novým nastavením správy
+            return () => clearTimeout(timer);
+
+        } else {
+            // Ak stav nie je 'unapproved_admin', uistite sa, že správa nie je zobrazená
+            setUnapprovedAdminMessage('');
+        }
 
         // Po vykreslení sa uistíme, že hlavička je viditeľná
         const header = document.querySelector('header');
@@ -275,9 +278,6 @@ const App = () => {
             header.classList.add('bg-blue-800');
             console.log("login.js: Hlavička nastavená ako viditeľná.");
         }
-
-        // Return funkcia pre čistenie sa už nebude viazať na authListener, ktorý bol odstránený.
-        // return () => authListener();
     }, []); // Ponechanie prázdneho poľa závislostí zabezpečí, že sa spustí len raz pri pripojení.
 
     return React.createElement(
