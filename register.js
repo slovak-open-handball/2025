@@ -1,29 +1,17 @@
-// register.js
-// Hlavný súbor aplikácie, ktorý spravuje stav a orchestráciu medzi stránkami formulára.
-// Táto verzia pridáva kontrolu na inicializáciu po prijatí globalDataUpdated a categoriesLoaded.
-// NOVINKA: Pridaná logika pre automatické zatvorenie registrácie bez zobrazenia odpočtu.
-
-// Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// Import komponentov pre stránky formulára z ich samostatných súborov
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
 import { Page5Form } from './register-page5.js';
-import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
-import { Page7Form } from './register-page7.js'; // NOVINKA: Import pre Page7Form (pôvodná Page6)
+import { Page6Form } from './register-page6.js'; 
+import { Page7Form } from './register-page7.js';
 
-// Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-// POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
 import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-
-// Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'DD. MM. YYYY hh:mm'
-// Táto funkcia je teraz určená len na formátovanie pre zobrazenie, nie na ukladanie do stavu.
 const formatToDatetimeLocal = (date) => {
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
   const day = date.getDate().toString().padStart(2, '0');
@@ -34,7 +22,6 @@ const formatToDatetimeLocal = (date) => {
   return `${day}. ${month}. ${year} ${hours}:${minutes}`;
 };
 
-// NotificationModal Component pre zobrazovanie dočasných správ (teraz už NIE JE definovaný tu, ale v Page5Form a Page6Form)
 function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -70,7 +57,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   if (type === 'success') {
     bgColorClass = 'bg-green-500';
   } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // ZMENENÉ: pre chybu je červené pozadie
+    bgColorClass = 'bg-red-600'; 
   } else {
     bgColorClass = 'bg-blue-500';
   }
@@ -86,7 +73,6 @@ function NotificationModal({ message, onClose, type = 'info' }) {
 }
 
 
-// Hlavný App komponent
 function App() {
   const [page, setPage] = React.useState(1);
   const [formData, setFormData] = React.useState({
@@ -107,7 +93,6 @@ function App() {
       dic: '',
       icDph: '',
     }
-    // accommodation, arrival, packageId, packageDetails are now per-team in teamsDataFromPage4
   });
   const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
   const [teamsDataFromPage4, setTeamsDataFromPage4] = React.useState({});
@@ -115,7 +100,6 @@ function App() {
   const [userRole, setUserRole] = React.useState('user');
   const [loading, setLoading] = React.useState(false);
 
-  // Notifikačné stavy zostávajú v App komponente pre jeho vlastné notifikácie
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [showNotification, setShowNotification] = React.useState(false);
   const [notificationType, setNotificationType] = React.useState('info');
@@ -124,10 +108,8 @@ function App() {
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421');
   const [registrationSuccess, setRegistrationSuccess] = React.useState(false);
 
-  // Zmena: isAuthReady bude teraz získavané z globálneho window.isGlobalAuthReady
   const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady || false);
 
-  // ZMENA: Ukladanie Date objektov namiesto formátovaných reťazcov
   const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
   const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
   const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
@@ -136,12 +118,12 @@ function App() {
   const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
 
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
-  const [categoriesExist, setCategoriesExist] = React.useState(false); // OPRAVENÉ: Predvolená hodnota na false
+  const [categoriesExist, setCategoriesExist] = React.useState(false); 
   const [categoriesDataFromFirestore, setCategoriesDataFromFirestore] = React.useState({});
 
   const [countdown, setCountdown] = React.useState(null);
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
-  const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0); // NOVINKA: Kľúč pre vynútenie re-renderu a prepočtu useMemo
+  const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
   const [countdownEnd, setCountdownEnd] = React.useState(null);
   const countdownEndIntervalRef = React.useRef(null);
@@ -155,7 +137,6 @@ function App() {
   const isRegistrationOpen = React.useMemo(() => {
     if (!settingsLoaded) return false;
     const now = new Date();
-    // ZMENA: regStart a regEnd sú už Date objekty alebo null
     const regStart = registrationStartDate; 
     const regEnd = registrationEndDate;   
 
@@ -166,15 +147,14 @@ function App() {
       (isRegStartValid ? now >= regStart : true) &&
       (isRegEndValid ? now <= regEnd : true)
     );
-  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]); // NOVINKA: Pridaný periodicRefreshKey
+  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
 
   const isRegistrationClosed = React.useMemo(() => {
     if (!settingsLoaded) return false;
     const now = new Date();
-    // ZMENA: regEnd je už Date objekt alebo null
     const regEnd = registrationEndDate; 
     return regEnd instanceof Date && !isNaN(regEnd.getTime()) && now > regEnd;
-  }, [settingsLoaded, registrationEndDate, periodicRefreshKey]); // NOVINKA: Pridaný periodicRefreshKey
+  }, [settingsLoaded, registrationEndDate, periodicRefreshKey]); 
 
   const isBeforeRegistrationStart = React.useMemo(() => {
     if (!settingsLoaded) return false;
