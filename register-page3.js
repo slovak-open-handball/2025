@@ -34,7 +34,7 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
       });
       setCategoriesData(formattedCategories);
       setIsCategoriesLoaded(true);
-      console.log("Kategórie prijaté a spracované z props v Page3Form:", formattedCategories);
+//      console.log("Kategórie prijaté a spracované z props v Page3Form:", formattedCategories);
     } else if (availableCategoriesMap) {
       setCategoriesData({});
       setIsCategoriesLoaded(true);
