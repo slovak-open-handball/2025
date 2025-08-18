@@ -600,13 +600,16 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     }),
                                                     React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
-                                                React.createElement('div', { className: 'flex-initial w-auto flex flex-col items-center justify-center pt-2' },
+                                                // Upravený kontajner pre ToggleSwitch
+                                                React.createElement('div', { className: 'flex-initial w-auto flex flex-col pt-2' }, // Odstránené items-center a justify-center
                                                     React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný'),
-                                                    React.createElement(ToggleSwitch, {
-                                                        isOn: player.isRegistered || false,
-                                                        handleToggle: () => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', !player.isRegistered),
-                                                        disabled: loading,
-                                                    }),
+                                                    React.createElement('div', { className: 'mt-[11px]' }, // Upravený margin-top pre zarovnanie
+                                                        React.createElement(ToggleSwitch, {
+                                                            isOn: player.isRegistered || false,
+                                                            handleToggle: () => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', !player.isRegistered),
+                                                            disabled: loading,
+                                                        })
+                                                    ),
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', {
