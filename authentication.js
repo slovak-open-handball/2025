@@ -159,23 +159,20 @@ const handleAuthState = async () => {
                         return; // Zastaví ďalšie spracovanie pre tohto používateľa
                     } 
                     // NOVÁ LOGIKA: Presmerovanie schválených používateľov (admin, user, hall s approved: true)
+                    // ALE LEN AK SÚ NA PRIHLASOVACEJ STRÁNKE
                     else if (userProfileData.approved === true) {
                         const currentPath = window.location.pathname;
                         const targetPath = `${appBasePath}/logged-in-my-data.html`;
                         const loginPath = `${appBasePath}/login.html`; // Plná cesta k prihlasovacej stránke
 
-                        // Skontroluje, či aktuálna cesta ZAČÍNA predponou '/logged-in-' (napr. /2025/logged-in-profile.html)
-                        const isOnAnyLoggedInPage = currentPath.startsWith(`${appBasePath}/logged-in-`);
-
-                        // Ak je používateľ na prihlasovacej stránke, alebo nie je na žiadnej "logged-in" stránke
-                        // a nie je už na cieľovej stránke, presmeruje ho na cieľovú stránku.
-                        if (currentPath === loginPath || (!isOnAnyLoggedInPage && currentPath !== targetPath)) {
-                            console.log("AuthManager: Schválený používateľ je na prihlasovacej stránke alebo inej verejnej stránke. Presmerovávam na logged-in-my-data.html.");
+                        // Presmeruje len vtedy, ak je používateľ na prihlasovacej stránke
+                        if (currentPath === loginPath) {
+                            console.log("AuthManager: Schválený používateľ sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.");
                             window.location.href = targetPath;
                         } else {
-                            // Používateľ je schválený a je už na stránke, ktorá začína na 'logged-in-'
-                            // (alebo už je na targetPath), takže zostane na aktuálnej stránke.
-                            console.log("AuthManager: Schválený používateľ je už na 'logged-in-...' stránke. Zostávam na aktuálnej stránke.");
+                            // Používateľ je schválený a NIE JE na prihlasovacej stránke,
+                            // takže zostane na aktuálnej stránke.
+                            console.log("AuthManager: Schválený používateľ je už prihlásený a nie je na prihlasovacej stránke. Zostávam na aktuálnej stránke.");
                         }
                     }
 
