@@ -1,19 +1,19 @@
 // login.js
-// This file assumes that firebaseConfig, initialAuthToken and appId
-// are globally defined in <head> login.html.
-// It has been modified so that when "Forgot password?" is clicked, the login form is hidden
-// and the password reset form is displayed instead, without using a modal window with a dark background.
-// Email validation and styling of the "Send" button have also been added to the password reset form.
-// A red error will now be displayed if an account with the given email is not found.
-// In this version, the style of disabled buttons has been changed as per user request.
+// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
+// sú globálne definované v <head> login.html.
+// Bol upravený tak, aby sa pri kliknutí na "Zabudli ste heslo?" skryl prihlasovací formulár
+// a namiesto neho sa zobrazil formulár na obnovenie hesla, bez použitia modálneho okna s tmavým pozadím.
+// Taktiež bola pridaná validácia e-mailu a štýlovanie tlačidla "Odoslať" aj do formulára na obnovenie hesla.
+// Teraz sa zobrazí červená chyba, ak sa účet s daným e-mailom nenájde.
+// V tejto verzii bol zmenený štýl zablokovaných tlačidiel podľa požiadavky používateľa.
 
-// Imports for necessary Firebase functions
+// Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 
-// SVG icons for showing/hiding password
+// SVG ikony pre zobrazenie/skrytie hesla
 const EyeIcon = React.createElement(
   'svg',
   { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -29,7 +29,7 @@ const EyeOffIcon = React.createElement(
   React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
 );
 
-// PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
+// Komponent PasswordInput pre polia s heslom s prepínačom viditeľnosti (prevedené na React.createElement)
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex }) {
     return React.createElement(
         'div',
@@ -76,14 +76,14 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     );
 }
 
-// Function to validate email address
+// Funkcia na validáciu e-mailovej adresy
 const isEmailValid = (email) => {
-    // Regex to check 'a@b.cd' format
+    // Regex na kontrolu formátu 'a@b.cd'
     const re = /\S+@\S+\.\S{2,}/;
     return re.test(email);
 };
 
-// Password Reset component
+// Komponent pre obnovenie hesla
 const ResetPasswordForm = ({ onCancel }) => {
     const [email, setEmail] = React.useState('');
     const [message, setMessage] = React.useState('');
@@ -97,24 +97,24 @@ const ResetPasswordForm = ({ onCancel }) => {
         setError('');
 
         if (!isEmailValid(email)) {
-            setError('Please enter a valid email address.');
+            setError('Prosím, zadajte platnú e-mailovú adresu.');
             setLoading(false);
             return;
         }
 
         try {
             if (!window.auth) {
-                console.error("Firebase Auth is not initialized.");
+                console.error("Firebase Auth nie je inicializovaný.");
                 return;
             }
             await sendPasswordResetEmail(window.auth, email);
-            setMessage('A password reset link has been sent to your email.');
+            setMessage('Odkaz na obnovenie hesla bol odoslaný na váš e-mail.');
         } catch (err) {
-            console.error("Error sending password reset email:", err);
+            console.error("Chyba pri odosielaní e-mailu na obnovenie hesla:", err);
             if (err.code === 'auth/user-not-found') {
-                setError('No account found with this email address.');
+                setError('Nepodarilo sa nájsť účet s touto e-mailovou adresou.');
             } else {
-                setError('Error: Failed to send password reset email. Please try again.');
+                setError('Chyba: E-mail na obnovenie hesla sa nepodarilo odoslať. Skúste to znova.');
             }
         } finally {
             setLoading(false);
@@ -126,7 +126,7 @@ const ResetPasswordForm = ({ onCancel }) => {
     return React.createElement(
         'div',
         { className: 'bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4' },
-        React.createElement('h2', { className: 'text-2xl font-bold mb-4 text-center' }, 'Password Reset'),
+        React.createElement('h2', { className: 'text-2xl font-bold mb-4 text-center' }, 'Obnovenie hesla'),
         React.createElement(
             'form',
             { onSubmit: handleResetPassword },
@@ -136,7 +136,7 @@ const ResetPasswordForm = ({ onCancel }) => {
                 React.createElement(
                     'label',
                     { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email-reset' },
-                    'Email address'
+                    'E-mailová adresa'
                 ),
                 React.createElement(
                     'input',
@@ -144,7 +144,7 @@ const ResetPasswordForm = ({ onCancel }) => {
                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-colors duration-200',
                         id: 'email-reset',
                         type: 'email',
-                        placeholder: 'Enter email address',
+                        placeholder: 'Zadajte e-mailovú adresu',
                         value: email,
                         onChange: (e) => setEmail(e.target.value),
                         disabled: loading,
@@ -167,7 +167,7 @@ const ResetPasswordForm = ({ onCancel }) => {
                         disabled: isSendButtonDisabled,
                         tabIndex: 2
                     },
-                    loading ? 'Sending...' : 'Send'
+                    loading ? 'Odosielam...' : 'Odoslať'
                 )
             ),
             React.createElement(
@@ -178,7 +178,7 @@ const ResetPasswordForm = ({ onCancel }) => {
                     className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 w-full mt-4',
                     tabIndex: 3
                 },
-                'Cancel'
+                'Zrušiť'
             ),
             message && React.createElement(
                 'p',
@@ -195,7 +195,7 @@ const ResetPasswordForm = ({ onCancel }) => {
 };
 
 
-// Main application component for the login page (converted to React.createElement)
+// Hlavný komponent aplikácie pre prihlasovaciu stránku (prevedený na React.createElement)
 const App = () => {
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
@@ -203,17 +203,17 @@ const App = () => {
     const [error, setError] = React.useState('');
     const [showPassword, setShowPassword] = React.useState(false);
     const [showResetPasswordForm, setShowResetPasswordForm] = React.useState(false);
-    // NEW: State for the unapproved admin message
+    // NOVINKA: Stav pre správu o neschválenom administrátorovi
     const [unapprovedAdminMessage, setUnapprovedAdminMessage] = React.useState('');
 
-    // Function to toggle password visibility
+    // Funkcia na prepínanie viditeľnosti hesla
     const toggleShowPassword = () => {
         setShowPassword(prevShowPassword => !prevShowPassword);
     };
 
-    // Password validation
+    // Validácia hesla
     const isPasswordValid = (password) => {
-        // Password must be at least 10 characters long
+        // Heslo musí mať aspoň 10 znakov
         return password.length >= 10;
     };
 
@@ -221,65 +221,64 @@ const App = () => {
         e.preventDefault();
         setLoading(true);
         setError('');
-        setUnapprovedAdminMessage(''); // Clear unapproved admin message on new login attempt
+        setUnapprovedAdminMessage(''); // Vymazať správu o neschválenom administrátorovi pri novom pokuse o prihlásenie
 
         try {
             if (!window.auth) {
-                throw new Error("Firebase Auth is not initialized.");
+                throw new Error("Firebase Auth nie je inicializovaný.");
             }
             await signInWithEmailAndPassword(window.auth, email, password);
-            // If login is successful, onAuthStateChanged listener in authentication.js
-            // will handle the redirect to index.html.
+            // Ak je prihlásenie úspešné, onAuthStateChanged listener v authentication.js
+            // sa postará o presmerovanie na index.html.
         } catch (err) {
-            console.error("Error during login:", err);
+            console.error("Chyba pri prihlásení:", err);
             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-                setError('Incorrect email or password.');
+                setError('Nesprávny e-mail alebo heslo.');
             } else if (err.code === 'auth/invalid-email') {
-                setError('Invalid email format.');
+                setError('Neplatný formát e-mailu.');
             } else {
-                setError('You entered an incorrect username or password. Please try again.');
+                setError('Zadali ste nesprávne používateľské meno alebo heslo. Skúste to znova.');
             }
         } finally {
             setLoading(false);
         }
     };
 
-    // Calculate if the button is disabled
+    // Vypočítame, či je tlačidlo povolené
     const isButtonDisabled = loading || !isEmailValid(email) || !isPasswordValid(password);
 
     React.useEffect(() => {
-        const authListener = onAuthStateChanged(window.auth, (user) => {
-            if (user) {
-                // If user is already logged in (e.g., from previous session),
-                // onAuthStateChanged in authentication.js will handle redirect
-                // based on their approved status.
-                console.log("login.js: User is logged in. authentication.js will handle redirect.");
-                // No explicit redirect to index.html from here,
-                // let authentication.js manage based on approval status.
-            }
-        });
+        // Tento listener bol prenesený do authentication.js, kde sa spravuje globálne.
+        // Tu ho už nepotrebujeme, pretože authentication.js sa postará o presmerovanie.
+        // const authListener = onAuthStateChanged(window.auth, (user) => {
+        //     if (user) {
+        //         console.log("login.js: Používateľ je prihlásený. Presmerovávam na index.html.");
+        //         window.location.href = 'index.html';
+        //     }
+        // });
 
-        // Parse URL for status parameter on component mount
+        // Analýza URL pre parameter stavu pri načítaní komponentu
         const urlParams = new URLSearchParams(window.location.search);
         const status = urlParams.get('status');
         if (status === 'unapproved_admin') {
             setUnapprovedAdminMessage("Váš účet bol zaregistrovaný ako administrátorský. Prosím, počkajte na schválenie. O stave vášho účtu vás budeme informovať.");
-            // Optionally clear the URL parameter so it doesn't reappear on refresh
+            // Voliteľné: Vymazať URL parameter, aby sa znova nezobrazil pri obnovení stránky
             const newUrl = window.location.origin + window.location.pathname;
             window.history.replaceState({}, document.title, newUrl);
         }
 
 
-        // After rendering, make sure the header is visible
+        // Po vykreslení sa uistíme, že hlavička je viditeľná
         const header = document.querySelector('header');
         if (header) {
             header.classList.remove('invisible');
             header.classList.add('bg-blue-800');
-            console.log("login.js: Header set to visible.");
+            console.log("login.js: Hlavička nastavená ako viditeľná.");
         }
 
-        return () => authListener();
-    }, []);
+        // Return funkcia pre čistenie sa už nebude viazať na authListener, ktorý bol odstránený.
+        // return () => authListener();
+    }, []); // Ponechanie prázdneho poľa závislostí zabezpečí, že sa spustí len raz pri pripojení.
 
     return React.createElement(
         'div',
@@ -296,10 +295,10 @@ const App = () => {
                     React.createElement(
                         'h1',
                         { className: 'text-3xl font-bold text-gray-800' },
-                        'Login'
+                        'Prihlásenie'
                     )
                 ),
-                // Display the unapproved admin message here
+                // Zobrazenie správy o neschválenom administrátorovi
                 unapprovedAdminMessage && React.createElement(
                     'div',
                     { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -318,7 +317,7 @@ const App = () => {
                         React.createElement(
                             'label',
                             { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' },
-                            'Email address'
+                            'E-mailová adresa'
                         ),
                         React.createElement(
                             'input',
@@ -326,7 +325,7 @@ const App = () => {
                                 className: 'shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-colors duration-200',
                                 id: 'email',
                                 type: 'email',
-                                placeholder: 'Enter email address',
+                                placeholder: 'Zadajte e-mailovú adresu',
                                 value: email,
                                 onChange: (e) => setEmail(e.target.value),
                                 disabled: loading,
@@ -337,10 +336,10 @@ const App = () => {
                     ),
                     React.createElement(PasswordInput, {
                         id: 'password',
-                        label: 'Password',
+                        label: 'Heslo',
                         value: password,
                         onChange: (e) => setPassword(e.target.value),
-                        placeholder: 'Enter password',
+                        placeholder: 'Zadajte heslo',
                         autoComplete: 'current-password',
                         showPassword: showPassword,
                         toggleShowPassword: toggleShowPassword,
@@ -371,7 +370,7 @@ const App = () => {
                                 disabled: isButtonDisabled,
                                 tabIndex: 3
                             },
-                            loading ? 'Logging in...' : 'Login'
+                            loading ? 'Prihlasujem...' : 'Prihlásiť'
                         ),
                         React.createElement(
                             'a',
@@ -380,7 +379,7 @@ const App = () => {
                                 onClick: (e) => { e.preventDefault(); setShowResetPasswordForm(true); },
                                 className: 'inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200 mt-4',
                             },
-                            'Forgot Password?'
+                            'Zabudli ste heslo?'
                         )
                     )
                 )
@@ -389,19 +388,19 @@ const App = () => {
     );
 };
 
-// Function to check if all necessary global variables are available
+// Funkcia na overenie, či sú všetky potrebné globálne premenné dostupné
 const renderApp = () => {
     try {
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(React.createElement(App, null));
-        console.log("login.js: React App rendered after 'globalDataUpdated' event.");
+        console.log("login.js: React App vykreslená po prijatí udalosti 'globalDataUpdated'.");
     } catch (error) {
-        console.error("Error rendering React component:", error);
+        console.error("Chyba pri vykresľovaní React komponentu:", error);
     }
 };
 
-// Wait for 'globalDataUpdated' event before rendering the application.
-// If the event has already occurred, render immediately.
+// Počkajte na udalosť 'globalDataUpdated' predtým, ako vykreslíme aplikáciu.
+// Ak sa udalosť už odohrala, vykreslíme okamžite.
 if (window.isGlobalAuthReady) {
     renderApp();
 } else {
