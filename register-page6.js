@@ -8,14 +8,14 @@ function ToggleSwitch({ isOn, handleToggle, disabled }) {
     return React.createElement(
         'div',
         {
-            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
+            className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out cursor-pointer ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`.trim(),
             onClick: disabled ? null : handleToggle,
             style: { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' }
         },
         React.createElement(
             'span',
             {
-                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`,
+                className: `inline-block w-5 h-5 transform bg-white rounded-full shadow-lg ring-0 transition-transform duration-200 ease-in-out ${togglePositionClass}`.trim(),
                 style: { boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }
             }
         )
@@ -234,8 +234,16 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
         // Validácia dátumu narodenia pre hráča
         const categoryData = Object.values(availableCategoriesMap || {}).find(cat => cat.name === categoryName);
-        const categoryDateFrom = categoryData ? new Date(categoryData.dateFrom) : null;
-        const categoryDateTo = categoryData ? new Date(categoryData.dateTo) : null;
+        let categoryDateFrom = null;
+        let categoryDateTo = null;
+
+        if (categoryData) {
+            categoryDateFrom = new Date(categoryData.dateFrom);
+            categoryDateTo = new Date(categoryData.dateTo);
+            // Nastavíme dátumy z kategórie na začiatok dňa v UTC
+            categoryDateFrom.setUTCHours(0, 0, 0, 0);
+            categoryDateTo.setUTCHours(0, 0, 0, 0);
+        }
 
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
@@ -246,21 +254,13 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 const playerDob = new Date(dob);
                 // Nastavíme dátum na začiatok dňa, aby sa predišlo problémom s časovými pásmami pri porovnávaní
                 playerDob.setUTCHours(0, 0, 0, 0); 
-                if (categoryDateFrom) {
-                    const from = new Date(categoryDateFrom);
-                    from.setUTCHours(0,0,0,0);
-                    if (playerDob < from) {
-                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
-                        teamHasErrors = true;
-                    }
+                if (categoryDateFrom && playerDob < categoryDateFrom) {
+                    dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
+                    teamHasErrors = true;
                 }
-                if (categoryDateTo) {
-                    const to = new Date(categoryDateTo);
-                    to.setUTCHours(0,0,0,0);
-                    if (playerDob > to) {
-                        dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
-                        teamHasErrors = true;
-                    }
+                if (categoryDateTo && playerDob > categoryDateTo) {
+                    dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu. Zadajte, prosím, platný dátum.`;
+                    teamHasErrors = true;
                 }
             }
             if (dateOfBirthError) {
@@ -491,7 +491,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
             : 'bg-blue-500 hover:bg-blue-700 text-white'
         }
-    `;
+    `.trim();
 
     const handlePage6Submit = (e) => {
         e.preventDefault();
@@ -569,7 +569,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
             React.createElement('strong', null, 'ale je povinné ich vyplniť v\u00A0sekcii "Moja zóna"'),
             ' po prihlásení sa do svojho turnajového účtu do ',
-            React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, formatDateAndTime(dataEditDeadline) + ' hod.')
+            React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, formatDateAndTime(dataEditDeadline) + ' hod.') /* Použitie novej formátovacej funkcie */
         ),
 
         React.createElement(
@@ -614,7 +614,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumber ? 'border-red-500' : ''}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumber ? 'border-red-500' : ''}`.trim(),
                                                         value: player.jerseyNumber || '',
                                                         onChange: (e) => {
                                                             const value = e.target.value.replace(/[^0-9]/g, '');
@@ -632,33 +632,33 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`.trim(),
                                                         value: player.firstName || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'firstName', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Meno hráča'
                                                     }),
-                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`.trim(),
                                                         value: player.lastName || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'lastName', e.target.value),
                                                         disabled: loading,
                                                         placeholder: 'Priezvisko hráča'
                                                     }),
-                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || '\u00A0')
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || '\u00A0')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
                                                     React.createElement('label', { htmlFor: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
                                                     React.createElement('input', {
                                                         type: 'date',
                                                         id: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.dateOfBirth ? 'border-red-500' : ''}`, // Aplikuj border, ak je chyba
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.dateOfBirth ? 'border-red-500' : ''}`.trim(), // Aplikuj border, ak je chyba
                                                         value: player.dateOfBirth || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
                                                         disabled: loading,
@@ -680,28 +680,28 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 ),
                                                 React.createElement('div', {
-                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${player.isRegistered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`
+                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${player.isRegistered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`.trim()
                                                 },
                                                     React.createElement('label', { htmlFor: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo registrácie'),
                                                     React.createElement('input', {
                                                         type: 'text',
                                                         id: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? 'border-red-500' : ''}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? 'border-red-500' : ''}`.trim(),
                                                         value: player.registrationNumber || '',
                                                         onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
                                                         disabled: loading || !player.isRegistered,
                                                         placeholder: 'Číslo'
                                                     }),
-                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}` }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
                                                 ),
                                             ),
                                             // Conditional rendering for address fields based on hasAccommodation
                                             React.createElement('div', {
-                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden` // Adjusted classes
+                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`.trim() // Adjusted classes
                                             },
                                                 hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
                                                 React.createElement('div', {
-                                                    className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}` // Added hidden class if no accommodation
+                                                    className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}`.trim() // Added hidden class if no accommodation
                                                 },
                                                     React.createElement('div', {
                                                         className: `flex-1 min-w-[120px]`
@@ -835,10 +835,10 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             ),
                                             // Conditional rendering for address fields
                                             React.createElement('div', {
-                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden` // Adjusted classes
+                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`.trim() // Adjusted classes
                                             },
                                                 hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
-                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}` },
+                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}`.trim() },
                                                     React.createElement('div', { className: `flex-1 min-w-[120px]` },
                                                         React.createElement('label', { htmlFor: `street-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
                                                         React.createElement('input', {
@@ -961,10 +961,10 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             ),
                                             // Conditional rendering for address fields
                                             React.createElement('div', {
-                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden` // Adjusted classes
+                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`.trim() // Adjusted classes
                                             },
                                                 hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
-                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}` },
+                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}`.trim() },
                                                     React.createElement('div', { className: `flex-1 min-w-[120px]` },
                                                         React.createElement('label', { htmlFor: `street-man-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
                                                         React.createElement('input', {
@@ -1088,10 +1088,10 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             ),
                                             // Conditional rendering for address fields
                                             React.createElement('div', {
-                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`
+                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`.trim()
                                             },
                                                 hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
-                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}` },
+                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}`.trim() },
                                                     React.createElement('div', { className: `flex-1 min-w-[120px]` },
                                                         React.createElement('label', { htmlFor: `street-male-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
                                                         React.createElement('input', {
@@ -1215,10 +1215,10 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             ),
                                             // Conditional rendering for address fields
                                             React.createElement('div', {
-                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`
+                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`.trim()
                                             },
                                                 hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
-                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}` },
+                                                React.createElement('div', { className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}`.trim() },
                                                     React.createElement('div', { className: `flex-1 min-w-[120px]` },
                                                         React.createElement('label', { htmlFor: `street-female-driver-${categoryName}-${teamIndex}-${driverIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
                                                         React.createElement('input', {
