@@ -50,15 +50,15 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 
 // NEW LOGIC: Extract year from appId or default
 const getAppBasePath = () => {
-    const appYearMatch = appId.match(/(\d{4})/); // Finds the first four-digit group
-    const appYear = appYearMatch ? appYearMatch[1] : '2025'; // Uses the found year or defaults to '2025'
+    const appYearMatch = appId.match(/(\d{4})/); // Nájde prvú štvorcifernú skupinu
+    const appYear = appYearMatch ? appYearMatch[1] : '2025'; // Použije nájdený rok alebo predvolené '2025'
     return `/${appYear}`;
 };
 
-const appBasePath = getAppBasePath(); // Getting the dynamic base path
+const appBasePath = getAppBasePath(); // Získanie dynamickej základnej cesty
 
 
-// Initialization of Firebase application
+// Inicializácia Firebase aplikácie
 let app;
 let db;
 let auth;
@@ -68,9 +68,9 @@ const setupFirebase = () => {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        console.log("AuthManager: Firebase initialized.");
+        console.log("AuthManager: Firebase inicializovaný.");
 
-        // Add globally accessible functions
+        // Pridáme globálne sprístupnené funkcie
         window.auth = auth;
         window.db = db;
         window.reauthenticateWithCredential = reauthenticateWithCredential;
@@ -78,7 +78,7 @@ const setupFirebase = () => {
         window.EmailAuthProvider = EmailAuthProvider;
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
     } catch (e) {
-        console.error("AuthManager: Error initializing Firebase:", e);
+        console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
     }
 };
 
@@ -87,9 +87,9 @@ const handleAuthState = async () => {
         window.isGlobalAuthReady = true;
 
         if (user) {
-            console.log("AuthManager: User logged in:", user.uid);
+            console.log("AuthManager: Používateľ prihlásený:", user.uid);
             
-            // Correct path to the profile document based on provided rules
+            // Správna cesta k profilovému dokumentu na základe poskytnutých pravidiel
             const userDocRef = doc(db, `users/${user.uid}`);
             
             // Unsubscribe from previous snapshot listener if it exists
@@ -101,19 +101,37 @@ const handleAuthState = async () => {
                 if (docSnap.exists()) {
                     const userProfileData = { id: docSnap.id, ...docSnap.data() };
                     
-                    // NEW LOGIC: Check if user is an unapproved admin and sign them out
+                    // Logic for unapproved admin
                     if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                         console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa.");
-                        // Perform signOut and then clear global data
                         signOut(auth).then(() => {
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                            // Redirect to the specified login page using the dynamic base path and add status parameter
                             window.location.href = `${appBasePath}/login.html?status=unapproved_admin`; 
                         }).catch((error) => {
                             console.error("AuthManager: Chyba pri odhlasovaní neschváleného administrátora:", error);
                         });
                         return; // Stop further processing for this user
+                    } 
+                    // NEW LOGIC: Redirect approved users (admin, user, hall with approved: true)
+                    else if (userProfileData.approved === true) {
+                        console.log("AuthManager: Schválený používateľ detekovaný. Presmerovávam na logged-in-my-data.html.");
+                        // Only redirect if not already on the target page to avoid infinite loops
+                        // Also check if current path is login.html, to ensure redirect happens after successful login.
+                        const currentPath = window.location.pathname;
+                        const targetPath = `${appBasePath}/logged-in-my-data.html`;
+                        const loginPath = `${appBasePath}/login.html`; // Full login path
+
+                        // Redirect if not already on the target page and not currently on the login page (to prevent redirect loops)
+                        // Or if currently on the login page and just successfully logged in
+                        if (currentPath !== targetPath && currentPath === loginPath) {
+                             window.location.href = targetPath;
+                        } else if (currentPath !== targetPath && userProfileData.id === user.uid) { // If user logs in successfully on another page, redirect
+                             // This condition handles cases where a user might be on a different page
+                             // (not login.html) and their auth state changes (e.g., re-authentication or session refresh).
+                             // We ensure we redirect only if their profile data matches the current user.
+                            window.location.href = targetPath;
+                        }
                     }
 
                     window.globalUserProfileData = userProfileData;
