@@ -179,11 +179,6 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         const newPlayerErrorsForTeam = {}; // Chyby pre aktuálny tím
         let teamHasErrors = false;
 
-        // NOVINKA: Debug log pre availableCategoriesMap a categoryName
-        console.log(`[Validation Debug] Vstupná availableCategoriesMap pre kategóriu '${categoryName}':`, availableCategoriesMap);
-        console.log(`[Validation Debug] Hľadám kategóriu s názvom: '${categoryName}'`);
-
-
         // Validácia čísla dresu
         const jerseyNumbers = new Set();
         const jerseyNumberErrors = new Set();
@@ -275,7 +270,6 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             // Nastavíme dátumy z kategórie na začiatok dňa v UTC
             categoryDateFrom.setUTCHours(0, 0, 0, 0);
             categoryDateTo.setUTCHours(0, 0, 0, 0);
-            console.log(`[Validation Debug] Kategória '${categoryName}': Dátum od (UTC Midnight): ${categoryDateFrom.toISOString()}, Dátum do (UTC Midnight): ${categoryDateTo.toISOString()}`);
         } else {
             console.log(`[Validation Debug] Kategória '${categoryName}' nebola nájdená v availableCategoriesMap. Validácia dátumu narodenia pre túto kategóriu bude preskočená.`);
         }
@@ -285,31 +279,14 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             const dob = player.dateOfBirth;
             let dateOfBirthError = '';
 
-            console.log(`[Validation Debug] Hráč ${i + 1} (${categoryName} - Tím ${teamIndex}): Zadaný DOB: '${dob}'`);
-
             if (dob) {
-                // Pre input type="date" prehliadač už vracia YYYY-MM-DD
                 const playerDob = new Date(dob);
                 
-                console.log(`[Validation Debug] Hráč ${i + 1}: Parsed DOB (Date object): ${playerDob.toISOString()}`);
-
-                // Kontrola, či je dátum platný po parsovaní
                 if (isNaN(playerDob.getTime())) {
                     dateOfBirthError = `Zadajte, prosím, platný dátum narodenia.`;
                     teamHasErrors = true;
-                    console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Neplatný dátum.`);
                 } else {
-                    // Nastavíme dátum na začiatok dňa, aby sa predišlo problémom s časovými pásmami pri porovnávaní
                     playerDob.setUTCHours(0, 0, 0, 0); 
-                    console.log(`[Validation Debug] Hráč ${i + 1}: DOB (UTC Midnight): ${playerDob.toISOString()}`);
-
-                    // Nové logy pre porovnanie
-                    if (categoryDateTo) {
-                        console.log(`[Validation Debug] Hráč ${i + 1}: Player DOB (${playerDob.toISOString()}) > Category TO (${categoryDateTo.toISOString()})? ${playerDob > categoryDateTo}`);
-                    }
-
-                    // Aplikujeme chybu len ak máme kategórie dátumu
-                    // Pôvodná kontrola: if (categoryDateFrom && playerDob < categoryDateFrom) { ... } bola odstránená
                     
                     if (categoryDateTo && playerDob > categoryDateTo) {
                         // Ak je už jedna chyba, pridáme ju k existujúcej
@@ -319,7 +296,6 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                             dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`;
                         }
                         teamHasErrors = true;
-                        console.log(`[Validation Debug] Hráč ${i + 1}: CHYBA - Dátum príliš neskorý.`);
                     }
                 }
             }
