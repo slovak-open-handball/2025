@@ -82,9 +82,9 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
-  // Nové stavy pre aktívny/neaktívny dátum, predvolene true
-  const [dateFromActive, setDateFromActive] = React.useState(true);
-  const [dateToActive, setDateToActive] = React.useState(true);
+  // Nové stavy pre aktívny/neaktívny dátum, PREDVOLENE false
+  const [dateFromActive, setDateFromActive] = React.useState(false); // ZMENA: Predvolené na false
+  const [dateToActive, setDateToActive] = React.useState(false);   // ZMENA: Predvolené na false
 
   // Kontrola, či názov kategórie už existuje (case-insensitive) aj s dátumami
   const categoryExists = React.useMemo(() => {
@@ -99,11 +99,20 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
   if (!show) return null;
 
   const handleSubmit = () => {
-    if (newCategoryName.trim() === '' || dateFrom === '' || dateTo === '') {
-        showLocalNotification("Prosím vyplňte všetky polia (Názov, Dátum od, Dátum do).", 'error');
+    if (newCategoryName.trim() === '') {
+        showLocalNotification("Prosím vyplňte názov kategórie.", 'error');
         return;
     }
-    if (new Date(dateFrom) > new Date(dateTo)) {
+    // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
+    if (dateFromActive && dateFrom === '') {
+        showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
+        return;
+    }
+    if (dateToActive && dateTo === '') {
+        showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
+        return;
+    }
+    if (dateFromActive && dateToActive && new Date(dateFrom) > new Date(dateTo)) {
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
@@ -112,11 +121,17 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
     setNewCategoryName(''); // Vyčistí pole po odoslaní
     setDateFrom('');
     setDateTo('');
-    setDateFromActive(true); // Reset to default
-    setDateToActive(true); // Reset to default
+    setDateFromActive(false); // Reset to default (false)
+    setDateToActive(false);   // Reset to default (false)
   };
 
-  const isDisabled = loading || newCategoryName.trim() === '' || dateFrom === '' || dateTo === '' || categoryExists || (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo));
+  // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
+  const isDisabled = loading || newCategoryName.trim() === '' || 
+                     (dateFromActive && dateFrom === '') || 
+                     (dateToActive && dateTo === '') || 
+                     categoryExists || 
+                     (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo));
+
 
   return React.createElement(
     'div',
@@ -154,7 +169,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: dateFrom,
             onChange: (e) => setDateFrom(e.target.value),
-            required: true,
+            required: dateFromActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
 
@@ -173,7 +188,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: dateTo,
             onChange: (e) => setDateTo(e.target.value),
-            required: true,
+            required: dateToActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
         categoryExists && React.createElement( // Zobrazenie chybovej správy
@@ -218,9 +233,9 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   const [editedCategoryName, setEditedCategoryName] = React.useState(category ? category.name : '');
   const [editedDateFrom, setEditedDateFrom] = React.useState(category ? category.dateFrom : '');
   const [editedDateTo, setEditedDateTo] = React.useState(category ? category.dateTo : '');
-  // Nové stavy pre aktívny/neaktívny dátum, predvolene true pre spätnú kompatibilitu
-  const [editedDateFromActive, setEditedDateFromActive] = React.useState(category ? (category.dateFromActive !== undefined ? category.dateFromActive : true) : true);
-  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : true) : true);
+  // Nové stavy pre aktívny/neaktívny dátum, PREDVOLENE false pre spätnú kompatibilitu
+  const [editedDateFromActive, setEditedDateFromActive] = React.useState(category ? (category.dateFromActive !== undefined ? category.dateFromActive : false) : false); // ZMENA: Predvolené na false
+  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : false) : false);     // ZMENA: Predvolené na false
 
 
   React.useEffect(() => {
@@ -228,9 +243,9 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
       setEditedCategoryName(category.name);
       setEditedDateFrom(category.dateFrom || '');
       setEditedDateTo(category.dateTo || '');
-      // Načítanie existujúcich hodnôt alebo predvolené na true
-      setEditedDateFromActive(category.dateFromActive !== undefined ? category.dateFromActive : true);
-      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : true);
+      // Načítanie existujúcich hodnôt alebo predvolené na false
+      setEditedDateFromActive(category.dateFromActive !== undefined ? category.dateFromActive : false); // ZMENA: Predvolené na false
+      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : false);     // ZMENA: Predvolené na false
     }
   }, [category]);
 
@@ -255,11 +270,20 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   if (!show || !category) return null;
 
   const handleSubmit = () => {
-    if (editedCategoryName.trim() === '' || editedDateFrom === '' || editedDateTo === '') {
-        showLocalNotification("Prosím vyplňte všetky polia (Názov, Dátum od, Dátum do).", 'error');
+    if (editedCategoryName.trim() === '') {
+        showLocalNotification("Prosím vyplňte názov kategórie.", 'error');
         return;
     }
-    if (new Date(editedDateFrom) > new Date(editedDateTo)) {
+    // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
+    if (editedDateFromActive && editedDateFrom === '') {
+        showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
+        return;
+    }
+    if (editedDateToActive && editedDateTo === '') {
+        showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
+        return;
+    }
+    if (editedDateFromActive && editedDateToActive && new Date(editedDateFrom) > new Date(editedDateTo)) {
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
@@ -267,7 +291,12 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
     onSaveCategory(category.id, editedCategoryName, editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive);
   };
 
-  const isDisabled = loading || editedCategoryName.trim() === '' || editedDateFrom === '' || editedDateTo === '' || categoryExists || (editedDateFrom && editedDateTo && new Date(editedDateFrom) > new Date(editedDateTo));
+  // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
+  const isDisabled = loading || editedCategoryName.trim() === '' || 
+                     (editedDateFromActive && editedDateFrom === '') || 
+                     (editedDateToActive && editedDateTo === '') || 
+                     categoryExists || 
+                     (editedDateFromActive && editedDateToActive && editedDateFrom && editedDateTo && new Date(editedDateFrom) > new Date(editedDateTo));
 
   return React.createElement(
     'div',
@@ -305,7 +334,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: editedDateFrom,
             onChange: (e) => setEditedDateFrom(e.target.value),
-            required: true,
+            required: editedDateFromActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
 
@@ -324,7 +353,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: editedDateTo,
             onChange: (e) => setEditedDateTo(e.target.value),
-            required: true,
+            required: editedDateToActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
         categoryExists && React.createElement( // Zobrazenie chybovej správy
@@ -560,29 +589,30 @@ function AddCategoriesApp() {
                 let name = '';
                 let dateFrom = '';
                 let dateTo = '';
-                let dateFromActive = true; // Predvolené na true pre spätnú kompatibilitu
-                let dateToActive = true;   // Predvolené na true pre spätnú kompatibilitu
+                // ZMENA: Predvolené na false pre spätnú kompatibilitu, ak pole neexistuje
+                let dateFromActive = false; 
+                let dateToActive = false;   
 
                 if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
                     // Nový formát: { name: "...", dateFrom: "...", dateTo: "...", dateFromActive: true/false, dateToActive: true/false }
                     name = categoryValue.name;
                     dateFrom = categoryValue.dateFrom || '';
                     dateTo = categoryValue.dateTo || '';
-                    dateFromActive = categoryValue.dateFromActive !== undefined ? categoryValue.dateFromActive : true;
-                    dateToActive = categoryValue.dateToActive !== undefined ? categoryValue.dateToActive : true;
+                    dateFromActive = categoryValue.dateFromActive !== undefined ? categoryValue.dateFromActive : false; // ZMENA: Predvolené na false
+                    dateToActive = categoryValue.dateToActive !== undefined ? categoryValue.dateToActive : false;     // ZMENA: Predvolené na false
                 } else if (typeof categoryValue === 'string') {
                     // Starý formát: "CategoryName" - pre spätnú kompatibilitu
                     name = categoryValue;
                     dateFrom = '';
                     dateTo = '';
-                    // Tu ponechávame default true
+                    // Tu ponechávame default false
                 } else {
                     // Spracovanie neočakávaného formátu, napr. zalogovanie varovania
                     console.warn(`Neočakávaný formát dát kategórie pre ID ${id}:`, categoryValue);
                     name = `Neznáma kategória (${id})`; // Záložný názov
                     dateFrom = '';
                     dateTo = '';
-                    // Tu ponechávame default true
+                    // Tu ponechávame default false
                 }
                 return { id, name, dateFrom, dateTo, dateFromActive, dateToActive };
             });
@@ -683,11 +713,25 @@ function AddCategoriesApp() {
       return;
     }
     const trimmedCategoryName = categoryName.trim();
-    if (trimmedCategoryName === '' || dateFrom === '' || dateTo === '') {
+    if (trimmedCategoryName === '') { // ZMENA: Iba názov je vždy povinný
       if (typeof showLocalNotification === 'function') {
-        showLocalNotification("Názov kategórie alebo dátumy nemôžu byť prázdne.", 'error');
+        showLocalNotification("Názov kategórie nemôže byť prázdny.", 'error');
       }
       return;
+    }
+
+    // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
+    if (dateFromActive && dateFrom === '') {
+        showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
+        return;
+    }
+    if (dateToActive && dateTo === '') {
+        showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
+        return;
+    }
+    if (dateFromActive && dateToActive && new Date(dateFrom) > new Date(dateTo)) {
+        showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
+        return;
     }
 
     setLoading(true);
@@ -721,10 +765,10 @@ function AddCategoriesApp() {
       await setDoc(categoriesDocRef, {
         [newFieldId]: {
             name: trimmedCategoryName,
-            dateFrom: dateFrom,
-            dateTo: dateTo,
-            dateFromActive: dateFromActive, // Ukladanie stavu aktivity dátumu
-            dateToActive: dateToActive      // Ukladanie stavu aktivity dátumu
+            dateFrom: dateFromActive ? dateFrom : '', // Ukladáme prázdny reťazec, ak nie je aktívne
+            dateTo: dateToActive ? dateTo : '',       // Ukladáme prázdny reťazec, ak nie je aktívne
+            dateFromActive: dateFromActive,           // Ukladanie stavu aktivity dátumu
+            dateToActive: dateToActive                // Ukladanie stavu aktivity dátumu
         }
       }, { merge: true });
 
@@ -756,11 +800,24 @@ function AddCategoriesApp() {
       return;
     }
     const trimmedNewName = newName.trim();
-    if (trimmedNewName === '' || newDateFrom === '' || newDateTo === '') {
+    if (trimmedNewName === '') { // ZMENA: Iba názov je vždy povinný
       if (typeof showLocalNotification === 'function') {
-        showLocalNotification("Názov kategórie alebo dátumy nemôžu byť prázdne.", 'error');
+        showLocalNotification("Názov kategórie nemôže byť prázdny.", 'error');
       }
       return;
+    }
+    // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
+    if (newDateFromActive && newDateFrom === '') {
+        showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
+        return;
+    }
+    if (newDateToActive && newDateTo === '') {
+        showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
+        return;
+    }
+    if (newDateFromActive && newDateToActive && new Date(newDateFrom) > new Date(newDateTo)) {
+        showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
+        return;
     }
 
     setLoading(true);
@@ -793,17 +850,17 @@ function AddCategoriesApp() {
       const originalCategoryName = originalCategoryData.name;
       const originalDateFrom = originalCategoryData.dateFrom;
       const originalDateTo = originalCategoryData.dateTo;
-      const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : true;
-      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : true;
+      const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : false; // ZMENA: Predvolené na false
+      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : false;     // ZMENA: Predvolené na false
 
       // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
       await setDoc(categoriesDocRef, {
         [categoryId]: {
             name: trimmedNewName,
-            dateFrom: newDateFrom,
-            dateTo: newDateTo,
-            dateFromActive: newDateFromActive, // Ukladanie stavu aktivity dátumu
-            dateToActive: newDateToActive      // Ukladanie stavu aktivity dátumu
+            dateFrom: newDateFromActive ? newDateFrom : '', // Ukladáme prázdny reťazec, ak nie je aktívne
+            dateTo: newDateToActive ? newDateTo : '',       // Ukladáme prázdny reťazec, ak nie je aktívne
+            dateFromActive: newDateFromActive,              // Ukladanie stavu aktivity dátumu
+            dateToActive: newDateToActive                   // Ukladanie stavu aktivity dátumu
         }
       }, { merge: true });
 
