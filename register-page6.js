@@ -251,8 +251,6 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         }
 
         // Validácia dátumu narodenia pre hráča
-        // ZMENA: Namiesto Object.values().find() iterujeme cez kľúče availableCategoriesMap,
-        // keďže štruktúra je { id: { name: '...', dateFrom: '...', dateTo: '...' } }
         let categoryData = null;
         for (const id in availableCategoriesMap) {
             if (availableCategoriesMap[id].name === categoryName) {
@@ -263,13 +261,21 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
         let categoryDateFrom = null;
         let categoryDateTo = null;
+        let isDateFromActive = false;
+        let isDateToActive = false;
 
         if (categoryData) {
-            categoryDateFrom = new Date(categoryData.dateFrom);
-            categoryDateTo = new Date(categoryData.dateTo);
-            // Nastavíme dátumy z kategórie na začiatok dňa v UTC
-            categoryDateFrom.setUTCHours(0, 0, 0, 0);
-            categoryDateTo.setUTCHours(0, 0, 0, 0);
+            isDateFromActive = categoryData.dateFromActive === true && !!categoryData.dateFrom; // Kontrolujeme aj či dátum existuje
+            isDateToActive = categoryData.dateToActive === true && !!categoryData.dateTo; // Kontrolujeme aj či dátum existuje
+
+            if (isDateFromActive) {
+                categoryDateFrom = new Date(categoryData.dateFrom);
+                categoryDateFrom.setUTCHours(0, 0, 0, 0);
+            }
+            if (isDateToActive) {
+                categoryDateTo = new Date(categoryData.dateTo);
+                categoryDateTo.setUTCHours(0, 0, 0, 0);
+            }
         } else {
             console.log(`[Validation Debug] Kategória '${categoryName}' nebola nájdená v availableCategoriesMap. Validácia dátumu narodenia pre túto kategóriu bude preskočená.`);
         }
@@ -288,12 +294,17 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 } else {
                     playerDob.setUTCHours(0, 0, 0, 0); 
                     
-                    if (categoryDateTo && playerDob > categoryDateTo) {
+                    if (isDateFromActive && playerDob < categoryDateFrom) {
+                        dateOfBirthError = `Dátum narodenia je príliš starý pre túto kategóriu. (Min: ${formatDateToDDMMYYYY(categoryData.dateFrom)})`;
+                        teamHasErrors = true;
+                    }
+
+                    if (isDateToActive && playerDob > categoryDateTo) {
                         // Ak je už jedna chyba, pridáme ju k existujúcej
                         if (dateOfBirthError) {
-                            dateOfBirthError += ` (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`; // Pridáme info o hornej hranici
+                            dateOfBirthError += ` a príliš mladý (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`; 
                         } else {
-                            dateOfBirthError = `Dátum narodenia je mimo povoleného rozsahu pre kategóriu. (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`;
+                            dateOfBirthError = `Dátum narodenia je príliš mladý pre túto kategóriu. (Max: ${formatDateToDDMMYYYY(categoryData.dateTo)})`;
                         }
                         teamHasErrors = true;
                     }
