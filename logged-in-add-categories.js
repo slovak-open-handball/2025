@@ -682,11 +682,11 @@ function AddCategoriesApp() {
       return;
     }
     try {
-      // Odkaz na kolekciu 'notifications'
-      const notificationsCollectionRef = collection(db, 'notifications');
+      // Odkaz na dokument adminNotifications v kolekcii 'settings'
+      const adminNotificationsDocRef = doc(db, 'settings', 'adminNotifications');
       const userEmail = notificationData.data.userEmail;
       const currentTimestamp = new Date().toISOString(); // Získanie aktuálnej časovej pečiatky
-      const changesArray = []; // Toto bude pole zmien pre tento konkrétny dokument notifikácie
+      const changesToAdd = []; // Toto bude pole objektov zmien, ktoré sa pridajú do poľa 'changes'
 
       // Pomocná funkcia pre formátovanie dátumu do DD. MM. YYYY
       const formatNotificationDate = (dateString) => {
@@ -703,13 +703,15 @@ function AddCategoriesApp() {
       if (notificationData.type === 'create') {
         const formattedDateFrom = formatNotificationDate(notificationData.data.dateFrom);
         const formattedDateTo = formatNotificationDate(notificationData.data.dateTo);
-        changesArray.push({
+        changesToAdd.push({
           type: 'category_create', // Špecifický typ zmeny
           categoryName: notificationData.data.newCategoryName,
           dateFrom: formattedDateFrom,
           dateTo: formattedDateTo,
           dateFromActive: notificationData.data.dateFromActive,
           dateToActive: notificationData.data.dateToActive,
+          userEmail: userEmail, // Pridané userEmail
+          timestamp: currentTimestamp, // Pridaná časová pečiatka
         });
       } else if (notificationData.type === 'edit') {
         const {
@@ -719,11 +721,13 @@ function AddCategoriesApp() {
 
         // Kontrola zmeny názvu
         if (originalCategoryName !== newCategoryName) {
-          changesArray.push({
+          changesToAdd.push({
             type: 'category_name_change', // Špecifický typ zmeny
             category: newCategoryName, // Aktuálny názov kategórie pre kontext
             from: originalCategoryName,
             to: newCategoryName,
+            userEmail: userEmail, // Pridané userEmail
+            timestamp: currentTimestamp, // Pridaná časová pečiatka
           });
         }
 
@@ -731,13 +735,15 @@ function AddCategoriesApp() {
         const formattedOriginalDateFrom = formatNotificationDate(originalDateFrom);
         const formattedNewDateFrom = formatNotificationDate(newDateFrom);
         if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
-          changesArray.push({
+          changesToAdd.push({
             type: 'category_date_from_change', // Špecifický typ zmeny
             category: newCategoryName, // Aktuálny názov kategórie pre kontext
             from: formattedOriginalDateFrom,
             to: formattedNewDateFrom,
             wasActive: originalDateFromActive,
             isActive: newDateFromActive,
+            userEmail: userEmail, // Pridané userEmail
+            timestamp: currentTimestamp, // Pridaná časová pečiatka
           });
         }
 
@@ -745,32 +751,32 @@ function AddCategoriesApp() {
         const formattedOriginalDateTo = formatNotificationDate(originalDateTo);
         const formattedNewDateTo = formatNotificationDate(newDateTo);
         if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
-          changesArray.push({
+          changesToAdd.push({
             type: 'category_date_to_change', // Špecifický typ zmeny
             category: newCategoryName, // Aktuálny názov kategórie pre kontext
             from: formattedOriginalDateTo,
             to: formattedNewDateTo,
             wasActive: originalDateToActive,
             isActive: newDateToActive,
+            userEmail: userEmail, // Pridané userEmail
+            timestamp: currentTimestamp, // Pridaná časová pečiatka
           });
         }
       } else if (notificationData.type === 'delete') {
-        changesArray.push({
+        changesToAdd.push({
           type: 'category_delete', // Špecifický typ zmeny
           categoryName: notificationData.data.categoryName,
+          userEmail: userEmail, // Pridané userEmail
+          timestamp: currentTimestamp, // Pridaná časová pečiatka
         });
       }
 
-      // Vytvorenie jedného nového dokumentu v kolekcii 'notifications'
-      // Tento dokument bude obsahovať pole 'changes' s detailmi zmien
-      if (changesArray.length > 0) {
-        await addDoc(notificationsCollectionRef, {
-          userEmail: userEmail,
-          timestamp: currentTimestamp,
-          notificationType: notificationData.type, // Pôvodný typ notifikácie (create, edit, delete)
-          changes: changesArray // Pole detailných zmien
-        });
-        console.log("Notifikácia pre administrátorov úspešne uložená do kolekcie 'notifications'.");
+      // Použitie setDoc s merge: true a arrayUnion pre pridanie zmien do poľa 'changes'
+      if (changesToAdd.length > 0) {
+        await setDoc(adminNotificationsDocRef, {
+          changes: arrayUnion(...changesToAdd)
+        }, { merge: true });
+        console.log("Notifikácie pre administrátorov úspešne uložené do Firestore poľa 'changes' v dokumente adminNotifications.");
       } else {
         console.log("Žiadne zmeny na uloženie notifikácií.");
       }
