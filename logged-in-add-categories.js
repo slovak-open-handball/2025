@@ -108,7 +108,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
 
   if (!show) return null;
 
-  const handleSubmit = async () => { // ZMENA: Funkcia je async
+  const handleSubmit = async () => { 
     console.log("AddCategoryModal handleSubmit: Validating inputs.");
     if (newCategoryName.trim() === '') {
         showLocalNotification("Prosím vyplňte názov kategórie.", 'error');
@@ -129,22 +129,24 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
     }
 
     // EXPLICITNÁ KONTROLA DUPLICITY PRED VOLANÍM onAddCategory (len názov)
+    // Táto klientská kontrola slúži primárne na zobrazenie chybovej správy a znefunkčnenie tlačidla.
+    // Dôležité je, že finálna kontrola sa deje aj na strane servera v handleAddCategorySubmit.
     if (categoryNameExists) {
         showLocalNotification(`Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`, 'error');
         console.log("AddCategoryModal handleSubmit: Client-side duplicate detected. Not calling onAddCategory.");
-        return; // Zabráni odoslaniu, ak duplikát existuje na strane klienta
+        return; 
     }
 
     console.log("AddCategoryModal handleSubmit: Client-side validation passed. Calling onAddCategory.");
-    // ZMENA: Await volanie onAddCategory
     const success = await onAddCategory(newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive);
     
-    // ZMENA: Modál sa zatvorí len ak operácia bola úspešná (notifikácia je už zobrazená v handleAddCategorySubmit)
     if (success) {
-      onClose(); // Zatvorí modálne okno
+      onClose(); 
       console.log("AddCategoryModal handleSubmit: Category added successfully, closing modal.");
     } else {
       console.log("AddCategoryModal handleSubmit: Category addition failed, modal remains open.");
+      // Ak pridanie zlyhalo (napr. kvôli duplicitnému názvu zistenému na serveri), modál zostane otvorený.
+      // Notifikáciu o chybe už spracuje handleAddCategorySubmit.
     }
   };
 
@@ -153,7 +155,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
   const isDisabled = loading || newCategoryName.trim() === '' || 
                      (dateFromActive && dateFrom === '') || 
                      (dateToActive && dateTo === '') || 
-                     categoryNameExists || // Používame categoryNameExists
+                     categoryNameExists || 
                      (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo));
 
 
@@ -805,7 +807,7 @@ function AddCategoriesApp() {
 
   // Funkcia na pridanie novej kategórie
   const handleAddCategorySubmit = async (categoryName, dateFrom, dateTo, dateFromActive, dateToActive) => { // Prijíma nové parametre
-    console.log("handleAddCategorySubmit: Starting category submission.");
+    console.log("handleAddCategorySubmit: Starting category submission for name:", categoryName);
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       if (typeof showLocalNotification === 'function') {
         showLocalNotification("Nemáte oprávnenie na pridanie kategórie.", 'error');
@@ -850,13 +852,14 @@ function AddCategoriesApp() {
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; 
 
       // Kontrola duplicity názvu kategórie (case-insensitive) IGNORUJEME DÁTUMY
+      console.log("handleAddCategorySubmit: Checking for duplicate name in current data.");
       if (Object.values(currentCategoriesData).some(cat => 
         (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase()
       )) {
         if (typeof showLocalNotification === 'function') {
           showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
         }
-        console.log("handleAddCategorySubmit: Server-side duplicate detected. Returning false.");
+        console.log("handleAddCategorySubmit: Server-side duplicate detected for name:", trimmedCategoryName, ". Returning false.");
         setLoading(false); // Zastaví loader
         return false; // <--- TOTO ZABRÁNI PRIDANIU DUPLICITY DO FIRESTORE A VRÁTI FALSE
       }
@@ -956,7 +959,7 @@ function AddCategoriesApp() {
       const originalDateFrom = originalCategoryData.dateFrom;
       const originalDateTo = originalCategoryData.dateTo;
       const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : false; 
-      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToToActive : false;     
+      const originalDateToActive = originalCategoryData.dateToToActive !== undefined ? originalCategoryData.dateToToActive : false;     
 
       // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
       await setDoc(categoriesDocRef, {
