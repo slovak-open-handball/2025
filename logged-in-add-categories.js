@@ -128,6 +128,13 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
+
+    // EXPLICITNÁ KONTROLA DUPLICITY PRED VOLANÍM onAddCategory
+    if (categoryExists) {
+        showLocalNotification(`Kategória s názvom "${newCategoryName.trim()}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`, 'error');
+        return; // Zabráni odoslaniu, ak duplikát existuje na strane klienta
+    }
+
     // Pridanie stavov toggle buttonov do onAddCategory
     onAddCategory(newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive);
   };
@@ -136,7 +143,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
   const isDisabled = loading || newCategoryName.trim() === '' || 
                      (dateFromActive && dateFrom === '') || 
                      (dateToActive && dateTo === '') || 
-                     categoryExists || 
+                     categoryExists || // Toto je dôležité pre disable tlačidla
                      (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo));
 
 
@@ -198,7 +205,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
             required: dateToActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
-        categoryExists && React.createElement( // Zobrazenie chybovej správy
+        categoryExists && React.createElement( // Zobrazenie chybovej správy je podmienené categoryExists
           'p',
           { className: 'text-red-500 text-xs italic mt-2' },
           `Kategória s názvom "${newCategoryName.trim()}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`
@@ -836,7 +843,7 @@ function AddCategoriesApp() {
           showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`, 'error');
         }
         setLoading(false);
-        return;
+        return; // <--- TOTO ZABRÁNI PRIDANIU DUPLICITY DO FIRESTORE
       }
 
       // Generujeme náhodné ID pre názov poľa (Firebase v9 way to get a new doc ID)
