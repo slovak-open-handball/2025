@@ -399,7 +399,7 @@ const setupNotificationListenerForAdmin = () => {
                         console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
                     }
                 } else if (userId && seenBy.includes(userId)) {
-                    console.log(`header.js: Notifikácia ${notificationId} už bola videná používateľom ${userId}. Nebude sa zobrazovať znova.`);
+//                    console.log(`header.js: Notifikácia ${notificationId} už bola videná používateľom ${userId}. Nebude sa zobrazovať znova.`);
                 }
             }
         });
