@@ -197,7 +197,6 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
             required: dateToActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
-        {/* ZMENA: Odstránený `categoryNameExists && React.createElement(...)` */}
       ),
       React.createElement(
         'div',
@@ -237,8 +236,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   const [editedDateTo, setEditedDateTo] = React.useState(category ? category.dateTo : '');
   // Nové stavy pre aktívny/neaktívny dátum, PREDVOLENE false pre spätnú kompatibilitu
   const [editedDateFromActive, setEditedDateFromActive] = React.useState(category ? (category.dateFromActive !== undefined ? category.dateFromActive : false) : false); 
-  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : false) : false);     
-
+  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : false) : false);     // ZMENA: Oprava preklepu z category.dateToToActive
 
   React.useEffect(() => {
     if (category) {
@@ -247,7 +245,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
       setEditedDateTo(category.dateTo || '');
       // Načítanie existujúcich hodnôt alebo predvolené na false
       setEditedDateFromActive(category.dateFromActive !== undefined ? category.dateFromActive : false); 
-      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : false);     
+      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : false);     // ZMENA: Oprava preklepu
     }
   }, [category]);
 
@@ -261,6 +259,12 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
 
     const trimmedName = editedCategoryName.trim().toLowerCase();
     const currentCategoryId = category.id; 
+
+    // Pridaná obranná kontrola, či existingCategories je pole
+    if (!Array.isArray(existingCategories)) {
+      console.error("EditCategoryModal: existingCategories is NOT an array!", existingCategories);
+      return false; // Ak nie je pole, nemôžeme volať .some()
+    }
 
     return existingCategories.some(cat => 
         cat.id !== currentCategoryId && 
@@ -934,7 +938,7 @@ function AddCategoriesApp() {
       const originalDateFrom = originalCategoryData.dateFrom;
       const originalDateTo = originalCategoryData.dateTo;
       const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : false; 
-      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : false;     
+      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : false;     // Opravené: preklep z category.dateToToActive
 
       // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
       await setDoc(categoriesDocRef, {
@@ -1070,7 +1074,6 @@ function AddCategoriesApp() {
         onClose: () => { setShowAddCategoryModal(false); }, 
         onAddCategory: handleAddCategorySubmit,
         loading: loading,
-        //existingCategories: categories // ZMENA: Odstránené, už sa neposiela do AddCategoryModal
     }),
     React.createElement(EditCategoryModal, {
         show: showEditCategoryModal,
