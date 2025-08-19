@@ -1080,7 +1080,7 @@ function AddCategoriesApp() {
     }),
     React.createElement(ConfirmationModal, { 
         show: showConfirmDeleteModal,
-        message: categoryToDelete ? `Naozaj chcete zmazať kategóriu "${categoryToDelete.name}"? Táto akcia je nevratná.` : '',
+        message: categoryToDelete ? `Naozaj chcete zmazať kategóriu ${categoryToDelete.name}? Táto akcia je nevratná.` : '',
         onConfirm: handleDeleteCategory,
         onCancel: () => { setShowConfirmDeleteModal(false); setCategoryToDelete(null); },
         loading: loading,
