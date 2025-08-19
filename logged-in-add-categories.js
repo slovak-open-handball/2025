@@ -686,7 +686,7 @@ function AddCategoriesApp() {
       const adminNotificationsDocRef = doc(db, 'settings', 'adminNotifications');
       const userEmail = notificationData.data.userEmail;
       const currentTimestamp = new Date().toISOString(); // Získanie aktuálnej časovej pečiatky
-      const changesToAdd = []; // Toto bude pole objektov zmien, ktoré sa pridajú do poľa 'changes'
+      const changesToAdd = []; // Toto bude pole reťazcov zmien
 
       // Pomocná funkcia pre formátovanie dátumu do DD. MM. YYYY
       const formatNotificationDate = (dateString) => {
@@ -703,16 +703,9 @@ function AddCategoriesApp() {
       if (notificationData.type === 'create') {
         const formattedDateFrom = formatNotificationDate(notificationData.data.dateFrom);
         const formattedDateTo = formatNotificationDate(notificationData.data.dateTo);
-        changesToAdd.push({
-          type: 'category_create', // Špecifický typ zmeny
-          categoryName: notificationData.data.newCategoryName,
-          dateFrom: formattedDateFrom,
-          dateTo: formattedDateTo,
-          dateFromActive: notificationData.data.dateFromActive,
-          dateToActive: notificationData.data.dateToActive,
-          userEmail: userEmail, // Pridané userEmail
-          timestamp: currentTimestamp, // Pridaná časová pečiatka
-        });
+        changesToAdd.push(
+          `[${currentTimestamp}] Používateľ ${userEmail} vytvoril novú kategóriu: '${notificationData.data.newCategoryName}' (Od: ${formattedDateFrom}, Do: ${formattedDateTo}) (Aktívny dátum od: ${notificationData.data.dateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.dateToActive ? 'Áno' : 'Nie'})`
+        );
       } else if (notificationData.type === 'edit') {
         const {
           originalCategoryName, originalDateFrom, originalDateTo, originalDateFromActive, originalDateToActive,
@@ -721,54 +714,32 @@ function AddCategoriesApp() {
 
         // Kontrola zmeny názvu
         if (originalCategoryName !== newCategoryName) {
-          changesToAdd.push({
-            type: 'category_name_change', // Špecifický typ zmeny
-            category: newCategoryName, // Aktuálny názov kategórie pre kontext
-            from: originalCategoryName,
-            to: newCategoryName,
-            userEmail: userEmail, // Pridané userEmail
-            timestamp: currentTimestamp, // Pridaná časová pečiatka
-          });
+          changesToAdd.push(
+            `[${currentTimestamp}] Používateľ ${userEmail} zmenil názov kategórie z '${originalCategoryName}' na '${newCategoryName}'.`
+          );
         }
 
         // Kontrola zmeny "Dátum od"
         const formattedOriginalDateFrom = formatNotificationDate(originalDateFrom);
         const formattedNewDateFrom = formatNotificationDate(newDateFrom);
         if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
-          changesToAdd.push({
-            type: 'category_date_from_change', // Špecifický typ zmeny
-            category: newCategoryName, // Aktuálny názov kategórie pre kontext
-            from: formattedOriginalDateFrom,
-            to: formattedNewDateFrom,
-            wasActive: originalDateFromActive,
-            isActive: newDateFromActive,
-            userEmail: userEmail, // Pridané userEmail
-            timestamp: currentTimestamp, // Pridaná časová pečiatka
-          });
+          changesToAdd.push(
+            `[${currentTimestamp}] Používateľ ${userEmail} zmenil 'Dátum od' pre kategóriu '${newCategoryName}' z '${formattedOriginalDateFrom}' (Aktívny: ${originalDateFromActive ? 'Áno' : 'Nie'}) na '${formattedNewDateFrom}' (Aktívny: ${newDateFromActive ? 'Áno' : 'Nie'}).`
+          );
         }
 
         // Kontrola zmeny "Dátum do"
         const formattedOriginalDateTo = formatNotificationDate(originalDateTo);
         const formattedNewDateTo = formatNotificationDate(newDateTo);
         if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
-          changesToAdd.push({
-            type: 'category_date_to_change', // Špecifický typ zmeny
-            category: newCategoryName, // Aktuálny názov kategórie pre kontext
-            from: formattedOriginalDateTo,
-            to: formattedNewDateTo,
-            wasActive: originalDateToActive,
-            isActive: newDateToActive,
-            userEmail: userEmail, // Pridané userEmail
-            timestamp: currentTimestamp, // Pridaná časová pečiatka
-          });
+          changesToAdd.push(
+            `[${currentTimestamp}] Používateľ ${userEmail} zmenil 'Dátum do' pre kategóriu '${newCategoryName}' z '${formattedOriginalDateTo}' (Aktívny: ${originalDateToActive ? 'Áno' : 'Nie'}) na '${formattedNewDateTo}' (Aktívny: ${newDateToActive ? 'Áno' : 'Nie'}).`
+          );
         }
       } else if (notificationData.type === 'delete') {
-        changesToAdd.push({
-          type: 'category_delete', // Špecifický typ zmeny
-          categoryName: notificationData.data.categoryName,
-          userEmail: userEmail, // Pridané userEmail
-          timestamp: currentTimestamp, // Pridaná časová pečiatka
-        });
+        changesToAdd.push(
+          `[${currentTimestamp}] Používateľ ${userEmail} zmazal kategóriu: '${notificationData.data.categoryName}'.`
+        );
       }
 
       // Použitie setDoc s merge: true a arrayUnion pre pridanie zmien do poľa 'changes'
