@@ -98,15 +98,13 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
   }, [show]); // Efekt sa spustí, keď sa zmení hodnota 'show'
 
 
-  // Kontrola, či názov kategórie už existuje (case-insensitive) aj s dátumami
-  const categoryExists = React.useMemo(() => {
+  // Kontrola, či názov kategórie už existuje (case-insensitive) IGNORUJEME DÁTUMY
+  const categoryNameExists = React.useMemo(() => {
     const trimmedName = newCategoryName.trim().toLowerCase();
     return existingCategories.some(cat => 
-        cat.name.toLowerCase() === trimmedName &&
-        cat.dateFrom === dateFrom &&
-        cat.dateTo === dateTo
+        cat.name.toLowerCase() === trimmedName
     );
-  }, [newCategoryName, dateFrom, dateTo, existingCategories]);
+  }, [newCategoryName, existingCategories]);
 
   if (!show) return null;
 
@@ -129,9 +127,9 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
         return;
     }
 
-    // EXPLICITNÁ KONTROLA DUPLICITY PRED VOLANÍM onAddCategory
-    if (categoryExists) {
-        showLocalNotification(`Kategória s názvom "${newCategoryName.trim()}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`, 'error');
+    // EXPLICITNÁ KONTROLA DUPLICITY PRED VOLANÍM onAddCategory (len názov)
+    if (categoryNameExists) {
+        showLocalNotification(`Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`, 'error');
         return; // Zabráni odoslaniu, ak duplikát existuje na strane klienta
     }
 
@@ -140,10 +138,11 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
   };
 
   // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
+  // Disabled stav tlačidla teraz závisí len od názvu a stavu dátumových polí.
   const isDisabled = loading || newCategoryName.trim() === '' || 
                      (dateFromActive && dateFrom === '') || 
                      (dateToActive && dateTo === '') || 
-                     categoryExists || // Toto je dôležité pre disable tlačidla
+                     categoryNameExists || // Používame categoryNameExists
                      (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo));
 
 
@@ -205,10 +204,10 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
             required: dateToActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
-        categoryExists && React.createElement( // Zobrazenie chybovej správy je podmienené categoryExists
+        categoryNameExists && React.createElement( // Zobrazenie chybovej správy je podmienené categoryNameExists
           'p',
           { className: 'text-red-500 text-xs italic mt-2' },
-          `Kategória s názvom "${newCategoryName.trim()}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`
+          `Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`
         )
       ),
       React.createElement(
@@ -264,6 +263,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   }, [category]);
 
   // Kontrola, či názov kategórie už existuje (case-insensitive) aj s dátumami
+  // Pri úprave kategórie stále kontrolujeme aj dátumy, ak sú podstatné
   const categoryExists = React.useMemo(() => {
     // Pridanie kontroly, či je 'category' definované
     if (!category) {
@@ -829,18 +829,15 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Firebase v9 syntax: getDoc(docRef)
-      const docSnapshot = await getDoc(categoriesDocRef); 
+      const docSnapshot = await get(categoriesDocRef); // Používame get() namiesto getDoc()
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; // Firebase v9 syntax: docSnapshot.exists()
 
-      // Kontrola duplicity názvu kategórie (case-insensitive) aj s dátumami
+      // Kontrola duplicity názvu kategórie (case-insensitive) IGNORUJEME DÁTUMY
       if (Object.values(currentCategoriesData).some(cat => 
-        // Zabezpečenie, že cat.name existuje pred volaním toLowerCase()
-        (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase() &&
-        cat.dateFrom === dateFrom &&
-        cat.dateTo === dateTo
+        (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase()
       )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`, 'error');
+          showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return; // <--- TOTO ZABRÁNI PRIDANIU DUPLICITY DO FIRESTORE
@@ -915,19 +912,16 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Firebase v9 syntax: getDoc(docRef)
-      const docSnapshot = await getDoc(categoriesDocRef); 
+      const docSnapshot = await get(categoriesDocRef); // Používame get() namiesto getDoc()
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; // Firebase v9 syntax: docSnapshot.exists()
 
-      // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
+      // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie) IGNORUJEME DÁTUMY pri kontrole duplicity
       if (Object.entries(currentCategoriesData).some(([id, catData]) => 
-            // Zabezpečenie, že catData je objekt a má vlastnosť 'name' pred volaním toLowerCase()
             (typeof catData === 'object' && catData !== null && catData.name || '').toLowerCase() === trimmedNewName.toLowerCase() &&
-            catData.dateFrom === newDateFrom &&
-            catData.dateTo === newDateTo &&
-            id !== categoryId
+            id !== categoryId // Dôležité: Ignorovať aktuálne upravovanú kategóriu
         )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom "${trimmedNewName}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`, 'error');
+          showLocalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return;
