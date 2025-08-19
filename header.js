@@ -180,7 +180,7 @@ const showDatabaseNotification = (message, type = 'info') => {
         flex items-center space-x-2
     `;
 
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '�';
     
     const formattedMessage = message.replace(/\n/g, '<br>');
 
@@ -365,6 +365,24 @@ const setupNotificationListenerForAdmin = () => {
         const auth = getAuth();
         const userId = auth.currentUser ? auth.currentUser.uid : null;
 
+        let unreadCount = 0;
+        // Spočítame neprečítané správy pre aktuálneho používateľa
+        snapshot.docs.forEach(doc => {
+            const notificationData = doc.data();
+            const seenBy = notificationData.seenBy || [];
+            if (userId && !seenBy.includes(userId)) {
+                unreadCount++;
+            }
+        });
+
+        // Zobrazíme súhrnnú notifikáciu o neprečítaných správach, ak sú splnené podmienky
+        if (unreadCount >= 5) {
+            showDatabaseNotification(`Máte ${unreadCount} nových neprečítaných upozornení.`, 'info');
+        } else if (unreadCount >= 3) {
+            showDatabaseNotification(`Máte ${unreadCount} nové neprečítané upozornenia.`, 'info');
+        }
+
+        // Spracujeme jednotlivé nové notifikácie (existujúca logika)
         snapshot.docChanges().forEach(async (change) => {
             if (change.type === "added") {
                 const newNotification = change.doc.data();
