@@ -860,9 +860,8 @@ function AddCategoriesApp() {
       }, { merge: true });
 
       if (typeof showLocalNotification === 'function') {
-        showLocalNotification("Kategória pridaná!", 'success');
+        showLocalNotification(`Kategória s názvom ${trimmedCategoryName} pridaná!`, 'success');
       }
-      console.log("handleAddCategorySubmit: Category added successfully. Returning true.");
 
       // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
