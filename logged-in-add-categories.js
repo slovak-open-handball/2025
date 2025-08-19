@@ -115,6 +115,8 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
     setDateToActive(true); // Reset to default
   };
 
+  const isDisabled = loading || newCategoryName.trim() === '' || dateFrom === '' || dateTo === '' || categoryExists || (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo));
+
   return React.createElement(
     'div',
     { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
@@ -195,9 +197,12 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
           'button',
           {
             onClick: handleSubmit,
-            className: `bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 
-            ${loading || newCategoryName.trim() === '' || dateFrom === '' || dateTo === '' || categoryExists || (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) ? 'opacity-50 cursor-not-allowed' : ''}`,
-            disabled: loading || newCategoryName.trim() === '' || dateFrom === '' || dateTo === '' || categoryExists || (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)), // Zablokovanie, ak názov existuje alebo sú dátumy neplatné
+            className: `py-2 px-4 rounded-lg transition-colors duration-200 ${
+                isDisabled
+                  ? 'bg-white text-blue-500 border border-blue-500 opacity-50 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`,
+            disabled: isDisabled, // Používame premennú isDisabled
           },
           loading ? 'Ukladám...' : 'Pridať'
         )
@@ -259,6 +264,8 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
     // Pridanie stavov toggle buttonov do onSaveCategory
     onSaveCategory(category.id, editedCategoryName, editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive);
   };
+
+  const isDisabled = loading || editedCategoryName.trim() === '' || editedDateFrom === '' || editedDateTo === '' || categoryExists || (editedDateFrom && editedDateTo && new Date(editedDateFrom) > new Date(editedDateTo));
 
   return React.createElement(
     'div',
@@ -340,9 +347,12 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           'button',
           {
             onClick: handleSubmit,
-            className: `bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 
-            ${loading || editedCategoryName.trim() === '' || editedDateFrom === '' || editedDateTo === '' || categoryExists || (editedDateFrom && editedDateTo && new Date(editedDateFrom) > new Date(editedDateTo)) ? 'opacity-50 cursor-not-allowed' : ''}`,
-            disabled: loading || editedCategoryName.trim() === '' || editedDateFrom === '' || editedDateTo === '' || categoryExists || (editedDateFrom && editedDateTo && new Date(editedDateFrom) > new Date(editedDateTo)), // Zablokovanie, ak názov existuje alebo sú dátumy neplatné
+            className: `py-2 px-4 rounded-lg transition-colors duration-200 ${
+                isDisabled
+                  ? 'bg-white text-blue-500 border border-blue-500 opacity-50 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`,
+            disabled: isDisabled, // Používame premennú isDisabled
           },
           loading ? 'Ukladám...' : 'Uložiť zmeny'
         )
