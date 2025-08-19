@@ -54,6 +54,7 @@ function showLocalNotification(message, type = 'success') {
 // NOVÝ KOMPONENT: ToggleButton
 function ToggleButton({ isActive, onToggle, disabled }) {
   const bgColor = isActive ? 'bg-green-500' : 'bg-red-500';
+  // Upravené triedy pre toggle button, aby sa používali základné Tailwind farby
   const toggleClasses = `relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${bgColor} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
   const spanClasses = `pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${isActive ? 'translate-x-5' : 'translate-x-0'}`;
 
@@ -197,6 +198,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
           'button',
           {
             onClick: handleSubmit,
+            // Upravené triedy pre disabled stav
             className: `py-2 px-4 rounded-lg transition-colors duration-200 ${
                 isDisabled
                   ? 'bg-white text-blue-500 border border-blue-500 opacity-50 cursor-not-allowed'
@@ -347,6 +349,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           'button',
           {
             onClick: handleSubmit,
+            // Upravené triedy pre disabled stav
             className: `py-2 px-4 rounded-lg transition-colors duration-200 ${
                 isDisabled
                   ? 'bg-white text-blue-500 border border-blue-500 opacity-50 cursor-not-allowed'
