@@ -390,7 +390,7 @@ const handleDataUpdateAndRender = (event) => {
                                 });
                                 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-my-data.js: E-mail vo Firestore bol úspešne aktualizovaný a notifikácia vytvorená.");
+                                console.log("logged-in-my-data.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
             
                             } else {
                                 console.log("logged-in-my-data.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
@@ -408,7 +408,7 @@ const handleDataUpdateAndRender = (event) => {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(MyDataApp, { userProfileData }));
-            console.log("logged-in-my-data.js: Aplikácia bola úspešne vykreslená po udalosti 'globalDataUpdated'.");
+            console.log("logged-in-my-data.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
         } else {
             console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
