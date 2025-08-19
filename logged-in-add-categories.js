@@ -86,6 +86,17 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
   const [dateFromActive, setDateFromActive] = React.useState(false); // ZMENA: Predvolené na false
   const [dateToActive, setDateToActive] = React.useState(false);   // ZMENA: Predvolené na false
 
+  // Resetuje stav, keď sa modálne okno otvorí
+  React.useEffect(() => {
+    if (show) {
+      setNewCategoryName('');
+      setDateFrom('');
+      setDateTo('');
+      setDateFromActive(false);
+      setDateToActive(false);
+    }
+  }, [show]);
+
   // Kontrola, či názov kategórie už existuje (case-insensitive) aj s dátumami
   const categoryExists = React.useMemo(() => {
     const trimmedName = newCategoryName.trim().toLowerCase();
@@ -112,17 +123,12 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
         showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
         return;
     }
-    if (dateFromActive && dateToActive && new Date(dateFrom) > new Date(dateTo)) {
+    if (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
     // Pridanie stavov toggle buttonov do onAddCategory
     onAddCategory(newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive);
-    setNewCategoryName(''); // Vyčistí pole po odoslaní
-    setDateFrom('');
-    setDateTo('');
-    setDateFromActive(false); // Reset to default (false)
-    setDateToActive(false);   // Reset to default (false)
   };
 
   // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
@@ -283,7 +289,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
         return;
     }
-    if (editedDateFromActive && editedDateToActive && new Date(editedDateFrom) > new Date(editedDateTo)) {
+    if (editedDateFromActive && editedDateToActive && editedDateFrom && editedDateTo && new Date(editedDateFrom) > new Date(editedDateTo)) {
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
@@ -729,7 +735,7 @@ function AddCategoriesApp() {
         showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
         return;
     }
-    if (dateFromActive && dateToActive && new Date(dateFrom) > new Date(dateTo)) {
+    if (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
