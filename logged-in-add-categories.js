@@ -682,8 +682,8 @@ function AddCategoriesApp() {
       return;
     }
     try {
-      // Odkaz na dokument adminNotifications v kolekcii 'settings'
-      const adminNotificationsDocRef = doc(db, 'settings', 'adminNotifications');
+      // Odkaz na kolekciu 'notifications'
+      const notificationsCollectionRef = collection(db, 'notifications');
       const userEmail = notificationData.data.userEmail;
       const currentTimestamp = new Date().toISOString(); // Získanie aktuálnej časovej pečiatky
       const changesToAdd = []; // Toto bude pole reťazcov zmien
@@ -714,27 +714,34 @@ function AddCategoriesApp() {
 
         // Kontrola zmeny názvu
         if (originalCategoryName !== newCategoryName) {
-          changesToAdd.push(
-            `Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`
-          );
+          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`);
+          changesToAdd.push(`Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`);
         }
 
         // Kontrola zmeny "Dátum od"
         const formattedOriginalDateFrom = formatNotificationDate(originalDateFrom);
         const formattedNewDateFrom = formatNotificationDate(newDateFrom);
         if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
-          changesToAdd.push(
-            `Zmena dátumu od: z '${formattedOriginalDateFrom}' (Aktívny: ${originalDateFromActive ? 'Áno' : 'Nie'}) na '${formattedNewDateFrom}' (Aktívny: ${newDateFromActive ? 'Áno' : 'Nie'}) pre kategóriu '${newCategoryName}'`
-          );
+          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`); // Opakujeme pre jasnosť
+          if (formattedOriginalDateFrom !== formattedNewDateFrom) {
+            changesToAdd.push(`Zmena dátumu od: z '${formattedOriginalDateFrom}' na '${formattedNewDateFrom}'`);
+          }
+          if (originalDateFromActive !== newDateFromActive) {
+            changesToAdd.push(`Zmena aktívnosti pre dátum od: z '${originalDateFromActive ? 'Áno' : 'Nie'}' na '${newDateFromActive ? 'Áno' : 'Nie'}'`);
+          }
         }
 
         // Kontrola zmeny "Dátum do"
         const formattedOriginalDateTo = formatNotificationDate(originalDateTo);
         const formattedNewDateTo = formatNotificationDate(newDateTo);
         if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
-          changesToAdd.push(
-            `Zmena dátumu do: z '${formattedOriginalDateTo}' (Aktívny: ${originalDateToActive ? 'Áno' : 'Nie'}) na '${formattedNewDateTo}' (Aktívny: ${newDateToActive ? 'Áno' : 'Nie'}) pre kategóriu '${newCategoryName}'`
-          );
+          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`); // Opakujeme pre jasnosť
+          if (formattedOriginalDateTo !== formattedNewDateTo) {
+            changesToAdd.push(`Zmena dátumu do: z '${formattedOriginalDateTo}' na '${formattedNewDateTo}'`);
+          }
+          if (originalDateToActive !== newDateToActive) {
+            changesToAdd.push(`Zmena aktívnosti pre dátum do: z '${originalDateToActive ? 'Áno' : 'Nie'}' na '${newDateToActive ? 'Áno' : 'Nie'}'`);
+          }
         }
       } else if (notificationData.type === 'delete') {
         changesToAdd.push(
@@ -744,7 +751,6 @@ function AddCategoriesApp() {
 
       // Použitie addDoc na vytvorenie nového dokumentu v kolekcii 'notifications'
       if (changesToAdd.length > 0) {
-        const notificationsCollectionRef = collection(db, 'notifications'); // Odkaz na kolekciu 'notifications'
         await addDoc(notificationsCollectionRef, {
           userEmail: userEmail,
           timestamp: currentTimestamp,
