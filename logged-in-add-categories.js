@@ -1058,7 +1058,7 @@ function AddCategoriesApp() {
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum od'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum do'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, '')
                         )
                     ),
                     React.createElement(
