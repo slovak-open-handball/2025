@@ -845,7 +845,7 @@ function AddCategoriesApp() {
       }, { merge: true });
 
       if (typeof showLocalNotification === 'function') {
-        showLocalNotification("Kategória úspešne pridaná!", 'success');
+        showLocalNotification("Kategória pridaná!", 'success');
       }
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
 
@@ -999,7 +999,7 @@ function AddCategoriesApp() {
       }, { merge: true }); // Používame merge: true pre bezpečné odstránenie poľa
 
       if (typeof showLocalNotification === 'function') {
-        showLocalNotification(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`, 'success');
+        showLocalNotification(`Kategória ${categoryToDelete.name} bola zmazaná!`, 'success');
       }
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
 
