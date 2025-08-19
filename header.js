@@ -1,40 +1,19 @@
-// header.js
-// Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
-// a obsluhuje akcie ako odhlásenie používateľa.
-// Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase,
-// a zároveň aby pravidelne kontroloval aktuálny čas, aby sa odkaz zobrazil alebo skryl
-// presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
-// Nová funkcionalita: Pridáva listener pre zobrazovanie notifikácií z databázy pre administrátorov.
-// Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
-// Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
-// Nová úprava: Pridáva funkciu na formátovanie telefónnych čísiel v notifikáciách pre lepšiu čitateľnosť.
-
-// Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
 
-// Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
 let registrationCheckIntervalId = null;
-let unsubscribeFromNotifications = null; // Nová globálna premenná pre listener notifikácií
-// Nové premenné na sledovanie stavu načítania dát
+let unsubscribeFromNotifications = null; 
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
-let isFirestoreListenersSetup = false; // Nový flag pre sledovanie, či sú listenery Firestore nastavené
-// NOVINKA: Pridaná globálna premenná na indikáciu, že kategórie sú načítané
+let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-// Premenná na sledovanie predchádzajúceho počtu neprečítaných notifikácií pre inteligentné prekresľovanie
 let previousNotificationCount = -1; 
 
-
-// Globálna funkcia pre zobrazenie notifikácií
-// Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     
-    // Ak element ešte neexistuje, vytvoríme ho a pridáme do tela dokumentu
     if (!notificationElement) {
         notificationElement = document.createElement('div');
         notificationElement.id = 'global-notification';
@@ -199,7 +178,7 @@ const showDatabaseNotification = (message, type = 'info', options = {}) => {
         notificationElement.dataset.notificationId = options.notificationId;
     }
 
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '�';
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔'; // ZMENA: Zmenená ikona pre 'info'
     
     const formattedMessage = message.replace(/\n/g, '<br>');
 
@@ -268,7 +247,7 @@ const getHeaderColorByRole = (role) => {
 
 /**
  * Funkcia na aktualizáciu viditeľnosti odkazov a farby hlavičky na základe stavu autentifikácie.
- * Táto funkcia tiež kontroluje, či sú načítané všetky potrebné dáta, a až potom zruší triedu "invisible".
+ * Táto funkcia tiež kontroluje, či sú načítané všetky potrebné dáta, a až potom zruší triedu "invisible.
  * @param {object} userProfileData - Dáta profilu používateľa.
  */
 const updateHeaderLinks = (userProfileData) => {
@@ -308,7 +287,7 @@ const updateHeaderLinks = (userProfileData) => {
 
             if (userProfileData.role === 'admin' && userProfileData.displayNotifications) {
                 if (!unsubscribeFromNotifications) {
-                    setupNotificationListenerForAdmin();
+                    window.setupNotificationListenerForAdmin(); // ZMENA: Volanie globálnej funkcie
                 }
             } else {
                 if (unsubscribeFromNotifications) {
@@ -370,7 +349,7 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
  * NOVÁ FUNKCIA: Nastaví listener pre notifikácie admina.
  * Počúva na zmeny v kolekcii /notifications a zobrazuje nové správy.
  */
-const setupNotificationListenerForAdmin = () => {
+window.setupNotificationListenerForAdmin = () => { // ZMENA: Funkcia je teraz globálna
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
         return;
@@ -521,14 +500,14 @@ window.loadHeaderAndScripts = async () => {
         window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
             window.isGlobalAuthReady = true; 
-            setupFirestoreListeners();
+            window.setupFirestoreListeners(); // ZMENA: Volanie globálnej funkcie
             updateHeaderLinks(event.detail);
         });
 
         // Ak už je autentifikácia pripravená pri načítaní tohto skriptu, spustíme listenery manuálne.
         if (window.isGlobalAuthReady) {
              console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
-             setupFirestoreListeners();
+             window.setupFirestoreListeners(); // ZMENA: Volanie globálnej funkcie
              updateHeaderLinks(window.globalUserProfileData);
         }
 
