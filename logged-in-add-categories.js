@@ -129,7 +129,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
 
     // EXPLICITNÁ KONTROLA DUPLICITY PRED VOLANÍM onAddCategory (len názov)
     if (categoryNameExists) {
-        showLocalNotification(`Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`, 'error');
+        showLocalNotification(`Kategória s názvom ${newCategoryName.trim()} už existuje. Zvoľte iný názov.`, 'error');
         return; // Zabráni odoslaniu, ak duplikát existuje na strane klienta
     }
 
@@ -207,7 +207,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
         categoryNameExists && React.createElement( // Zobrazenie chybovej správy je podmienené categoryNameExists
           'p',
           { className: 'text-red-500 text-xs italic mt-2' },
-          `Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`
+          `Kategória s názvom ${newCategoryName.trim()} už existuje. Zvoľte iný názov.`
         )
       ),
       React.createElement(
@@ -373,7 +373,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         categoryExists && React.createElement( // Zobrazenie chybovej správy
             'p',
             { className: 'text-red-500 text-xs italic mt-2' },
-            `Kategória s názvom "${editedCategoryName.trim()}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`
+            `Kategória s názvom ${editedCategoryName.trim()} už existuje. Zvoľte iný názov alebo dátumy.`
         )
       ),
       React.createElement(
@@ -837,7 +837,7 @@ function AddCategoriesApp() {
         (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase()
       )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
+          showLocalNotification(`Kategória s názvom ${trimmedCategoryName} už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return; // <--- TOTO ZABRÁNI PRIDANIU DUPLICITY DO FIRESTORE
@@ -921,7 +921,7 @@ function AddCategoriesApp() {
             id !== categoryId // Dôležité: Ignorovať aktuálne upravovanú kategóriu
         )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
+          showLocalNotification(`Kategória s názvom ${trimmedNewName} už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return;
