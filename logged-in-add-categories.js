@@ -122,7 +122,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
 
     console.log("AddCategoryModal handleSubmit: Client-side validation passed. Calling onAddCategory.");
     const success = await onAddCategory(newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive);
-    
+
     if (success) {
       onClose(); 
       console.log("AddCategoryModal handleSubmit: Category added successfully, closing modal.");
@@ -159,7 +159,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
           required: true,
           disabled: loading,
         }),
-        
+
         // Dátum narodenia od s toggle buttonom
         React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'date-from' }, 'Dátum narodenia od'),
@@ -197,7 +197,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
             required: dateToActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
-        {/* ZMENA: Odstránený `categoryNameExists && React.createElement(...)` */}
+
       ),
       React.createElement(
         'div',
@@ -246,7 +246,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
       setEditedDateTo(category.dateTo || '');
       // Načítanie existujúcich hodnôt alebo predvolené na false
       setEditedDateFromActive(category.dateFromActive !== undefined ? category.dateFromActive : false); 
-      setEditedToActive(category.dateToActive !== undefined ? category.dateToActive : false);     // ZMENA: Oprava preklepu, opravený setState volanie
+      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : false);     // ZMENA: Oprava preklepu
     }
   }, [category]);
 
@@ -326,7 +326,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           required: true,
           disabled: loading,
         }),
-        
+
         // Dátum narodenia od s toggle buttonom
         React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'edit-date-from' }, 'Dátum narodenia od'),
@@ -367,7 +367,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         categoryExists && React.createElement( // Zobrazenie chybovej správy
             'p',
             { className: 'text-red-500 text-xs italic mt-2' },
-            `Kategória s názvom ${editedCategoryName.trim()} už existuje. Zvoľte iný názov.`
+            `Kategória s názvom "${editedCategoryName.trim()}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`
         )
       ),
       React.createElement(
@@ -624,7 +624,7 @@ function AddCategoriesApp() {
                 }
                 return { id, name, dateFrom, dateTo, dateFromActive, dateToActive };
             });
-            
+
             // Triedenie kategórií podľa názvu (abecedne/číselne)
             fetchedCategories.sort((a, b) => {
               const nameA = a.name.toLowerCase();
@@ -709,13 +709,13 @@ function AddCategoriesApp() {
         // Názov kategórie je vždy prítomný pri vytvorení
         changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
         changesToAdd.push(`Vytvorenie názvu kategórie: '''${newCategoryName}'`);
-        
+
         // Dátum od a jeho aktívnosť
         if (dateFrom || dateFromActive) { // Generovať, ak je dátum alebo je aktívny
             changesToAdd.push(`Dátum od: '''${formattedDateFrom}'`);
             changesToAdd.push(`Aktívnosť pre dátum od ${formattedDateFrom || 'N/A'}: '''${dateFromActive ? 'Áno' : 'Nie'}'`);
         }
-        
+
         // Dátum do a jeho aktívnosť
         if (dateTo || dateToActive) { // Generovať, ak je dátum alebo je aktívny
             changesToAdd.push(`Dátum do: '''${formattedDateTo}'`);
@@ -838,7 +838,7 @@ function AddCategoriesApp() {
         (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase()
       )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom ${trimmedCategoryName} už existuje. Zvoľte iný názov.`, 'error');
+          showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
         }
         console.log("handleAddCategorySubmit: Server-side duplicate detected for name:", trimmedCategoryName, ". Returning false.");
         setLoading(false); 
@@ -927,7 +927,7 @@ function AddCategoriesApp() {
             id !== categoryId 
         )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom ${trimmedNewName} už existuje. Zvoľte iný názov.`, 'error');
+          showLocalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return;
@@ -1167,11 +1167,12 @@ function AddCategoriesApp() {
         )
       )
     ),
+    // Zelené okrúhle tlačidlo s textom "+"
     React.createElement(
       'button',
       {
         className: 'fab-button',
-        onClick: () => setShowAddCategoryModal(true),
+        onClick: () => setShowAddCategoryModal(true), // Otvorí modálne okno na pridanie
         disabled: loading,
       },
       '+'
@@ -1179,4 +1180,5 @@ function AddCategoriesApp() {
   );
 }
 
-export default AddCategoriesApp;
+// Explicitne sprístupniť komponent globálne
+window.AddCategoriesApp = AddCategoriesApp;
