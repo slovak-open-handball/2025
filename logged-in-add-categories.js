@@ -687,9 +687,9 @@ function AddCategoriesApp() {
       let userEmail = notificationData.data.userEmail; // Získanie userEmail z dát
 
       if (notificationData.type === 'create') {
-        changesMessage = `Vytvorenie novej kategórie: '''${notificationData.data.newCategoryName}' (Od: ${notificationData.data.dateFrom}, Do: ${notificationData.data.dateTo}) (Aktívny dátum od: ${notificationData.data.dateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.dateToActive ? 'Áno' : 'Nie'})`; // Upravené na jeden reťazec s novými dátami
+        changesMessage = `Vytvorenie novej kategórie: '''${notificationData.data.newCategoryName} (Od: ${notificationData.data.dateFrom}, Do: ${notificationData.data.dateTo}) (Aktívny dátum od: ${notificationData.data.dateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.dateToActive ? 'Áno' : 'Nie'})'`; // Upravené na jeden reťazec s novými dátami
       } else if (notificationData.type === 'edit') {
-        changesMessage = `Zmena kategórie z: '${notificationData.data.originalCategoryName}' (Od: ${notificationData.data.originalDateFrom}, Do: ${notificationData.data.originalDateTo}, Aktívny dátum od: ${notificationData.data.originalDateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.originalDateToActive ? 'Áno' : 'Nie'}) na '${notificationData.data.newCategoryName}' (Od: ${notificationData.data.newDateFrom}, Do: ${notificationData.data.newDateTo}, Aktívny dátum od: ${notificationData.data.newDateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.newDateToActive ? 'Áno' : 'Nie'})`;
+        changesMessage = `Zmena kategórie z: '${notificationData.data.originalCategoryName} (Od: ${notificationData.data.originalDateFrom}, Do: ${notificationData.data.originalDateTo}, Aktívny dátum od: ${notificationData.data.originalDateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.originalDateToActive ? 'Áno' : 'Nie'})' na '${notificationData.data.newCategoryName} (Od: ${notificationData.data.newDateFrom}, Do: ${notificationData.data.newDateTo}, Aktívny dátum od: ${notificationData.data.newDateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.newDateToActive ? 'Áno' : 'Nie'})'`;
       } else if (notificationData.type === 'delete') {
         changesMessage = `Zmazanie kategórie: '''${notificationData.data.categoryName}'`;
       }
@@ -1038,7 +1038,7 @@ function AddCategoriesApp() {
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum od'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum do'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, '')
                         )
                     ),
                     React.createElement(
