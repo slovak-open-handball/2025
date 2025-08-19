@@ -751,7 +751,7 @@ function AddCategoriesApp() {
         }
       } else if (notificationData.type === 'delete') {
         changesToAdd.push(
-          `Zmazanie kategórie: '${notificationData.data.categoryName}'`
+          `Zmazanie kategórie: '''${notificationData.data.categoryName}'`
         );
       }
 
