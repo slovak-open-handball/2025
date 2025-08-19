@@ -180,7 +180,7 @@ const showDatabaseNotification = (message, type = 'info') => {
         flex items-center space-x-2
     `;
 
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '�';
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔'; // Použijeme zvonček pre info notifikácie
     
     const formattedMessage = message.replace(/\n/g, '<br>');
 
@@ -365,31 +365,45 @@ const setupNotificationListenerForAdmin = () => {
         const auth = getAuth();
         const userId = auth.currentUser ? auth.currentUser.uid : null;
 
+        if (!userId) { // Ak nie je prihlásený používateľ, nemá zmysel spracovávať notifikácie
+            return;
+        }
+
         let unreadCount = 0;
+        // Načítame všetky notifikácie pre správne spočítanie neprečítaných
+        const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+
         // Spočítame neprečítané správy pre aktuálneho používateľa
-        snapshot.docs.forEach(doc => {
-            const notificationData = doc.data();
-            const seenBy = notificationData.seenBy || [];
-            if (userId && !seenBy.includes(userId)) {
+        allNotifications.forEach(notification => {
+            const seenBy = notification.data.seenBy || [];
+            if (!seenBy.includes(userId)) {
                 unreadCount++;
             }
         });
 
         // Zobrazíme súhrnnú notifikáciu o neprečítaných správach, ak sú splnené podmienky
-        if (unreadCount >= 5) {
-            showDatabaseNotification(`Máte ${unreadCount} nových neprečítaných upozornení.`, 'info');
-        } else if (unreadCount >= 3) {
-            showDatabaseNotification(`Máte ${unreadCount} nové neprečítané upozornenia.`, 'info');
+        if (unreadCount >= 3) {
+            let message = '';
+            if (unreadCount >= 5) {
+                message = `Máte ${unreadCount} nových neprečítaných upozornení.`;
+            } else { // unreadCount je 3 alebo 4
+                message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
+            }
+            showDatabaseNotification(message, 'info');
+
+            // Ukončíme spracovanie, aby sa nezobrazovali individuálne notifikácie,
+            // a správy sa neoznačujú ako prečítané.
+            return; 
         }
 
-        // Spracujeme jednotlivé nové notifikácie (existujúca logika)
+        // Ak unreadCount je menší ako 3, spracujeme jednotlivé nové notifikácie
         snapshot.docChanges().forEach(async (change) => {
             if (change.type === "added") {
                 const newNotification = change.doc.data();
                 const notificationId = change.doc.id;
                 
                 const seenBy = newNotification.seenBy || [];
-                if (userId && !seenBy.includes(userId)) {
+                if (!seenBy.includes(userId)) { // Spracujeme len tie, ktoré používateľ ešte nevidel
                     console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                     
                     let changesMessage = '';
@@ -410,14 +424,13 @@ const setupNotificationListenerForAdmin = () => {
                     
                     const notificationDocRef = doc(window.db, "notifications", notificationId);
                     try {
+                        // Tieto individuálne notifikácie sa označia ako videné
                         await updateDoc(notificationDocRef, {
                             seenBy: arrayUnion(userId)
                         });
                     } catch (e) {
                         console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
                     }
-                } else if (userId && seenBy.includes(userId)) {
-//                    console.log(`header.js: Notifikácia ${notificationId} už bola videná používateľom ${userId}. Nebude sa zobrazovať znova.`);
                 }
             }
         });
