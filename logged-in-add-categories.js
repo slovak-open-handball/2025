@@ -86,16 +86,17 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
   const [dateFromActive, setDateFromActive] = React.useState(false); // ZMENA: Predvolené na false
   const [dateToActive, setDateToActive] = React.useState(false);   // ZMENA: Predvolené na false
 
-  // Resetuje stav, keď sa modálne okno otvorí
+  // Resetuje stav, keď sa modálne okno otvorí alebo zmení jeho 'show' property
   React.useEffect(() => {
     if (show) {
       setNewCategoryName('');
       setDateFrom('');
       setDateTo('');
-      setDateFromActive(false);
-      setDateToActive(false);
+      setDateFromActive(false); // VŽDY resetovať na false pri otvorení
+      setDateToActive(false);   // VŽDY resetovať na false pri otvorení
     }
-  }, [show]);
+  }, [show]); // Efekt sa spustí, keď sa zmení hodnota 'show'
+
 
   // Kontrola, či názov kategórie už existuje (case-insensitive) aj s dátumami
   const categoryExists = React.useMemo(() => {
@@ -1037,7 +1038,7 @@ function AddCategoriesApp() {
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum od'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum do'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, '')
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
                         )
                     ),
                     React.createElement(
