@@ -704,7 +704,7 @@ function AddCategoriesApp() {
         const formattedDateFrom = formatNotificationDate(notificationData.data.dateFrom);
         const formattedDateTo = formatNotificationDate(notificationData.data.dateTo);
         changesToAdd.push(
-          `[${currentTimestamp}] Používateľ ${userEmail} vytvoril novú kategóriu: '${notificationData.data.newCategoryName}' (Od: ${formattedDateFrom}, Do: ${formattedDateTo}) (Aktívny dátum od: ${notificationData.data.dateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.dateToActive ? 'Áno' : 'Nie'})`
+          `Vytvorenie novej kategórie: '${notificationData.data.newCategoryName}' (Od: ${formattedDateFrom}, Do: ${formattedDateTo}) (Aktívny dátum od: ${notificationData.data.dateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.dateToActive ? 'Áno' : 'Nie'})`
         );
       } else if (notificationData.type === 'edit') {
         const {
@@ -715,7 +715,7 @@ function AddCategoriesApp() {
         // Kontrola zmeny názvu
         if (originalCategoryName !== newCategoryName) {
           changesToAdd.push(
-            `[${currentTimestamp}] Používateľ ${userEmail} zmenil názov kategórie z '${originalCategoryName}' na '${newCategoryName}'.`
+            `Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`
           );
         }
 
@@ -724,7 +724,7 @@ function AddCategoriesApp() {
         const formattedNewDateFrom = formatNotificationDate(newDateFrom);
         if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
           changesToAdd.push(
-            `[${currentTimestamp}] Používateľ ${userEmail} zmenil 'Dátum od' pre kategóriu '${newCategoryName}' z '${formattedOriginalDateFrom}' (Aktívny: ${originalDateFromActive ? 'Áno' : 'Nie'}) na '${formattedNewDateFrom}' (Aktívny: ${newDateFromActive ? 'Áno' : 'Nie'}).`
+            `Zmena dátumu od: z '${formattedOriginalDateFrom}' (Aktívny: ${originalDateFromActive ? 'Áno' : 'Nie'}) na '${formattedNewDateFrom}' (Aktívny: ${newDateFromActive ? 'Áno' : 'Nie'}) pre kategóriu '${newCategoryName}'`
           );
         }
 
@@ -733,21 +733,24 @@ function AddCategoriesApp() {
         const formattedNewDateTo = formatNotificationDate(newDateTo);
         if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
           changesToAdd.push(
-            `[${currentTimestamp}] Používateľ ${userEmail} zmenil 'Dátum do' pre kategóriu '${newCategoryName}' z '${formattedOriginalDateTo}' (Aktívny: ${originalDateToActive ? 'Áno' : 'Nie'}) na '${formattedNewDateTo}' (Aktívny: ${newDateToActive ? 'Áno' : 'Nie'}).`
+            `Zmena dátumu do: z '${formattedOriginalDateTo}' (Aktívny: ${originalDateToActive ? 'Áno' : 'Nie'}) na '${formattedNewDateTo}' (Aktívny: ${newDateToActive ? 'Áno' : 'Nie'}) pre kategóriu '${newCategoryName}'`
           );
         }
       } else if (notificationData.type === 'delete') {
         changesToAdd.push(
-          `[${currentTimestamp}] Používateľ ${userEmail} zmazal kategóriu: '${notificationData.data.categoryName}'.`
+          `Zmazanie kategórie: '${notificationData.data.categoryName}'`
         );
       }
 
-      // Použitie setDoc s merge: true a arrayUnion pre pridanie zmien do poľa 'changes'
+      // Použitie addDoc na vytvorenie nového dokumentu v kolekcii 'notifications'
       if (changesToAdd.length > 0) {
-        await setDoc(adminNotificationsDocRef, {
-          changes: arrayUnion(...changesToAdd)
-        }, { merge: true });
-        console.log("Notifikácie pre administrátorov úspešne uložené do Firestore poľa 'changes' v dokumente adminNotifications.");
+        const notificationsCollectionRef = collection(db, 'notifications'); // Odkaz na kolekciu 'notifications'
+        await addDoc(notificationsCollectionRef, {
+          userEmail: userEmail,
+          timestamp: currentTimestamp,
+          changes: changesToAdd // Pole textových reťazcov zmien
+        });
+        console.log("Notifikácia pre administrátorov úspešne uložená do kolekcie 'notifications'.");
       } else {
         console.log("Žiadne zmeny na uloženie notifikácií.");
       }
