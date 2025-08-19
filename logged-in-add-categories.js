@@ -108,7 +108,8 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
 
   if (!show) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => { // ZMENA: Funkcia je async
+    console.log("AddCategoryModal handleSubmit: Validating inputs.");
     if (newCategoryName.trim() === '') {
         showLocalNotification("Prosím vyplňte názov kategórie.", 'error');
         return;
@@ -129,12 +130,22 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
 
     // EXPLICITNÁ KONTROLA DUPLICITY PRED VOLANÍM onAddCategory (len názov)
     if (categoryNameExists) {
-        showLocalNotification(`Kategória s názvom ${newCategoryName.trim()} už existuje. Zvoľte iný názov.`, 'error');
+        showLocalNotification(`Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`, 'error');
+        console.log("AddCategoryModal handleSubmit: Client-side duplicate detected. Not calling onAddCategory.");
         return; // Zabráni odoslaniu, ak duplikát existuje na strane klienta
     }
 
-    // Pridanie stavov toggle buttonov do onAddCategory
-    onAddCategory(newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive);
+    console.log("AddCategoryModal handleSubmit: Client-side validation passed. Calling onAddCategory.");
+    // ZMENA: Await volanie onAddCategory
+    const success = await onAddCategory(newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive);
+    
+    // ZMENA: Modál sa zatvorí len ak operácia bola úspešná (notifikácia je už zobrazená v handleAddCategorySubmit)
+    if (success) {
+      onClose(); // Zatvorí modálne okno
+      console.log("AddCategoryModal handleSubmit: Category added successfully, closing modal.");
+    } else {
+      console.log("AddCategoryModal handleSubmit: Category addition failed, modal remains open.");
+    }
   };
 
   // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
@@ -207,7 +218,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
         categoryNameExists && React.createElement( // Zobrazenie chybovej správy je podmienené categoryNameExists
           'p',
           { className: 'text-red-500 text-xs italic mt-2' },
-          `Kategória s názvom ${newCategoryName.trim()} už existuje. Zvoľte iný názov.`
+          `Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`
         )
       ),
       React.createElement(
@@ -248,7 +259,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   const [editedDateTo, setEditedDateTo] = React.useState(category ? category.dateTo : '');
   // Nové stavy pre aktívny/neaktívny dátum, PREDVOLENE false pre spätnú kompatibilitu
   const [editedDateFromActive, setEditedDateFromActive] = React.useState(category ? (category.dateFromActive !== undefined ? category.dateFromActive : false) : false); // ZMENA: Predvolené na false
-  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : false) : false);     // ZMENA: Predvolené na false
+  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToToActive !== undefined ? category.dateToToActive : false) : false);     // ZMENA: Predvolené na false
 
 
   React.useEffect(() => {
@@ -373,7 +384,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         categoryExists && React.createElement( // Zobrazenie chybovej správy
             'p',
             { className: 'text-red-500 text-xs italic mt-2' },
-            `Kategória s názvom ${editedCategoryName.trim()} s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`
+            `Kategória s názvom "${editedCategoryName.trim()}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`
         )
       ),
       React.createElement(
@@ -794,32 +805,38 @@ function AddCategoriesApp() {
 
   // Funkcia na pridanie novej kategórie
   const handleAddCategorySubmit = async (categoryName, dateFrom, dateTo, dateFromActive, dateToActive) => { // Prijíma nové parametre
+    console.log("handleAddCategorySubmit: Starting category submission.");
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       if (typeof showLocalNotification === 'function') {
         showLocalNotification("Nemáte oprávnenie na pridanie kategórie.", 'error');
       }
-      return;
+      console.log("handleAddCategorySubmit: Insufficient permissions. Returning false.");
+      return false; // ZMENA: Vráti false pri chybe oprávnení
     }
     const trimmedCategoryName = categoryName.trim();
     if (trimmedCategoryName === '') { // ZMENA: Iba názov je vždy povinný
       if (typeof showLocalNotification === 'function') {
         showLocalNotification("Názov kategórie nemôže byť prázdny.", 'error');
       }
-      return;
+      console.log("handleAddCategorySubmit: Category name is empty. Returning false.");
+      return false; // ZMENA: Vráti false
     }
 
     // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
     if (dateFromActive && dateFrom === '') {
         showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
-        return;
+        console.log("handleAddCategorySubmit: DateFrom active but empty. Returning false.");
+        return false; // ZMENA: Vráti false
     }
     if (dateToActive && dateTo === '') {
         showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
-        return;
+        console.log("handleAddCategorySubmit: DateTo active but empty. Returning false.");
+        return false; // ZMENA: Vráti false
     }
     if (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
-        return;
+        console.log("handleAddCategorySubmit: DateFrom after DateTo. Returning false.");
+        return false; // ZMENA: Vráti false
     }
 
     setLoading(true);
@@ -829,18 +846,19 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Firebase v9 syntax: getDoc(docRef)
-      const docSnapshot = await getDoc(categoriesDocRef); // POUŽITIE getDoc()
-      const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; // Firebase v9 syntax: docSnapshot.exists()
+      const docSnapshot = await getDoc(categoriesDocRef); 
+      const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; 
 
       // Kontrola duplicity názvu kategórie (case-insensitive) IGNORUJEME DÁTUMY
       if (Object.values(currentCategoriesData).some(cat => 
         (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase()
       )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom ${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
+          showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
         }
-        setLoading(false);
-        return; // <--- TOTO ZABRÁNI PRIDANIU DUPLICITY DO FIRESTORE
+        console.log("handleAddCategorySubmit: Server-side duplicate detected. Returning false.");
+        setLoading(false); // Zastaví loader
+        return false; // <--- TOTO ZABRÁNI PRIDANIU DUPLICITY DO FIRESTORE A VRÁTI FALSE
       }
 
       // Generujeme náhodné ID pre názov poľa (Firebase v9 way to get a new doc ID)
@@ -860,17 +878,22 @@ function AddCategoriesApp() {
       if (typeof showLocalNotification === 'function') {
         showLocalNotification("Kategória pridaná!", 'success');
       }
-      setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
+      console.log("handleAddCategorySubmit: Category added successfully. Returning true.");
+      // setShowAddCategoryModal(false); // ZMENA: Toto už riadi AddCategoryModal na základe vrátenej hodnoty
 
       // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
-      await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, dateFrom: dateFrom, dateTo: dateTo, dateFromActive: dateFromActive, dateToActive: dateToActive, userEmail: userEmail } }); // Upravené volanie
+      await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, dateFrom: dateFrom, dateTo: dateTo, dateFromActive: dateFromActive, dateToActive: dateToActive, userEmail: userEmail } });
+
+      return true; // ZMENA: Vráti true pri úspechu
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
       if (typeof showLocalNotification === 'function') {
         showLocalNotification(`Chyba pri pridávaní kategórie: ${e.message}`, 'error');
       }
+      console.log("handleAddCategorySubmit: Error during submission. Returning false.");
+      return false; // ZMENA: Vráti false pri chybe
     } finally {
       setLoading(false);
     }
@@ -912,8 +935,8 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Firebase v9 syntax: getDoc(docRef)
-      const docSnapshot = await getDoc(categoriesDocRef); // POUŽITIE getDoc()
-      const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; // Firebase v9 syntax: docSnapshot.exists()
+      const docSnapshot = await getDoc(categoriesDocRef); 
+      const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; 
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie) IGNORUJEME DÁTUMY pri kontrole duplicity
       if (Object.entries(currentCategoriesData).some(([id, catData]) => 
@@ -921,7 +944,7 @@ function AddCategoriesApp() {
             id !== categoryId // Dôležité: Ignorovať aktuálne upravovanú kategóriu
         )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom ${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
+          showLocalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return;
@@ -932,8 +955,8 @@ function AddCategoriesApp() {
       const originalCategoryName = originalCategoryData.name;
       const originalDateFrom = originalCategoryData.dateFrom;
       const originalDateTo = originalCategoryData.dateTo;
-      const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : false; // ZMENA: Predvolené na false
-      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : false;     // ZMENA: Predvolené na false
+      const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : false; 
+      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToToActive : false;     
 
       // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
       await setDoc(categoriesDocRef, {
@@ -969,7 +992,7 @@ function AddCategoriesApp() {
               newDateToActive: newDateToActive,
               userEmail: userEmail 
           } 
-      }); // Upravené volanie
+      }); 
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
