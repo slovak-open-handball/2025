@@ -237,7 +237,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   const [editedDateTo, setEditedDateTo] = React.useState(category ? category.dateTo : '');
   // Nové stavy pre aktívny/neaktívny dátum, PREDVOLENE false pre spätnú kompatibilitu
   const [editedDateFromActive, setEditedDateFromActive] = React.useState(category ? (category.dateFromActive !== undefined ? category.dateFromActive : false) : false); 
-  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToToActive !== undefined ? category.dateToToActive : false) : false);     
+  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : false) : false);     
 
 
   React.useEffect(() => {
@@ -934,7 +934,7 @@ function AddCategoriesApp() {
       const originalDateFrom = originalCategoryData.dateFrom;
       const originalDateTo = originalCategoryData.dateTo;
       const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : false; 
-      const originalDateToActive = originalCategoryData.dateToToActive !== undefined ? originalCategoryData.dateToToActive : false;     
+      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : false;     
 
       // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
       await setDoc(categoriesDocRef, {
