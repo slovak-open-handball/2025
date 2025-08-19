@@ -860,7 +860,7 @@ function AddCategoriesApp() {
       }, { merge: true });
 
       if (typeof showLocalNotification === 'function') {
-        showLocalNotification(`Kategória s názvom ${trimmedCategoryName} pridaná!`, 'success');
+        showLocalNotification(`Kategória s názvom ${trimmedCategoryName} pridaná.`, 'success');
       }
 
       // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
@@ -1014,7 +1014,7 @@ function AddCategoriesApp() {
       }, { merge: true }); // Používame merge: true pre bezpečné odstránenie poľa
 
       if (typeof showLocalNotification === 'function') {
-        showLocalNotification(`Kategória ${categoryToDelete.name} bola zmazaná!`, 'success');
+        showLocalNotification(`Kategória ${categoryToDelete.name} bola zmazaná.`, 'success');
       }
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
 
