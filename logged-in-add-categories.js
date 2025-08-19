@@ -51,11 +51,39 @@ function showLocalNotification(message, type = 'success') {
 }
 
 
+// NOVÝ KOMPONENT: ToggleButton
+function ToggleButton({ isActive, onToggle, disabled }) {
+  const bgColor = isActive ? 'bg-green-500' : 'bg-red-500';
+  const toggleClasses = `relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${bgColor} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+  const spanClasses = `pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${isActive ? 'translate-x-5' : 'translate-x-0'}`;
+
+  return React.createElement(
+    'button',
+    {
+      type: 'button',
+      className: toggleClasses,
+      role: 'switch',
+      'aria-checked': isActive,
+      onClick: onToggle,
+      disabled: disabled,
+    },
+    React.createElement('span', { className: 'sr-only' }, isActive ? 'Zapnuté' : 'Vypnuté'), // Screen reader text
+    React.createElement('span', {
+      'aria-hidden': 'true',
+      className: spanClasses,
+    })
+  );
+}
+
+
 // AddCategoryModal Component
 function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCategories }) {
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
+  // Nové stavy pre aktívny/neaktívny dátum, predvolene true
+  const [dateFromActive, setDateFromActive] = React.useState(true);
+  const [dateToActive, setDateToActive] = React.useState(true);
 
   // Kontrola, či názov kategórie už existuje (case-insensitive) aj s dátumami
   const categoryExists = React.useMemo(() => {
@@ -78,10 +106,13 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
-    onAddCategory(newCategoryName, dateFrom, dateTo);
+    // Pridanie stavov toggle buttonov do onAddCategory
+    onAddCategory(newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive);
     setNewCategoryName(''); // Vyčistí pole po odoslaní
     setDateFrom('');
     setDateTo('');
+    setDateFromActive(true); // Reset to default
+    setDateToActive(true); // Reset to default
   };
 
   return React.createElement(
@@ -104,7 +135,16 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
           required: true,
           disabled: loading,
         }),
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2 mt-4', htmlFor: 'date-from' }, 'Dátum narodenia od'),
+        
+        // Dátum narodenia od s toggle buttonom
+        React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'date-from' }, 'Dátum narodenia od'),
+          React.createElement(ToggleButton, {
+            isActive: dateFromActive,
+            onToggle: () => setDateFromActive(!dateFromActive),
+            disabled: loading,
+          })
+        ),
         React.createElement('input', {
             type: 'date',
             id: 'date-from',
@@ -114,7 +154,16 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCateg
             required: true,
             disabled: loading,
         }),
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2 mt-4', htmlFor: 'date-to' }, 'Dátum narodenia do'),
+
+        // Dátum narodenia do s toggle buttonom
+        React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'date-to' }, 'Dátum narodenia do'),
+          React.createElement(ToggleButton, {
+            isActive: dateToActive,
+            onToggle: () => setDateToActive(!dateToActive),
+            disabled: loading,
+          })
+        ),
         React.createElement('input', {
             type: 'date',
             id: 'date-to',
@@ -162,12 +211,19 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   const [editedCategoryName, setEditedCategoryName] = React.useState(category ? category.name : '');
   const [editedDateFrom, setEditedDateFrom] = React.useState(category ? category.dateFrom : '');
   const [editedDateTo, setEditedDateTo] = React.useState(category ? category.dateTo : '');
+  // Nové stavy pre aktívny/neaktívny dátum, predvolene true pre spätnú kompatibilitu
+  const [editedDateFromActive, setEditedDateFromActive] = React.useState(category ? (category.dateFromActive !== undefined ? category.dateFromActive : true) : true);
+  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : true) : true);
+
 
   React.useEffect(() => {
     if (category) {
       setEditedCategoryName(category.name);
       setEditedDateFrom(category.dateFrom || '');
       setEditedDateTo(category.dateTo || '');
+      // Načítanie existujúcich hodnôt alebo predvolené na true
+      setEditedDateFromActive(category.dateFromActive !== undefined ? category.dateFromActive : true);
+      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : true);
     }
   }, [category]);
 
@@ -200,7 +256,8 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
-    onSaveCategory(category.id, editedCategoryName, editedDateFrom, editedDateTo);
+    // Pridanie stavov toggle buttonov do onSaveCategory
+    onSaveCategory(category.id, editedCategoryName, editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive);
   };
 
   return React.createElement(
@@ -223,7 +280,16 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           required: true,
           disabled: loading,
         }),
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2 mt-4', htmlFor: 'edit-date-from' }, 'Dátum narodenia od'),
+        
+        // Dátum narodenia od s toggle buttonom
+        React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'edit-date-from' }, 'Dátum narodenia od'),
+          React.createElement(ToggleButton, {
+            isActive: editedDateFromActive,
+            onToggle: () => setEditedDateFromActive(!editedDateFromActive),
+            disabled: loading,
+          })
+        ),
         React.createElement('input', {
             type: 'date',
             id: 'edit-date-from',
@@ -233,7 +299,16 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
             required: true,
             disabled: loading,
         }),
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2 mt-4', htmlFor: 'edit-date-to' }, 'Dátum narodenia do'),
+
+        // Dátum narodenia do s toggle buttonom
+        React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'edit-date-to' }, 'Dátum narodenia do'),
+          React.createElement(ToggleButton, {
+            isActive: editedDateToActive,
+            onToggle: () => setEditedDateToActive(!editedDateToActive),
+            disabled: loading,
+          })
+        ),
         React.createElement('input', {
             type: 'date',
             id: 'edit-date-to',
@@ -467,30 +542,36 @@ function AddCategoriesApp() {
           console.log("AddCategoriesApp: onSnapshot pre dokument 'categories' spustený.");
           if (docSnapshot.exists()) { // Firebase v9 syntax: docSnapshot.exists()
             const data = docSnapshot.data();
-            // Konvertujeme objekt na pole objektov { id, name, dateFrom, dateTo }
+            // Konvertujeme objekt na pole objektov { id, name, dateFrom, dateTo, dateFromActive, dateToActive }
             let fetchedCategories = Object.entries(data).map(([id, categoryValue]) => { 
                 let name = '';
                 let dateFrom = '';
                 let dateTo = '';
+                let dateFromActive = true; // Predvolené na true pre spätnú kompatibilitu
+                let dateToActive = true;   // Predvolené na true pre spätnú kompatibilitu
 
                 if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
-                    // Nový formát: { name: "...", dateFrom: "...", dateTo: "..." }
+                    // Nový formát: { name: "...", dateFrom: "...", dateTo: "...", dateFromActive: true/false, dateToActive: true/false }
                     name = categoryValue.name;
                     dateFrom = categoryValue.dateFrom || '';
                     dateTo = categoryValue.dateTo || '';
+                    dateFromActive = categoryValue.dateFromActive !== undefined ? categoryValue.dateFromActive : true;
+                    dateToActive = categoryValue.dateToActive !== undefined ? categoryValue.dateToActive : true;
                 } else if (typeof categoryValue === 'string') {
                     // Starý formát: "CategoryName" - pre spätnú kompatibilitu
                     name = categoryValue;
                     dateFrom = '';
                     dateTo = '';
+                    // Tu ponechávame default true
                 } else {
                     // Spracovanie neočakávaného formátu, napr. zalogovanie varovania
                     console.warn(`Neočakávaný formát dát kategórie pre ID ${id}:`, categoryValue);
                     name = `Neznáma kategória (${id})`; // Záložný názov
                     dateFrom = '';
                     dateTo = '';
+                    // Tu ponechávame default true
                 }
-                return { id, name, dateFrom, dateTo };
+                return { id, name, dateFrom, dateTo, dateFromActive, dateToActive };
             });
             
             // Triedenie kategórií podľa názvu (abecedne/číselne)
@@ -556,9 +637,9 @@ function AddCategoriesApp() {
       let userEmail = notificationData.data.userEmail; // Získanie userEmail z dát
 
       if (notificationData.type === 'create') {
-        changesMessage = `Vytvorenie novej kategórie: '''${notificationData.data.newCategoryName}' (Od: ${notificationData.data.dateFrom}, Do: ${notificationData.data.dateTo})`; // Upravené na jeden reťazec
+        changesMessage = `Vytvorenie novej kategórie: '''${notificationData.data.newCategoryName}' (Od: ${notificationData.data.dateFrom}, Do: ${notificationData.data.dateTo}) (Aktívny dátum od: ${notificationData.data.dateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.dateToActive ? 'Áno' : 'Nie'})`; // Upravené na jeden reťazec s novými dátami
       } else if (notificationData.type === 'edit') {
-        changesMessage = `Zmena kategórie z: '${notificationData.data.originalCategoryName}' (Od: ${notificationData.data.originalDateFrom}, Do: ${notificationData.data.originalDateTo}) na '${notificationData.data.newCategoryName}' (Od: ${notificationData.data.newDateFrom}, Do: ${notificationData.data.newDateTo})`;
+        changesMessage = `Zmena kategórie z: '${notificationData.data.originalCategoryName}' (Od: ${notificationData.data.originalDateFrom}, Do: ${notificationData.data.originalDateTo}, Aktívny dátum od: ${notificationData.data.originalDateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.originalDateToActive ? 'Áno' : 'Nie'}) na '${notificationData.data.newCategoryName}' (Od: ${notificationData.data.newDateFrom}, Do: ${notificationData.data.newDateTo}, Aktívny dátum od: ${notificationData.data.newDateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.newDateToActive ? 'Áno' : 'Nie'})`;
       } else if (notificationData.type === 'delete') {
         changesMessage = `Zmazanie kategórie: '''${notificationData.data.categoryName}'`;
       }
@@ -581,7 +662,7 @@ function AddCategoriesApp() {
 
 
   // Funkcia na pridanie novej kategórie
-  const handleAddCategorySubmit = async (categoryName, dateFrom, dateTo) => {
+  const handleAddCategorySubmit = async (categoryName, dateFrom, dateTo, dateFromActive, dateToActive) => { // Prijíma nové parametre
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       if (typeof showLocalNotification === 'function') {
         showLocalNotification("Nemáte oprávnenie na pridanie kategórie.", 'error');
@@ -628,7 +709,9 @@ function AddCategoriesApp() {
         [newFieldId]: {
             name: trimmedCategoryName,
             dateFrom: dateFrom,
-            dateTo: dateTo
+            dateTo: dateTo,
+            dateFromActive: dateFromActive, // Ukladanie stavu aktivity dátumu
+            dateToActive: dateToActive      // Ukladanie stavu aktivity dátumu
         }
       }, { merge: true });
 
@@ -639,7 +722,7 @@ function AddCategoriesApp() {
 
       // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
-      await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, dateFrom: dateFrom, dateTo: dateTo, userEmail: userEmail } }); // Upravené volanie
+      await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, dateFrom: dateFrom, dateTo: dateTo, dateFromActive: dateFromActive, dateToActive: dateToActive, userEmail: userEmail } }); // Upravené volanie
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
@@ -652,7 +735,7 @@ function AddCategoriesApp() {
   };
 
   // Funkcia na úpravu kategórie
-  const handleEditCategorySubmit = async (categoryId, newName, newDateFrom, newDateTo) => {
+  const handleEditCategorySubmit = async (categoryId, newName, newDateFrom, newDateTo, newDateFromActive, newDateToActive) => { // Prijíma nové parametre
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       if (typeof showLocalNotification === 'function') {
         showLocalNotification("Nemáte oprávnenie na úpravu kategórie.", 'error');
@@ -697,13 +780,17 @@ function AddCategoriesApp() {
       const originalCategoryName = originalCategoryData.name;
       const originalDateFrom = originalCategoryData.dateFrom;
       const originalDateTo = originalCategoryData.dateTo;
+      const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : true;
+      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : true;
 
       // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
       await setDoc(categoriesDocRef, {
         [categoryId]: {
             name: trimmedNewName,
             dateFrom: newDateFrom,
-            dateTo: newDateTo
+            dateTo: newDateTo,
+            dateFromActive: newDateFromActive, // Ukladanie stavu aktivity dátumu
+            dateToActive: newDateToActive      // Ukladanie stavu aktivity dátumu
         }
       }, { merge: true });
 
@@ -721,9 +808,13 @@ function AddCategoriesApp() {
               originalCategoryName: originalCategoryName, 
               originalDateFrom: originalDateFrom,
               originalDateTo: originalDateTo,
+              originalDateFromActive: originalDateFromActive,
+              originalDateToActive: originalDateToActive,
               newCategoryName: trimmedNewName, 
               newDateFrom: newDateFrom,
               newDateTo: newDateTo,
+              newDateFromActive: newDateFromActive,
+              newDateToActive: newDateToActive,
               userEmail: userEmail 
           } 
       }); // Upravené volanie
@@ -797,6 +888,19 @@ function AddCategoriesApp() {
     }
   };
 
+  // Zobrazenie indikátora aktivity dátumu v tabuľke
+  const renderDateStatus = (dateString, isActive) => {
+    const statusColor = isActive ? 'bg-green-500' : 'bg-red-500';
+    const statusText = isActive ? 'Aktívne' : 'Neaktívne';
+    return React.createElement(
+      'div',
+      { className: 'flex items-center space-x-2' },
+      React.createElement('span', { className: `inline-block h-3 w-3 rounded-full ${statusColor}` }),
+      React.createElement('span', null, `${formatDateDisplay(dateString)} (${statusText})`)
+    );
+  };
+
+
   // Display loading state
   // Táto časť bola odstránená, pretože globálny loader.js sa stará o zobrazenie počas počiatočného načítavania.
   // Lokálny stav 'loading' sa stále používa na riadenie interakcií v rámci komponentu (napr. disabled tlačidlá).
@@ -856,7 +960,7 @@ function AddCategoriesApp() {
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum od'),
-                            React. createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum do'),
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum do'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
                         )
                     ),
@@ -868,8 +972,10 @@ function AddCategoriesApp() {
                                 'tr',
                                 { key: cat.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.name),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatDateDisplay(cat.dateFrom)),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatDateDisplay(cat.dateTo)),
+                                // Zobrazenie dátumu od so stavom aktivity
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, renderDateStatus(cat.dateFrom, cat.dateFromActive)),
+                                // Zobrazenie dátumu do so stavom aktivity
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, renderDateStatus(cat.dateTo, cat.dateToActive)),
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
