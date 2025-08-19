@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, deleteField, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -676,15 +676,15 @@ function AddCategoriesApp() {
   }, [db, userProfileData, getCategoriesDocRef]);
 
   // Funkcia na odoslanie notifikácie administrátorom
-  const sendAdminNotification = async (notificationData) => { // Zmenený parameter na objekt
+  const sendAdminNotification = async (notificationData) => {
     if (!db) { 
       console.error("Chyba: Databáza nie je k dispozícii pre odoslanie notifikácie.");
       return;
     }
     try {
-      const notificationsCollectionRef = collection(db, 'notifications');
-      let changesMessage = ''; // Zmenené na reťazec
-      let userEmail = notificationData.data.userEmail; // Získanie userEmail z dát
+      const adminNotificationsDocRef = doc(db, 'settings', 'adminNotifications');
+      const userEmail = notificationData.data.userEmail;
+      const detailedChanges = []; // Toto bude pole zmien
 
       // Pomocná funkcia pre formátovanie dátumu do DD. MM. YYYY
       const formatNotificationDate = (dateString) => {
@@ -698,33 +698,82 @@ function AddCategoriesApp() {
         }
       };
 
-
       if (notificationData.type === 'create') {
         const formattedDateFrom = formatNotificationDate(notificationData.data.dateFrom);
         const formattedDateTo = formatNotificationDate(notificationData.data.dateTo);
-        changesMessage = `Vytvorenie novej kategórie: '''${notificationData.data.newCategoryName} (Od: ${formattedDateFrom}, Do: ${formattedDateTo}) (Aktívny dátum od: ${notificationData.data.dateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.dateToActive ? 'Áno' : 'Nie'})'`; // Upravené na jeden reťazec s novými dátami
+        detailedChanges.push({
+          type: 'create',
+          categoryName: notificationData.data.newCategoryName,
+          dateFrom: formattedDateFrom,
+          dateTo: formattedDateTo,
+          dateFromActive: notificationData.data.dateFromActive,
+          dateToActive: notificationData.data.dateToActive,
+        });
       } else if (notificationData.type === 'edit') {
-        const formattedOriginalDateFrom = formatNotificationDate(notificationData.data.originalDateFrom);
-        const formattedOriginalDateTo = formatNotificationDate(notificationData.data.originalDateTo);
-        const formattedNewDateFrom = formatNotificationDate(notificationData.data.newDateFrom);
-        const formattedNewDateTo = formatNotificationDate(notificationData.data.newDateTo);
+        const {
+          originalCategoryName, originalDateFrom, originalDateTo, originalDateFromActive, originalDateToActive,
+          newCategoryName, newDateFrom, newDateTo, newDateFromActive, newDateToActive
+        } = notificationData.data;
 
-        changesMessage = `Zmena kategórie z: '${notificationData.data.originalCategoryName} (Od: ${formattedOriginalDateFrom}, Do: ${formattedOriginalDateTo}, Aktívny dátum od: ${notificationData.data.originalDateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.originalDateToActive ? 'Áno' : 'Nie'})' na '${notificationData.data.newCategoryName} (Od: ${formattedNewDateFrom}, Do: ${formattedNewDateTo}, Aktívny dátum od: ${notificationData.data.newDateFromActive ? 'Áno' : 'Nie'}, Aktívny dátum do: ${notificationData.data.newDateToActive ? 'Áno' : 'Nie'})'`;
+        // Kontrola zmeny názvu
+        if (originalCategoryName !== newCategoryName) {
+          detailedChanges.push({
+            type: 'name',
+            from: originalCategoryName,
+            to: newCategoryName,
+          });
+        }
+
+        // Kontrola zmeny "Dátum od"
+        const formattedOriginalDateFrom = formatNotificationDate(originalDateFrom);
+        const formattedNewDateFrom = formatNotificationDate(newDateFrom);
+        if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
+          detailedChanges.push({
+            type: 'dateFrom',
+            from: formattedOriginalDateFrom,
+            to: formattedNewDateFrom,
+            wasActive: originalDateFromActive,
+            isActive: newDateFromActive,
+          });
+        }
+
+        // Kontrola zmeny "Dátum do"
+        const formattedOriginalDateTo = formatNotificationDate(originalDateTo);
+        const formattedNewDateTo = formatNotificationDate(newDateTo);
+        if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
+          detailedChanges.push({
+            type: 'dateTo',
+            from: formattedOriginalDateTo,
+            to: formattedNewDateTo,
+            wasActive: originalDateToActive,
+            isActive: newDateToActive,
+          });
+        }
       } else if (notificationData.type === 'delete') {
-        changesMessage = `Zmazanie kategórie: '''${notificationData.data.categoryName}'`;
+        detailedChanges.push({
+          type: 'delete',
+          categoryName: notificationData.data.categoryName,
+        });
       }
 
-      await addDoc(notificationsCollectionRef, {
-        userEmail: userEmail, // Pridané pole userEmail
-        changes: changesMessage, // Zmenené 'message' na 'changes' a je to jeden reťazec
-        timestamp: new Date(), 
-        recipientId: 'all_admins'
-        // Odstránené pole 'read: false'
-      });
-      console.log("Notifikácia pre administrátorov úspešne uložená do Firestore.");
+      // Vytvorenie objektu notifikácie, ktorý sa pridá do poľa
+      const newNotificationEntry = {
+        userEmail: userEmail,
+        detailedChanges: detailedChanges, // Používame pole objektov zmien
+        timestamp: new Date().toISOString(), // Uložiť časovú pečiatku ako ISO reťazec pre lepšiu kompatibilitu
+        notificationType: notificationData.type, // Pôvodný typ notifikácie (create, edit, delete)
+      };
+
+      // Použitie setDoc s merge: true pre pridanie do poľa.
+      // Ak dokument neexistuje, vytvorí ho s poľom. Ak existuje, pridá do poľa.
+      await setDoc(adminNotificationsDocRef, {
+        changes: arrayUnion(newNotificationEntry)
+      }, { merge: true });
+
+      console.log("Notifikácia pre administrátorov úspešne uložená do Firestore poľa.");
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri ukladaní notifikácie pre administrátorov:", e);
-      if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+      if (typeof showLocalNotification === 'function') {
         showLocalNotification(`Chyba pri ukladaní notifikácie pre administrátorov: ${e.message}`, 'error');
       }
     }
@@ -1058,7 +1107,7 @@ function AddCategoriesApp() {
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum od'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum do'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, '')
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
                         )
                     ),
                     React.createElement(
