@@ -78,7 +78,7 @@ function ToggleButton({ isActive, onToggle, disabled }) {
 
 
 // AddCategoryModal Component
-function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // ZMENA: Odstránené existingCategories
+function AddCategoryModal({ show, onClose, onAddCategory, loading }) { 
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
@@ -714,7 +714,7 @@ function AddCategoriesApp() {
         // Dátum do a jeho aktívnosť
         if (dateTo || dateToActive) { // Generovať, ak je dátum alebo je aktívny
             changesToAdd.push(`Dátum do: '''${formattedDateTo}'`);
-            changesToAdd.push(`Aktívnosť pre dátum do ${formattedTo || 'N/A'}: '''${dateToActive ? 'Áno' : 'Nie'}'`); // ZMENA: Opravená premenná
+            changesToAdd.push(`Aktívnosť pre dátum do ${formattedDateTo || 'N/A'}: '''${dateToActive ? 'Áno' : 'Nie'}'`); 
         }
 
       } else if (notificationData.type === 'edit') {
@@ -1070,7 +1070,7 @@ function AddCategoriesApp() {
         onClose: () => { setShowAddCategoryModal(false); }, 
         onAddCategory: handleAddCategorySubmit,
         loading: loading,
-        existingCategories: categories 
+        //existingCategories: categories // ZMENA: Odstránené, už sa neposiela do AddCategoryModal
     }),
     React.createElement(EditCategoryModal, {
         show: showEditCategoryModal,
