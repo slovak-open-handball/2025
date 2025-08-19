@@ -904,11 +904,12 @@ function AddCategoriesApp() {
   // Zobrazenie indikátora aktivity dátumu v tabuľke
   const renderDateStatus = (dateString, isActive) => {
     const statusColor = isActive ? 'bg-green-500' : 'bg-red-500';
+    // Odstránený text '(Aktívne)' alebo '(Neaktívne)'
     return React.createElement(
       'div',
       { className: 'flex items-center space-x-2' },
       React.createElement('span', { className: `inline-block h-3 w-3 rounded-full ${statusColor}` }),
-      React.createElement('span', null, `${formatDateDisplay(dateString)}`)
+      React.createElement('span', null, formatDateDisplay(dateString))
     );
   };
 
