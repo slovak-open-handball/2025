@@ -197,6 +197,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
             required: dateToActive, // Dátum je povinný len ak je toggle zapnutý
             disabled: loading,
         }),
+        {/* ZMENA: Odstránený `categoryNameExists && React.createElement(...)` */}
       ),
       React.createElement(
         'div',
@@ -245,7 +246,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
       setEditedDateTo(category.dateTo || '');
       // Načítanie existujúcich hodnôt alebo predvolené na false
       setEditedDateFromActive(category.dateFromActive !== undefined ? category.dateFromActive : false); 
-      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : false);     // ZMENA: Oprava preklepu
+      setEditedToActive(category.dateToActive !== undefined ? category.dateToActive : false);     // ZMENA: Oprava preklepu, opravený setState volanie
     }
   }, [category]);
 
@@ -1166,12 +1167,11 @@ function AddCategoriesApp() {
         )
       )
     ),
-    // Zelené okrúhle tlačidlo s textom "+"
     React.createElement(
       'button',
       {
         className: 'fab-button',
-        onClick: () => setShowAddCategoryModal(true), // Otvorí modálne okno na pridanie
+        onClick: () => setShowAddCategoryModal(true),
         disabled: loading,
       },
       '+'
@@ -1179,5 +1179,4 @@ function AddCategoriesApp() {
   );
 }
 
-// Explicitne sprístupniť komponent globálne
-window.AddCategoriesApp = AddCategoriesApp;
+export default AddCategoriesApp;
