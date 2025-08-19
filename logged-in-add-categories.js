@@ -722,12 +722,12 @@ function AddCategoriesApp() {
         const formattedOriginalDateFrom = formatNotificationDate(originalDateFrom);
         const formattedNewDateFrom = formatNotificationDate(newDateFrom);
         if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
-          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`); // Opakujeme pre jasnosť
+          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`);
           if (formattedOriginalDateFrom !== formattedNewDateFrom) {
             changesToAdd.push(`Zmena dátumu od: z '${formattedOriginalDateFrom}' na '${formattedNewDateFrom}'`);
           }
           if (originalDateFromActive !== newDateFromActive) {
-            changesToAdd.push(`Zmena aktívnosti pre dátum od: z '${originalDateFromActive ? 'Áno' : 'Nie'}' na '${newDateFromActive ? 'Áno' : 'Nie'}'`);
+            changesToAdd.push(`Zmena aktívnosti pre dátum od ${formattedNewDateFrom}: z '${originalDateFromActive ? 'Áno' : 'Nie'}' na '${newDateFromActive ? 'Áno' : 'Nie'}'`);
           }
         }
 
@@ -735,12 +735,12 @@ function AddCategoriesApp() {
         const formattedOriginalDateTo = formatNotificationDate(originalDateTo);
         const formattedNewDateTo = formatNotificationDate(newDateTo);
         if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
-          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`); // Opakujeme pre jasnosť
+          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`);
           if (formattedOriginalDateTo !== formattedNewDateTo) {
             changesToAdd.push(`Zmena dátumu do: z '${formattedOriginalDateTo}' na '${formattedNewDateTo}'`);
           }
           if (originalDateToActive !== newDateToActive) {
-            changesToAdd.push(`Zmena aktívnosti pre dátum do: z '${originalDateToActive ? 'Áno' : 'Nie'}' na '${newDateToActive ? 'Áno' : 'Nie'}'`);
+            changesToAdd.push(`Zmena aktívnosti pre dátum do ${formattedNewDateTo}: z '${originalDateToActive ? 'Áno' : 'Nie'}' na '${newDateToActive ? 'Áno' : 'Nie'}'`);
           }
         }
       } else if (notificationData.type === 'delete') {
@@ -1097,7 +1097,7 @@ function AddCategoriesApp() {
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum od'),
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum do'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, '')
                         )
                     ),
                     React.createElement(
