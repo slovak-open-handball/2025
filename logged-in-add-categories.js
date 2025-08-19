@@ -367,7 +367,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         categoryExists && React.createElement( // Zobrazenie chybovej správy
             'p',
             { className: 'text-red-500 text-xs italic mt-2' },
-            `Kategória s názvom "${editedCategoryName.trim()}" s týmito dátumami už existuje. Zvoľte iný názov alebo dátumy.`
+            `Kategória s názvom ${editedCategoryName.trim()} už existuje. Zvoľte iný názov.`
         )
       ),
       React.createElement(
@@ -838,7 +838,7 @@ function AddCategoriesApp() {
         (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase()
       )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
+          showLocalNotification(`Kategória s názvom ${trimmedCategoryName} už existuje. Zvoľte iný názov.`, 'error');
         }
         console.log("handleAddCategorySubmit: Server-side duplicate detected for name:", trimmedCategoryName, ". Returning false.");
         setLoading(false); 
@@ -927,7 +927,7 @@ function AddCategoriesApp() {
             id !== categoryId 
         )) {
         if (typeof showLocalNotification === 'function') {
-          showLocalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
+          showLocalNotification(`Kategória s názvom ${trimmedNewName} už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return;
