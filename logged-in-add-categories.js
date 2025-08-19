@@ -714,7 +714,7 @@ function AddCategoriesApp() {
 
         // Kontrola zmeny názvu
         if (originalCategoryName !== newCategoryName) {
-          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`);
+          changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
           changesToAdd.push(`Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`);
         }
 
@@ -722,7 +722,7 @@ function AddCategoriesApp() {
         const formattedOriginalDateFrom = formatNotificationDate(originalDateFrom);
         const formattedNewDateFrom = formatNotificationDate(newDateFrom);
         if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
-          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`);
+          changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
           if (formattedOriginalDateFrom !== formattedNewDateFrom) {
             changesToAdd.push(`Zmena dátumu od: z '${formattedOriginalDateFrom}' na '${formattedNewDateFrom}'`);
           }
@@ -735,7 +735,7 @@ function AddCategoriesApp() {
         const formattedOriginalDateTo = formatNotificationDate(originalDateTo);
         const formattedNewDateTo = formatNotificationDate(newDateTo);
         if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
-          changesToAdd.push(`Pre kategóriu '${newCategoryName}'`);
+          changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
           if (formattedOriginalDateTo !== formattedNewDateTo) {
             changesToAdd.push(`Zmena dátumu do: z '${formattedOriginalDateTo}' na '${formattedNewDateTo}'`);
           }
