@@ -619,9 +619,9 @@ function AddCategoriesApp() {
       return false; 
     }
     const startDate = new Date(registrationStartDate.seconds * 1000); 
-    console.log(`areAllButtonsDisabledByDate: Aktuálny čas: ${currentTime.toLocaleString()}, Dátum zablokovania: ${startDate.toLocaleString()}`);
+//    console.log(`areAllButtonsDisabledByDate: Aktuálny čas: ${currentTime.toLocaleString()}, Dátum zablokovania: ${startDate.toLocaleString()}`);
     const isDisabled = currentTime >= startDate;
-    console.log(`areAllButtonsDisabledByDate: Výsledok porovnania (isDisabled): ${isDisabled}.`);
+//    console.log(`areAllButtonsDisabledByDate: Výsledok porovnania (isDisabled): ${isDisabled}.`);
     return isDisabled;
   }, [registrationStartDate, currentTime]); 
 
