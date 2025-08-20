@@ -787,7 +787,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             disabled: loading || !player.isRegistered,
                                                             placeholder: 'Číslo'
                                                         }),
-                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
+                                                        React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
                                                     ),
                                                 ),
                                                 // Conditional rendering for address fields based on hasAccommodation
