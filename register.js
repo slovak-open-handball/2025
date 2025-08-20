@@ -905,6 +905,7 @@ function App() {
           passwordLastChanged: serverTimestamp(),
           categories: formData.categories,
           teams: teamsDataToSaveFinal, // Uložíme celú štruktúru s dátami Page 5 a Page 6
+          note: teamsDataToSaveFinal.note || '' // NOVINKA: Uloženie poznámky
         });
       } catch (firestoreError) {
           let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
@@ -1072,6 +1073,10 @@ function App() {
         if (hasTeamDetails) {
             return false;
         }
+    }
+    // NOVINKA: Kontrola, či poznámka nie je prázdna
+    if (teamsDataFromPage4.note && teamsDataFromPage4.note.trim() !== '') {
+        return false;
     }
 
 
@@ -1302,7 +1307,6 @@ function App() {
               }) :
           page === 6 ? // NOVINKA: Renderovanie Page6Form (detaily hráčov/tímu)
               React.createElement(Page6Form, {
-                  // formData: formData, // ODSTRÁNENÉ: Page6Form už nepotrebuje celý formData
                   teamsDataFromPage4: teamsDataFromPage4, // Posiela sa kompletný stav tímov
                   handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                   handleSubmit: handleNextPage6ToPage7, // Nová funkcia pre prechod na Page 7
