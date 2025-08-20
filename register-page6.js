@@ -28,39 +28,399 @@ const formatDateToDDMMYYYY = (dateString) => {
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) {
-            return dateString; // Vráti pôvodný reťazec, ak sa nedá parsovať
+            // Skúsime parsovať ako 'YYYY-MM-DD' ak pôvodný formát zlyhal (napr. pre IE/Safari)
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // Mesiac je 0-indexovaný
+                const day = parseInt(parts[2], 10);
+                const recheckedDate = new Date(year, month, day);
+                if (!isNaN(recheckedDate.getTime())) {
+                    return `${recheckedDate.getDate().toString().padStart(2, '0')}.${(recheckedDate.getMonth() + 1).toString().padStart(2, '0')}.${recheckedDate.getFullYear()}`;
+                }
+            }
+            return dateString; // Vrátiť pôvodný reťazec, ak sa nedá parsovať
         }
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // Mesiace sú 0-11
-        const year = date.getFullYear();
-        return `${day}. ${month}. ${year}`;
-    } catch (e) {
-        console.error("Chyba pri formátovaní dátumu:", e);
-        return dateString; // V prípade chyby vráť pôvodný reťazec
+        return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+    } catch (error) {
+        console.error("Chyba pri formátovaní dátumu:", error);
+        return dateString; // Vrátiť pôvodný reťazec v prípade chyby
     }
 };
 
-// Hlavný komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
-export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType, availableCategoriesMap }) { // Pridaná availableCategoriesMap
+// Funkcia na generovanie správy o chýbajúcom počte hráčov/členov realizačného tímu
+const getPlayerCountValidationMessage = (requiredPlayers, currentPlayers, requiredTeamMembers, currentTeamMembers) => {
+    const missingPlayers = requiredPlayers - currentPlayers;
+    const missingTeamMembers = requiredTeamMembers - currentTeamMembers;
 
-    const [localTeamDetails, setLocalTeamDetails] = React.useState({});
-    // Nový stav pre chyby hráčov
-    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error', dateOfBirth: 'error' } } } }
-    // Nový stav pre globálnu poznámku
-    const [globalNote, setGlobalNote] = React.useState(teamsDataFromPage4.globalNote || '');
+    if (missingPlayers > 0) {
+        let textPlayers = 'hráčov';
+        if (missingPlayers === 1) textPlayers = 'hráča';
+        else if (missingPlayers >= 2 && missingPlayers <= 4) textPlayers = 'hráčov'; // Opravené pre 2-4
+        return `Pre tento tím musíte pridať ešte ${missingPlayers} ${textPlayers}.`;
+    }
+
+    if (missingTeamMembers > 0) {
+        let textMembers = 'členov realizačného tímu';
+        if (missingTeamMembers === 1) textMembers = 'člena realizačného tímu';
+        else if (missingTeamMembers >= 2 && missingTeamMembers <= 4) textMembers = 'členov realizačného tímu'; // Opravené pre 2-4
+        return `Pre tento tím musíte pridať ešte ${missingTeamMembers} ${textMembers}.`;
+    }
+
+    return null; // Žiadna správa, ak je všetko v poriadku
+};
+
+export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFromPage4, setTeamsDataFromPage4, loading, setLoading, notificationMessage, closeNotification, NotificationModal, notificationType, globalNote, setGlobalNote, onSaveAndPrev, availableCategoriesMap, dataEditDeadline }) {
+    // Definícia a inicializácia stavov pre dresy a dresy bez mena
+    const [jerseys, setJerseys] = React.useState([]);
+    const [jerseysWithoutName, setJerseysWithoutName] = React.useState([]);
+
+    // ODSTRÁNENÉ: Predtým tu bol riadok: const [globalNote, setGlobalNote] = React.useState(teamsDataFromPage4.globalNote || '');
+    // Poznámka: globalNote a setGlobalNote sú teraz očakávané ako props z rodičovského komponentu (napr. App.js)
+
+    React.useEffect(() => {
+        let unsubscribeJerseys;
+        let unsubscribeJerseysWithoutName;
+
+        const fetchJerseyData = () => {
+            if (!window.db) {
+                console.log("Firestore DB nie je zatiaľ k dispozícii pre dresy.");
+                setTimeout(fetchJerseyData, 100);
+                return;
+            }
+            try {
+                const jerseysDocRef = doc(window.db, 'settings', 'jerseys');
+                unsubscribeJerseys = onSnapshot(jerseysDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const data = docSnapshot.data();
+                        setJerseys(data.jerseys || []);
+                        setJerseysWithoutName(data.jerseysWithoutName || []);
+                    } else {
+                        console.warn("Dokument /settings/jerseys neexistuje.");
+                        setJerseys([]);
+                        setJerseysWithoutName([]);
+                    }
+                }, (error) => {
+                    console.error("Chyba pri načítaní dresov:", error);
+                });
+            } catch (e) {
+                console.error("Chyba pri nastavovaní poslucháča pre dresy:", e);
+            }
+        };
+
+        fetchJerseyData();
+
+        return () => {
+            if (unsubscribeJerseys) unsubscribeJerseys();
+            if (unsubscribeJerseysWithoutName) unsubscribeJerseysWithoutName();
+        };
+    }, []);
+
+    // Spracovanie zmeny vstupných polí pre hráčov/členov realizačného tímu
+    const handlePlayerChange = (categoryName, teamIndex, playerIndex, field, value) => {
+        setTeamsDataFromPage4(prevData => {
+            const newData = JSON.parse(JSON.stringify(prevData));
+            if (!newData[categoryName] || !newData[categoryName][teamIndex]) {
+                console.error("Chyba: Kategória alebo tím neexistuje pre aktualizáciu hráča.");
+                return prevData;
+            }
+
+            const team = newData[categoryName][teamIndex];
+            if (!team.playersData) {
+                team.playersData = [];
+            }
+
+            // Ensure player object exists at index
+            if (!team.playersData[playerIndex]) {
+                team.playersData[playerIndex] = {
+                    jerseyNumber: '',
+                    playerName: '',
+                    playerSurname: '',
+                    birthDate: '',
+                    captain: false,
+                    realizationTeam: false // Default to false
+                };
+            }
+
+            // Špeciálna logika pre dresové číslo
+            if (field === 'jerseyNumber') {
+                const numValue = value === '' ? '' : parseInt(value, 10);
+                if (numValue === '' || (!isNaN(numValue) && numValue >= 0 && numValue <= 99)) {
+                    team.playersData[playerIndex][field] = numValue;
+                } else if (!isNaN(numValue) && numValue < 0) {
+                    team.playersData[playerIndex][field] = 0;
+                } else if (!isNaN(numValue) && numValue > 99) {
+                    team.playersData[playerIndex][field] = 99;
+                }
+            } else if (field === 'birthDate') {
+                // Pre dátum narodenia zabezpečíme správny formát YYYY-MM-DD
+                team.playersData[playerIndex][field] = value;
+            } else if (field === 'realizationTeam') {
+                team.playersData[playerIndex][field] = value;
+                // Ak sa hráč stane členom realizačného tímu, nastavíme ho ako kapitána na false
+                if (value) {
+                    team.playersData[playerIndex].captain = false;
+                }
+            } else {
+                team.playersData[playerIndex][field] = value;
+            }
+            return newData;
+        });
+    };
+
+    // Pridanie nového riadku hráča/člena realizačného tímu
+    const handleAddPlayer = (categoryName, teamIndex, isRealizationTeamMember = false) => {
+        setTeamsDataFromPage4(prevData => {
+            const newData = JSON.parse(JSON.stringify(prevData));
+            const team = newData[categoryName][teamIndex];
+            if (!team.playersData) {
+                team.playersData = [];
+            }
+            const newPlayer = {
+                jerseyNumber: '',
+                playerName: '',
+                playerSurname: '',
+                birthDate: '',
+                captain: false,
+                realizationTeam: isRealizationTeamMember,
+            };
+            team.playersData.push(newPlayer);
+            return newData;
+        });
+    };
+
+    // Odstránenie riadku hráča/člena realizačného tímu
+    const handleRemovePlayer = (categoryName, teamIndex, playerIndexToRemove) => {
+        setTeamsDataFromPage4(prevData => {
+            const newData = JSON.parse(JSON.stringify(prevData));
+            const team = newData[categoryName][teamIndex];
+            team.playersData = team.playersData.filter((_, idx) => idx !== playerIndexToRemove);
+            return newData;
+        });
+    };
+
+    // Prepínanie kapitána
+    const handleToggleCaptain = (categoryName, teamIndex, playerIndex) => {
+        setTeamsDataFromPage4(prevData => {
+            const newData = JSON.parse(JSON.stringify(prevData));
+            const team = newData[categoryName][teamIndex];
+            // Ak je aktuálny hráč členom realizačného tímu, nemôže byť kapitánom
+            if (team.playersData[playerIndex].realizationTeam) {
+                return prevData;
+            }
+
+            // Nastaví všetkých ostatných hráčov na false
+            team.playersData = team.playersData.map((player, idx) => ({
+                ...player,
+                captain: idx === playerIndex ? !player.captain : false,
+            }));
+            return newData;
+        });
+    };
+
+    // Prepínanie člena realizačného tímu
+    const handleToggleRealizationTeam = (categoryName, teamIndex, playerIndex) => {
+        setTeamsDataFromPage4(prevData => {
+            const newData = JSON.parse(JSON.stringify(prevData));
+            const team = newData[categoryName][teamIndex];
+            const currentPlayer = team.playersData[playerIndex];
+
+            // Ak sa prepína na "člen realizačného tímu", kapitán sa nastaví na false
+            if (!currentPlayer.realizationTeam) { // Ak sa má stať členom realizačného tímu
+                currentPlayer.captain = false;
+            }
+            currentPlayer.realizationTeam = !currentPlayer.realizationTeam;
+            return newData;
+        });
+    };
+
+    // Nový stav pre chyby hráčov (presunutý na začiatok komponentu)
+    const [playerErrors, setPlayerErrors] = React.useState({});
+
+    // Funkcia na validáciu hráčov v tíme
+    const validateTeamPlayers = React.useCallback((currentTeamPlayers, categoryName, teamIndex) => {
+        const newPlayerErrorsForTeam = {}; // Chyby pre aktuálny tím
+        let teamHasErrors = false;
+
+        // Validácia čísla dresu
+        const jerseyNumbers = new Set();
+        const jerseyNumberErrors = new Set();
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const jersey = String(player.jerseyNumber).trim(); // Konvertovať na string pre .trim()
+
+            if (jersey !== '') {
+                if (jerseyNumbers.has(jersey)) {
+                    jerseyNumberErrors.add(jersey);
+                    teamHasErrors = true;
+                } else {
+                    jerseyNumbers.add(jersey);
+                }
+            }
+        }
+
+        // Nastav chybové správy pre čísla dresu
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            if (jerseyNumberErrors.has(String(player.jerseyNumber).trim())) {
+                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
+                newPlayerErrorsForTeam[i].jerseyNumber = 'Duplicitné číslo dresu v tíme.';
+            }
+        }
+
+        // Validácia kombinácie údajov hráča
+        const playerCombinations = new Set();
+        const combinationErrors = new Set();
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const firstName = player.playerName.trim().toLowerCase(); // Používame playerName
+            const lastName = player.playerSurname.trim().toLowerCase(); // Používame playerSurname
+            const dateOfBirth = player.birthDate.trim();
+
+            if (firstName === '' && lastName === '' && dateOfBirth === '') {
+                continue;
+            }
+
+            const combinationKey = `${firstName}-${lastName}-${dateOfBirth}`;
+
+            if (combinationErrors.has(combinationKey) || playerCombinations.has(combinationKey)) { // Kontrola duplikátov
+                combinationErrors.add(combinationKey);
+                teamHasErrors = true;
+            } else {
+                playerCombinations.add(combinationKey);
+            }
+        }
+
+        // Nastav chybové správy pre kombinácie údajov hráča
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const firstName = player.playerName.trim().toLowerCase();
+            const lastName = player.playerSurname.trim().toLowerCase();
+            const dateOfBirth = player.birthDate.trim();
+
+            const combinationKey = `${firstName}-${lastName}-${dateOfBirth}`;
+
+            if (combinationErrors.has(combinationKey)) {
+                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
+                newPlayerErrorsForTeam[i].combination = 'Duplicitný hráč v tíme.';
+            } else {
+                if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].combination) {
+                    delete newPlayerErrorsForTeam[i].combination;
+                }
+            }
+        }
+
+        // Validácia dátumu narodenia pre hráča
+        let categoryData = null;
+        for (const id in availableCategoriesMap) {
+            if (availableCategoriesMap[id].name === categoryName) {
+                categoryData = availableCategoriesMap[id];
+                break;
+            }
+        }
+
+        let categoryDateFrom = null;
+        let categoryDateTo = null;
+        let isDateFromActive = false;
+        let isDateToActive = false;
+
+        if (categoryData) {
+            isDateFromActive = categoryData.dateFromActive === true && !!categoryData.dateFrom; // Kontrolujeme aj či dátum existuje
+            isDateToActive = categoryData.dateToActive === true && !!categoryData.dateTo; // Kontrolujeme aj či dátum existuje
+
+            if (isDateFromActive) {
+                categoryDateFrom = new Date(categoryData.dateFrom);
+                categoryDateFrom.setUTCHours(0, 0, 0, 0);
+            }
+            if (isDateToActive) {
+                categoryDateTo = new Date(categoryData.dateTo);
+                categoryDateTo.setUTCHours(0, 0, 0, 0);
+            }
+        } else {
+            console.log(`[Validation Debug] Kategória '${categoryName}' nebola nájdená v availableCategoriesMap. Validácia dátumu narodenia pre túto kategóriu bude preskočená.`);
+        }
+
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            const dob = player.birthDate;
+            let dateOfBirthError = '';
+
+            if (dob) {
+                const playerDob = new Date(dob);
+                
+                if (isNaN(playerDob.getTime())) {
+                    dateOfBirthError = `Zadajte, prosím, platný dátum narodenia.`;
+                    teamHasErrors = true;
+                } else {
+                    playerDob.setUTCHours(0, 0, 0, 0); 
+                    
+                    if (isDateFromActive && playerDob < categoryDateFrom) {
+                        const minDateFormatted = formatDateToDDMMYYYY(categoryData.dateFrom);
+                        dateOfBirthError = `Dátum narodenia je príliš starý pre túto kategóriu. <span style="white-space:nowrap;">(Min: ${minDateFormatted})</span>`;
+                        teamHasErrors = true;
+                    }
+
+                    if (isDateToActive && playerDob > categoryDateTo) {
+                        const maxDateFormatted = formatDateToDDMMYYYY(categoryData.dateTo);
+                        if (dateOfBirthError) {
+                            dateOfBirthError += ` a príliš mladý <span style="white-space:nowrap;">(Max: ${maxDateFormatted})</span>`; 
+                        } else {
+                            dateOfBirthError = `Dátum narodenia je príliš mladý pre túto kategóriu. <span style="white-space:nowrap;">(Max: ${maxDateFormatted})</span>`;
+                        }
+                        teamHasErrors = true;
+                    }
+                }
+            }
+            if (dateOfBirthError) {
+                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
+                newPlayerErrorsForTeam[i].dateOfBirth = dateOfBirthError;
+            } else {
+                // Ak bola chyba predtým, ale teraz už nie je, vyčistíme ju
+                if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].dateOfBirth) {
+                    delete newPlayerErrorsForTeam[i].dateOfBirth;
+                }
+            }
+        }
+        
+        // Aktualizuj globálny stav chýb
+        setPlayerErrors(prevPlayerErrors => ({
+            ...prevPlayerErrors,
+            [categoryName]: {
+                ...(prevPlayerErrors[categoryName] || {}),
+                [teamIndex]: newPlayerErrorsForTeam
+            }
+        }));
+
+        // Znovu prepočítaj teamHasErrors po aktualizácii newPlayerErrorsForTeam
+        let updatedTeamHasErrors = false;
+        for (const playerIndex in newPlayerErrorsForTeam) {
+            if (Object.keys(newPlayerErrorsForTeam[playerIndex]).length > 0) {
+                updatedTeamHasErrors = true;
+                break;
+            }
+            // Kontrola, či sa podarilo vyčistiť všetky chyby pre daného hráča
+            // Ak je newPlayerErrorsForTeam[playerIndex] prázdny objekt, znamená to, že chyby boli vyčistené
+            if (Object.keys(newPlayerErrorsForTeam[playerIndex] || {}).length === 0) {
+                // Pokračovať v iterácii, ak je prázdny
+            } else {
+                // Ak sú tam stále chyby, nastav updatedTeamHasErrors na true
+                updatedTeamHasErrors = true;
+            }
+        }
+
+        return updatedTeamHasErrors; // Vráti, či boli nájdené chyby v tíme
+    }, [availableCategoriesMap]); // Pridaná závislosť availableCategoriesMap
 
 
-    // Helper pre notifikácie
-    const dispatchAppNotification = React.useCallback((message, type = 'info') => {
-        setNotificationMessage(message);
-        setNotificationType(type);
-    }, [setNotificationMessage, setNotificationType]);
-
-
-    // Inicializácia localTeamDetails z teamsDataFromPage4 pri zmene teamsDataFromPage4
+    // Tento useEffect sa už nebude starať o globalNote, ale o localTeamDetails
+    // a o inicializáciu globalNote z props, ak sa zmení teamsDataFromPage4
     React.useEffect(() => {
         const initialDetails = {};
         for (const categoryName in teamsDataFromPage4) {
+            // Preskoč kategóriu 'globalNote' pri inicializácii localTeamDetails
+            if (categoryName === 'globalNote') {
+                continue;
+            }
             const teamsInCurrentCategory = teamsDataFromPage4[categoryName];
             if (Array.isArray(teamsInCurrentCategory)) {
                 initialDetails[categoryName] = teamsInCurrentCategory.map(team => {
@@ -73,9 +433,9 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         const existingPlayer = team.playerDetails?.[i] || {};
                         return {
                             jerseyNumber: '',
-                            firstName: '',
-                            lastName: '',
-                            dateOfBirth: '',
+                            playerName: '',
+                            playerSurname: '',
+                            birthDate: '',
                             isRegistered: false,
                             registrationNumber: '',
                             address: { // Vždy zabezpečiť existenciu objektu adresy s predvolenými hodnotami
@@ -174,230 +534,197 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             }
         }
         setLocalTeamDetails(initialDetails);
-        // Tiež inicializuj globalNote zo vstupných dát, ak existuje
-        if (teamsDataFromPage4.globalNote) {
-            setGlobalNote(teamsDataFromPage4.globalNote);
-        }
+        // Poznámka: globalNote sa už inicializuje priamo z propu globalNote, nie z teamsDataFromPage4.globalNote
+        // Alebo, ak globalNote prichádza cez teamsDataFromPage4.globalNote, tak by sa mala synchronizovať s propom
+        // Takže táto časť už nemusí byť potrebná, ak sa globalNote riadi len z App.js cez props
+        // if (teamsDataFromPage4.globalNote) {
+        //     setGlobalNote(teamsDataFromPage4.globalNote); // Ak by sa globalNote mala synchronizovať s teamsDataFromPage4.globalNote
+        // }
     }, [teamsDataFromPage4]);
 
 
-    // Funkcia na validáciu hráčov v tíme
-    const validateTeamPlayers = React.useCallback((currentTeamPlayers, categoryName, teamIndex) => {
-        const newPlayerErrorsForTeam = {}; // Chyby pre aktuálny tím
-        let teamHasErrors = false;
-
-        // Validácia čísla dresu
-        const jerseyNumbers = new Set();
-        const jerseyNumberErrors = new Set();
-        for (let i = 0; i < currentTeamPlayers.length; i++) {
-            const player = currentTeamPlayers[i];
-            const jersey = player.jerseyNumber.trim();
-
-            if (jersey !== '') {
-                if (jerseyNumbers.has(jersey)) {
-                    jerseyNumberErrors.add(jersey);
-                    teamHasErrors = true;
-                } else {
-                    jerseyNumbers.add(jersey);
-                }
-            }
-        }
-
-        // Nastav chybové správy pre čísla dresu
-        for (let i = 0; i < currentTeamPlayers.length; i++) {
-            const player = currentTeamPlayers[i];
-            if (jerseyNumberErrors.has(player.jerseyNumber.trim())) {
-                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
-                newPlayerErrorsForTeam[i].jerseyNumber = 'Duplicitné číslo dresu v tíme.';
-            }
-        }
-
-        // Validácia kombinácie údajov hráča
-        const playerCombinations = new Set();
-        const combinationErrors = new Set();
-        for (let i = 0; i < currentTeamPlayers.length; i++) {
-            const player = currentTeamPlayers[i];
-            const firstName = player.firstName.trim().toLowerCase();
-            const lastName = player.lastName.trim().toLowerCase();
-            const dateOfBirth = player.dateOfBirth.trim();
-            const registrationNumber = player.registrationNumber.trim().toLowerCase();
-
-            if (firstName === '' && lastName === '' && dateOfBirth === '' && registrationNumber === '') {
+    const [localTeamDetails, setLocalTeamDetails] = React.useState(() => {
+        // Inicializácia localTeamDetails z teamsDataFromPage4 pri prvom renderovaní
+        const initialDetails = {};
+        for (const categoryName in teamsDataFromPage4) {
+            if (categoryName === 'globalNote') {
                 continue;
             }
+            const teamsInCurrentCategory = teamsDataFromPage4[categoryName];
+            if (Array.isArray(teamsInCurrentCategory)) {
+                initialDetails[categoryName] = teamsInCurrentCategory.map(team => {
+                    const playersCount = parseInt(team.players, 10) || 0;
+                    const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
+                    const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
-            let combinationKey;
-            if (player.isRegistered && registrationNumber !== '') {
-                combinationKey = `${firstName}-${lastName}-${dateOfBirth}-${registrationNumber}`;
-            } else {
-                combinationKey = `${firstName}-${lastName}-${dateOfBirth}`;
-            }
+                    const playerDetails = Array.from({ length: playersCount }).map((_, i) => {
+                        const existingPlayer = team.playerDetails?.[i] || {};
+                        return {
+                            jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingPlayer,
+                            address: { ...(existingPlayer.address || {}) }
+                        };
+                    });
 
-            if (playerCombinations.has(combinationKey)) {
-                combinationErrors.add(combinationKey);
-                teamHasErrors = true;
-            } else {
-                playerCombinations.add(combinationKey);
-            }
-        }
+                    const womenTeamMemberDetails = Array.from({ length: womenMembersCount }).map((_, i) => {
+                        const existingMember = team.womenTeamMemberDetails?.[i] || {};
+                        return {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingMember,
+                            address: { ...(existingMember.address || {}) }
+                        };
+                    });
 
-        // Validácia duplicitného registračného čísla
-        const registeredNumbers = new Set();
-        const registeredNumberErrors = new Set();
-        for (let i = 0; i < currentTeamPlayers.length; i++) {
-            const player = currentTeamPlayers[i];
-            const regNum = player.registrationNumber.trim();
-            if (player.isRegistered && regNum !== '') {
-                if (registeredNumbers.has(regNum)) {
-                    registeredNumberErrors.add(regNum);
-                    teamHasErrors = true;
-                } else {
-                    registeredNumbers.add(regNum);
-                }
-            }
-        }
+                    const menTeamMemberDetails = Array.from({ length: menMembersCount }).map((_, i) => {
+                        const existingMember = team.menTeamMemberDetails?.[i] || {};
+                        return {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingMember,
+                            address: { ...(existingMember.address || {}) }
+                        };
+                    });
 
-        // Validácia dátumu narodenia pre hráča
-        let categoryData = null;
-        for (const id in availableCategoriesMap) {
-            if (availableCategoriesMap[id].name === categoryName) {
-                categoryData = availableCategoriesMap[id];
-                break;
-            }
-        }
+                    const driversMaleCount = team.arrival?.drivers?.male || 0;
+                    const driversFemaleCount = team.arrival?.drivers?.female || 0;
 
-        let categoryDateFrom = null;
-        let categoryDateTo = null;
-        let isDateFromActive = false;
-        let isDateToActive = false;
+                    const driverDetailsMale = Array.from({ length: driversMaleCount }).map((_, i) => {
+                        const existingDriver = team.driverDetailsMale?.[i] || {};
+                        return {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
+                            ...existingDriver,
+                            address: { ...(existingDriver.address || {}) }
+                        };
+                    });
 
-        if (categoryData) {
-            isDateFromActive = categoryData.dateFromActive === true && !!categoryData.dateFrom; // Kontrolujeme aj či dátum existuje
-            isDateToActive = categoryData.dateToActive === true && !!categoryData.dateTo; // Kontrolujeme aj či dátum existuje
+                    const driverDetailsFemale = Array.from({ length: driversFemaleCount }).map((_, i) => {
+                        const existingDriver = team.driverDetailsFemale?.[i] || {};
+                        return {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
+                            ...existingDriver,
+                            address: { ...(existingDriver.address || {}) }
+                        };
+                    });
 
-            if (isDateFromActive) {
-                categoryDateFrom = new Date(categoryData.dateFrom);
-                categoryDateFrom.setUTCHours(0, 0, 0, 0);
-            }
-            if (isDateToActive) {
-                categoryDateTo = new Date(categoryData.dateTo);
-                categoryDateTo.setUTCHours(0, 0, 0, 0);
-            }
-        } else {
-            console.log(`[Validation Debug] Kategória '${categoryName}' nebola nájdená v availableCategoriesMap. Validácia dátumu narodenia pre túto kategóriu bude preskočená.`);
-        }
-
-        for (let i = 0; i < currentTeamPlayers.length; i++) {
-            const player = currentTeamPlayers[i];
-            const dob = player.dateOfBirth;
-            let dateOfBirthError = '';
-
-            if (dob) {
-                const playerDob = new Date(dob);
-                
-                if (isNaN(playerDob.getTime())) {
-                    dateOfBirthError = `Zadajte, prosím, platný dátum narodenia.`;
-                    teamHasErrors = true;
-                } else {
-                    playerDob.setUTCHours(0, 0, 0, 0); 
-                    
-                    if (isDateFromActive && playerDob < categoryDateFrom) {
-                        const minDateFormatted = formatDateToDDMMYYYY(categoryData.dateFrom);
-                        dateOfBirthError = `Dátum narodenia je príliš starý pre túto kategóriu. <span style="white-space:nowrap;">(Min: ${minDateFormatted})</span>`;
-                        teamHasErrors = true;
-                    }
-
-                    if (isDateToActive && playerDob > categoryDateTo) {
-                        const maxDateFormatted = formatDateToDDMMYYYY(categoryData.dateTo);
-                        if (dateOfBirthError) {
-                            dateOfBirthError += ` a príliš mladý <span style="white-space:nowrap;">(Max: ${maxDateFormatted})</span>`; 
-                        } else {
-                            dateOfBirthError = `Dátum narodenia je príliš mladý pre túto kategóriu. <span style="white-space:nowrap;">(Max: ${maxDateFormatted})</span>`;
+                    return {
+                        ...team,
+                        players: playersCount,
+                        womenTeamMembers: womenMembersCount,
+                        menTeamMembers: menMembersCount,
+                        playerDetails: playerDetails,
+                        womenTeamMemberDetails: womenTeamMemberDetails,
+                        menTeamMemberDetails: menTeamMemberDetails,
+                        driverDetailsMale: driverDetailsMale,
+                        driverDetailsFemale: driverDetailsFemale,
+                        accommodation: {
+                            type: team.accommodation?.type || '',
+                            ...(team.accommodation || {})
                         }
-                        teamHasErrors = true;
-                    }
-                }
-            }
-            if (dateOfBirthError) {
-                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
-                newPlayerErrorsForTeam[i].dateOfBirth = dateOfBirthError;
+                    };
+                });
             } else {
-                // Ak bola chyba predtým, ale teraz už nie je, vyčistíme ju
-                if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].dateOfBirth) {
-                    delete newPlayerErrorsForTeam[i].dateOfBirth;
-                }
+                console.warn(`teamsDataFromPage4[${categoryName}] nie je pole. Nastavujem na prázdne pole.`);
+                initialDetails[categoryName] = [];
             }
         }
+        return initialDetails;
+    });
 
-
-        // Nastav chybové správy pre kombinácie údajov hráča
-        for (let i = 0; i < currentTeamPlayers.length; i++) {
-            const player = currentTeamPlayers[i];
-            const firstName = player.firstName.trim().toLowerCase();
-            const lastName = player.lastName.trim().toLowerCase();
-            const dateOfBirth = player.dateOfBirth.trim();
-            const registrationNumber = player.registrationNumber.trim().toLowerCase();
-
-            if (firstName === '' && lastName === '' && dateOfBirth === '' && registrationNumber === '') {
+    // Pridal som useEffect na synchronizáciu localTeamDetails s teamsDataFromPage4
+    // Toto je dôležité, aby sa stav aktualizoval, keď sa zmenia props z rodiča (napríklad pri navigácii späť z prvej stránky)
+    React.useEffect(() => {
+        const updatedDetails = {};
+        for (const categoryName in teamsDataFromPage4) {
+            if (categoryName === 'globalNote') {
                 continue;
             }
+            const teamsInCurrentCategory = teamsDataFromPage4[categoryName];
+            if (Array.isArray(teamsInCurrentCategory)) {
+                updatedDetails[categoryName] = teamsInCurrentCategory.map(team => {
+                    const playersCount = parseInt(team.players, 10) || 0;
+                    const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
+                    const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
 
-            let combinationKey;
-            if (player.isRegistered && registrationNumber !== '') {
-                combinationKey = `${firstName}-${lastName}-${dateOfBirth}-${registrationNumber}`;
-            } else {
-                combinationKey = `${firstName}-${lastName}-${dateOfBirth}`;
-            }
+                    const playerDetails = Array.from({ length: playersCount }).map((_, i) => {
+                        const existingPlayer = team.playerDetails?.[i] || {};
+                        return {
+                            jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingPlayer,
+                            address: { ...(existingPlayer.address || {}) }
+                        };
+                    });
 
-            if (combinationErrors.has(combinationKey)) {
-                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
-                newPlayerErrorsForTeam[i].combination = 'Duplicitný hráč v tíme.';
-            } else {
-                if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].combination) {
-                    delete newPlayerErrorsForTeam[i].combination;
-                }
-            }
+                    const womenTeamMemberDetails = Array.from({ length: womenMembersCount }).map((_, i) => {
+                        const existingMember = team.womenTeamMemberDetails?.[i] || {};
+                        return {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingMember,
+                            address: { ...(existingMember.address || {}) }
+                        };
+                    });
 
-            // Nastav chybovú správu pre duplicitné registračné číslo
-            if (player.isRegistered && registeredNumberErrors.has(player.registrationNumber.trim())) {
-                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
-                newPlayerErrorsForTeam[i].registrationNumber = 'Duplicitné číslo registrácie v tíme.';
+                    const menTeamMemberDetails = Array.from({ length: menMembersCount }).map((_, i) => {
+                        const existingMember = team.menTeamMemberDetails?.[i] || {};
+                        return {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingMember,
+                            address: { ...(existingMember.address || {}) }
+                        };
+                    });
+
+                    const driversMaleCount = team.arrival?.drivers?.male || 0;
+                    const driversFemaleCount = team.arrival?.drivers?.female || 0;
+
+                    const driverDetailsMale = Array.from({ length: driversMaleCount }).map((_, i) => {
+                        const existingDriver = team.driverDetailsMale?.[i] || {};
+                        return {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
+                            ...existingDriver,
+                            address: { ...(existingDriver.address || {}) }
+                        };
+                    });
+
+                    const driverDetailsFemale = Array.from({ length: driversFemaleCount }).map((_, i) => {
+                        const existingDriver = team.driverDetailsFemale?.[i] || {};
+                        return {
+                            firstName: '', lastName: '', dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
+                            ...existingDriver,
+                            address: { ...(existingDriver.address || {}) }
+                        };
+                    });
+
+                    return {
+                        ...team,
+                        players: playersCount,
+                        womenTeamMembers: womenMembersCount,
+                        menTeamMembers: menMembersCount,
+                        playerDetails: playerDetails,
+                        womenTeamMemberDetails: womenTeamMemberDetails,
+                        menTeamMemberDetails: menTeamMemberDetails,
+                        driverDetailsMale: driverDetailsMale,
+                        driverDetailsFemale: driverDetailsFemale,
+                        accommodation: {
+                            type: team.accommodation?.type || '',
+                            ...(team.accommodation || {})
+                        }
+                    };
+                });
             } else {
-                if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].registrationNumber) {
-                    delete newPlayerErrorsForTeam[i].registrationNumber;
-                }
+                console.warn(`teamsDataFromPage4[${categoryName}] nie je pole. Nastavujem na prázdne pole.`);
+                updatedDetails[categoryName] = [];
             }
         }
-
-        // Aktualizuj globálny stav chýb
-        setPlayerErrors(prevPlayerErrors => ({
-            ...prevPlayerErrors,
-            [categoryName]: {
-                ...(prevPlayerErrors[categoryName] || {}),
-                [teamIndex]: newPlayerErrorsForTeam
-            }
-        }));
-
-        // Znovu prepočítaj teamHasErrors po aktualizácii newPlayerErrorsForTeam
-        // Toto je dôležité, aby sa správne zistilo, či existujú nejaké chyby v tíme.
-        let updatedTeamHasErrors = false;
-        for (const playerIndex in newPlayerErrorsForTeam) {
-            if (Object.keys(newPlayerErrorsForTeam[playerIndex]).length > 0) {
-                updatedTeamHasErrors = true;
-                break;
-            }
-            // Kontrola, či sa podarilo vyčistiť všetky chyby pre daného hráča
-            // Ak je newPlayerErrorsForTeam[playerIndex] prázdny objekt, znamená to, že chyby boli vyčistené
-            if (Object.keys(newPlayerErrorsForTeam[playerIndex] || {}).length === 0) {
-                // Pokračovať v iterácii, ak je prázdny
-            } else {
-                // Ak sú tam stále chyby, nastav updatedTeamHasErrors na true
-                updatedTeamHasErrors = true;
-            }
-        }
-
-        return updatedTeamHasErrors; // Vráti, či boli nájdené chyby v tíme
-    }, [availableCategoriesMap]); // Pridaná závislosť availableCategoriesMap
+        setLocalTeamDetails(updatedDetails);
+    }, [teamsDataFromPage4]);
 
 
     const handlePlayerDetailChange = (categoryName, teamIndex, playerIndex, field, value) => {
@@ -408,7 +735,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             }
             if (!newDetails[categoryName][teamIndex].playerDetails[playerIndex]) {
                 newDetails[categoryName][teamIndex].playerDetails[playerIndex] = {
-                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                    jerseyNumber: '', playerName: '', playerSurname: '', birthDate: '', isRegistered: false, registrationNumber: '',
                     address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                 };
             }
@@ -1413,8 +1740,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         id: 'globalNote',
                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                         rows: 6, // Výška 6 riadkov
-                        value: globalNote,
-                        onChange: handleGlobalNoteChange,
+                        value: globalNote, // Hodnota poznámky je priamo z propu
+                        onChange: handleGlobalNoteChange, // Zmena hodnoty aktualizuje prop setGlobalNote
                         disabled: loading,
                         placeholder: 'Sem môžete zadať akékoľvek dôležité poznámky k registrácii.'
                     })
