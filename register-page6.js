@@ -41,14 +41,11 @@ const formatDateToDDMMYYYY = (dateString) => {
 };
 
 // Hlavný komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
-export function Page6Form(props) {
-    const { handlePrev, handleSubmit, loading, availableCategoriesMap } = props;
+export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType, availableCategoriesMap }) { // Pridaná availableCategoriesMap
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
-    const [playerErrors, setPlayerErrors] = React.useState({});
-    // NOVINKA: Stav pre poznámku
-    const [note, setNote] = React.useState('');
+    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error', dateOfBirth: 'error' } } } }
 
     // Helper pre notifikácie
     const dispatchAppNotification = React.useCallback((message, type = 'info') => {
@@ -78,15 +75,21 @@ export function Page6Form(props) {
                             dateOfBirth: '',
                             isRegistered: false,
                             registrationNumber: '',
-                            // Deep-merge: keep defaults, then existingPlayer, with address deeply merged
-                            ...existingPlayer,
-                            address: {
+                            address: { // Vždy zabezpečiť existenciu objektu adresy s predvolenými hodnotami
                                 street: '',
                                 houseNumber: '',
                                 city: '',
                                 postalCode: '',
                                 country: '',
-                                ...(existingPlayer.address || {})
+                            },
+                            ...existingPlayer, // Prepíše predvolené hodnoty existujúcimi dátami hráča
+                            address: { // Hlboké zlúčenie adresy pre zabezpečenie všetkých podpolí
+                                street: '',
+                                houseNumber: '',
+                                city: '',
+                                postalCode: '',
+                                country: '',
+                                ...(existingPlayer.address || {}) // Prepíše predvolené hodnoty adresy existujúcimi dátami adresy
                             }
                         };
                     });
@@ -168,9 +171,6 @@ export function Page6Form(props) {
             }
         }
         setLocalTeamDetails(initialDetails);
-        // NOVINKA: Inicializácia poznámky z teamsDataFromPage4 (ak existuje)
-        // Predpokladáme, že poznámka by bola uložená na úrovni celého teamsDataFromPage4, nie v rámci jednotlivých tímov
-        setNote(teamsDataFromPage4.note || '');
     }, [teamsDataFromPage4]);
 
 
@@ -593,9 +593,6 @@ export function Page6Form(props) {
                 }
             });
         }
-        // NOVINKA: Pridanie poznámky do finalTeamsData
-        finalTeamsData.note = note;
-
         handleSubmit(finalTeamsData);
     };
 
@@ -614,8 +611,6 @@ export function Page6Form(props) {
                 }
             });
         }
-        // NOVINKA: Uloženie poznámky pri prechode späť
-        updatedTeamsData.note = note;
         onSaveAndPrev(updatedTeamsData);
     };
 
@@ -662,266 +657,264 @@ export function Page6Form(props) {
             Object.keys(localTeamDetails).length === 0 ? (
                 React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúce stránky a zadajte tímy.')
             ) : (
-                React.createElement(React.Fragment, null,
-                    Object.keys(localTeamDetails).map(categoryName => (
-                        React.createElement(
-                            'div',
-                            { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
-                            React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
-                            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).map((team, teamIndex) => {
-                                const playersCount = parseInt(team.players, 10) || 0;
-                                const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
-                                const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
-                                const driversMaleCount = team.arrival?.drivers?.male || 0;
-                                const driversFemaleCount = team.arrival?.drivers?.female || 0;
+                Object.keys(localTeamDetails).map(categoryName => (
+                    React.createElement(
+                        'div',
+                        { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
+                        React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
+                        (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).map((team, teamIndex) => {
+                            const playersCount = parseInt(team.players, 10) || 0;
+                            const womenMembersCount = parseInt(team.womenTeamMembers, 10) || 0;
+                            const menMembersCount = parseInt(team.menTeamMembers, 10) || 0;
+                            const driversMaleCount = team.arrival?.drivers?.male || 0;
+                            const driversFemaleCount = team.arrival?.drivers?.female || 0;
 
 
-                                const hasAccommodation = team.accommodation && team.accommodation.type && team.accommodation.type.toLowerCase() !== 'bez ubytovania';
+                            const hasAccommodation = team.accommodation && team.accommodation.type && team.accommodation.type.toLowerCase() !== 'bez ubytovania';
 
-                                return React.createElement(
+                            return React.createElement(
+                                'div',
+                                { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
+                                React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
+
+                                playersCount > 0 && React.createElement(
                                     'div',
-                                    { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
-                                    React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
+                                    null,
+                                    React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
+                                    Array.from({ length: playersCount }).map((_, playerIndex) => {
+                                        const player = team.playerDetails?.[playerIndex] || {};
+                                        const playerSpecificErrors = playerErrors?.[categoryName]?.[teamIndex]?.[playerIndex] || {};
 
-                                    playersCount > 0 && React.createElement(
-                                        'div',
-                                        null,
-                                        React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
-                                        Array.from({ length: playersCount }).map((_, playerIndex) => {
-                                            const player = team.playerDetails?.[playerIndex] || {};
-                                            const playerSpecificErrors = playerErrors?.[categoryName]?.[teamIndex]?.[playerIndex] || {};
-
-                                            return React.createElement('div', { key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
-                                                React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Hráč ${playerIndex + 1}`),
-                                                React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
-                                                    React.createElement('div', { className: 'w-24' },
-                                                        React.createElement('label', { htmlFor: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo dresu'),
+                                        return React.createElement('div', { key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
+                                            React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Hráč ${playerIndex + 1}`),
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
+                                                React.createElement('div', { className: 'w-24' },
+                                                    React.createElement('label', { htmlFor: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo dresu'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumber ? 'border-red-500' : ''}`.trim(),
+                                                        value: player.jerseyNumber || '',
+                                                        onChange: (e) => {
+                                                            const value = e.target.value.replace(/[^0-9]/g, '');
+                                                            handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumber', value);
+                                                        },
+                                                        disabled: loading,
+                                                        placeholder: 'Číslo'
+                                                    }),
+                                                    playerSpecificErrors.jerseyNumber ?
+                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber) :
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                    React.createElement('label', { htmlFor: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`.trim(),
+                                                        value: player.firstName || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'firstName', e.target.value),
+                                                        disabled: loading,
+                                                        placeholder: 'Meno hráča'
+                                                    }),
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                    React.createElement('label', { htmlFor: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`.trim(),
+                                                        value: player.lastName || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'lastName', e.target.value),
+                                                        disabled: loading,
+                                                        placeholder: 'Priezvisko hráča'
+                                                    }),
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' },
+                                                    React.createElement('label', { htmlFor: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
+                                                    React.createElement('input', {
+                                                        type: 'date', // Zmenené späť na 'date'
+                                                        id: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.dateOfBirth ? 'border-red-500' : ''}`.trim(), // Aplikuj border, ak je chyba
+                                                        value: player.dateOfBirth || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
+                                                        disabled: loading,
+                                                        // placeholder: 'DD. MM. RRRR' - Odstránené, prehliadač poskytne vlastné UI
+                                                    }),
+                                                    // ZMENA: Použitie dangerouslySetInnerHTML pre zalamovanie textu
+                                                    playerSpecificErrors.dateOfBirth ?
+                                                        React.createElement('p', { 
+                                                            className: 'text-red-500 text-xs italic mt-1',
+                                                            dangerouslySetInnerHTML: { __html: playerSpecificErrors.dateOfBirth } 
+                                                        }) :
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                // Upravený kontajner pre ToggleSwitch
+                                                React.createElement('div', { className: 'flex-initial w-auto flex flex-col pt-2' }, // Odstránené items-center a justify-center
+                                                    React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný vo zväze'),
+                                                    React.createElement('div', { className: 'mt-[11px] flex justify-center items-center w-full' }, // Pridané flex, justify-center, items-center, w-full
+                                                        React.createElement(ToggleSwitch, {
+                                                            isOn: player.isRegistered || false,
+                                                            handleToggle: () => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', !player.isRegistered),
+                                                            disabled: loading,
+                                                        })
+                                                    ),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', {
+                                                    className: `flex-1 min-w-[120px] transition-opacity duration-200 ${player.isRegistered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`.trim()
+                                                },
+                                                    React.createElement('label', { htmlFor: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo registrácie'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? 'border-red-500' : ''}`.trim(),
+                                                        value: player.registrationNumber || '',
+                                                        onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
+                                                        disabled: loading || !player.isRegistered,
+                                                        placeholder: 'Číslo'
+                                                    }),
+                                                    React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
+                                                ),
+                                            ),
+                                            // Conditional rendering for address fields based on hasAccommodation
+                                            React.createElement('div', {
+                                                className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`.trim() // Adjusted classes
+                                            },
+                                                hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
+                                                React.createElement('div', {
+                                                    className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}`.trim() // Added hidden class if no accommodation
+                                                },
+                                                    React.createElement('div', {
+                                                        className: `flex-1 min-w-[120px]`
+                                                    },
+                                                        React.createElement('label', { htmlFor: `street-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
                                                         React.createElement('input', {
                                                             type: 'text',
-                                                            id: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                            className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumber ? 'border-red-500' : ''}`.trim(),
-                                                            value: player.jerseyNumber || '',
-                                                            onChange: (e) => {
-                                                                const value = e.target.value.replace(/[^0-9]/g, '');
-                                                                handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumber', value);
-                                                            },
-                                                            disabled: loading,
-                                                            placeholder: 'Číslo'
+                                                            id: `street-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: player.address?.street || '',
+                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.street', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Ulica'
                                                         }),
-                                                        playerSpecificErrors.jerseyNumber ?
-                                                            React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber) :
-                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                    ),
-                                                    React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('label', { htmlFor: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
-                                                        React.createElement('input', {
-                                                            type: 'text',
-                                                            id: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                            className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`.trim(),
-                                                            value: player.firstName || '',
-                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'firstName', e.target.value),
-                                                            disabled: loading,
-                                                            placeholder: 'Meno hráča'
-                                                        }),
-                                                        React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || '\u00A0')
-                                                    ),
-                                                    React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('label', { htmlFor: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
-                                                        React.createElement('input', {
-                                                            type: 'text',
-                                                            id: `lastName-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                            className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination ? 'border-red-500' : ''}`.trim(),
-                                                            value: player.lastName || '',
-                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'lastName', e.target.value),
-                                                            disabled: loading,
-                                                            placeholder: 'Priezvisko hráča'
-                                                        }),
-                                                        React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || '\u00A0')
-                                                    ),
-                                                    React.createElement('div', { className: 'flex-1 min-w-[150px]' },
-                                                        React.createElement('label', { htmlFor: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
-                                                        React.createElement('input', {
-                                                            type: 'date', // Zmenené späť na 'date'
-                                                            id: `dateOfBirth-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                            className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.dateOfBirth ? 'border-red-500' : ''}`.trim(), // Aplikuj border, ak je chyba
-                                                            value: player.dateOfBirth || '',
-                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'dateOfBirth', e.target.value),
-                                                            disabled: loading,
-                                                            // placeholder: 'DD. MM. RRRR' - Odstránené, prehliadač poskytne vlastné UI
-                                                        }),
-                                                        // ZMENA: Použitie dangerouslySetInnerHTML pre zalamovanie textu
-                                                        playerSpecificErrors.dateOfBirth ?
-                                                            React.createElement('p', { 
-                                                                className: 'text-red-500 text-xs italic mt-1',
-                                                                dangerouslySetInnerHTML: { __html: playerSpecificErrors.dateOfBirth } 
-                                                            }) :
-                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                    ),
-                                                    // Upravený kontajner pre ToggleSwitch
-                                                    React.createElement('div', { className: 'flex-initial w-auto flex flex-col pt-2' }, // Odstránené items-center a justify-center
-                                                        React.createElement('label', { htmlFor: `isRegistered-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Registrovaný vo zväze'),
-                                                        React.createElement('div', { className: 'mt-[11px] flex justify-center items-center w-full' }, // Pridané flex, justify-center, items-center, w-full
-                                                            React.createElement(ToggleSwitch, {
-                                                                isOn: player.isRegistered || false,
-                                                                handleToggle: () => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'isRegistered', !player.isRegistered),
-                                                                disabled: loading,
-                                                            })
-                                                        ),
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
                                                     React.createElement('div', {
-                                                        className: `flex-1 min-w-[120px] transition-opacity duration-200 ${player.isRegistered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`.trim()
+                                                        className: `w-24`
                                                     },
-                                                        React.createElement('label', { htmlFor: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo registrácie'),
+                                                        React.createElement('label', { htmlFor: `houseNumber-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
                                                         React.createElement('input', {
                                                             type: 'text',
-                                                            id: `registrationNumber-player-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                            className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? 'border-red-500' : ''}`.trim(),
-                                                            value: player.registrationNumber || '',
-                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'registrationNumber', e.target.value),
-                                                            disabled: loading || !player.isRegistered,
+                                                            id: `houseNumber-addr-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: player.address?.houseNumber || '',
+                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.houseNumber', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
                                                             placeholder: 'Číslo'
                                                         }),
-                                                        React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     ),
-                                                ),
-                                                // Conditional rendering for address fields based on hasAccommodation
-                                                React.createElement('div', {
-                                                    className: `transition-all duration-300 ease-in-out ${hasAccommodation ? 'max-h-[500px] mt-4' : 'max-h-0 mt-0'} overflow-hidden`.trim() // Adjusted classes
-                                                },
-                                                    hasAccommodation && React.createElement('h5', { className: 'block text-gray-700 text-base font-bold mb-2 w-full mt-4' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
                                                     React.createElement('div', {
-                                                        className: `flex flex-wrap items-end gap-x-4 gap-y-2 ${hasAccommodation ? '' : 'hidden'}`.trim() // Added hidden class if no accommodation
+                                                        className: `flex-1 min-w-[120px]`
                                                     },
-                                                        React.createElement('div', {
-                                                            className: `flex-1 min-w-[120px]`
-                                                        },
-                                                            React.createElement('label', { htmlFor: `street-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
-                                                            React.createElement('input', {
-                                                                type: 'text',
-                                                                id: `street-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                                                value: player.address?.street || '',
-                                                                onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.street', e.target.value),
-                                                                disabled: loading || !hasAccommodation,
-                                                                placeholder: 'Ulica'
-                                                            }),
-                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                        ),
-                                                        React.createElement('div', {
-                                                            className: `w-24`
-                                                        },
-                                                            React.createElement('label', { htmlFor: `houseNumber-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
-                                                            React.createElement('input', {
-                                                                type: 'text',
-                                                                id: `houseNumber-addr-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                                                value: player.address?.houseNumber || '',
-                                                                onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.houseNumber', e.target.value),
-                                                                disabled: loading || !hasAccommodation,
-                                                                placeholder: 'Číslo'
-                                                            }),
-                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                        ),
-                                                        React.createElement('div', {
-                                                            className: `flex-1 min-w-[120px]`
-                                                        },
-                                                            React.createElement('label', { htmlFor: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto/obec'),
-                                                            React.createElement('input', {
-                                                                type: 'text',
-                                                                id: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                                                value: player.address?.city || '',
-                                                                onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.city', e.target.value),
-                                                                disabled: loading || !hasAccommodation,
-                                                                placeholder: 'Mesto/obec'
-                                                            }),
-                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                        ),
-                                                        React.createElement('div', {
-                                                            className: `flex-1 min-w-[120px]`
-                                                        },
-                                                            React.createElement('label', { htmlFor: `postalCode-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ'),
-                                                            React.createElement('input', {
-                                                                type: 'text',
-                                                                id: `postalCode-addr-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                                                value: player.address?.postalCode || '',
-                                                                onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.postalCode', e.target.value),
-                                                                disabled: loading || !hasAccommodation,
-                                                                maxLength: 6,
-                                                                placeholder: '000 00'
-                                                            }),
-                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                        ),
-                                                        React.createElement('div', {
-                                                            className: `flex-1 min-w-[120px]`
-                                                        },
-                                                            React.createElement('label', { htmlFor: `country-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Štát'),
-                                                            React.createElement('input', {
-                                                                type: 'text',
-                                                                id: `country-addr-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                                                value: player.address?.country || '',
-                                                                onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.country', e.target.value),
-                                                                disabled: loading || !hasAccommodation,
-                                                                placeholder: 'Štát'
-                                                            }),
-                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                        )
+                                                        React.createElement('label', { htmlFor: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto/obec'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `city-addr-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: player.address?.city || '',
+                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.city', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Mesto/obec'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', {
+                                                        className: `flex-1 min-w-[120px]`
+                                                    },
+                                                        React.createElement('label', { htmlFor: `postalCode-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `postalCode-addr-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: player.address?.postalCode || '',
+                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.postalCode', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            maxLength: 6,
+                                                            placeholder: '000 00'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    React.createElement('div', {
+                                                        className: `flex-1 min-w-[120px]`
+                                                    },
+                                                        React.createElement('label', { htmlFor: `country-addr-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Štát'),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `country-addr-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                            value: player.address?.country || '',
+                                                            onChange: (e) => handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'address.country', e.target.value),
+                                                            disabled: loading || !hasAccommodation,
+                                                            placeholder: 'Štát'
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     )
                                                 )
-                                            );
-                                        })
-                                    ),
+                                            )
+                                        );
+                                    })
+                                ),
 
-                                    womenMembersCount > 0 && React.createElement(
-                                        'div',
-                                        null,
-                                        React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (ženy)'),
-                                        Array.from({ length: womenMembersCount }).map((_, memberIndex) => {
-                                            const member = team.womenTeamMemberDetails?.[memberIndex] || {};
-                                            return React.createElement('div', { key: `woman-member-input-${categoryName}-${teamIndex}-${memberIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
-                                                React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Žena ${memberIndex + 1}`),
-                                                React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
-                                                    React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('label', { htmlFor: `firstName-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
-                                                        React.createElement('input', {
-                                                            type: 'text',
-                                                            id: `firstName-woman-${categoryName}-${teamIndex}-${memberIndex}`,
-                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                                            value: member.firstName || '',
-                                                            onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'firstName', e.target.value),
-                                                            disabled: loading,
-                                                            placeholder: 'Meno členky'
-                                                        }),
-                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                    ),
-                                                    React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('label', { htmlFor: `lastName-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
-                                                        React.createElement('input', {
-                                                            type: 'text',
-                                                            id: `lastName-woman-${categoryName}-${teamIndex}-${memberIndex}`,
-                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                                            value: member.lastName || '',
-                                                            onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'lastName', e.target.value),
-                                                            disabled: loading,
-                                                            placeholder: 'Priezvisko členky'
-                                                        }),
-                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                    ),
-                                                    React.createElement('div', { className: 'flex-1 min-w-[150px]' },
-                                                        React.createElement('label', { htmlFor: `dateOfBirth-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
-                                                        React.createElement('input', {
-                                                            type: 'date',
-                                                            id: `dateOfBirth-woman-${categoryName}-${teamIndex}-${memberIndex}`,
-                                                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                                            value: member.dateOfBirth || '',
-                                                            onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'dateOfBirth', e.target.value),
-                                                            disabled: loading,
-                                                        }),
-                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
-                                                    )
+                                womenMembersCount > 0 && React.createElement(
+                                    'div',
+                                    null,
+                                    React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (ženy)'),
+                                    Array.from({ length: womenMembersCount }).map((_, memberIndex) => {
+                                        const member = team.womenTeamMemberDetails?.[memberIndex] || {};
+                                        return React.createElement('div', { key: `woman-member-input-${categoryName}-${teamIndex}-${memberIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
+                                            React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Žena ${memberIndex + 1}`),
+                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                    React.createElement('label', { htmlFor: `firstName-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `firstName-woman-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.firstName || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'firstName', e.target.value),
+                                                        disabled: loading,
+                                                        placeholder: 'Meno členky'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                                    React.createElement('label', { htmlFor: `lastName-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Priezvisko'),
+                                                    React.createElement('input', {
+                                                        type: 'text',
+                                                        id: `lastName-woman-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.lastName || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'lastName', e.target.value),
+                                                        disabled: loading,
+                                                        placeholder: 'Priezvisko členky'
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                ),
+                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' },
+                                                    React.createElement('label', { htmlFor: `dateOfBirth-woman-${categoryName}-${teamIndex}-${memberIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Dátum narodenia'),
+                                                    React.createElement('input', {
+                                                        type: 'date',
+                                                        id: `dateOfBirth-woman-${categoryName}-${teamIndex}-${memberIndex}`,
+                                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                                        value: member.dateOfBirth || '',
+                                                        onChange: (e) => handleTeamMemberDetailChange(categoryName, teamIndex, memberIndex, 'women', 'dateOfBirth', e.target.value),
+                                                        disabled: loading,
+                                                    }),
+                                                    React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                 )
                                             ),
                                             // Conditional rendering for address fields
@@ -997,7 +990,8 @@ export function Page6Form(props) {
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     )
                                                 )
-                                            );
+                                            )
+                                        );
                                     })
                                 ),
 
@@ -1380,28 +1374,10 @@ export function Page6Form(props) {
                                         );
                                     })
                                 )
-                            ) 
-                        )
-                    )),
-                    // NOVINKA: Poznámka textarea na konci formulára
-                    React.createElement(
-                        'div',
-                        { className: 'border-t border-gray-200 pt-4 mt-4' },
-                        React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Poznámka'),
-                        React.createElement('div', { className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
-                            React.createElement('label', { htmlFor: 'note-textarea', className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Vaše poznámky pre organizátora:'),
-                            React.createElement('textarea', {
-                                id: 'note-textarea',
-                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                rows: 6, // Predvolená výška 6 riadkov
-                                value: note,
-                                onChange: (e) => setNote(e.target.value),
-                                disabled: loading,
-                                placeholder: 'Sem môžete zadať akékoľvek dôležité poznámky pre organizátora turnaja...'
-                            })
-                        )
+                            );
+                        })
                     )
-                )
+                ))
             ),
 
             React.createElement(
