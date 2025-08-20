@@ -583,5 +583,5 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 )
             )
         )
-    );
+    )
 }
