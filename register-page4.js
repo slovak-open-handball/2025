@@ -216,6 +216,11 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
 
         // Prechádzame všetky kategórie a tímy
         for (const categoryName in teamsDataFromPage4) {
+            // NOVINKA: Preskoč kategóriu 'globalNote'
+            if (categoryName === 'globalNote') {
+                continue;
+            }
+
             // Zabezpečíme, že teamsDataFromPage4[categoryName] je pole, alebo použijeme prázdne pole
             const teamsInCategory = Array.isArray(teamsDataFromPage4[categoryName])
                 ? teamsDataFromPage4[categoryName]
@@ -310,6 +315,11 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
         // Používame teamsDataFromPage4 zo stavu komponentu, nie z parametra
         const teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
         for (const categoryName in teamsDataToSaveFinal) {
+            // NOVINKA: Preskoč kategóriu 'globalNote' pri ukladaní
+            if (categoryName === 'globalNote') {
+                continue;
+            }
+
             // Zabezpečíme, že je to pole, pred tým ako na ňom voláme map
             const currentTeamsInCategory = Array.isArray(teamsDataToSaveFinal[categoryName]) ? teamsDataToSaveFinal[categoryName] : [];
             teamsDataToSaveFinal[categoryName] = currentTeamsInCategory.map(team => ({
@@ -350,7 +360,9 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a vyberte kategórie s počtom tímov.')
             ) : (
                 // Mapovanie cez kategórie a tímy
-                Object.keys(teamsDataFromPage4).map(categoryName => (
+                Object.keys(teamsDataFromPage4)
+                    .filter(categoryName => categoryName !== 'globalNote') // NOVINKA: Filtrujeme kategóriu 'globalNote'
+                    .map(categoryName => (
                     React.createElement(
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
@@ -551,7 +563,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }), // <--- ZMENA TU
+                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }), 
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                         tabIndex: 1
