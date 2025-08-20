@@ -1265,6 +1265,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     'div',
                                     null,
                                     React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (ženy)'),
+                                    // Priame vloženie výsledku mapovania ako children je korektné.
+                                    // Žiadne obklopujúce React.Fragment, pretože mapovanie je jediným childom tohto divu okrem h4.
                                     Array.from({ length: driversFemaleCount }).map((_, driverIndex) => {
                                         const driver = team.driverDetailsFemale?.[driverIndex] || {};
                                         return React.createElement('div', { key: `female-driver-input-${categoryName}-${teamIndex}-${driverIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
