@@ -1,7 +1,72 @@
 // register-page7.js
 // Obsahuje komponent pre poslednú stránku registračného formulára - zhrnutie zadaných údajov.
 
-export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode }) { // Pridaný notificationType a selectedCountryDialCode prop
+// Nový komponent pre modálne okno potvrdenia e-mailu
+function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }) {
+    if (!show) return null;
+
+    // Dynamické triedy pre tlačidlá v modálnom okne
+    const getModalButtonClasses = (originalBgColorClass, disabledState) => {
+        const baseClasses = 'py-2 px-4 rounded-lg transition-colors duration-200';
+        const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
+
+        if (disabledState && colorMatch) {
+            const colorName = colorMatch[1];
+            const colorShade = colorMatch[2];
+            return `${baseClasses} bg-white border border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
+        } else {
+            return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-white`;
+        }
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
+            React.createElement('h2', { className: 'text-xl font-bold mb-4 text-center' }, 'Potvrdenie e-mailovej adresy'),
+            React.createElement('p', { className: 'mb-4 text-center' }, `Pre dokončenie registrácie potvrďte, že zadaná e-mailová adresa je správna:`),
+            React.createElement('p', { className: 'mb-6 text-center font-bold text-blue-700 break-words' }, userEmail), // Zobrazenie e-mailu
+
+            React.createElement(
+                'div',
+                { className: 'flex justify-center space-x-4' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: getModalButtonClasses('bg-gray-300', loading),
+                        disabled: loading,
+                    },
+                    'Späť na úpravu'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onConfirm,
+                        className: getModalButtonClasses('bg-green-500', loading),
+                        disabled: loading,
+                    },
+                    loading ? React.createElement(
+                        'div',
+                        { className: 'flex items-center justify-center' },
+                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-white', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+                            React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
+                            React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
+                        ),
+                        'Potvrdzujem...'
+                    ) : 'Potvrdiť registráciu'
+                )
+            )
+        )
+    );
+}
+
+export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode }) {
+
+    const [isConsentChecked, setIsConsentChecked] = React.useState(false); // Nový stav pre checkbox
+    const [showEmailConfirmationModal, setShowEmailConfirmationModal] = React.useState(false); // Stav pre zobrazenie potvrdzovacieho modálu
 
     // Funkcia na formátovanie dátumu narodenia
     const formatDate = (dateString) => {
@@ -76,17 +141,14 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 teamsInCategory.map((team, index) => {
                     const tshirtsDetails = team.tshirts && team.tshirts.length > 0
                         ? team.tshirts.filter(t => t.size && t.quantity > 0)
-                                    // ZMENA: Použitie znaku násobenia '×' namiesto 'x'
                                     .map(t => `${t.quantity}× ${t.size}`)
                                     .join(', ')
                         : 'žiadne';
 
-                    // NOVINKA: Vypočítame celkový počet tričiek
                     const totalTshirtQuantity = team.tshirts && team.tshirts.length > 0
                         ? team.tshirts.reduce((sum, t) => sum + (parseInt(t.quantity, 10) || 0), 0)
                         : 0;
 
-                    // ÚPRAVA: Opravené zobrazenie celkového počtu tričiek
                     const finalTshirtsDisplay = tshirtsDetails === 'žiadne'
                         ? 'žiadne'
                         : React.createElement(React.Fragment, null,
@@ -98,7 +160,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
                     // Detaily ubytovania
                     const accommodationDetails = team.accommodation?.type || 'Bez ubytovania';
-                    // const teamHasAccommodation = accommodationDetails.toLowerCase() !== 'bez ubytovania'; // Nepotrebné, adresa sa zobrazuje podmienečne podľa hasAccommodation na Page6
 
                     // Detaily dopravy
                     let arrivalDetails = team.arrival?.type || 'Nezadaný';
@@ -111,10 +172,9 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         arrivalDetails += ` (šoféri: ${driversInfo.join(', ')})`;
                     }
 
-
                     // Detaily balíčka
                     let packageDetailsHtml = null;
-                    if (team.packageId && team.packageDetails) { // Podmienka: musí byť vybrané packageId a packageDetails
+                    if (team.packageId && team.packageDetails) {
                         const pkg = team.packageDetails;
                         let mealsHtml = null;
                         if (pkg.meals) {
@@ -123,7 +183,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                 React.createElement('strong', null, 'Stravovanie:'),
                                 mealDates.length > 0 ? (
                                     mealDates.map(date => {
-                                        const dateObj = new Date(date + 'T00:00:00'); // Ensure correct date parsing
+                                        const dateObj = new Date(date + 'T00:00:00');
                                         const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
                                         const mealsForDay = pkg.meals[date];
                                         const includedItems = [];
@@ -148,12 +208,10 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         }
 
                         packageDetailsHtml = React.createElement(React.Fragment, null,
-                            // ÚPRAVA: Text "Balíček:" je teraz tučný
                             React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} €/osoba)`),
                             mealsHtml
                         );
                     } else {
-                        // ÚPRAVA: Text "Balíček:" je teraz tučný
                         packageDetailsHtml = React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), 'Nezadaný');
                     }
 
@@ -177,11 +235,11 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.womenTeamMemberDetails || []).forEach(member => {
                         allParticipants.push({
                             type: 'Realizačný tím (žena)',
-                            jerseyNumber: '', // Realizačný tím nemá dres
+                            jerseyNumber: '',
                             firstName: member.firstName || '',
                             lastName: member.lastName || '',
                             dateOfBirth: formatDate(member.dateOfBirth),
-                            registrationNumber: '', // Realizačný tím nemá registráciu
+                            registrationNumber: '',
                             address: formatAddress(member.address)
                         });
                     });
@@ -190,11 +248,11 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.menTeamMemberDetails || []).forEach(member => {
                         allParticipants.push({
                             type: 'Realizačný tím (muž)',
-                            jerseyNumber: '', // Realizačný tím nemá dres
+                            jerseyNumber: '',
                             firstName: member.firstName || '',
                             lastName: member.lastName || '',
                             dateOfBirth: formatDate(member.dateOfBirth),
-                            registrationNumber: '', // Realizačný tím nemá registráciu
+                            registrationNumber: '',
                             address: formatAddress(member.address)
                         });
                     });
@@ -232,8 +290,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         
                         // Zobrazenie tabuľky pre všetkých účastníkov
                         allParticipants.length > 0 ? (
-                            React.createElement('div', { className: 'w-full overflow-x-auto box-border' }, // Added overflow-x-auto and box-border
-                                React.createElement('table', { className: 'bg-white border border-gray-300 rounded-lg shadow-sm w-max' }, // Changed w-full to w-max
+                            React.createElement('div', { className: 'w-full overflow-x-auto box-border' },
+                                React.createElement('table', { className: 'bg-white border border-gray-300 rounded-lg shadow-sm w-max' },
                                     React.createElement('thead', null,
                                         React.createElement('tr', { className: 'bg-gray-200 text-gray-700 text-sm leading-normal' },
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Osoba'),
@@ -271,10 +329,36 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         });
     };
 
+    // Handler pre zobrazenie potvrdzovacieho modálu
+    const handleShowConfirmation = () => {
+        setShowEmailConfirmationModal(true);
+    };
+
+    // Handler pre uzavretie potvrdzovacieho modálu
+    const handleCloseConfirmation = () => {
+        setShowEmailConfirmationModal(false);
+    };
+
+    // Handler pre skutočné odoslanie formulára po potvrdení v modálnom okne
+    const handleConfirmSubmit = () => {
+        // Tu sa zavolá pôvodná funkcia handleSubmit, ktorá dokončí registráciu
+        handleSubmit();
+        handleCloseConfirmation(); // Zatvorí modál po odoslaní
+    };
+
     return React.createElement(
         React.Fragment,
         null,
         React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
+        
+        // Modálne okno potvrdenia e-mailu
+        React.createElement(EmailConfirmationModal, {
+            show: showEmailConfirmationModal,
+            onClose: handleCloseConfirmation,
+            onConfirm: handleConfirmSubmit,
+            userEmail: formData.email, // E-mailová adresa z formData
+            loading: loading,
+        }),
 
         React.createElement(
             'h2',
@@ -289,11 +373,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 'div',
                 { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
                 React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-800' }, 'Osobné údaje'),
-                // Upravené pre zobrazenie mena a priezviska v jednom riadku
                 React.createElement('p', null, React.createElement('strong', null, 'Meno a priezvisko kontaktnej osoby: '), `${formData.firstName} ${formData.lastName}`),
-                // Zmenený riadok pre e-mail
                 React.createElement('p', null, React.createElement('strong', null, 'E-mailová adresa kontaktnej osoby: '), formData.email),
-                // Zmenený riadok pre telefónne číslo
                 React.createElement('p', null, React.createElement('strong', null, 'Telefónne číslo kontaktnej osoby: '), 
                     formData.contactPhoneNumber ? 
                         `${selectedCountryDialCode} ${formData.contactPhoneNumber}` : '-'
@@ -308,7 +389,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 React.createElement('p', null, React.createElement('strong', null, 'IČO: '), formData.billing?.ico || '-'),
                 React.createElement('p', null, React.createElement('strong', null, 'DIČ: '), formData.billing?.dic || '-'),
                 React.createElement('p', null, React.createElement('strong', null, 'IČ DPH: '), formData.billing?.icDph || '-'),
-                // Upravené pre zobrazenie adresy v jednom riadku
                 React.createElement('p', null, React.createElement('strong', null, 'Fakturačná adresa: '), 
                     formatAddress({
                         street: formData.street,
@@ -325,6 +405,23 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
                 React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-800' }, 'Registrované tímy a ich detaily'),
                 formatTeamsData(teamsDataFromPage4)
+            ),
+
+            // NOVINKA: Checkbox pre súhlas so spracovaním osobných údajov
+            React.createElement(
+                'div',
+                { className: 'mt-6 flex items-center' },
+                React.createElement('input', {
+                    type: 'checkbox',
+                    id: 'consent-checkbox',
+                    className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md focus:ring-blue-500',
+                    checked: isConsentChecked,
+                    onChange: (e) => setIsConsentChecked(e.target.checked),
+                    disabled: loading,
+                }),
+                React.createElement('label', { htmlFor: 'consent-checkbox', className: 'ml-2 block text-gray-900' },
+                    'Súhlasím so spracovaním osobných údajov pre účely organizácie turnaja.'
+                )
             ),
 
             React.createElement(
@@ -344,9 +441,15 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     'button',
                     {
                         type: 'button',
-                        onClick: handleSubmit,
-                        className: `font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 ${loading ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' : 'bg-green-500 hover:bg-green-700 text-white'}`,
-                        disabled: loading,
+                        onClick: handleShowConfirmation, // Teraz voláme funkciu na zobrazenie potvrdzovacieho modálu
+                        // Dynamické triedy pre tlačidlo "Registrovať"
+                        className: `font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 ${
+                            loading || !isConsentChecked // Zablokované, ak loading alebo checkbox nie je zaškrtnutý
+                                ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zablokovaný stav
+                                : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
+                        }`,
+                        disabled: loading || !isConsentChecked, // Zablokované, ak loading alebo checkbox nie je zaškrtnutý
+                        style: { cursor: (loading || !isConsentChecked) ? 'not-allowed' : 'pointer' } // Ikona myši
                     },
                     loading ? React.createElement(
                         'div',
