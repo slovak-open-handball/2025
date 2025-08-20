@@ -41,8 +41,7 @@ const formatDateToDDMMYYYY = (dateString) => {
 };
 
 // Hlavný komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
-export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType, availableCategoriesMap }) { // Pridaná availableCategoriesMap
-
+export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType, availableCategoriesMap, globalNote, setGlobalNote }) { // Pridaná globalNote a setGlobalNote
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
     const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error', dateOfBirth: 'error' } } } }
@@ -315,7 +314,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
                 newPlayerErrorsForTeam[i].dateOfBirth = dateOfBirthError;
             } else {
-                // Ak bola chyba predtým, ale teraz už nie je, vyčistíme ju
+                // Ak bola chyba predtla, ale teraz už nie je, vyčistíme ju
                 if (newPlayerErrorsForTeam[i] && newPlayerErrorsForTeam[i].dateOfBirth) {
                     delete newPlayerErrorsForTeam[i].dateOfBirth;
                 }
@@ -593,7 +592,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 }
             });
         }
-        handleSubmit(finalTeamsData);
+        // ZMENA: Voláme handleSubmit s finalTeamsData a globalNote
+        handleSubmit(finalTeamsData, globalNote);
     };
 
     // Nová funkcia na uloženie dát a prechod späť
@@ -611,7 +611,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 }
             });
         }
-        onSaveAndPrev(updatedTeamsData);
+        // ZMENA: Voláme onSaveAndPrev s updatedTeamsData a globalNote
+        onSaveAndPrev(updatedTeamsData, globalNote);
     };
 
     // Funkcia na formátovanie dátumu a času (DD. MM. YYYY hh:mm)
@@ -1378,6 +1379,21 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         })
                     )
                 ))
+            ),
+            // NOVINKA: Inputbox pre poznámku
+            React.createElement(
+                'div',
+                { className: 'border-t border-gray-200 pt-4 mt-4' },
+                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'globalNote' }, 'Poznámka'),
+                React.createElement('textarea', {
+                    id: 'globalNote',
+                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                    value: globalNote,
+                    onChange: (e) => setGlobalNote(e.target.value),
+                    rows: 6, // Predvolená výška 6 riadkov
+                    placeholder: 'Sem môžete pridať akékoľvek ďalšie poznámky k registrácii...',
+                    disabled: loading
+                })
             ),
 
             React.createElement(
