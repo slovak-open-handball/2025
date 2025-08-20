@@ -1385,10 +1385,9 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             )
                                         );
                                     })
-                                ) // This closes the `driversFemaleCount > 0 && React.createElement` block. THIS LINE HAD THE EXTRA `)` BEFORE.
-                                ); // This line closes the `return React.createElement` for the `team` div.
-                            })
-                        )
+                                )
+                            );
+                        })
                     )),
                     // NOVINKA: Poznámka textarea na konci formulára
                     React.createElement(
