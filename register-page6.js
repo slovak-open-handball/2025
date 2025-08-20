@@ -1002,7 +1002,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     )
                                                 )
-                                            );
+                                            )
+                                        );
                                     })
                                 ),
 
@@ -1137,6 +1138,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     'div',
                                     null,
                                     React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (muži)'),
+                                    // Priame vloženie výsledku mapovania ako children je korektné.
+                                    // Žiadne obklopujúce React.Fragment, pretože mapovanie je jediným childom tohto divu okrem h4.
                                     Array.from({ length: driversMaleCount }).map((_, driverIndex) => {
                                         const driver = team.driverDetailsMale?.[driverIndex] || {};
                                         return React.createElement('div', { key: `male-driver-input-${categoryName}-${teamIndex}-${driverIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
@@ -1443,5 +1446,5 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 )
             )
         )
-    )
+    );
 }
