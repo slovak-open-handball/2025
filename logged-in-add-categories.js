@@ -449,55 +449,46 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
 
 // Main React component for the logged-in-add-categories.html page
 function AddCategoriesApp() {
-  // Získame referencie na Firebase služby z globálnych premenných
-  // Pre Firebase v9 pristupujeme k inštanciám cez getAuth() a getFirestore()
   const auth = getAuth(); 
   const db = getFirestore();     
 
-  // Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
   const [user, setUser] = React.useState(null); 
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
 
-  const [loading, setLoading] = React.useState(true); // Loading pre dáta v AddCategoriesApp
-  const [categories, setCategories] = React.useState([]); // Stav pre zoznam kategórií
-  const [showAddCategoryModal, setShowAddCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna pridania
-  const [showEditCategoryModal, setShowEditCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna úpravy
-  const [categoryToEdit, setCategoryToEdit] = React.useState(null); // Stav pre kategóriu, ktorá sa má upraviť
-  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false); // NOVINKA: Stav pre potvrdenie zmazania
-  const [categoryToDelete, setCategoryToDelete] = React.useState(null); // NOVINKA: Kategória na zmazanie
+  const [loading, setLoading] = React.useState(true); 
+  const [categories, setCategories] = React.useState([]); 
+  const [showAddCategoryModal, setShowAddCategoryModal] = React.useState(false); 
+  const [showEditCategoryModal, setShowEditCategoryModal] = React.useState(false); 
+  const [categoryToEdit, setCategoryToEdit] = React.useState(null); 
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false); 
+  const [categoryToDelete, setCategoryToDelete] = React.useState(null); 
 
-  // NOVINKA: Stav pre dátum, od ktorého sa majú zablokovať tlačidlá
   const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
 
   // NOVINKA: Stav pre aktuálny čas, ktorý sa bude aktualizovať každú sekundu
   const [currentTime, setCurrentTime] = React.useState(new Date());
 
-  // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-  // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
-      setIsAuthReady(true); // Auth je pripravené
+      setIsAuthReady(true); 
       if (!currentUser) {
         console.log("AddCategoriesApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
         window.location.href = 'login.html';
       }
     });
 
-    // Listener pre globalDataUpdated z authentication.js
     const handleGlobalDataUpdated = (event) => {
       setUserProfileData(event.detail);
-      // Skrytie globálneho loaderu po načítaní profilových dát
       if (window.hideGlobalLoader) {
         window.hideGlobalLoader();
       }
     };
     window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
 
-    // Počiatočné nastavenie, ak už sú dáta dostupné
     if (window.isGlobalAuthReady) {
         setIsAuthReady(true);
         setUser(auth.currentUser);
@@ -509,33 +500,29 @@ function AddCategoriesApp() {
         }
     }
 
-
     return () => {
       unsubscribeAuth();
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
-  }, []); // Prázdne pole závislostí, spustí sa len raz pri mountovaní
+  }, []); 
 
-  // Effect pre načítanie používateľských dát z Firestore a kontrolu roly
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
     if (user && db && isAuthReady) {
       console.log(`AddCategoriesApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-      setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
+      setLoading(true); 
 
       try {
-        // Firebase v9 syntax: doc(db, 'users', user.uid)
         const userDocRef = doc(db, 'users', user.uid);
-        unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => { // Firebase v9 syntax: onSnapshot
-          if (docSnapshot.exists()) { // Firebase v9 syntax: docSnapshot.exists()
-            const userData = docSnapshot.data();
-            console.log("AddCategoriesApp: Používateľský dokument existuje, dáta:", userData);
+        unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => { 
+          console.log("AddCategoriesApp: Používateľský dokument existuje, dáta:", docSnapshot.data());
 
+          if (docSnapshot.exists()) { 
+            const userData = docSnapshot.data();
             setUserProfileData(userData);
             setLoading(false);
 
-            // Ak používateľ nie je admin, presmerujeme ho
             if (userData.role !== 'admin') {
                 console.log("AddCategoriesApp: Používateľ nie je admin, presmerovávam na logged-in-my-data.html.");
                 window.location.href = 'logged-in-my-data.html';
@@ -543,17 +530,17 @@ function AddCategoriesApp() {
 
           } else {
             console.warn("AddCategoriesApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+            if (typeof showLocalNotification === 'function') { 
                 showLocalNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error');
             }
             setLoading(false);
-            auth.signOut(); // Odhlásiť používateľa
+            auth.signOut(); 
             setUser(null);
             setUserProfileData(null);
           }
         }, error => {
           console.error("AddCategoriesApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-          if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+          if (typeof showLocalNotification === 'function') { 
             showLocalNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error');
           }
           setLoading(false);
@@ -563,7 +550,7 @@ function AddCategoriesApp() {
         });
       } catch (e) {
         console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-        if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+        if (typeof showLocalNotification === 'function') { 
             showLocalNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error');
         }
         setLoading(false);
@@ -584,7 +571,6 @@ function AddCategoriesApp() {
     };
   }, [user, db, isAuthReady, auth]);
 
-  // NOVINKA: Effect pre načítanie dátumu zablokovania registrácie
   React.useEffect(() => {
     let unsubscribeRegistration;
     if (db) {
@@ -615,7 +601,7 @@ function AddCategoriesApp() {
         unsubscribeRegistration();
       }
     };
-  }, [db]); // Závisí od 'db' pre zabezpečenie inicializácie
+  }, [db]); 
 
   // NOVINKA: Timer pre automatické zablokovanie tlačidiel
   React.useEffect(() => {
@@ -624,28 +610,27 @@ function AddCategoriesApp() {
     }, 1000); // Každú sekundu
 
     return () => clearInterval(timer); // Vyčistenie pri odmontovaní komponentu
-  }, []); // Spustí sa iba raz pri pripojení komponentu
+  }, []); 
 
   // NOVINKA: Určenie, či majú byť tlačidlá zablokované na základe dátumu
   const areAllButtonsDisabledByDate = React.useMemo(() => {
     if (!registrationStartDate || typeof registrationStartDate.seconds === 'undefined') {
-      return false; // Ak dátum nie je nastavený alebo nie je Timestamp, tlačidlá nie sú zablokované týmto pravidlom
+      console.log("areAllButtonsDisabledByDate: registrationStartDate nie je definované alebo nie je Timestamp. Buttons UNBLOCKED.");
+      return false; 
     }
-    // Správna konverzia Firebase Timestamp na JavaScript Date objekt
     const startDate = new Date(registrationStartDate.seconds * 1000); 
-    // Použijeme currentTime zo stavu pre porovnanie
-    return currentTime >= startDate;
-  }, [registrationStartDate, currentTime]); // Závisí od registrationStartDate a currentTime
+    console.log(`areAllButtonsDisabledByDate: Aktuálny čas: ${currentTime.toLocaleString()}, Dátum zablokovania: ${startDate.toLocaleString()}`);
+    const isDisabled = currentTime >= startDate;
+    console.log(`areAllButtonsDisabledByDate: Výsledok porovnania (isDisabled): ${isDisabled}.`);
+    return isDisabled;
+  }, [registrationStartDate, currentTime]); 
 
 
-  // Callback funkcia pre získanie referencie na dokument kategórií
   const getCategoriesDocRef = React.useCallback(() => {
     if (!db) return null; 
-    // Firebase v9 syntax: doc(db, 'settings', 'categories')
     return doc(db, 'settings', 'categories');
   }, [db]);
 
-  // Effect for fetching categories
   React.useEffect(() => {
     let unsubscribeCategories;
     const categoriesDocRef = getCategoriesDocRef();
@@ -654,56 +639,46 @@ function AddCategoriesApp() {
       console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie z dokumentu 'categories'.");
       setLoading(true);
       try {
-        unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { // Firebase v9 syntax: onSnapshot
+        unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
           console.log("AddCategoriesApp: onSnapshot pre dokument 'categories' spustený.");
-          if (docSnapshot.exists()) { // Firebase v9 syntax: docSnapshot.exists()
+          if (docSnapshot.exists()) { 
             const data = docSnapshot.data();
-            // Konvertujeme objekt na pole objektov { id, name, dateFrom, dateTo, dateFromActive, dateToActive }
             let fetchedCategories = Object.entries(data).map(([id, categoryValue]) => { 
                 let name = '';
                 let dateFrom = '';
                 let dateTo = '';
-                // ZMENA: Predvolené na false pre spätnú kompatibilitu, ak pole neexistuje
                 let dateFromActive = false; 
                 let dateToActive = false;   
 
                 if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
-                    // Nový formát: { name: "...", dateFrom: "...", dateTo: "...", dateFromActive: true/false, dateToActive: true/false }
                     name = categoryValue.name;
                     dateFrom = categoryValue.dateFrom || '';
                     dateTo = categoryValue.dateTo || '';
-                    dateFromActive = categoryValue.dateFromActive !== undefined ? categoryValue.dateFromActive : false; // ZMENA: Predvolené na false
-                    dateToActive = categoryValue.dateToActive !== undefined ? categoryValue.dateToActive : false;     // ZMENA: Predvolené na false
+                    dateFromActive = categoryValue.dateFromActive !== undefined ? categoryValue.dateFromActive : false; 
+                    dateToActive = categoryValue.dateToActive !== undefined ? categoryValue.dateToActive : false;     
                 } else if (typeof categoryValue === 'string') {
-                    // Starý formát: "CategoryName" - pre spätnú kompatibilitu
                     name = categoryValue;
                     dateFrom = '';
                     dateTo = '';
-                    // Tu ponechávame default false
                 } else {
-                    // Spracovanie neočakávaného formátu, napr. zalogovanie varovania
                     console.warn(`Neočakávaný formát dát kategórie pre ID ${id}:`, categoryValue);
-                    name = `Neznáma kategória (${id})`; // Záložný názov
+                    name = `Neznáma kategória (${id})`; 
                     dateFrom = '';
                     dateTo = '';
-                    // Tu ponechávame default false
                 }
                 return { id, name, dateFrom, dateTo, dateFromActive, dateToActive };
             });
 
-            // Triedenie kategórií podľa názvu (abecedne/číselne)
             fetchedCategories.sort((a, b) => {
               const nameA = a.name.toLowerCase();
               const nameB = b.name.toLowerCase();
 
-              // Skúsiť číselné porovnanie, ak sú to čísla
               const numA = parseFloat(nameA);
               const numB = parseFloat(nameB);
 
               if (!isNaN(numA) && !isNaN(numB)) {
                 return numA - numB;
               }
-              // Inak abecedné porovnanie
               if (nameA < nameB) return -1;
               if (nameA > nameB) return 1;
               return 0;
@@ -713,25 +688,25 @@ function AddCategoriesApp() {
             console.log("AddCategoriesApp: Kategórie aktualizované z onSnapshot dokumentu, dáta:", fetchedCategories);
           } else {
             console.log("AddCategoriesApp: Dokument 'categories' neexistuje, inicializujem prázdne kategórie.");
-            setCategories([]); // Dokument kategórií zatiaľ neexistuje, takže prázdny zoznam
+            setCategories([]); 
           }
           setLoading(false);
         }, error => {
           console.error("AddCategoriesApp: Chyba pri načítaní dokumentu 'categories' z Firestore (onSnapshot error):", error);
-          if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+          if (typeof showLocalNotification === 'function') { 
             showLocalNotification(`Chyba pri načítaní kategórií: ${error.message}`, 'error');
           }
           setLoading(false);
         });
       } catch (e) {
         console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre dokument 'categories' (try-catch):", e);
-        if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+        if (typeof showLocalNotification === 'function') { 
             showLocalNotification(`Chyba pri nastavovaní poslucháča pre kategórie: ${e.message}`, 'error');
         }
         setLoading(false);
       }
     } else {
-      setCategories([]); // Vyčisti kategórie, ak nie je admin alebo nie je pripravené
+      setCategories([]); 
     }
 
     return () => {
@@ -742,20 +717,17 @@ function AddCategoriesApp() {
     };
   }, [db, userProfileData, getCategoriesDocRef]);
 
-  // Funkcia na odoslanie notifikácie administrátorom
   const sendAdminNotification = async (notificationData) => {
     if (!db) { 
       console.error("Chyba: Databáza nie je k dispozícii pre odoslanie notifikácie.");
       return;
     }
     try {
-      // Odkaz na kolekciu 'notifications'
       const notificationsCollectionRef = collection(db, 'notifications');
-      const userEmail = notificationData.data.userEmail;
-      const currentTimestamp = new Date().toISOString(); // Získanie aktuálnej časovej pečiatky
-      const changesToAdd = []; // Toto bude pole reťazcov zmien
+      const userEmail = user.email; // Používame priamo user.email, ktorý by mal byť dostupný
+      const currentTimestamp = new Date().toISOString(); 
+      const changesToAdd = []; 
 
-      // Pomocná funkcia pre formátovanie dátumu do DD. MM. YYYY
       const formatNotificationDate = (dateString) => {
         if (!dateString) return '';
         try {
@@ -763,7 +735,7 @@ function AddCategoriesApp() {
           return `${day}. ${month}. ${year}`;
         } catch (e) {
           console.error("Chyba pri formátovaní dátumu pre notifikáciu:", dateString, e);
-          return dateString; // Vráti pôvodný reťazec v prípade chyby
+          return dateString; 
         }
       };
 
@@ -772,18 +744,15 @@ function AddCategoriesApp() {
         const formattedDateFrom = formatNotificationDate(dateFrom);
         const formattedDateTo = formatNotificationDate(dateTo);
 
-        // Názov kategórie je vždy prítomný pri vytvorení
         changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
         changesToAdd.push(`Vytvorenie názvu kategórie: '''${newCategoryName}'`);
 
-        // Dátum od a jeho aktívnosť
-        if (dateFrom || dateFromActive) { // Generovať, ak je dátum alebo je aktívny
+        if (dateFrom || dateFromActive) { 
             changesToAdd.push(`Dátum od: '''${formattedDateFrom}'`);
             changesToAdd.push(`Aktívnosť pre dátum od ${formattedDateFrom || 'N/A'}: '''${dateFromActive ? 'Áno' : 'Nie'}'`);
         }
 
-        // Dátum do a jeho aktívnosť
-        if (dateTo || dateToActive) { // Generovať, ak je dátum alebo je aktívny
+        if (dateTo || dateToActive) { 
             changesToAdd.push(`Dátum do: '''${formattedDateTo}'`);
             changesToAdd.push(`Aktívnosť pre dátum do ${formattedDateTo || 'N/A'}: '''${dateToActive ? 'Áno' : 'Nie'}'`); 
         }
@@ -794,13 +763,11 @@ function AddCategoriesApp() {
           newCategoryName, newDateFrom, newDateTo, newDateFromActive, newDateToActive
         } = notificationData.data;
 
-        // Kontrola zmeny názvu
         if (originalCategoryName !== newCategoryName) {
           changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
           changesToAdd.push(`Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`);
         }
 
-        // Kontrola zmeny "Dátum od"
         const formattedOriginalDateFrom = formatNotificationDate(originalDateFrom);
         const formattedNewDateFrom = formatNotificationDate(newDateFrom);
         if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
@@ -813,7 +780,6 @@ function AddCategoriesApp() {
           }
         }
 
-        // Kontrola zmeny "Dátum do"
         const formattedOriginalDateTo = formatNotificationDate(originalDateTo);
         const formattedNewDateTo = formatNotificationDate(newDateTo);
         if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
@@ -831,12 +797,11 @@ function AddCategoriesApp() {
         );
       }
 
-      // Použitie addDoc na vytvorenie nového dokumentu v kolekcii 'notifications'
       if (changesToAdd.length > 0) {
         await addDoc(notificationsCollectionRef, {
           userEmail: userEmail,
           timestamp: currentTimestamp,
-          changes: changesToAdd // Pole textových reťazcov zmien
+          changes: arrayUnion(...changesToAdd) // Používame arrayUnion na pridanie viacerých zmien
         });
         console.log("Notifikácia pre administrátorov uložená do kolekcie 'notifications'.");
       } else {
@@ -852,7 +817,6 @@ function AddCategoriesApp() {
   };
 
 
-  // Funkcia na pridanie novej kategórie
   const handleAddCategorySubmit = async (categoryName, dateFrom, dateTo, dateFromActive, dateToActive) => {
     console.log("handleAddCategorySubmit: Starting category submission for name:", categoryName);
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
@@ -941,7 +905,6 @@ function AddCategoriesApp() {
     }
   };
 
-  // Funkcia na úpravu kategórie
   const handleEditCategorySubmit = async (categoryId, newName, newDateFrom, newDateTo, newDateFromActive, newDateToActive) => { 
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       if (typeof showLocalNotification === 'function') {
@@ -1040,13 +1003,11 @@ function AddCategoriesApp() {
     }
   };
 
-  // Funkcia na zobrazenie potvrdzovacieho modálu pred zmazaním
   const confirmDeleteCategory = (category) => {
     setCategoryToDelete(category);
     setShowConfirmDeleteModal(true);
   };
 
-  // Funkcia na zmazanie kategórie (volaná z potvrdzovacieho modálu)
   const handleDeleteCategory = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !categoryToDelete) {
       if (typeof showLocalNotification === 'function') {
@@ -1056,7 +1017,7 @@ function AddCategoriesApp() {
     }
 
     setLoading(true);
-    setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
+    setShowConfirmDeleteModal(false); 
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
@@ -1084,7 +1045,6 @@ function AddCategoriesApp() {
     }
   };
 
-  // Pomocná funkcia pre formátovanie dátumu
   const formatDateDisplay = (dateString) => {
     if (!dateString) return '';
     try {
@@ -1096,7 +1056,6 @@ function AddCategoriesApp() {
     }
   };
 
-  // Zobrazenie indikátora aktivity dátumu v tabuľke
   const renderDateStatus = (dateString, isActive) => {
     const statusColor = isActive ? 'bg-green-500' : 'bg-red-500';
     return React.createElement(
