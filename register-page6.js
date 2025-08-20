@@ -46,6 +46,9 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
     const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error', dateOfBirth: 'error' } } } }
+    // Nový stav pre globálnu poznámku
+    const [globalNote, setGlobalNote] = React.useState(teamsDataFromPage4.globalNote || '');
+
 
     // Helper pre notifikácie
     const dispatchAppNotification = React.useCallback((message, type = 'info') => {
@@ -171,6 +174,10 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             }
         }
         setLocalTeamDetails(initialDetails);
+        // Tiež inicializuj globalNote zo vstupných dát, ak existuje
+        if (teamsDataFromPage4.globalNote) {
+            setGlobalNote(teamsDataFromPage4.globalNote);
+        }
     }, [teamsDataFromPage4]);
 
 
@@ -514,6 +521,11 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         });
     };
 
+    // Handler pre zmenu globálnej poznámky
+    const handleGlobalNoteChange = (e) => {
+        setGlobalNote(e.target.value);
+    };
+
     // NOVINKA: useEffect pre spracovanie notifikácií na základe playerErrors
     React.useEffect(() => {
         let hasAnyPlayerErrors = false;
@@ -593,6 +605,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 }
             });
         }
+        // Pridaj globálnu poznámku k dátam pred odoslaním
+        finalTeamsData.globalNote = globalNote;
         handleSubmit(finalTeamsData);
     };
 
@@ -611,6 +625,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 }
             });
         }
+        // Pridaj globálnu poznámku k dátam pred uložením a prechodom späť
+        updatedTeamsData.globalNote = globalNote;
         onSaveAndPrev(updatedTeamsData);
     };
 
@@ -1378,6 +1394,31 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         })
                     )
                 ))
+            ),
+
+            // NOVINKA: Sekcia pre globálnu poznámku
+            React.createElement(
+                'div',
+                { className: 'border-t border-gray-200 pt-4 mt-4' }, // Čiara nad poznámkou
+                React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Poznámka'),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'globalNote', className: 'block text-gray-700 text-sm font-bold mb-1' },
+                        'Zadajte poznámku (nepovinné):'
+                    ),
+                    React.createElement('textarea', {
+                        id: 'globalNote',
+                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                        rows: 6, // Výška 6 riadkov
+                        value: globalNote,
+                        onChange: handleGlobalNoteChange,
+                        disabled: loading,
+                        placeholder: 'Sem môžete zadať akékoľvek dôležité poznámky k registrácii.'
+                    })
+                )
             ),
 
             React.createElement(
