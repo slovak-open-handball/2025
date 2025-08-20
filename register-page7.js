@@ -10,12 +10,30 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
         const baseClasses = 'py-2 px-4 rounded-lg transition-colors duration-200';
         const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
 
+        // NOVINKA: Špecifické ošetrenie pre 'bg-gray-300' pre zabezpečenie čierneho textu
+        if (originalBgColorClass === 'bg-gray-300') {
+            if (disabledState) {
+                // Pre zablokované tlačidlo "Späť na úpravu"
+                return `${baseClasses} bg-white border border-gray-300 text-black opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
+            } else {
+                // Pre aktívne tlačidlo "Späť na úpravu"
+                return `${baseClasses} bg-gray-300 hover:bg-gray-400 text-black`;
+            }
+        }
+
+        // Pôvodná logika pre ostatné tlačidlá (napr. zelené, modré)
         if (disabledState && colorMatch) {
             const colorName = colorMatch[1];
             const colorShade = colorMatch[2];
             return `${baseClasses} bg-white border border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
         } else {
-            return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-white`;
+            // Špeciálne ošetrenie pre sivé tlačidlá, ktoré používajú text-gray-800, nie text-white.
+            // Táto časť sa už pre 'bg-gray-300' nespustí vďaka prvej podmienke.
+            if (originalBgColorClass.includes('bg-gray-')) {
+                return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-gray-800`;
+            } else {
+                return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-white`;
+            }
         }
     };
 
@@ -36,7 +54,7 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
                     'button',
                     {
                         onClick: onClose,
-                        className: getModalButtonClasses('bg-gray-300', loading),
+                        className: getModalButtonClasses('bg-gray-300', loading), // Používa upravenú funkciu
                         disabled: loading,
                     },
                     'Späť na úpravu'
