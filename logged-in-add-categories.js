@@ -639,11 +639,12 @@ function AddCategoriesApp() {
   }, [db]); // Závisí od 'db' pre zabezpečenie inicializácie
 
   // NOVINKA: Určenie, či majú byť všetky tlačidlá zablokované na základe dátumu
-  const areAllButtonsDisabledByDate = React.useMemo(() => { // ZMENA NÁZVU NA areAllButtonsDisabledByDate
-    if (!registrationStartDate) {
-      return false; // Ak dátum nie je nastavený, tlačidlá nie sú zablokované týmto pravidlom
+  const areAllButtonsDisabledByDate = React.useMemo(() => {
+    if (!registrationStartDate || typeof registrationStartDate.seconds === 'undefined') { // Pridaná kontrola .seconds
+      return false; // Ak dátum nie je nastavený alebo nie je Timestamp, tlačidlá nie sú zablokované týmto pravidlom
     }
-    const startDate = new Date(registrationStartDate);
+    // Správna konverzia Firebase Timestamp na JavaScript Date objekt
+    const startDate = new Date(registrationStartDate.seconds * 1000); 
     const now = new Date();
     // Tlačidlá sú zablokované, ak je aktuálny dátum a čas rovný alebo neskorší ako registrationStartDate
     return now >= startDate;
