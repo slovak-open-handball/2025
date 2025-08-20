@@ -429,7 +429,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             ),
 
             // NOVINKA: Zobrazenie globálnej poznámky
-            globalNote.trim() !== '' && React.createElement(
+            globalNote && globalNote.trim() !== '' && React.createElement( // Podmienka, aby sa zobrazilo len ak globalNote nie je prázdny
                 'div',
                 { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
                 React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-800' }, 'Poznámka'),
