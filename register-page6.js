@@ -77,21 +77,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                             dateOfBirth: '',
                             isRegistered: false,
                             registrationNumber: '',
-                            address: { // Vždy zabezpečiť existenciu objektu adresy s predvolenými hodnotami
+                            // Deep-merge: keep defaults, then existingPlayer, with address deeply merged
+                            ...existingPlayer,
+                            address: {
                                 street: '',
                                 houseNumber: '',
                                 city: '',
                                 postalCode: '',
                                 country: '',
-                            },
-                            ...existingPlayer, // Prepíše predvolené hodnoty existujúcimi dátami hráča
-                            address: { // Hlboké zlúčenie adresy pre zabezpečenie všetkých podpolí
-                                street: '',
-                                houseNumber: '',
-                                city: '',
-                                postalCode: '',
-                                country: '',
-                                ...(existingPlayer.address || {}) // Prepíše predvolené hodnoty adresy existujúcimi dátami adresy
+                                ...(existingPlayer.address || {})
                             }
                         };
                     });
@@ -609,7 +603,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         const updatedTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
         for (const categoryName in localTeamDetails) {
-            (Array.isArray(localTeam[categoryName]) ? localTeam[categoryName] : []).forEach((localTeam, teamIndex) => {
+            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => {
                 if (updatedTeamsData[categoryName] && updatedTeamsData[categoryName][teamIndex]) {
                     updatedTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     updatedTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
@@ -1386,7 +1380,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         );
                                     })
                                 )
-                            )
+                            ) 
                         )
                     )),
                     // NOVINKA: Poznámka textarea na konci formulára
