@@ -83,7 +83,7 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
     );
 }
 
-export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode }) {
+export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode, globalNote }) { // Pridaný globalNote prop
 
     const [isConsentChecked, setIsConsentChecked] = React.useState(false); // Nový stav pre checkbox
     const [showEmailConfirmationModal, setShowEmailConfirmationModal] = React.useState(false); // Stav pre zobrazenie potvrdzovacieho modálu
@@ -147,7 +147,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             return React.createElement('p', null, 'Žiadne tímy neboli pridané.');
         }
 
-        return Object.keys(teams).map(categoryName => {
+        // ZMENA: Filter pre kľúče, aby sa spracovávali len kategórie (objekty, ktoré sú polia alebo sa očakávajú ako polia)
+        return Object.keys(teams).filter(categoryName => Array.isArray(teams[categoryName])).map(categoryName => {
             const teamsInCategory = teams[categoryName];
             if (!teamsInCategory || teamsInCategory.length === 0) {
                 return React.createElement('div', { key: categoryName, className: 'mb-2' },
@@ -362,7 +363,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     // Handler pre skutočné odoslanie formulára po potvrdení v modálnom okne
     const handleConfirmSubmit = () => {
         // Tu sa zavolá pôvodná funkcia handleSubmit, ktorá dokončí registráciu
-        handleSubmit();
+        handleSubmit(teamsDataFromPage4, globalNote); // ZMENA: Odovzdávame teamsDataFromPage4 a globalNote
         handleCloseConfirmation(); // Zatvorí modál po odoslaní
     };
 
@@ -427,6 +428,14 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 formatTeamsData(teamsDataFromPage4)
             ),
 
+            // NOVINKA: Zobrazenie globálnej poznámky
+            globalNote.trim() !== '' && React.createElement(
+                'div',
+                { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
+                React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-800' }, 'Poznámka'),
+                React.createElement('p', { className: 'whitespace-pre-wrap' }, globalNote)
+            ),
+
             // NOVINKA: Checkbox pre súhlas so spracovaním osobných údajov
             React.createElement(
                 'div',
@@ -451,7 +460,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
+                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4, currentGlobalNote: globalNote }), // NOVINKA: Odovzdanie globalNote
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
