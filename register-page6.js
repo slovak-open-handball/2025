@@ -787,7 +787,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             disabled: loading || !player.isRegistered,
                                                             placeholder: 'Číslo'
                                                         }),
-                                                        React.createElement('p', { className: `text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
+                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1 ${playerSpecificErrors.combination || playerSpecificErrors.registrationNumber ? '' : 'opacity-0'}`.trim() }, playerSpecificErrors.combination || playerSpecificErrors.registrationNumber || '\u00A0')
                                                     ),
                                                 ),
                                                 // Conditional rendering for address fields based on hasAccommodation
@@ -1002,7 +1002,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     )
                                                 )
-                                            ),
+                                            )
+                                        );
                                     })
                                 ),
 
@@ -1384,9 +1385,10 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             )
                                         );
                                     })
-                                )
-                            );
-                        })
+                                ) // This closes the `driversFemaleCount > 0 && React.createElement` block. THIS LINE HAD THE EXTRA `)` BEFORE.
+                                ); // This line closes the `return React.createElement` for the `team` div.
+                            })
+                        )
                     )),
                     // NOVINKA: Poznámka textarea na konci formulára
                     React.createElement(
