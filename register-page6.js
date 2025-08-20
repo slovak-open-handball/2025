@@ -1002,7 +1002,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     )
                                                 )
-                                            );
+                                            )
+                                        );
                                     })
                                 ),
 
