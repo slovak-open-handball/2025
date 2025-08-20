@@ -561,24 +561,39 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                     const playerDetails = Array.from({ length: playersCount }).map((_, i) => {
                         const existingPlayer = team.playerDetails?.[i] || {};
                         return {
-                            jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                            jerseyNumber: '',
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            isRegistered: false,
+                            registrationNumber: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingPlayer, // Zlúčiť existujúce dáta hráča
+                            address: { ...(existingPlayer.address || {}) } // Hlboké zlúčenie pre adresu
                         };
                     });
 
                     const womenTeamMemberDetails = Array.from({ length: womenMembersCount }).map((_, i) => {
                         const existingMember = team.womenTeamMemberDetails?.[i] || {};
                         return {
-                            firstName: '', lastName: '', dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingMember, // Zlúčiť existujúce dáta člena
+                            address: { ...(existingMember.address || {}) }
                         };
                     });
 
                     const menTeamMemberDetails = Array.from({ length: menMembersCount }).map((_, i) => {
                         const existingMember = team.menTeamMemberDetails?.[i] || {};
                         return {
-                            firstName: '', lastName: '', dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingMember, // Zlúčiť existujúce dáta člena
+                            address: { ...(existingMember.address || {}) }
                         };
                     });
 
@@ -588,9 +603,11 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                     const driverDetailsMale = Array.from({ length: driversMaleCount }).map((_, i) => {
                         const existingDriver = team.driverDetailsMale?.[i] || {};
                         return {
-                            firstName: '', lastName: '', dateOfBirth: '',
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
                             address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
-                            ...existingDriver,
+                            ...existingDriver, // Zlúčiť existujúce dáta šoféra
                             address: { ...(existingDriver.address || {}) }
                         };
                     });
@@ -598,9 +615,11 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                     const driverDetailsFemale = Array.from({ length: driversFemaleCount }).map((_, i) => {
                         const existingDriver = team.driverDetailsFemale?.[i] || {};
                         return {
-                            firstName: '', lastName: '', dateOfBirth: '',
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
                             address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
-                            ...existingDriver,
+                            ...existingDriver, // Zlúčiť existujúce dáta šoféra
                             address: { ...(existingDriver.address || {}) }
                         };
                     });
@@ -647,24 +666,39 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                     const playerDetails = Array.from({ length: playersCount }).map((_, i) => {
                         const existingPlayer = team.playerDetails?.[i] || {};
                         return {
-                            jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                            jerseyNumber: '',
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            isRegistered: false,
+                            registrationNumber: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingPlayer, // Zlúčiť existujúce dáta hráča
+                            address: { ...(existingPlayer.address || {}) } // Hlboké zlúčenie pre adresu
                         };
                     });
 
                     const womenTeamMemberDetails = Array.from({ length: womenMembersCount }).map((_, i) => {
                         const existingMember = team.womenTeamMemberDetails?.[i] || {};
                         return {
-                            firstName: '', lastName: '', dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingMember, // Zlúčiť existujúce dáta člena
+                            address: { ...(existingMember.address || {}) }
                         };
                     });
 
                     const menTeamMemberDetails = Array.from({ length: menMembersCount }).map((_, i) => {
                         const existingMember = team.menTeamMemberDetails?.[i] || {};
                         return {
-                            firstName: '', lastName: '', dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
+                            ...existingMember, // Zlúčiť existujúce dáta člena
+                            address: { ...(existingMember.address || {}) }
                         };
                     });
 
@@ -674,9 +708,11 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                     const driverDetailsMale = Array.from({ length: driversMaleCount }).map((_, i) => {
                         const existingDriver = team.driverDetailsMale?.[i] || {};
                         return {
-                            firstName: '', lastName: '', dateOfBirth: '',
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
                             address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
-                            ...existingDriver,
+                            ...existingDriver, // Zlúčiť existujúce dáta šoféra
                             address: { ...(existingDriver.address || {}) }
                         };
                     });
@@ -684,9 +720,11 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                     const driverDetailsFemale = Array.from({ length: driversFemaleCount }).map((_, i) => {
                         const existingDriver = team.driverDetailsFemale?.[i] || {};
                         return {
-                            firstName: '', lastName: '', dateOfBirth: '',
+                            firstName: '',
+                            lastName: '',
+                            dateOfBirth: '',
                             address: { street: '', houseNumber: '', city: '', postalCode: '', country: '', },
-                            ...existingDriver,
+                            ...existingDriver, // Zlúčiť existujúce dáta šoféra
                             address: { ...(existingDriver.address || {}) }
                         };
                     });
