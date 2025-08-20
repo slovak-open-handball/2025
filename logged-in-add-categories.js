@@ -78,7 +78,7 @@ function ToggleButton({ isActive, onToggle, disabled }) {
 
 
 // AddCategoryModal Component
-function AddCategoryModal({ show, onClose, onAddCategory, loading }) { 
+function AddCategoryModal({ show, onClose, onAddCategory, loading, propagateDisabledByDate }) { 
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
@@ -133,7 +133,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
 
   // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
   // ZMENA: Odstránená závislosť od categoryNameExists
-  const isDisabled = loading || newCategoryName.trim() === '' || 
+  const isDisabled = loading || propagateDisabledByDate || newCategoryName.trim() === '' || 
                      (dateFromActive && dateFrom === '') || 
                      (dateToActive && dateTo === '') || 
                      (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo));
@@ -157,7 +157,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
           value: newCategoryName,
           onChange: (e) => setNewCategoryName(e.target.value),
           required: true,
-          disabled: loading,
+          disabled: loading || propagateDisabledByDate, // Zablokovanie inputu pri loading alebo datume
         }),
 
         // Dátum narodenia od s toggle buttonom
@@ -166,7 +166,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
           React.createElement(ToggleButton, {
             isActive: dateFromActive,
             onToggle: () => setDateFromActive(!dateFromActive),
-            disabled: loading,
+            disabled: loading || propagateDisabledByDate, // Zablokovanie toggle buttonu
           })
         ),
         React.createElement('input', {
@@ -176,7 +176,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
             value: dateFrom,
             onChange: (e) => setDateFrom(e.target.value),
             required: dateFromActive, // Dátum je povinný len ak je toggle zapnutý
-            disabled: loading,
+            disabled: loading || propagateDisabledByDate, // Zablokovanie inputu pri loading alebo datume
         }),
 
         // Dátum narodenia do s toggle buttonom
@@ -185,7 +185,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
           React.createElement(ToggleButton, {
             isActive: dateToActive,
             onToggle: () => setDateToActive(!dateToActive),
-            disabled: loading,
+            disabled: loading || propagateDisabledByDate, // Zablokovanie toggle buttonu
           })
         ),
         React.createElement('input', {
@@ -195,7 +195,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
             value: dateTo,
             onChange: (e) => setDateTo(e.target.value),
             required: dateToActive, // Dátum je povinný len ak je toggle zapnutý
-            disabled: loading,
+            disabled: loading || propagateDisabledByDate, // Zablokovanie inputu pri loading alebo datume
         }),
 
       ),
@@ -206,8 +206,9 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
           'button',
           {
             onClick: onClose,
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
+            // Dynamické triedy pre tlačidlo "Zrušiť"
+            className: getModalButtonClasses('bg-gray-300', loading || propagateDisabledByDate),
+            disabled: loading || propagateDisabledByDate,
           },
           'Zrušiť'
         ),
@@ -215,12 +216,8 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
           'button',
           {
             onClick: handleSubmit,
-            // Upravené triedy pre disabled stav
-            className: `py-2 px-4 rounded-lg transition-colors duration-200 ${
-                isDisabled
-                  ? 'bg-white text-blue-500 border border-blue-500 opacity-50 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-              }`,
+            // Dynamické triedy pre tlačidlo "Pridať"
+            className: getModalButtonClasses('bg-blue-500', isDisabled),
             disabled: isDisabled, // Používame premennú isDisabled
           },
           loading ? 'Ukladám...' : 'Pridať'
@@ -231,7 +228,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
 }
 
 // EditCategoryModal Component
-function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, existingCategories }) {
+function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, existingCategories, propagateDisabledByDate }) {
   const [editedCategoryName, setEditedCategoryName] = React.useState(category ? category.name : '');
   const [editedDateFrom, setEditedDateFrom] = React.useState(category ? category.dateFrom : '');
   const [editedDateTo, setEditedDateTo] = React.useState(category ? category.dateTo : '');
@@ -300,7 +297,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   };
 
   // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
-  const isDisabled = loading || editedCategoryName.trim() === '' || 
+  const isDisabled = loading || propagateDisabledByDate || editedCategoryName.trim() === '' || 
                      (editedDateFromActive && editedDateFrom === '') || 
                      (editedDateToActive && editedDateTo === '') || 
                      categoryExists || 
@@ -324,7 +321,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           value: editedCategoryName,
           onChange: (e) => setEditedCategoryName(e.target.value),
           required: true,
-          disabled: loading,
+          disabled: loading || propagateDisabledByDate, // Zablokovanie inputu pri loading alebo datume
         }),
 
         // Dátum narodenia od s toggle buttonom
@@ -333,7 +330,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           React.createElement(ToggleButton, {
             isActive: editedDateFromActive,
             onToggle: () => setEditedDateFromActive(!editedDateFromActive),
-            disabled: loading,
+            disabled: loading || propagateDisabledByDate, // Zablokovanie toggle buttonu
           })
         ),
         React.createElement('input', {
@@ -343,7 +340,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
             value: editedDateFrom,
             onChange: (e) => setEditedDateFrom(e.target.value),
             required: editedDateFromActive, // Dátum je povinný len ak je toggle zapnutý
-            disabled: loading,
+            disabled: loading || propagateDisabledByDate, // Zablokovanie inputu pri loading alebo datume
         }),
 
         // Dátum narodenia do s toggle buttonom
@@ -352,7 +349,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           React.createElement(ToggleButton, {
             isActive: editedDateToActive,
             onToggle: () => setEditedDateToActive(!editedDateToActive),
-            disabled: loading,
+            disabled: loading || propagateDisabledByDate, // Zablokovanie toggle buttonu
           })
         ),
         React.createElement('input', {
@@ -362,7 +359,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
             value: editedDateTo,
             onChange: (e) => setEditedDateTo(e.target.value),
             required: editedDateToActive, // Dátum je povinný len ak je toggle zapnutý
-            disabled: loading,
+            disabled: loading || propagateDisabledByDate, // Zablokovanie inputu pri loading alebo datume
         }),
         categoryExists && React.createElement( // Zobrazenie chybovej správy
             'p',
@@ -377,8 +374,9 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           'button',
           {
             onClick: onClose,
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
+            // Dynamické triedy pre tlačidlo "Zrušiť"
+            className: getModalButtonClasses('bg-gray-300', loading || propagateDisabledByDate),
+            disabled: loading || propagateDisabledByDate,
           },
           'Zrušiť'
         ),
@@ -386,12 +384,8 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           'button',
           {
             onClick: handleSubmit,
-            // Upravené triedy pre disabled stav
-            className: `py-2 px-4 rounded-lg transition-colors duration-200 ${
-                isDisabled
-                  ? 'bg-white text-blue-500 border border-blue-500 opacity-50 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-              }`,
+            // Dynamické triedy pre tlačidlo "Uložiť zmeny"
+            className: getModalButtonClasses('bg-blue-500', isDisabled),
             disabled: isDisabled, // Používame premennú isDisabled
           },
           loading ? 'Ukladám...' : 'Uložiť zmeny'
@@ -402,7 +396,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
 }
 
 // ConfirmationModal Component (nový komponent pre potvrdenie zmazania)
-function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
+function ConfirmationModal({ show, message, onConfirm, onCancel, loading, propagateDisabledByDate }) {
   if (!show) return null;
 
   return React.createElement(
@@ -420,8 +414,9 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
           'button',
           {
             onClick: onCancel,
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
+            // Dynamické triedy pre tlačidlo "Zrušiť"
+            className: getModalButtonClasses('bg-gray-300', loading || propagateDisabledByDate),
+            disabled: loading || propagateDisabledByDate,
           },
           'Zrušiť'
         ),
@@ -429,8 +424,9 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
           'button',
           {
             onClick: onConfirm,
-            className: 'bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
+            // Dynamické triedy pre tlačidlo "Potvrdiť"
+            className: getModalButtonClasses('bg-red-500', loading || propagateDisabledByDate),
+            disabled: loading || propagateDisabledByDate,
           },
           loading ? 'Potvrdzujem...' : 'Potvrdiť'
         )
@@ -459,6 +455,9 @@ function AddCategoriesApp() {
   const [categoryToEdit, setCategoryToEdit] = React.useState(null); // Stav pre kategóriu, ktorá sa má upraviť
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false); // NOVINKA: Stav pre potvrdenie zmazania
   const [categoryToDelete, setCategoryToDelete] = React.useState(null); // NOVINKA: Kategória na zmazanie
+
+  // NOVINKA: Stav pre dátum, od ktorého sa majú zablokovať tlačidlá
+  const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
@@ -570,6 +569,50 @@ function AddCategoriesApp() {
       }
     };
   }, [user, db, isAuthReady, auth]);
+
+  // NOVINKA: Effect pre načítanie dátumu zablokovania registrácie
+  React.useEffect(() => {
+    let unsubscribeRegistration;
+    if (db) {
+      const registrationDocRef = doc(db, 'settings', 'registration');
+      unsubscribeRegistration = onSnapshot(registrationDocRef, (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          if (data.registrationStartDate) {
+            setRegistrationStartDate(data.registrationStartDate);
+            console.log("Dátum začiatku registrácie načítaný:", data.registrationStartDate);
+          } else {
+            setRegistrationStartDate(null);
+            console.log("Pole 'registrationStartDate' sa v dokumente settings/registration nenašlo.");
+          }
+        } else {
+          setRegistrationStartDate(null);
+          console.log("Dokument settings/registration neexistuje.");
+        }
+      }, (error) => {
+        console.error("Chyba pri načítaní dátumu začiatku registrácie:", error);
+        showLocalNotification(`Chyba pri načítaní dátumu registrácie: ${error.message}`, 'error');
+        setRegistrationStartDate(null);
+      });
+    }
+
+    return () => {
+      if (unsubscribeRegistration) {
+        unsubscribeRegistration();
+      }
+    };
+  }, [db]); // Závisí od 'db' pre zabezpečenie inicializácie
+
+  // NOVINKA: Určenie, či majú byť všetky tlačidlá zablokované na základe dátumu
+  const areAllButtonsDisabled = React.useMemo(() => {
+    if (!registrationStartDate) {
+      return false; // Ak dátum nie je nastavený, tlačidlá nie sú zablokované týmto pravidlom
+    }
+    const startDate = new Date(registrationStartDate);
+    const now = new Date();
+    // Tlačidlá sú zablokované, ak je aktuálny dátum a čas rovný alebo neskorší ako registrationStartDate
+    return now >= startDate;
+  }, [registrationStartDate]);
 
 
   // Callback funkcia pre získanie referencie na dokument kategórií
@@ -1048,13 +1091,47 @@ function AddCategoriesApp() {
   // Zobrazenie indikátora aktivity dátumu v tabuľke
   const renderDateStatus = (dateString, isActive) => {
     const statusColor = isActive ? 'bg-green-500' : 'bg-red-500';
-    // Odstránený text '(Aktívne)' alebo '(Neaktívne)'
     return React.createElement(
       'div',
       { className: 'flex items-center space-x-2' },
       React.createElement('span', { className: `inline-block h-3 w-3 rounded-full ${statusColor}` }),
       React.createElement('span', null, formatDateDisplay(dateString))
     );
+  };
+
+  // NOVINKA: Pomocná funkcia pre generovanie tried CSS pre tlačidlá v modálnych oknách (py-2 px-4)
+  const getModalButtonClasses = (originalBgColorClass, disabledState) => {
+    const baseClasses = 'py-2 px-4 rounded-lg transition-colors duration-200';
+    const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
+
+    if (disabledState && colorMatch) {
+      const colorName = colorMatch[1];
+      const colorShade = colorMatch[2];
+      // Pre zablokovaný stav: biely podklad, farba obrysu a textu zodpovedá pôvodnej farbe výplne.
+      return `${baseClasses} bg-white border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
+    } else {
+      // Pre aktívny stav: pôvodný podklad, efekt pri hoveri a farba textu.
+      // Špeciálne ošetrenie pre sivé tlačidlá, ktoré používajú text-gray-800, nie text-white.
+      if (originalBgColorClass.includes('bg-gray-')) {
+        return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-gray-800`;
+      } else {
+        return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-white`;
+      }
+    }
+  };
+
+  // NOVINKA: Pomocná funkcia pre generovanie tried CSS pre tlačidlá v tabuľke (py-1 px-3)
+  const getTableButtonClasses = (originalBgColorClass, disabledState) => {
+    const baseClasses = 'py-1 px-3 rounded-lg text-sm transition-colors duration-200';
+    const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
+    if (disabledState && colorMatch) {
+      const colorName = colorMatch[1];
+      const colorShade = colorMatch[2];
+      return `${baseClasses} bg-white border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
+    } else {
+      const hoverBgClass = originalBgColorClass.replace('bg-', 'hover:bg-');
+      return `${baseClasses} ${originalBgColorClass} ${hoverBgClass} text-white`;
+    }
   };
 
 
@@ -1074,6 +1151,7 @@ function AddCategoriesApp() {
         onClose: () => { setShowAddCategoryModal(false); }, 
         onAddCategory: handleAddCategorySubmit,
         loading: loading,
+        propagateDisabledByDate: areAllButtonsDisabled, // Odovzdanie stavu zablokovania dátumom
     }),
     React.createElement(EditCategoryModal, {
         show: showEditCategoryModal,
@@ -1081,7 +1159,8 @@ function AddCategoriesApp() {
         onSaveCategory: handleEditCategorySubmit,
         loading: loading,
         category: categoryToEdit,
-        existingCategories: categories
+        existingCategories: categories,
+        propagateDisabledByDate: areAllButtonsDisabled, // Odovzdanie stavu zablokovania dátumom
     }),
     React.createElement(ConfirmationModal, { 
         show: showConfirmDeleteModal,
@@ -1089,6 +1168,7 @@ function AddCategoriesApp() {
         onConfirm: handleDeleteCategory,
         onCancel: () => { setShowConfirmDeleteModal(false); setCategoryToDelete(null); },
         loading: loading,
+        propagateDisabledByDate: areAllButtonsDisabled, // Odovzdanie stavu zablokovania dátumom
     }),
     React.createElement(
       'div',
@@ -1142,8 +1222,9 @@ function AddCategoriesApp() {
                                             'button',
                                             {
                                               onClick: () => { setCategoryToEdit(cat); setShowEditCategoryModal(true); },
-                                              className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                              disabled: loading,
+                                              // Dynamické triedy pre tlačidlo "Upraviť"
+                                              className: getTableButtonClasses('bg-yellow-500', loading || areAllButtonsDisabled),
+                                              disabled: loading || areAllButtonsDisabled, // Zablokovanie pri loading alebo dátume
                                             },
                                             'Upraviť'
                                         ),
@@ -1151,8 +1232,9 @@ function AddCategoriesApp() {
                                             'button',
                                             {
                                               onClick: () => confirmDeleteCategory(cat),
-                                              className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                              disabled: loading,
+                                              // Dynamické triedy pre tlačidlo "Zmazať"
+                                              className: getTableButtonClasses('bg-red-500', loading || areAllButtonsDisabled),
+                                              disabled: loading || areAllButtonsDisabled, // Zablokovanie pri loading alebo dátume
                                             },
                                             'Zmazať'
                                         )
@@ -1166,13 +1248,18 @@ function AddCategoriesApp() {
         )
       )
     ),
-    // Zelené okrúhle tlačidlo s textom "+"
+    // Zelené okrúhle tlačidlo s textom "+" (FAB tlačidlo)
     React.createElement(
       'button',
       {
-        className: 'fab-button',
+        // Dynamické triedy pre FAB tlačidlo
+        className: `fixed bottom-4 right-4 h-14 w-14 flex items-center justify-center rounded-full text-2xl shadow-lg transition-colors duration-200 z-50 ${
+            (loading || areAllButtonsDisabled)
+              ? 'bg-white border-green-500 text-green-500 opacity-50 cursor-not-allowed hover:cursor-not-allowed' // Zablokovaný stav
+              : 'bg-green-500 hover:bg-green-600 text-white' // Aktívny stav
+        }`,
         onClick: () => setShowAddCategoryModal(true), // Otvorí modálne okno na pridanie
-        disabled: loading,
+        disabled: loading || areAllButtonsDisabled, // Zablokovanie pri loading alebo dátume
       },
       '+'
     )
