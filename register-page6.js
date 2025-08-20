@@ -70,7 +70,8 @@ const getPlayerCountValidationMessage = (requiredPlayers, currentPlayers, requir
     return null; // Žiadna správa, ak je všetko v poriadku
 };
 
-export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFromPage4, setTeamsDataFromPage4, loading, setLoading, notificationMessage, closeNotification, NotificationModal, notificationType, globalNote, setGlobalNote, onSaveAndPrev, availableCategoriesMap, dataEditDeadline }) {
+// ZMENA: Pridal som dispatchAppNotification do props
+export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFromPage4, setTeamsDataFromPage4, loading, setLoading, notificationMessage, closeNotification, NotificationModal, notificationType, globalNote, setGlobalNote, onSaveAndPrev, availableCategoriesMap, dataEditDeadline, dispatchAppNotification }) {
     // Definícia a inicializácia stavov pre dresy a dresy bez mena
     const [jerseys, setJerseys] = React.useState([]);
     const [jerseysWithoutName, setJerseysWithoutName] = React.useState([]);
@@ -561,9 +562,7 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                         const existingPlayer = team.playerDetails?.[i] || {};
                         return {
                             jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
-                            ...existingPlayer,
-                            address: { ...(existingPlayer.address || {}) }
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                         };
                     });
 
@@ -571,9 +570,7 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                         const existingMember = team.womenTeamMemberDetails?.[i] || {};
                         return {
                             firstName: '', lastName: '', dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
-                            ...existingMember,
-                            address: { ...(existingMember.address || {}) }
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                         };
                     });
 
@@ -581,9 +578,7 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                         const existingMember = team.menTeamMemberDetails?.[i] || {};
                         return {
                             firstName: '', lastName: '', dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
-                            ...existingMember,
-                            address: { ...(existingMember.address || {}) }
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                         };
                     });
 
@@ -653,9 +648,7 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                         const existingPlayer = team.playerDetails?.[i] || {};
                         return {
                             jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
-                            ...existingPlayer,
-                            address: { ...(existingPlayer.address || {}) }
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                         };
                     });
 
@@ -663,9 +656,7 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                         const existingMember = team.womenTeamMemberDetails?.[i] || {};
                         return {
                             firstName: '', lastName: '', dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
-                            ...existingMember,
-                            address: { ...(existingMember.address || {}) }
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                         };
                     });
 
@@ -673,9 +664,7 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
                         const existingMember = team.menTeamMemberDetails?.[i] || {};
                         return {
                             firstName: '', lastName: '', dateOfBirth: '',
-                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' },
-                            ...existingMember,
-                            address: { ...(existingMember.address || {}) }
+                            address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                         };
                     });
 
@@ -934,7 +923,7 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
         }
         // Pridaj globálnu poznámku k dátam pred odoslaním
         finalTeamsData.globalNote = globalNote;
-        handleSubmit(finalTeamsData);
+        handleSubmit(finalTeamsData, globalNote); // ZMENA: Odovzdávame aj globalNote
     };
 
     // Nová funkcia na uloženie dát a prechod späť
@@ -954,7 +943,7 @@ export function Page6Form({ formData, handlePrev, handleNextPage6, teamsDataFrom
         }
         // Pridaj globálnu poznámku k dátam pred uložením a prechodom späť
         updatedTeamsData.globalNote = globalNote;
-        onSaveAndPrev(updatedTeamsData);
+        onSaveAndPrev(updatedTeamsData, globalNote); // ZMENA: Odovzdávame aj globalNote
     };
 
     // Funkcia na formátovanie dátumu a času (DD. MM. YYYY hh:mm)
