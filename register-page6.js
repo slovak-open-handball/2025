@@ -1443,5 +1443,5 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                 )
             )
         )
-    );
+    )
 }
