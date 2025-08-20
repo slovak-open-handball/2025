@@ -41,11 +41,12 @@ const formatDateToDDMMYYYY = (dateString) => {
 };
 
 // Hlavný komponent pre zadávanie detailov hráčov a členov realizačného tímu pre každý tím.
-export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType, availableCategoriesMap }) { // Pridaná availableCategoriesMap
+export function Page6Form(props) {
+    const { handlePrev, handleSubmit, loading, availableCategoriesMap } = props;
 
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
-    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error', dateOfBirth: 'error' } } } }
+    const [playerErrors, setPlayerErrors] = React.useState({});
     // NOVINKA: Stav pre poznámku
     const [note, setNote] = React.useState('');
 
@@ -77,21 +78,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                             dateOfBirth: '',
                             isRegistered: false,
                             registrationNumber: '',
-                            address: { // Vždy zabezpečiť existenciu objektu adresy s predvolenými hodnotami
+                            // Deep-merge: keep defaults, then existingPlayer, with address deeply merged
+                            ...existingPlayer,
+                            address: {
                                 street: '',
                                 houseNumber: '',
                                 city: '',
                                 postalCode: '',
                                 country: '',
-                            },
-                            ...existingPlayer, // Prepíše predvolené hodnoty existujúcimi dátami hráča
-                            address: { // Hlboké zlúčenie adresy pre zabezpečenie všetkých podpolí
-                                street: '',
-                                houseNumber: '',
-                                city: '',
-                                postalCode: '',
-                                country: '',
-                                ...(existingPlayer.address || {}) // Prepíše predvolené hodnoty adresy existujúcimi dátami adresy
+                                ...(existingPlayer.address || {})
                             }
                         };
                     });
@@ -609,7 +604,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         const updatedTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
         for (const categoryName in localTeamDetails) {
-            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => { // Opravené: localTeamDetails namiesto localTeam
+            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => {
                 if (updatedTeamsData[categoryName] && updatedTeamsData[categoryName][teamIndex]) {
                     updatedTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     updatedTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
@@ -1002,8 +997,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                     )
                                                 )
-                                            )
-                                        );
+                                            );
                                     })
                                 ),
 
@@ -1386,7 +1380,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         );
                                     })
                                 )
-                            )
+                            ) 
                         )
                     )),
                     // NOVINKA: Poznámka textarea na konci formulára
