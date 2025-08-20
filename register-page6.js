@@ -609,7 +609,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         const updatedTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
         for (const categoryName in localTeamDetails) {
-            (Array.isArray(localTeamDetails[categoryName]) ? localTeamDetails[categoryName] : []).forEach((localTeam, teamIndex) => {
+            (Array.isArray(localTeam[categoryName]) ? localTeam[categoryName] : []).forEach((localTeam, teamIndex) => {
                 if (updatedTeamsData[categoryName] && updatedTeamsData[categoryName][teamIndex]) {
                     updatedTeamsData[categoryName][teamIndex].playerDetails = localTeam.playerDetails;
                     updatedTeamsData[categoryName][teamIndex].womenTeamMemberDetails = localTeam.womenTeamMemberDetails;
@@ -1386,7 +1386,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         );
                                     })
                                 )
-                            ) // Removed the extra ')' here
+                            )
                         )
                     )),
                     // NOVINKA: Poznámka textarea na konci formulára
