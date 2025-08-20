@@ -50,6 +50,41 @@ function showLocalNotification(message, type = 'success') {
     }, 5000);
 }
 
+// NOVINKA: Pomocná funkcia pre generovanie tried CSS pre tlačidlá v modálnych oknách (py-2 px-4)
+const getModalButtonClasses = (originalBgColorClass, disabledState) => {
+  const baseClasses = 'py-2 px-4 rounded-lg transition-colors duration-200';
+  const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
+
+  if (disabledState && colorMatch) {
+    const colorName = colorMatch[1];
+    const colorShade = colorMatch[2];
+    // Pre zablokovaný stav: biely podklad, farba obrysu a textu zodpovedá pôvodnej farbe výplne.
+    return `${baseClasses} bg-white border border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
+  } else {
+    // Pre aktívny stav: pôvodný podklad, efekt pri hoveri a farba textu.
+    // Špeciálne ošetrenie pre sivé tlačidlá, ktoré používajú text-gray-800, nie text-white.
+    if (originalBgColorClass.includes('bg-gray-')) {
+      return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-gray-800`;
+    } else {
+      return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-white`;
+    }
+  }
+};
+
+// NOVINKA: Pomocná funkcia pre generovanie tried CSS pre tlačidlá v tabuľke (py-1 px-3)
+const getTableButtonClasses = (originalBgColorClass, disabledState) => {
+  const baseClasses = 'py-1 px-3 rounded-lg text-sm transition-colors duration-200';
+  const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
+  if (disabledState && colorMatch) {
+    const colorName = colorMatch[1];
+    const colorShade = colorMatch[2];
+    return `${baseClasses} bg-white border border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
+  } else {
+    const hoverBgClass = originalBgColorClass.replace('bg-', 'hover:bg-');
+    return `${baseClasses} ${originalBgColorClass} ${hoverBgClass} text-white`;
+  }
+};
+
 
 // NOVÝ KOMPONENT: ToggleButton
 function ToggleButton({ isActive, onToggle, disabled }) {
@@ -1099,41 +1134,6 @@ function AddCategoriesApp() {
     );
   };
 
-  // NOVINKA: Pomocná funkcia pre generovanie tried CSS pre tlačidlá v modálnych oknách (py-2 px-4)
-  const getModalButtonClasses = (originalBgColorClass, disabledState) => {
-    const baseClasses = 'py-2 px-4 rounded-lg transition-colors duration-200';
-    const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
-
-    if (disabledState && colorMatch) {
-      const colorName = colorMatch[1];
-      const colorShade = colorMatch[2];
-      // Pre zablokovaný stav: biely podklad, farba obrysu a textu zodpovedá pôvodnej farbe výplne.
-      return `${baseClasses} bg-white border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
-    } else {
-      // Pre aktívny stav: pôvodný podklad, efekt pri hoveri a farba textu.
-      // Špeciálne ošetrenie pre sivé tlačidlá, ktoré používajú text-gray-800, nie text-white.
-      if (originalBgColorClass.includes('bg-gray-')) {
-        return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-gray-800`;
-      } else {
-        return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-white`;
-      }
-    }
-  };
-
-  // NOVINKA: Pomocná funkcia pre generovanie tried CSS pre tlačidlá v tabuľke (py-1 px-3)
-  const getTableButtonClasses = (originalBgColorClass, disabledState) => {
-    const baseClasses = 'py-1 px-3 rounded-lg text-sm transition-colors duration-200';
-    const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
-    if (disabledState && colorMatch) {
-      const colorName = colorMatch[1];
-      const colorShade = colorMatch[2];
-      return `${baseClasses} bg-white border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
-    } else {
-      const hoverBgClass = originalBgColorClass.replace('bg-', 'hover:bg-');
-      return `${baseClasses} ${originalBgColorClass} ${hoverBgClass} text-white`;
-    }
-  };
-
 
   // Display loading state
   // Táto časť bola odstránená, pretože globálny loader.js sa stará o zobrazenie počas počiatočného načítavania.
@@ -1255,7 +1255,7 @@ function AddCategoriesApp() {
         // Dynamické triedy pre FAB tlačidlo
         className: `fixed bottom-4 right-4 h-14 w-14 flex items-center justify-center rounded-full text-2xl shadow-lg transition-colors duration-200 z-50 ${
             (loading || areAllButtonsDisabled)
-              ? 'bg-white border-green-500 text-green-500 opacity-50 cursor-not-allowed hover:cursor-not-allowed' // Zablokovaný stav
+              ? 'bg-white border border-green-500 text-green-500 opacity-50 cursor-not-allowed hover:cursor-not-allowed' // Zablokovaný stav
               : 'bg-green-500 hover:bg-green-600 text-white' // Aktívny stav
         }`,
         onClick: () => setShowAddCategoryModal(true), // Otvorí modálne okno na pridanie
