@@ -113,15 +113,13 @@ function ToggleButton({ isActive, onToggle, disabled }) {
 
 
 // AddCategoryModal Component
-function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstránené propagateDisabledByDate
+function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
-  // Nové stavy pre aktívny/neaktívny dátum, PREDVOLENE false
   const [dateFromActive, setDateFromActive] = React.useState(false); 
   const [dateToActive, setDateToActive] = React.useState(false);   
 
-  // Resetuje stav, keď sa modálne okno otvorí alebo zmení jeho 'show' property
   React.useEffect(() => {
     if (show) {
       setNewCategoryName('');
@@ -141,7 +139,6 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstr�
         showLocalNotification("Prosím vyplňte názov kategórie.", 'error');
         return;
     }
-    // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
     if (dateFromActive && dateFrom === '') {
         showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
         return;
@@ -166,8 +163,6 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstr�
     }
   };
 
-  // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
-  // ZMENA: Odstránená závislosť od categoryNameExists
   const isDisabled = loading || newCategoryName.trim() === '' || 
                      (dateFromActive && dateFrom === '') || 
                      (dateToActive && dateTo === '') || 
@@ -192,16 +187,15 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstr�
           value: newCategoryName,
           onChange: (e) => setNewCategoryName(e.target.value),
           required: true,
-          disabled: loading, // Zablokovanie inputu len pri loading
+          disabled: loading,
         }),
 
-        // Dátum narodenia od s toggle buttonom
         React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'date-from' }, 'Dátum narodenia od'),
           React.createElement(ToggleButton, {
             isActive: dateFromActive,
             onToggle: () => setDateFromActive(!dateFromActive),
-            disabled: loading, // Zablokovanie toggle buttonu len pri loading
+            disabled: loading,
           })
         ),
         React.createElement('input', {
@@ -210,17 +204,16 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstr�
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: dateFrom,
             onChange: (e) => setDateFrom(e.target.value),
-            required: dateFromActive, // Dátum je povinný len ak je toggle zapnutý
-            disabled: loading, // Zablokovanie inputu len pri loading
+            required: dateFromActive,
+            disabled: loading,
         }),
 
-        // Dátum narodenia do s toggle buttonom
         React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'date-to' }, 'Dátum narodenia do'),
           React.createElement(ToggleButton, {
             isActive: dateToActive,
             onToggle: () => setDateToActive(!dateToActive),
-            disabled: loading, // Zablokovanie toggle buttonu len pri loading
+            disabled: loading,
           })
         ),
         React.createElement('input', {
@@ -229,8 +222,8 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstr�
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: dateTo,
             onChange: (e) => setDateTo(e.target.value),
-            required: dateToActive, // Dátum je povinný len ak je toggle zapnutý
-            disabled: loading, // Zablokovanie inputu len pri loading
+            required: dateToActive,
+            disabled: loading,
         }),
 
       ),
@@ -241,8 +234,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstr�
           'button',
           {
             onClick: onClose,
-            // Dynamické triedy pre tlačidlo "Zrušiť"
-            className: getModalButtonClasses('bg-gray-300', loading), // Len loading
+            className: getModalButtonClasses('bg-gray-300', loading),
             disabled: loading,
           },
           'Zrušiť'
@@ -251,9 +243,8 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstr�
           'button',
           {
             onClick: handleSubmit,
-            // Dynamické triedy pre tlačidlo "Pridať"
             className: getModalButtonClasses('bg-blue-500', isDisabled),
-            disabled: isDisabled, // Používame premennú isDisabled
+            disabled: isDisabled,
           },
           loading ? 'Ukladám...' : 'Pridať'
         )
@@ -263,29 +254,24 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) { // Odstr�
 }
 
 // EditCategoryModal Component
-function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, existingCategories }) { // Odstránené propagateDisabledByDate
+function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, existingCategories }) {
   const [editedCategoryName, setEditedCategoryName] = React.useState(category ? category.name : '');
   const [editedDateFrom, setEditedDateFrom] = React.useState(category ? category.dateFrom : '');
   const [editedDateTo, setEditedDateTo] = React.useState(category ? category.dateTo : '');
-  // Nové stavy pre aktívny/neaktívny dátum, PREDVOLENE false pre spätnú kompatibilitu
   const [editedDateFromActive, setEditedDateFromActive] = React.useState(category ? (category.dateFromActive !== undefined ? category.dateFromActive : false) : false); 
-  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : false) : false);     // ZMENA: Oprava preklepu z category.dateToToActive
+  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : false) : false);     
 
   React.useEffect(() => {
     if (category) {
       setEditedCategoryName(category.name);
       setEditedDateFrom(category.dateFrom || '');
       setEditedDateTo(category.dateTo || '');
-      // Načítanie existujúcich hodnôt alebo predvolené na false
       setEditedDateFromActive(category.dateFromActive !== undefined ? category.dateFromActive : false); 
-      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : false);     // ZMENA: Oprava preklepu
+      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : false);     
     }
   }, [category]);
 
-  // Kontrola, či názov kategórie už existuje (case-insensitive) aj s dátumami
-  // Pri úprave kategórie stále kontrolujeme aj dátumy, ak sú podstatné
   const categoryExists = React.useMemo(() => {
-    // Pridanie kontroly, či je 'category' definované
     if (!category) {
       return false; 
     }
@@ -293,10 +279,9 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
     const trimmedName = editedCategoryName.trim().toLowerCase();
     const currentCategoryId = category.id; 
 
-    // Pridaná obranná kontrola, či existingCategories je pole
     if (!Array.isArray(existingCategories)) {
       console.error("EditCategoryModal: existingCategories is NOT an array!", existingCategories);
-      return false; // Ak nie je pole, nemôžeme volať .some()
+      return false;
     }
 
     return existingCategories.some(cat => 
@@ -314,7 +299,6 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         showLocalNotification("Prosím vyplňte názov kategórie.", 'error');
         return;
     }
-    // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
     if (editedDateFromActive && editedDateFrom === '') {
         showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
         return;
@@ -327,11 +311,9 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
         return;
     }
-    // Pridanie stavov toggle buttonov do onSaveCategory
     onSaveCategory(category.id, editedCategoryName, editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive);
   };
 
-  // NOVÁ LOGIKA: isDisabled - názov je vždy povinný. Dátumy sú povinné, len ak sú aktívne.
   const isDisabled = loading || editedCategoryName.trim() === '' || 
                      (editedDateFromActive && editedDateFrom === '') || 
                      (editedDateToActive && editedDateTo === '') || 
@@ -356,16 +338,15 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           value: editedCategoryName,
           onChange: (e) => setEditedCategoryName(e.target.value),
           required: true,
-          disabled: loading, // Zablokovanie inputu len pri loading
+          disabled: loading,
         }),
 
-        // Dátum narodenia od s toggle buttonom
         React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'edit-date-from' }, 'Dátum narodenia od'),
           React.createElement(ToggleButton, {
             isActive: editedDateFromActive,
             onToggle: () => setEditedDateFromActive(!editedDateFromActive),
-            disabled: loading, // Zablokovanie toggle buttonu len pri loading
+            disabled: loading,
           })
         ),
         React.createElement('input', {
@@ -374,17 +355,16 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: editedDateFrom,
             onChange: (e) => setEditedDateFrom(e.target.value),
-            required: editedDateFromActive, // Dátum je povinný len ak je toggle zapnutý
-            disabled: loading, // Zablokovanie inputu len pri loading
+            required: editedDateFromActive,
+            disabled: loading,
         }),
 
-        // Dátum narodenia do s toggle buttonom
         React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'edit-date-to' }, 'Dátum narodenia do'),
           React.createElement(ToggleButton, {
             isActive: editedDateToActive,
             onToggle: () => setEditedDateToActive(!editedDateToActive),
-            disabled: loading, // Zablokovanie toggle buttonu len pri loading
+            disabled: loading,
           })
         ),
         React.createElement('input', {
@@ -393,10 +373,10 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: editedDateTo,
             onChange: (e) => setEditedDateTo(e.target.value),
-            required: editedDateToActive, // Dátum je povinný len ak je toggle zapnutý
-            disabled: loading, // Zablokovanie inputu len pri loading
+            required: editedDateToActive,
+            disabled: loading,
         }),
-        categoryExists && React.createElement( // Zobrazenie chybovej správy
+        categoryExists && React.createElement(
             'p',
             { className: 'text-red-500 text-xs italic mt-2' },
             `Kategória s názvom ${editedCategoryName.trim()} už existuje. Zvoľte iný názov.`
@@ -409,8 +389,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           'button',
           {
             onClick: onClose,
-            // Dynamické triedy pre tlačidlo "Zrušiť"
-            className: getModalButtonClasses('bg-gray-300', loading), // Len loading
+            className: getModalButtonClasses('bg-gray-300', loading),
             disabled: loading,
           },
           'Zrušiť'
@@ -419,9 +398,8 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           'button',
           {
             onClick: handleSubmit,
-            // Dynamické triedy pre tlačidlo "Uložiť zmeny"
             className: getModalButtonClasses('bg-blue-500', isDisabled),
-            disabled: isDisabled, // Používame premennú isDisabled
+            disabled: isDisabled,
           },
           loading ? 'Ukladám...' : 'Uložiť zmeny'
         )
@@ -431,7 +409,7 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
 }
 
 // ConfirmationModal Component (nový komponent pre potvrdenie zmazania)
-function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) { // Odstránené propagateDisabledByDate
+function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
   if (!show) return null;
 
   return React.createElement(
@@ -449,8 +427,7 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) { //
           'button',
           {
             onClick: onCancel,
-            // Dynamické triedy pre tlačidlo "Zrušiť"
-            className: getModalButtonClasses('bg-gray-300', loading), // Len loading
+            className: getModalButtonClasses('bg-gray-300', loading),
             disabled: loading,
           },
           'Zrušiť'
@@ -459,8 +436,7 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) { //
           'button',
           {
             onClick: onConfirm,
-            // Dynamické triedy pre tlačidlo "Potvrdiť"
-            className: getModalButtonClasses('bg-red-500', loading), // Len loading
+            className: getModalButtonClasses('bg-red-500', loading),
             disabled: loading,
           },
           loading ? 'Potvrdzujem...' : 'Potvrdiť'
@@ -493,6 +469,9 @@ function AddCategoriesApp() {
 
   // NOVINKA: Stav pre dátum, od ktorého sa majú zablokovať tlačidlá
   const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
+
+  // NOVINKA: Stav pre aktuálny čas, ktorý sa bude aktualizovať každú sekundu
+  const [currentTime, setCurrentTime] = React.useState(new Date());
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
@@ -638,17 +617,25 @@ function AddCategoriesApp() {
     };
   }, [db]); // Závisí od 'db' pre zabezpečenie inicializácie
 
-  // NOVINKA: Určenie, či majú byť všetky tlačidlá zablokované na základe dátumu
+  // NOVINKA: Timer pre automatické zablokovanie tlačidiel
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date()); // Aktualizujeme aktuálny čas každú sekundu
+    }, 1000); // Každú sekundu
+
+    return () => clearInterval(timer); // Vyčistenie pri odmontovaní komponentu
+  }, []); // Spustí sa iba raz pri pripojení komponentu
+
+  // NOVINKA: Určenie, či majú byť tlačidlá zablokované na základe dátumu
   const areAllButtonsDisabledByDate = React.useMemo(() => {
-    if (!registrationStartDate || typeof registrationStartDate.seconds === 'undefined') { // Pridaná kontrola .seconds
+    if (!registrationStartDate || typeof registrationStartDate.seconds === 'undefined') {
       return false; // Ak dátum nie je nastavený alebo nie je Timestamp, tlačidlá nie sú zablokované týmto pravidlom
     }
     // Správna konverzia Firebase Timestamp na JavaScript Date objekt
     const startDate = new Date(registrationStartDate.seconds * 1000); 
-    const now = new Date();
-    // Tlačidlá sú zablokované, ak je aktuálny dátum a čas rovný alebo neskorší ako registrationStartDate
-    return now >= startDate;
-  }, [registrationStartDate]);
+    // Použijeme currentTime zo stavu pre porovnanie
+    return currentTime >= startDate;
+  }, [registrationStartDate, currentTime]); // Závisí od registrationStartDate a currentTime
 
 
   // Callback funkcia pre získanie referencie na dokument kategórií
@@ -866,7 +853,7 @@ function AddCategoriesApp() {
 
 
   // Funkcia na pridanie novej kategórie
-  const handleAddCategorySubmit = async (categoryName, dateFrom, dateTo, dateFromActive, dateToActive) => { // Prijíma nové parametre
+  const handleAddCategorySubmit = async (categoryName, dateFrom, dateTo, dateFromActive, dateToActive) => {
     console.log("handleAddCategorySubmit: Starting category submission for name:", categoryName);
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       if (typeof showLocalNotification === 'function') {
@@ -884,7 +871,6 @@ function AddCategoriesApp() {
       return false; 
     }
 
-    // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
     if (dateFromActive && dateFrom === '') {
         showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
         console.log("handleAddCategorySubmit: DateFrom active but empty. Returning false.");
@@ -907,11 +893,9 @@ function AddCategoriesApp() {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Firebase v9 syntax: getDoc(docRef)
       const docSnapshot = await getDoc(categoriesDocRef); 
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; 
 
-      // Kontrola duplicity názvu kategórie (case-insensitive) IGNORUJEME DÁTUMY
       console.log("handleAddCategorySubmit: Checking for duplicate name in current data.");
       if (Object.values(currentCategoriesData).some(cat => 
         (typeof cat === 'object' && cat !== null && cat.name || '').toLowerCase() === trimmedCategoryName.toLowerCase()
@@ -924,10 +908,8 @@ function AddCategoriesApp() {
         return false; 
       }
 
-      // Generujeme náhodné ID pre názov poľa (Firebase v9 way to get a new doc ID)
       const newFieldId = doc(collection(db, 'settings')).id; 
 
-      // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
       await setDoc(categoriesDocRef, {
         [newFieldId]: {
             name: trimmedCategoryName,
@@ -942,7 +924,6 @@ function AddCategoriesApp() {
         showLocalNotification(`Kategória s názvom ${trimmedCategoryName} pridaná.`, 'success');
       }
 
-      // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
       await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, dateFrom: dateFrom, dateTo: dateTo, dateFromActive: dateFromActive, dateToActive: dateToActive, userEmail: userEmail } });
 
@@ -975,7 +956,6 @@ function AddCategoriesApp() {
       }
       return;
     }
-    // NOVÁ LOGIKA: Dátum je povinný len ak je toggle zapnutý
     if (newDateFromActive && newDateFrom === '') {
         showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
         return;
@@ -995,11 +975,9 @@ function AddCategoriesApp() {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Firebase v9 syntax: getDoc(docRef)
       const docSnapshot = await getDoc(categoriesDocRef); 
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; 
 
-      // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie) IGNORUJEME DÁTUMY pri kontrole duplicity
       if (Object.entries(currentCategoriesData).some(([id, catData]) => 
             (typeof catData === 'object' && catData !== null && catData.name || '').toLowerCase() === trimmedNewName.toLowerCase() &&
             id !== categoryId 
@@ -1011,15 +989,13 @@ function AddCategoriesApp() {
         return;
       }
 
-      // Získame pôvodný názov kategórie a dátumy pre notifikáciu
       const originalCategoryData = currentCategoriesData[categoryId];
       const originalCategoryName = originalCategoryData.name;
       const originalDateFrom = originalCategoryData.dateFrom;
       const originalDateTo = originalCategoryData.dateTo;
       const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : false; 
-      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : false;     // Opravené: preklep z category.dateToToActive
+      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : false;     
 
-      // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
       await setDoc(categoriesDocRef, {
         [categoryId]: {
             name: trimmedNewName,
@@ -1036,7 +1012,6 @@ function AddCategoriesApp() {
       setShowEditCategoryModal(false); 
       setCategoryToEdit(null);
 
-      // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
       await sendAdminNotification({ 
           type: 'edit', 
@@ -1087,23 +1062,20 @@ function AddCategoriesApp() {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Odstránime konkrétne pole z dokumentu pomocou deleteField() pre Firebase v9
       await setDoc(categoriesDocRef, {
-        [categoryToDelete.id]: deleteField() // Používame deleteField() pre v9
-      }, { merge: true }); // Používame merge: true pre bezpečné odstránenie poľa
+        [categoryToDelete.id]: deleteField()
+      }, { merge: true });
 
       if (typeof showLocalNotification === 'function') {
         showLocalNotification(`Kategória ${categoryToDelete.name} bola zmazaná.`, 'success');
       }
-      setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
+      setCategoryToDelete(null);
 
-      // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
-      await sendAdminNotification({ type: 'delete', data: { categoryName: categoryToDelete.name, userEmail: userEmail } }); // Upravené volanie
+      await sendAdminNotification({ type: 'delete', data: { categoryName: categoryToDelete.name, userEmail: userEmail } });
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
-      // Zobrazenie chyby pomocou lokálnej notifikácie
       if (typeof showLocalNotification === 'function') {
         showLocalNotification(`Chyba pri mazaní kategórie: ${e.message}`, 'error');
       }
@@ -1120,7 +1092,7 @@ function AddCategoriesApp() {
       return `${day}. ${month}. ${year}`;
     } catch (e) {
       console.error("Chyba pri formátovaní dátumu pre zobrazenie:", dateString, e);
-      return dateString; // Vráti pôvodný reťazec v prípade chyby
+      return dateString;
     }
   };
 
@@ -1135,15 +1107,10 @@ function AddCategoriesApp() {
     );
   };
 
-
-  // Display loading state
-  // Táto časť bola odstránená, pretože globálny loader.js sa stará o zobrazenie počas počiatočného načítavania.
-  // Lokálny stav 'loading' sa stále používa na riadenie interakcií v rámci komponentu (napr. disabled tlačidlá).
-  if (!isAuthReady || !userProfileData) { // Pridaná kontrola userProfileData
-    return null; // Návrat null, ak nie je pripravené, loader.js sa postará o zobrazenie
+  if (!isAuthReady || !userProfileData) {
+    return null;
   }
 
-  // Ak sa dostaneme sem, user je prihlásený, userProfileData sú načítané a rola je admin.
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -1152,7 +1119,6 @@ function AddCategoriesApp() {
         onClose: () => { setShowAddCategoryModal(false); }, 
         onAddCategory: handleAddCategorySubmit,
         loading: loading,
-        // Odstránené propagateDisabledByDate
     }),
     React.createElement(EditCategoryModal, {
         show: showEditCategoryModal,
@@ -1161,7 +1127,6 @@ function AddCategoriesApp() {
         loading: loading,
         category: categoryToEdit,
         existingCategories: categories,
-        // Odstránené propagateDisabledByDate
     }),
     React.createElement(ConfirmationModal, { 
         show: showConfirmDeleteModal,
@@ -1169,7 +1134,6 @@ function AddCategoriesApp() {
         onConfirm: handleDeleteCategory,
         onCancel: () => { setShowConfirmDeleteModal(false); setCategoryToDelete(null); },
         loading: loading,
-        // Odstránené propagateDisabledByDate
     }),
     React.createElement(
       'div',
@@ -1178,7 +1142,7 @@ function AddCategoriesApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Vytvorenie kategórií' // Hlavný nadpis
+          'Vytvorenie kategórií'
         ),
         categories.length === 0 && !loading ? (
             React.createElement('p', { className: 'text-center text-gray-600' }, 'Zatiaľ neboli vytvorené žiadne kategórie.')
@@ -1209,9 +1173,7 @@ function AddCategoriesApp() {
                                 'tr',
                                 { key: cat.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.name),
-                                // Zobrazenie dátumu od so stavom aktivity
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, renderDateStatus(cat.dateFrom, cat.dateFromActive)),
-                                // Zobrazenie dátumu do so stavom aktivity
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, renderDateStatus(cat.dateTo, cat.dateToActive)),
                                 React.createElement(
                                     'td',
@@ -1223,9 +1185,8 @@ function AddCategoriesApp() {
                                             'button',
                                             {
                                               onClick: () => { setCategoryToEdit(cat); setShowEditCategoryModal(true); },
-                                              // Dynamické triedy pre tlačidlo "Upraviť"
-                                              className: getTableButtonClasses('bg-yellow-500', loading || areAllButtonsDisabledByDate), // ZABLOKOVANÉ DÁTUMOM
-                                              disabled: loading || areAllButtonsDisabledByDate, // ZABLOKOVANÉ DÁTUMOM
+                                              className: getTableButtonClasses('bg-yellow-500', loading || areAllButtonsDisabledByDate),
+                                              disabled: loading || areAllButtonsDisabledByDate,
                                             },
                                             'Upraviť'
                                         ),
@@ -1233,9 +1194,8 @@ function AddCategoriesApp() {
                                             'button',
                                             {
                                               onClick: () => confirmDeleteCategory(cat),
-                                              // Dynamické triedy pre tlačidlo "Zmazať"
-                                              className: getTableButtonClasses('bg-red-500', loading || areAllButtonsDisabledByDate), // ZABLOKOVANÉ DÁTUMOM
-                                              disabled: loading || areAllButtonsDisabledByDate, // ZABLOKOVANÉ DÁTUMOM
+                                              className: getTableButtonClasses('bg-red-500', loading || areAllButtonsDisabledByDate),
+                                              disabled: loading || areAllButtonsDisabledByDate,
                                             },
                                             'Zmazať'
                                         )
@@ -1249,18 +1209,16 @@ function AddCategoriesApp() {
         )
       )
     ),
-    // Zelené okrúhle tlačidlo s textom "+" (FAB tlačidlo)
     React.createElement(
       'button',
       {
-        // Dynamické triedy pre FAB tlačidlo
         className: `fixed bottom-4 right-4 h-14 w-14 flex items-center justify-center rounded-full text-2xl shadow-lg transition-colors duration-200 z-50 ${
-            (loading || areAllButtonsDisabledByDate) // ZABLOKOVANÉ DÁTUMOM
-              ? 'bg-white border border-green-500 text-green-500 opacity-50 cursor-not-allowed hover:cursor-not-allowed' // Zablokovaný stav
-              : 'bg-green-500 hover:bg-green-600 text-white' // Aktívny stav
+            (loading || areAllButtonsDisabledByDate)
+              ? 'bg-white border border-green-500 text-green-500 opacity-50 cursor-not-allowed hover:cursor-not-allowed'
+              : 'bg-green-500 hover:bg-green-600 text-white'
         }`,
-        onClick: () => setShowAddCategoryModal(true), // Otvorí modálne okno na pridanie
-        disabled: loading || areAllButtonsDisabledByDate, // ZABLOKOVANÉ DÁTUMOM
+        onClick: () => setShowAddCategoryModal(true),
+        disabled: loading || areAllButtonsDisabledByDate,
       },
       '+'
     )
