@@ -45,7 +45,9 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
             { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
             React.createElement('h2', { className: 'text-xl font-bold mb-4 text-center' }, 'Potvrdenie e-mailovej adresy'),
             React.createElement('p', { className: 'mb-4 text-center' }, `Pre dokončenie registrácie potvrďte, že zadaná e-mailová adresa je správna:`),
-            React.createElement('p', { className: 'mb-6 text-center font-bold text-blue-700 break-words' }, userEmail), // Zobrazenie e-mailu
+            React.createElement('p', { className: 'mb-2 text-center font-bold text-blue-700 break-words' }, userEmail), // Zobrazenie e-mailu
+            // NOVINKA: Pridaný text pod e-mailovú adresu
+            React.createElement('p', { className: 'mb-6 text-center text-gray-600 text-sm' }, 'Na túto zadanú e-mailovú adresu bude odoslané potvrdenie o zaregistrovaní vášho klubu na turnaj.'),
 
             React.createElement(
                 'div',
