@@ -284,16 +284,14 @@ const MyDataApp = ({ userProfileData }) => {
         setCanEdit(false);
 
         // Uistíme sa, že sú dostupné dáta používateľa a dáta o registrácii
-        if (!userProfileData || !window.isRegistrationDataLoaded || !window.registrationDates) {
-            // Ak chýbajú dáta, nemôžeme určiť oprávnenia, takže úpravy nie sú povolené.
-            console.log("logged-in-my-data.js: Chýbajú dáta pre určenie oprávnení na úpravu.");
+        if (!userProfileData) { // ZMENA: Odstránená závislosť na window.isRegistrationDataLoaded a window.registrationDates pre logiku admina
+            console.log("logged-in-my-data.js: Chýbajú dáta používateľa. Úpravy nie sú povolené.");
             return;
         }
 
         const isAdmin = userProfileData.role === 'admin';
         const isUser = userProfileData.role === 'user';
-        const dataEditDeadline = window.registrationDates.dataEditDeadline;
-
+        
         // Ak je používateľ administrátor, vždy môže upravovať
         if (isAdmin) {
             setCanEdit(true);
@@ -301,8 +299,10 @@ const MyDataApp = ({ userProfileData }) => {
             return; 
         }
 
-        // Pre ne-admin používateľov skontrolujeme dataEditDeadline
-        if (dataEditDeadline) {
+        // Pre ne-admin používateľov skontrolujeme dataEditDeadline (ak je definovaný)
+        // NOVINKA: Kontrola existencie registrationDates a dataEditDeadline
+        if (window.isRegistrationDataLoaded && window.registrationDates && window.registrationDates.dataEditDeadline) {
+            const dataEditDeadline = window.registrationDates.dataEditDeadline;
             const deadlineMillis = dataEditDeadline.toMillis();
             const nowMillis = Date.now();
             
@@ -342,15 +342,9 @@ const MyDataApp = ({ userProfileData }) => {
                 }
             }
         } else {
-            // Ak deadline nie je špecifikovaný (napr. v databáze), zakázať úpravy pre rolu 'user'
-            if (isUser) {
-                setCanEdit(false);
-                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre USER - deadline nie je definovaný.");
-            } else {
-                // Pre ostatné roly (mimo admina a user), tiež zakázať ak deadline nie je definovaný
-                setCanEdit(false);
-                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin, deadline nie je definovaný.");
-            }
+            // Ak deadline nie je špecifikovaný (napr. v databáze), zakázať úpravy pre rolu 'user' a iné roly okrem admina
+            setCanEdit(false);
+            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - deadline nie je definovaný alebo dáta registrácie nie sú načítané.");
         }
 
         // Funkcia pre vyčistenie časovača pri odpojení komponentu
