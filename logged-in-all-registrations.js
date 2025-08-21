@@ -241,7 +241,7 @@ function AllRegistrationsApp() {
     { id: 'firstName', label: 'Meno', type: 'string', visible: true },
     { id: 'lastName', label: 'Priezvisko', type: 'string', visible: true },
     { id: 'email', label: 'Email', type: 'string', visible: true },
-    { id: 'contactPhoneNumber', label: 'Tel. číslo', type: 'string', visible: true },
+    { id: 'contactPhoneNumber', label: 'Tel. číslo', type: 'string', visible: true }, 
     { id: 'billing.clubName', label: 'Názov klubu', type: 'string', visible: true },
     { id: 'billing.ico', label: 'IČO', type: 'string', visible: true },
     { id: 'billing.dic', label: 'DIČ', type: 'string', visible: true },
@@ -337,6 +337,8 @@ function AllRegistrationsApp() {
             setUserProfileData(userData);
             setError('');
 
+            // NOVINKA: Aktualizácia viditeľnosti položiek menu na základe roly
+            // Až tu voláme updateMenuItemsVisibility, pretože vieme, že userProfileData je k dispozícii.
             if (typeof window.updateMenuItemsVisibility === 'function') {
                 window.updateMenuItemsVisibility(userData.role);
             } else {
@@ -929,7 +931,8 @@ function AllRegistrationsApp() {
                                 'tr',
                                 { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
                                 columnOrder.filter(col => col.visible).map(col => (
-                                    React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' },
+                                    // ODSTRÁNENÉ whitespace-nowrap Z `td` elementu
+                                    React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' }, 
                                         col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
                                         col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
                                         col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
