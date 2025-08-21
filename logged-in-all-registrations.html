@@ -49,19 +49,19 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 0; /* Predvolene 0, menu-spacer to upraví dynamicky */
+            margin-left: 0; /* Bude dynamicky nastavené JS z logged-in-left-menu.js */
             padding: 1rem;
             flex-grow: 1;
-            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
             display: flex;
             justify-content: center; /* Centrovanie horizontálne */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
             width: 100%; /* Zabezpečíme, aby zaberala zvyšnú šírku */
+            transition: margin-left 0.3s ease-in-out; /* Hladký prechod */
         }
         @media (max-width: 768px) {
             #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
-                width: 100%; /* Na mobiloch zaberá celú šírku */
+                margin-left: 0 !important; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                width: 100% !important; /* Na mobiloch zaberá celú šírku */
                 justify-content: center; /* Stále centrovať obsah */
                 align-items: flex-start;
             }
@@ -114,8 +114,9 @@
     <div id="header-placeholder"></div>
     <div id="menu-placeholder"></div>
 
-    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
-        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> 
+    <main id="main-content-area" class="flex-grow flex">
+        <!-- Tento div slúži ako 'spacer' pre ľavé menu a jeho šírka sa bude dynamicky meniť pomocou JS v logged-in-left-menu.js -->
+        <div id="menu-spacer" class="flex-shrink-0 w-16 transition-all duration-300"></div> 
         <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div class="flex justify-center pt-16">
                 <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
@@ -202,7 +203,9 @@
         // Načítanie hlavičky a spustenie kontroly a renderovania po načítaní DOM
         document.addEventListener('DOMContentLoaded', async () => {
             await loadHeader(); // Načítajte hlavičku
-            checkReadyAndRender(); // Potom začnite s kontrolou a renderovaním React aplikácie
+            // checkReadyAndRender sa volá priamo po loadHeader,
+            // pretože logika prispôsobenia obsahu je teraz v logged-in-left-menu.js
+            checkReadyAndRender(); 
         });
     </script>
 </body>
