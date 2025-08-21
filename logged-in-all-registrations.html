@@ -104,52 +104,31 @@
             padding: 1rem; /* Zabezpečenie vnútornej medzery */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
         }
-        /* Zabraňuje zalomeniu textu v bunkách tabuľky */
         table td {
             white-space: nowrap;
-        }
-
-        /* Odstránené počiatočné štýly pre globálny loader, aby sa zobrazil okamžite */
-        /* body.loading-app a #initial-global-loader boli odstránené */
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <!-- Odstránený počiatočný loader -->
-    <!-- <div id="initial-global-loader">
-        <div class="spinner"></div>
-    </div> -->
-
     <div id="header-placeholder"></div>
-    <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
     <div id="menu-placeholder"></div>
 
     <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
-        <!-- Tento div vytvára priestor pre zbalené/rozbalené menu, aby obsah nebol pod ním -->
         <div class="flex-shrink-0 w-16 transition-all duration-300"></div> 
-        <!-- React aplikácia sa vykreslí sem -->
         <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Lokálny loader ako vo logged-in-my-data.html -->
             <div class="flex justify-center pt-16">
                 <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
             </div>
         </div>
     </main>
 
-    <!-- Skrytý div pre načítanie authentication.js (zabezpečuje inicializáciu Firebase) -->
     <div id="authentication-root" style="display: none;"></div>
 
-    <!-- Načítanie globálnych skriptov presne podľa vzoru -->
     <script type="module" src="loader.js"></script>
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
     
-    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) -->
     <script type="module" src="logged-in-all-registrations.js"></script>
 
     <script>
