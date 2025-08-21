@@ -2,6 +2,9 @@
 // Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-all-registrations.html
 // a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
 
+// Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
+import { collection, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // Ponechané pre zobrazovanie správ o spätnej väzbe pre používateľa v tomto module.
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
@@ -208,15 +211,11 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() {
-  // NOVÉ: Získame referencie na Firebase služby z globálnych premenných (autentifikácia.js)
+  // Získame referencie na Firebase služby z globálnych premenných (autentifikácia.js)
   const auth = window.auth;
   const db = window.db;
 
-  // NOVÉ: Získame Firestore funkcie z globálneho objektu `firebase.firestore`
-  // (dostupné vďaka UMD verzii firebase-firestore.js načítanej v HTML)
-  const { collection, doc, onSnapshot, setDoc, updateDoc } = firebase.firestore; // ZMENA TU
-
-  // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
+  // Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
   const [user, setUser] = React.useState(null); 
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
@@ -235,7 +234,7 @@ function AllRegistrationsApp() {
   const [activeFilters, setActiveFilters] = React.useState({});
   const [uniqueColumnValues, setUniqueColumnValues] = React.useState([]);
 
-  // NOVINKA: Stav pre poradie stĺpcov
+  // Stav pre poradie stĺpcov
   const defaultColumnOrder = [
     { id: 'role', label: 'Rola', type: 'string', visible: true },
     { id: 'approved', label: 'Schválený', type: 'boolean', visible: true },
@@ -259,7 +258,7 @@ function AllRegistrationsApp() {
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
 
 
-  // NOVÉ: Lokálny Auth Listener pre AllRegistrationsApp
+  // Lokálny Auth Listener pre AllRegistrationsApp
   React.useEffect(() => {
     const initializeAuthState = () => {
         if (window.isGlobalAuthReady) {
@@ -303,7 +302,7 @@ function AllRegistrationsApp() {
     };
   }, []);
 
-  // NOVÉ: Lokálny Effect pre načítanie používateľských dát z Firestore
+  // Lokálny Effect pre načítanie používateľských dát z Firestore
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
@@ -313,7 +312,7 @@ function AllRegistrationsApp() {
       setLoadingUsers(true);
 
       try {
-        // Používame globálne dostupné funkcie doc a onSnapshot
+        // Používame importované funkcie doc a onSnapshot
         const userDocRef = doc(db, `users/${user.uid}`);
         unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
           if (docSnapshot.exists()) {
@@ -395,12 +394,12 @@ function AllRegistrationsApp() {
 
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
-            // Používame globálne dostupné funkcie collection a doc
+            // Používame importované funkcie collection a doc
             const columnOrderColRef = collection(db, 'users', user.uid, 'columnOrder');
             const columnOrderDocRef = doc(columnOrderColRef, 'columnOrder');
 
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
-            // Používame globálne dostupné onSnapshot
+            // Používame importované onSnapshot
             unsubscribeColumnOrder = onSnapshot(columnOrderDocRef, docSnapshot => {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists());
                 let newOrderToSet = defaultColumnOrder;
@@ -434,14 +433,14 @@ function AllRegistrationsApp() {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané uložené poradie:", newOrderToSet);
                     } else {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
-                        // Používame globálne dostupné setDoc
+                        // Používame importované setDoc
                         setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                             .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
                             .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
                     }
                 } else {
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
-                    // Používame globálne dostupné setDoc
+                    // Používame importované setDoc
                     setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                         .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
                         .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
@@ -464,9 +463,9 @@ function AllRegistrationsApp() {
 
         // --- Získanie všetkých používateľov z kolekcie 'users' ---
         try {
-            // Používame globálne dostupné collection
+            // Používame importované collection
             const usersCollectionRef = collection(db, 'users');
-            // Používame globálne dostupné onSnapshot
+            // Používame importované onSnapshot
             unsubscribeAllUsers = onSnapshot(usersCollectionRef, snapshot => {
                 const usersData = snapshot.docs.map(doc => ({
                     id: doc.id,
@@ -734,7 +733,7 @@ function AllRegistrationsApp() {
     setColumnOrder(newColumnOrder);
 
     // Uloženie nového poradia do Firestore
-    // Používame globálne dostupné funkcie collection, doc a setDoc
+    // Používame importované funkcie collection, doc a setDoc
     if (db && user && user.uid) {
         const columnOrderColRef = collection(db, 'users', user.uid, 'columnOrder');
         const columnOrderDocRef = doc(columnOrderColRef, 'columnOrder');
@@ -751,7 +750,7 @@ function AllRegistrationsApp() {
   // Funkcia na uloženie viditeľnosti stĺpcov do Firestore
   const handleSaveColumnVisibility = async (updatedColumns) => {
     setColumnOrder(updatedColumns);
-    // Používame globálne dostupné funkcie collection, doc a setDoc
+    // Používame importované funkcie collection, doc a setDoc
     if (db && user && user.uid) {
         const columnOrderColRef = collection(db, 'users', user.uid, 'columnOrder');
         const columnOrderDocRef = doc(columnOrderColRef, 'columnOrder');
