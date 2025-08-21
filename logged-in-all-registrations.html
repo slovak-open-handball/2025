@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -161,51 +161,54 @@
             }
         }
 
-        // Spustíme načítanie hlavičky a menu po načítaní DOM
-        window.onload = async () => {
-            // Zobrazenie globálneho loaderu na začiatku
-            if (typeof window.showGlobalLoader === 'function') {
-                window.showGlobalLoader();
-            } else {
-                console.warn("Global loader function (window.showGlobalLoader) is not available.");
-            }
-
-            // Pred načítaním hlavičky a menu počkáme na Firebase inicializáciu
-            while (typeof window.auth === 'undefined' || typeof window.db === 'undefined' || !window.isGlobalAuthReady) {
-                console.log("logged-in-all-registrations.html: Čakám na inicializáciu Firebase v authentication.js...");
-                await new Promise(resolve => setTimeout(resolve, 100)); // Krátka pauza
-            }
-            console.log("logged-in-all-registrations.html: Firebase inštancie sú k dispozícii.");
-
-            await loadHeader();
-            
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            while (typeof window.AllRegistrationsApp === 'undefined') {
-                 console.log("logged-in-all-registrations.html: Čakám na definíciu AllRegistrationsApp...");
-                 await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
+        // Funkcia na kontrolu pripravenosti globálnych dát a vykreslenie React aplikácie
+        const checkReadyAndRender = () => {
+            // Kontrola, či sú React a ReactDOM načítané
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                if (typeof window.hideGlobalLoader === 'function') {
-                    window.hideGlobalLoader();
-                }
                 return;
             }
-            
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(window.AllRegistrationsApp, null));
-            console.log("logged-in-all-registrations.html: React App vykreslená.");
+            // Kontrola, či je komponent AllRegistrationsApp definovaný
+            if (typeof window.AllRegistrationsApp === 'undefined') {
+                console.log("logged-in-all-registrations.html: Čakám na definíciu AllRegistrationsApp...");
+                setTimeout(checkReadyAndRender, 100); // Skúste znova po krátkom oneskorení
+                return;
+            }
 
-            // Skrytie globálneho loaderu po vykreslení aplikácie
-            if (typeof window.hideGlobalLoader === 'function') {
-                window.hideGlobalLoader();
+            // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
+            // a kým je načítaný aj loader (window.showGlobalLoader existuje)
+            if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
+                // Skryjeme globálny loader, ak je zobrazený
+                if (window.hideGlobalLoader) {
+                    window.hideGlobalLoader();
+                }
+
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(window.AllRegistrationsApp, null));
+                console.log("logged-in-all-registrations.html: React App vykreslená.");
+            } else {
+                // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
+                setTimeout(checkReadyAndRender, 100);
             }
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Toto už nemusí byť potrebné, loader sa spúšťa v window.onload
+        // Spustenie globálneho loaderu hneď na začiatku
+        if (typeof window.showGlobalLoader === 'function') {
+            window.showGlobalLoader();
+        } else {
+            // Ak loader ešte nie je k dispozícii, počkáme a potom ho spustíme
+            document.addEventListener('DOMContentLoaded', () => {
+                if (typeof window.showGlobalLoader === 'function') {
+                    window.showGlobalLoader();
+                }
+            });
+        }
+        
+        // Načítanie hlavičky a spustenie kontroly a renderovania po načítaní DOM
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadHeader(); // Načítajte hlavičku
+            checkReadyAndRender(); // Potom začnite s kontrolou a renderovaním React aplikácie
         });
     </script>
 </body>
