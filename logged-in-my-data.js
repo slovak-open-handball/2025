@@ -279,104 +279,87 @@ const MyDataApp = ({ userProfileData }) => {
     // Časovač a logika pre určenie, či je možné dáta upravovať
     useEffect(() => {
         let timer; // Premenná pre časovač
-        let unsubscribeSettings; // Premenná pre odberateľa Firestore
 
         // Východiskovo nastavíme canEdit na false
         setCanEdit(false);
 
-        if (!userProfileData || !window.db) {
-            // Ak chýbajú dáta používateľa alebo inštancia databázy, nie je možné určiť oprávnenia
+        // Uistíme sa, že sú dostupné dáta používateľa a dáta o registrácii
+        if (!userProfileData || !window.isRegistrationDataLoaded || !window.registrationDates) {
+            // Ak chýbajú dáta, nemôžeme určiť oprávnenia, takže úpravy nie sú povolené.
+            console.log("logged-in-my-data.js: Chýbajú dáta pre určenie oprávnení na úpravu.");
             return;
         }
 
         const isAdmin = userProfileData.role === 'admin';
         const isUser = userProfileData.role === 'user';
+        const dataEditDeadline = window.registrationDates.dataEditDeadline;
 
         // Ak je používateľ administrátor, vždy môže upravovať
         if (isAdmin) {
             setCanEdit(true);
-            return; // Ukončíme useEffect pre admina, netreba kontrolovať deadline
+            console.log("logged-in-my-data.js: Admin môže vždy upravovať.");
+            return; 
         }
 
-        // Pre ne-admin používateľov načítame dataEditDeadline z Firestore
-        const settingsDocRef = doc(window.db, "settings", "registration");
-        unsubscribeSettings = onSnapshot(settingsDocRef, (docSnap) => {
-            let dataEditDeadline = null;
-            if (docSnap.exists()) {
-                const settingsData = docSnap.data();
-                dataEditDeadline = settingsData.dataEditDeadline;
-            }
+        // Pre ne-admin používateľov skontrolujeme dataEditDeadline
+        if (dataEditDeadline) {
+            const deadlineMillis = dataEditDeadline.toMillis();
+            const nowMillis = Date.now();
+            
+            // Logging pre diagnostiku
+            console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
+            console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
+            console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
 
-            if (dataEditDeadline) {
-                const deadlineMillis = dataEditDeadline.toMillis();
-                const nowMillis = Date.now();
-                
-                // Logging pre diagnostiku
-                console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
-                console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
-                console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
-
-
-                if (nowMillis <= deadlineMillis) { // Zmenené z timeRemaining > 0 na nowMillis <= deadlineMillis pre väčšiu presnosť
-                    // Ak je aktuálny čas menší alebo rovný deadline, povoliť úpravy pre rolu 'user'
-                    if (isUser) {
-                        setCanEdit(true);
-                        console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre USER - pred deadline.");
-                    } else {
-                         // Pre ostatné roly (mimo admina a user, ale v rámci deadline), stále zakážeme
-                         setCanEdit(false);
-                         console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin pred deadline.");
-                    }
-
-
-                    // Ak už existuje časovač, vyčistíme ho, aby sme predišli duplikáciám
-                    if (timer) clearTimeout(timer);
-                    
-                    // Nastavíme časovač na automatické vypnutie úprav presne po uplynutí deadline
-                    timer = setTimeout(() => {
-                        setCanEdit(false);
-                        console.log("logged-in-my-data.js: Termín úprav uplynul pre rolu používateľa, zakazujem úpravy.");
-                    }, deadlineMillis - nowMillis); // Dôležité: časovač sa nastaví na presný rozdiel
+            if (nowMillis <= deadlineMillis) { 
+                // Ak je aktuálny čas menší alebo rovný deadline, povoliť úpravy pre rolu 'user'
+                if (isUser) {
+                    setCanEdit(true);
+                    console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre USER - pred deadline.");
                 } else {
-                    // Deadline už uplynul, zakázať úpravy pre rolu 'user'
-                    if (isUser) {
-                        setCanEdit(false);
-                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre USER - po deadline.");
-                    } else {
-                        // Pre ostatné roly (mimo admina a user), tiež zakázať po deadline
-                        setCanEdit(false);
-                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin po deadline.");
-                    }
+                     // Pre ostatné roly (mimo admina a user, ale v rámci deadline), stále zakážeme
+                     setCanEdit(false);
+                     console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin pred deadline.");
                 }
+
+                // Ak už existuje časovač, vyčistíme ho, aby sme predišli duplikáciám
+                if (timer) clearTimeout(timer);
+                
+                // Nastavíme časovač na automatické vypnutie úprav presne po uplynutí deadline
+                timer = setTimeout(() => {
+                    setCanEdit(false);
+                    console.log("logged-in-my-data.js: Termín úprav uplynul pre rolu používateľa, zakazujem úpravy.");
+                }, deadlineMillis - nowMillis); 
             } else {
-                // Ak deadline nie je špecifikovaný (napr. v databáze), zakázať úpravy pre rolu 'user'
+                // Deadline už uplynul, zakázať úpravy pre rolu 'user'
                 if (isUser) {
                     setCanEdit(false);
-                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre USER - deadline nie je definovaný.");
+                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre USER - po deadline.");
                 } else {
-                    // Pre ostatné roly (mimo admina a user), tiež zakázať ak deadline nie je definovaný
+                    // Pre ostatné roly (mimo admina a user), tiež zakázať po deadline
                     setCanEdit(false);
-                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin, deadline nie je definovaný.");
+                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin po deadline.");
                 }
             }
-        }, (error) => {
-            console.error("logged-in-my-data.js: Chyba pri načítaní nastavení registrácie pre MyDataApp:", error);
-            // V prípade chyby zakázať úpravy pre rolu 'user'
+        } else {
+            // Ak deadline nie je špecifikovaný (napr. v databáze), zakázať úpravy pre rolu 'user'
             if (isUser) {
                 setCanEdit(false);
+                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre USER - deadline nie je definovaný.");
+            } else {
+                // Pre ostatné roly (mimo admina a user), tiež zakázať ak deadline nie je definovaný
+                setCanEdit(false);
+                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin, deadline nie je definovaný.");
             }
-        });
+        }
 
-        // Funkcia pre vyčistenie časovača a odberateľa Firestore pri odpojení komponentu
+        // Funkcia pre vyčistenie časovača pri odpojení komponentu
         return () => {
             if (timer) {
                 clearTimeout(timer);
             }
-            if (unsubscribeSettings) {
-                unsubscribeSettings(); // Odhlásenie z odberu zmien v Firestore
-            }
         };
-    }, [userProfileData, window.db]); // Závislosť na userProfileData a window.db (pre inicializáciu Firestore)
+    }, [userProfileData, window.isRegistrationDataLoaded, window.registrationDates]); // Závislosť na userProfileData a window.isRegistrationDataLoaded a window.registrationDates
 
     const getRoleColor = (role) => {
         switch (role) {
