@@ -284,25 +284,30 @@ const MyDataApp = ({ userProfileData }) => {
         setCanEdit(false);
 
         // Uistíme sa, že sú dostupné dáta používateľa a dáta o registrácii
-        if (!userProfileData) { // ZMENA: Odstránená závislosť na window.isRegistrationDataLoaded a window.registrationDates pre logiku admina
+        if (!userProfileData) { 
             console.log("logged-in-my-data.js: Chýbajú dáta používateľa. Úpravy nie sú povolené.");
             return;
         }
 
         const isAdmin = userProfileData.role === 'admin';
-        const isUser = userProfileData.role === 'user';
         
         // Ak je používateľ administrátor, vždy môže upravovať
+        // ZMENA: Presun isAdmin kontroli na začiatok, aby mala najvyššiu prioritu
         if (isAdmin) {
             setCanEdit(true);
             console.log("logged-in-my-data.js: Admin môže vždy upravovať.");
+            // Vrátime sa, aby sme predišli ďalším kontrolám dátumu pre admina
             return; 
         }
 
-        // Pre ne-admin používateľov skontrolujeme dataEditDeadline (ak je definovaný)
-        // NOVINKA: Kontrola existencie registrationDates a dataEditDeadline
-        if (window.isRegistrationDataLoaded && window.registrationDates && window.registrationDates.dataEditDeadline) {
-            const dataEditDeadline = window.registrationDates.dataEditDeadline;
+        // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline
+        const isUser = userProfileData.role === 'user';
+        const isRegistrationDataLoaded = window.isRegistrationDataLoaded;
+        const registrationDates = window.registrationDates;
+
+
+        if (isRegistrationDataLoaded && registrationDates && registrationDates.dataEditDeadline) {
+            const dataEditDeadline = registrationDates.dataEditDeadline;
             const deadlineMillis = dataEditDeadline.toMillis();
             const nowMillis = Date.now();
             
