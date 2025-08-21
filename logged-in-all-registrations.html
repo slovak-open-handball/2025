@@ -140,62 +140,100 @@
     <!-- Skrytý div pre načítanie authentication.js (zabezpečuje inicializáciu Firebase) -->
     <div id="authentication-root" style="display: none;"></div>
 
-    <!-- Načítanie globálnych skriptov -->
-    <script type="module" src="loader.js"></script>
-    <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script>
-    <script type="module" src="logged-in-left-menu.js"></script>
-    
-    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) -->
-    <script type="module" src="logged-in-all-registrations.js"></script>
+    <!-- Pôvodné načítanie modulov je presunuté do inline skriptu nižšie, aby sa zabezpečilo správne poradie a pripravenosť DOM. -->
+    <!-- <script type="module" src="loader.js"></script> -->
+    <!-- <script type="module" src="authentication.js"></script> -->
+    <!-- <script type="module" src="header.js"></script> -->
+    <!-- <script type="module" src="logged-in-left-menu.js"></script> -->
+    <!-- <script type="module" src="logged-in-all-registrations.js"></script> -->
 
-    <script>
+    <script type="module">
+        // Funkcia pre dynamické načítanie JS modulu
+        const loadModule = (src) => {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.type = 'module';
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
+        };
+
         // Funkcia na kontrolu pripravenosti globálnych dát a vykreslenie React aplikácie
-        const checkReadyAndRender = () => {
+        const checkReadyAndRender = async () => {
             // Kontrola, či sú React a ReactDOM načítané
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            // Kontrola, či je komponent AllRegistrationsApp definovaný
-            if (typeof AllRegistrationsApp === 'undefined') {
-                console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+            // Kontrola, či je komponent AllRegistrationsApp definovaný (bude až po dynamickom načítaní)
+            // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
+            if (!window.isGlobalAuthReady || window.globalUserProfileData === undefined || typeof window.showGlobalLoader !== 'function') {
+                setTimeout(checkReadyAndRender, 100);
                 return;
             }
 
-            // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
-            // a kým je načítaný aj loader (window.showGlobalLoader exists)
-            if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
-                // Skryjeme globálny loader, ak je zobrazený
-                if (window.hideGlobalLoader) {
-                    window.hideGlobalLoader();
+            // Skryjeme globálny loader, ak je zobrazený
+            if (window.hideGlobalLoader) {
+                window.hideGlobalLoader();
+            }
+
+            // Dynamické načítanie zvyšných modulov po tom, ako sú globálne dáta pripravené
+            try {
+                // Načítajte menu a aplikáciu až po overení globálnych dát
+                // Toto zabezpečí, že `logged-in-left-menu.js` bude mať prístup k DOM
+                // a globálnym premenným (`window.db`, `window.globalUserProfileData`).
+                await Promise.all([
+                    loadModule("logged-in-left-menu.js"),
+                    loadModule("logged-in-all-registrations.js")
+                ]);
+
+                // Po načítaní oboch modulov, skontrolujte dostupnosť komponentu
+                if (typeof AllRegistrationsApp === 'undefined') {
+                    console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný ani po dynamickom načítaní.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
                 }
 
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(AllRegistrationsApp, null));
-                console.log("logged-in-all-registrations.html: React App vykreslená.");
-            } else {
-                // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
-                setTimeout(checkReadyAndRender, 100);
+                console.log("logged-in-all-registrations.html: React App vykreslená po dynamickom načítaní.");
+
+            } catch (error) {
+                console.error("Chyba pri dynamickom načítaní modulov:", error);
+                document.getElementById('root').innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní modulov: ${error.message}</div>`;
             }
         };
 
-        // Spustenie globálneho loaderu hneď na začiatku
-        if (typeof window.showGlobalLoader === 'function') {
-            window.showGlobalLoader();
-        } else {
-            // Ak loader ešte nie je k dispozícii, počkáme a potom ho spustíme
-            document.addEventListener('DOMContentLoaded', () => {
-                if (typeof window.showGlobalLoader === 'function') {
-                    window.showGlobalLoader();
-                }
-            });
-        }
-        
-        // Spustíme kontrolu a renderovanie po načítaní DOM
-        document.addEventListener('DOMContentLoaded', checkReadyAndRender);
+        // Načítanie základných globálnych skriptov, ktoré nastavujú 'window.isGlobalAuthReady' a 'window.globalUserProfileData'
+        // a tiež loader.js pre správu načítavania.
+        Promise.all([
+            loadModule("loader.js"),
+            loadModule("authentication.js"),
+            loadModule("header.js")
+        ]).then(() => {
+            // Po načítaní základných skriptov, spustíme kontrolu a renderovanie aplikácie
+            document.addEventListener('DOMContentLoaded', checkReadyAndRender);
+
+            // Spustenie globálneho loaderu hneď na začiatku
+            if (typeof window.showGlobalLoader === 'function') {
+                window.showGlobalLoader();
+            } else {
+                // Ak loader ešte nie je k dispozícii, počkáme a potom ho spustíme
+                // (Tento blok by sa mal spustiť len veľmi zriedka, ak loader.js zlyhá)
+                console.warn("window.showGlobalLoader nie je k dispozícii, čakám na DOMContentLoaded pre jeho spustenie.");
+                document.addEventListener('DOMContentLoaded', () => {
+                    if (typeof window.showGlobalLoader === 'function') {
+                        window.showGlobalLoader();
+                    }
+                });
+            }
+        }).catch(error => {
+            console.error("Chyba pri načítaní základných modulov:", error);
+            document.getElementById('root').innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Kritická chyba pri načítaní základných modulov: ${error.message}</div>`;
+        });
     </script>
 </body>
 </html>
