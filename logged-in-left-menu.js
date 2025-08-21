@@ -19,6 +19,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
+    const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -69,9 +70,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
             tournamentSettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na nastavenia turnaja
+            allRegistrationsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na všetky registrácie
         } else {
             addCategoriesLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na nastavenia turnaja
+            allRegistrationsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na všetky registrácie
         }
     };    
 
