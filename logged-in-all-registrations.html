@@ -89,17 +89,14 @@
             z-index: 100; /* Nižšie ako notifikácia (1000), ale vyššie ako menu (20) */
         }
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Firebase SDKs - ODSTRÁNENÉ, POUŽÍVAJÚ SA IMPORTY V authentication.js -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
-    <!-- TENTO BLOK BOL ODSTRÁNENÝ, KEĎŽE INITIALIZÁCIU SPRAVUJE authentication.js -->
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Načítanie autentifikačného skriptu ako modulu - MUSÍ BYŤ NAČÍTANÉ PRED AKÝKOĽVEK KÓDOM, KTORÝ POUŽÍVA window.auth alebo window.db -->
+    <script type="module" src="authentication.js"></script>
+
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
@@ -134,9 +131,8 @@
                     headerScript.type = 'module'; // PRIDANÉ: Načítanie ako modul
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
-                        if (typeof initializeHeaderLogic === 'function') {
-                            initializeHeaderLogic();
-                        }
+                        // Poznámka: initializeHeaderLogic() už nie je potrebné explicitne volať tu,
+                        // pretože header.js sa spúšťa automaticky ako modul.
                     };
                     headerScript.onerror = (e) => {
                         console.error("Chyba pri načítaní header.js:", e);
@@ -178,6 +174,16 @@
 
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
+            // Pred načítaním hlavičky a menu počkáme na Firebase inicializáciu,
+            // ktorá sa spúšťa cez authentication.js.
+            // Zabezpečíme, že window.auth a window.db sú dostupné.
+            // Loop, kým window.auth nie je definované.
+            while (typeof window.auth === 'undefined' || typeof window.db === 'undefined') {
+                console.log("logged-in-all-registrations.html: Čakám na inicializáciu Firebase v authentication.js...");
+                await new Promise(resolve => setTimeout(resolve, 100)); // Krátka pauza
+            }
+            console.log("logged-in-all-registrations.html: Firebase inštancie sú k dispozícii.");
+
             await loadHeader();
             await loadLeftMenu();
 
