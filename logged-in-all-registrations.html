@@ -176,6 +176,13 @@
                 setTimeout(checkReadyAndRender, 100); // Skúste znova po krátkom oneskorení
                 return;
             }
+            // NOVINKA: Čakáme aj na načítanie funkcie loadLeftMenu
+            if (typeof window.loadLeftMenu === 'undefined') {
+                console.log("logged-in-all-registrations.html: Čakám na definíciu window.loadLeftMenu...");
+                setTimeout(checkReadyAndRender, 100); // Skúste znova po krátkom oneskorení
+                return;
+            }
+
 
             // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
             // a kým je načítaný aj loader (window.showGlobalLoader existuje)
@@ -184,6 +191,18 @@
                 if (window.hideGlobalLoader) {
                     window.hideGlobalLoader();
                 }
+
+                // NOVINKA: Manuálne volanie loadLeftMenu, ak ešte nebolo volané
+                // Tento blok kódu je potrebný, ak sa globalDataUpdated udalosť neodošle dostatočne rýchlo
+                // alebo ak stránka už bola načítaná a používateľ prechádza na túto stránku
+                // bez plného opätovného načítania authentication.js.
+                // Robíme to podobne, ako keby to robil logged-in-left-menu.js, aby sa inicializovalo menu.
+                const menuPlaceholder = document.getElementById('menu-placeholder');
+                if (menuPlaceholder && menuPlaceholder.innerHTML === '') { // Načítame menu, len ak je placeholder prázdny
+                    console.log("logged-in-all-registrations.html: Inicializujem ľavé menu, pretože placeholder je prázdny.");
+                    window.loadLeftMenu(window.globalUserProfileData);
+                }
+
 
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(window.AllRegistrationsApp, null));
