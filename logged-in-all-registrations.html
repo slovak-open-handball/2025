@@ -88,8 +88,6 @@
             z-index: 100; /* Nižšie ako notifikácia (1000), ale vyššie ako menu (20) */
         }
     </style>
-    <!-- Firebase Firestore SDK (UMD verzia) - ODSTRÁNENÉ: Boli s ňou problémy so SyntaxError.
-         Funkcie budeme importovať priamo v logged-in-all-registrations.js ako modul. -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
@@ -171,7 +169,7 @@
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
             // Pred načítaním hlavičky a menu počkáme na Firebase inicializáciu
-            while (typeof window.auth === 'undefined' || typeof window.db === 'undefined') {
+            while (typeof window.auth === 'undefined' || typeof window.db === 'undefined' || !window.isGlobalAuthReady) {
                 console.log("logged-in-all-registrations.html: Čakám na inicializáciu Firebase v authentication.js...");
                 await new Promise(resolve => setTimeout(resolve, 100)); // Krátka pauza
             }
@@ -181,19 +179,20 @@
             await loadLeftMenu();
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+            // Počkáme na definíciu AllRegistrationsApp (ktorá je teraz exportovaná globálne z modulového skriptu)
+            while (typeof window.AllRegistrationsApp === 'undefined') {
+                 console.log("logged-in-all-registrations.html: Čakám na definíciu AllRegistrationsApp...");
+                 await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            if (typeof AllRegistrationsApp === 'undefined') {
-                console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
-
+            
             const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(AllRegistrationsApp, null));
+            root.render(React.createElement(window.AllRegistrationsApp, null)); // Používame window.AllRegistrationsApp
             console.log("logged-in-all-registrations.html: React App vykreslená.");
         };
     </script>
