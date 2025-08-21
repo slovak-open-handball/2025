@@ -121,6 +121,9 @@
     <!-- Načítanie globálneho skriptu pre ľavé menu ako modul -->
     <script type="module" src="logged-in-left-menu.js"></script>
 
+    <!-- Načítanie loader.js ako modulu -->
+    <script type="module" src="loader.js"></script>
+
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
         // Funkcia na načítanie hlavičky
@@ -167,6 +170,13 @@
 
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
+            // Zobrazenie globálneho loaderu na začiatku
+            if (typeof window.showGlobalLoader === 'function') {
+                window.showGlobalLoader();
+            } else {
+                console.warn("Global loader function (window.showGlobalLoader) is not available.");
+            }
+
             // Pred načítaním hlavičky a menu počkáme na Firebase inicializáciu
             while (typeof window.auth === 'undefined' || typeof window.db === 'undefined' || !window.isGlobalAuthReady) {
                 console.log("logged-in-all-registrations.html: Čakám na inicializáciu Firebase v authentication.js...");
@@ -187,13 +197,31 @@
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                // Skryť loader aj pri chybe
+                if (typeof window.hideGlobalLoader === 'function') {
+                    window.hideGlobalLoader();
+                }
                 return;
             }
             
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(window.AllRegistrationsApp, null)); // Používame window.AllRegistrationsApp
             console.log("logged-in-all-registrations.html: React App vykreslená.");
+
+            // Skrytie globálneho loaderu po vykreslení aplikácie
+            if (typeof window.hideGlobalLoader === 'function') {
+                window.hideGlobalLoader();
+            }
         };
+
+        // Spustenie globálneho loaderu hneď na začiatku, ak je skript načítaný skôr ako window.onload
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.showGlobalLoader === 'function') {
+                // Loader sa už zobrazuje v window.onload, ale táto časť zabezpečí, že sa zobrazí čo najskôr.
+                // Môžete ju odstrániť, ak preferujete zobrazenie len po window.onload.
+                // window.showGlobalLoader(); 
+            }
+        });
     </script>
 </body>
 </html>
