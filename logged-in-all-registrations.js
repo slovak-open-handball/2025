@@ -434,27 +434,43 @@ function AllRegistrationsApp() {
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Raw savedOrder from Firestore:", savedOrder);
 
                     if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
-                        let mergedOrder = [];
+                        // Vytvoríme mapu pre rýchle vyhľadávanie uložených nastavení (hlavne pre viditeľnosť)
+                        const savedSettingsMap = new Map(savedOrder.map(col => [col.id, col]));
+                        
+                        // Zlúčime predvolené definície stĺpcov s uloženými nastaveniami viditeľnosti
+                        let mergedOrder = defaultColumnOrder.map(defaultCol => {
+                            const savedColSettings = savedSettingsMap.get(defaultCol.id);
+                            if (savedColSettings) {
+                                // Ak existujú uložené nastavenia, použijeme ich pre 'visible',
+                                // ale 'label' VŽDY prevezmeme z 'defaultCol' (predvolenej definície)
+                                return {
+                                    ...defaultCol,
+                                    visible: savedColSettings.visible !== undefined ? savedColSettings.visible : true
+                                };
+                            }
+                            // Ak nie sú uložené nastavenia, použijeme len predvolenú definíciu
+                            return defaultCol;
+                        });
+
+                        // Vytvoríme finálne poradie stĺpcov na základe 'savedOrder'
+                        // Ak sa stĺpec nachádza v savedOrder, použijeme jeho pozíciu.
+                        // Ak nie, pridáme ho na koniec, ak nie je už v mergedOrder.
+                        const finalOrder = [];
                         savedOrder.forEach(savedCol => {
-                            const defaultColDef = defaultColumnOrder.find(dCol => dCol.id === savedCol.id);
-                            if (defaultColDef) {
-                                mergedOrder.push({
-                                    ...defaultColDef,
-                                    ...savedCol,
-                                    visible: savedCol.visible !== undefined ? savedCol.visible : true
-                                });
-                            } else {
-                                mergedOrder.push({ ...savedCol, visible: savedCol.visible !== undefined ? savedCol.visible : true });
+                            const foundMergedCol = mergedOrder.find(mCol => mCol.id === savedCol.id);
+                            if (foundMergedCol) {
+                                finalOrder.push(foundMergedCol);
                             }
                         });
 
+                        // Pridáme všetky stĺpce z defaultColumnOrder, ktoré neboli v savedOrder, na koniec
                         defaultColumnOrder.forEach(defaultCol => {
-                            if (!mergedOrder.some(mCol => mCol.id === defaultCol.id)) {
-                                mergedOrder.push(defaultCol);
+                            if (!finalOrder.some(fCol => fCol.id === defaultCol.id)) {
+                                finalOrder.push(defaultCol);
                             }
                         });
 
-                        newOrderToSet = mergedOrder;
+                        newOrderToSet = finalOrder;
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané uložené poradie:", newOrderToSet);
                     } else {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
