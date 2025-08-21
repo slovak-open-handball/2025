@@ -738,7 +738,7 @@ function AllRegistrationsApp() { // UZ NEPrijímame userProfileData ako prop
         window.location.href = `${appBasePath}/login.html`;
         return null; 
     }
-    let loadingMessage = 'Načítavam...';
+    let loadingMessage = '';
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
