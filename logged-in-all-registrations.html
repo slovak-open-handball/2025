@@ -42,30 +42,18 @@
             width: 90%;
             position: relative;
         }
-        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
+        /* NOVINKA: Základné štýly pre #main-content-area, bez fixného margin-left */
         #main-content-area {
-            margin-left: 0; /* Predvolene 0, menu-spacer to upraví dynamicky */
             padding: 1rem;
             flex-grow: 1;
-            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
             display: flex;
             justify-content: center; /* Centrovanie horizontálne */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
             width: 100%; /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
-        @media (min-width: 768px) { /* Pre desktopové zobrazenie */
-            #main-content-area {
-                margin-left: 256px; /* Šírka ľavého menu */
-                width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
-            }
-        }
-        @media (max-width: 768px) {
-            #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
-                width: 100%; /* Na mobiloch zaberá celú šírku */
-            }
-        }
-        /* Štýly pre plávajúce tlačidlo */
+        /* Odstránené fixné margin-left tu, pretože ho spravuje menu-spacer a responzívne triedy */
+
+        /* Štýly pre plávajúce tlačidlo - ponechané ako sú */
         .fab-button {
             position: fixed;
             bottom: 20px;
@@ -113,7 +101,7 @@
     <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
     <div id="menu-placeholder"></div>
     <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
-        <!-- Sem sme pridali triedu pre plynulú animáciu -->
+        <!-- Sem sme pridali triedu pre plynulú animáciu - W-16 JE PREDVOLENÁ ZBALENÁ ŠÍRKA -->
         <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
         <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Obsah aplikácie bude vykreslený tu -->
