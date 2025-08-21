@@ -44,12 +44,14 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu */
+            /* PÔVODNÉ: margin-left: 256px; */
+            margin-left: 0; /* ZMENA: Predvolene 0, medzerník (flex-shrink-0 div) bude riadiť ľavý posun */
             padding: 1rem;
             flex-grow: 1;
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
-            width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
-            display: flex; /* NOVINKA: Aby flex-shrink-0 spacer a #root boli vedľa seba */
+            /* PÔVODNÉ: width: calc(100% - 256px); */
+            width: 100%; /* ZMENA: Necháme flexboxu, aby riadil šírku vo vnútri */
+            display: flex; /* Aby flex-shrink-0 spacer a #root boli vedľa seba */
         }
         @media (max-width: 768px) {
             #main-content-area {
@@ -106,6 +108,7 @@
         <!-- Hlavná oblasť pre obsah React aplikácie -->
         <main id="main-content-area" class="flex-grow flex p-4">
             <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
+            <!-- Jeho šírka (w-16 alebo w-64) bude kontrolovaná logged-in-left-menu.js -->
             <div class="flex-shrink-0 w-16 transition-all duration-300"></div> 
             <!-- React aplikácia sa vykreslí sem -->
             <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8"></div>
@@ -116,7 +119,6 @@
     <script type="module" src="logged-in-all-registrations.js"></script>
 
     <!-- Načítanie globálneho skriptu pre ľavé menu ako modul -->
-    <!-- ZMENA: Presunuté sem, aby sa načítal ako modul priamo -->
     <script type="module" src="logged-in-left-menu.js"></script>
 
     <!-- Načítanie hlavičky a logiky menu -->
@@ -142,7 +144,7 @@
                     };
                     document.body.appendChild(headerScript);
                 } catch (error) {
-                    console.error("Chyba pri načítaní hlavičky:", error);
+                        console.error("Chyba pri načítaní hlavičky:", error);
                 }
             }
         }
@@ -157,9 +159,6 @@
                     if (!response.ok) throw new Error('Network response was not ok.');
                     const menuHtml = await response.text();
                     menuPlaceholder.innerHTML = menuHtml; // HTML je vložené tu
-
-                    // ODSTRÁNENÉ: Dynamické pridávanie script tagu pre logged-in-left-menu.js
-                    // Tento skript sa už načíta priamo v HTML vyššie ako type="module"
                 } catch (error) {
                     console.error("Chyba pri načítaní ľavého menu:", error);
                 }
