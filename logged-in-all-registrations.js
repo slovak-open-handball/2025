@@ -310,22 +310,19 @@ function AllRegistrationsApp() {
       try {
         const userDocRef = db.collection('users').doc(user.uid);
         unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-          if (docSnap.exists()) {
+          if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
             console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
 
-            // TÁTO KONTROLA BOLA ODSTRÁNENÁ: if (userData.role === 'admin' && userData.approved === false)
-            // Pretože túto logiku už spracúva authentication.js
-            
-            // Kontrola passwordLastChanged (ideálne by mala byť v authentication.js)
-            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                console.error("AllRegistrationsApp: passwordLastChanged NIE JE platný Timestamp objekt! Odhlasujem používateľa (bezpečnostná kontrola).");
-                if (auth) {
-                    auth.signOut();
-                    window.location.href = 'login.html';
-                }
-                return;
-            }
+            // Kontrola passwordLastChanged (presunutá do authentication.js)
+            // if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+            //     console.error("AllRegistrationsApp: passwordLastChanged NIE JE platný Timestamp objekt! Odhlasujem používateľa (bezpečnostná kontrola).");
+            //     if (auth) {
+            //         auth.signOut();
+            //         window.location.href = 'login.html';
+            //     }
+            //     return;
+            // }
 
             setUserProfileData(userData);
             setLoadingUsers(false);
@@ -351,10 +348,8 @@ function AllRegistrationsApp() {
               setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
           } else if (error.code === 'unavailable') {
               setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-          } else { // TÁTO ČASŤ BOLA UPRAVENÁ - Odstránené explicitné odhlásenie pri 'unauthenticated'
+          } else {
               setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
-              // Ak je error.code 'unauthenticated', predpokladáme, že authentication.js to zachytí a správne zmení stav user,
-              // čo následne vyvolá presmerovanie na login.html v hlavnom reaktivnom bloku.
           }
           setLoadingUsers(false);
           console.log("AllRegistrationsApp: Načítanie používateľských dát zlyhalo, loadingUsers: false");
