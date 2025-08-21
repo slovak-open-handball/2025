@@ -100,7 +100,8 @@
 
     <div class="flex flex-1">
         <!-- Ľavé menu sa načíta dynamicky -->
-        <div id="left-menu-placeholder"></div>
+        <!-- ZMENA ID: Z 'left-menu-placeholder' na 'menu-placeholder' pre kompatibilitu s logged-in-left-menu.js -->
+        <div id="menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
         <div id="main-content-area" class="flex-1 p-4">
@@ -142,13 +143,14 @@
 
         // Funkcia na načítanie ľavého menu
         async function loadLeftMenu() {
-            const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
-            if (leftMenuPlaceholder) {
+            // ZMENA: Používame nové ID placeholderu pre ľavé menu
+            const menuPlaceholder = document.getElementById('menu-placeholder'); 
+            if (menuPlaceholder) {
                 try {
                     const response = await fetch('logged-in-left-menu.html');
                     if (!response.ok) throw new Error('Network response was not ok.');
                     const menuHtml = await response.text();
-                    leftMenuPlaceholder.innerHTML = menuHtml;
+                    menuPlaceholder.innerHTML = menuHtml;
 
                     const menuScript = document.createElement('script');
                     menuScript.src = 'logged-in-left-menu.js';
