@@ -17,13 +17,14 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
-    const mainContentArea = document.getElementById('main-content-area'); // NOVINKA: Získame referenciu na hlavný obsah
+    // ZMENA: Získame referenciu na hlavný obsah, menuSpacer bol odstránený z HTML
+    const mainContentArea = document.getElementById('main-content-area'); 
 
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
     
-    // ZMENA: Odstránená kontrola menuSpacer, pretože je odstránený z HTML pre túto logiku
+    // ZMENA: Aktualizovaná kontrola elementov, menuSpacer bol odstránený
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !mainContentArea) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo #main-content-area po vložení HTML.");
         return;
@@ -37,13 +38,12 @@ const setupMenuListeners = (userProfileData, db, userId) => {
      * @param {boolean} expandedState - true ak má byť menu rozbalené, false ak zbalené.
      */
     const applyMenuState = (expandedState) => {
-        // ZMENA: isMenuToggled bude teraz zodpovedať expandedState, aby sa zjednotila logika
-        isMenuToggled = expandedState;
+        isMenuToggled = expandedState; // Aktualizujeme lokálny stav
 
         if (expandedState) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
-            // ZMENA: Aplikujeme triedy na mainContentArea namiesto menuSpacer
+            // NOVINKA: Aplikujeme triedy na mainContentArea
             mainContentArea.classList.remove('menu-collapsed');
             mainContentArea.classList.add('menu-expanded');
             menuTexts.forEach(span => {
@@ -52,7 +52,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
-            // ZMENA: Aplikujeme triedy na mainContentArea namiesto menuSpacer
+            // NOVINKA: Aplikujeme triedy na mainContentArea
             mainContentArea.classList.remove('menu-expanded');
             mainContentArea.classList.add('menu-collapsed');
             menuTexts.forEach(span => {
@@ -118,30 +118,22 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
         // Prepínanie aktuálneho stavu menu
-        applyMenuState(!isMenuToggled); 
+        applyMenuState(!isMenuToggled); // Prepínanie stavu
         saveMenuState();
     });
 
     // Obsluha prechodu myšou pre automatické rozbalenie
     leftMenu.addEventListener('mouseenter', () => {
         if (!isMenuToggled) { // Ak je menu zbalené (a nie je manuálne prepnuté)
-            leftMenu.classList.remove('w-16');
-            leftMenu.classList.add('w-64');
-            // ZMENA: Aplikujeme triedy na mainContentArea namiesto menuSpacer
-            mainContentArea.classList.remove('menu-collapsed');
-            mainContentArea.classList.add('menu-expanded');
-            menuTexts.forEach(span => span.classList.remove('opacity-0'));
+            applyMenuState(true); // Dočasne rozbalíme menu
+            // Neukladáme stav pri hoveri do DB, aby sa zachoval manuálny stav používateľa
         }
     });
 
     leftMenu.addEventListener('mouseleave', () => {
-        if (!isMenuToggled) { // Ak je menu zbalené (a nie je manuálne prepnuté)
-            leftMenu.classList.remove('w-64');
-            leftMenu.classList.add('w-16');
-            // ZMENA: Aplikujeme triedy na mainContentArea namiesto menuSpacer
-            mainContentArea.classList.remove('menu-expanded');
-            mainContentArea.classList.add('menu-collapsed');
-            menuTexts.forEach(span => span.classList.add('opacity-0'));
+        if (!isMenuToggled) { // Ak je menu zbalené (a nebolo manuálne prepnuté), vrátime ho do zbaleného stavu
+            applyMenuState(false); // Vrátime menu do zbaleného stavu
+            // Neukladáme stav pri hoveri do DB
         }
     });
 };
@@ -164,14 +156,20 @@ const loadLeftMenu = async (userProfileData) => {
             menuPlaceholder.innerHTML = menuHtml;
             console.log("left-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
-            // Po úspešnom vložení HTML hneď nastavíme poslucháčov
-            const db = window.db;
-            const userId = userProfileData.id;
-            setupMenuListeners(userProfileData, db, userId);
-            const leftMenuElement = document.getElementById('left-menu');
-            if (leftMenuElement) {
-                leftMenuElement.classList.remove('hidden');
-            }
+            // ZMENA: Asynchrónne spustenie setupMenuListeners
+            // Zabaliť volanie setupMenuListeners do setTimeout s oneskorením 0ms.
+            // Tým sa zabezpečí, že sa vykoná v nasledujúcom cykle udalostí prehliadača,
+            // čo dá prehliadaču čas na spracovanie vloženého HTML a pridanie elementov do DOM.
+            setTimeout(() => {
+                const db = window.db;
+                const userId = userProfileData.id;
+                setupMenuListeners(userProfileData, db, userId);
+                const leftMenuElement = document.getElementById('left-menu');
+                if (leftMenuElement) {
+                    leftMenuElement.classList.remove('hidden');
+                }
+            }, 0); // Použite setTimeout s 0ms
+            
 
         } catch (error) {
             console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
