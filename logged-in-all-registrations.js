@@ -300,9 +300,9 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
             // Cesta pre columnOrder je teraz users/{userId}/columnOrder/columnOrder
-            const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder'); // Používame doc z firestore.js
+            const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
-            unsubscribeColumnOrder = onSnapshot(columnOrderDocRef, docSnapshot => { // Používame onSnapshot z firestore.js
+            unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists);
                 let newOrderToSet = defaultColumnOrder; // Predvolené poradie
 
@@ -341,14 +341,14 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
                         // Dokument existuje, ale savedOrder je prázdny alebo poškodený.
                         // To znamená, že by sa mal resetovať na predvolené a uložiť.
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
-                        setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true }) // Používame setDoc
+                        columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
                             .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
                             .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
                     }
                 } else {
                     // Dokument neexistuje. Nastavte predvolené a uložte ho.
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
-                    setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true }) // Používame setDoc
+                    columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
                         .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
                         .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
                 }
@@ -370,8 +370,7 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
 
         // --- Získanie všetkých používateľov z kolekcie 'users' ---
         try {
-            const usersCollectionRef = collection(db, 'users'); // Používame collection z firestore.js
-            unsubscribeAllUsers = onSnapshot(usersCollectionRef, snapshot => { // Používame onSnapshot z firestore.js
+            unsubscribeAllUsers = db.collection('users').onSnapshot(snapshot => {
                 const usersData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -592,7 +591,9 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
       // Odstránime starý listener, ak existuje, pre opätovné pripojenie
-      logoutButton.removeEventListener('click', window.handleLogout); // Odstránime pôvodný z header.js
+      // Predpokladáme, že header.js už nepripojuje listener priamo, ale len definuje funkciu.
+      // Ak by aj pripojoval, tento removeEventListener je na mieste.
+      logoutButton.removeEventListener('click', window.handleLogout); // Odstránime pôvodný z header.js (ak existuje)
       logoutButton.addEventListener('click', handleLogout); // Pripojíme lokálny
     }
     return () => {
@@ -623,9 +624,9 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
 
     // Uloženie nového poradia do Firestore
     if (db && user && user.uid) {
-        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder'); // Používame doc z firestore.js
+        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
-            await setDoc(columnOrderDocRef, { order: newColumnOrder }, { merge: true }); // Používame setDoc
+            await columnOrderDocRef.set({ order: newColumnOrder }, { merge: true });
             console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
@@ -638,9 +639,9 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
   const handleSaveColumnVisibility = async (updatedColumns) => {
     setColumnOrder(updatedColumns); // Okamžitá aktualizácia lokálneho stavu
     if (db && user && user.uid) {
-        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder'); // Používame doc z firestore.js
+        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
-            await setDoc(columnOrderDocRef, { order: updatedColumns }, { merge: true });
+            await columnOrderDocRef.set({ order: updatedColumns }, { merge: true });
             setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní viditeľnosti stĺpcov do Firestore:", e);
@@ -650,21 +651,21 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
   };
 
   // Display loading state
-  // Ak NIE JE Auth ready, ALEBO používateľ NIE JE definovaný, ALEBO používateľ existuje a jeho profilové dáta NIE SÚ načítané
-  // ALEBO načítavanie používateľov/poradia stĺpcov ešte prebieha.
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loadingUsers || loadingColumnOrder) { 
     if (isAuthReady && user === null) {
-        // Ak je Auth ready, ale používateľ je null (odhlásený), presmerujeme
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html.");
+        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html"); 
+        // Použijeme globálne definovanú base path
         const appBasePath = typeof window.getAppBasePath === 'function' ? window.getAppBasePath() : '';
         window.location.href = `${appBasePath}/login.html`;
-        return null; // Zastaviť vykresľovanie
+        return null; 
     }
     let loadingMessage = 'Načítavam...';
+    // Simplified loading message as it's now derived from two states
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, loadingMessage)
+      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }),
+      React.createElement('div', { className: 'text-xl font-semibold text-gray-700 ml-4' }, loadingMessage)
     );
   }
 
@@ -772,8 +773,7 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
                                             onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
                                             className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
                                         }, '→')
-                                    )
-                                    , // Pridaná čiarka
+                                    ),
                                     React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center' }, // Kliknutie na text pre triedenie, pridaný flex pre ikonu filtra
                                         col.label,
                                         currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
