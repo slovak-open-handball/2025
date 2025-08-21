@@ -321,8 +321,8 @@ function AllRegistrationsApp() {
 
     if (isAuthReady && db && user) {
       console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-      // Zobraziť loader len ak už nie je zobrazený
-      if (typeof window.showGlobalLoader === 'function' && !window.loaderElement.style.display === 'flex') {
+      // Zobraziť globálny loader, ak je funkcia dostupná
+      if (typeof window.showGlobalLoader === 'function') {
         window.showGlobalLoader();
       }
 
@@ -389,7 +389,6 @@ function AllRegistrationsApp() {
         return;
     } else if (!isAuthReady || !db || user === undefined) { 
         console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Current states: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
-        // showGlobalLoader sa uz spusti v hlavnom HTML, takze tu ho zbytocne neopakujeme
     }
 
     return () => {
@@ -413,8 +412,8 @@ function AllRegistrationsApp() {
 
     if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions met: Approved Admin. Proceeding to fetch data.");
-        // Zobraziť loader len ak už nie je zobrazený
-        if (typeof window.showGlobalLoader === 'function' && !window.loaderElement.style.display === 'flex') {
+        // Zobraziť globálny loader, ak je funkcia dostupná
+        if (typeof window.showGlobalLoader === 'function') {
           window.showGlobalLoader();
         }
 
@@ -531,7 +530,6 @@ function AllRegistrationsApp() {
         return;
     } else {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions not met for fetching data. Waiting for state updates.");
-        // showGlobalLoader sa uz spusti v hlavnom HTML, takze tu ho zbytocne neopakujeme
     }
 
     return () => {
