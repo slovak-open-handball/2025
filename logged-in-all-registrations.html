@@ -42,17 +42,43 @@
             width: 90%;
             position: relative;
         }
-        /* NOVINKA: Základné štýly pre #main-content-area, bez fixného margin-left */
+        /* NOVINKA: Základné štýly pre #main-content-area */
         #main-content-area {
             padding: 1rem;
             flex-grow: 1;
             display: flex;
             justify-content: center; /* Centrovanie horizontálne */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
-            width: 100%; /* Zabezpečíme, aby zaberala zvyšnú šírku */
+            width: 100%; /* Predvolená šírka pre mobilné zobrazenie */
         }
-        /* Odstránené fixné margin-left tu, pretože ho spravuje menu-spacer a responzívne triedy */
 
+        /* NOVINKA: Štýl pre #main-content-area, keď je menu ZBALENÉ */
+        /* Táto trieda sa pridá/odstráni pomocou logged-in-left-menu.js */
+        #main-content-area.menu-collapsed {
+            /* Keď je menu zbalené (w-16 = 64px), obsah by mal mať vľavo 64px medzeru */
+            margin-left: 64px; 
+            width: calc(100% - 64px); /* Prispôsobí šírku */
+        }
+
+        /* NOVINKA: Štýl pre #main-content-area, keď je menu ROZBALENÉ */
+        /* Táto trieda sa pridá/odstráni pomocou logged-in-left-menu.js */
+        #main-content-area.menu-expanded {
+            /* Keď je menu rozbalené (w-64 = 256px), obsah by mal mať vľavo 256px medzeru */
+            margin-left: 256px;
+            width: calc(100% - 256px); /* Prispôsobí šírku */
+        }
+
+        /* Responzívne úpravy pre #main-content-area na menších obrazovkách */
+        @media (max-width: 768px) {
+            #main-content-area,
+            #main-content-area.menu-collapsed,
+            #main-content-area.menu-expanded {
+                margin-left: 0; /* Na mobiloch menu nezaberá priestor, môže byť prekryvné */
+                width: 100%; /* Plná šírka */
+                /* Ak je ľavé menu na mobiloch prekryvné, nie je potrebné meniť margin-left obsahu */
+            }
+        }
+        
         /* Štýly pre plávajúce tlačidlo - ponechané ako sú */
         .fab-button {
             position: fixed;
@@ -102,7 +128,7 @@
     <div id="menu-placeholder"></div>
     <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
         <!-- Sem sme pridali triedu pre plynulú animáciu - W-16 JE PREDVOLENÁ ZBALENÁ ŠÍRKA -->
-        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
+        <!-- Removed menu-spacer, as main-content-area handles its own margin -->
         <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Obsah aplikácie bude vykreslený tu -->
             <div class="flex justify-center pt-16">
@@ -140,7 +166,7 @@
             }
 
             // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
-            // a kým je načítaný aj loader (window.showGlobalLoader existuje)
+            // a kým je načítaný aj loader (window.showGlobalLoader exists)
             if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
                 // Skryjeme globálny loader, ak je zobrazený
                 if (window.hideGlobalLoader) {
