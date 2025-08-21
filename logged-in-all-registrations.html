@@ -47,7 +47,6 @@
             margin-left: 256px; /* Šírka ľavého menu */
             padding: 1rem;
             flex-grow: 1;
-            /* ZMENA: Odstránené justify-content: center; */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
             width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
@@ -121,55 +120,38 @@
         // Spustíme načítanie hlavičky a menu, a potom vykreslíme React aplikáciu
         // až po úplnom načítaní DOM a všetkých skriptov.
         window.addEventListener('DOMContentLoaded', async () => {
-            // Zabezpečíme, že globálne funkcie existujú, ak sa náhodou nenačítali
-            // V normálnom scenári by už mali byť dostupné
+            // Skripty authentication.js, header.js a logged-in-left-menu.js sa načítajú ako moduly
+            // a sprístupnia svoje globálne funkcie (napr. window.loadHeaderAndScripts, window.loadLeftMenu)
+            // Tieto funkcie by mali len vložiť HTML obsah, nie opäť načítavať JS súbory.
+            
             if (typeof window.loadHeaderAndScripts === 'function') {
                 await window.loadHeaderAndScripts();
+                console.log("logged-in-all-registrations.html: window.loadHeaderAndScripts() úspešne volané.");
             } else {
                 console.error("logged-in-all-registrations.html: window.loadHeaderAndScripts() nie je definované. Skontrolujte načítanie header.js.");
             }
 
-            if (typeof window.loadLeftMenu === 'function') {
-                // Pre loadLeftMenu potrebujeme userProfileData, ktoré je dostupné cez globalDataUpdated event.
-                // Môžeme buď čakať na event, alebo použiť window.globalUserProfileData, ak už je k dispozícii.
-                if (window.globalUserProfileData) {
-                    await window.loadLeftMenu(window.globalUserProfileData);
+            // Pre loadLeftMenu potrebujeme userProfileData, ktoré je dostupné cez globalDataUpdated event.
+            // Preto počkáme na event, alebo použijeme už dostupné dáta.
+            const loadLeftMenuOnData = (userProfileDataDetail) => {
+                if (typeof window.loadLeftMenu === 'function') {
+                    window.loadLeftMenu(userProfileDataDetail);
+                    console.log("logged-in-all-registrations.html: window.loadLeftMenu() úspešne volané.");
                 } else {
-                    // Ak dáta ešte nie sú dostupné, počkáme na udalosť
-                    window.addEventListener('globalDataUpdated', (event) => {
-                        window.loadLeftMenu(event.detail);
-                    }, { once: true }); // Použijeme { once: true }, aby sa listener odstránil po prvom spustení
+                    console.error("logged-in-all-registrations.html: window.loadLeftMenu() nie je definované. Skontrolujte načítanie logged-in-left-menu.js.");
                 }
-            } else {
-                console.error("logged-in-all-registrations.html: window.loadLeftMenu() nie je definované. Skontrolujte načítanie logged-in-left-menu.js.");
-            }
-
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            // Až po tom, čo je window.globalUserProfileData k dispozícii.
-            const renderApp = (userProfileData) => {
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
-                if (typeof AllRegistrationsApp === 'undefined') {
-                    console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(AllRegistrationsApp, { userProfileData }));
-                console.log("logged-in-all-registrations.html: React App vykreslená.");
             };
 
             // Počúvame na udalosť globalDataUpdated, ktorá signalizuje, že userProfileData je k dispozícii
             window.addEventListener('globalDataUpdated', (event) => {
-                renderApp(event.detail);
+                loadLeftMenuOnData(event.detail);
+                renderAllRegistrationsApp(event.detail);
             });
 
-            // Ak sú dáta už pri prvom načítaní k dispozícii, vykreslíme aplikáciu ihneď
+            // Ak sú dáta už pri prvom načítaní k dispozícii, vykreslíme aplikáciu a menu ihneď
             if (window.globalUserProfileData) {
-                renderApp(window.globalUserProfileData);
+                loadLeftMenuOnData(window.globalUserProfileData);
+                renderAllRegistrationsApp(window.globalUserProfileData);
             } else {
                  // Zobrazíme loader, kým sa nenačítajú dáta
                 const rootElement = document.getElementById('root');
@@ -182,9 +164,29 @@
                             React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
                         )
                     );
+                    console.log("logged-in-all-registrations.html: Zobrazujem loader, čakám na globalDataUpdated.");
+                } else {
+                     console.error("logged-in-all-registrations.html: Element 'root' alebo React/ReactDOM nie sú dostupné pre zobrazenie loadera.");
                 }
             }
         });
+
+        // Funkcia na vykreslenie React aplikácie, volaná po načítaní dát používateľa
+        const renderAllRegistrationsApp = (userProfileData) => {
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("logged-in-all-registrations.html: Chyba: React alebo ReactDOM nie sú načítané.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            if (typeof AllRegistrationsApp === 'undefined') {
+                console.error("logged-in-all-registrations.html: Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(AllRegistrationsApp, { userProfileData }));
+            console.log("logged-in-all-registrations.html: React App vykreslená s userProfileData.");
+        };
     </script>
 </body>
 </html>
