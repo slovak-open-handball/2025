@@ -43,12 +43,14 @@
             position: relative;
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
+        /* ZMENA: Nastavenie display:flex pre #main-content-area */
         #main-content-area {
             margin-left: 256px; /* Šírka ľavého menu */
             padding: 1rem;
             flex-grow: 1;
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
             width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
+            display: flex; /* NOVINKA: Aby flex-shrink-0 spacer a #root boli vedľa seba */
         }
         @media (max-width: 768px) {
             #main-content-area {
@@ -100,14 +102,16 @@
 
     <div class="flex flex-1">
         <!-- Ľavé menu sa načíta dynamicky -->
-        <!-- ZMENA ID: Z 'left-menu-placeholder' na 'menu-placeholder' pre kompatibilitu s logged-in-left-menu.js -->
         <div id="menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area" class="flex-1 p-4">
+        <!-- ZMENA: #main-content-area teraz obsahuje aj flex-shrink-0 spacer a #root -->
+        <main id="main-content-area" class="flex-grow flex p-4">
+            <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
+            <div class="flex-shrink-0 w-16 transition-all duration-300"></div> 
             <!-- React aplikácia sa vykreslí sem -->
-            <div id="root"></div>
-        </div>
+            <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8"></div>
+        </main>
     </div>
 
     <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) ako modul -->
