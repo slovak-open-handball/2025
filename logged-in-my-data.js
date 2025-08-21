@@ -139,9 +139,9 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     const emailLabel = userProfileData?.role === 'user' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
     const phoneLabel = userProfileData?.role === 'user' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
 
-    // Logika pre zobrazenie ceruzky na základe roly
-    const showProfilePencil = canEdit || userProfileData?.role === 'admin';
-    const showBillingPencil = canEdit || userProfileData?.role === 'admin';
+    // Logika pre zobrazenie ceruzky na základe stavu canEdit (odovzdaného z MyDataApp)
+    const showProfilePencil = canEdit;
+    const showBillingPencil = canEdit;
 
 
     const profileContent = React.createElement(
@@ -151,7 +151,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, profileCardTitle),
-            // Ceruzka sa zobrazí len ak je canEdit true, alebo ak je rola 'admin'
+            // Ceruzka sa zobrazí len ak je canEdit true
             showProfilePencil && React.createElement(
                 'button',
                 {
@@ -206,7 +206,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
-            // Ceruzka sa zobrazí len ak je canEdit true, alebo ak je rola 'admin'
+            // Ceruzka sa zobrazí len ak je canEdit true
             showBillingPencil && React.createElement(
                 'button',
                 {
@@ -278,30 +278,51 @@ const MyDataApp = ({ userProfileData }) => {
 
     // Časovač na automatické skrytie ceruziek
     useEffect(() => {
-        // Logika pre admina
-        if (userProfileData?.role === 'admin') {
-            setCanEdit(true);
-            return; // Ukončíme useEffect, aby sa nespúšťal časovač
+        let timer; // Deklarujeme premennú pre časovač
+
+        // Východiskovo nastavíme canEdit na false pri nových dátach používateľa alebo pri pripojení komponentu
+        setCanEdit(false);
+
+        if (!userProfileData) {
+            return;
         }
-        
-        if (userProfileData?.dataEditDeadline) {
-            const deadlineMillis = userProfileData.dataEditDeadline.toMillis();
+
+        const isAdmin = userProfileData.role === 'admin';
+        const isUser = userProfileData.role === 'user';
+        const deadline = userProfileData.dataEditDeadline;
+
+        if (isAdmin) {
+            setCanEdit(true);
+            return; // Administrátori môžu vždy upravovať, netreba kontrolovať dátum
+        }
+
+        if (deadline) {
+            const deadlineMillis = deadline.toMillis();
             const nowMillis = Date.now();
             const timeRemaining = deadlineMillis - nowMillis;
 
             if (timeRemaining > 0) {
+                // Ak je deadline v budúcnosti, povoliť úpravy
                 setCanEdit(true);
-                const timer = setTimeout(() => {
+                timer = setTimeout(() => {
                     setCanEdit(false);
                 }, timeRemaining);
-                // Funkcia pre vyčistenie časovača pri odpojení komponentu
-                return () => clearTimeout(timer);
             } else {
-                // Ak už je po termíne, hneď nastavíme stav na false
+                // Deadline už uplynul, zakázať úpravy
                 setCanEdit(false);
             }
+        } else {
+            // Ak deadline nie je špecifikovaný (null/undefined), zakázať úpravy pre ne-admin roly
+            setCanEdit(false);
         }
-    }, [userProfileData]);
+
+        // Funkcia pre vyčistenie časovača pri odpojení komponentu
+        return () => {
+            if (timer) {
+                clearTimeout(timer);
+            }
+        };
+    }, [userProfileData]); // Závislosť na userProfileData
 
     const getRoleColor = (role) => {
         switch (role) {
