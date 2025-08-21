@@ -97,33 +97,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
-    <script>
-        // Centralizovaná inicializácia Firebase pomocou explicitne definovaných premenných
-        // Inicializujeme Firebase iba raz, ak už nebola inicializovaná.
-        const appId = '1:572988314768:web:781e27eb035179fe34b415';
-        const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
-        };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                console.log("logged-in-all-registrations.html: Firebase inicializovaný globálne.");
-            } catch (e) {
-                console.error("logged-in-all-registrations.html: Chyba pri globálnej inicializácii Firebase:", e);
-            }
-        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
-            console.log("logged-in-all-registrations.html: Firebase už bol inicializovaný.");
-        } else {
-            console.error("logged-in-all-registrations.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
-        }
-    </script>
+    <!-- TENTO BLOK BOL ODSTRÁNENÝ, KEĎŽE INITIALIZÁCIU SPRAVUJE authentication.js -->
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
