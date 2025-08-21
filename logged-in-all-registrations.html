@@ -101,11 +101,49 @@
             padding: 1rem; /* Zabezpečenie vnútornej medzery */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
         }
+
+        /* Počiatočné štýly pre globálny loader, aby sa zobrazil okamžite */
+        #initial-global-loader {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(243, 244, 246, 1); /* Svetlošedé pozadie ako na obrázku */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 101; /* Vyšší z-index ako ostatné elementy */
+            transition: opacity 0.3s ease-in-out;
+            opacity: 1;
+        }
+
+        #initial-global-loader .spinner {
+            animation: spin 1s linear infinite;
+            border: 4px solid rgba(209, 213, 219, 1); /* border-gray-200 */
+            border-top-color: rgba(59, 130, 246, 1); /* border-t-blue-500 */
+            border-radius: 50%;
+            height: 3rem; /* h-12 */
+            width: 3rem; /* w-12 */
+        }
+
+        /* Skrytie obsahu body, kým sa nenačíta aplikácia */
+        body.loading-app > *:not(#initial-global-loader) {
+            visibility: hidden;
+            opacity: 0;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-100 min-h-screen flex flex-col loading-app">
+    <!-- Počiatočný loader, ktorý sa zobrazí okamžite -->
+    <div id="initial-global-loader">
+        <div class="spinner"></div>
+    </div>
+
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
     <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
@@ -175,10 +213,18 @@
             // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
             // a kým je načítaný aj loader (window.showGlobalLoader existuje)
             if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
-                // Skryjeme globálny loader, ak je zobrazený
+                // Skryjeme globálny loader (ten, ktorý vytvorí loader.js)
                 if (window.hideGlobalLoader) {
                     window.hideGlobalLoader();
                 }
+
+                // Odstránime počiatočný inline loader
+                const initialLoader = document.getElementById('initial-global-loader');
+                if (initialLoader) {
+                    initialLoader.style.opacity = '0';
+                    setTimeout(() => initialLoader.remove(), 300); // Počkajte na animáciu a potom odstráňte
+                }
+                document.body.classList.remove('loading-app'); // Zobrazte obsah body
 
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(window.AllRegistrationsApp, null));
@@ -189,17 +235,10 @@
             }
         };
 
-        // Spustenie globálneho loaderu hneď na začiatku
-        if (typeof window.showGlobalLoader === 'function') {
-            window.showGlobalLoader();
-        } else {
-            // Ak loader ešte nie je k dispozícii, počkáme a potom ho spustíme
-            document.addEventListener('DOMContentLoaded', () => {
-                if (typeof window.showGlobalLoader === 'function') {
-                    window.showGlobalLoader();
-                }
-            });
-        }
+        // loader.js už sám volá showGlobalLoader a hideGlobalLoader na základe DOMContentLoaded.
+        // Avšak, potrebujeme zabezpečiť, aby sa _pred_ DOMContentLoaded zobrazilo niečo okamžite.
+        // Preto som pridal initial-global-loader priamo do HTML.
+        // Volanie showGlobalLoader() z loader.js po DOMContentLoaded bude spravovať ďalšie načítania.
         
         // Načítanie hlavičky a spustenie kontroly a renderovania po načítaní DOM
         document.addEventListener('DOMContentLoaded', async () => {
