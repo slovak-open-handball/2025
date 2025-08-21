@@ -2,6 +2,9 @@
 // Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-all-registrations.html
 // a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
 
+// NOVINKA: Importy pre potrebné Firebase funkcie v modularizovanom štýle (Firebase v9+)
+import { doc, collection, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // Ponechané pre zobrazovanie správ o spätnej väzbe pre používateľa v tomto module.
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
@@ -300,9 +303,11 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
             // Cesta pre columnOrder je teraz users/{userId}/columnOrder/columnOrder
-            const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+            // POUŽITIE Firebase v9: doc(db, 'users', user.uid, 'columnOrder', 'columnOrder')
+            const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
-            unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
+            // POUŽITIE Firebase v9: onSnapshot(columnOrderDocRef, ...)
+            unsubscribeColumnOrder = onSnapshot(columnOrderDocRef, docSnapshot => {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists);
                 let newOrderToSet = defaultColumnOrder; // Predvolené poradie
 
@@ -341,14 +346,16 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
                         // Dokument existuje, ale savedOrder je prázdny alebo poškodený.
                         // To znamená, že by sa mal resetovať na predvolené a uložiť.
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
-                        columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
+                        // POUŽITIE Firebase v9: setDoc(columnOrderDocRef, ...)
+                        setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                             .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
                             .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
                     }
                 } else {
                     // Dokument neexistuje. Nastavte predvolené a uložte ho.
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
-                    columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
+                    // POUŽITIE Firebase v9: setDoc(columnOrderDocRef, ...)
+                    setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                         .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
                         .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
                 }
@@ -370,7 +377,8 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
 
         // --- Získanie všetkých používateľov z kolekcie 'users' ---
         try {
-            unsubscribeAllUsers = db.collection('users').onSnapshot(snapshot => {
+            // POUŽITIE Firebase v9: collection(db, 'users')
+            unsubscribeAllUsers = onSnapshot(collection(db, 'users'), snapshot => {
                 const usersData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -624,9 +632,11 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
 
     // Uloženie nového poradia do Firestore
     if (db && user && user.uid) {
-        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+        // POUŽITIE Firebase v9: doc(db, 'users', user.uid, 'columnOrder', 'columnOrder')
+        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
         try {
-            await columnOrderDocRef.set({ order: newColumnOrder }, { merge: true });
+            // POUŽITIE Firebase v9: setDoc(columnOrderDocRef, ...)
+            await setDoc(columnOrderDocRef, { order: newColumnOrder }, { merge: true });
             console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
@@ -639,9 +649,11 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
   const handleSaveColumnVisibility = async (updatedColumns) => {
     setColumnOrder(updatedColumns); // Okamžitá aktualizácia lokálneho stavu
     if (db && user && user.uid) {
-        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+        // POUŽITIE Firebase v9: doc(db, 'users', user.uid, 'columnOrder', 'columnOrder')
+        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
         try {
-            await columnOrderDocRef.set({ order: updatedColumns }, { merge: true });
+            // POUŽITIE Firebase v9: setDoc(columnOrderDocRef, ...)
+            await setDoc(columnOrderDocRef, { order: updatedColumns }, { merge: true });
             setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní viditeľnosti stĺpcov do Firestore:", e);
