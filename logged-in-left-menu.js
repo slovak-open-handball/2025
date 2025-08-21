@@ -2,6 +2,7 @@
 // Tento súbor spravuje logiku pre ľavé menu, vrátane jeho rozbalenia/zbalenia
 // a obsluhy udalostí pri kliknutí a prechode myšou.
 // Bola pridaná nová funkcionalita na ukladanie stavu menu do databázy používateľa.
+// Úprava: Dynamicky mení triedy na '#main-content-area' pre správne zarovnanie obsahu.
 
 // Importy pre potrebné Firebase funkcie
 import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -16,13 +17,15 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
-    const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
+    const mainContentArea = document.getElementById('main-content-area'); // NOVINKA: Získame referenciu na hlavný obsah
+
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
     
-    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
-        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
+    // ZMENA: Odstránená kontrola menuSpacer, pretože je odstránený z HTML pre túto logiku
+    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !mainContentArea) {
+        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo #main-content-area po vložení HTML.");
         return;
     }
 
@@ -30,27 +33,32 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
     /**
-     * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
+     * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie a po prepnutí)
+     * @param {boolean} expandedState - true ak má byť menu rozbalené, false ak zbalené.
      */
-    const applyMenuState = () => {
-        if (isMenuToggled) {
+    const applyMenuState = (expandedState) => {
+        // ZMENA: isMenuToggled bude teraz zodpovedať expandedState, aby sa zjednotila logika
+        isMenuToggled = expandedState;
+
+        if (expandedState) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
-            menuSpacer.classList.remove('w-16');
-            menuSpacer.classList.add('w-64');
+            // ZMENA: Aplikujeme triedy na mainContentArea namiesto menuSpacer
+            mainContentArea.classList.remove('menu-collapsed');
+            mainContentArea.classList.add('menu-expanded');
+            menuTexts.forEach(span => {
+                span.classList.remove('opacity-0');
+            });
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
-            menuSpacer.classList.remove('w-64');
-            menuSpacer.classList.add('w-16');
-        }
-        menuTexts.forEach(span => {
-            if (isMenuToggled) {
-                span.classList.remove('opacity-0');
-            } else {
+            // ZMENA: Aplikujeme triedy na mainContentArea namiesto menuSpacer
+            mainContentArea.classList.remove('menu-expanded');
+            mainContentArea.classList.add('menu-collapsed');
+            menuTexts.forEach(span => {
                 span.classList.add('opacity-0');
-            }
-        });
+            });
+        }
     };
     
     // Nová funkcia na dynamickú zmenu textu menu
@@ -101,7 +109,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     };
 
     // Aplikujeme počiatočný stav menu pri načítaní
-    applyMenuState();
+    applyMenuState(isMenuToggled); // Počiatočný stav z userProfileData
     // Aplikujeme dynamický text menu
     updateMenuText();
     // Zobrazíme admin odkazy na základe roly
@@ -109,28 +117,30 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
-        isMenuToggled = !isMenuToggled;
-        applyMenuState();
+        // Prepínanie aktuálneho stavu menu
+        applyMenuState(!isMenuToggled); 
         saveMenuState();
     });
 
     // Obsluha prechodu myšou pre automatické rozbalenie
     leftMenu.addEventListener('mouseenter', () => {
-        if (!isMenuToggled) {
+        if (!isMenuToggled) { // Ak je menu zbalené (a nie je manuálne prepnuté)
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
-            menuSpacer.classList.remove('w-16');
-            menuSpacer.classList.add('w-64');
+            // ZMENA: Aplikujeme triedy na mainContentArea namiesto menuSpacer
+            mainContentArea.classList.remove('menu-collapsed');
+            mainContentArea.classList.add('menu-expanded');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
         }
     });
 
     leftMenu.addEventListener('mouseleave', () => {
-        if (!isMenuToggled) {
+        if (!isMenuToggled) { // Ak je menu zbalené (a nie je manuálne prepnuté)
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
-            menuSpacer.classList.remove('w-64');
-            menuSpacer.classList.add('w-16');
+            // ZMENA: Aplikujeme triedy na mainContentArea namiesto menuSpacer
+            mainContentArea.classList.remove('menu-expanded');
+            mainContentArea.classList.add('menu-collapsed');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
         }
     });
