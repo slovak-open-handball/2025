@@ -128,7 +128,7 @@
     <div id="menu-placeholder"></div>
     <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
         <!-- Sem sme pridali triedu pre plynulú animáciu - W-16 JE PREDVOLENÁ ZBALENÁ ŠÍRKA -->
-        <!-- Removed menu-spacer, as main-content-area handles its own margin -->
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- NOVINKA: Pomocný div, ktorý vytvára priestor pre zbalené menu -->
         <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Obsah aplikácie bude vykreslený tu -->
             <div class="flex justify-center pt-16">
