@@ -179,22 +179,11 @@
 
             await loadHeader();
             
-            // VOLANIE GLOBÁLNEJ FUNKCIE loadLeftMenu Z logged-in-left-menu.js
-            // Uistíme sa, že loadLeftMenu je k dispozícii
-            while (typeof window.loadLeftMenu === 'undefined') {
-                 console.log("logged-in-all-registrations.html: Čakám na definíciu window.loadLeftMenu...");
-                 await new Promise(resolve => setTimeout(resolve, 100));
-            }
-
-            if (window.globalUserProfileData) {
-                await window.loadLeftMenu(window.globalUserProfileData);
-                console.log("logged-in-all-registrations.html: Globálna funkcia loadLeftMenu z logged-in-left-menu.js volaná.");
-            } else {
-                console.warn("logged-in-all-registrations.html: window.loadLeftMenu je definovaná, ale window.globalUserProfileData chýba.");
-                // V prípade, že globalUserProfileData chýba, môžeme stále zavolať loadLeftMenu bez nej,
-                // aby sa menu aspoň skrylo, ako je to definované v left-menu.js
-                await window.loadLeftMenu(null); 
-            }
+            // ! DÔLEŽITÁ ZMENA !
+            // Odstránené explicitné volanie window.loadLeftMenu() a čakanie naň.
+            // logged-in-left-menu.js sa načíta ako modul a sám reaguje na `globalDataUpdated`
+            // udalosť, ktorá je dispečovaná z authentication.js po inicializácii používateľského profilu.
+            // Týmto sa správanie zhoduje s logged-in-add-categories.html.
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
             while (typeof window.AllRegistrationsApp === 'undefined') {
