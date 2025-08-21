@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Všetky registrácie</title>
+    <title>SOH 2025 - Vytvorenie kategórií</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -13,10 +13,6 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
-            display: flex; /* Použitie flexboxu pre hlavný layout */
-            flex-direction: column; /* Hlavička, potom obsah */
-            min-height: 100vh; /* Minimálna výška na celú obrazovku */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -38,19 +34,20 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 500px;
+            max-width: 250px;
             width: 90%;
             position: relative;
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
-        /* ZMENA: Nastavenie display:flex pre #main-content-area */
         #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu */
+            margin-left: 0; /* Predvolene 0, menu-spacer to upraví dynamicky */
             padding: 1rem;
             flex-grow: 1;
+            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
+            display: flex;
+            justify-content: center; /* Centrovanie horizontálne */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
-            width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
-            display: flex; /* NOVINKA: Aby flex-shrink-0 spacer a #root boli vedľa seba */
+            width: 100%; /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
         @media (max-width: 768px) {
             #main-content-area {
@@ -82,126 +79,95 @@
         .fab-button:hover {
             background-color: #10B981; /* Tmavšia zelená */
         }
-        #header-placeholder { /* NOVINKA: Explicitný z-index pre hlavičku */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 100; /* Nižšie ako notifikácia (1000), ale vyššie ako menu (20) */
-        }
     </style>
+    <!-- React SDKs -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
+    <script>
+        // Tieto premenné sú definované v hlavnom HTML súbore alebo v authentication.js
+        // Odstránené, pretože authentication.js ich definuje globálne.
+        // const __app_id = 'soh2025-2s0o2h5'; 
+        // const __firebase_config = JSON.stringify({ ... });
+        // const __initial_auth_token = null; 
+    </script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Načítanie autentifikačného skriptu ako modulu - MUSÍ BYŤ NAČÍTANÉ PRED AKÝKOĽVEK KÓDOM, KTORÝ POUŽÍVA window.auth alebo window.db -->
-    <script type="module" src="authentication.js"></script>
-
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
+    <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
+    <div id="menu-placeholder"></div>
+    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
+        <!-- Sem sme pridali triedu pre plynulú animáciu -->
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
+        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Obsah aplikácie bude vykreslený tu -->
+            <div class="flex justify-center pt-16">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+            </div>
+        </div>
+    </main>
 
-    <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky -->
-        <div id="menu-placeholder"></div>
-        
-        <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <!-- ZMENA: #main-content-area teraz obsahuje aj flex-shrink-0 spacer a #root -->
-        <main id="main-content-area" class="flex-grow flex p-4">
-            <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
-            <div class="flex-shrink-0 w-16 transition-all duration-300"></div> 
-            <!-- React aplikácia sa vykreslí sem -->
-            <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8"></div>
-        </main>
-    </div>
+    <!-- Skrytý div pre načítanie authentication.js (zabezpečuje inicializáciu Firebase) -->
+    <div id="authentication-root" style="display: none;"></div>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) ako modul -->
+    <!-- Načítanie globálnych skriptov -->
+    <script type="module" src="loader.js"></script>
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="logged-in-left-menu.js"></script>
+    
+    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) -->
     <script type="module" src="logged-in-all-registrations.js"></script>
 
-    <!-- Načítanie hlavičky a logiky menu -->
     <script>
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
-            const headerPlaceholder = document.getElementById('header-placeholder');
-            if (headerPlaceholder) {
-                try {
-                    const response = await fetch('header.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const headerHtml = await response.text();
-                    headerPlaceholder.innerHTML = headerHtml;
-
-                    const headerScript = document.createElement('script');
-                    headerScript.src = 'header.js';
-                    headerScript.type = 'module';
-                    headerScript.onload = () => {
-                        console.log("header.js načítaný a spustený.");
-                    };
-                    headerScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní header.js:", e);
-                    };
-                    document.body.appendChild(headerScript);
-                } catch (error) {
-                    console.error("Chyba pri načítaní hlavičky:", error);
-                }
-            }
-        }
-
-        // Funkcia na načítanie ľavého menu
-        async function loadLeftMenu() {
-            // Používame ID placeholderu pre ľavé menu
-            const menuPlaceholder = document.getElementById('menu-placeholder'); 
-            if (menuPlaceholder) {
-                try {
-                    const response = await fetch('logged-in-left-menu.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const menuHtml = await response.text();
-                    menuPlaceholder.innerHTML = menuHtml; // HTML je vložené tu
-
-                    // Dynamicky pridáme skript až po vložení HTML
-                    const menuScript = document.createElement('script');
-                    menuScript.src = 'logged-in-left-menu.js';
-                    menuScript.type = 'module'; // Dôležité: načítať ako modul
-                    menuScript.onload = () => {
-                        console.log("logged-in-left-menu.js načítaný a spustený.");
-                    };
-                    menuScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní logged-in-left-menu.js:", e);
-                    };
-                    document.body.appendChild(menuScript);
-                } catch (error) {
-                    console.error("Chyba pri načítaní ľavého menu:", error);
-                }
-            }
-        }
-
-        // Spustíme načítanie hlavičky a menu po načítaní DOM
-        window.onload = async () => {
-            // Pred načítaním hlavičky a menu počkáme na Firebase inicializáciu
-            while (typeof window.auth === 'undefined' || typeof window.db === 'undefined' || !window.isGlobalAuthReady) {
-                console.log("logged-in-all-registrations.html: Čakám na inicializáciu Firebase v authentication.js...");
-                await new Promise(resolve => setTimeout(resolve, 100)); // Krátka pauza
-            }
-            console.log("logged-in-all-registrations.html: Firebase inštancie sú k dispozícii.");
-
-            await loadHeader();
-            await loadLeftMenu();
-
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            // Počkáme na definíciu AllRegistrationsApp (ktorá je teraz exportovaná globálne z modulového skriptu)
-            while (typeof window.AllRegistrationsApp === 'undefined') {
-                 console.log("logged-in-all-registrations.html: Čakám na definíciu AllRegistrationsApp...");
-                 await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
+        // Funkcia na kontrolu pripravenosti globálnych dát a vykreslenie React aplikácie
+        const checkReadyAndRender = () => {
+            // Kontrola, či sú React a ReactDOM načítané
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(window.AllRegistrationsApp, null)); // Používame window.AllRegistrationsApp
-            console.log("logged-in-all-registrations.html: React App vykreslená.");
+            // Kontrola, či je komponent AllRegistrationsApp definovaný
+            if (typeof AllRegistrationsApp === 'undefined') {
+                console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+
+            // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
+            // a kým je načítaný aj loader (window.showGlobalLoader existuje)
+            if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
+                // Skryjeme globálny loader, ak je zobrazený
+                if (window.hideGlobalLoader) {
+                    window.hideGlobalLoader();
+                }
+
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(AllRegistrationsApp, null));
+                console.log("logged-in-all-registrations.html: React App vykreslená.");
+            } else {
+                // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
+                setTimeout(checkReadyAndRender, 100);
+            }
         };
+
+        // Spustenie globálneho loaderu hneď na začiatku
+        if (typeof window.showGlobalLoader === 'function') {
+            window.showGlobalLoader();
+        } else {
+            // Ak loader ešte nie je k dispozícii, počkáme a potom ho spustíme
+            document.addEventListener('DOMContentLoaded', () => {
+                if (typeof window.showGlobalLoader === 'function') {
+                    window.showGlobalLoader();
+                }
+            });
+        }
+        
+        // Spustíme kontrolu a renderovanie po načítaní DOM
+        document.addEventListener('DOMContentLoaded', checkReadyAndRender);
     </script>
 </body>
 </html>
