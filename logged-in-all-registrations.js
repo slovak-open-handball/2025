@@ -209,8 +209,15 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() {
   // NOVÉ: Získame referencie na Firebase služby z globálnych premenných
+  // Tieto sa inicializujú v authentication.js a sprístupňujú globálne.
   const auth = window.auth;
   const db = window.db;
+  // NOVÉ: Exponované Firestore funkcie z authentication.js
+  const collection = window.collection;
+  const doc = window.doc;
+  const onSnapshot = window.onSnapshot;
+  const setDoc = window.setDoc;
+  const updateDoc = window.updateDoc;
 
   // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
   const [user, setUser] = React.useState(null); 
@@ -303,26 +310,19 @@ function AllRegistrationsApp() {
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    if (isAuthReady && db && user) {
+    // Používame priamo globálne window.db
+    if (isAuthReady && window.db && user) {
       console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
       setLoadingUsers(true);
 
       try {
-        const userDocRef = db.collection('users').doc(user.uid);
-        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+        // Používame window.doc a window.db
+        const userDocRef = window.doc(window.db, `users/${user.uid}`);
+        // Používame window.onSnapshot
+        unsubscribeUserDoc = window.onSnapshot(userDocRef, (docSnapshot) => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
             console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
-
-            // Kontrola passwordLastChanged (presunutá do authentication.js)
-            // if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-            //     console.error("AllRegistrationsApp: passwordLastChanged NIE JE platný Timestamp objekt! Odhlasujem používateľa (bezpečnostná kontrola).");
-            //     if (auth) {
-            //         auth.signOut();
-            //         window.location.href = 'login.html';
-            //     }
-            //     return;
-            // }
 
             setUserProfileData(userData);
             setLoadingUsers(false);
@@ -367,8 +367,8 @@ function AllRegistrationsApp() {
         console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
-    } else if (!isAuthReady || !db || user === undefined) {
-        console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Current states: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
+    } else if (!isAuthReady || !window.db || user === undefined) {
+        console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Current states: isAuthReady:", isAuthReady, "db:", !!window.db, "user:", user);
         setLoadingUsers(true);
     }
 
@@ -378,7 +378,7 @@ function AllRegistrationsApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [isAuthReady, window.db, user, auth]); // Závislosti aktualizované na window.db
 
 
   // Effect for fetching all users from Firestore and column order
@@ -388,23 +388,28 @@ function AllRegistrationsApp() {
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Triggered.");
-    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
+    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!window.db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
 
 
-    if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
+    // Používame priamo globálne window.db
+    if (isAuthReady && window.db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions met: Approved Admin. Proceeding to fetch data.");
         setLoadingUsers(true);
         setLoadingColumnOrder(true);
 
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
-            const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+            // Používame window.collection a window.doc
+            const columnOrderColRef = window.collection(window.db, 'users', user.uid, 'columnOrder');
+            const columnOrderDocRef = window.doc(columnOrderColRef, 'columnOrder');
+
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
-            unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
-                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists);
+            // Používame window.onSnapshot
+            unsubscribeColumnOrder = window.onSnapshot(columnOrderDocRef, docSnapshot => {
+                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists());
                 let newOrderToSet = defaultColumnOrder;
 
-                if (docSnapshot.exists) {
+                if (docSnapshot.exists()) {
                     const savedOrder = docSnapshot.data().order;
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Raw savedOrder from Firestore:", savedOrder);
 
@@ -433,13 +438,15 @@ function AllRegistrationsApp() {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané uložené poradie:", newOrderToSet);
                     } else {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
-                        columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
+                        // Používame window.setDoc
+                        window.setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                             .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
                             .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
                     }
                 } else {
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
-                    columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
+                    // Používame window.setDoc
+                    window.setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                         .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
                         .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
                 }
@@ -461,7 +468,10 @@ function AllRegistrationsApp() {
 
         // --- Získanie všetkých používateľov z kolekcie 'users' ---
         try {
-            unsubscribeAllUsers = db.collection('users').onSnapshot(snapshot => {
+            // Používame window.collection
+            const usersCollectionRef = window.collection(window.db, 'users');
+            // Používame window.onSnapshot
+            unsubscribeAllUsers = window.onSnapshot(usersCollectionRef, snapshot => {
                 const usersData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -510,7 +520,7 @@ function AllRegistrationsApp() {
             unsubscribeColumnOrder();
         }
     };
-  }, [db, userProfileData, isAuthReady, user]);
+  }, [window.db, userProfileData, isAuthReady, user]); // Závislosti aktualizované na window.db
 
 
   // Sorting logic
@@ -728,10 +738,12 @@ function AllRegistrationsApp() {
     setColumnOrder(newColumnOrder);
 
     // Uloženie nového poradia do Firestore
-    if (db && user && user.uid) {
-        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+    // Používame window.doc a window.setDoc
+    if (window.db && user && user.uid) {
+        const columnOrderColRef = window.collection(window.db, 'users', user.uid, 'columnOrder');
+        const columnOrderDocRef = window.doc(columnOrderColRef, 'columnOrder');
         try {
-            await columnOrderDocRef.set({ order: newColumnOrder }, { merge: true });
+            await window.setDoc(columnOrderDocRef, { order: newColumnOrder }, { merge: true });
             console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
@@ -743,10 +755,12 @@ function AllRegistrationsApp() {
   // Funkcia na uloženie viditeľnosti stĺpcov do Firestore
   const handleSaveColumnVisibility = async (updatedColumns) => {
     setColumnOrder(updatedColumns);
-    if (db && user && user.uid) {
-        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+    // Používame window.doc a window.setDoc
+    if (window.db && user && user.uid) {
+        const columnOrderColRef = window.collection(window.db, 'users', user.uid, 'columnOrder');
+        const columnOrderDocRef = window.doc(columnOrderColRef, 'columnOrder');
         try {
-            await columnOrderDocRef.set({ order: updatedColumns }, { merge: true });
+            await window.setDoc(columnOrderDocRef, { order: updatedColumns }, { merge: true });
             setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní viditeľnosti stĺpcov do Firestore:", e);
