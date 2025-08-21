@@ -2,8 +2,8 @@
 // Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-all-registrations.html
 // a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
 
-// Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
-import { collection, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// ODSTRÁNENÉ: Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
+// Pretože tento súbor bude načítaný ako nemodulový skript, funkcie sa budú pristupovať globálne
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // Ponechané pre zobrazovanie správ o spätnej väzbe pre používateľa v tomto module.
@@ -259,16 +259,40 @@ function AllRegistrationsApp() {
 
 
   // Lokálny Auth Listener pre AllRegistrationsApp
+  // Tento useEffect čaká na to, kým authentication.js nastaví globálne auth a db.
   React.useEffect(() => {
-    const initializeAuthState = () => {
-        if (window.isGlobalAuthReady) {
-            setIsAuthReady(true);
-            setUser(window.auth?.currentUser || null);
-            setUserProfileData(window.globalUserProfileData);
-        }
+    const checkGlobalAuthReady = () => {
+      if (window.isGlobalAuthReady && window.auth && window.db) {
+        setIsAuthReady(true);
+        setUser(window.auth.currentUser);
+        setUserProfileData(window.globalUserProfileData);
+        return true;
+      }
+      return false;
     };
 
-    initializeAuthState();
+    if (!checkGlobalAuthReady()) {
+      const intervalId = setInterval(() => {
+        if (checkGlobalAuthReady()) {
+          clearInterval(intervalId);
+          console.log("AllRegistrationsApp: Firebase a používateľské dáta sú pripravené (interval).");
+        }
+      }, 100); // Kontroluj každých 100 ms
+
+      // Listener na udalosť 'globalDataUpdated' ak sa dáta zmenia dynamicky
+      const handleGlobalDataUpdate = (event) => {
+        console.log('AllRegistrationsApp: Prijatá udalosť "globalDataUpdated". Aktualizujem lokálny stav.');
+        setIsAuthReady(true);
+        setUser(window.auth?.currentUser || null);
+        setUserProfileData(event.detail);
+      };
+      window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
+
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+      };
+    }
 
     let unsubscribeGlobalAuth;
     if (window.auth) {
@@ -282,39 +306,28 @@ function AllRegistrationsApp() {
                 window.location.href = 'login.html';
             }
         });
-    } else {
-        console.warn("AllRegistrationsApp: window.auth nie je definované pri prvom renderovaní. onAuthStateChanged listener sa nastaví, keď bude k dispozícii.");
     }
-
-    const handleGlobalDataUpdate = (event) => {
-        console.log('AllRegistrationsApp: Prijatá udalosť "globalDataUpdated". Aktualizujem lokálny stav.');
-        setIsAuthReady(true);
-        setUser(window.auth?.currentUser || null);
-        setUserProfileData(event.detail);
-    };
-    window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
 
     return () => {
       if (unsubscribeGlobalAuth) {
           unsubscribeGlobalAuth();
       }
-      window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
     };
-  }, []);
+  }, []); // Prázdne závislosti, aby sa spustil len raz
+
 
   // Lokálny Effect pre načítanie používateľských dát z Firestore
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    // Používame lokálne db (z window.db)
     if (isAuthReady && db && user) {
       console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
       setLoadingUsers(true);
 
       try {
-        // Používame importované funkcie doc a onSnapshot
-        const userDocRef = doc(db, `users/${user.uid}`);
-        unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
+        // Používame db.collection a db.doc ako to bolo v authentication.js
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot((docSnapshot) => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
             console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
@@ -362,7 +375,7 @@ function AllRegistrationsApp() {
         console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
-    } else if (!isAuthReady || !db || user === undefined) { // Používame lokálne db
+    } else if (!isAuthReady || !db || user === undefined) { 
         console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Current states: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
         setLoadingUsers(true);
     }
@@ -373,7 +386,7 @@ function AllRegistrationsApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth, doc, onSnapshot]);
+  }, [isAuthReady, db, user, auth]);
 
 
   // Effect for fetching all users from Firestore and column order
@@ -386,7 +399,6 @@ function AllRegistrationsApp() {
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
 
 
-    // Používame lokálne db (z window.db)
     if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions met: Approved Admin. Proceeding to fetch data.");
         setLoadingUsers(true);
@@ -394,13 +406,11 @@ function AllRegistrationsApp() {
 
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
-            // Používame importované funkcie collection a doc
-            const columnOrderColRef = collection(db, 'users', user.uid, 'columnOrder');
-            const columnOrderDocRef = doc(columnOrderColRef, 'columnOrder');
+            // Používame db.collection a db.doc
+            const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
 
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
-            // Používame importované onSnapshot
-            unsubscribeColumnOrder = onSnapshot(columnOrderDocRef, docSnapshot => {
+            unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists());
                 let newOrderToSet = defaultColumnOrder;
 
@@ -433,15 +443,15 @@ function AllRegistrationsApp() {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané uložené poradie:", newOrderToSet);
                     } else {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
-                        // Používame importované setDoc
-                        setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
+                        // Používame db.doc().set()
+                        db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder').set({ order: defaultColumnOrder }, { merge: true })
                             .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
                             .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
                     }
                 } else {
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
-                    // Používame importované setDoc
-                    setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
+                    // Používame db.doc().set()
+                    db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder').set({ order: defaultColumnOrder }, { merge: true })
                         .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
                         .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
                 }
@@ -463,10 +473,8 @@ function AllRegistrationsApp() {
 
         // --- Získanie všetkých používateľov z kolekcie 'users' ---
         try {
-            // Používame importované collection
-            const usersCollectionRef = collection(db, 'users');
-            // Používame importované onSnapshot
-            unsubscribeAllUsers = onSnapshot(usersCollectionRef, snapshot => {
+            // Používame db.collection
+            unsubscribeAllUsers = db.collection('users').onSnapshot(snapshot => {
                 const usersData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -515,7 +523,7 @@ function AllRegistrationsApp() {
             unsubscribeColumnOrder();
         }
     };
-  }, [db, userProfileData, isAuthReady, user, collection, doc, onSnapshot, setDoc]);
+  }, [db, userProfileData, isAuthReady, user]);
 
 
   // Sorting logic
@@ -733,12 +741,11 @@ function AllRegistrationsApp() {
     setColumnOrder(newColumnOrder);
 
     // Uloženie nového poradia do Firestore
-    // Používame importované funkcie collection, doc a setDoc
+    // Používame db.collection a db.doc
     if (db && user && user.uid) {
-        const columnOrderColRef = collection(db, 'users', user.uid, 'columnOrder');
-        const columnOrderDocRef = doc(columnOrderColRef, 'columnOrder');
+        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
-            await setDoc(columnOrderDocRef, { order: newColumnOrder }, { merge: true });
+            await columnOrderDocRef.set({ order: newColumnOrder }, { merge: true });
             console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
@@ -750,12 +757,11 @@ function AllRegistrationsApp() {
   // Funkcia na uloženie viditeľnosti stĺpcov do Firestore
   const handleSaveColumnVisibility = async (updatedColumns) => {
     setColumnOrder(updatedColumns);
-    // Používame importované funkcie collection, doc a setDoc
+    // Používame db.collection a db.doc
     if (db && user && user.uid) {
-        const columnOrderColRef = collection(db, 'users', user.uid, 'columnOrder');
-        const columnOrderDocRef = doc(columnOrderColRef, 'columnOrder');
+        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
-            await setDoc(columnOrderDocRef, { order: updatedColumns }, { merge: true });
+            await columnOrderDocRef.set({ order: updatedColumns }, { merge: true });
             setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní viditeľnosti stĺpcov do Firestore:", e);
