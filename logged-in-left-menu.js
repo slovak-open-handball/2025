@@ -3,6 +3,7 @@
 // a obsluhy udalostí pri kliknutí a prechode myšou.
 // Bola pridaná nová funkcionalita na ukladanie stavu menu do databázy používateľa.
 // Úprava: Dynamicky mení triedy na '#main-content-area' pre správne zarovnanie obsahu.
+// FIX: Opravené správanie menu po hoveri, aby sa správne zbalilo, ak nebolo manuálne rozbalené.
 
 // Importy pre potrebné Firebase funkcie
 import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -17,33 +18,30 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
-    // ZMENA: Získame referenciu na hlavný obsah, menuSpacer bol odstránený z HTML
     const mainContentArea = document.getElementById('main-content-area'); 
 
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
     
-    // ZMENA: Aktualizovaná kontrola elementov, menuSpacer bol odstránený
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !mainContentArea) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo #main-content-area po vložení HTML.");
         return;
     }
 
     // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
+    // isMenuToggled bude teraz reprezentovať *manuálny* stav menu (kliknutie na tlačidlo alebo stav z DB)
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
     /**
-     * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie a po prepnutí)
-     * @param {boolean} expandedState - true ak má byť menu rozbalené, false ak zbalené.
+     * Pomocná funkcia na vizuálnu aktualizáciu stavu menu (pridáva/odstraňuje triedy).
+     * NEUPRAVUJE premennú `isMenuToggled`.
+     * @param {boolean} expanded - true ak má byť menu vizuálne rozbalené, false ak zbalené.
      */
-    const applyMenuState = (expandedState) => {
-        isMenuToggled = expandedState; // Aktualizujeme lokálny stav
-
-        if (expandedState) {
+    const setVisualMenuState = (expanded) => {
+        if (expanded) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
-            // NOVINKA: Aplikujeme triedy na mainContentArea
             mainContentArea.classList.remove('menu-collapsed');
             mainContentArea.classList.add('menu-expanded');
             menuTexts.forEach(span => {
@@ -52,13 +50,22 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
-            // NOVINKA: Aplikujeme triedy na mainContentArea
             mainContentArea.classList.remove('menu-expanded');
             mainContentArea.classList.add('menu-collapsed');
             menuTexts.forEach(span => {
                 span.classList.add('opacity-0');
             });
         }
+    };
+
+    /**
+     * Funkcia na aplikovanie trvalého stavu menu (pre počiatočné načítanie a po manuálnom prepnutí).
+     * Taktiež vizuálne aktualizuje menu.
+     * @param {boolean} expandedState - true ak má byť menu trvalo rozbalené, false ak trvalo zbalené.
+     */
+    const applyMenuState = (expandedState) => {
+        isMenuToggled = expandedState; // Aktualizujeme PERMANENTNÝ lokálny stav
+        setVisualMenuState(expandedState); // Aplikujeme vizuálny stav
     };
     
     // Nová funkcia na dynamickú zmenu textu menu
@@ -77,12 +84,12 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const showAdminLinks = () => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
-            tournamentSettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na nastavenia turnaja
-            allRegistrationsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na všetky registrácie
+            tournamentSettingsLink.classList.remove('hidden'); 
+            allRegistrationsLink.classList.remove('hidden'); 
         } else {
             addCategoriesLink.classList.add('hidden');
-            tournamentSettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na nastavenia turnaja
-            allRegistrationsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na všetky registrácie
+            tournamentSettingsLink.classList.add('hidden'); 
+            allRegistrationsLink.classList.add('hidden'); 
         }
     };    
 
@@ -101,7 +108,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             console.log("left-menu.js: Stav menu bol úspešne uložený do databázy.");
         } catch (error) {
             console.error("left-menu.js: Chyba pri ukladaní/vytváraní stavu menu:", error);
-            // Zobrazenie globálnej notifikácie, ak je funkcia dostupná
             if (window.showGlobalNotification) {
                  window.showGlobalNotification('Nepodarilo sa uložiť nastavenia menu. Skontrolujte oprávnenia.', 'error');
             }
@@ -110,36 +116,34 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
     // Aplikujeme počiatočný stav menu pri načítaní
     applyMenuState(isMenuToggled); // Počiatočný stav z userProfileData
-    // Aplikujeme dynamický text menu
     updateMenuText();
-    // Zobrazíme admin odkazy na základe roly
     showAdminLinks();
     
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
-        // Prepínanie aktuálneho stavu menu
-        applyMenuState(!isMenuToggled); // Prepínanie stavu
+        // Prepínanie PERMANENTNÉHO stavu menu
+        applyMenuState(!isMenuToggled); 
         saveMenuState();
     });
 
     // Obsluha prechodu myšou pre automatické rozbalenie
     leftMenu.addEventListener('mouseenter', () => {
-        if (!isMenuToggled) { // Ak je menu zbalené (a nie je manuálne prepnuté)
-            applyMenuState(true); // Dočasne rozbalíme menu
-            // Neukladáme stav pri hoveri do DB, aby sa zachoval manuálny stav používateľa
+        // Ak je menu PERMANENTNE zbalené (t.j. nebolo manuálne prepnuté na rozbalené)
+        if (!isMenuToggled) { 
+            setVisualMenuState(true); // Dočasne rozbalíme menu VIZUÁLNE
         }
     });
 
     leftMenu.addEventListener('mouseleave', () => {
-        if (!isMenuToggled) { // Ak je menu zbalené (a nebolo manuálne prepnuté), vrátime ho do zbaleného stavu
-            applyMenuState(false); // Vrátime menu do zbaleného stavu
-            // Neukladáme stav pri hoveri do DB
+        // Ak je menu PERMANENTNE zbalené (t.j. nebolo manuálne prepnuté na rozbalené)
+        // Vrátime vizuálny stav na základe PERMANENTNÉHO stavu isMenuToggled
+        if (!isMenuToggled) { 
+            setVisualMenuState(false); // Vrátime menu do zbaleného VIZUÁLNEHO stavu
         }
     });
 };
 
 const loadLeftMenu = async (userProfileData) => {
-    // Kontrola, či existujú dáta používateľa, bez nich nemá menu zmysel
     if (userProfileData && userProfileData.id) {
         const menuPlaceholder = document.getElementById('menu-placeholder');
         if (!menuPlaceholder) {
@@ -157,9 +161,6 @@ const loadLeftMenu = async (userProfileData) => {
             console.log("left-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
             // ZMENA: Asynchrónne spustenie setupMenuListeners
-            // Zabaliť volanie setupMenuListeners do setTimeout s oneskorením 0ms.
-            // Tým sa zabezpečí, že sa vykoná v nasledujúcom cykle udalostí prehliadača,
-            // čo dá prehliadaču čas na spracovanie vloženého HTML a pridanie elementov do DOM.
             setTimeout(() => {
                 const db = window.db;
                 const userId = userProfileData.id;
@@ -168,7 +169,7 @@ const loadLeftMenu = async (userProfileData) => {
                 if (leftMenuElement) {
                     leftMenuElement.classList.remove('hidden');
                 }
-            }, 0); // Použite setTimeout s 0ms
+            }, 0); 
             
 
         } catch (error) {
