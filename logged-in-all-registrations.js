@@ -207,15 +207,16 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 
 
 // Main React component for the logged-in-all-registrations.html page
-function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Zmena: Prijímame initialUserProfileData
+function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   // NOVÉ: Získame referencie na Firebase služby z globálnych premenných
   const auth = window.auth;
   const db = window.db;
 
   // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
-  // Tieto stavy budú aktualizované cez 'globalDataUpdated' event.
-  const [user, setUser] = React.useState(auth ? auth.currentUser : null); 
-  const [userProfileData, setUserProfileData] = React.useState(initialUserProfileData); 
+  // Tieto stavy budú aktualizované lokálnym onAuthStateChanged a onSnapshot
+  // Používame window.globalUserProfileData pre počiatočný stav
+  const [user, setUser] = React.useState(window.auth.currentUser); 
+  const [userProfileData, setUserProfileData] = React.useState(window.globalUserProfileData); 
   const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady); // Získame globálny stav pripravenosti
 
   const [loadingUsers, setLoadingUsers] = React.useState(true); // NOVINKA: Oddelený stav pre načítanie používateľov
@@ -256,32 +257,196 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
 
 
-  // NOVÉ: Reakcia na globálne zmeny stavu autentifikácie a profilu
+  // NOVÉ: Lokálny Auth Listener pre AllRegistrationsApp
+  // Tento listener zabezpečí, že AllRegistrationsApp reaguje na zmeny autentifikácie,
+  // ale primárne odhlásenie/presmerovanie spravuje GlobalNotificationHandler.
   React.useEffect(() => {
-    const handleGlobalDataUpdate = (event) => {
-      console.log("AllRegistrationsApp: Prijatá udalosť 'globalDataUpdated' v komponente.");
-      setUserProfileData(event.detail);
-      setUser(auth ? auth.currentUser : null); // Aktualizujeme aj objekt užívateľa
-      setIsAuthReady(true); // Teraz sú dáta pripravené
-    };
-
-    window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
-
-    // Počiatočná kontrola, ak už sú dáta dostupné pri načítaní komponentu
-    if (window.isGlobalAuthReady && window.globalUserProfileData) {
-        setIsAuthReady(true);
-        setUser(auth ? auth.currentUser : null);
-        setUserProfileData(window.globalUserProfileData);
+    // Akonáhle je globálna autentifikácia pripravená, nastavíme lokálny stav
+    if (window.isGlobalAuthReady) {
+      setIsAuthReady(true);
+      setUser(window.auth.currentUser);
+      setUserProfileData(window.globalUserProfileData);
     }
-    
-    // Čistenie pri odpojení komponentu
-    return () => {
-      window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+
+    // Nastavíme listener na zmeny globálneho stavu autentifikácie
+    const unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
+      console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser);
+      // Ak používateľ nie je prihlásený, presmerujeme ho (aj keď by to mal spraviť GNH)
+      if (!currentUser) {
+        console.log("AllRegistrationsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+        window.location.href = 'login.html';
+      }
+    });
+
+    // Nastavíme listener na zmeny globálneho profilu používateľa
+    const unsubscribeGlobalProfile = () => {
+      // Táto funkcia sa zavolá, keď sa zmení globalUserProfileData
+      // V AuthenticationManageri už je onSnapshot, takže tu len preberáme dáta
+      setUserProfileData(window.globalUserProfileData);
     };
-  }, [auth]); // Závislosť na auth inštancii
+    // Pridáme vlastný event listener, ak ho GlobalNotificationHandler poskytuje
+    window.addEventListener('globalProfileDataChanged', unsubscribeGlobalProfile);
+
+
+    return () => {
+      unsubscribeGlobalAuth();
+      window.removeEventListener('globalProfileDataChanged', unsubscribeGlobalProfile);
+    };
+  }, []); // Závisí od auth inštancie
+
+  // NOVÉ: Lokálny Effect pre načítanie používateľských dát z Firestore
+  // Tento efekt sa spustí, keď je používateľ prihlásený a db je k dispozícii.
+  // Predpokladá sa, že passwordLastChanged a approved status sú už overené v header.js.
+  React.useEffect(() => {
+    let unsubscribeUserDoc;
+
+    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
+    if (isAuthReady && db && user !== undefined) {
+      if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
+        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
+      if (user) {
+        console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`); // Zmena logu
+        // Nastavíme loading na true, pretože začíname načítavať profilové dáta
+        setLoadingUsers(true); // Nastavíme loading na true tu
+
+        try {
+          const userDocRef = db.collection('users').doc(user.uid);
+          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+            if (docSnapshot.exists) {
+              const userData = docSnapshot.data();
+              console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
+
+              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
+              // Toto je pridaná logika, ktorá sa spustí hneď po načítaní dát.
+              // Ak je passwordLastChanged neplatný alebo chýba, odhlásiť.
+              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                  console.error("AllRegistrationsApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged); // Zmena logu
+                  console.log("AllRegistrationsApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla."); // Zmena logu
+                  auth.signOut(); // Používame auth z React stavu
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return; // Zastaviť ďalšie spracovanie
+              }
+
+              // Normal processing if passwordLastChanged is valid
+              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+              const localStorageKey = `passwordLastChanged_${user.uid}`;
+              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+              console.log(`AllRegistrationsApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`); // Zmena logu
+
+              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                  // First load for this user/browser, initialize localStorage and do NOT logout
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("AllRegistrationsApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie)."); // Zmena logu
+                  // No return here, continue with normal data processing for the first load
+              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                  // Password was changed on another device/session
+                  console.log("AllRegistrationsApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa."); // Zmena logu
+                  auth.signOut(); // Používame auth z React stavu
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return;
+              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                  // This should ideally not happen if Firestore is the source of truth
+                  console.warn("AllRegistrationsApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad)."); // Zmena logu
+                  auth.signOut(); // Používame auth z React stavu
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return;
+              } else {
+                  // Times are equal, ensure localStorage is up-to-date
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("AllRegistrationsApp: Timestampy sú rovnaké, aktualizujem localStorage."); // Zmena logu
+              }
+
+              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
+              if (userData.role === 'admin' && userData.approved === false) {
+                  console.log("AllRegistrationsApp: Používateľ je admin a nie je schválený. Odhlasujem."); // Zmena logu
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return; // Zastav ďalšie spracovanie
+              }
+
+              setUserProfileData(userData); // Aktualizujeme stav userProfileData
+              setLoadingUsers(false); // Stop loading po načítaní používateľských dát
+              setError(''); // Vymazať chyby po úspešnom načítaní
+
+              // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
+              if (typeof window.updateMenuItemsVisibility === 'function') {
+                  window.updateMenuItemsVisibility(userData.role);
+              } else {
+                  console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná."); // Zmena logu
+              }
+
+              console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené, loadingUsers: false"); // Zmena logu
+            } else {
+              console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // Zmena logu
+              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
+              setLoadingUsers(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              setUser(null); // Explicitne nastaviť user na null
+              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+            }
+          }, error => {
+            console.error("AllRegistrationsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error); // Zmena logu
+            if (error.code === 'permission-denied') {
+                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
+            } else if (error.code === 'unavailable') {
+                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
+            } else if (error.code === 'unauthenticated') {
+                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
+                 if (auth) {
+                    auth.signOut();
+                    window.location.href = 'login.html';
+                    setUser(null); // Explicitne nastaviť user na null
+                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                 }
+            } else {
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+            }
+            setLoadingUsers(false); // Stop loading aj pri chybe
+            console.log("AllRegistrationsApp: Načítanie používateľských dát zlyhalo, loadingUsers: false"); // Zmena logu
+            setUser(null); // Explicitne nastaviť user na null
+            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+          });
+        } catch (e) {
+          console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e); // Zmena logu
+          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
+          setLoadingUsers(false); // Stop loading aj pri chybe
+          setUser(null); // Explicitne nastaviť user na null
+          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+        }
+      }
+    } else if (isAuthReady && user === undefined) {
+        console.log("AllRegistrationsApp: Auth ready, user undefined. Nastavujem loadingUsers na false."); // Zmena logu
+        setLoadingUsers(false);
+    }
+
+
+    return () => {
+      // Zrušíme odber onSnapshot pri unmount
+      if (unsubscribeUserDoc) {
+        console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument."); // Zmena logu
+        unsubscribeUserDoc();
+      }
+    };
+  }, [isAuthReady, db, user, auth]);
 
   // Effect for fetching all users from Firestore and column order
-  // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
   React.useEffect(() => {
     let unsubscribeAllUsers;
     let unsubscribeColumnOrder;
@@ -289,10 +454,10 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Triggered.");
-    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", !!user, "user.uid:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
+    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", !!user, "user.uid:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A");
 
-    // Kľúčová podmienka pre načítanie dát
-    if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
+
+    if (db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions met: Approved Admin. Proceeding to fetch data.");
         setLoadingUsers(true); // Indicate loading for users
         setLoadingColumnOrder(true); // Indicate loading for column order
@@ -300,9 +465,9 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
             // Cesta pre columnOrder je teraz users/{userId}/columnOrder/columnOrder
-            const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder'); // Používame doc z firestore.js
+            const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
-            unsubscribeColumnOrder = onSnapshot(columnOrderDocRef, docSnapshot => { // Používame onSnapshot z firestore.js
+            unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists);
                 let newOrderToSet = defaultColumnOrder; // Predvolené poradie
 
@@ -341,14 +506,14 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
                         // Dokument existuje, ale savedOrder je prázdny alebo poškodený.
                         // To znamená, že by sa mal resetovať na predvolené a uložiť.
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
-                        setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true }) // Používame setDoc
+                        columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
                             .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
                             .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
                     }
                 } else {
                     // Dokument neexistuje. Nastavte predvolené a uložte ho.
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
-                    setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true }) // Používame setDoc
+                    columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
                         .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
                         .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
                 }
@@ -370,8 +535,7 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
 
         // --- Získanie všetkých používateľov z kolekcie 'users' ---
         try {
-            const usersCollectionRef = collection(db, 'users'); // Používame collection z firestore.js
-            unsubscribeAllUsers = onSnapshot(usersCollectionRef, snapshot => { // Používame onSnapshot z firestore.js
+            unsubscribeAllUsers = db.collection('users').onSnapshot(snapshot => {
                 const usersData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -565,25 +729,50 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
   }, [allUsers, activeFilters]);
 
 
+  // useEffect for updating header link visibility
+  React.useEffect(() => {
+    console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // Zmena logu
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    const registerLink = document.getElementById('register-link');
+
+    if (authLink) {
+      if (user) { // If user is logged in
+        authLink.classList.add('hidden');
+        profileLink && profileLink.classList.remove('hidden');
+        logoutButton && logoutButton.classList.remove('hidden');
+        registerLink && registerLink.classList.add('hidden');
+        console.log("AllRegistrationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // Zmena logu
+      } else { // If user is not logged in
+        authLink.classList.remove('hidden');
+        profileLink && profileLink.classList.add('hidden');
+        logoutButton && logoutButton.classList.add('hidden');
+        // Register link visibility will now be handled by register.js based on registration settings
+        // For logged-in-all-registrations.html, if not logged in, register link should be visible by default
+        registerLink && registerLink.classList.remove('hidden'); 
+        console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie."); // Zmena logu
+      }
+    }
+  }, [user]);
+
   // Handle logout (needed for the header logout button)
   const handleLogout = React.useCallback(async () => {
     if (!auth) return;
     try {
-      setLoadingUsers(true); 
-      setLoadingColumnOrder(true); 
+      setLoadingUsers(true); // ZMENA: Používame loadingUsers
+      setLoadingColumnOrder(true); // ZMENA: Používame loadingColumnOrder
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
-      // Použijeme globálne definovanú base path
-      const appBasePath = typeof window.getAppBasePath === 'function' ? window.getAppBasePath() : '';
-      window.location.href = `${appBasePath}/login.html`;
-      setUser(null); 
-      setUserProfileData(null); 
+      window.location.href = 'login.html';
+      setUser(null); // Explicitne nastaviť user na null
+      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
     } catch (e) {
-      console.error("AllRegistrationsApp: Chyba pri odhlásení:", e); 
+      console.error("AllRegistrationsApp: Chyba pri odhlásení:", e); // Zmena logu
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
-      setLoadingUsers(false); 
-      setLoadingColumnOrder(false); 
+      setLoadingUsers(false); // ZMENA: Používame loadingUsers
+      setLoadingColumnOrder(false); // ZMENA: Používame loadingColumnOrder
     }
   }, [auth]);
 
@@ -591,9 +780,7 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
-      // Odstránime starý listener, ak existuje, pre opätovné pripojenie
-      logoutButton.removeEventListener('click', window.handleLogout); // Odstránime pôvodný z header.js
-      logoutButton.addEventListener('click', handleLogout); // Pripojíme lokálny
+      logoutButton.addEventListener('click', handleLogout);
     }
     return () => {
       if (logoutButton) {
@@ -601,7 +788,6 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
       }
     };
   }, [handleLogout]);
-
 
   // Funkcia na presun stĺpca
   const moveColumn = async (columnId, direction) => {
@@ -619,13 +805,13 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
     }
 
     newColumnOrder.splice(newIndex, 0, columnToMove);
-    setColumnOrder(newColumnOrder); // Okamžitá aktualizácia lokálneho stavu
+    setColumnOrder(newColumnOrder); // ZMENA: Okamžitá aktualizácia lokálneho stavu
 
     // Uloženie nového poradia do Firestore
     if (db && user && user.uid) {
-        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder'); // Používame doc z firestore.js
+        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
-            await setDoc(columnOrderDocRef, { order: newColumnOrder }, { merge: true }); // Používame setDoc
+            await columnOrderDocRef.set({ order: newColumnOrder }, { merge: true }); // Používame merge: true
             console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
@@ -636,11 +822,11 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
 
   // Funkcia na uloženie viditeľnosti stĺpcov do Firestore
   const handleSaveColumnVisibility = async (updatedColumns) => {
-    setColumnOrder(updatedColumns); // Okamžitá aktualizácia lokálneho stavu
+    setColumnOrder(updatedColumns); // ZMENA: Okamžitá aktualizácia lokálneho stavu
     if (db && user && user.uid) {
-        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder'); // Používame doc z firestore.js
+        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
-            await setDoc(columnOrderDocRef, { order: updatedColumns }, { merge: true });
+            await columnOrderDocRef.set({ order: updatedColumns }, { merge: true });
             setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní viditeľnosti stĺpcov do Firestore:", e);
@@ -650,17 +836,14 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
   };
 
   // Display loading state
-  // Ak NIE JE Auth ready, ALEBO používateľ NIE JE definovaný, ALEBO používateľ existuje a jeho profilové dáta NIE SÚ načítané
-  // ALEBO načítavanie používateľov/poradia stĺpcov ešte prebieha.
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loadingUsers || loadingColumnOrder) { 
+  if (!isAuthReady || user === undefined || (user && !userProfileData) || loadingUsers || loadingColumnOrder) { // ZMENA: Podmienky pre loading
     if (isAuthReady && user === null) {
-        // Ak je Auth ready, ale používateľ je null (odhlásený), presmerujeme
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html.");
-        const appBasePath = typeof window.getAppBasePath === 'function' ? window.getAppBasePath() : '';
-        window.location.href = `${appBasePath}/login.html`;
-        return null; // Zastaviť vykresľovanie
+        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
+        window.location.href = 'login.html';
+        return null;
     }
     let loadingMessage = 'Načítavam...';
+    // Simplified loading message as it's now derived from two states
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -671,8 +854,7 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
   // Ak používateľ nie je admin alebo nie je schválený, presmerujeme ho
   if (userProfileData.role !== 'admin' || userProfileData.approved === false) {
       console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
-      const appBasePath = typeof window.getAppBasePath === 'function' ? window.getAppBasePath() : '';
-      window.location.href = `${appBasePath}/logged-in-my-data.html`;
+      window.location.href = 'logged-in-my-data.html';
       return null; // Zastaviť vykresľovanie
   }
 
@@ -772,8 +954,7 @@ function AllRegistrationsApp({ userProfileData: initialUserProfileData }) { // Z
                                             onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
                                             className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
                                         }, '→')
-                                    )
-                                    , // Pridaná čiarka
+                                    ),
                                     React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center' }, // Kliknutie na text pre triedenie, pridaný flex pre ikonu filtra
                                         col.label,
                                         currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
