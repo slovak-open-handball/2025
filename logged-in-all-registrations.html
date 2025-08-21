@@ -45,21 +45,20 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 64px; /* Predvolený margin-left pre zbalené menu */
-            margin-right: 2rem; /* Pevná pravá medzera (2x 1rem) */
-            padding: 1rem; /* Zostáva vnútorné odsadenie */
+            margin-left: 0; /* Predvolene 0, menu-spacer to upraví dynamicky */
+            padding: 1rem;
             flex-grow: 1;
-            align-items: flex-start;
-            transition: margin-left 0.3s ease;
+            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
             display: flex;
-            flex-direction: column;
+            justify-content: center; /* Centrovanie horizontálne */
+            align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
+            width: 100%; /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
         @media (max-width: 768px) {
             #main-content-area {
-                margin-left: 0;
-                margin-right: 1rem; /* Menšia medzera na mobiloch */
-                width: 100%;
-                justify-content: center;
+                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                width: 100%; /* Na mobiloch zaberá celú šírku */
+                justify-content: center; /* Stále centrovať obsah */
                 align-items: flex-start;
             }
         }
@@ -113,16 +112,15 @@
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
-    <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky -->
-        <div id="menu-placeholder"></div>
-        
-        <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <main id="main-content-area" class="flex-grow p-4">
-            <!-- React aplikácia sa vykreslí sem -->
-            <div id="root" class="container mx-auto px-4 sm:px-6 lg:px-8 py-8"></div>
-        </main>
-    </div>
+    <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
+    <div id="menu-placeholder"></div>
+
+    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
+        <!-- Tento div vytvára priestor pre zbalené/rozbalené menu, aby obsah nebol pod ním -->
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> 
+        <!-- React aplikácia sa vykreslí sem -->
+        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8"></div>
+    </main>
 
     <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) ako modul -->
     <script type="module" src="logged-in-all-registrations.js"></script>
@@ -170,20 +168,12 @@
                 return;
             }
             // Kontrola, či je komponent AllRegistrationsApp definovaný
-            // Používame window.AllRegistrationsApp, pretože je sprístupnený globálne
             if (typeof window.AllRegistrationsApp === 'undefined') {
                 console.log("logged-in-all-registrations.html: Čakám na definíciu AllRegistrationsApp...");
                 setTimeout(checkReadyAndRender, 100); // Skúste znova po krátkom oneskorení
                 return;
             }
-            // NOVINKA: Čakáme aj na načítanie funkcie loadLeftMenu
-            if (typeof window.loadLeftMenu === 'undefined') {
-                console.log("logged-in-all-registrations.html: Čakám na definíciu window.loadLeftMenu...");
-                setTimeout(checkReadyAndRender, 100); // Skúste znova po krátkom oneskorení
-                return;
-            }
-
-
+            
             // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
             // a kým je načítaný aj loader (window.showGlobalLoader existuje)
             if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
@@ -191,18 +181,6 @@
                 if (window.hideGlobalLoader) {
                     window.hideGlobalLoader();
                 }
-
-                // NOVINKA: Manuálne volanie loadLeftMenu, ak ešte nebolo volané
-                // Tento blok kódu je potrebný, ak sa globalDataUpdated udalosť neodošle dostatočne rýchlo
-                // alebo ak stránka už bola načítaná a používateľ prechádza na túto stránku
-                // bez plného opätovného načítania authentication.js.
-                // Robíme to podobne, ako keby to robil logged-in-left-menu.js, aby sa inicializovalo menu.
-                const menuPlaceholder = document.getElementById('menu-placeholder');
-                if (menuPlaceholder && menuPlaceholder.innerHTML === '') { // Načítame menu, len ak je placeholder prázdny
-                    console.log("logged-in-all-registrations.html: Inicializujem ľavé menu, pretože placeholder je prázdny.");
-                    window.loadLeftMenu(window.globalUserProfileData);
-                }
-
 
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(window.AllRegistrationsApp, null));
