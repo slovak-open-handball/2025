@@ -105,6 +105,10 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
+    
+    <!-- Načítanie loader.js ako modulu -->
+    <script type="module" src="loader.js"></script>
+    
     <!-- Načítanie autentifikačného skriptu ako modulu - MUSÍ BYŤ NAČÍTANÉ PRED AKÝKOĽVEK KÓDOM, KTORÝ POUŽÍVA window.auth alebo window.db -->
     <script type="module" src="authentication.js"></script>
 
@@ -121,15 +125,13 @@
             <div id="root" class="container mx-auto px-4 sm:px-6 lg:px-8 py-8"></div>
         </main>
     </div>
-
+    
     <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) ako modul -->
     <script type="module" src="logged-in-all-registrations.js"></script>
 
     <!-- Načítanie globálneho skriptu pre ľavé menu ako modul -->
     <script type="module" src="logged-in-left-menu.js"></script>
 
-    <!-- Načítanie loader.js ako modulu -->
-    <script type="module" src="loader.js"></script>
 
     <!-- Načítanie hlavičky a logiky stránky po načítaní DOM -->
     <script>
