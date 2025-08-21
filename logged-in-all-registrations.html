@@ -88,8 +88,8 @@
             z-index: 100; /* Nižšie ako notifikácia (1000), ale vyššie ako menu (20) */
         }
     </style>
-    <!-- Firebase Firestore SDK (UMD verzia) - PRIDANÉ PRE GLOBÁLNE SPRÍSTUPNENIE FUNKCIÍ -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+    <!-- Firebase Firestore SDK (UMD verzia) - ODSTRÁNENÉ: Boli s ňou problémy so SyntaxError.
+         Funkcie budeme importovať priamo v logged-in-all-registrations.js ako modul. -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
@@ -111,8 +111,8 @@
         </div>
     </div>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) -->
-    <script src="logged-in-all-registrations.js"></script>
+    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) ako modul -->
+    <script type="module" src="logged-in-all-registrations.js"></script>
 
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
@@ -128,7 +128,7 @@
 
                     const headerScript = document.createElement('script');
                     headerScript.src = 'header.js';
-                    headerScript.type = 'module'; // PRIDANÉ: Načítanie ako modul
+                    headerScript.type = 'module';
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
                     };
@@ -154,7 +154,7 @@
 
                     const menuScript = document.createElement('script');
                     menuScript.src = 'logged-in-left-menu.js';
-                    menuScript.type = 'module'; // PRIDANÉ: Načítanie ako modul
+                    menuScript.type = 'module';
                     menuScript.onload = () => {
                         console.log("logged-in-left-menu.js načítaný a spustený.");
                     };
@@ -175,12 +175,7 @@
                 console.log("logged-in-all-registrations.html: Čakám na inicializáciu Firebase v authentication.js...");
                 await new Promise(resolve => setTimeout(resolve, 100)); // Krátka pauza
             }
-            // NOVÉ: Počkáme aj na to, kým sú globálne Firebase Firestore funkcie dostupné
-            while (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined' || typeof firebase.firestore.collection === 'undefined') {
-                console.log("logged-in-all-registrations.html: Čakám na dostupnosť globálnych Firebase Firestore funkcií...");
-                await new Promise(resolve => setTimeout(resolve, 100)); // Krátka pauza
-            }
-            console.log("logged-in-all-registrations.html: Firebase inštancie a Firestore funkcie sú k dispozícii.");
+            console.log("logged-in-all-registrations.html: Firebase inštancie sú k dispozícii.");
 
             await loadHeader();
             await loadLeftMenu();
