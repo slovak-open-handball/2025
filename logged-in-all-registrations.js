@@ -98,7 +98,7 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-white bg-opacity-50 flex justify-center items-center z-50' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
         React.createElement(
             'div',
             { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
