@@ -310,33 +310,53 @@ const MyDataApp = ({ userProfileData }) => {
             if (dataEditDeadline) {
                 const deadlineMillis = dataEditDeadline.toMillis();
                 const nowMillis = Date.now();
-                const timeRemaining = deadlineMillis - nowMillis;
+                
+                // Logging pre diagnostiku
+                console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
+                console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
+                console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
 
-                if (timeRemaining > 0) {
-                    // Ak je deadline v budúcnosti, povoliť úpravy pre rolu 'user'
+
+                if (nowMillis <= deadlineMillis) { // Zmenené z timeRemaining > 0 na nowMillis <= deadlineMillis pre väčšiu presnosť
+                    // Ak je aktuálny čas menší alebo rovný deadline, povoliť úpravy pre rolu 'user'
                     if (isUser) {
                         setCanEdit(true);
+                        console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre USER - pred deadline.");
+                    } else {
+                         // Pre ostatné roly (mimo admina a user, ale v rámci deadline), stále zakážeme
+                         setCanEdit(false);
+                         console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin pred deadline.");
                     }
-                    // Ostatné roly (okrem admina) sa tu nepovolia úpravy, ak nemajú vlastnú logiku
+
 
                     // Ak už existuje časovač, vyčistíme ho, aby sme predišli duplikáciám
                     if (timer) clearTimeout(timer);
                     
-                    // Nastavíme časovač na automatické vypnutie úprav po uplynutí deadline
+                    // Nastavíme časovač na automatické vypnutie úprav presne po uplynutí deadline
                     timer = setTimeout(() => {
                         setCanEdit(false);
                         console.log("logged-in-my-data.js: Termín úprav uplynul pre rolu používateľa, zakazujem úpravy.");
-                    }, timeRemaining);
+                    }, deadlineMillis - nowMillis); // Dôležité: časovač sa nastaví na presný rozdiel
                 } else {
                     // Deadline už uplynul, zakázať úpravy pre rolu 'user'
                     if (isUser) {
                         setCanEdit(false);
+                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre USER - po deadline.");
+                    } else {
+                        // Pre ostatné roly (mimo admina a user), tiež zakázať po deadline
+                        setCanEdit(false);
+                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin po deadline.");
                     }
                 }
             } else {
                 // Ak deadline nie je špecifikovaný (napr. v databáze), zakázať úpravy pre rolu 'user'
                 if (isUser) {
                     setCanEdit(false);
+                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre USER - deadline nie je definovaný.");
+                } else {
+                    // Pre ostatné roly (mimo admina a user), tiež zakázať ak deadline nie je definovaný
+                    setCanEdit(false);
+                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ - iná rola ako user/admin, deadline nie je definovaný.");
                 }
             }
         }, (error) => {
