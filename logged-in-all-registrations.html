@@ -143,18 +143,19 @@
 
         // Funkcia na načítanie ľavého menu
         async function loadLeftMenu() {
-            // ZMENA: Používame nové ID placeholderu pre ľavé menu
+            // Používame ID placeholderu pre ľavé menu
             const menuPlaceholder = document.getElementById('menu-placeholder'); 
             if (menuPlaceholder) {
                 try {
                     const response = await fetch('logged-in-left-menu.html');
                     if (!response.ok) throw new Error('Network response was not ok.');
                     const menuHtml = await response.text();
-                    menuPlaceholder.innerHTML = menuHtml;
+                    menuPlaceholder.innerHTML = menuHtml; // HTML je vložené tu
 
+                    // Dynamicky pridáme skript až po vložení HTML
                     const menuScript = document.createElement('script');
                     menuScript.src = 'logged-in-left-menu.js';
-                    menuScript.type = 'module';
+                    menuScript.type = 'module'; // Dôležité: načítať ako modul
                     menuScript.onload = () => {
                         console.log("logged-in-left-menu.js načítaný a spustený.");
                     };
