@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React a ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -101,50 +104,26 @@
             padding: 1rem; /* Zabezpečenie vnútornej medzery */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
         }
-
-        /* Počiatočné štýly pre globálny loader, aby sa zobrazil okamžite */
-        #initial-global-loader {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(243, 244, 246, 1); /* Svetlošedé pozadie ako na obrázku */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 101; /* Vyšší z-index ako ostatné elementy */
-            transition: opacity 0.3s ease-in-out;
-            opacity: 1;
+        /* Zabraňuje zalomeniu textu v bunkách tabuľky */
+        table td {
+            white-space: nowrap;
         }
 
-        #initial-global-loader .spinner {
-            animation: spin 1s linear infinite;
-            border: 4px solid rgba(209, 213, 219, 1); /* border-gray-200 */
-            border-top-color: rgba(59, 130, 246, 1); /* border-t-blue-500 */
-            border-radius: 50%;
-            height: 3rem; /* h-12 */
-            width: 3rem; /* w-12 */
-        }
-
-        /* Skrytie obsahu body, kým sa nenačíta aplikácia */
-        body.loading-app > *:not(#initial-global-loader) {
-            visibility: hidden;
-            opacity: 0;
-        }
+        /* Odstránené počiatočné štýly pre globálny loader, aby sa zobrazil okamžite */
+        /* body.loading-app a #initial-global-loader boli odstránené */
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
     </style>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col loading-app">
-    <!-- Počiatočný loader, ktorý sa zobrazí okamžite -->
-    <div id="initial-global-loader">
+<body>
+    <!-- Odstránený počiatočný loader -->
+    <!-- <div id="initial-global-loader">
         <div class="spinner"></div>
-    </div>
+    </div> -->
 
-    <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
     <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
     <div id="menu-placeholder"></div>
@@ -153,7 +132,12 @@
         <!-- Tento div vytvára priestor pre zbalené/rozbalené menu, aby obsah nebol pod ním -->
         <div class="flex-shrink-0 w-16 transition-all duration-300"></div> 
         <!-- React aplikácia sa vykreslí sem -->
-        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8"></div>
+        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Lokálny loader ako vo logged-in-my-data.html -->
+            <div class="flex justify-center pt-16">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+            </div>
+        </div>
     </main>
 
     <!-- Skrytý div pre načítanie authentication.js (zabezpečuje inicializáciu Firebase) -->
@@ -214,19 +198,19 @@
             // a kým je načítaný aj loader (window.showGlobalLoader existuje)
             if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
                 // Skryjeme globálny loader (ten, ktorý vytvorí loader.js)
+                // Toto sa stane len, ak sa predtým showGlobalLoader() zavolalo z iného miesta
                 if (window.hideGlobalLoader) {
                     window.hideGlobalLoader();
                 }
 
-                // Odstránime počiatočný inline loader
-                const initialLoader = document.getElementById('initial-global-loader');
-                if (initialLoader) {
-                    initialLoader.style.opacity = '0';
-                    setTimeout(() => initialLoader.remove(), 300); // Počkajte na animáciu a potom odstráňte
+                // Odstránime lokálny loader, ktorý je priamo v HTML (v #root)
+                const rootElement = document.getElementById('root');
+                if (rootElement) {
+                    // Pred samotným vykreslením Reactu vyčistíme obsah root elementu
+                    rootElement.innerHTML = ''; 
                 }
-                document.body.classList.remove('loading-app'); // Zobrazte obsah body
-
-                const root = ReactDOM.createRoot(document.getElementById('root'));
+                
+                const root = ReactDOM.createRoot(rootElement);
                 root.render(React.createElement(window.AllRegistrationsApp, null));
                 console.log("logged-in-all-registrations.html: React App vykreslená.");
             } else {
@@ -235,11 +219,6 @@
             }
         };
 
-        // loader.js už sám volá showGlobalLoader a hideGlobalLoader na základe DOMContentLoaded.
-        // Avšak, potrebujeme zabezpečiť, aby sa _pred_ DOMContentLoaded zobrazilo niečo okamžite.
-        // Preto som pridal initial-global-loader priamo do HTML.
-        // Volanie showGlobalLoader() z loader.js po DOMContentLoaded bude spravovať ďalšie načítania.
-        
         // Načítanie hlavičky a spustenie kontroly a renderovania po načítaní DOM
         document.addEventListener('DOMContentLoaded', async () => {
             await loadHeader(); // Načítajte hlavičku
