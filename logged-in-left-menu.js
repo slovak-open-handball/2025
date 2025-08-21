@@ -2,8 +2,6 @@
 // Tento súbor spravuje logiku pre ľavé menu, vrátane jeho rozbalenia/zbalenia
 // a obsluhy udalostí pri kliknutí a prechode myšou.
 // Bola pridaná nová funkcionalita na ukladanie stavu menu do databázy používateľa.
-// Úprava: Dynamicky mení triedy na '#main-content-area' pre správne zarovnanie obsahu.
-// FIX: Opravené správanie menu po hoveri, aby sa správne zbalilo, ak nebolo manuálne rozbalené.
 
 // Importy pre potrebné Firebase funkcie
 import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -18,54 +16,41 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
-    const mainContentArea = document.getElementById('main-content-area'); 
-
+    const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
     
-    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !mainContentArea) {
-        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo #main-content-area po vložení HTML.");
+    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
+        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
         return;
     }
 
     // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
-    // isMenuToggled bude teraz reprezentovať *manuálny* stav menu (kliknutie na tlačidlo alebo stav z DB)
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
     /**
-     * Pomocná funkcia na vizuálnu aktualizáciu stavu menu (pridáva/odstraňuje triedy).
-     * NEUPRAVUJE premennú `isMenuToggled`.
-     * @param {boolean} expanded - true ak má byť menu vizuálne rozbalené, false ak zbalené.
+     * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
      */
-    const setVisualMenuState = (expanded) => {
-        if (expanded) {
+    const applyMenuState = () => {
+        if (isMenuToggled) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
-            mainContentArea.classList.remove('menu-collapsed');
-            mainContentArea.classList.add('menu-expanded');
-            menuTexts.forEach(span => {
-                span.classList.remove('opacity-0');
-            });
+            menuSpacer.classList.remove('w-16');
+            menuSpacer.classList.add('w-64');
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
-            mainContentArea.classList.remove('menu-expanded');
-            mainContentArea.classList.add('menu-collapsed');
-            menuTexts.forEach(span => {
-                span.classList.add('opacity-0');
-            });
+            menuSpacer.classList.remove('w-64');
+            menuSpacer.classList.add('w-16');
         }
-    };
-
-    /**
-     * Funkcia na aplikovanie trvalého stavu menu (pre počiatočné načítanie a po manuálnom prepnutí).
-     * Taktiež vizuálne aktualizuje menu.
-     * @param {boolean} expandedState - true ak má byť menu trvalo rozbalené, false ak trvalo zbalené.
-     */
-    const applyMenuState = (expandedState) => {
-        isMenuToggled = expandedState; // Aktualizujeme PERMANENTNÝ lokálny stav
-        setVisualMenuState(expandedState); // Aplikujeme vizuálny stav
+        menuTexts.forEach(span => {
+            if (isMenuToggled) {
+                span.classList.remove('opacity-0');
+            } else {
+                span.classList.add('opacity-0');
+            }
+        });
     };
     
     // Nová funkcia na dynamickú zmenu textu menu
@@ -84,12 +69,12 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const showAdminLinks = () => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
-            tournamentSettingsLink.classList.remove('hidden'); 
-            allRegistrationsLink.classList.remove('hidden'); 
+            tournamentSettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na nastavenia turnaja
+            allRegistrationsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na všetky registrácie
         } else {
             addCategoriesLink.classList.add('hidden');
-            tournamentSettingsLink.classList.add('hidden'); 
-            allRegistrationsLink.classList.add('hidden'); 
+            tournamentSettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na nastavenia turnaja
+            allRegistrationsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na všetky registrácie
         }
     };    
 
@@ -108,6 +93,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             console.log("left-menu.js: Stav menu bol úspešne uložený do databázy.");
         } catch (error) {
             console.error("left-menu.js: Chyba pri ukladaní/vytváraní stavu menu:", error);
+            // Zobrazenie globálnej notifikácie, ak je funkcia dostupná
             if (window.showGlobalNotification) {
                  window.showGlobalNotification('Nepodarilo sa uložiť nastavenia menu. Skontrolujte oprávnenia.', 'error');
             }
@@ -115,35 +101,43 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     };
 
     // Aplikujeme počiatočný stav menu pri načítaní
-    applyMenuState(isMenuToggled); // Počiatočný stav z userProfileData
+    applyMenuState();
+    // Aplikujeme dynamický text menu
     updateMenuText();
+    // Zobrazíme admin odkazy na základe roly
     showAdminLinks();
     
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
-        // Prepínanie PERMANENTNÉHO stavu menu
-        applyMenuState(!isMenuToggled); 
+        isMenuToggled = !isMenuToggled;
+        applyMenuState();
         saveMenuState();
     });
 
     // Obsluha prechodu myšou pre automatické rozbalenie
     leftMenu.addEventListener('mouseenter', () => {
-        // Ak je menu PERMANENTNE zbalené (t.j. nebolo manuálne prepnuté na rozbalené)
-        if (!isMenuToggled) { 
-            setVisualMenuState(true); // Dočasne rozbalíme menu VIZUÁLNE
+        if (!isMenuToggled) {
+            leftMenu.classList.remove('w-16');
+            leftMenu.classList.add('w-64');
+            menuSpacer.classList.remove('w-16');
+            menuSpacer.classList.add('w-64');
+            menuTexts.forEach(span => span.classList.remove('opacity-0'));
         }
     });
 
     leftMenu.addEventListener('mouseleave', () => {
-        // Ak je menu PERMANENTNE zbalené (t.j. nebolo manuálne prepnuté na rozbalené)
-        // Vrátime vizuálny stav na základe PERMANENTNÉHO stavu isMenuToggled
-        if (!isMenuToggled) { 
-            setVisualMenuState(false); // Vrátime menu do zbaleného VIZUÁLNEHO stavu
+        if (!isMenuToggled) {
+            leftMenu.classList.remove('w-64');
+            leftMenu.classList.add('w-16');
+            menuSpacer.classList.remove('w-64');
+            menuSpacer.classList.add('w-16');
+            menuTexts.forEach(span => span.classList.add('opacity-0'));
         }
     });
 };
 
 const loadLeftMenu = async (userProfileData) => {
+    // Kontrola, či existujú dáta používateľa, bez nich nemá menu zmysel
     if (userProfileData && userProfileData.id) {
         const menuPlaceholder = document.getElementById('menu-placeholder');
         if (!menuPlaceholder) {
@@ -160,17 +154,14 @@ const loadLeftMenu = async (userProfileData) => {
             menuPlaceholder.innerHTML = menuHtml;
             console.log("left-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
-            // ZMENA: Asynchrónne spustenie setupMenuListeners
-            setTimeout(() => {
-                const db = window.db;
-                const userId = userProfileData.id;
-                setupMenuListeners(userProfileData, db, userId);
-                const leftMenuElement = document.getElementById('left-menu');
-                if (leftMenuElement) {
-                    leftMenuElement.classList.remove('hidden');
-                }
-            }, 0); 
-            
+            // Po úspešnom vložení HTML hneď nastavíme poslucháčov
+            const db = window.db;
+            const userId = userProfileData.id;
+            setupMenuListeners(userProfileData, db, userId);
+            const leftMenuElement = document.getElementById('left-menu');
+            if (leftMenuElement) {
+                leftMenuElement.classList.remove('hidden');
+            }
 
         } catch (error) {
             console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
