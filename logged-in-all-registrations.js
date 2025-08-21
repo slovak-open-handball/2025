@@ -209,15 +209,17 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   // NOVÉ: Získame referencie na Firebase služby z globálnych premenných
+  // Poznámka: `window.auth` a `window.db` nemusia byť okamžite dostupné pri prvom vykreslení.
+  // Ich prítomnosť budeme kontrolovať v `useEffect` hookoch.
   const auth = window.auth;
   const db = window.db;
 
   // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
-  // Tieto stavy budú aktualizované lokálnym onAuthStateChanged a onSnapshot
-  // Používame window.globalUserProfileData pre počiatočný stav
-  const [user, setUser] = React.useState(window.auth.currentUser); 
-  const [userProfileData, setUserProfileData] = React.useState(window.globalUserProfileData); 
-  const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady); // Získame globálny stav pripravenosti
+  // Inicializujeme na null, pretože dáta budú načítané asynchrónne.
+  const [user, setUser] = React.useState(null); 
+  const [userProfileData, setUserProfileData] = React.useState(null); 
+  // `isAuthReady` indikuje, či `authentication.js` už dokončil počiatočnú kontrolu autentifikácie.
+  const [isAuthReady, setIsAuthReady] = React.useState(false); 
 
   const [loadingUsers, setLoadingUsers] = React.useState(true); // NOVINKA: Oddelený stav pre načítanie používateľov
   const [loadingColumnOrder, setLoadingColumnOrder] = React.useState(true); // NOVINKA: Oddelený stav pre načítanie poradia stĺpcov
@@ -259,192 +261,165 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
   // NOVÉ: Lokálny Auth Listener pre AllRegistrationsApp
   // Tento listener zabezpečí, že AllRegistrationsApp reaguje na zmeny autentifikácie,
-  // ale primárne odhlásenie/presmerovanie spravuje GlobalNotificationHandler.
+  // ale primárne odhlásenie/presmerovanie spravuje GlobalNotificationHandler (authentication.js).
   React.useEffect(() => {
-    // Akonáhle je globálna autentifikácia pripravená, nastavíme lokálny stav
-    if (window.isGlobalAuthReady) {
-      setIsAuthReady(true);
-      setUser(window.auth.currentUser);
-      setUserProfileData(window.globalUserProfileData);
+    // Vytvoríme funkciu na inicializáciu stavov
+    const initializeAuthState = () => {
+        if (window.isGlobalAuthReady) {
+            setIsAuthReady(true);
+            setUser(window.auth.currentUser);
+            setUserProfileData(window.globalUserProfileData);
+        }
+    };
+
+    // Okamžite skúsime inicializovať stav pri prvom spustení
+    initializeAuthState();
+
+    // Nastavíme listener na zmeny globálneho stavu autentifikácie (cez window.auth)
+    // TENTO LISTENER MUSÍ BYŤ NASTAVENÝ AŽ KEĎ JE `window.auth` DEFINOVANÉ!
+    let unsubscribeGlobalAuth;
+    if (window.auth) {
+        unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
+            console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+            setUser(currentUser);
+            setUserProfileData(window.globalUserProfileData); // Aktualizujeme aj profilové dáta
+            // Ak používateľ nie je prihlásený, presmerujeme ho (aj keď by to mal spraviť GNH)
+            if (!currentUser) {
+                console.log("AllRegistrationsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+                window.location.href = 'login.html';
+            }
+        });
+    } else {
+        console.warn("AllRegistrationsApp: window.auth nie je definované pri prvom renderovaní. onAuthStateChanged listener sa nastaví, keď bude k dispozícii.");
+        // Ak window.auth ešte nie je definované, môžeme počkať na event alebo re-render
+        // (Vďaka dependencies v ďalších useEffectoch a window.isGlobalAuthReady sa to nakoniec zosynchronizuje)
     }
 
-    // Nastavíme listener na zmeny globálneho stavu autentifikácie
-    const unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
-      console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-      setUser(currentUser);
-      // Ak používateľ nie je prihlásený, presmerujeme ho (aj keď by to mal spraviť GNH)
-      if (!currentUser) {
-        console.log("AllRegistrationsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
-        window.location.href = 'login.html';
-      }
-    });
-
     // Nastavíme listener na zmeny globálneho profilu používateľa
-    const unsubscribeGlobalProfile = () => {
-      // Táto funkcia sa zavolá, keď sa zmení globalUserProfileData
-      // V AuthenticationManageri už je onSnapshot, takže tu len preberáme dáta
-      setUserProfileData(window.globalUserProfileData);
+    const handleGlobalDataUpdate = (event) => {
+        console.log('AllRegistrationsApp: Prijatá udalosť "globalDataUpdated". Aktualizujem lokálny stav.');
+        setIsAuthReady(true); // Nastavíme isAuthReady na true, keď prvé dáta prídu
+        setUser(window.auth?.currentUser || null); // Bezpečný prístup
+        setUserProfileData(event.detail); // event.detail obsahuje userProfileData
     };
-    // Pridáme vlastný event listener, ak ho GlobalNotificationHandler poskytuje
-    window.addEventListener('globalProfileDataChanged', unsubscribeGlobalProfile);
-
+    window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
 
     return () => {
-      unsubscribeGlobalAuth();
-      window.removeEventListener('globalProfileDataChanged', unsubscribeGlobalProfile);
+      if (unsubscribeGlobalAuth) {
+          unsubscribeGlobalAuth();
+      }
+      window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
     };
-  }, []); // Závisí od auth inštancie
+  }, []); // Prázdne pole závislostí zabezpečí, že sa tento efekt spustí iba raz pri pripojení komponentu.
 
   // NOVÉ: Lokálny Effect pre načítanie používateľských dát z Firestore
   // Tento efekt sa spustí, keď je používateľ prihlásený a db je k dispozícii.
-  // Predpokladá sa, že passwordLastChanged a approved status sú už overené v header.js.
+  // Predpokladá sa, že passwordLastChanged a approved status sú už overené v authentication.js.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
-    if (isAuthReady && db && user !== undefined) {
-      if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
-        window.location.href = 'login.html';
-        return;
-      }
+    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie null)
+    if (isAuthReady && db && user) { // Kontrolujeme, či user nie je null alebo undefined
+      console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+      setLoadingUsers(true);
 
-      // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
-      if (user) {
-        console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`); // Zmena logu
-        // Nastavíme loading na true, pretože začíname načítavať profilové dáta
-        setLoadingUsers(true); // Nastavíme loading na true tu
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+          if (docSnapshot.exists()) {
+            const userData = docSnapshot.data();
+            console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
 
-        try {
-          const userDocRef = db.collection('users').doc(user.uid);
-          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            if (docSnapshot.exists) {
-              const userData = docSnapshot.data();
-              console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
+            // Ak je používateľ admin a nie je schválený, alebo má neplatný passwordLastChanged,
+            // presmerovanie by malo ideálne spraviť `authentication.js`.
+            // Ak sa sem dostaneme s takýmito dátami, znamená to, že `authentication.js` buď ešte nedokončil,
+            // alebo je tu nejaký okrajový prípad. Len zobrazíme chybu a presmerujeme.
 
-              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              // Toto je pridaná logika, ktorá sa spustí hneď po načítaní dát.
-              // Ak je passwordLastChanged neplatný alebo chýba, odhlásiť.
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("AllRegistrationsApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged); // Zmena logu
-                  console.log("AllRegistrationsApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla."); // Zmena logu
-                  auth.signOut(); // Používame auth z React stavu
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return; // Zastaviť ďalšie spracovanie
-              }
-
-              // Normal processing if passwordLastChanged is valid
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-              console.log(`AllRegistrationsApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`); // Zmena logu
-
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  // First load for this user/browser, initialize localStorage and do NOT logout
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("AllRegistrationsApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie)."); // Zmena logu
-                  // No return here, continue with normal data processing for the first load
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  // Password was changed on another device/session
-                  console.log("AllRegistrationsApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa."); // Zmena logu
-                  auth.signOut(); // Používame auth z React stavu
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey); // Clear localStorage after logout
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  // This should ideally not happen if Firestore is the source of truth
-                  console.warn("AllRegistrationsApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad)."); // Zmena logu
-                  auth.signOut(); // Používame auth z React stavu
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else {
-                  // Times are equal, ensure localStorage is up-to-date
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("AllRegistrationsApp: Timestampy sú rovnaké, aktualizujem localStorage."); // Zmena logu
-              }
-
-              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              if (userData.role === 'admin' && userData.approved === false) {
-                  console.log("AllRegistrationsApp: Používateľ je admin a nie je schválený. Odhlasujem."); // Zmena logu
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return; // Zastav ďalšie spracovanie
-              }
-
-              setUserProfileData(userData); // Aktualizujeme stav userProfileData
-              setLoadingUsers(false); // Stop loading po načítaní používateľských dát
-              setError(''); // Vymazať chyby po úspešnom načítaní
-
-              // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
-              } else {
-                  console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná."); // Zmena logu
-              }
-
-              console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené, loadingUsers: false"); // Zmena logu
-            } else {
-              console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // Zmena logu
-              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoadingUsers(false); // Zastaví načítavanie, aby sa zobrazila chyba
-              setUser(null); // Explicitne nastaviť user na null
-              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+            // Ak je používateľ admin a nie je schválený
+            if (userData.role === 'admin' && userData.approved === false) {
+                console.log("AllRegistrationsApp: Používateľ je admin a nie je schválený. Presmerovávam (opakovaná kontrola).");
+                window.location.href = 'login.html'; // Alebo na inú stránku pre neschváleného admina
+                return;
             }
-          }, error => {
-            console.error("AllRegistrationsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error); // Zmena logu
-            if (error.code === 'permission-denied') {
-                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
-            } else if (error.code === 'unavailable') {
-                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-            } else if (error.code === 'unauthenticated') {
-                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
-                 if (auth) {
+            
+            // Kontrola passwordLastChanged by mala byť primárne v authentication.js,
+            // ale pre istotu znova skontrolujeme, ak by došlo k pretečeniu.
+            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                console.error("AllRegistrationsApp: passwordLastChanged NIE JE platný Timestamp objekt! Odhlasujem (opakovaná kontrola).");
+                if (auth) { // Bezpečná kontrola
                     auth.signOut();
                     window.location.href = 'login.html';
-                    setUser(null); // Explicitne nastaviť user na null
-                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                 }
-            } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                }
+                return;
             }
-            setLoadingUsers(false); // Stop loading aj pri chybe
-            console.log("AllRegistrationsApp: Načítanie používateľských dát zlyhalo, loadingUsers: false"); // Zmena logu
-            setUser(null); // Explicitne nastaviť user na null
-            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-          });
-        } catch (e) {
-          console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e); // Zmena logu
-          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoadingUsers(false); // Stop loading aj pri chybe
-          setUser(null); // Explicitne nastaviť user na null
-          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-        }
-      }
-    } else if (isAuthReady && user === undefined) {
-        console.log("AllRegistrationsApp: Auth ready, user undefined. Nastavujem loadingUsers na false."); // Zmena logu
+
+            setUserProfileData(userData); // Aktualizujeme stav userProfileData
+            setLoadingUsers(false); // Stop loading po načítaní používateľských dát
+            setError(''); // Vymazať chyby po úspešnom načítaní
+
+            // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
+            if (typeof window.updateMenuItemsVisibility === 'function') {
+                window.updateMenuItemsVisibility(userData.role);
+            } else {
+                console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
+            }
+
+            console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené, loadingUsers: false");
+          } else {
+            console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
+            setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
+            setLoadingUsers(false);
+            setUser(null);
+            setUserProfileData(null);
+          }
+        }, error => {
+          console.error("AllRegistrationsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+          if (error.code === 'permission-denied') {
+              setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
+          } else if (error.code === 'unavailable') {
+              setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
+          } else if (error.code === 'unauthenticated') {
+               setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
+               if (auth) {
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null);
+                  setUserProfileData(null);
+               }
+          } else {
+              setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+          }
+          setLoadingUsers(false);
+          console.log("AllRegistrationsApp: Načítanie používateľských dát zlyhalo, loadingUsers: false");
+          setUser(null);
+          setUserProfileData(null);
+        });
+      } catch (e) {
+        console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
+        setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
         setLoadingUsers(false);
+        setUser(null);
+        setUserProfileData(null);
+      }
+    } else if (isAuthReady && user === null) {
+        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+        window.location.href = 'login.html';
+        return; // Dôležité pre ukončenie funkcie, ak sa presmerováva
+    } else if (!isAuthReady || !db || user === undefined) { // Prípad, keď ešte nie je Auth plne pripravená alebo db
+        console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Current states: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
+        setLoadingUsers(true); // Uistíme sa, že je stav načítavania
     }
 
 
     return () => {
       // Zrušíme odber onSnapshot pri unmount
       if (unsubscribeUserDoc) {
-        console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument."); // Zmena logu
+        console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [isAuthReady, db, user, auth]); // Dependencies: db, user, auth - ak sa tieto zmenia, efekt sa spustí znova
+
 
   // Effect for fetching all users from Firestore and column order
   React.useEffect(() => {
@@ -454,10 +429,11 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Triggered.");
-    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", !!user, "user.uid:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A");
+    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
 
 
-    if (db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
+    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a userProfileData je k dispozícii a používateľ je schválený admin
+    if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions met: Approved Admin. Proceeding to fetch data.");
         setLoadingUsers(true); // Indicate loading for users
         setLoadingColumnOrder(true); // Indicate loading for column order
@@ -559,6 +535,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     } else if (isAuthReady && user === null) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] User is null, not fetching data. Redirecting to login.html.");
         window.location.href = 'login.html';
+        return; // Dôležité pre ukončenie, aby sa nešlo ďalej, ak sa presmerováva
     } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] User is not an approved admin, not fetching data. Redirecting to my-data.html.");
         setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
@@ -566,6 +543,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         setLoadingColumnOrder(false); // Ensure loading is false if not authorized
         setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
         window.location.href = 'logged-in-my-data.html';
+        return; // Dôležité pre ukončenie, ak sa presmerováva
     } else {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions not met for fetching data. Waiting for state updates.");
         // If conditions are not met, ensure loading is false if it's stuck
@@ -731,48 +709,57 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
   // useEffect for updating header link visibility
   React.useEffect(() => {
-    console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // Zmena logu
+    console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
 
-    if (authLink) {
-      if (user) { // If user is logged in
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("AllRegistrationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // Zmena logu
-      } else { // If user is not logged in
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        // Register link visibility will now be handled by register.js based on registration settings
-        // For logged-in-all-registrations.html, if not logged in, register link should be visible by default
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie."); // Zmena logu
-      }
+    // Ak odkazy neexistujú, ukončíme funkciu.
+    if (!authLink || !profileLink || !logoutButton || !registerLink) {
+        console.warn("AllRegistrationsApp: Niektoré navigačné odkazy nie sú k dispozícii v DOM.");
+        return;
+    }
+
+    if (user) { // If user is logged in
+      authLink.classList.add('hidden');
+      profileLink.classList.remove('hidden');
+      logoutButton.classList.remove('hidden');
+      registerLink.classList.add('hidden');
+      console.log("AllRegistrationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
+    } else { // If user is not logged in
+      authLink.classList.remove('hidden');
+      profileLink.classList.add('hidden');
+      logoutButton.classList.add('hidden');
+      // Register link visibility will now be handled by register.js based on registration settings
+      // For logged-in-all-registrations.html, if not logged in, register link should be visible by default
+      registerLink.classList.remove('hidden'); 
+      console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
     }
   }, [user]);
 
   // Handle logout (needed for the header logout button)
   const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
+    // Pred odhlásením overte, či je `auth` definované.
+    if (!auth) {
+        console.error("AllRegistrationsApp: Chyba: Auth inštancia nie je definovaná pri pokuse o odhlásenie.");
+        setUserNotificationMessage("Chyba: Systém autentifikácie nie je pripravený. Skúste to znova.", 'error');
+        return;
+    }
     try {
-      setLoadingUsers(true); // ZMENA: Používame loadingUsers
-      setLoadingColumnOrder(true); // ZMENA: Používame loadingColumnOrder
+      setLoadingUsers(true);
+      setLoadingColumnOrder(true);
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
     } catch (e) {
-      console.error("AllRegistrationsApp: Chyba pri odhlásení:", e); // Zmena logu
+      console.error("AllRegistrationsApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
-      setLoadingUsers(false); // ZMENA: Používame loadingUsers
-      setLoadingColumnOrder(false); // ZMENA: Používame loadingColumnOrder
+      setLoadingUsers(false);
+      setLoadingColumnOrder(false);
     }
   }, [auth]);
 
@@ -836,14 +823,11 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   };
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loadingUsers || loadingColumnOrder) { // ZMENA: Podmienky pre loading
-    if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
-        window.location.href = 'login.html';
-        return null;
-    }
+  // Zobrazujeme "Načítavam..." pokiaľ nie je autentifikácia pripravená, alebo sa stále načítavajú dáta používateľa/stĺpcov.
+  if (!isAuthReady || loadingUsers || loadingColumnOrder || user === undefined) { 
     let loadingMessage = 'Načítavam...';
-    // Simplified loading message as it's now derived from two states
+    // Ak je `user` null a `isAuthReady` je true, znamená to, že používateľ nie je prihlásený a je potrebné presmerovať.
+    // Presmerovanie sa už robí v `useEffect` hookoch, ale toto je záložka pre zobrazenie stavu UI.
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -851,8 +835,9 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     );
   }
 
-  // Ak používateľ nie je admin alebo nie je schválený, presmerujeme ho
-  if (userProfileData.role !== 'admin' || userProfileData.approved === false) {
+  // Ak používateľ existuje, ale nie je schválený admin, presmerujeme ho.
+  // Táto kontrola sa vykonáva až po načítaní `userProfileData`.
+  if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
       console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
       window.location.href = 'logged-in-my-data.html';
       return null; // Zastaviť vykresľovanie
