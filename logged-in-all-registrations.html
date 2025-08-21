@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -44,20 +44,20 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 64px; /* ZMENA: Predvolený margin-left pre zbalené menu */
+            margin-left: 64px; /* Predvolený margin-left pre zbalené menu */
             padding: 1rem;
             flex-grow: 1;
             align-items: flex-start;
-            width: 100%; /* Zabezpečenie, že zaberá celú šírku okrem marginu */
-            transition: margin-left 0.3s ease; /* NOVINKA: Plynulý prechod pre margin-left */
-            display: flex; /* Aby sa obsah vo vnútri centroval */
-            flex-direction: column; /* Aby sa prvky vo vnútri ukladali pod seba */
+            width: 100%;
+            transition: margin-left 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
         @media (max-width: 768px) {
             #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
-                width: 100%; /* Na mobiloch zaberá celú šírku */
-                justify-content: center; /* Stále centrovať obsah */
+                margin-left: 0;
+                width: 100%;
+                justify-content: center;
                 align-items: flex-start;
             }
         }
@@ -78,7 +78,7 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
             cursor: pointer;
             transition: background-color 0.3s ease;
-            z-index: 30; /* Vyššie ako hlavička a menu */
+            z-index: 30;
         }
         .fab-button:hover {
             background-color: #10B981; /* Tmavšia zelená */
@@ -117,7 +117,6 @@
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
         <main id="main-content-area" class="flex-grow p-4">
-            <!-- ODSTRÁNENÉ: Pomocný div, ktorý vytvára priestor pre zbalené menu, teraz sa riadi margin-left na #main-content-area -->
             <!-- React aplikácia sa vykreslí sem -->
             <div id="root" class="container mx-auto px-4 sm:px-6 lg:px-8 py-8"></div>
         </main>
@@ -132,7 +131,7 @@
     <!-- Načítanie loader.js ako modulu -->
     <script type="module" src="loader.js"></script>
 
-    <!-- Načítanie hlavičky a logiky menu -->
+    <!-- Načítanie hlavičky a logiky stránky po načítaní DOM -->
     <script>
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
@@ -155,23 +154,7 @@
                     };
                     document.body.appendChild(headerScript);
                 } catch (error) {
-                        console.error("Chyba pri načítaní hlavičky:", error);
-                }
-            }
-        }
-
-        // Funkcia na načítanie ľavého menu
-        async function loadLeftMenu() {
-            // Používame ID placeholderu pre ľavé menu
-            const menuPlaceholder = document.getElementById('menu-placeholder'); 
-            if (menuPlaceholder) {
-                try {
-                    const response = await fetch('logged-in-left-menu.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const menuHtml = await response.text();
-                    menuPlaceholder.innerHTML = menuHtml; // HTML je vložené tu
-                } catch (error) {
-                    console.error("Chyba pri načítaní ľavého menu:", error);
+                    console.error("Chyba pri načítaní hlavičky:", error);
                 }
             }
         }
@@ -193,10 +176,16 @@
             console.log("logged-in-all-registrations.html: Firebase inštancie sú k dispozícii.");
 
             await loadHeader();
-            await loadLeftMenu(); // Táto funkcia už len vloží HTML menu
+            
+            // VOLANIE GLOBÁLNEJ FUNKCIE loadLeftMenu Z logged-in-left-menu.js
+            if (typeof window.loadLeftMenu === 'function' && window.globalUserProfileData) {
+                await window.loadLeftMenu(window.globalUserProfileData);
+                console.log("logged-in-all-registrations.html: Globálna funkcia loadLeftMenu z logged-in-left-menu.js volaná.");
+            } else {
+                console.warn("logged-in-all-registrations.html: window.loadLeftMenu nie je definovaná alebo window.globalUserProfileData chýba.");
+            }
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            // Počkáme na definíciu AllRegistrationsApp (ktorá je teraz exportovaná globálne z modulového skriptu)
             while (typeof window.AllRegistrationsApp === 'undefined') {
                  console.log("logged-in-all-registrations.html: Čakám na definíciu AllRegistrationsApp...");
                  await new Promise(resolve => setTimeout(resolve, 100));
@@ -205,7 +194,6 @@
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                // Skryť loader aj pri chybe
                 if (typeof window.hideGlobalLoader === 'function') {
                     window.hideGlobalLoader();
                 }
@@ -213,7 +201,7 @@
             }
             
             const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(window.AllRegistrationsApp, null)); // Používame window.AllRegistrationsApp
+            root.render(React.createElement(window.AllRegistrationsApp, null));
             console.log("logged-in-all-registrations.html: React App vykreslená.");
 
             // Skrytie globálneho loaderu po vykreslení aplikácie
@@ -222,13 +210,8 @@
             }
         };
 
-        // Spustenie globálneho loaderu hneď na začiatku, ak je skript načítaný skôr ako window.onload
         document.addEventListener('DOMContentLoaded', () => {
-            if (typeof window.showGlobalLoader === 'function') {
-                // Loader sa už zobrazuje v window.onload, ale táto časť zabezpečí, že sa zobrazí čo najskôr.
-                // Môžete ju odstrániť, ak preferujete zobrazenie len po window.onload.
-                // window.showGlobalLoader(); 
-            }
+            // Toto už nemusí byť potrebné, loader sa spúšťa v window.onload
         });
     </script>
 </body>
