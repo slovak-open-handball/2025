@@ -179,12 +179,6 @@
 
             await loadHeader();
             
-            // ! DÔLEŽITÁ ZMENA !
-            // Odstránené explicitné volanie window.loadLeftMenu() a čakanie naň.
-            // logged-in-left-menu.js sa načíta ako modul a sám reaguje na `globalDataUpdated`
-            // udalosť, ktorá je dispečovaná z authentication.js po inicializácii používateľského profilu.
-            // Týmto sa správanie zhoduje s logged-in-add-categories.html.
-
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
             while (typeof window.AllRegistrationsApp === 'undefined') {
                  console.log("logged-in-all-registrations.html: Čakám na definíciu AllRegistrationsApp...");
