@@ -16,14 +16,13 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
-    const menuSpacer = document.querySelector('#main-content-area > #menu-spacer'); // Zmena selektora na #menu-spacer
-    const mainContentArea = document.getElementById('main-content-area'); // Získanie hlavnej obsahovej oblasti
-    const addCategoriesLink = document.getElementById('add-categories-link');
-    const tournamentSettingsLink = document.getElementById('tournament-settings-link');
-    const allRegistrationsLink = document.getElementById('all-registrations-link');
+    const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
+    const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
+    const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
+    const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
     
-    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer || !mainContentArea) {
-        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy, menu spacer alebo main content area po vložení HTML.");
+    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
+        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
         return;
     }
 
@@ -31,36 +30,20 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
     /**
-     * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie a zmeny)
+     * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
      */
     const applyMenuState = () => {
-        // Kontrola pre mobilné zariadenia
-        if (window.innerWidth <= 768) {
-            leftMenu.classList.remove('w-64'); // Zabezpečí, že menu bude úzke na mobiloch
-            leftMenu.classList.add('w-16'); 
-            menuSpacer.classList.remove('w-64');
-            menuSpacer.classList.add('w-16');
-            mainContentArea.style.marginLeft = '0px'; // Na mobiloch žiadny margin
-            menuTexts.forEach(span => span.classList.add('opacity-0')); // Skryjeme texty na mobiloch
-            return; // Ukončíme funkciu, aby sa nepoužili desktopové štýly
-        }
-
-        // Desktopové správanie
         if (isMenuToggled) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
-            mainContentArea.style.marginLeft = '256px'; // Posunieme obsah doprava o šírku menu (256px)
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
-            mainContentArea.style.marginLeft = '64px'; // Posunieme obsah doprava o šírku zatvoreného menu (64px)
         }
-        
-        // Zobrazenie/skrytie textov v menu
         menuTexts.forEach(span => {
             if (isMenuToggled) {
                 span.classList.remove('opacity-0');
@@ -86,12 +69,12 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const showAdminLinks = () => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
-            tournamentSettingsLink.classList.remove('hidden');
-            allRegistrationsLink.classList.remove('hidden');
+            tournamentSettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na nastavenia turnaja
+            allRegistrationsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na všetky registrácie
         } else {
             addCategoriesLink.classList.add('hidden');
-            tournamentSettingsLink.classList.add('hidden');
-            allRegistrationsLink.classList.add('hidden');
+            tournamentSettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na nastavenia turnaja
+            allRegistrationsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na všetky registrácie
         }
     };    
 
@@ -133,31 +116,24 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
     // Obsluha prechodu myšou pre automatické rozbalenie
     leftMenu.addEventListener('mouseenter', () => {
-        // Iba ak nie je menu už toggled (kliknutím) a nie je na mobile
-        if (!isMenuToggled && window.innerWidth > 768) { 
+        if (!isMenuToggled) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
-            mainContentArea.style.marginLeft = '256px'; // Dočasné posunutie pre hover
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
         }
     });
 
     leftMenu.addEventListener('mouseleave', () => {
-        // Iba ak nie je menu už toggled (kliknutím) a nie je na mobile
-        if (!isMenuToggled && window.innerWidth > 768) {
+        if (!isMenuToggled) {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
-            mainContentArea.style.marginLeft = '64px'; // Návrat po hoveri
             menuTexts.forEach(span => span.classList.add('opacity-0'));
         }
     });
-
-    // Počúvanie na zmenu veľkosti okna pre prispôsobenie
-    window.addEventListener('resize', applyMenuState);
 };
 
 const loadLeftMenu = async (userProfileData) => {
