@@ -210,6 +210,343 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
     );
 }
 
+// Helper function for formatting postal code
+const formatPostalCode = (postalCode) => {
+    if (!postalCode) return '-';
+    const cleaned = String(postalCode).replace(/\s/g, ''); // Odstráni existujúce medzery
+    if (cleaned.length === 5) {
+      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
+    }
+    return postalCode; // Vráti pôvodné, ak nemá 5 číslic
+};
+
+// Helper function to get nested value from an object
+const getNestedValue = (obj, path) => {
+    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+};
+
+// Helper for formatting a generic address object
+const formatAddress = (address) => {
+    if (!address) return '-';
+    const parts = [];
+    if (address.street) parts.push(address.street);
+    if (address.houseNumber) parts.push(address.houseNumber);
+    if (address.postalCode) parts.push(formatPostalCode(address.postalCode));
+    if (address.city) parts.push(address.city);
+    if (address.country) parts.push(address.country);
+    return parts.filter(Boolean).join(', '); // Filter Boolean to remove empty strings
+};
+
+// Helper for formatting meal details
+const formatMeals = (mealsMap) => {
+    if (!mealsMap || Object.keys(mealsMap).length === 0) return 'Žiadne jedlá';
+    const mealSummaries = [];
+    for (const date in mealsMap) {
+        const dayMeals = mealsMap[date];
+        const daySummary = Object.keys(dayMeals).map(mealType => `${dayMeals[mealType]}x ${mealType}`).join(', ');
+        if (daySummary) mealSummaries.push(`${new Date(date).toLocaleDateString('sk-SK')}: (${daySummary})`);
+    }
+    return mealSummaries.join('; ');
+};
+
+// Helper for formatting t-shirt details
+const formatTshirts = (tshirtsArray) => {
+    if (!tshirtsArray || tshirtsArray.length === 0) return 'Žiadne tričká';
+    return tshirtsArray.map(t => `${t.quantity}x ${t.size}`).join(', ');
+};
+
+// New Component for rendering user's detailed data (nested table)
+function UserDetailsTable({ user }) {
+    return React.createElement(
+        'div',
+        { className: 'bg-white p-4 rounded-lg shadow-inner border border-gray-200' },
+        // Kategórie Section
+        user.categories && Object.keys(user.categories).length > 0 &&
+        React.createElement(
+            'div',
+            { className: 'mb-6' },
+            React.createElement('h4', { className: 'text-xl font-bold text-gray-800 mb-3 border-b pb-2' }, 'Kategórie'),
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto' },
+                React.createElement(
+                    'table',
+                    { className: 'min-w-full bg-white border border-gray-200 rounded-md' },
+                    React.createElement(
+                        'thead',
+                        null,
+                        React.createElement(
+                            'tr',
+                            { className: 'bg-gray-100 text-gray-600 text-xs uppercase' },
+                            React.createElement('th', { className: 'py-2 px-4 border-b text-left' }, 'Názov kategórie'),
+                            React.createElement('th', { className: 'py-2 px-4 border-b text-left' }, 'Počet tímov')
+                        )
+                    ),
+                    React.createElement(
+                        'tbody',
+                        null,
+                        Object.entries(user.categories).map(([categoryId, categoryData]) => (
+                            React.createElement(
+                                'tr',
+                                { key: categoryId, className: 'border-b last:border-b-0 hover:bg-gray-50' },
+                                React.createElement('td', { className: 'py-2 px-4' }, categoryId),
+                                React.createElement('td', { className: 'py-2 px-4' }, categoryData.numberOfTeams || '-')
+                            )
+                        ))
+                    )
+                )
+            )
+        ),
+
+        // Tímy Section
+        user.teams && Object.keys(user.teams).length > 0 &&
+        React.createElement(
+            'div',
+            null,
+            React.createElement('h4', { className: 'text-xl font-bold text-gray-800 mb-3 border-b pb-2' }, 'Tímy'),
+            Object.entries(user.teams).map(([categoryName, teamsArray]) => (
+                React.createElement(
+                    'div',
+                    { key: categoryName, className: 'mb-6 border border-blue-200 rounded-md p-4 bg-blue-50' },
+                    React.createElement('h5', { className: 'text-lg font-semibold mb-3 text-blue-800' }, `Kategória tímu: ${categoryName}`),
+                    teamsArray.map((team, teamIndex) => (
+                        React.createElement(
+                            'div',
+                            { key={`${categoryName}-${teamIndex}`, className: 'mb-4 p-4 bg-white rounded-md shadow-sm border border-gray-100 last:mb-0' },
+                            React.createElement('p', { className: 'font-bold text-gray-700 text-base mb-2' }, `Názov tímu: ${team.teamName || '-'}`),
+                            React.createElement('ul', { className: 'list-disc list-inside space-y-1 text-gray-700 text-sm mb-4' },
+                                React.createElement('li', null, `Počet hráčov: ${team.players || '-'}`),
+                                React.createElement('li', null, `Tričká: ${formatTshirts(team.tshirts)}`),
+                                React.createElement('li', null, `Ubytovanie: ${team.accommodation?.type || '-'}`),
+                                React.createElement('li', null, `Príchod: ${team.arrival?.type || '-'}`),
+                            ),
+                            
+                            // Detaily Balíčka
+                            team.packageDetails && React.createElement(
+                                'div',
+                                { className: 'ml-4 mt-2 p-3 bg-gray-50 rounded-md border border-gray-200' },
+                                React.createElement('h6', { className: 'font-semibold text-gray-700 mb-2 text-md' }, 'Detaily balíčka:'),
+                                React.createElement('ul', { className: 'list-disc list-inside space-y-1 text-gray-600 text-sm' },
+                                    React.createElement('li', null, `Názov: ${team.packageDetails.name || '-'}`),
+                                    React.createElement('li', null, `Cena: ${team.packageDetails.price ? `${team.packageDetails.price} €` : '-'}`),
+                                    React.createElement('li', null, `Účastnícka karta: ${team.packageDetails.participantCard ? 'Áno' : 'Nie'}`),
+                                    React.createElement('li', null, `Stravovanie: ${formatMeals(team.packageDetails.meals)}`)
+                                )
+                            ),
+
+                            // Detaily Hráčov
+                            team.playerDetails && team.playerDetails.length > 0 && React.createElement(
+                                'div',
+                                { className: 'ml-4 mt-4 p-3 bg-gray-50 rounded-md border border-gray-200' },
+                                React.createElement('h6', { className: 'font-semibold text-gray-700 mb-2 text-md' }, 'Detaily hráčov:'),
+                                React.createElement(
+                                    'div',
+                                    { className: 'overflow-x-auto' },
+                                    React.createElement(
+                                        'table',
+                                        { className: 'min-w-full bg-white border border-gray-200 text-xs rounded-md' },
+                                        React.createElement(
+                                            'thead',
+                                            null,
+                                            React.createElement(
+                                                'tr',
+                                                { className: 'bg-gray-100 text-gray-600 uppercase' },
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Meno'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Priezvisko'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Dátum nar.'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Dres'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Reg.č.'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Adresa')
+                                            )
+                                        ),
+                                        React.createElement(
+                                            'tbody',
+                                            null,
+                                            team.playerDetails.map((player, pIndex) => (
+                                                React.createElement(
+                                                    'tr',
+                                                    { key:`player-${pIndex}`, className: 'border-b last:border-b-0 hover:bg-gray-50' },
+                                                    React.createElement('td', { className: 'py-1 px-2' }, player.firstName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, player.lastName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, player.dateOfBirth || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, player.jerseyNumber || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, player.registrationNumber || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, formatAddress(player.address))
+                                                )
+                                            ))
+                                        )
+                                    )
+                                )
+                            ),
+                            
+                            // Detaily Členiek tímu (ženy)
+                            team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0 && React.createElement(
+                                'div',
+                                { className: 'ml-4 mt-4 p-3 bg-gray-50 rounded-md border border-gray-200' },
+                                React.createElement('h6', { className: 'font-semibold text-gray-700 mb-2 text-md' }, 'Detaily členiek tímu (ženy):'),
+                                React.createElement(
+                                    'div',
+                                    { className: 'overflow-x-auto' },
+                                    React.createElement(
+                                        'table',
+                                        { className: 'min-w-full bg-white border border-gray-200 text-xs rounded-md' },
+                                        React.createElement(
+                                            'thead',
+                                            null,
+                                            React.createElement(
+                                                'tr',
+                                                { className: 'bg-gray-100 text-gray-600 uppercase' },
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Meno'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Priezvisko'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Dátum nar.'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Adresa')
+                                            )
+                                        ),
+                                        React.createElement(
+                                            'tbody',
+                                            null,
+                                            team.womenTeamMemberDetails.map((member, mIndex) => (
+                                                React.createElement(
+                                                    'tr',
+                                                    { key:`w-member-${mIndex}`, className: 'border-b last:border-b-0 hover:bg-gray-50' },
+                                                    React.createElement('td', { className: 'py-1 px-2' }, member.firstName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, member.lastName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, member.dateOfBirth || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, formatAddress(member.address))
+                                                )
+                                            ))
+                                        )
+                                    )
+                                )
+                            ),
+
+                            // Detaily Členov tímu (muži)
+                            team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0 && React.createElement(
+                                'div',
+                                { className: 'ml-4 mt-4 p-3 bg-gray-50 rounded-md border border-gray-200' },
+                                React.createElement('h6', { className: 'font-semibold text-gray-700 mb-2 text-md' }, 'Detaily členov tímu (muži):'),
+                                React.createElement(
+                                    'div',
+                                    { className: 'overflow-x-auto' },
+                                    React.createElement(
+                                        'table',
+                                        { className: 'min-w-full bg-white border border-gray-200 text-xs rounded-md' },
+                                        React.createElement(
+                                            'thead',
+                                            null,
+                                            React.createElement(
+                                                'tr',
+                                                { className: 'bg-gray-100 text-gray-600 uppercase' },
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Meno'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Priezvisko'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Dátum nar.'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Adresa')
+                                            )
+                                        ),
+                                        React.createElement(
+                                            'tbody',
+                                            null,
+                                            team.menTeamMemberDetails.map((member, mIndex) => (
+                                                React.createElement(
+                                                    'tr',
+                                                    { key:`m-member-${mIndex}`, className: 'border-b last:border-b-0 hover:bg-gray-50' },
+                                                    React.createElement('td', { className: 'py-1 px-2' }, member.firstName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, member.lastName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, member.dateOfBirth || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, formatAddress(member.address))
+                                                )
+                                            ))
+                                        )
+                                    )
+                                )
+                            ),
+
+                            // Detaily vodičov (ženy)
+                            team.driverDetailsFemale && team.driverDetailsFemale.length > 0 && React.createElement(
+                                'div',
+                                { className: 'ml-4 mt-4 p-3 bg-gray-50 rounded-md border border-gray-200' },
+                                React.createElement('h6', { className: 'font-semibold text-gray-700 mb-2 text-md' }, 'Detaily vodičiek (ženy):'),
+                                React.createElement(
+                                    'div',
+                                    { className: 'overflow-x-auto' },
+                                    React.createElement(
+                                        'table',
+                                        { className: 'min-w-full bg-white border border-gray-200 text-xs rounded-md' },
+                                        React.createElement(
+                                            'thead',
+                                            null,
+                                            React.createElement(
+                                                'tr',
+                                                { className: 'bg-gray-100 text-gray-600 uppercase' },
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Meno'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Priezvisko'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Adresa')
+                                            )
+                                        ),
+                                        React.createElement(
+                                            'tbody',
+                                            null,
+                                            team.driverDetailsFemale.map((driver, dIndex) => (
+                                                React.createElement(
+                                                    'tr',
+                                                    { key:`f-driver-${dIndex}`, className: 'border-b last:border-b-0 hover:bg-gray-50' },
+                                                    React.createElement('td', { className: 'py-1 px-2' }, driver.firstName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, driver.lastName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, formatAddress(driver.address))
+                                                )
+                                            ))
+                                        )
+                                    )
+                                )
+                            ),
+
+                            // Detaily vodičov (muži)
+                            team.driverDetailsMale && team.driverDetailsMale.length > 0 && React.createElement(
+                                'div',
+                                { className: 'ml-4 mt-4 p-3 bg-gray-50 rounded-md border border-gray-200' },
+                                React.createElement('h6', { className: 'font-semibold text-gray-700 mb-2 text-md' }, 'Detaily vodičov (muži):'),
+                                React.createElement(
+                                    'div',
+                                    { className: 'overflow-x-auto' },
+                                    React.createElement(
+                                        'table',
+                                        { className: 'min-w-full bg-white border border-gray-200 text-xs rounded-md' },
+                                        React.createElement(
+                                            'thead',
+                                            null,
+                                            React.createElement(
+                                                'tr',
+                                                { className: 'bg-gray-100 text-gray-600 uppercase' },
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Meno'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Priezvisko'),
+                                                React.createElement('th', { className: 'py-1 px-2 border-b text-left' }, 'Adresa')
+                                            )
+                                        ),
+                                        React.createElement(
+                                            'tbody',
+                                            null,
+                                            team.driverDetailsMale.map((driver, dIndex) => (
+                                                React.createElement(
+                                                    'tr',
+                                                    { key:`m-driver-${dIndex}`, className: 'border-b last:border-b-0 hover:bg-gray-50' },
+                                                    React.createElement('td', { className: 'py-1 px-2' }, driver.firstName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, driver.lastName || '-'),
+                                                    React.createElement('td', { className: 'py-1 px-2' }, formatAddress(driver.address))
+                                                )
+                                            ))
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ))
+                )
+            )
+        )
+    );
+}
+
+
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() { // UZ NEPrijímame userProfileData ako prop
   // Získame referencie na Firebase služby pomocou getAuth() a getFirestore()
@@ -234,6 +571,7 @@ function AllRegistrationsApp() { // UZ NEPrijímame userProfileData ako prop
   const [filterColumn, setFilterColumn] = React.useState('');
   const [activeFilters, setActiveFilters] = React.useState({});
   const [uniqueColumnValues, setUniqueColumnValues] = React.useState([]);
+  const [expandedRows, setExpandedRows] = React.useState({}); // Stav pre rozšírené riadky
 
   const defaultColumnOrder = [
     { id: 'role', label: 'Rola', type: 'string', visible: true },
@@ -256,6 +594,14 @@ function AllRegistrationsApp() { // UZ NEPrijímame userProfileData ako prop
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
+
+  // Funkcia na prepínanie rozšírenia riadku
+  const toggleRow = (userId) => {
+    setExpandedRows(prev => ({
+        ...prev,
+        [userId]: !prev[userId]
+    }));
+  };
 
   // Reakcia na globálne zmeny stavu autentifikácie a profilu
   React.useEffect(() => {
@@ -520,11 +866,6 @@ function AllRegistrationsApp() { // UZ NEPrijímame userProfileData ako prop
 
           let valA, valB;
 
-          // Helper to get nested value
-          const getNestedValue = (obj, path) => {
-              return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
-          };
-
           if (columnId.includes('.')) {
               valA = getNestedValue(a, columnId);
               valB = getNestedValue(b, columnId);
@@ -755,21 +1096,6 @@ function AllRegistrationsApp() { // UZ NEPrijímame userProfileData ako prop
       return null; // Zastaviť vykresľovanie
   }
 
-  // Funkcia na formátovanie PSČ
-  const formatPostalCode = (postalCode) => {
-    if (!postalCode) return '-';
-    const cleaned = String(postalCode).replace(/\s/g, ''); // Odstráni existujúce medzery
-    if (cleaned.length === 5) {
-      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
-    }
-    return postalCode; // Vráti pôvodné, ak nemá 5 číslic
-  };
-
-  // Funkcia na získanie vnorenej hodnoty
-  const getNestedValue = (obj, path) => {
-    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
-  };
-
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -856,7 +1182,9 @@ function AllRegistrationsApp() { // UZ NEPrijímame userProfileData ako prop
                                     )
                                 )
                             ))
-                        )
+                        ),
+                        // Nová hlavička pre tlačidlo rozbalenia
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Detaily')
                     )
                 ),
                 React.createElement(
@@ -866,21 +1194,46 @@ function AllRegistrationsApp() { // UZ NEPrijímame userProfileData ako prop
                         React.createElement(
                             'tr',
                             null,
-                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 1, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
                         )
                     ) : (
                         filteredUsers.map(u => (
                             React.createElement(
-                                'tr',
-                                { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
-                                columnOrder.filter(col => col.visible).map(col => ( 
-                                    React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' },
-                                        col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
-                                        col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
-                                        col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
-                                        getNestedValue(u, col.id) || '-'
+                                React.Fragment,
+                                { key: u.id },
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white border-b hover:bg-gray-50' },
+                                    columnOrder.filter(col => col.visible).map(col => ( 
+                                        React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' },
+                                            col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
+                                            col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
+                                            col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
+                                            getNestedValue(u, col.id) || '-'
+                                        )
+                                    )),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'py-3 px-6 text-center' },
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                onClick: () => toggleRow(u.id),
+                                                className: 'p-1 rounded-full hover:bg-gray-200'
+                                            },
+                                            expandedRows[u.id] ? '▲' : '▼'
+                                        )
                                     )
-                                ))
+                                ),
+                                expandedRows[u.id] && React.createElement(
+                                    'tr',
+                                    { className: 'bg-gray-50' },
+                                    React.createElement(
+                                        'td',
+                                        { colSpan: columnOrder.filter(col => col.visible).length + 1, className: 'p-4' },
+                                        React.createElement(UserDetailsTable, { user: u })
+                                    )
+                                )
                             )
                         ))
                     )
