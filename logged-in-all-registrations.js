@@ -341,15 +341,15 @@ function TeamDetailsContent({ team, tshirtSizeOrder }) {
                         React.createElement(
                             'tr',
                             null,
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Typ'),
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Priezvisko'),
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Dátum narodenia'),
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Číslo dresu'),
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Reg. číslo'),
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Adresa'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Typ'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Meno'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Priezvisko'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Dátum narodenia'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Číslo dresu'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Reg. číslo'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-normal' }, 'Adresa'), // Adresa ostáva s normal zalamovaním
                             mealDates.map(date =>
-                                React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200' },
+                                React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap' },
                                     React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
                                     React.createElement(
                                         'div',
@@ -373,11 +373,11 @@ function TeamDetailsContent({ team, tshirtSizeOrder }) {
                                 React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.firstName || '-'),
                                 React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.lastName || '-'),
                                 React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, formatDateToDMMYYYY(member.dateOfBirth)),
-                                React.createElement('td', { className: 'px-4 py-2' }, member.jerseyNumber || '-'),
-                                React.createElement('td', { className: 'px-4 py-2' }, member.registrationNumber || '-'),
-                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
+                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.jerseyNumber || '-'),
+                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.registrationNumber || '-'),
+                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)), // Adresa ostáva s normal zalamovaním
                                 mealDates.map(date =>
-                                    React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200' },
+                                    React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap' },
                                         React.createElement(
                                             'div',
                                             { className: 'flex justify-around' },
@@ -416,8 +416,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder }) {
                         React.createElement(
                             'tr',
                             null,
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Veľkosť'),
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Množstvo'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Veľkosť'),
+                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Množstvo'),
                         )
                     ),
                     React.createElement(
@@ -427,8 +427,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder }) {
                             React.createElement(
                                 'tr',
                                 { key: tIndex },
-                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.size || '-'),
-                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.quantity || 0),
+                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.size || '-'),
+                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.quantity || 0),
                             )
                         )
                     )
@@ -1222,7 +1222,7 @@ function AllRegistrationsApp() {
                         null,
                         // Hlavička sa líši v závislosti od režimu
                         (!showUsers && showTeams) ? ( // Režim "iba tímy"
-                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-3 px-6 text-left text-gray-700' },
+                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-3 px-6 text-left text-gray-700 whitespace-nowrap' },
                                 React.createElement('div', { className: 'flex items-center space-x-2' },
                                     React.createElement('button', {
                                         onClick: toggleAllRows,
@@ -1248,7 +1248,8 @@ function AllRegistrationsApp() {
                                     React.createElement('th', {
                                         key: col.id,
                                         scope: 'col',
-                                        className: 'py-3 px-6 cursor-pointer relative group',
+                                        // Aplikujeme whitespace-nowrap na hlavičky stĺpcov, ak nie sú ikonové tlačidlá
+                                        className: `py-3 px-6 cursor-pointer relative group ${col.id === 'toggle' || col.id === 'expander' ? '' : 'whitespace-nowrap'}`,
                                         onMouseEnter: () => setHoveredColumn(col.id),
                                         onMouseLeave: () => setHoveredColumn(null)
                                     },
@@ -1303,14 +1304,14 @@ function AllRegistrationsApp() {
                                 const teamHeaderTitle = React.createElement(
                                     'div',
                                     { className: 'flex flex-wrap items-center justify-between w-full' },
-                                    React.createElement('span', { className: 'font-semibold text-gray-900 mr-2' }, team._category || '-'),
-                                    React.createElement('span', { className: 'text-gray-700 mr-4' }, ` - ${team.teamName || `Tím`}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2' }, `Hráči: ${team.players || 0}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2' }, `R. tím (ž): ${womenTeamMembersCount}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2' }, `R. tím (m): ${menTeamMembersCount}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2' }, `Doprava: ${team.arrival?.type || '-'}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2' }, `Ubytovanie: ${team.accommodation?.type || '-'}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2' }, `Balík: ${team.packageDetails?.name || '-'}`),
+                                    React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, team._category || '-'),
+                                    React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, ` - ${team.teamName || `Tím`}`),
+                                    React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, `Hráči: ${team.players || 0}`),
+                                    React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`),
+                                    React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`),
+                                    React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`),
+                                    React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`),
+                                    React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`),
                                     ...getTshirtSpans(team, availableTshirtSizes),
                                 );
 
@@ -1349,7 +1350,7 @@ function AllRegistrationsApp() {
                                             React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼')
                                         ),
                                         columnOrder.filter(col => col.visible).map(col => (
-                                            React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' },
+                                            React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' }, // Aplikujeme whitespace-nowrap na všetky data cells
                                                 col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
                                                 col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
                                                 col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
