@@ -293,25 +293,11 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                 // NOVINKA: Generovanie span elementov pre každú veľkosť trička pre hlavičku
                 const tshirtSpans = currentTshirtSizeOrder.map(size => {
                     const quantity = teamTshirtsMap.get(size) || 0;
-                    // Použijeme Tailwind triedy pre responzívne zobrazenie
-                    let visibilityClass = 'hidden';
-                    if (size === 'XXS' || size === 'XS' || size === 'S' || size === '134 - 140' || size === '146 - 152' || size === '158 - 164') { // Vždy viditeľné pre menšie veľkosti a detské
-                      visibilityClass = 'inline-block';
-                    } else if (size === 'M') { // Viditeľné od malých obrazoviek
-                        visibilityClass = 'sm:inline-block';
-                    } else if (size === 'L') { // Viditeľné od stredných obrazoviek
-                        visibilityClass = 'md:inline-block';
-                    } else if (size === 'XL') { // Viditeľné od veľkých obrazoviek
-                        visibilityClass = 'lg:inline-block';
-                    } else if (size === 'XXL') { // Viditeľné od extra veľkých obrazoviek
-                        visibilityClass = 'xl:inline-block';
-                    } else if (size === 'XXXL') { // Viditeľné od 2xl obrazoviek
-                        visibilityClass = '2xl:inline-block';
-                    }
-
+                    // ODSTRÁNENÉ: Podmienené triedy visibilityClass, aby sa všetky veľkosti zobrazovali stále
+                    // Teraz sa vždy zobrazí ako inline-block
                     return React.createElement('span', {
                         key: `tshirt-summary-${size}`,
-                        className: `text-gray-600 mr-2 ${visibilityClass}`
+                        className: `text-gray-600 mr-2 inline-block` // Vždy inline-block
                     }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
                 });
 
