@@ -337,13 +337,12 @@ function AllRegistrationsApp() {
             setUserProfileData(userData);
             setError('');
 
-            // NOVINKA: Aktualizácia viditeľnosti položiek menu na základe roly
-            // Až tu voláme updateMenuItemsVisibility, pretože vieme, že userProfileData je k dispozícii.
-            if (typeof window.updateMenuItemsVisibility === 'function') {
-                window.updateMenuItemsVisibility(userData.role);
-            } else {
-                console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
-            }
+            // Pôvodné volanie updateMenuItemsVisibility bolo odstránené.
+            // if (typeof window.updateMenuItemsVisibility === 'function') {
+            //     window.updateMenuItemsVisibility(userData.role);
+            // } else {
+            //     console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
+            // }
 
             console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
             if (typeof window.hideGlobalLoader === 'function') {
