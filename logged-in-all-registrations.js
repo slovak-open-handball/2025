@@ -209,10 +209,24 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 }
 
 // CollapsibleSection Component - pre rozbaľovacie sekcie
-function CollapsibleSection({ title, children, defaultOpen = false, noOuterStyles = false }) { // Pridaná prop noOuterStyles
-  const [isOpen, setIsOpen] = React.useState(defaultOpen);
+// Upravené pre podporu kontrolovaných komponentov (props isOpen a onToggle)
+function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, defaultOpen = false, noOuterStyles = false }) {
+  // Určíme, či je komponent externe riadený
+  const isControlled = isOpenProp !== undefined;
+  // Použijeme interný stav, ak nie je riadený, inak použijeme externú prop isOpenProp
+  const [internalIsOpen, setInternalIsOpen] = React.useState(defaultOpen);
 
-  // Podmienené triedy na základe prop noOuterStyles
+  // Aktuálny stav, ktorý ovláda otváranie/zatváranie sekcie
+  const currentIsOpen = isControlled ? isOpenProp : internalIsOpen;
+
+  const handleToggle = () => {
+    if (isControlled && onToggle) {
+      onToggle(); // Zavoláme externý toggle handler, ak je riadený
+    } else {
+      setInternalIsOpen(prev => !prev); // Aktualizujeme interný stav, ak nie je riadený
+    }
+  };
+
   const outerDivClasses = noOuterStyles ? '' : 'border border-gray-200 rounded-lg mb-2';
   const buttonClasses = noOuterStyles ?
     'flex justify-between items-center w-full px-4 py-2 text-left bg-transparent hover:bg-gray-100 focus:outline-none' :
@@ -221,20 +235,20 @@ function CollapsibleSection({ title, children, defaultOpen = false, noOuterStyle
 
   return React.createElement(
     'div',
-    { className: outerDivClasses }, // Použitie podmienených tried
+    { className: outerDivClasses },
     React.createElement(
       'button',
       {
-        className: buttonClasses, // Použitie podmienených tried
-        onClick: () => setIsOpen(!isOpen)
+        className: buttonClasses,
+        onClick: handleToggle // Použijeme nový univerzálny handleToggle
       },
       // Titul sa bude rendrovať buď ako string alebo ako React element (tabuľka)
       typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700' }, title) : title,
-      React.createElement('span', { className: 'text-gray-500' }, isOpen ? '▲' : '▼')
+      React.createElement('span', { className: 'text-gray-500' }, currentIsOpen ? '▲' : '▼')
     ),
-    isOpen && React.createElement(
+    currentIsOpen && React.createElement(
       'div',
-      { className: contentDivClasses }, // Použitie podmienených tried
+      { className: contentDivClasses },
       children
     )
   );
@@ -518,6 +532,7 @@ function AllRegistrationsApp() {
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
 
   // Stav pre sledovanie rozbalených riadkov (ID používateľa -> boolean)
+  const [expandedRows, setExpandedRows] = React.useState({});
   // V režime "iba tímy" budeme túto mapu používať pre tímy, aby sme sledovali ich rozbalenie
   const [expandedTeamRows, setExpandedTeamRows] = React.useState({});
 
@@ -527,6 +542,31 @@ function AllRegistrationsApp() {
 
   const [showUsers, setShowUsers] = React.useState(true);
   const [showTeams, setShowTeams] = React.useState(true);
+
+  // Zoskupenie všetkých tímov do jedného plochého zoznamu pre režim "iba tímy"
+  // PRESUNUTÉ NAD PODMIENENÉ RETURN STATEMENTS
+  const allTeamsFlattened = React.useMemo(() => {
+    if (!showUsers && showTeams) {
+        let teams = [];
+        filteredUsers.forEach(u => {
+            if (u.teams && Object.keys(u.teams).length > 0) {
+                Object.entries(u.teams).forEach(([category, teamList]) => {
+                    teamList.forEach((team, teamIndex) => {
+                        teams.push({
+                            ...team,
+                            _userId: u.id, // Uložíme ID používateľa pre referenciu
+                            _category: category,
+                            _teamIndex: teamIndex,
+                            _registeredBy: `${u.firstName} ${u.lastName}` // Kto registroval
+                        });
+                    });
+                });
+            }
+        });
+        return teams;
+    }
+    return [];
+  }, [filteredUsers, showUsers, showTeams]);
 
 
   const toggleRowExpansion = (userId) => { // Pre používateľské riadky
@@ -546,21 +586,12 @@ function AllRegistrationsApp() {
   const toggleAllRows = () => {
     // V závislosti od režimu sa bude správanie líšiť
     if (!showUsers && showTeams) { // Režim "iba tímy"
-        const allTeamRows = [];
-        allUsers.forEach(user => {
-            if (user.teams) {
-                Object.entries(user.teams).forEach(([category, teamList]) => {
-                    teamList.forEach((team, teamIndex) => {
-                        allTeamRows.push(`${user.id}-${category}-${teamIndex}`);
-                    });
-                });
-            }
-        });
+        const allTeamIds = allTeamsFlattened.map(team => `${team._userId}-${team._category}-${team._teamIndex}`);
 
-        const allCurrentlyExpanded = allTeamRows.length > 0 && allTeamRows.every(id => expandedTeamRows[id]);
+        const allCurrentlyExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
         const newExpandedState = { ...expandedTeamRows };
 
-        allTeamRows.forEach(id => {
+        allTeamIds.forEach(id => {
             newExpandedState[id] = !allCurrentlyExpanded;
         });
         setExpandedTeamRows(newExpandedState);
@@ -1123,6 +1154,9 @@ function AllRegistrationsApp() {
     }
   };
 
+  // Pred podmienenými return statements, kde sú volané všetky hooks
+  // ... (všetky useState, useEffect, useCallback hooks už sú definované vyššie) ...
+
   if (!isAuthReady || user === undefined || !userProfileData) {
     return null;
   }
@@ -1148,31 +1182,6 @@ function AllRegistrationsApp() {
   const getNestedValue = (obj, path) => {
     return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
   };
-
-  // Zoskupenie všetkých tímov do jedného plochého zoznamu pre režim "iba tímy"
-  const allTeamsFlattened = React.useMemo(() => {
-    if (!showUsers && showTeams) {
-        let teams = [];
-        filteredUsers.forEach(u => {
-            if (u.teams && Object.keys(u.teams).length > 0) {
-                Object.entries(u.teams).forEach(([category, teamList]) => {
-                    teamList.forEach((team, teamIndex) => {
-                        teams.push({
-                            ...team,
-                            _userId: u.id, // Uložíme ID používateľa pre referenciu
-                            _category: category,
-                            _teamIndex: teamIndex,
-                            _registeredBy: `${u.firstName} ${u.lastName}` // Kto registroval
-                        });
-                    });
-                });
-            }
-        });
-        return teams;
-    }
-    return [];
-  }, [filteredUsers, showUsers, showTeams]);
-
 
   return React.createElement(
     'div',
@@ -1332,9 +1341,9 @@ function AllRegistrationsApp() {
                                     React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
                                         React.createElement(CollapsibleSection, {
                                             title: teamHeaderTitle,
-                                            defaultOpen: expandedTeamRows[teamUniqueId] || false,
+                                            isOpen: expandedTeamRows[teamUniqueId] || false, // Pass isOpen
+                                            onToggle: () => toggleTeamRowExpansion(teamUniqueId), // Pass onToggle
                                             noOuterStyles: true,
-                                            onClick: () => toggleTeamRowExpansion(teamUniqueId) // Handle click for expanding/collapsing
                                         },
                                             // Vykreslíme TeamDetails s aktuálnym tímom
                                             React.createElement(TeamDetails, {
