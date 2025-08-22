@@ -699,11 +699,12 @@ function AllRegistrationsApp() {
             } else {
                 console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
             }
-
-            console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
+            // Zmena: Skrytie loadera po úspešnom načítaní profilu
             if (typeof window.hideGlobalLoader === 'function') {
               window.hideGlobalLoader();
             }
+
+            console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
           } else {
             console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
@@ -840,7 +841,8 @@ function AllRegistrationsApp() {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
                 setAllUsers(usersData);
                 setFilteredUsers(usersData);
-                if (typeof window.showGlobalLoader === 'function') {
+                // Skryť loader po úspešnom načítaní všetkých používateľov
+                if (typeof window.hideGlobalLoader === 'function') {
                   window.hideGlobalLoader();
                 }
             }, error => {
@@ -870,7 +872,7 @@ function AllRegistrationsApp() {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] User is not an approved admin, not fetching data. Redirecting to my-data.html.");
         setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
         if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader();
+          window.hideGlobalLoader(); // Skryť loader aj pri presmerovaní kvôli oprávneniam
         }
         setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
         window.location.href = 'logged-in-my-data.html';
@@ -1174,14 +1176,20 @@ function AllRegistrationsApp() {
   // ... (všetky useState, useEffect, useCallback hooks už sú definované vyššie) ...
 
   if (!isAuthReady || user === undefined || !userProfileData) {
+    // V prípade, že overenie ešte nie je pripravené alebo chýbajú dáta, skryjeme loader, aby neostával visieť
+    if (typeof window.hideGlobalLoader === 'function') {
+      window.hideGlobalLoader();
+    }
     return null;
   }
 
   if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
       console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
+      setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
       if (typeof window.hideGlobalLoader === 'function') {
-        window.hideGlobalLoader();
+        window.hideGlobalLoader(); // Skryť loader aj pri presmerovaní kvôli oprávneniam
       }
+      setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
       window.location.href = 'logged-in-my-data.html';
       return null;
   }
