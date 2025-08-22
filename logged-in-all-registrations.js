@@ -297,7 +297,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -470,6 +470,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         },
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.type || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
@@ -580,29 +581,52 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const formatDisplayValue = (value) => {
         if (value === null || value === undefined) return '';
         if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
-        if (value.toDate && typeof value.toDate === 'function') { // Firebase Timestamp
-            return value.toDate().toLocaleString('sk-SK');
+        
+        // Explicitly handle Firebase Timestamp objects
+        if (value && typeof value === 'object' && value.toDate && typeof value.toDate === 'function') {
+            try {
+                return value.toDate().toLocaleString('sk-SK');
+            } catch (e) {
+                console.error("Error formatting Timestamp:", value, e);
+                return `[Timestamp Error: ${e.message}]`; // Fallback to a string representation
+            }
         }
+        
+        // Handle arrays
         if (Array.isArray(value)) {
-            // Arrays of primitives can be joined, complex arrays get a summary
             return value.map(item => {
                 if (typeof item === 'object' && item !== null) {
-                    return JSON.stringify(item); // For objects in array, stringify
+                    // If an object within an array, try to stringify it, or use a placeholder
+                    try {
+                        return JSON.stringify(item);
+                    } catch (e) {
+                        console.error("Error stringifying array item object:", item, e);
+                        return '[Object Error]';
+                    }
                 }
                 return String(item);
             }).join(', ');
         }
+        
+        // Handle other objects
         if (typeof value === 'object') {
-            // For general objects, stringify or special format
+            // Specific heuristics for common objects
             if (value.street || value.city) { // Heuristic for address objects
                 return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
             }
             if (value.name || value.type) { // Heuristic for package, accommodation, arrival
                 return value.name || value.type;
             }
-            return JSON.stringify(value);
+            // Fallback for any other object
+            try {
+                return JSON.stringify(value);
+            } catch (e) {
+                console.error("Error stringifying object:", value, e);
+                return '[Object Error]'; // Fallback to a string representation
+            }
         }
-        return String(value);
+        
+        return String(value); // Default to string for primitives
     };
 
     // Helper to handle input changes for nested data
@@ -1628,6 +1652,53 @@ function AllRegistrationsApp() {
       return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
   };
 
+  // New helper function for formatting values in table cells
+  const formatTableCellValue = (value, columnId) => {
+    if (value === null || value === undefined) return '-';
+
+    // Specific formatting based on column ID
+    if (columnId === 'registrationDate') {
+        if (value && typeof value.toDate === 'function') {
+            return value.toDate().toLocaleString('sk-SK');
+        }
+    } else if (columnId === 'approved') {
+        return value ? 'Áno' : 'Nie';
+    } else if (columnId === 'postalCode') {
+        return formatPostalCode(value); // Reuses the existing formatPostalCode
+    }
+
+    // Generic formatting for other cases, similar to formatDisplayValue
+    if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
+    if (Array.isArray(value)) {
+        return value.map(item => {
+            if (typeof item === 'object' && item !== null) {
+                // For nested objects in arrays, provide a summary or simplified string
+                if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
+                if (item.size) return item.size; // For t-shirt sizes
+                return '[Objekt]'; // Generic for other objects
+            }
+            return String(item);
+        }).join(', ');
+    }
+    if (typeof value === 'object') {
+        // Heuristics for common complex objects
+        if (value.street || value.city) { // Address object
+            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+        }
+        if (value.name || value.type) { // Package, accommodation, arrival object
+            return value.name || value.type;
+        }
+        // Fallback for any other object
+        try {
+            return JSON.stringify(value);
+        } catch (e) {
+            console.error("Error stringifying object for table cell:", value, e);
+            return '[Objekt]';
+        }
+    }
+    return String(value);
+  };
+
 
   return React.createElement(
     'div',
@@ -1731,7 +1802,7 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`)
                                 )
                             )
                         ) : (
@@ -1890,10 +1961,7 @@ function AllRegistrationsApp() {
                                         ),
                                         columnOrder.filter(col => col.visible).map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
-                                                col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
-                                                col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
-                                                col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
-                                                getNestedValue(u, col.id) || '-'
+                                                formatTableCellValue(getNestedValue(u, col.id), col.id)
                                             )
                                         ))
                                     ),
