@@ -53,10 +53,9 @@
             padding: 1rem;
             flex-grow: 1;
             display: flex;
-            /* Dôležité: align-items: flex-start; a justify-content: center; zabezpečia správne rozloženie */
-            justify-content: center; /* Centrovanie horizontálne */
+            /* ODSTRÁNENÉ: justify-content: center; */ /* Toto spôsobovalo nesprávne centrovanie s menu-spacerom */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
-            width: 100%; /* Zabezpečíme, aby zaberala zvyšnú šírku */
+            /* ODSTRÁNENÉ: width: 100%; */ /* Flex-grow už zabezpečuje vyplnenie priestoru */
             transition: margin-left 0.3s ease-in-out; /* Hladký prechod */
         }
         @media (max-width: 768px) {
