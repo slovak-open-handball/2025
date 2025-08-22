@@ -255,7 +255,7 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
 }
 
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder }) {
+function TeamDetailsContent({ team, tshirtSizeOrder, collapsibleTitle }) { // Pridaný collapsibleTitle prop
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -328,7 +328,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder }) {
         allConsolidatedMembers.length > 0 &&
         React.createElement(
             CollapsibleSection,
-            { title: 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: false },
+            { title: collapsibleTitle || 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: false }, // Použije collapsibleTitle alebo predvolený text
             React.createElement(
                 'div',
                 { className: 'overflow-x-auto' },
@@ -1133,7 +1133,7 @@ function AllRegistrationsApp() {
     return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
   };
 
-  const getTshirtSpans = (team, tshirtSizeOrder, addLabels = false) => {
+  const getTshirtSpans = (team, tshirtSizeOrder) => {
     const teamTshirtsMap = new Map(
       (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
     );
@@ -1142,9 +1142,68 @@ function AllRegistrationsApp() {
         return React.createElement('span', {
             key: `tshirt-summary-${size}`,
             className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-        }, `${addLabels ? `Veľkosť ${size.toUpperCase()}:` : ''} ${quantity > 0 ? quantity : '-'}`);
+        }, `${quantity > 0 ? quantity : '-'}`); // Odstránené "Veľkosť ${size.toUpperCase()}:"
     });
   };
+
+  const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false) => {
+    let menTeamMembersCount = 0;
+    if (Array.isArray(team.menTeamMemberDetails)) {
+        menTeamMembersCount = team.menTeamMemberDetails.length;
+    }
+
+    let womenTeamMembersCount = 0;
+    if (Array.isArray(team.womenTeamMemberDetails)) {
+        womenTeamMembersCount = team.womenTeamMemberDetails.length;
+    }
+
+    const titleParts = [];
+
+    // Pre titulok sekcie môžeme pridať popisky, pre riadok v tabuľke nie
+    if (forCollapsibleSection) {
+        titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, `Kategória: ${team._category || '-'}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, `Názov tímu: ${team.teamName || `Tím`}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Registroval: ${team._registeredBy || '-'}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${team.players || 0}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
+        
+        // Tričká s popiskou "Veľ. XXS: "
+        const tshirtDataWithLabels = (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
+            const teamTshirtsMap = new Map(
+                (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
+            );
+            const quantity = teamTshirtsMap.get(size) || 0;
+            return React.createElement('span', {
+                key: `tshirt-summary-label-${size}`,
+                className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
+            }, `Veľ. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+        });
+        titleParts.push(...tshirtDataWithLabels);
+
+    } else {
+        // Pôvodné zobrazenie bez popisiek pre riadok v tabuľke
+        titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, team._category || '-'));
+        titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, team.teamName || `Tím`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, team.players || 0)); // Hráči
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, womenTeamMembersCount)); // R. tím (ž)
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount)); // R. tím (m)
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, team.arrival?.type || '-')); // Doprava
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, team.accommodation?.type || '-')); // Ubytovanie
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, team.packageDetails?.name || '-')); // Balík
+        titleParts.push(...getTshirtSpans(team, availableTshirtSizes)); // Tričká bez popisiek
+    }
+
+    return React.createElement(
+        'div',
+        { className: 'flex flex-wrap items-center justify-between w-full' },
+        ...titleParts
+    );
+  };
+
 
   return React.createElement(
     'div',
@@ -1305,11 +1364,14 @@ function AllRegistrationsApp() {
                                     React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Balík'),
                                     // Dynamicky generované hlavičky pre veľkosti tričiek
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `Vel. ${size.toUpperCase()}`)
+                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `${size.toUpperCase()}`)
                                     )
                                 ),
                                 allTeamsFlattened.map(team => {
                                     const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
+                                    // Pôvodné hodnoty pre titulok tímu
+                                    const teamTitleForCollapsible = generateTeamHeaderTitle(team, availableTshirtSizes, true); // Generujeme titulok s popiskami pre vnútornú sekciu
+
                                     let menTeamMembersCount = 0;
                                     if (Array.isArray(team.menTeamMemberDetails)) {
                                         menTeamMembersCount = team.menTeamMemberDetails.length;
@@ -1356,7 +1418,8 @@ function AllRegistrationsApp() {
                                             React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
                                                 React.createElement(TeamDetailsContent, {
                                                     team: team,
-                                                    tshirtSizeOrder: availableTshirtSizes
+                                                    tshirtSizeOrder: availableTshirtSizes,
+                                                    collapsibleTitle: teamTitleForCollapsible // Použijeme generovaný titulok
                                                 })
                                             )
                                         )
@@ -1399,7 +1462,8 @@ function AllRegistrationsApp() {
                                                     React.createElement(TeamDetailsContent, {
                                                         key: `${u.id}-${category}-${teamIndex}-details-content`,
                                                         team: team,
-                                                        tshirtSizeOrder: availableTshirtSizes
+                                                        tshirtSizeOrder: availableTshirtSizes,
+                                                        collapsibleTitle: generateTeamHeaderTitle(team, availableTshirtSizes, true) // Generujeme titulok s popiskami
                                                     })
                                                 )
                                             )
