@@ -244,7 +244,7 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
       },
       // Titul sa bude rendrovať buď ako string alebo ako React element (tabuľka)
       typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700' }, title) : title,
-      React.createElement('span', { className: 'text-gray-500' }, currentIsOpen ? '▲' : '▼')
+      React.createElement('span', { className: 'text-gray-500' }, currentIsOpen ? '▼' : '▲')
     ),
     currentIsOpen && React.createElement(
       'div',
@@ -1329,7 +1329,7 @@ function AllRegistrationsApp() {
                                         ),
                                         React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center' },
                                             col.label,
-                                            currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
+                                            currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▼' : '▲')
                                         )
                                     )
                                 ))
@@ -1397,7 +1397,7 @@ function AllRegistrationsApp() {
                                                 onClick: () => toggleTeamRowExpansion(teamUniqueId)
                                             },
                                             React.createElement('td', { className: 'py-3 px-2 text-center' },
-                                                React.createElement('span', { className: 'text-gray-500' }, expandedTeamRows[teamUniqueId] ? '▲' : '▼')
+                                                React.createElement('span', { className: 'text-gray-500' }, expandedTeamRows[teamUniqueId] ? '▼' : '▲')
                                             ),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._category || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.teamName || `Tím`),
@@ -1440,7 +1440,7 @@ function AllRegistrationsApp() {
                                         },
                                         React.createElement('td', { className: 'py-3 px-2 text-center' }, ''),
                                         React.createElement('td', { className: 'py-3 px-2 text-center' },
-                                            React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼')
+                                            React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▼' : '▲')
                                         ),
                                         columnOrder.filter(col => col.visible).map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' }, // Aplikujeme whitespace-nowrap na všetky data cells
