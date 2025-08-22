@@ -685,7 +685,7 @@ function AllRegistrationsApp() {
 
                         // Pridáme všetky stĺpce z defaultColumnOrder, ktoré neboli v savedOrder, na koniec
                         defaultColumnOrder.forEach(defaultCol => {
-                            if (!finalOrder.some(fCol => fCol.id === defaultCol.id)) {
+                            if (!finalOrder.some(fCol => fFfCol.id === defaultCol.id)) {
                                 finalOrder.push(defaultCol);
                             }
                         });
@@ -1115,7 +1115,7 @@ function AllRegistrationsApp() {
     return `${finalWidth}px`;
   }, [windowWidth, menuSpacerWidth]); // Závisí od týchto stavov
 
-  const dynamicWidth = calculateContentWidth();
+  const dynamicWidth = React.useMemo(() => calculateContentWidth(), [calculateContentWidth]);
 
   // NOVINKA: Funkcia na prepínanie rozbalených riadkov
   const toggleRowExpansion = (userId) => {
