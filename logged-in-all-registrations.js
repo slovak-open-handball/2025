@@ -449,6 +449,14 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                             className: 'cursor-pointer hover:bg-gray-100', // Pridal som triedy pre vizuálnu spätnú väzbu
                             onClick: (e) => { // Pridal som obsluhu kliknutia na riadok člena
                                 e.stopPropagation();
+                                
+                                // Pridaná kontrola pre team._userId
+                                if (!team._userId || typeof team._userId !== 'string') {
+                                    console.error("Chyba: Chýba ID používateľa pre tím. Nemôžem otvoriť editačné modálne okno.", team);
+                                    openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null); // Otvoriť v režime iba na čítanie
+                                    return;
+                                }
+
                                 let memberPath = '';
                                 if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
                                     memberPath = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
