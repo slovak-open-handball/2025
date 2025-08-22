@@ -487,11 +487,15 @@ function AllRegistrationsApp() {
 
   // NOVINKA: Funkcia na prepínanie všetkých riadkov
   const toggleAllRows = () => {
-    // Zistíme, či sú všetky aktuálne filtrované riadky už rozbalené
-    const allCurrentlyExpanded = filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]);
-    const newExpandedState = {};
+    // Filtrovať adminov pred kontrolou, či sú všetky rozbalené, alebo pred vytvorením nového stavu rozbalenia
+    const nonAdminUsers = filteredUsers.filter(user => user.role !== 'admin');
+    const allCurrentlyExpandedNonAdmin = nonAdminUsers.length > 0 && nonAdminUsers.every(user => expandedRows[user.id]);
+    const newExpandedState = { ...expandedRows }; // Začať s aktuálnym stavom
+
     filteredUsers.forEach(user => {
-        newExpandedState[user.id] = !allCurrentlyExpanded;
+        if (user.role !== 'admin') {
+            newExpandedState[user.id] = !allCurrentlyExpandedNonAdmin;
+        }
     });
     setExpandedRows(newExpandedState);
   };
@@ -743,17 +747,16 @@ function AllRegistrationsApp() {
             // Používame Firebase v9 modulárnu syntax
             const usersCollectionRef = collection(db, 'users');
             unsubscribeAllUsers = onSnapshot(usersCollectionRef, snapshot => {
-                // Filtrovať používateľov s rolou 'admin'
+                // NEFILTROVAŤ používateľov s rolou 'admin' tu, aby sa zobrazili v tabuľke
                 const usersData = snapshot.docs
                     .map(doc => ({ // doc from snapshot is a QueryDocumentSnapshot, not the doc function
                         id: doc.id,
                         ...doc.data()
-                    }))
-                    .filter(user => user.role !== 'admin'); // NOVINKA: Filtrujeme administrátorov
+                    }));
 
-                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní (bez adminov):", usersData.length, "používateľov.");
+                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
                 setAllUsers(usersData);
-                setFilteredUsers(usersData);
+                setFilteredUsers(usersData); // filteredUsers sa bude spravovať cez activeFilters a custom logiku
                 if (typeof window.hideGlobalLoader === 'function') {
                   window.hideGlobalLoader();
                 }
@@ -864,8 +867,8 @@ function AllRegistrationsApp() {
       console.log("AllRegistrationsApp: Aktuálny stav allUsers:", allUsers);
 
       setFilterColumn(column);
-      // NOVINKA: Filtrovať adminov aj z uniqueColumnValues
-      const values = [...new Set(allUsers.filter(u => u.role !== 'admin').map(u => {
+      // NOVINKA: Filtrovať adminov len z uniqueColumnValues, ak je to potrebné
+      const values = [...new Set(allUsers.map(u => { // allUsers obsahuje aj adminov
           let val;
           if (column === 'registrationDate' && u.registrationDate && typeof u.registrationDate.toDate === 'function') {
               val = u.registrationDate.toDate().toLocaleString('sk-SK');
@@ -908,10 +911,7 @@ function AllRegistrationsApp() {
 
   // Effect to re-apply filters when activeFilters or allUsers change
   React.useEffect(() => {
-      let currentFiltered = [...allUsers];
-
-      // NOVINKA: Vždy odfiltrujte adminov
-      currentFiltered = currentFiltered.filter(user => user.role !== 'admin');
+      let currentFiltered = [...allUsers]; // allUsers teraz obsahuje aj adminov
 
       Object.keys(activeFilters).forEach(column => {
           const filterValues = activeFilters[column];
@@ -1156,7 +1156,7 @@ function AllRegistrationsApp() {
                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                             },
                             // Zobrazíme šípku dole, ak sú všetky rozbalené (na zbalenie), inak šípku hore (na rozbalenie)
-                            filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▼' : '▲'
+                            filteredUsers.length > 0 && filteredUsers.filter(user => user.role !== 'admin').every(user => expandedRows[user.id]) ? '▼' : '▲'
                             )
                         ),
                         // Pôvodný stĺpec pre individuálne rozbalenie/zbalenie ostáva
@@ -1211,14 +1211,14 @@ function AllRegistrationsApp() {
                                 React.createElement(
                                     'tr',
                                     {
-                                        className: 'bg-white border-b hover:bg-gray-50 cursor-pointer',
-                                        onClick: () => toggleRowExpansion(u.id) // NOVINKA: Kliknutím sa riadok rozbalí/zbalí
+                                        className: `bg-white border-b hover:bg-gray-50 ${u.role !== 'admin' ? 'cursor-pointer' : ''}`, // Len cursor-pointer pre non-admins
+                                        onClick: u.role !== 'admin' ? () => toggleRowExpansion(u.id) : undefined // Len klikateľné pre non-admins
                                     },
                                     // Prázdna bunka pre globálny toggle
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, ''),
-                                    // NOVINKA: Ikonka pre rozbalenie/zbalenie individuálneho riadku
+                                    // NOVINKA: Ikonka pre rozbalenie/zbalenie individuálneho riadku (len pre non-admins)
                                     React.createElement('td', { className: 'py-3 px-2 text-center' },
-                                        React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼')
+                                        u.role !== 'admin' ? React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼') : ''
                                     ),
                                     columnOrder.filter(col => col.visible).map(col => (
                                         React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' },
@@ -1229,8 +1229,8 @@ function AllRegistrationsApp() {
                                         )
                                     ))
                                 ),
-                                // NOVINKA: Zobrazenie detailov tímov, ak je riadok rozbalený
-                                expandedRows[u.id] && React.createElement(
+                                // NOVINKA: Zobrazenie detailov tímov, ak je riadok rozbalený a používateľ nie je admin
+                                expandedRows[u.id] && u.role !== 'admin' && React.createElement(
                                     'tr',
                                     { key: `${u.id}-details`, className: 'bg-gray-100' },
                                     // Zväčšenie colspan o 2 pre globálny a individuálny rozbalovací stĺpec
