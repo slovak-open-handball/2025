@@ -400,41 +400,42 @@ function TeamDetailsContent({ team, tshirtSizeOrder, collapsibleTitle }) { // Pr
                 )
             )
         ),
-        team.tshirts && team.tshirts.length > 0 &&
-        React.createElement(
-            CollapsibleSection,
-            { title: 'Veľkosti tričiek (podrobný zoznam)', defaultOpen: false },
-            React.createElement(
-                'div',
-                { className: 'overflow-x-auto' },
-                React.createElement(
-                    'table',
-                    { className: 'min-w-full divide-y divide-gray-200' },
-                    React.createElement(
-                        'thead',
-                        { className: 'bg-gray-50' },
-                        React.createElement(
-                            'tr',
-                            null,
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Veľkosť'),
-                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Množstvo'),
-                        )
-                    ),
-                    React.createElement(
-                        'tbody',
-                        { className: 'bg-white divide-y divide-gray-200' },
-                        team.tshirts.map((tshirt, tIndex) =>
-                            React.createElement(
-                                'tr',
-                                { key: tIndex },
-                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.size || '-'),
-                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.quantity || 0),
-                            )
-                        )
-                    )
-                )
-            )
-        )
+        // ODSTRÁNENÁ CELÁ SEKCIA PRE VEĽKOSTI TRIČIEK
+        // team.tshirts && team.tshirts.length > 0 &&
+        // React.createElement(
+        //     CollapsibleSection,
+        //     { title: 'Veľkosti tričiek (podrobný zoznam)', defaultOpen: false },
+        //     React.createElement(
+        //         'div',
+        //         { className: 'overflow-x-auto' },
+        //         React.createElement(
+        //             'table',
+        //             { className: 'min-w-full divide-y divide-gray-200' },
+        //             React.createElement(
+        //                 'thead',
+        //                 { className: 'bg-gray-50' },
+        //                 React.createElement(
+        //                     'tr',
+        //                     null,
+        //                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Veľkosť'),
+        //                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Množstvo'),
+        //                 )
+        //             ),
+        //             React.createElement(
+        //                 'tbody',
+        //                 { className: 'bg-white divide-y divide-gray-200' },
+        //                 team.tshirts.map((tshirt, tIndex) =>
+        //                     React.createElement(
+        //                         'tr',
+        //                         { key: tIndex },
+        //                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.size || '-'),
+        //                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.quantity || 0),
+        //                     )
+        //                 )
+        //             )
+        //         )
+        //     )
+        // )
     );
 }
 
@@ -1146,7 +1147,7 @@ function AllRegistrationsApp() {
     });
   };
 
-  const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false) => {
+  const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false, showUsersChecked = false, showTeamsChecked = false) => {
     let menTeamMembersCount = 0;
     if (Array.isArray(team.menTeamMemberDetails)) {
         menTeamMembersCount = team.menTeamMemberDetails.length;
@@ -1159,8 +1160,9 @@ function AllRegistrationsApp() {
 
     const titleParts = [];
 
-    // Pre titulok sekcie môžeme pridať popisky, pre riadok v tabuľke nie
-    if (forCollapsibleSection) {
+    // Logika pre titulok CollapsibleSection alebo riadka tabuľky
+    if (forCollapsibleSection || (showUsersChecked && showTeamsChecked)) {
+        // Zobrazujeme s popiskami
         titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, `Kategória: ${team._category || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, `Názov tímu: ${team.teamName || `Tím`}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Registroval: ${team._registeredBy || '-'}`));
@@ -1171,7 +1173,6 @@ function AllRegistrationsApp() {
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
         
-        // Tričká s popiskou "Veľ. XXS: "
         const tshirtDataWithLabels = (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
             const teamTshirtsMap = new Map(
                 (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
@@ -1180,7 +1181,7 @@ function AllRegistrationsApp() {
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `Veľ. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -1364,7 +1365,7 @@ function AllRegistrationsApp() {
                                     React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Balík'),
                                     // Dynamicky generované hlavičky pre veľkosti tričiek
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `${size.toUpperCase()}`)
+                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `Vel. ${size.toUpperCase()}`)
                                     )
                                 ),
                                 allTeamsFlattened.map(team => {
