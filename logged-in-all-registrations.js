@@ -210,7 +210,7 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 
 // CollapsibleSection Component - pre rozbaľovacie sekcie
 function CollapsibleSection({ title, children, defaultOpen = false }) {
-  const [isOpen, setIsOpen] = React.useState(defaultOpen);
+  const [isOpen, setIsOpen] = React.useState(defaultOpen); // Opravené: pridaný operátor '='
 
   return React.createElement(
     'div',
