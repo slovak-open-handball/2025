@@ -442,40 +442,40 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                         // outside the 'Detaily členov tímu' collapsible, they should be here.
                         // For example, if 'tshirts' section was supposed to be at this level:
                         team.tshirts && team.tshirts.length > 0 &&
-//                        React.createElement(
-//                            CollapsibleSection,
-//                            { title: 'Veľkosti tričiek (podrobný zoznam)', defaultOpen: false },
-//                            React.createElement(
-//                                'div',
-//                                { className: 'overflow-x-auto' },
-//                                React.createElement(
-//                                    'table',
-//                                    { className: 'min-w-full divide-y divide-gray-200' },
-//                                    React.createElement(
-//                                        'thead',
-//                                        { className: 'bg-gray-50' },
-//                                        React.createElement(
-//                                            'tr',
-//                                            null,
-//                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Veľkosť'),
-//                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Množstvo'),
-//                                        )
-//                                    ),
-//                                    React.createElement(
-//                                        'tbody',
-//                                        { className: 'bg-white divide-y divide-gray-200' },
-//                                        team.tshirts.map((tshirt, tIndex) =>
-//                                            React.createElement(
-//                                                'tr',
-//                                                { key: tIndex },
-//                                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.size || '-'),
-//                                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.quantity || 0),
-//                                            )
-//                                        )
-//                                    )
-//                                )
-//                            )
-//                        )
+                        React.createElement(
+                            CollapsibleSection,
+                            { title: 'Veľkosti tričiek (podrobný zoznam)', defaultOpen: false },
+                            React.createElement(
+                                'div',
+                                { className: 'overflow-x-auto' },
+                                React.createElement(
+                                    'table',
+                                    { className: 'min-w-full divide-y divide-gray-200' },
+                                    React.createElement(
+                                        'thead',
+                                        { className: 'bg-gray-50' },
+                                        React.createElement(
+                                            'tr',
+                                            null,
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Veľkosť'),
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Množstvo'),
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'tbody',
+                                        { className: 'bg-white divide-y divide-gray-200' },
+                                        team.tshirts.map((tshirt, tIndex) =>
+                                            React.createElement(
+                                                'tr',
+                                                { key: tIndex },
+                                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.size || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.quantity || 0),
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
                     )
                 );
             })
