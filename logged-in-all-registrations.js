@@ -444,7 +444,7 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: 'Krajina', type: true, visible: true },
+    { id: 'country', label: true, visible: true },
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
@@ -1274,14 +1274,14 @@ function AllRegistrationsApp() {
                         ) : ( // Režim "Zobraziť používateľov" (samostatne alebo s tímami)
                             React.createElement(React.Fragment, null,
                                 React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center' },
-                                    React.createElement('button', {
+                                    showTeams && React.createElement('button', { // Render button only if showTeams is true
                                         onClick: toggleAllRows,
                                         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                     },
                                     filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▼' : '▲'
                                     )
                                 ),
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-2' }, ''),
+                                React.createElement('th', { scope: 'col', className: 'py-3 px-2' }, ''), // Placeholder for individual expander column
                                 columnOrder.filter(col => col.visible).map((col, index) => (
                                     React.createElement('th', {
                                         key: col.id,
@@ -1402,12 +1402,12 @@ function AllRegistrationsApp() {
                                     React.createElement(
                                         'tr',
                                         {
-                                            className: `bg-white border-b hover:bg-gray-50 cursor-pointer`,
-                                            onClick: () => toggleRowExpansion(u.id)
+                                            className: `bg-white border-b hover:bg-gray-50 ${showTeams ? 'cursor-pointer' : ''}`, // Add cursor-pointer only if expandable
+                                            onClick: showTeams ? () => toggleRowExpansion(u.id) : undefined // Only clickable if showTeams is true
                                         },
-                                        React.createElement('td', { className: 'py-3 px-2 text-center' }, ''),
+                                        React.createElement('td', { className: 'py-3 px-2 text-center' }, ''), // First empty td
                                         React.createElement('td', { className: 'py-3 px-2 text-center' },
-                                            React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼')
+                                            showTeams && React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼') // Render arrow only if showTeams is true
                                         ),
                                         columnOrder.filter(col => col.visible).map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' }, // Aplikujeme whitespace-nowrap na všetky data cells
