@@ -328,7 +328,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, collapsibleTitle }) { // Pr
         allConsolidatedMembers.length > 0 &&
         React.createElement(
             CollapsibleSection,
-            { title: collapsibleTitle || 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: false }, // Použije collapsibleTitle alebo predvolený text
+            { title: collapsibleTitle || 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: true }, // defaultOpen nastavené na true
             React.createElement(
                 'div',
                 { className: 'overflow-x-auto' },
@@ -1451,7 +1451,8 @@ function AllRegistrationsApp() {
                                             )
                                         ))
                                     ),
-                                    expandedRows[u.id] && React.createElement(
+                                    // Podmienené zobrazenie detailov tímu pre používateľa, ak je zaškrtnutý "Zobraziť tímy"
+                                    expandedRows[u.id] && showTeams && React.createElement(
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
                                         React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
