@@ -1,9 +1,9 @@
 // logged-in-all-registrations.js
-// Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-all-registrations.html
-// a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
+// This file assumes that the Firebase SDK is initialized in <head> logged-in-all-registrations.html
+// and GlobalNotificationHandler in header.js manages global authentication and user state.
 
-// Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
-// Tento súbor je načítaný ako modul, preto môže používať importy.
+// Imports for Firebase Firestore functions (Firebase v9 modular syntax)
+// This file is loaded as a module, so it can use imports.
 import { collection, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
@@ -35,9 +35,9 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
+  }, [message, onClose, displayNotificationsEnabled]); // Depends on displayNotificationsEnabled too
 
-  // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak sú notifikácie zakázané
+  // Do not show notification if there is no message OR if notifications are disabled
   if ((!show && !message) || !displayNotificationsEnabled) return null;
 
   return React.createElement(
@@ -46,7 +46,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
       className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
       }`,
-      style: { pointerEvents: 'none', zIndex: 1000 } // ZMENA: zIndex nastavený na 1000
+      style: { pointerEvents: 'none', zIndex: 1000 } // CHANGE: zIndex set to 1000
     },
     React.createElement(
       'div',
@@ -59,28 +59,28 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   );
 }
 
-// FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
+// FilterModal Component - Modal window for filtering with multiple selection
 function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues }) {
-    // selectedValues je teraz pole pre viacnásobný výber
-    // initialFilterValues už obsahujú hodnoty v malých písmenách, takže ich len použijeme
+    // selectedValues is now an array for multiple selection
+    // initialFilterValues already contain lowercase values, so we just use them
     const [selectedValues, setSelectedValues] = React.useState(initialFilterValues || []);
 
     React.useEffect(() => {
-        // Inicializovať selectedValues pri otvorení modalu alebo zmene initialFilterValues
-        // Zabezpečí, že pri opätovnom otvorení modalu sa nastavia správne začiarknuté polia
+        // Initialize selectedValues when modal opens or initialFilterValues change
+        // Ensures that when reopening the modal, the correct checkboxes are set
         setSelectedValues(initialFilterValues || []);
     }, [initialFilterValues, isOpen]);
 
     if (!isOpen) return null;
 
     const handleCheckboxChange = (value) => {
-        // KĽÚČOVÁ ZMENA: Prevod hodnoty na malé písmená pre konzistentné porovnávanie
+        // KEY CHANGE: Convert value to lowercase for consistent comparison
         const lowerCaseValue = String(value).toLowerCase();
         setSelectedValues(prev => {
             if (prev.includes(lowerCaseValue)) {
-                return prev.filter(item => item !== lowerCaseValue); // Odstrániť, ak už je vybrané
+                return prev.filter(item => item !== lowerCaseValue); // Remove if already selected
             } else {
-                return [...prev, lowerCaseValue]; // Pridať, ak nie je vybrané
+                return [...prev, lowerCaseValue]; // Add if not selected
             }
         });
     };
@@ -114,11 +114,11 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
                             type: 'checkbox',
                             id: `filter-${columnName}-${index}`,
                             value: value,
-                            checked: selectedValues.includes(String(value).toLowerCase()), // Kontrola na malé písmená
+                            checked: selectedValues.includes(String(value).toLowerCase()), // Check for lowercase
                             onChange: () => handleCheckboxChange(value),
                             className: 'mr-2'
                         }),
-                        React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, value || '(Prázdne)')
+                        React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, value || '(Empty)')
                     )
                 )
             ),
@@ -128,15 +128,15 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
                 React.createElement('button', {
                     className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
                     onClick: onClose
-                }, 'Zrušiť'),
+                }, 'Cancel'),
                 React.createElement('button', {
                     className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
                     onClick: handleClear
-                }, 'Vymazať filter'),
+                }, 'Clear filter'),
                 React.createElement('button', {
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                     onClick: handleApply
-                }, 'Použiť filter')
+                }, 'Apply filter')
             )
         )
     );
@@ -171,7 +171,7 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
         React.createElement(
             'div',
             { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-md' },
-            React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, 'Viditeľnosť stĺpcov'),
+            React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, 'Column Visibility'),
             React.createElement(
                 'div',
                 { className: 'max-h-80 overflow-y-auto mb-4 border border-gray-200 rounded-md p-2' },
@@ -188,7 +188,7 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
                             }),
                             React.createElement('span', { className: 'text-gray-700' }, col.label)
                         )
-                        // ODSTRÁNENÉ: React.createElement('span', { className: 'text-gray-500 text-sm' }, col.id)
+                        // REMOVED: React.createElement('span', { className: 'text-gray-500 text-sm' }, col.id)
                     )
                 )
             ),
@@ -198,32 +198,32 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
                 React.createElement('button', {
                     className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
                     onClick: onClose
-                }, 'Zrušiť'),
+                }, 'Cancel'),
                 React.createElement('button', {
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                     onClick: handleSave
-                }, 'Uložiť zmeny')
+                }, 'Save Changes')
             )
         )
     );
 }
 
-// CollapsibleSection Component - pre rozbaľovacie sekcie
-// Upravené pre podporu kontrolovaných komponentov (props isOpen a onToggle)
+// CollapsibleSection Component - for collapsible sections
+// Modified to support controlled components (props isOpen and onToggle)
 function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, defaultOpen = false, noOuterStyles = false }) {
-  // Určíme, či je komponent externe riadený
+  // Determine if the component is externally controlled
   const isControlled = isOpenProp !== undefined;
-  // Použijeme interný stav, ak nie je riadený, inak použijeme externú prop isOpenProp
+  // Use internal state if not controlled, otherwise use external prop isOpenProp
   const [internalIsOpen, setInternalIsOpen] = React.useState(defaultOpen);
 
-  // Aktuálny stav, ktorý ovláda otváranie/zatváranie sekcie
+  // Current state that controls section opening/closing
   const currentIsOpen = isControlled ? isOpenProp : internalIsOpen;
 
   const handleToggle = () => {
     if (isControlled && onToggle) {
-      onToggle(); // Zavoláme externý toggle handler, ak je riadený
+      onToggle(); // Call external toggle handler if controlled
     } else {
-      setInternalIsOpen(prev => !prev); // Aktualizujeme interný stav, ak nie je riadený
+      setInternalIsOpen(prev => !prev); // Update internal state if not controlled
     }
   };
 
@@ -240,11 +240,11 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
       'button',
       {
         className: buttonClasses,
-        onClick: handleToggle // Použijeme nový univerzálny handleToggle
+        onClick: handleToggle // Use the new universal handleToggle
       },
-      // Šípka na začiatku
+      // Arrow at the beginning
       React.createElement('span', { className: 'text-gray-500 mr-2' }, currentIsOpen ? '▲' : '▼'),
-      // Titul sa bude rendrovať buď ako string alebo ako React element (tabuľka)
+      // Title will be rendered either as a string or as a React element (table)
       typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700' }, title) : title
     ),
     currentIsOpen && React.createElement(
@@ -262,37 +262,37 @@ const getNestedValue = (obj, path) => {
 
 // Helper function to get tshirt spans
 const getTshirtSpans = (team, tshirtSizeOrder) => {
-    const teamTshirtsMap = team._teamTshirtsMap || new Map(); // Používame už existujúcu mapu z `team`
+    const teamTshirtsMap = team._teamTshirtsMap || new Map(); // Use existing map from `team`
     return (tshirtSizeOrder && tshirtSizeOrder.length > 0 ? tshirtSizeOrder : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
         const quantity = teamTshirtsMap.get(size) || 0;
         return React.createElement('span', {
             key: `tshirt-summary-${size}`,
             className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-        }, `${quantity > 0 ? quantity : '-'}`); // Odstránené "Veľkosť ${size.toUpperCase()}:"
+        }, `${quantity > 0 ? quantity : '-'}`); // Removed "Size ${size.toUpperCase()}:"
     });
 };
 
 // Renamed and moved generateTeamHeaderTitle to a higher scope
 const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false, showUsersChecked = false, showTeamsChecked = false) => {
-    // Tieto počty by mali byť už k dispozícii v objekte `team` ak sú vypočítané v useMemo
+    // These counts should already be available in the `team` object if calculated in useMemo
     const menTeamMembersCount = team._menTeamMembersCount !== undefined ? team._menTeamMembersCount : 0;
     const womenTeamMembersCount = team._womenTeamMembersCount !== undefined ? team._womenTeamMembersCount : 0;
     const playersCount = team._players !== undefined ? team._players : 0;
 
     const titleParts = [];
 
-    // Logika pre titulok CollapsibleSection alebo riadka tabuľky
+    // Logic for CollapsibleSection title or table row
     if (forCollapsibleSection || (showUsersChecked && showTeamsChecked)) {
-        // Zobrazujeme s popiskami
-        titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, `Kategória: ${team._category || '-'}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, `Názov tímu: ${team.teamName || `Tím`}`));
-        // ODSTRÁNENÉ: Registroval: ${team._registeredBy || '-'}
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${playersCount}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
+        // Display with labels
+        titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, `Category: ${team._category || '-'}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, `Team Name: ${team.teamName || `Team`}`));
+        // REMOVED: Registered by: ${team._registeredBy || '-'}
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Players: ${playersCount}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Staff (W): ${womenTeamMembersCount}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Staff (M): ${menTeamMembersCount}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Transport: ${team.arrival?.type || '-'}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Accommodation: ${team.accommodation?.type || '-'}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Package: ${team.packageDetails?.name || '-'}`));
         
         const teamTshirtsMap = team._teamTshirtsMap || new Map();
         const tshirtDataWithLabels = (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
@@ -300,22 +300,22 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Size ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
     } else {
-        // Pôvodné zobrazenie bez popisiek pre riadok v tabuľke
+        // Original display without labels for a table row
         titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, team._category || '-'));
-        titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, team.teamName || `Tím`));
-        // ODSTRÁNENÉ: Registroval: ${team._registeredBy || '-'}
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, playersCount)); // Hráči
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, womenTeamMembersCount)); // R. tím (ž)
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount)); // R. tím (m)
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, team.arrival?.type || '-')); // Doprava
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, team.accommodation?.type || '-')); // Ubytovanie
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, team.packageDetails?.name || '-')); // Balík
-        titleParts.push(...getTshirtSpans(team, availableTshirtSizes)); // Tričká bez popisiek
+        titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, team.teamName || `Team`));
+        // REMOVED: Registered by: ${team._registeredBy || '-'}
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, playersCount)); // Players
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, womenTeamMembersCount)); // Staff (W)
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount)); // Staff (M)
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, team.arrival?.type || '-')); // Transport
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, team.accommodation?.type || '-')); // Accommodation
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, team.packageDetails?.name || '-')); // Package
+        titleParts.push(...getTshirtSpans(team, availableTshirtSizes)); // T-shirts without labels
     }
 
     return React.createElement(
@@ -326,10 +326,10 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 };
 
 
-// TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked }) { // Pridané showUsersChecked, showTeamsChecked
+// TeamDetailsContent Component - displays only the internal details of one team (without the outer CollapsibleSection)
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked }) { // Added showUsersChecked, showTeamsChecked
     if (!team) {
-        return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
+        return React.createElement('div', { className: 'text-gray-600 p-4' }, 'No team registrations.');
     }
 
     const formatAddress = (address) => {
@@ -352,7 +352,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         team.playerDetails.forEach((player, index) => {
             allConsolidatedMembers.push({
                 ...player,
-                type: 'Hráč',
+                type: 'Player',
                 uniqueId: `${team.teamName}-player-${player.firstName || ''}-${player.lastName || ''}-${index}`
             });
         });
@@ -361,7 +361,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         team.menTeamMemberDetails.forEach((member, index) => {
             allConsolidatedMembers.push({
                 ...member,
-                type: 'Člen realizačného tímu (muži)',
+                type: 'Staff Member (Men)',
                 uniqueId: `${team.teamName}-menstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
             });
         });
@@ -370,7 +370,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         team.womenTeamMemberDetails.forEach((member, index) => {
             allConsolidatedMembers.push({
                 ...member,
-                type: 'Člen realizačného tímu (ženy)',
+                type: 'Staff Member (Women)',
                 uniqueId: `${team.teamName}-womenstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
             });
         });
@@ -378,7 +378,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     if (team.driverDetails) {
         allConsolidatedMembers.push({
             ...team.driverDetails,
-            type: 'Šofér',
+            type: 'Driver',
             uniqueId: `${team.teamName}-driver-${team.driverDetails.firstName || ''}-${team.driverDetails.lastName || ''}-0`
         });
     }
@@ -386,15 +386,15 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     const mealDates = team.packageDetails && team.packageDetails.meals ? Object.keys(team.packageDetails.meals).sort() : [];
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
     const mealTypeLabels = {
-        breakfast: 'Raňajky',
-        lunch: 'Obed',
-        dinner: 'Večera',
-        refreshment: 'Občerstvenie'
+        breakfast: 'Breakfast',
+        lunch: 'Lunch',
+        dinner: 'Dinner',
+        refreshment: 'Refreshment'
     };
                 
     const teamDetailsTable = React.createElement(
         'div',
-        { className: '' }, // Removed 'overflow-x-auto' from here
+        { className: 'overflow-x-auto' }, // Added overflow-x-auto to contain the table within its parent.
         React.createElement(
             'table',
             { className: 'min-w-full divide-y divide-gray-200' },
@@ -404,15 +404,15 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 React.createElement(
                     'tr',
                     null,
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Typ'),
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Meno'),
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Priezvisko'),
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Dátum narodenia'),
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Číslo dresu'),
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Reg. číslo'),
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Adresa'), // ZMENA: pridané whitespace-nowrap
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Type'), // Added min-w-max
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'First Name'), // Added min-w-max
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Last Name'), // Added min-w-max
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Date of Birth'), // Added min-w-max
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Jersey No.'), // Added min-w-max
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Reg. No.'), // Added min-w-max
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Address'), // Added min-w-max
                     mealDates.map(date =>
-                        React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap' },
+                        React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' }, // Added min-w-max
                             React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
                             React.createElement(
                                 'div',
@@ -432,15 +432,15 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement(
                         'tr',
                         { key: member.uniqueId },
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.type || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.firstName || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.lastName || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, formatDateToDMMYYYY(member.dateOfBirth)),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.jerseyNumber || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.registrationNumber || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, formatAddress(member.address)), // ZMENA: pridané whitespace-nowrap
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.type || '-'), // Added min-w-max
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'), // Added min-w-max
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'), // Added min-w-max
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)), // Added min-w-max
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'), // Added min-w-max
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'), // Added min-w-max
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member.address)), // Added min-w-max
                         mealDates.map(date =>
-                            React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap' },
+                            React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' }, // Added min-w-max
                                 React.createElement(
                                     'div',
                                     { className: 'flex justify-around' },
@@ -469,16 +469,16 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     if (showDetailsAsCollapsible) {
         return React.createElement(
             CollapsibleSection,
-            { title: collapsibleSectionTitle, defaultOpen: false }, // Používame dynamický title
+            { title: collapsibleSectionTitle, defaultOpen: false }, // Use dynamic title
             teamDetailsTable
         );
     } else {
-        // Skryť tento nadpis, ak je povolený iba režim "Zobraziť tímy"
-        const shouldShowHeader = showUsersChecked || !showTeamsChecked; // Zobrazí sa, ak sú zobrazení používatelia ALEBO ak nie sú zobrazené iba tímy
+        // Hide this heading if only "Show Teams" mode is enabled
+        const shouldShowHeader = showUsersChecked || !showTeamsChecked; // Display if users are shown OR if only teams are not shown
         return React.createElement(
             'div',
             { className: 'p-4 pt-0 bg-gray-50 rounded-lg' },
-            shouldShowHeader && React.createElement('h3', { className: 'font-semibold text-gray-700 mb-2' }, 'Detaily členov tímu a stravovanie'),
+            shouldShowHeader && React.createElement('h3', { className: 'font-semibold text-gray-700 mb-2' }, 'Team Members Details and Meals'),
             teamDetailsTable
         );
     }
@@ -527,9 +527,9 @@ function AllRegistrationsApp() {
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
 
-  // Stav pre sledovanie rozbalených riadkov (ID používateľa -> boolean)
+  // State for tracking expanded rows (User ID -> boolean)
   const [expandedRows, setExpandedRows] = React.useState({});
-  // V režime "iba tímy" budeme túto mapu používať pre tímy, aby sme sledovali ich rozbalenie
+  // In "teams only" mode, we will use this map for teams to track their expansion
   const [expandedTeamRows, setExpandedTeamRows] = React.useState({});
 
 
@@ -539,8 +539,8 @@ function AllRegistrationsApp() {
   const [showUsers, setShowUsers] = React.useState(true);
   const [showTeams, setShowTeams] = React.useState(true);
 
-  // Zoskupenie všetkých tímov do jedného plochého zoznamu pre režim "iba tímy"
-  // PRESUNUTÉ NAD PODMIENENÉ RETURN STATEMENTS
+  // Group all teams into a single flat list for "teams only" mode
+  // MOVED ABOVE CONDITIONAL RETURN STATEMENTS
   const allTeamsFlattened = React.useMemo(() => {
     if (!showUsers && showTeams) {
         let teams = [];
@@ -565,10 +565,10 @@ function AllRegistrationsApp() {
 
                         teams.push({
                             ...team,
-                            _userId: u.id, // Uložíme ID používateľa pre referenciu
+                            _userId: u.id, // Store user ID for reference
                             _category: category,
                             _teamIndex: teamIndex,
-                            _registeredBy: `${u.firstName} ${u.lastName}`, // Kto registroval
+                            _registeredBy: `${u.firstName} ${u.lastName}`, // Who registered
                             _menTeamMembersCount: menTeamMembersCount,   // Add calculated count
                             _womenTeamMembersCount: womenTeamMembersCount, // Add calculated count
                             _players: team.playerDetails ? team.playerDetails.length : 0, // Ensure players count is also available
@@ -584,14 +584,14 @@ function AllRegistrationsApp() {
   }, [filteredUsers, showUsers, showTeams]);
 
 
-  const toggleRowExpansion = (userId) => { // Pre používateľské riadky
+  const toggleRowExpansion = (userId) => { // For user rows
       setExpandedRows(prev => ({
           ...prev,
           [userId]: !prev[userId]
       }));
   };
 
-  const toggleTeamRowExpansion = (teamUniqueId) => { // Pre tímové riadky
+  const toggleTeamRowExpansion = (teamUniqueId) => { // For team rows
       setExpandedTeamRows(prev => ({
           ...prev,
           [teamUniqueId]: !prev[teamUniqueId]
@@ -599,8 +599,8 @@ function AllRegistrationsApp() {
   };
 
   const toggleAllRows = () => {
-    // V závislosti od režimu sa bude správanie líšiť
-    if (!showUsers && showTeams) { // Režim "iba tímy"
+    // Behavior will differ depending on the mode
+    if (!showUsers && showTeams) { // "Teams only" mode
         const allTeamIds = allTeamsFlattened.map(team => `${team._userId}-${team._category}-${team._teamIndex}`);
 
         const allCurrentlyExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
@@ -611,7 +611,7 @@ function AllRegistrationsApp() {
         });
         setExpandedTeamRows(newExpandedState);
 
-    } else { // Režim "Zobraziť používateľov" (samostatne alebo s tímami)
+    } else { // "Show Users" mode (alone or with teams)
         const allCurrentlyExpanded = filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]);
         const newExpandedState = { ...expandedRows };
 
@@ -637,12 +637,12 @@ function AllRegistrationsApp() {
       const intervalId = setInterval(() => {
         if (checkGlobalAuthReady()) {
           clearInterval(intervalId);
-          console.log("AllRegistrationsApp: Firebase a používateľské dáta sú pripravené (interval).");
+          console.log("AllRegistrationsApp: Firebase and user data are ready (interval).");
         }
       }, 100);
 
       const handleGlobalDataUpdate = (event) => {
-        console.log('AllRegistrationsApp: Prijatá udalosť "globalDataUpdated". Aktualizujem lokálny stav.');
+        console.log('AllRegistrationsApp: Received "globalDataUpdated" event. Updating local state.');
         setIsAuthReady(true);
         setUser(window.auth?.currentUser || null);
         setUserProfileData(event.detail);
@@ -658,11 +658,11 @@ function AllRegistrationsApp() {
     let unsubscribeGlobalAuth;
     if (window.auth) {
         unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
-            console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+            console.log("AllRegistrationsApp: Global onAuthStateChanged - User:", currentUser ? currentUser.uid : "null");
             setUser(currentUser);
             setUserProfileData(window.globalUserProfileData);
             if (!currentUser) {
-                console.log("AllRegistrationsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+                console.log("AllRegistrationsApp: User is not logged in, redirecting to login.html.");
                 window.location.href = 'login.html';
             }
         });
@@ -680,7 +680,7 @@ function AllRegistrationsApp() {
     let unsubscribeUserDoc;
 
     if (isAuthReady && db && user) {
-      console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+      console.log(`AllRegistrationsApp: Attempting to load user document for UID: ${user.uid}`);
       if (typeof window.showGlobalLoader === 'function') {
         window.showGlobalLoader();
       }
@@ -690,7 +690,7 @@ function AllRegistrationsApp() {
         unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
-            console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
+            console.log("AllRegistrationsApp: User document exists, data:", userData);
 
             setUserProfileData(userData);
             setError('');
@@ -698,17 +698,17 @@ function AllRegistrationsApp() {
             if (typeof window.updateMenuItemsVisibility === 'function') {
                 window.updateMenuItemsVisibility(userData.role);
             } else {
-                console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
+                console.warn("AllRegistrationsApp: updateMenuItemsVisibility function is not defined.");
             }
-            // Zmena: Skrytie loadera po úspešnom načítaní profilu
+            // Change: Hide loader after successful profile loading
             if (typeof window.hideGlobalLoader === 'function') {
               window.hideGlobalLoader();
             }
 
-            console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
+            console.log("AllRegistrationsApp: User data loading completed.");
           } else {
-            console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
+            console.warn("AllRegistrationsApp: User document not found for UID:", user.uid);
+            setError("Error: User profile not found or you do not have sufficient permissions. Please try logging in again.");
             if (typeof window.hideGlobalLoader === 'function') {
               window.hideGlobalLoader();
             }
@@ -716,13 +716,13 @@ function AllRegistrationsApp() {
             setUserProfileData(null);
           }
         }, error => {
-          console.error("AllRegistrationsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+          console.error("AllRegistrationsApp: Error loading user data from Firestore (onSnapshot error):", error);
           if (error.code === 'permission-denied') {
-              setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
+              setError(`Permission error: You do not have access to your profile. Please try logging in again or contact support.`);
           } else if (error.code === 'unavailable') {
-              setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
+              setError(`Connection error: Firestore service is unavailable. Please try again later.`);
           } else {
-              setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+              setError(`Error loading user data: ${error.message}`);
           }
           if (typeof window.hideGlobalLoader === 'function') {
             window.hideGlobalLoader();
@@ -731,8 +731,8 @@ function AllRegistrationsApp() {
           setUserProfileData(null);
         });
       } catch (e) {
-        console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-        setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
+        console.error("AllRegistrationsApp: Error setting up onSnapshot for user data (try-catch):", e);
+        setError(`Error setting up listener for user data: ${e.message}`);
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
         }
@@ -740,19 +740,19 @@ function AllRegistrationsApp() {
         setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+        console.log("AllRegistrationsApp: Auth is ready and user is null, redirecting to login.html");
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
         }
         window.location.href = 'login.html';
         return;
     } else if (!isAuthReady || !db || user === undefined) {
-        console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Current states: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
+        console.log("AllRegistrationsApp: Waiting for Auth/DB/User data initialization. Current states: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
     }
 
     return () => {
       if (unsubscribeUserDoc) {
-        console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument.");
+        console.log("AllRegistrationsApp: Unsubscribing onSnapshot for user document.");
         unsubscribeUserDoc();
       }
     };
@@ -803,30 +803,30 @@ function AllRegistrationsApp() {
                         });
 
                         newOrderToSet = finalOrder;
-                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané poradie:", newOrderToSet);
+                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Merged and reordered order:", newOrderToSet);
 
                     } else {
-                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
+                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Saved order is empty or corrupted. Using default and saving it.");
                         setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
-                            .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
-                            .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
+                            .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Saved default order to Firestore (empty/corrupted)."))
+                            .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Error saving default order (empty/corrupted):", e));
                     }
                 } else {
-                    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
+                    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Column order document does not exist. Using default and saving it.");
                     setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
-                        .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
-                        .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
+                        .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Saved default order to Firestore (document did not exist)."))
+                        .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Error saving default order (document did not exist):", e));
                 }
 
                 setColumnOrder(newOrderToSet);
             }, error => {
-                console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní poradia stĺpcov z Firestore (onSnapshot error):", error);
-                setError(`Chyba pri načítaní poradia stĺpcov: ${error.message}`);
+                console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Error loading column order from Firestore (onSnapshot error):", error);
+                setError(`Error loading column order: ${error.message}`);
                 setColumnOrder(defaultColumnOrder);
             });
         } catch (e) {
-            console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri nastavovaní onSnapshot pre poradie stĺpcov (try-catch):", e);
-            setError(`Chyba pri inicializácii poradia stĺpcov: ${e.message}`);
+            console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Error setting up onSnapshot for column order (try-catch):", e);
+            setError(`Error initializing column order: ${e.message}`);
             setColumnOrder(defaultColumnOrder);
         }
 
@@ -839,28 +839,28 @@ function AllRegistrationsApp() {
                         ...doc.data()
                     }));
 
-                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
+                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] All users loaded:", usersData.length, "users.");
                 setAllUsers(usersData);
                 setFilteredUsers(usersData);
-                // Skryť loader po úspešnom načítaní všetkých používateľov
+                // Hide loader after successful loading of all users
                 if (typeof window.hideGlobalLoader === 'function') {
                   window.hideGlobalLoader();
                 }
             }, error => {
-                console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní všetkých používateľov z Firestore:", error);
-                setError(`Chyba pri načítaní používateľov: ${error.message}`);
+                console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Error loading all users from Firestore:", error);
+                setError(`Error loading users: ${error.message}`);
                 if (typeof window.hideGlobalLoader === 'function') {
                   window.hideGlobalLoader();
                 }
-                setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
+                setUserNotificationMessage(`Error loading data: ${e.message}`);
             });
         } catch (e) {
-            console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri nastavovaní onSnapshot pre všetkých používateľov (try-catch):", e);
-            setError(`Chyba pri načítaní používateľov: ${e.message}`);
+            console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Error setting up onSnapshot for all users (try-catch):", e);
+            setError(`Error loading users: ${e.message}`);
             if (typeof window.hideGlobalLoader === 'function') {
               window.hideGlobalLoader();
             }
-            setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
+            setUserNotificationMessage(`Error loading data: ${e.message}`);
         }
     } else if (isAuthReady && user === null) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] User is null, not fetching data. Redirecting to login.html.");
@@ -871,11 +871,11 @@ function AllRegistrationsApp() {
         return;
     } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] User is not an approved admin, not fetching data. Redirecting to my-data.html.");
-        setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
+        setError("You are not authorized to view this page. Only approved administrators have access.");
         if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader(); // Skryť loader aj pri presmerovaní kvôli oprávneniam
+          window.hideGlobalLoader(); // Hide loader even on redirection due to permissions
         }
-        setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
+        setUserNotificationMessage("You are not authorized to view this page.");
         window.location.href = 'logged-in-my-data.html';
         return;
     } else {
@@ -884,11 +884,11 @@ function AllRegistrationsApp() {
 
     return () => {
         if (unsubscribeAllUsers) {
-            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Ruším odber onSnapshot pre všetkých používateľov.");
+            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Unsubscribing onSnapshot for all users.");
             unsubscribeAllUsers();
         }
         if (unsubscribeColumnOrder) {
-            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Ruším odber onSnapshot pre poradie stĺpcov.");
+            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Unsubscribing onSnapshot for column order.");
             unsubscribeColumnOrder();
         }
     };
@@ -907,15 +907,15 @@ function AllRegistrationsApp() {
 
                       setAvailableTshirtSizes(availableSizesFromDb);
                   } else {
-                      console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes' alebo má neočakávaný formát. Používam predvolené poradie.");
+                      console.warn("Firestore settings/sizeTshirts document does not contain 'sizes' array or has an unexpected format. Using default order.");
                       setAvailableTshirtSizes(tshirtSizeOrderFallback);
                   }
               } else {
-                  console.warn("Firestore settings/sizeTshirts dokument neexistuje. Používam predvolené poradie.");
+                  console.warn("Firestore settings/sizeTshirts document does not exist. Using default order.");
                   setAvailableTshirtSizes(tshirtSizeOrderFallback);
               }
           }, error => {
-              console.error("Chyba pri načítaní veľkostí tričiek z Firestore:", error);
+              console.error("Error loading T-shirt sizes from Firestore:", error);
               setAvailableTshirtSizes(tshirtSizeOrderFallback);
           });
       }
@@ -936,14 +936,14 @@ function AllRegistrationsApp() {
 
       const sorted = [...filteredUsers].sort((a, b) => {
           const columnDef = columnOrder.find(col => col.id === columnId);
-          console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
-          console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
+          console.log(`handleSort: Sorting by column: ${columnId}, Direction: ${direction}`);
+          console.log(`handleSort: Found column definition for ${columnId}:`, columnDef);
 
           const type = columnDef ? columnDef.type : 'string';
 
           let valA, valB;
 
-          // Prístup k vnoreným vlastnostiam pre zoraďovanie
+          // Access nested properties for sorting
           if (columnId.includes('.')) {
               valA = getNestedValue(a, columnId);
               valB = getNestedValue(b, columnId);
@@ -969,12 +969,12 @@ function AllRegistrationsApp() {
           }
       });
       setFilteredUsers(sorted);
-      console.log("handleSort: Prvých 5 zoradených používateľov:", sorted.slice(0, 5).map(u => ({ id: u.id, [columnId]: getNestedValue(u, columnId) })));
+      console.log("handleSort: First 5 sorted users:", sorted.slice(0, 5).map(u => ({ id: u.id, [columnId]: getNestedValue(u, columnId) })));
   };
 
   const openFilterModal = (column) => {
-      console.log("AllRegistrationsApp: openFilterModal volaná pre stĺpec:", column);
-      console.log("AllRegistrationsApp: Aktuálny stav allUsers:", allUsers);
+      console.log("AllRegistrationsApp: openFilterModal called for column:", column);
+      console.log("AllRegistrationsApp: Current state of allUsers:", allUsers);
 
       setFilterColumn(column);
       // Generate unique column values from all users, including admins
@@ -993,7 +993,7 @@ function AllRegistrationsApp() {
               val = u[column];
           }
           if (typeof val === 'boolean') {
-              return val ? 'áno' : 'nie';
+              return val ? 'yes' : 'no';
           }
           return String(val || '').toLowerCase();
       }))].filter(v => v !== '').sort();
@@ -1026,10 +1026,10 @@ function AllRegistrationsApp() {
 
       // Logic for global checkboxes
       if (showUsers) {
-          // If "Zobraziť používateľov" is checked, display all users
+          // If "Show Users" is checked, display all users
           usersToDisplay = currentFiltered;
       } else if (!showUsers && showTeams) {
-          // If ONLY "Zobraziť tímy" is checked, display only users who have teams.
+          // If ONLY "Show Teams" is checked, display only users who have teams.
           // Users without teams are only admin and hall, or simple users who did not register any team
           usersToDisplay = currentFiltered.filter(user => user.teams && Object.keys(user.teams).length > 0);
       } else { // (!showUsers && !showTeams)
@@ -1056,7 +1056,7 @@ function AllRegistrationsApp() {
                       userValue = String(user[column] || '').toLowerCase();
                   }
                   if (typeof user[column] === 'boolean') {
-                      userValue = user[column] ? 'áno' : 'nie';
+                      userValue = user[column] ? 'yes' : 'no';
                   }
                   return filterValues.includes(userValue);
               });
@@ -1067,14 +1067,14 @@ function AllRegistrationsApp() {
 
 
   React.useEffect(() => {
-    console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
+    console.log(`AllRegistrationsApp: useEffect for updating header links. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
 
     if (!authLink || !profileLink || !logoutButton || !registerLink) {
-        console.warn("AllRegistrationsApp: Niektoré navigačné odkazy nie sú k dispozícii v DOM.");
+        console.warn("AllRegistrationsApp: Some navigation links are not available in the DOM.");
         return;
     }
 
@@ -1083,20 +1083,20 @@ function AllRegistrationsApp() {
       profileLink.classList.remove('hidden');
       logoutButton.classList.remove('hidden');
       registerLink.classList.add('hidden');
-      console.log("AllRegistrationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
+      console.log("AllRegistrationsApp: User logged in. Hidden: Login, Register. Shown: My Zone, Logout.");
     } else {
       authLink.classList.remove('hidden');
       profileLink.classList.add('hidden');
       logoutButton.classList.add('hidden');
       registerLink.classList.remove('hidden');
-      console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
+      console.log("AllRegistrationsApp: User logged out. Shown: Login, Register. Hidden: My Zone, Logout.");
     }
   }, [user]);
 
   const handleLogout = React.useCallback(async () => {
     if (!auth) {
-        console.error("AllRegistrationsApp: Chyba: Auth inštancia nie je definovaná pri pokuse o odhlásenie.");
-        setUserNotificationMessage("Chyba: Systém autentifikácie nie je pripravený. Skúste to znova.", 'error');
+        console.error("AllRegistrationsApp: Error: Auth instance is not defined when attempting to log out.");
+        setUserNotificationMessage("Error: Authentication system is not ready. Please try again.", 'error');
         return;
     }
     try {
@@ -1104,13 +1104,13 @@ function AllRegistrationsApp() {
         window.showGlobalLoader();
       }
       await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
+      setUserNotificationMessage("Successfully logged out.");
       window.location.href = 'login.html';
       setUser(null);
       setUserProfileData(null);
     } catch (e) {
-      console.error("AllRegistrationsApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
+      console.error("AllRegistrationsApp: Error logging out:", e);
+      setError(`Error logging out: ${e.message}`);
     } finally {
       if (typeof window.hideGlobalLoader === 'function') {
         window.hideGlobalLoader();
@@ -1151,10 +1151,10 @@ function AllRegistrationsApp() {
         const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
         try {
             await setDoc(columnOrderDocRef, { order: newColumnOrder }, { merge: true });
-            console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
+            console.log("AllRegistrationsApp: Column order saved to Firestore.");
         } catch (e) {
-            console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
-            setUserNotificationMessage(`Chyba pri ukladaní poradia stĺpcov: ${e.message}`);
+            console.error("AllRegistrationsApp: Error saving column order to Firestore:", e);
+            setUserNotificationMessage(`Error saving column order: ${e.message}`);
         }
     }
   };
@@ -1165,19 +1165,19 @@ function AllRegistrationsApp() {
         const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
         try {
             await setDoc(columnOrderDocRef, { order: updatedColumns }, { merge: true });
-            setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
+            setUserNotificationMessage("Column visibility successfully saved.", 'success');
         } catch (e) {
-            console.error("AllRegistrationsApp: Chyba pri ukladaní viditeľnosti stĺpcov do Firestore:", e);
-            setUserNotificationMessage(`Chyba pri ukladaní viditeľnosti stĺpcov: ${e.message}`, 'error');
+            console.error("AllRegistrationsApp: Error saving column visibility to Firestore:", e);
+            setUserNotificationMessage(`Error saving column visibility: ${e.message}`, 'error');
         }
     }
   };
 
-  // Pred podmienenými return statements, kde sú volané všetky hooks
-  // ... (všetky useState, useEffect, useCallback hooks už sú definované vyššie) ...
+  // Before conditional return statements, where all hooks are called
+  // ... (all useState, useEffect, useCallback hooks are already defined above) ...
 
   if (!isAuthReady || user === undefined || !userProfileData) {
-    // V prípade, že overenie ešte nie je pripravené alebo chýbajú dáta, skryjeme loader, aby neostával visieť
+    // If authentication is not yet ready or data is missing, hide the loader so it doesn't hang
     if (typeof window.hideGlobalLoader === 'function') {
       window.hideGlobalLoader();
     }
@@ -1185,12 +1185,12 @@ function AllRegistrationsApp() {
   }
 
   if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
-      console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
-      setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
+      console.log("AllRegistrationsApp: User is not an approved administrator. Redirecting to logged-in-my-data.html.");
+      setError("You are not authorized to view this page. Only approved administrators have access.");
       if (typeof window.hideGlobalLoader === 'function') {
-        window.hideGlobalLoader(); // Skryť loader aj pri presmerovaní kvôli oprávneniam
+        window.hideGlobalLoader(); // Hide loader even on redirection due to permissions
       }
-      setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
+      setUserNotificationMessage("You are not authorized to view this page.");
       window.location.href = 'logged-in-my-data.html';
       return null;
   }
@@ -1205,8 +1205,8 @@ function AllRegistrationsApp() {
   };
 
   const shouldShowExpander = (u) => {
-      // Funkcia, ktorá určuje, či má byť riadok rozbaliteľný (nielen zobraziť šípku)
-      // Administrátori by nemali mať rozbaliteľné riadky, ak nie sú zobrazené tímy, alebo ak nemajú tímy.
+      // Function that determines if a row should be expandable (not just show an arrow)
+      // Administrators should not have expandable rows if teams are not shown, or if they don't have teams.
       return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
   };
 
@@ -1245,7 +1245,7 @@ function AllRegistrationsApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Všetky registrácie'
+          'All Registrations'
         ),
         React.createElement(
             'div',
@@ -1257,7 +1257,7 @@ function AllRegistrationsApp() {
                     checked: showUsers,
                     onChange: (e) => setShowUsers(e.target.checked)
                 }),
-                React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť používateľov')
+                React.createElement('span', { className: 'text-gray-700' }, 'Show Users')
             ),
             React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
                 React.createElement('input', {
@@ -1266,12 +1266,12 @@ function AllRegistrationsApp() {
                     checked: showTeams,
                     onChange: (e) => setShowTeams(e.target.checked)
                 }),
-                React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť tímy')
+                React.createElement('span', { className: 'text-gray-700' }, 'Show Teams')
             ),
             React.createElement('button', {
                 onClick: () => setShowColumnVisibilityModal(true),
                 className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
-            }, 'Upraviť stĺpce')
+            }, 'Edit Columns')
         ),
         React.createElement(
             'div',
@@ -1285,10 +1285,10 @@ function AllRegistrationsApp() {
                     React.createElement(
                         'tr',
                         null,
-                        // Hlavička sa líši v závislosti od režimu
-                        (!showUsers && showTeams) ? ( // Režim "iba tímy"
+                        // Header varies depending on the mode
+                        (!showUsers && showTeams) ? ( // "Teams only" mode
                             React.createElement(React.Fragment, null,
-                                React.createElement('th', { className: 'py-3 px-2 text-center' }, // Empty header for expander
+                                React.createElement('th', { className: 'py-3 px-2 text-center min-w-max' }, // Empty header for expander, Added min-w-max
                                     React.createElement('button', {
                                         onClick: toggleAllRows,
                                         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
@@ -1296,29 +1296,29 @@ function AllRegistrationsApp() {
                                     allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼'
                                     )
                                 ),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'Kategória'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Názov tímu'),
-                                // ODSTRÁNENÉ: 'Registroval' hlavička
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'Hráči'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'R. tím (ž)'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'R. tím (m)'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Doprava'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Ubytovanie'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Balík'),
-                                // Dynamicky generované hlavičky pre veľkosti tričiek
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Category'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Team Name'), // Added min-w-max
+                                // REMOVED: 'Registered by' header
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Players'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Staff (W)'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Staff (M)'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Transport'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Accommodation'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Package'), // Added min-w-max
+                                // Dynamically generated headers for T-shirt sizes
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Size ${size.toUpperCase()}`) // Added min-w-max
                                 )
                             )
-                        ) : ( // Režim "Zobraziť používateľov" (samostatne alebo s tímami)
+                        ) : ( // "Show Users" mode (alone or with teams)
                             React.createElement(React.Fragment, null,
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center' },
-                                    // Globálne rozbalovacie tlačidlo len ak sú zobrazení používatelia A tímy
+                                React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center min-w-max' }, // Added min-w-max
+                                    // Global expand/collapse button only if users AND teams are shown
                                     showUsers && showTeams && React.createElement('button', {
                                         onClick: toggleAllRows,
                                         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                     },
-                                    // Opravená logika smerovania pre globálne tlačidlo
+                                    // Corrected direction logic for global button
                                     filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▲' : '▼'
                                     )
                                 ),
@@ -1326,8 +1326,8 @@ function AllRegistrationsApp() {
                                     React.createElement('th', {
                                         key: col.id,
                                         scope: 'col',
-                                        // Aplikujeme whitespace-nowrap na hlavičky stĺpcov, ak nie sú ikonové tlačidlá
-                                        className: `py-3 px-6 cursor-pointer relative group ${col.id === 'toggle' || col.id === 'expander' ? '' : 'whitespace-nowrap'}`,
+                                        // Apply whitespace-nowrap to column headers if they are not icon buttons
+                                        className: `py-3 px-6 cursor-pointer relative group ${col.id === 'toggle' || col.id === 'expander' ? '' : 'whitespace-nowrap'} min-w-max`, // Added min-w-max
                                         onMouseEnter: () => setHoveredColumn(col.id),
                                         onMouseLeave: () => setHoveredColumn(null)
                                     },
@@ -1362,7 +1362,7 @@ function AllRegistrationsApp() {
                         React.createElement(
                             'tr',
                             null,
-                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-4 px-6 text-center text-gray-500' }, 'No registrations to display.')
                         )
                     ) : (
                         // Conditional rendering based on showUsers and showTeams
@@ -1370,7 +1370,7 @@ function AllRegistrationsApp() {
                             React.createElement(React.Fragment, null,
                                 allTeamsFlattened.map(team => {
                                     const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
-                                    // Generujeme titulok s popiskami, ktorý sa zobrazí priamo
+                                    // Generate title with labels, which will be displayed directly
                                     const teamHeaderTitleContent = generateTeamHeaderTitle(team, availableTshirtSizes, true, showUsers, showTeams); 
                                     
                                     return React.createElement(
@@ -1382,32 +1382,32 @@ function AllRegistrationsApp() {
                                                 className: `bg-white border-b hover:bg-gray-50 cursor-pointer`,
                                                 onClick: () => toggleTeamRowExpansion(teamUniqueId)
                                             },
-                                            React.createElement('td', { className: 'py-3 px-2 text-center' },
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, // Added min-w-max
                                                 React.createElement('span', { className: 'text-gray-500' }, expandedTeamRows[teamUniqueId] ? '▲' : '▼')
                                             ),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._category || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.teamName || `Tím`),
-                                            // ODSTRÁNENÉ: Registroval ${team._registeredBy || '-'}
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._players), // Používame novú vlastnosť
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._womenTeamMembersCount),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._menTeamMembersCount),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.arrival?.type || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.accommodation?.type || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.packageDetails?.name || '-'),
-                                            // Dynamicky generované bunky pre veľkosti tričiek
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._category || '-'), // Added min-w-max
+                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.teamName || `Team`), // Added min-w-max
+                                            // REMOVED: Registered by ${team._registeredBy || '-'}
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players), // Using new property, Added min-w-max
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenTeamMembersCount), // Added min-w-max
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menTeamMembersCount), // Added min-w-max
+                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.arrival?.type || '-'), // Added min-w-max
+                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'), // Added min-w-max
+                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'), // Added min-w-max
+                                            // Dynamically generated cells for T-shirt sizes
                                             (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                                React.createElement('td', { key: `tshirt-data-${teamUniqueId}-${size}`, className: 'py-3 px-2 text-center whitespace-nowrap' }, team._teamTshirtsMap.get(size) || '-')
+                                                React.createElement('td', { key: `tshirt-data-${teamUniqueId}-${size}`, className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._teamTshirtsMap.get(size) || '-') // Added min-w-max
                                             )
                                         ),
-                                        expandedTeamRows[teamUniqueId] && (!showUsers && showTeams) && React.createElement( // Zobraziť iba ak je "Zobraziť tímy" a NIE "Zobraziť používateľov"
+                                        expandedTeamRows[teamUniqueId] && (!showUsers && showTeams) && React.createElement( // Display only if "Show Teams" AND NOT "Show Users"
                                             'tr',
                                             { key: `${teamUniqueId}-details`, className: 'bg-gray-100' },
                                             React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
-                                                // V tomto režime sa nezobrazuje samostatný nadpis, pretože už je v CollapsibleSection title
+                                                // In this mode, no separate heading is displayed because it is already in CollapsibleSection title
                                                 React.createElement(TeamDetailsContent, {
                                                     team: team,
                                                     tshirtSizeOrder: availableTshirtSizes,
-                                                    showDetailsAsCollapsible: false, // Priamy režim pre "iba tímy"
+                                                    showDetailsAsCollapsible: false, // Direct mode for "teams only"
                                                     showUsersChecked: showUsers,
                                                     showTeamsChecked: showTeams
                                                 })
@@ -1427,31 +1427,31 @@ function AllRegistrationsApp() {
                                             className: `bg-white border-b hover:bg-gray-50 ${shouldShowExpander(u) ? 'cursor-pointer' : ''}`, // Add cursor-pointer only if expandable
                                             onClick: shouldShowExpander(u) ? () => toggleRowExpansion(u.id) : undefined // Only clickable if shouldShowExpander is true
                                         },
-                                        // Prvý stĺpec teraz obsahuje logiku pre šípku alebo pomlčku
-                                        React.createElement('td', { className: 'py-3 px-2 text-center' },
+                                        // The first column now contains the arrow or dash logic
+                                        React.createElement('td', { className: 'py-3 px-2 text-center min-w-max' }, // Added min-w-max
                                             React.createElement('span', { className: 'text-gray-500' },
                                                 shouldShowExpander(u)
                                                     ? (expandedRows[u.id] ? '▲' : '▼')
-                                                    : '-' // Zobrazí pomlčku, ak riadok nie je rozbaliteľný
+                                                    : '-' // Displays a dash if the row is not expandable
                                             )
                                         ),
                                         columnOrder.filter(col => col.visible).map(col => (
-                                            React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' }, // Aplikujeme whitespace-nowrap na všetky data cells
+                                            React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' }, // Apply whitespace-nowrap to all data cells, Added min-w-max
                                                 col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
-                                                col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
+                                                col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Yes' : 'No') :
                                                 col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
                                                 getNestedValue(u, col.id) || '-'
                                             )
                                         ))
                                     ),
-                                    // Podmienené zobrazenie detailov tímu pre používateľa, ak je zaškrtnutý "Zobraziť tímy"
+                                    // Conditional display of team details for the user if "Show Teams" is checked
                                     expandedRows[u.id] && showTeams && React.createElement(
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
                                         React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 1, className: 'p-0' }, // Reduced colspan by 1
-                                            // V tomto režime je `u` kompletný používateľ so všetkými tímami.
-                                            // `TeamDetailsContent` nie je navrhnutý pre spracovanie viacerých tímov naraz z jedného propu.
-                                            // Preto prechádzame cez tímy používateľa a vykresľujeme ich individuálne.
+                                            // In this mode, `u` is a complete user with all teams.
+                                            // `TeamDetailsContent` is not designed to process multiple teams at once from a single prop.
+                                            // Therefore, we iterate through the user's teams and render them individually.
                                             Object.entries(u.teams || {}).map(([category, teamList]) =>
                                                 teamList.map((team, teamIndex) => {
                                                     let menTeamMembersCount = 0;
@@ -1472,15 +1472,15 @@ function AllRegistrationsApp() {
                                                         key: `${u.id}-${category}-${teamIndex}-details-content`,
                                                         team: {
                                                             ...team,
-                                                            _category: category, // Pridávame kategóriu
-                                                            _registeredBy: `${u.firstName} ${u.lastName}`, // Pridávame kto registroval
+                                                            _category: category, // Add category
+                                                            _registeredBy: `${u.firstName} ${u.lastName}`, // Add who registered
                                                             _menTeamMembersCount: menTeamMembersCount,
                                                             _womenTeamMembersCount: womenTeamMembersCount,
                                                             _players: team.playerDetails ? team.playerDetails.length : 0,
-                                                            _teamTshirtsMap: teamTshirtsMap // Pridávame mapu tričiek
+                                                            _teamTshirtsMap: teamTshirtsMap // Add t-shirt map
                                                         },
                                                         tshirtSizeOrder: availableTshirtSizes,
-                                                        showDetailsAsCollapsible: true, // S tlačidlom pre "používateľov a tímy"
+                                                        showDetailsAsCollapsible: true, // With button for "users and teams"
                                                         showUsersChecked: showUsers,    // Pass current showUsers state
                                                         showTeamsChecked: showTeams     // Pass current showTeams state
                                                     })
@@ -1500,5 +1500,5 @@ function AllRegistrationsApp() {
   );
 }
 
-// Explicitne sprístupniť komponent globálne
+// Explicitly expose the component globally
 window.AllRegistrationsApp = AllRegistrationsApp;
