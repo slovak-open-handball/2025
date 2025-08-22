@@ -54,16 +54,17 @@
             display: flex;
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
             transition: margin-left 0.3s ease-in-out; /* Hladký prechod */
+            /* NOVINKA: Zabezpečíme, aby hlavná oblasť obsahu rolovala, ak jej obsah pretieka */
+            overflow-y: auto;
+            /* Zabezpečíme, aby na menších obrazovkách main-content-area nepoužívala margin-left */
+            /* a zároveň jej obsah bol správne rozložený */
+            @media (max-width: 768px) {
+                margin-left: 0 !important; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+            }
         }
 
         /* Štýly pre React root, ktorý slúži ako kontajner, nie ako biely obdĺžnik */
         #root {
-            /* ODSTRÁNENÉ vizuálne štýly pre "biely obdĺžnik" z tohto elementu */
-            /* background-color: #ffffff; */
-            /* padding: 2rem; */
-            /* border-radius: 0.5rem; */
-            /* box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); */
-            
             max-width: 1200px; /* Obmedzenie maximálnej šírky */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
             margin-left: auto; /* Centrovanie v rámci rodiča */
@@ -71,16 +72,32 @@
             flex-grow: 1; /* Umožní elementu rásť */
             flex-shrink: 1; /* Umožní elementu zmenšovať sa */
             min-width: 0; /* Zabezpečí, že sa element môže zmenšiť pod svojou obsahovou šírkou */
-        }
-
-        @media (max-width: 768px) {
-            #main-content-area {
-                margin-left: 0 !important; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
-                width: 100% !important; /* Na mobiloch zaberá celú šírku */
-                justify-content: center; /* Stále centrovať obsah */
-                align-items: flex-start;
+            /* NOVINKA: Na mobilných zariadeniach odstránime maximálnu šírku, aby sa prispôsobilo */
+            @media (max-width: 768px) {
+                max-width: 100%;
             }
         }
+
+        /* NOVINKA: Styling pre obalový div, ktorý teraz obsahuje padding a centrovanie obsahu */
+        .content-wrapper {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center; /* Centrovanie obsahu vo vnútri wrapperu */
+            padding-top: 2rem; /* pt-8 */
+            padding-bottom: 2rem; /* pb-8 */
+            padding-left: 1rem; /* px-4 */
+            padding-right: 1rem; /* px-4 */
+            /* Responzívne paddingy */
+            @media (min-width: 640px) { /* sm: */
+                padding-left: 1.5rem; /* sm:px-6 */
+                padding-right: 1.5rem; /* sm:px-6 */
+            }
+            @media (min-width: 1024px) { /* lg: */
+                padding-left: 2rem; /* lg:px-8 */
+                padding-right: 2rem; /* lg:px-8 */
+            }
+        }
+
         /* Štýly pre plávajúce tlačidlo */
         .fab-button {
             position: fixed;
@@ -120,11 +137,12 @@
     <div id="menu-placeholder"></div>
 
     <main id="main-content-area" class="flex-grow flex">
-        <!-- Tento div slúži ako 'spacer' pre ľavé menu a jeho šírka sa bude dynamicky meniť pomocou JS v logged-in-left-menu.js -->
-        <div id="menu-spacer" class="flex-shrink-0 w-16 transition-all duration-300"></div> 
+        <!-- ODSTRÁNENÉ: Tento div slúžil ako 'spacer' pre ľavé menu -->
+        <!-- <div id="menu-spacer" class="flex-shrink-0 w-16 transition-all duration-300"></div> --> 
 
         <!-- Obalový div pre obsah, ktorý zabezpečí symetrické okraje a centrovanie -->
-        <div class="flex-grow flex justify-center pt-8 pb-8 px-4 sm:px-6 lg:px-8">
+        <!-- NOVINKA: Použijeme pevnú triedu .content-wrapper a definujeme ju v <style> -->
+        <div class="content-wrapper">
             <div id="root">
                 <!-- Načítavací indikátor vnútri #root, už bez bieleho pozadia a tieňa z #root CSS -->
                 <div class="flex justify-center pt-16">
