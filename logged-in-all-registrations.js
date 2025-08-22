@@ -798,11 +798,11 @@ function AllRegistrationsApp() {
                   const data = docSnapshot.data();
                   if (data && Array.isArray(data.sizes)) {
                       // OPRAVA: Mapovanie pre settings/sizeTshirts, kde sú veľkosti uložené ako reťazce priamo
-                      const sortedSizes = [...data.sizes]
-                          .sort((a, b) => (a.order || 0) - (b.order || 0)) // Používame 'order', ak existuje
-                          .map(s => typeof s === 'object' && s.size ? String(s.size).trim() : String(s).trim()); // OPRAVA: Priame mapovanie reťazca alebo objektu s .size
+                      // ODSTRÁNENÉ ZORADZOVANIE - teraz sa mapujú tak, ako sú v databáze
+                      const availableSizesFromDb = [...data.sizes]
+                          .map(s => typeof s === 'object' && s.size ? String(s.size).trim() : String(s).trim()); 
 
-                      setAvailableTshirtSizes(sortedSizes);
+                      setAvailableTshirtSizes(availableSizesFromDb);
                   } else {
                       console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes' alebo má neočakávaný formát. Používam predvolené poradie.");
                       setAvailableTshirtSizes(tshirtSizeOrderFallback);
