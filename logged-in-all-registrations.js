@@ -282,7 +282,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -307,7 +307,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 
 
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked }) {
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal }) {
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -411,7 +411,14 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 allConsolidatedMembers.map((member) =>
                     React.createElement(
                         'tr',
-                        { key: member.uniqueId },
+                        {
+                            key: member.uniqueId,
+                            className: 'cursor-pointer hover:bg-gray-100', // Pridal som triedy pre vizuálnu spätnú väzbu
+                            onClick: (e) => { // Pridal som obsluhu kliknutia na riadok člena
+                                e.stopPropagation();
+                                openEditModal(member, `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`);
+                            }
+                        },
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.type || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'),
@@ -464,19 +471,235 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
 function DataEditModal({ isOpen, onClose, title, data }) {
+    const modalRef = React.useRef(null);
+
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
+
+    // Helper to format keys for labels
+    const formatLabel = (key) => {
+        // Handle common nested keys for better display
+        if (key === 'billing.clubName') return 'Názov klubu (Fakturácia)';
+        if (key === 'billing.ico') return 'IČO (Fakturácia)';
+        if (key === 'billing.dic') return 'DIČ (Fakturácia)';
+        if (key === 'billing.icDph') return 'IČ DPH (Fakturácia)';
+        if (key === 'accommodation.type') return 'Typ ubytovania';
+        if (key === 'arrival.type') return 'Typ dopravy';
+        if (key === 'packageDetails.name') return 'Názov balíka';
+        if (key === 'packageDetails.meals') return 'Stravovanie';
+        if (key === 'teamName') return 'Názov tímu';
+        if (key === 'playerDetails') return 'Detaily hráčov';
+        if (key === 'menTeamMemberDetails') return 'Detaily členov R. tímu (muži)';
+        if (key === 'womenTeamMemberDetails') return 'Detaily členov R. tímu (ženy)';
+        if (key === 'driverDetails') return 'Detaily šoféra';
+        if (key === 'tshirts') return 'Tričká';
+        if (key === 'registrationDate') return 'Dátum registrácie';
+        if (key === 'dateOfBirth') return 'Dátum narodenia';
+        if (key === 'postalCode') return 'PSČ';
+        if (key === 'approved') return 'Schválený';
+
+
+        return key
+            .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+            .replace(/^./, str => str.toUpperCase()) // Capitalize the first letter
+            .replace(/\./g, ' ') // Replace dots with spaces
+            .trim();
+    };
+
+    // Helper to format values for placeholders
+    const formatValueForPlaceholder = (value, key) => {
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
+        if (value.toDate && typeof value.toDate === 'function') { // Firebase Timestamp
+            return value.toDate().toLocaleString('sk-SK');
+        }
+        if (Array.isArray(value)) {
+            // Special handling for nested arrays in playerDetails etc.
+            if (key === 'playerDetails' || key === 'menTeamMemberDetails' || key === 'womenTeamMemberDetails' || key === 'tshirts') {
+                 // For complex arrays like playerDetails, show a summary or indicate complex data
+                 return `[${value.length} položiek] (Pozrite konzolu pre detaily)`;
+            }
+            return value.map(item => {
+                if (typeof item === 'object' && item !== null) {
+                    return JSON.stringify(item);
+                }
+                return String(item);
+            }).join(', ');
+        }
+        if (typeof value === 'object') {
+             if (key === 'billing') { // Specific handling for billing to flatten
+                return Object.entries(value).map(([billKey, billValue]) => `${formatLabel(billKey)}: ${formatValueForPlaceholder(billValue)}`).join(', ');
+            } else if (key === 'address') {
+                 return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            } else if (key === 'packageDetails' && value.name) {
+                return value.name;
+            } else if (key === 'accommodation' && value.type) {
+                return value.type;
+            } else if (key === 'arrival' && value.type) {
+                return value.type;
+            }
+            return JSON.stringify(value);
+        }
+        return String(value);
+    };
+
+    const renderDataFields = (obj, parentKey = '') => {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj) && !['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'tshirts', 'parts'].includes(parentKey.split('.').pop())) {
+             // For primitive types or simple arrays at top level, just return a single input.
+             const labelText = parentKey ? formatLabel(parentKey) : 'Hodnota';
+             return React.createElement(
+                'div',
+                { key: parentKey, className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                React.createElement('input', {
+                    type: 'text',
+                    readOnly: true,
+                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
+                    placeholder: formatValueForPlaceholder(obj, parentKey)
+                })
+            );
+        }
+
+        return Object.entries(obj).map(([key, value]) => {
+            // Skip internal React/Firebase keys or keys that are too verbose/nested
+            if (key.startsWith('_') || key === 'teams' || key === 'columnOrder' || key === 'displayNotifications') {
+                return null;
+            }
+
+            const fullKeyPath = parentKey ? `${parentKey}.${key}` : key;
+            const labelText = formatLabel(fullKeyPath);
+
+            // Handle nested objects and arrays
+            if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
+                // Special handling for address, billing, packageDetails, accommodation, arrival
+                if (key === 'address' || key === 'billing' || key === 'packageDetails' || key === 'accommodation' || key === 'arrival') {
+                    // For these specific nested objects, display their content in a single input field.
+                    const formattedValue = formatValueForPlaceholder(value, key);
+                     return React.createElement(
+                        'div',
+                        { key: fullKeyPath, className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                        React.createElement('input', {
+                            type: 'text',
+                            readOnly: true,
+                            className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
+                            placeholder: formattedValue
+                        })
+                    );
+                }
+                // For other nested objects, create a collapsible section
+                return React.createElement(
+                    CollapsibleSection,
+                    { key: fullKeyPath, title: labelText, defaultOpen: false, noOuterStyles: true },
+                    renderDataFields(value, fullKeyPath)
+                );
+            } else if (Array.isArray(value)) {
+                if (value.length === 0) {
+                     return React.createElement(
+                        'div',
+                        { key: fullKeyPath, className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                        React.createElement('input', {
+                            type: 'text',
+                            readOnly: true,
+                            className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
+                            placeholder: '(Prázdne)'
+                        })
+                    );
+                }
+                // For arrays of objects (like playerDetails, team members, tshirts), create collapsible sections for each item
+                // or just display a summary if it's too long
+                if (key === 'playerDetails' || key === 'menTeamMemberDetails' || key === 'womenTeamMemberDetails') {
+                    return React.createElement(
+                        CollapsibleSection,
+                        { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
+                        value.map((item, index) => React.createElement(
+                            CollapsibleSection,
+                            { key: `${fullKeyPath}-${index}`, title: `${item.firstName || ''} ${item.lastName || ''} (${item.type || 'Člen'})`, defaultOpen: false, noOuterStyles: true },
+                            renderDataFields(item, `${fullKeyPath}[${index}]`)
+                        ))
+                    );
+                } else if (key === 'tshirts') {
+                    return React.createElement(
+                        CollapsibleSection,
+                        { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
+                        value.map((item, index) => React.createElement(
+                            'div',
+                            { key: `${fullKeyPath}-${index}`, className: 'mb-2 p-2 border rounded-md bg-gray-50' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, `Tričko ${index + 1}`),
+                            renderDataFields(item, `${fullKeyPath}[${index}]`)
+                        ))
+                    );
+                } else if (key === 'parts' && parentKey.endsWith('contents')) { // special case for LLM chat history parts
+                     return React.createElement(
+                        CollapsibleSection,
+                        { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
+                        value.map((item, index) => React.createElement(
+                            'div',
+                            { key: `${fullKeyPath}-${index}`, className: 'mb-2 p-2 border rounded-md bg-gray-50' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, `Časť ${index + 1}`),
+                            renderDataFields(item, `${fullKeyPath}[${index}]`)
+                        ))
+                    );
+                }
+                // For other arrays, display in a single input field
+                const formattedValue = formatValueForPlaceholder(value, key);
+                return React.createElement(
+                    'div',
+                    { key: fullKeyPath, className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                    React.createElement('input', {
+                        type: 'text',
+                        readOnly: true,
+                        className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
+                        placeholder: formattedValue
+                    })
+                );
+            }
+            // For primitive values (string, number, boolean, Timestamp)
+            return React.createElement(
+                'div',
+                { key: fullKeyPath, className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                React.createElement('input', {
+                    type: 'text',
+                    readOnly: true,
+                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
+                    placeholder: formatValueForPlaceholder(value, key)
+                })
+            );
+        });
+    };
 
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4' },
         React.createElement(
             'div',
-            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto' },
+            {
+                ref: modalRef, // Attach ref here
+                className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto'
+            },
             React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, title),
             React.createElement(
-                'pre',
-                { className: 'bg-gray-100 p-3 rounded-md text-sm whitespace-pre-wrap break-all' },
-                JSON.stringify(data, null, 2)
+                'div',
+                { className: 'space-y-4' }, // Add some spacing between fields
+                renderDataFields(data)
             ),
             React.createElement(
                 'div',
@@ -547,7 +770,12 @@ function AllRegistrationsApp() {
   const [editModalTitle, setEditModalTitle] = React.useState('');
 
   const openEditModal = (data, title) => {
-      setEditingData(data);
+      // Remove sensitive or irrelevant keys before passing to modal
+      const cleanedData = { ...data };
+      delete cleanedData.password; // Príklad: odstránenie hesla
+      delete cleanedData.emailVerified; // Príklad: odstránenie interných stavov
+
+      setEditingData(cleanedData);
       setEditModalTitle(title);
       setIsEditModalOpen(true);
   };
@@ -1340,7 +1568,7 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`)
                                 )
                             )
                         ) : (
@@ -1439,7 +1667,8 @@ function AllRegistrationsApp() {
                                                     tshirtSizeOrder: availableTshirtSizes,
                                                     showDetailsAsCollapsible: false,
                                                     showUsersChecked: showUsers,
-                                                    showTeamsChecked: showTeams
+                                                    showTeamsChecked: showTeams,
+                                                    openEditModal: openEditModal // Preposielame openEditModal
                                                 })
                                             )
                                         )
@@ -1528,7 +1757,8 @@ function AllRegistrationsApp() {
                                                         tshirtSizeOrder: availableTshirtSizes,
                                                         showDetailsAsCollapsible: true,
                                                         showUsersChecked: showUsers,
-                                                        showTeamsChecked: showTeams
+                                                        showTeamsChecked: showTeams,
+                                                        openEditModal: openEditModal // Preposielame openEditModal
                                                     })
                                                 })
                                             )
