@@ -299,7 +299,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -392,7 +392,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 
     const teamDetailsTable = React.createElement(
         'div',
-        { className: 'overflow-x-auto' },
+        { className: '' }, // Removed 'overflow-x-auto' from here
         React.createElement(
             'table',
             { className: 'min-w-full divide-y divide-gray-200' },
@@ -1283,7 +1283,7 @@ function AllRegistrationsApp() {
                                         onClick: toggleAllRows,
                                         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                     },
-                                    allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▼' : '▲'
+                                    allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._teamIndex}-${team._category}`]) ? '▼' : '▲' // Fixed uniqueId for team
                                     ),
                                     React.createElement('span', { className: 'font-semibold' }, 'Tímové Registrácie'),
                                 )
@@ -1361,7 +1361,7 @@ function AllRegistrationsApp() {
                                     React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Balík'),
                                     // Dynamicky generované hlavičky pre veľkosti tričiek
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `${size.toUpperCase()}`)
+                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `Vel. ${size.toUpperCase()}`)
                                     )
                                 ),
                                 allTeamsFlattened.map(team => {
