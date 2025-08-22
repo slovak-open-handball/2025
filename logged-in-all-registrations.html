@@ -62,9 +62,14 @@
             padding: 2rem; /* Vnútorná medzera pre obsah */
             border-radius: 0.5rem; /* Zaoblené rohy */
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tieň */
-            width: 100%; /* Zabezpečí, aby zabralo celú šírku svojho flexibilného rodiča */
+            /* ODSTRÁNENÉ: width: 100%; */
             max-width: 1200px; /* Obmedzenie maximálnej šírky */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
+            margin-left: auto; /* NOVINKA: Centrovanie v rámci rodiča */
+            margin-right: auto; /* NOVINKA: Centrovanie v rámci rodiča */
+            flex-grow: 1; /* NOVINKA: Umožní elementu rásť */
+            flex-shrink: 1; /* NOVINKA: Umožní elementu zmenšovať sa */
+            min-width: 0; /* NOVINKA: Zabezpečí, že sa element môže zmenšiť pod svojou obsahovou šírkou */
         }
 
         @media (max-width: 768px) {
