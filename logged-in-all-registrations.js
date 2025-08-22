@@ -170,7 +170,7 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
         React.createElement(
             'div',
-            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-md' },
+            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
             React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, 'Viditeľnosť stĺpcov'),
             React.createElement(
                 'div',
@@ -232,6 +232,10 @@ function AllRegistrationsApp() {
   const [filterColumn, setFilterColumn] = React.useState('');
   const [activeFilters, setActiveFilters] = React.useState({});
   const [uniqueColumnValues, setUniqueColumnValues] = React.useState([]);
+
+  // NOVINKA: Stav pre šírku menu a šírku okna
+  const [menuSpacerWidth, setMenuSpacerWidth] = React.useState(0);
+  const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
 
   // Stav pre poradie stĺpcov
   const defaultColumnOrder = [
@@ -336,13 +340,6 @@ function AllRegistrationsApp() {
 
             setUserProfileData(userData);
             setError('');
-
-            // Pôvodné volanie updateMenuItemsVisibility bolo odstránené.
-            // if (typeof window.updateMenuItemsVisibility === 'function') {
-            //     window.updateMenuItemsVisibility(userData.role);
-            // } else {
-            //     console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
-            // }
 
             console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
             if (typeof window.hideGlobalLoader === 'function') {
@@ -560,6 +557,42 @@ function AllRegistrationsApp() {
         }
     };
   }, [db, userProfileData, isAuthReady, user, collection, doc, onSnapshot, setDoc]);
+
+
+  // NOVINKA: useEffect pre sledovanie šírky menu-spacer a okna
+  React.useEffect(() => {
+    const updateWidths = () => {
+      const menuSpacerElement = document.getElementById('menu-spacer');
+      if (menuSpacerElement) {
+        setMenuSpacerWidth(menuSpacerElement.offsetWidth);
+      }
+      setWindowWidth(window.innerWidth);
+    };
+
+    updateWidths(); // Nastav počiatočné šírky
+
+    window.addEventListener('resize', updateWidths);
+    // NOVINKA: Použijeme MutationObserver na sledovanie zmien atribútov (class) na menu-spacer
+    const menuSpacerElement = document.getElementById('menu-spacer');
+    let observer;
+    if (menuSpacerElement) {
+        observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    updateWidths(); // Ak sa zmenia triedy (w-16, w-64), aktualizuj šírky
+                }
+            });
+        });
+        observer.observe(menuSpacerElement, { attributes: true });
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateWidths);
+      if (observer) {
+          observer.disconnect();
+      }
+    };
+  }, []);
 
 
   // Sorting logic
@@ -841,6 +874,41 @@ function AllRegistrationsApp() {
     return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
   };
 
+  // Dynamický výpočet šírky pre biely obdĺžnik
+  const calculateContentWidth = React.useCallback(() => {
+    // Získanie responzívneho paddingu z .content-wrapper
+    const contentWrapper = document.querySelector('.content-wrapper');
+    let contentWrapperPaddingX = 0;
+    if (contentWrapper) {
+        const style = window.getComputedStyle(contentWrapper);
+        contentWrapperPaddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    }
+    
+    // Šírka dostupného priestoru v okne (viewport)
+    let availableWidth = windowWidth;
+
+    // Odpočítanie šírky menu-spacer, ak nie sme na mobilnom zobrazení
+    // (Predpokladáme, že breakpoint pre mobil je 768px, ako v CSS media queries)
+    if (windowWidth > 768) { 
+        availableWidth -= menuSpacerWidth;
+    }
+
+    // Odpočítanie horizontálneho paddingu z .content-wrapper
+    // Tento padding je na oboch stranách content-wrapper, takže ho odčítame.
+    availableWidth -= contentWrapperPaddingX;
+    
+    const maxWidthLimit = 1200; // Maximálna šírka bieleho obdĺžnika
+    const minWidthLimit = 300; // Minimálna šírka bieleho obdĺžnika, aby sa nerozpadol
+
+    let finalWidth = Math.min(availableWidth, maxWidthLimit);
+    finalWidth = Math.max(finalWidth, minWidthLimit);
+
+    return `${finalWidth}px`;
+  }, [windowWidth, menuSpacerWidth]); // Závisí od týchto stavov
+
+  const dynamicWidth = calculateContentWidth();
+
+
   // Ak je používateľ admin a schválený, zobrazíme mu tabuľku registrácií
   return React.createElement(
     'div',
@@ -867,99 +935,99 @@ function AllRegistrationsApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10' },
+      { 
+        // Triedy pre biely obdĺžnik definované tu
+        className: 'bg-white p-8 rounded-lg shadow-xl', 
+        style: { width: dynamicWidth } // Dynamicky nastavená šírka
+      },
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         error
       ),
+      React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
+        'Všetky registrácie'
+      ),
       React.createElement(
-        'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
-        React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Všetky registrácie'
-        ),
-        React.createElement(
-            'div',
-            { className: 'flex justify-end mb-4' },
-            React.createElement('button', {
-                onClick: () => setShowColumnVisibilityModal(true),
-                className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
-            }, 'Upraviť stĺpce')
-        ),
-        React.createElement(
-            'div',
-            { className: 'overflow-x-auto relative shadow-md sm:rounded-lg' },
-            React.createElement(
-                'table',
-                { className: 'w-full text-sm text-left text-gray-500' },
-                React.createElement(
-                    'thead',
-                    { className: 'text-xs text-gray-700 uppercase bg-gray-50' },
-                    React.createElement(
-                        'tr',
-                        null,
-                        columnOrder.filter(col => col.visible).map((col, index) => (
-                            React.createElement('th', { 
-                                key: col.id, 
-                                scope: 'col', 
-                                className: 'py-3 px-6 cursor-pointer relative group',
-                                onMouseEnter: () => setHoveredColumn(col.id),
-                                onMouseLeave: () => setHoveredColumn(null)
-                            },
-                                React.createElement('div', { className: 'flex flex-col items-center justify-center h-full' },
-                                    React.createElement('div', { className: 'flex items-center space-x-1 mb-1' },
-                                        index > 0 && React.createElement('button', {
-                                            onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
-                                            className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
-                                        }, '←'),
-                                        React.createElement('button', { 
-                                            onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
-                                            className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
-                                        }, '⚙️'),
-                                        index < columnOrder.filter(c => c.visible).length - 1 && React.createElement('button', {
-                                            onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
-                                            className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
-                                        }, '→')
-                                    ),
-                                    React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center' },
-                                        col.label,
-                                        currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
-                                    )
-                                )
-                            ))
-                        )
-                    )
-                ),
-                React.createElement(
-                    'tbody',
-                    null,
-                    filteredUsers.length === 0 ? (
-                        React.createElement(
-                            'tr',
-                            null,
-                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
-                        )
-                    ) : (
-                        filteredUsers.map(u => (
-                            React.createElement(
-                                'tr',
-                                { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
-                                columnOrder.filter(col => col.visible).map(col => (
-                                    // ODSTRÁNENÉ whitespace-nowrap Z `td` elementu
-                                    React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' }, 
-                                        col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
-                                        col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
-                                        col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
-                                        getNestedValue(u, col.id) || '-'
-                                    )
-                                ))
-                            )
-                        ))
-                    )
-                )
-            )
-        )
+          'div',
+          { className: 'flex justify-end mb-4' },
+          React.createElement('button', {
+              onClick: () => setShowColumnVisibilityModal(true),
+              className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+          }, 'Upraviť stĺpce')
+      ),
+      React.createElement(
+          'div',
+          { className: 'overflow-x-auto relative shadow-md sm:rounded-lg' },
+          React.createElement(
+              'table',
+              { className: 'w-full text-sm text-left text-gray-500' },
+              React.createElement(
+                  'thead',
+                  { className: 'text-xs text-gray-700 uppercase bg-gray-50' },
+                  React.createElement(
+                      'tr',
+                      null,
+                      columnOrder.filter(col => col.visible).map((col, index) => (
+                          React.createElement('th', { 
+                              key: col.id, 
+                              scope: 'col', 
+                              className: 'py-3 px-6 cursor-pointer relative group',
+                              onMouseEnter: () => setHoveredColumn(col.id),
+                              onMouseLeave: () => setHoveredColumn(null)
+                          },
+                              React.createElement('div', { className: 'flex flex-col items-center justify-center h-full' },
+                                  React.createElement('div', { className: 'flex items-center space-x-1 mb-1' },
+                                      index > 0 && React.createElement('button', {
+                                          onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
+                                          className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
+                                      }, '←'),
+                                      React.createElement('button', { 
+                                          onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
+                                          className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
+                                      }, '⚙️'),
+                                      index < columnOrder.filter(c => c.visible).length - 1 && React.createElement('button', {
+                                          onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
+                                          className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
+                                      }, '→')
+                                  ),
+                                  React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center' },
+                                      col.label,
+                                      currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
+                                  )
+                              )
+                          ))
+                      )
+                  )
+              ),
+              React.createElement(
+                  'tbody',
+                  null,
+                  filteredUsers.length === 0 ? (
+                      React.createElement(
+                          'tr',
+                          null,
+                          React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                      )
+                  ) : (
+                      filteredUsers.map(u => (
+                          React.createElement(
+                              'tr',
+                              { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
+                              columnOrder.filter(col => col.visible).map(col => (
+                                  // ODSTRÁNENÉ whitespace-nowrap Z `td` elementu
+                                  React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' }, 
+                                      col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
+                                      col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
+                                      col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
+                                      getNestedValue(u, col.id) || '-'
+                                  )
+                              ))
+                          )
+                      ))
+                  )
+              )
+          )
       )
     )
   );
