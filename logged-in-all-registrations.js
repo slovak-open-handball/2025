@@ -272,7 +272,7 @@ function TeamDetails({ user }) {
                                 { className: 'overflow-x-auto' },
                                 React.createElement(
                                     'table',
-                                    { className: 'min-w-full divide-y divide-gray-200 table-auto' }, {/* Added table-auto */}
+                                    { className: 'min-w-full divide-y divide-gray-200' },
                                     React.createElement(
                                         'thead',
                                         { className: 'bg-gray-50' },
@@ -294,11 +294,11 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: pIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, player.firstName || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, player.lastName || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, player.dateOfBirth || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, player.jerseyNumber || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, player.registrationNumber || '-'), {/* Removed whitespace-nowrap */}
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.firstName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.lastName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.dateOfBirth || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.jerseyNumber || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.registrationNumber || '-'),
                                                 React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(player.address)),
                                             )
                                         )
@@ -316,7 +316,7 @@ function TeamDetails({ user }) {
                                 { className: 'overflow-x-auto' },
                                 React.createElement(
                                     'table',
-                                    { className: 'min-w-full divide-y divide-gray-200 table-auto' }, {/* Added table-auto */}
+                                    { className: 'min-w-full divide-y divide-gray-200' },
                                     React.createElement(
                                         'thead',
                                         { className: 'bg-gray-50' },
@@ -336,9 +336,9 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: mIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, member.firstName || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, member.lastName || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, member.dateOfBirth || '-'), {/* Removed whitespace-nowrap */}
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.firstName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.lastName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.dateOfBirth || '-'),
                                                 React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
                                             )
                                         )
@@ -356,7 +356,7 @@ function TeamDetails({ user }) {
                                 { className: 'overflow-x-auto' },
                                 React.createElement(
                                     'table',
-                                    { className: 'min-w-full divide-y divide-gray-200 table-auto' }, {/* Added table-auto */}
+                                    { className: 'min-w-full divide-y divide-gray-200' },
                                     React.createElement(
                                         'thead',
                                         { className: 'bg-gray-50' },
@@ -376,9 +376,9 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: mIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, member.firstName || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, member.lastName || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, member.dateOfBirth || '-'), {/* Removed whitespace-nowrap */}
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.firstName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.lastName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.dateOfBirth || '-'),
                                                 React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
                                             )
                                         )
@@ -396,7 +396,7 @@ function TeamDetails({ user }) {
                                 { className: 'overflow-x-auto' },
                                 React.createElement(
                                     'table',
-                                    { className: 'min-w-full divide-y divide-gray-200 table-auto' }, {/* Added table-auto */}
+                                    { className: 'min-w-full divide-y divide-gray-200' },
                                     React.createElement(
                                         'thead',
                                         { className: 'bg-gray-50' },
@@ -414,8 +414,8 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: tIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, tshirt.size || '-'), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, tshirt.quantity || 0), {/* Removed whitespace-nowrap */}
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.size || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.quantity || 0),
                                             )
                                         )
                                     )
@@ -432,7 +432,7 @@ function TeamDetails({ user }) {
                                 { className: 'overflow-x-auto' },
                                 React.createElement(
                                     'table',
-                                    { className: 'min-w-full divide-y divide-gray-200 table-auto' }, {/* Added table-auto */}
+                                    { className: 'min-w-full divide-y divide-gray-200' },
                                     React.createElement(
                                         'thead',
                                         { className: 'bg-gray-50' },
@@ -453,11 +453,11 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: mealIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, date), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, meals.breakfast || 0), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, meals.lunch || 0), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, meals.dinner || 0), {/* Removed whitespace-nowrap */}
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, meals.refreshment || 0), {/* Removed whitespace-nowrap */}
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, date),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, meals.breakfast || 0),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, meals.lunch || 0),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, meals.dinner || 0),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, meals.refreshment || 0),
                                             )
                                         )
                                     )
