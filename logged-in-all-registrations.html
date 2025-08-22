@@ -62,14 +62,11 @@
             }
         }
 
-        /* Štýly pre React root, ktorý slúži ako kontajner, ale vizuálne štýly sa presunú do JS */
+        /* Štýly pre React root, ktorý slúži ako kontajner pre React aplikáciu */
         #root {
-            /* ODSTRÁNENÉ: background-color: #ffffff; */
-            /* ODSTRÁNENÉ: padding: 2rem; */
-            /* ODSTRÁNENÉ: border-radius: 0.5rem; */
-            /* ODSTRÁNENÉ: box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); */
+            /* Odstránené vizuálne štýly (pozadie, padding, tiene), ktoré robili z #root "biely obdĺžnik". */
+            /* Tieto vizuálne štýly sú teraz v React komponente AllRegistrationsApp. */
             
-            max-width: 1200px; /* Obmedzenie maximálnej šírky bieleho obdĺžnika (predvolené) */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
             margin-left: auto; /* Centrovanie v rámci .content-wrapper */
             margin-right: auto; /* Centrovanie v rámci .content-wrapper */
