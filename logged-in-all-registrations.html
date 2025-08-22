@@ -53,9 +53,7 @@
             padding: 1rem;
             flex-grow: 1;
             display: flex;
-            /* ODSTRÁNENÉ: justify-content: center; */ /* Toto spôsobovalo nesprávne centrovanie s menu-spacerom */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
-            /* ODSTRÁNENÉ: width: 100%; */ /* Flex-grow už zabezpečuje vyplnenie priestoru */
             transition: margin-left 0.3s ease-in-out; /* Hladký prechod */
         }
         @media (max-width: 768px) {
@@ -98,9 +96,10 @@
         /* Prispôsobenie pre React root, aby sa jeho šírka dynamicky menila */
         #root {
             flex-grow: 1;
-            /* ODSTRÁNENÉ: width: 100%; */
+            width: 100%; /* Pridané späť, aby zabezpečilo vyplnenie dostupnej šírky */
             max-width: 1200px; /* Obmedzenie maximálnej šírky pre biely obdĺžnik */
-            /* ODSTRÁNENÉ: margin-left: auto; margin-right: auto; */
+            /* margin-left: auto; */ /* Tieto by mali byť riadené triedou mx-auto */
+            /* margin-right: auto; */ /* Tieto by mali byť riadené triedou mx-auto */
             padding: 1rem; /* Zabezpečenie vnútornej medzery */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
         }
