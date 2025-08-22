@@ -1188,7 +1188,7 @@ function AllRegistrationsApp() {
 
   // Funkcia na získanie vnorenej hodnoty
   const getNestedValue = (obj, path) => {
-    return path.split('.').reduce((acc, part => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
   };
 
   // Ak je používateľ admin a schválený, zobrazíme mu tabuľku registrácií
