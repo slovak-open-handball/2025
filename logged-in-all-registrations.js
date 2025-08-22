@@ -839,8 +839,8 @@ function AllRegistrationsApp() {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
                 setAllUsers(usersData);
                 setFilteredUsers(usersData);
-                if (typeof window.hideGlobalLoader === 'function') {
-                  window.hideGlobalLoader();
+                if (typeof window.showGlobalLoader === 'function') {
+                  window.showGlobalLoader();
                 }
             }, error => {
                 console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní všetkých používateľov z Firestore:", error);
@@ -1195,8 +1195,9 @@ function AllRegistrationsApp() {
   };
 
   const shouldShowExpander = (u) => {
-      // Šípku zobrazíme len ak používateľ nie je admin A je zaškrtnuté "Zobraziť tímy"
-      return u.role !== 'admin' && showTeams;
+      // Funkcia, ktorá určuje, či má byť riadok rozbaliteľný (nielen zobraziť šípku)
+      // Administrátori by nemali mať rozbaliteľné riadky, ak nie sú zobrazené tímy, alebo ak nemajú tímy.
+      return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
   };
 
 
@@ -1276,14 +1277,15 @@ function AllRegistrationsApp() {
                         null,
                         // Hlavička sa líši v závislosti od režimu
                         (!showUsers && showTeams) ? ( // Režim "iba tímy"
-                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-3 px-6 text-left text-gray-700 whitespace-nowrap' },
+                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 1, className: 'py-3 px-2 text-left text-gray-700 whitespace-nowrap' }, // Reduced colspan by 1, combined expander and first col.
                                 React.createElement('div', { className: 'flex items-center space-x-2' },
                                     // Zobrazí globálne tlačidlo rozbalenia iba ak sú zobrazené tímy
                                     showTeams && React.createElement('button', {
                                         onClick: toggleAllRows,
                                         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                     },
-                                    allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._teamIndex}-${team._category}`]) ? '▼' : '▲' // Fixed uniqueId for team
+                                    // Opravená logika smerovania pre globálne tlačidlo
+                                    allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼' 
                                     ),
                                     React.createElement('span', { className: 'font-semibold' }, 'Tímové Registrácie'),
                                 )
@@ -1296,10 +1298,10 @@ function AllRegistrationsApp() {
                                         onClick: toggleAllRows,
                                         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                     },
-                                    filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▼' : '▲'
+                                    // Opravená logika smerovania pre globálne tlačidlo
+                                    filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▲' : '▼'
                                     )
                                 ),
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-2' }, ''), // Placeholder for individual expander column
                                 columnOrder.filter(col => col.visible).map((col, index) => (
                                     React.createElement('th', {
                                         key: col.id,
@@ -1349,7 +1351,7 @@ function AllRegistrationsApp() {
                                 React.createElement(
                                     'tr',
                                     { className: 'bg-gray-100 text-gray-700 uppercase' },
-                                    React.createElement('th', { className: 'py-2 px-2 text-center' }, ''), // Prázdny stĺpec pre rozbalenie
+                                    React.createElement('th', { className: 'py-2 px-2 text-center' }, ''), // Prázdny stĺpec pre šípku
                                     React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'Kategória'),
                                     React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Názov tímu'),
                                     React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Registroval'),
@@ -1423,9 +1425,13 @@ function AllRegistrationsApp() {
                                             className: `bg-white border-b hover:bg-gray-50 ${shouldShowExpander(u) ? 'cursor-pointer' : ''}`, // Add cursor-pointer only if expandable
                                             onClick: shouldShowExpander(u) ? () => toggleRowExpansion(u.id) : undefined // Only clickable if shouldShowExpander is true
                                         },
-                                        React.createElement('td', { className: 'py-3 px-2 text-center' }, ''), // First empty td
+                                        // Prvý stĺpec teraz obsahuje logiku pre šípku alebo pomlčku
                                         React.createElement('td', { className: 'py-3 px-2 text-center' },
-                                            shouldShowExpander(u) && React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼') // Render arrow only if shouldShowExpander is true
+                                            React.createElement('span', { className: 'text-gray-500' },
+                                                shouldShowExpander(u)
+                                                    ? (expandedRows[u.id] ? '▲' : '▼')
+                                                    : '-' // Zobrazí pomlčku, ak riadok nie je rozbaliteľný
+                                            )
                                         ),
                                         columnOrder.filter(col => col.visible).map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' }, // Aplikujeme whitespace-nowrap na všetky data cells
@@ -1440,7 +1446,7 @@ function AllRegistrationsApp() {
                                     expandedRows[u.id] && showTeams && React.createElement(
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
-                                        React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
+                                        React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 1, className: 'p-0' }, // Reduced colspan by 1
                                             // V tomto režime je `u` kompletný používateľ so všetkými tímami.
                                             // `TeamDetailsContent` nie je navrhnutý pre spracovanie viacerých tímov naraz z jedného propu.
                                             // Preto prechádzame cez tímy používateľa a vykresľujeme ich individuálne.
