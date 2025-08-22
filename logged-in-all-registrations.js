@@ -1007,16 +1007,12 @@ function AllRegistrationsApp() {
       let usersToDisplay = [];
 
       // Logic for global checkboxes based on clarification
-      if (showUsers && showTeams) {
-          // Both checked: Display all non-admin users (both with and without teams)
-          usersToDisplay = currentFiltered;
-      } else if (showUsers && !showTeams) {
-          // Only "Zobraziť používateľov" checked: Display all non-admin users (both with and without teams)
+      if (showUsers) { // If "Zobraziť používateľov" is checked, always show all non-admin users
           usersToDisplay = currentFiltered;
       } else if (!showUsers && showTeams) {
           // Only "Zobraziť tímy" checked: Display only users who have teams
           usersToDisplay = currentFiltered.filter(user => user.teams && Object.keys(user.teams).length > 0);
-      } else if (!showUsers && !showTeams) {
+      } else { // (!showUsers && !showTeams)
           // Neither checked: Display no users
           usersToDisplay = [];
       }
@@ -1239,7 +1235,7 @@ function AllRegistrationsApp() {
         ),
         React.createElement(
             'div',
-            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' },
+            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' }, {/* Added flex-wrap and gap for responsiveness */}
             React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
                 React.createElement('input', {
                     type: 'checkbox',
@@ -1348,10 +1344,19 @@ function AllRegistrationsApp() {
                                     // ODSTRÁNENÉ: Dynamicky generované bunky pre veľkosti tričiek z HLAVNÉHO RIADKU
                                     columnOrder.filter(col => col.visible).map(col => (
                                         React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' },
-                                            col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
-                                            col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
-                                            col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
-                                            getNestedValue(u, col.id) || '-'
+                                            // Conditional rendering for user data based on global filters
+                                            (!showUsers && showTeams) ? (
+                                                // If only "Show Teams" is active, display minimal info for the user row
+                                                col.id === 'billing.clubName' ? getNestedValue(u, col.id) || '-' :
+                                                col.id === 'email' ? getNestedValue(u, col.id) :
+                                                '-' // For other user-specific columns, just a dash
+                                            ) : (
+                                                // Original logic for when "Show Users" is active (alone or with teams)
+                                                col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
+                                                col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
+                                                col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
+                                                getNestedValue(u, col.id) || '-'
+                                            )
                                         )
                                     ))
                                 ),
