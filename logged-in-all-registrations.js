@@ -209,16 +209,23 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 }
 
 // CollapsibleSection Component - pre rozbaľovacie sekcie
-function CollapsibleSection({ title, children, defaultOpen = false }) {
+function CollapsibleSection({ title, children, defaultOpen = false, noOuterStyles = false }) { // Pridaná prop noOuterStyles
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
+
+  // Podmienené triedy na základe prop noOuterStyles
+  const outerDivClasses = noOuterStyles ? '' : 'border border-gray-200 rounded-lg mb-2';
+  const buttonClasses = noOuterStyles ?
+    'flex justify-between items-center w-full px-4 py-2 text-left bg-transparent hover:bg-gray-100 focus:outline-none' :
+    'flex justify-between items-center w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none rounded-t-lg';
+  const contentDivClasses = noOuterStyles ? 'p-2' : 'p-4 border-t border-gray-200';
 
   return React.createElement(
     'div',
-    { className: 'border border-gray-200 rounded-lg mb-2' },
+    { className: outerDivClasses }, // Použitie podmienených tried
     React.createElement(
       'button',
       {
-        className: 'flex justify-between items-center w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none rounded-t-lg',
+        className: buttonClasses, // Použitie podmienených tried
         onClick: () => setIsOpen(!isOpen)
       },
       // Titul sa bude rendrovať buď ako string alebo ako React element (tabuľka)
@@ -227,7 +234,7 @@ function CollapsibleSection({ title, children, defaultOpen = false }) {
     ),
     isOpen && React.createElement(
       'div',
-      { className: 'p-4 border-t border-gray-200' },
+      { className: contentDivClasses }, // Použitie podmienených tried
       children
     )
   );
@@ -1189,7 +1196,7 @@ function AllRegistrationsApp() {
                         // Ak je zaškrtnuté iba "Zobraziť tímy", tieto TH elementy nebudú relevantné, takže ich môžeme skryť alebo nechať prázdne.
                         // Pre jednoduchosť zachováme štruktúru, ale obsah bude prázdny.
                         (!showUsers && showTeams) ? (
-                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-3 px-2 text-center text-gray-500' }, 'Tímy')
+                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-3 px-6 text-center text-gray-700' }, 'Tímové Registrácie')
                         ) : (
                             React.createElement(React.Fragment, null,
                                 React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center' },
@@ -1261,7 +1268,7 @@ function AllRegistrationsApp() {
                                             'tr',
                                             { key: `${u.id}-${category}-${teamIndex}-direct-team`, className: 'bg-white border-b hover:bg-gray-50' },
                                             React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' }, // Full width for team content
-                                                React.createElement(CollapsibleSection, { title: teamHeaderTitle, defaultOpen: false },
+                                                React.createElement(CollapsibleSection, { title: teamHeaderTitle, defaultOpen: false, noOuterStyles: true }, // Použitie noOuterStyles
                                                     // This is where the actual team details (members, meals, t-shirts) will go
                                                     // We can render a simplified TeamDetails component that takes a single team object
                                                     // For now, I'll pass the whole user and let TeamDetails filter
