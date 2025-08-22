@@ -1239,7 +1239,7 @@ function AllRegistrationsApp() {
         ),
         React.createElement(
             'div',
-            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' }, {/* Added flex-wrap and gap for responsiveness */}
+            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' },
             React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
                 React.createElement('input', {
                     type: 'checkbox',
