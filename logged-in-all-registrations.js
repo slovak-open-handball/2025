@@ -540,6 +540,10 @@ function AllRegistrationsApp() {
   // Predvolené poradie veľkostí tričiek pre prípad, že sa nepodarí načítať z Firestore
   const tshirtSizeOrderFallback = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
+  // NOVINKA: Stavy pre globálne checkboxy Zobraziť používateľov a Zobraziť tímy
+  const [showUsers, setShowUsers] = React.useState(true);
+  const [showTeams, setShowTeams] = React.useState(true);
+
 
   // Funkcia na prepínanie rozbalenia/zbalenia riadku
   const toggleRowExpansion = (userId) => {
@@ -993,10 +997,29 @@ function AllRegistrationsApp() {
       });
   };
 
-  // Effect to re-apply filters when activeFilters or allUsers change
+  // Effect to re-apply filters when activeFilters, allUsers, showUsers, or showTeams change
   React.useEffect(() => {
       let currentFiltered = [...allUsers]; // allUsers teraz obsahuje aj adminov
 
+      // 1. Filter out admins (existing logic, applies to all cases)
+      currentFiltered = currentFiltered.filter(user => user.role !== 'admin');
+
+      // 2. Apply global checkboxes filter
+      // If both are checked, no additional filtering needed here based on user/team type
+      // If only showUsers is true, filter for users WITHOUT teams
+      // If only showTeams is true, filter for users WITH teams
+      // If neither is true, currentFiltered will become empty
+      if (!showUsers && showTeams) { // Only show teams
+          currentFiltered = currentFiltered.filter(user => user.teams && Object.keys(user.teams).length > 0);
+      } else if (showUsers && !showTeams) { // Only show users (without teams)
+          currentFiltered = currentFiltered.filter(user => !user.teams || Object.keys(user.teams).length === 0);
+      } else if (!showUsers && !showTeams) { // Show neither
+          currentFiltered = [];
+      }
+      // If both showUsers and showTeams are true, no filtering needed in this step, all non-admin users remain.
+
+
+      // 3. Apply column-specific activeFilters
       Object.keys(activeFilters).forEach(column => {
           const filterValues = activeFilters[column];
           if (filterValues.length > 0) {
@@ -1022,7 +1045,7 @@ function AllRegistrationsApp() {
           }
       });
       setFilteredUsers(currentFiltered);
-  }, [allUsers, activeFilters]);
+  }, [allUsers, activeFilters, showUsers, showTeams]); // Added showUsers and showTeams to dependencies
 
 
   // useEffect for updating header link visibility
@@ -1190,7 +1213,6 @@ function AllRegistrationsApp() {
         columnName: filterColumn,
         onApplyFilter: applyFilter,
         initialFilterValues: activeFilters[filterColumn] || [],
-        onClearFilter: clearFilter,
         uniqueColumnValues: uniqueColumnValues
     }),
     React.createElement(ColumnVisibilityModal, {
@@ -1215,7 +1237,25 @@ function AllRegistrationsApp() {
         ),
         React.createElement(
             'div',
-            { className: 'flex justify-end mb-4' },
+            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' }, {/* Added flex-wrap and gap for responsiveness */}
+            React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
+                React.createElement('input', {
+                    type: 'checkbox',
+                    className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md mr-2',
+                    checked: showUsers,
+                    onChange: (e) => setShowUsers(e.target.checked)
+                }),
+                React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť používateľov')
+            ),
+            React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
+                React.createElement('input', {
+                    type: 'checkbox',
+                    className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md mr-2',
+                    checked: showTeams,
+                    onChange: (e) => setShowTeams(e.target.checked)
+                }),
+                React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť tímy')
+            ),
             React.createElement('button', {
                 onClick: () => setShowColumnVisibilityModal(true),
                 className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
