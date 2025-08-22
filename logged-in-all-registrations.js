@@ -260,7 +260,7 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
     return React.createElement(
         'div',
         { className: 'p-4 bg-gray-50 rounded-lg' },
-        React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'Tímové detaily'),
+//        React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'Tímové detaily'),
         Object.entries(user.teams).flatMap(([category, teamList]) =>
             teamList.map((team, teamIndex) => {
                 const consolidatedMembers = [];
