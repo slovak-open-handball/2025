@@ -326,6 +326,17 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                     refreshment: 'Občerstvenie'
                 };
 
+                // OPRAVA: Robustnejšia inicializácia premenných womenTeamMembersCount a menTeamMembersCount
+                let menTeamMembersCount = 0;
+                if (Array.isArray(team.menTeamMemberDetails)) {
+                    menTeamMembersCount = team.menTeamMemberDetails.length;
+                }
+
+                let womenTeamMembersCount = 0;
+                if (Array.isArray(team.womenTeamMemberDetails)) {
+                    womenTeamMembersCount = team.womenTeamMemberDetails.length;
+                }
+
 
                 // KONŠTRUKCIA HLAVIČKY PRE CollapsibleSection
                 const teamHeaderTitle = React.createElement(
@@ -515,7 +526,7 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: 'Krajina', type: 'string', visible: true },
+    { id: 'country', label: 'Krajina', type: true, visible: true },
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
