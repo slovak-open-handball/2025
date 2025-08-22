@@ -318,8 +318,8 @@ function TeamDetails({ user }) {
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden xl:table-cell' }, `Doprava: ${team.arrival?.type || '-'}`),
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 2xl:table-cell' }, `Ubytovanie: ${team.accommodation?.type || '-'}`),
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 3xl:table-cell' }, `Balík: ${team.packageDetails?.name || '-'}`),
-                            // NOVINKA: Pridaný stĺpec pre tričká, viditeľný len na veľmi širokých obrazovkách
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 4xl:table-cell' }, `Tričká: ${sortedTshirts}`),
+                            // ZMENA: Odstránené triedy 'hidden 4xl:table-cell' pre Tričká, aby boli vždy viditeľné
+                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600' }, `Tričká: ${sortedTshirts}`),
                         )
                     )
                 );
@@ -880,7 +880,7 @@ function AllRegistrationsApp() {
 
           if (type === 'date') {
               const dateA = valA && typeof valA.toDate === 'function' ? valA.toDate() : new Date(0);
-              const dateB = valB && typeof valB.toDate === 'function' ? valB.toDate() : new Date(0);
+              const dateB = valB && typeof valA.toDate === 'function' ? valB.toDate() : new Date(0);
               return direction === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
           } else if (type === 'boolean') {
               const boolA = Boolean(valA);
