@@ -518,7 +518,9 @@ function AllRegistrationsApp() {
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
 
   // Stav pre sledovanie rozbalených riadkov (ID používateľa -> boolean)
-  const [expandedRows, setExpandedRows] = React.useState({});
+  // V režime "iba tímy" budeme túto mapu používať pre tímy, aby sme sledovali ich rozbalenie
+  const [expandedTeamRows, setExpandedTeamRows] = React.useState({});
+
 
   const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
   const tshirtSizeOrderFallback = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
@@ -527,23 +529,51 @@ function AllRegistrationsApp() {
   const [showTeams, setShowTeams] = React.useState(true);
 
 
-  const toggleRowExpansion = (userId) => {
+  const toggleRowExpansion = (userId) => { // Pre používateľské riadky
       setExpandedRows(prev => ({
           ...prev,
           [userId]: !prev[userId]
       }));
   };
 
-  const toggleAllRows = () => {
-    // Keďže teraz zobrazujeme všetkých používateľov, filter na rolu 'admin' tu už nie je potrebný.
-    // Všetci filtrovaní používatelia v tabuľke budú ovplyvnení.
-    const allCurrentlyExpanded = filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]);
-    const newExpandedState = { ...expandedRows };
+  const toggleTeamRowExpansion = (teamUniqueId) => { // Pre tímové riadky
+      setExpandedTeamRows(prev => ({
+          ...prev,
+          [teamUniqueId]: !prev[teamUniqueId]
+      }));
+  };
 
-    filteredUsers.forEach(user => {
-        newExpandedState[user.id] = !allCurrentlyExpanded;
-    });
-    setExpandedRows(newExpandedState);
+  const toggleAllRows = () => {
+    // V závislosti od režimu sa bude správanie líšiť
+    if (!showUsers && showTeams) { // Režim "iba tímy"
+        const allTeamRows = [];
+        allUsers.forEach(user => {
+            if (user.teams) {
+                Object.entries(user.teams).forEach(([category, teamList]) => {
+                    teamList.forEach((team, teamIndex) => {
+                        allTeamRows.push(`${user.id}-${category}-${teamIndex}`);
+                    });
+                });
+            }
+        });
+
+        const allCurrentlyExpanded = allTeamRows.length > 0 && allTeamRows.every(id => expandedTeamRows[id]);
+        const newExpandedState = { ...expandedTeamRows };
+
+        allTeamRows.forEach(id => {
+            newExpandedState[id] = !allCurrentlyExpanded;
+        });
+        setExpandedTeamRows(newExpandedState);
+
+    } else { // Režim "Zobraziť používateľov" (samostatne alebo s tímami)
+        const allCurrentlyExpanded = filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]);
+        const newExpandedState = { ...expandedRows };
+
+        filteredUsers.forEach(user => {
+            newExpandedState[user.id] = !allCurrentlyExpanded;
+        });
+        setExpandedRows(newExpandedState);
+    }
   };
 
   React.useEffect(() => {
@@ -1119,6 +1149,31 @@ function AllRegistrationsApp() {
     return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
   };
 
+  // Zoskupenie všetkých tímov do jedného plochého zoznamu pre režim "iba tímy"
+  const allTeamsFlattened = React.useMemo(() => {
+    if (!showUsers && showTeams) {
+        let teams = [];
+        filteredUsers.forEach(u => {
+            if (u.teams && Object.keys(u.teams).length > 0) {
+                Object.entries(u.teams).forEach(([category, teamList]) => {
+                    teamList.forEach((team, teamIndex) => {
+                        teams.push({
+                            ...team,
+                            _userId: u.id, // Uložíme ID používateľa pre referenciu
+                            _category: category,
+                            _teamIndex: teamIndex,
+                            _registeredBy: `${u.firstName} ${u.lastName}` // Kto registroval
+                        });
+                    });
+                });
+            }
+        });
+        return teams;
+    }
+    return [];
+  }, [filteredUsers, showUsers, showTeams]);
+
+
   return React.createElement(
     'div',
     { className: 'min-h-screen flex flex-col items-center font-inter overflow-y-auto' },
@@ -1193,11 +1248,20 @@ function AllRegistrationsApp() {
                     React.createElement(
                         'tr',
                         null,
-                        // Ak je zaškrtnuté iba "Zobraziť tímy", tieto TH elementy nebudú relevantné, takže ich môžeme skryť alebo nechať prázdne.
-                        // Pre jednoduchosť zachováme štruktúru, ale obsah bude prázdny.
-                        (!showUsers && showTeams) ? (
-                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-3 px-6 text-center text-gray-700' }, 'Tímové Registrácie')
-                        ) : (
+                        // Hlavička sa líši v závislosti od režimu
+                        (!showUsers && showTeams) ? ( // Režim "iba tímy"
+                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-3 px-6 text-left text-gray-700' },
+                                React.createElement('div', { className: 'flex items-center space-x-2' },
+                                    React.createElement('button', {
+                                        onClick: toggleAllRows,
+                                        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                                    },
+                                    allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▼' : '▲'
+                                    ),
+                                    React.createElement('span', null, 'Tímové Registrácie')
+                                )
+                            )
+                        ) : ( // Režim "Zobraziť používateľov" (samostatne alebo s tímami)
                             React.createElement(React.Fragment, null,
                                 React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center' },
                                     React.createElement('button', {
@@ -1243,7 +1307,7 @@ function AllRegistrationsApp() {
                 React.createElement(
                     'tbody',
                     null,
-                    filteredUsers.length === 0 ? (
+                    ((!showUsers && showTeams) && allTeamsFlattened.length === 0) || (showUsers && filteredUsers.length === 0) ? (
                         React.createElement(
                             'tr',
                             null,
@@ -1252,33 +1316,35 @@ function AllRegistrationsApp() {
                     ) : (
                         // Conditional rendering based on showUsers and showTeams
                         (!showUsers && showTeams) ? ( // Case: Only "Show Teams" is checked
-                            filteredUsers.map(u => (
-                                Object.entries(u.teams || {}).flatMap(([category, teamList]) =>
-                                    teamList.map((team, teamIndex) => {
-                                        // Construct title for each team's collapsible section
-                                        const teamHeaderTitle = React.createElement(
-                                            'div',
-                                            { className: 'flex flex-wrap items-center justify-between w-full' },
-                                            React.createElement('span', { className: 'font-semibold text-gray-900 mr-2' }, `Tím: ${team.teamName || `Tím ${teamIndex + 1}`}`),
-                                            React.createElement('span', { className: 'text-gray-700 mr-4' }, `Kategória: ${category || '-'}`),
-                                            React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2' }, `Registroval: ${u.firstName} ${u.lastName}`), // Indicate who registered
-                                        );
+                            allTeamsFlattened.map(team => {
+                                const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
+                                const teamHeaderTitle = React.createElement(
+                                    'div',
+                                    { className: 'flex flex-wrap items-center justify-between w-full' },
+                                    React.createElement('span', { className: 'font-semibold text-gray-900 mr-2' }, `Tím: ${team.teamName || `Tím`}`),
+                                    React.createElement('span', { className: 'text-gray-700 mr-4' }, `Kategória: ${team._category || '-'}`),
+                                    React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2' }, `Registroval: ${team._registeredBy}`),
+                                );
 
-                                        return React.createElement(
-                                            'tr',
-                                            { key: `${u.id}-${category}-${teamIndex}-direct-team`, className: 'bg-white border-b hover:bg-gray-50' },
-                                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' }, // Full width for team content
-                                                React.createElement(CollapsibleSection, { title: teamHeaderTitle, defaultOpen: false, noOuterStyles: true }, // Použitie noOuterStyles
-                                                    // This is where the actual team details (members, meals, t-shirts) will go
-                                                    // We can render a simplified TeamDetails component that takes a single team object
-                                                    // For now, I'll pass the whole user and let TeamDetails filter
-                                                    React.createElement(TeamDetails, { user: { teams: { [category]: [team] } }, tshirtSizeOrder: availableTshirtSizes })
-                                                )
-                                            )
-                                        );
-                                    })
-                                )
-                            ))
+                                return React.createElement(
+                                    'tr',
+                                    { key: teamUniqueId, className: 'bg-white border-b hover:bg-gray-50' },
+                                    React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
+                                        React.createElement(CollapsibleSection, {
+                                            title: teamHeaderTitle,
+                                            defaultOpen: expandedTeamRows[teamUniqueId] || false,
+                                            noOuterStyles: true,
+                                            onClick: () => toggleTeamRowExpansion(teamUniqueId) // Handle click for expanding/collapsing
+                                        },
+                                            // Vykreslíme TeamDetails s aktuálnym tímom
+                                            React.createElement(TeamDetails, {
+                                                user: { teams: { [team._category]: [team] } },
+                                                tshirtSizeOrder: availableTshirtSizes
+                                            })
+                                        )
+                                    )
+                                );
+                            })
                         ) : ( // Case: "Show Users" is checked (alone or with teams)
                             filteredUsers.map(u => (
                                 React.createElement(
