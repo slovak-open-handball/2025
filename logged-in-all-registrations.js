@@ -210,7 +210,7 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 
 // CollapsibleSection Component - pre rozbaľovacie sekcie
 function CollapsibleSection({ title, children, defaultOpen = false }) {
-  const [isOpen, setIsOpen] = React.useState(defaultOpen);
+  const [isOpen, setIsOpen] React.useState(defaultOpen);
 
   return React.createElement(
     'div',
@@ -434,16 +434,16 @@ function AllRegistrationsApp() {
   const db = window.db;
 
   // Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
-  const [user, setUser] = React.useState(null); 
-  const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); 
+  const [user, setUser] = React.useState(null);
+  const [userProfileData, setUserProfileData] = React.useState(null);
+  const [isAuthReady, setIsAuthReady] = React.useState(false);
 
   // Removed local loading state for users and column order
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // Deklarácia stavov pre používateľov a filtrovanie
-  const [allUsers, setAllUsers] = React.useState([]); 
+  const [allUsers, setAllUsers] = React.useState([]);
   const [filteredUsers, setFilteredUsers] = React.useState([]);
   const [currentSort, setCurrentSort] = React.useState({ column: 'registrationDate', direction: 'desc' });
   const [filterModalOpen, setFilterModalOpen] = React.useState(false);
@@ -459,7 +459,7 @@ function AllRegistrationsApp() {
     { id: 'firstName', label: 'Meno', type: 'string', visible: true },
     { id: 'lastName', label: 'Priezvisko', type: 'string', visible: true },
     { id: 'email', label: 'E-mailová adresa', type: 'string', visible: true },
-    { id: 'contactPhoneNumber', label: 'Telefónne číslo', type: 'string', visible: true }, 
+    { id: 'contactPhoneNumber', label: 'Telefónne číslo', type: 'string', visible: true },
     { id: 'billing.clubName', label: 'Názov klubu', type: 'string', visible: true },
     { id: 'billing.ico', label: 'IČO', type: 'string', visible: true },
     { id: 'billing.dic', label: 'DIČ', type: 'string', visible: true },
@@ -474,7 +474,7 @@ function AllRegistrationsApp() {
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
 
-  // NOVINKA: Stav pre sledovanie rozbalených riadkov (ID používateľa -> boolean)
+  // Stav pre sledovanie rozbalených riadkov (ID používateľa -> boolean)
   const [expandedRows, setExpandedRows] = React.useState({});
 
   // Funkcia na prepínanie rozbalenia/zbalenia riadku
@@ -483,6 +483,17 @@ function AllRegistrationsApp() {
           ...prev,
           [userId]: !prev[userId]
       }));
+  };
+
+  // NOVINKA: Funkcia na prepínanie všetkých riadkov
+  const toggleAllRows = () => {
+    // Zistíme, či sú všetky aktuálne filtrované riadky už rozbalené
+    const allCurrentlyExpanded = filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]);
+    const newExpandedState = {};
+    filteredUsers.forEach(user => {
+        newExpandedState[user.id] = !allCurrentlyExpanded;
+    });
+    setExpandedRows(newExpandedState);
   };
 
   // Lokálny Auth Listener pre AllRegistrationsApp
@@ -617,7 +628,7 @@ function AllRegistrationsApp() {
         }
         window.location.href = 'login.html';
         return;
-    } else if (!isAuthReady || !db || user === undefined) { 
+    } else if (!isAuthReady || !db || user === undefined) {
         console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Current states: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
     }
 
@@ -634,7 +645,7 @@ function AllRegistrationsApp() {
   React.useEffect(() => {
     let unsubscribeAllUsers;
     let unsubscribeColumnOrder;
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Triggered.");
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
@@ -945,7 +956,7 @@ function AllRegistrationsApp() {
       authLink.classList.remove('hidden');
       profileLink.classList.add('hidden');
       logoutButton.classList.add('hidden');
-      registerLink.classList.remove('hidden'); 
+      registerLink.classList.remove('hidden');
       console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
     }
   }, [user]);
@@ -1040,7 +1051,7 @@ function AllRegistrationsApp() {
   };
 
   // Display loading state - now handled by global loader
-  if (!isAuthReady || user === undefined || !userProfileData) { 
+  if (!isAuthReady || user === undefined || !userProfileData) {
     // Počas načítania nevraciame nič, pretože globálny loader sa o to postará
     // Tiež zabezpečíme, aby sa React komponent nevykreslil, kým nie sú dáta pripravené
     return null;
@@ -1130,12 +1141,22 @@ function AllRegistrationsApp() {
                     React.createElement(
                         'tr',
                         null,
-                        // NOVINKA: Pridanie stĺpca pre rozbalenie/zbalenie
+                        // NOVINKA: Pridanie stĺpca pre globálne rozbalenie/zbalenie
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center' },
+                            React.createElement('button', {
+                                onClick: toggleAllRows,
+                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                            },
+                            // Zobrazíme šípku dole, ak sú všetky rozbalené (na zbalenie), inak šípku hore (na rozbalenie)
+                            filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▼' : '▲'
+                            )
+                        ),
+                        // Pôvodný stĺpec pre individuálne rozbalenie/zbalenie ostáva
                         React.createElement('th', { scope: 'col', className: 'py-3 px-2' }, ''),
                         columnOrder.filter(col => col.visible).map((col, index) => (
-                            React.createElement('th', { 
-                                key: col.id, 
-                                scope: 'col', 
+                            React.createElement('th', {
+                                key: col.id,
+                                scope: 'col',
                                 className: 'py-3 px-6 cursor-pointer relative group',
                                 onMouseEnter: () => setHoveredColumn(col.id),
                                 onMouseLeave: () => setHoveredColumn(null)
@@ -1146,8 +1167,8 @@ function AllRegistrationsApp() {
                                             onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
                                             className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
                                         }, '←'),
-                                        React.createElement('button', { 
-                                            onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
+                                        React.createElement('button', {
+                                            onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); },
                                             className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
                                         }, '⚙️'),
                                         index < columnOrder.filter(c => c.visible).length - 1 && React.createElement('button', {
@@ -1171,8 +1192,8 @@ function AllRegistrationsApp() {
                         React.createElement(
                             'tr',
                             null,
-                            // NOVINKA: Zväčšenie colspan o 1 pre rozbalovací stĺpec
-                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 1, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                            // NOVINKA: Zväčšenie colspan o 2 pre globálny a individuálny rozbalovací stĺpec
+                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
                         )
                     ) : (
                         filteredUsers.map(u => (
@@ -1181,16 +1202,18 @@ function AllRegistrationsApp() {
                                 { key: u.id },
                                 React.createElement(
                                     'tr',
-                                    { 
+                                    {
                                         className: 'bg-white border-b hover:bg-gray-50 cursor-pointer',
                                         onClick: () => toggleRowExpansion(u.id) // NOVINKA: Kliknutím sa riadok rozbalí/zbalí
                                     },
-                                    // NOVINKA: Ikonka pre rozbalenie/zbalenie
+                                    // Prázdna bunka pre globálny toggle
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, ''),
+                                    // NOVINKA: Ikonka pre rozbalenie/zbalenie individuálneho riadku
                                     React.createElement('td', { className: 'py-3 px-2 text-center' },
                                         React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼')
                                     ),
                                     columnOrder.filter(col => col.visible).map(col => (
-                                        React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' }, 
+                                        React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' },
                                             col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
                                             col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
                                             col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
@@ -1202,7 +1225,8 @@ function AllRegistrationsApp() {
                                 expandedRows[u.id] && React.createElement(
                                     'tr',
                                     { key: `${u.id}-details`, className: 'bg-gray-100' },
-                                    React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 1, className: 'p-0' }, // +1 pre rozbalovací stĺpec
+                                    // Zväčšenie colspan o 2 pre globálny a individuálny rozbalovací stĺpec
+                                    React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
                                         React.createElement(TeamDetails, { user: u })
                                     )
                                 )
