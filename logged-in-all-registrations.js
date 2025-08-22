@@ -294,11 +294,12 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: pIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.firstName || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.lastName || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.dateOfBirth || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.jerseyNumber || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, player.registrationNumber || '-'),
+                                                // Odstránené whitespace-nowrap, aby sa text mohol zalomiť a stĺpce sa prispôsobili
+                                                React.createElement('td', { className: 'px-4 py-2' }, player.firstName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, player.lastName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, player.dateOfBirth || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, player.jerseyNumber || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, player.registrationNumber || '-'),
                                                 React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(player.address)),
                                             )
                                         )
@@ -336,9 +337,10 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: mIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.firstName || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.lastName || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.dateOfBirth || '-'),
+                                                // Odstránené whitespace-nowrap
+                                                React.createElement('td', { className: 'px-4 py-2' }, member.firstName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, member.lastName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, member.dateOfBirth || '-'),
                                                 React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
                                             )
                                         )
@@ -376,9 +378,10 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: mIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.firstName || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.lastName || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.dateOfBirth || '-'),
+                                                // Odstránené whitespace-nowrap
+                                                React.createElement('td', { className: 'px-4 py-2' }, member.firstName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, member.lastName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, member.dateOfBirth || '-'),
                                                 React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
                                             )
                                         )
@@ -414,8 +417,9 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: tIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.size || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, tshirt.quantity || 0),
+                                                // Odstránené whitespace-nowrap
+                                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.size || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.quantity || 0),
                                             )
                                         )
                                     )
@@ -453,11 +457,12 @@ function TeamDetails({ user }) {
                                             React.createElement(
                                                 'tr',
                                                 { key: mealIndex },
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, date),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, meals.breakfast || 0),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, meals.lunch || 0),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, meals.dinner || 0),
-                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, meals.refreshment || 0),
+                                                // Odstránené whitespace-nowrap
+                                                React.createElement('td', { className: 'px-4 py-2' }, date),
+                                                React.createElement('td', { className: 'px-4 py-2' }, meals.breakfast || 0),
+                                                React.createElement('td', { className: 'px-4 py-2' }, meals.lunch || 0),
+                                                React.createElement('td', { className: 'px-4 py-2' }, meals.dinner || 0),
+                                                React.createElement('td', { className: 'px-4 py-2' }, meals.refreshment || 0),
                                             )
                                         )
                                     )
@@ -694,8 +699,8 @@ function AllRegistrationsApp() {
 
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
-            // Používame Firebase v9 modulárnu syntax
-            const columnOrderDocRef = doc(collection(db, 'users', user.uid, 'columnOrder'), 'columnOrder');
+            // NOVINKA: Priame vytvorenie DocumentReference pomocou cesty
+            const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
 
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
             unsubscribeColumnOrder = onSnapshot(columnOrderDocRef, docSnapshot => {
@@ -748,14 +753,14 @@ function AllRegistrationsApp() {
                     } else {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
                         // Používame Firebase v9 modulárnu syntax
-                        setDoc(doc(collection(db, 'users', user.uid, 'columnOrder'), 'columnOrder'), { order: defaultColumnOrder }, { merge: true })
+                        setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                             .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
                             .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
                     }
                 } else {
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
                     // Používame Firebase v9 modulárnu syntax
-                    setDoc(doc(collection(db, 'users', user.uid, 'columnOrder'), 'columnOrder'), { order: defaultColumnOrder }, { merge: true })
+                    setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                         .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
                         .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
                 }
@@ -1055,7 +1060,8 @@ function AllRegistrationsApp() {
     // Uloženie nového poradia do Firestore
     // Používame Firebase v9 modulárnu syntax
     if (db && user && user.uid) {
-        const columnOrderDocRef = doc(collection(db, 'users', user.uid, 'columnOrder'), 'columnOrder');
+        // NOVINKA: Priame vytvorenie DocumentReference pomocou cesty
+        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
         try {
             await setDoc(columnOrderDocRef, { order: newColumnOrder }, { merge: true });
             console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
@@ -1071,7 +1077,8 @@ function AllRegistrationsApp() {
     setColumnOrder(updatedColumns);
     // Používame Firebase v9 modulárnu syntax
     if (db && user && user.uid) {
-        const columnOrderDocRef = doc(collection(db, 'users', user.uid, 'columnOrder'), 'columnOrder');
+        // NOVINKA: Priame vytvorenie DocumentReference pomocou cesty
+        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
         try {
             await setDoc(columnOrderDocRef, { order: updatedColumns }, { merge: true });
             setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
