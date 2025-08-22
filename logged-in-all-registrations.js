@@ -1004,28 +1004,28 @@ function AllRegistrationsApp() {
       // 1. Filter out admin roles first from allUsers, regardless of other filters.
       currentFiltered = currentFiltered.filter(user => user.role !== 'admin');
 
-      let finalFiltered = [];
+      let usersToDisplay = [];
 
-      // Logic for global checkboxes
+      // Logic for global checkboxes based on clarification
       if (showUsers && showTeams) {
-          // If both are checked, include all non-admin users
-          finalFiltered = currentFiltered;
+          // Both checked: Display all non-admin users (both with and without teams)
+          usersToDisplay = currentFiltered;
       } else if (showUsers && !showTeams) {
-          // Only show users without teams
-          finalFiltered = currentFiltered.filter(user => !user.teams || Object.keys(user.teams).length === 0);
+          // Only "Zobraziť používateľov" checked: Display all non-admin users (both with and without teams)
+          usersToDisplay = currentFiltered;
       } else if (!showUsers && showTeams) {
-          // Only show users with teams
-          finalFiltered = currentFiltered.filter(user => user.teams && Object.keys(user.teams).length > 0);
+          // Only "Zobraziť tímy" checked: Display only users who have teams
+          usersToDisplay = currentFiltered.filter(user => user.teams && Object.keys(user.teams).length > 0);
       } else if (!showUsers && !showTeams) {
-          // Show neither, so empty array
-          finalFiltered = [];
+          // Neither checked: Display no users
+          usersToDisplay = [];
       }
 
-      // 3. Apply column-specific activeFilters to finalFiltered
+      // 3. Apply column-specific activeFilters to usersToDisplay
       Object.keys(activeFilters).forEach(column => {
           const filterValues = activeFilters[column];
           if (filterValues.length > 0) {
-              finalFiltered = finalFiltered.filter(user => {
+              usersToDisplay = usersToDisplay.filter(user => {
                   let userValue;
                   if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
                       userValue = user.registrationDate.toDate().toLocaleString('sk-SK').toLowerCase();
@@ -1046,7 +1046,7 @@ function AllRegistrationsApp() {
               });
           }
       });
-      setFilteredUsers(finalFiltered);
+      setFilteredUsers(usersToDisplay);
   }, [allUsers, activeFilters, showUsers, showTeams]); // Added showUsers and showTeams to dependencies
 
 
