@@ -409,7 +409,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Dátum narodenia'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Číslo dresu'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Reg. číslo'),
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-normal' }, 'Adresa'), // Adresa ostáva s normal zalamovaním
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap' }, 'Adresa'), // ZMENA: pridané whitespace-nowrap
                     mealDates.map(date =>
                         React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap' },
                             React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
@@ -437,7 +437,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, formatDateToDMMYYYY(member.dateOfBirth)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.registrationNumber || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)), // Adresa ostáva s normal zalamovaním
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, formatAddress(member.address)), // ZMENA: pridané whitespace-nowrap
                         mealDates.map(date =>
                             React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap' },
                                 React.createElement(
