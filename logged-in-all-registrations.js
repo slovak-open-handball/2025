@@ -254,6 +254,9 @@ function TeamDetails({ user }) {
         return dateString; // Vráti pôvodný reťazec, ak formát nie je YYYY-MM-DD
     };
 
+    // NOVINKA: Definovanie poradia veľkostí tričiek pre triedenie
+    const tshirtSizeOrder = ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
+
     return React.createElement(
         'div',
         { className: 'p-4 bg-gray-50 rounded-lg' },
@@ -281,6 +284,22 @@ function TeamDetails({ user }) {
                     });
                 }
 
+                // NOVINKA: Spracovanie a zoradenie veľkostí tričiek
+                const sortedTshirts = team.tshirts && team.tshirts.length > 0
+                    ? [...team.tshirts].sort((a, b) => {
+                        const sizeA = String(a.size).toLowerCase();
+                        const sizeB = String(b.size).toLowerCase();
+                        const indexA = tshirtSizeOrder.indexOf(sizeA);
+                        const indexB = tshirtSizeOrder.indexOf(sizeB);
+
+                        if (indexA === -1 && indexB === -1) return sizeA.localeCompare(sizeB); // Ak ani jedna veľkosť nie je v zozname, abecedne
+                        if (indexA === -1) return 1; // A nie je v zozname, B je menšie
+                        if (indexB === -1) return -1; // B nie je v zozname, A je menšie
+                        return indexA - indexB; // Podľa definovaného poradia
+                    }).map(t => `${t.size}: ${t.quantity}`).join(', ')
+                    : '-';
+
+
                 // KONŠTRUKCIA JEDNOHO RIADKU TABUĽKY PRE HLAVIČKU CollapsibleSection
                 const teamHeaderTable = React.createElement(
                     'table',
@@ -299,6 +318,8 @@ function TeamDetails({ user }) {
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden xl:table-cell' }, `Doprava: ${team.arrival?.type || '-'}`),
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 2xl:table-cell' }, `Ubytovanie: ${team.accommodation?.type || '-'}`),
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 3xl:table-cell' }, `Balík: ${team.packageDetails?.name || '-'}`),
+                            // NOVINKA: Pridaný stĺpec pre tričká, viditeľný len na veľmi širokých obrazovkách
+                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 4xl:table-cell' }, `Tričká: ${sortedTshirts}`),
                         )
                     )
                 );
@@ -360,7 +381,7 @@ function TeamDetails({ user }) {
                     team.tshirts && team.tshirts.length > 0 &&
                     React.createElement(
                         CollapsibleSection,
-                        { title: 'Veľkosti tričiek', defaultOpen: false },
+                        { title: 'Veľkosti tričiek (podrobný zoznam)', defaultOpen: false }, // Zmenený názov pre odlíšenie od súhrnu
                         React.createElement(
                             'div',
                             { className: 'overflow-x-auto' },
@@ -380,11 +401,11 @@ function TeamDetails({ user }) {
                                 React.createElement(
                                     'tbody',
                                     { className: 'bg-white divide-y divide-gray-200' },
+                                    // Tu stále zostáva detailný zoznam tričiek
                                     team.tshirts.map((tshirt, tIndex) =>
                                         React.createElement(
                                             'tr',
                                             { key: tIndex },
-                                            // Odstránené whitespace-nowrap
                                             React.createElement('td', { className: 'px-4 py-2' }, tshirt.size || '-'),
                                             React.createElement('td', { className: 'px-4 py-2' }, tshirt.quantity || 0),
                                         )
