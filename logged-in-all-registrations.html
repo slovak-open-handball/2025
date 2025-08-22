@@ -62,14 +62,14 @@
             }
         }
 
-        /* Štýly pre React root, ktorý slúži ako kontajner, nie ako biely obdĺžnik */
-        /* Tieto štýly definujú samotný biely obdĺžnik */
+        /* Štýly pre React root, ktorý slúži ako kontajner, ale vizuálne štýly sa presunú do JS */
         #root {
-            background-color: #ffffff; /* Biely obdĺžnik */
-            padding: 2rem; /* Vnútorná medzera pre obsah */
-            border-radius: 0.5rem; /* Zaoblené rohy */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tieň */
-            max-width: 1200px; /* Obmedzenie maximálnej šírky bieleho obdĺžnika */
+            /* ODSTRÁNENÉ: background-color: #ffffff; */
+            /* ODSTRÁNENÉ: padding: 2rem; */
+            /* ODSTRÁNENÉ: border-radius: 0.5rem; */
+            /* ODSTRÁNENÉ: box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); */
+            
+            max-width: 1200px; /* Obmedzenie maximálnej šírky bieleho obdĺžnika (predvolené) */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
             margin-left: auto; /* Centrovanie v rámci .content-wrapper */
             margin-right: auto; /* Centrovanie v rámci .content-wrapper */
