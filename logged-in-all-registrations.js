@@ -286,7 +286,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         // Zobrazujeme s popiskami
         titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, `Kategória: ${team._category || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, `Názov tímu: ${team.teamName || `Tím`}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Registroval: ${team._registeredBy || '-'}`));
+        // ODSTRÁNENÉ: Registroval: ${team._registeredBy || '-'}
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${playersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
@@ -308,6 +308,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         // Pôvodné zobrazenie bez popisiek pre riadok v tabuľke
         titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, team._category || '-'));
         titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, team.teamName || `Tím`));
+        // ODSTRÁNENÉ: Registroval: ${team._registeredBy || '-'}
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, playersCount)); // Hráči
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, womenTeamMembersCount)); // R. tím (ž)
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount)); // R. tím (m)
@@ -1286,17 +1287,27 @@ function AllRegistrationsApp() {
                         null,
                         // Hlavička sa líši v závislosti od režimu
                         (!showUsers && showTeams) ? ( // Režim "iba tímy"
-                            React.createElement('th', { colSpan: columnOrder.filter(c => c.visible).length + 1, className: 'py-3 px-2 text-left text-gray-700 whitespace-nowrap' }, // Reduced colspan by 1, combined expander and first col.
-                                React.createElement('div', { className: 'flex items-center space-x-2' },
-                                    // Zobrazí globálne tlačidlo rozbalenia iba ak sú zobrazené tímy
-                                    showTeams && React.createElement('button', {
+                            React.createElement(React.Fragment, null,
+                                React.createElement('th', { className: 'py-3 px-2 text-center' }, // Empty header for expander
+                                    React.createElement('button', {
                                         onClick: toggleAllRows,
                                         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                     },
-                                    // Opravená logika smerovania pre globálne tlačidlo
-                                    allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼' 
-                                    ),
-                                    React.createElement('span', { className: 'font-semibold' }, 'Tímové Registrácie'),
+                                    allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼'
+                                    )
+                                ),
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'Kategória'),
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Názov tímu'),
+                                // ODSTRÁNENÉ: 'Registroval' hlavička
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'Hráči'),
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'R. tím (ž)'),
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'R. tím (m)'),
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Doprava'),
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Ubytovanie'),
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Balík'),
+                                // Dynamicky generované hlavičky pre veľkosti tričiek
+                                (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `Vel. ${size.toUpperCase()}`)
                                 )
                             )
                         ) : ( // Režim "Zobraziť používateľov" (samostatne alebo s tímami)
@@ -1357,24 +1368,6 @@ function AllRegistrationsApp() {
                         // Conditional rendering based on showUsers and showTeams
                         (!showUsers && showTeams) ? ( // Case: Only "Show Teams" is checked
                             React.createElement(React.Fragment, null,
-                                React.createElement(
-                                    'tr',
-                                    { className: 'bg-gray-100 text-gray-700 uppercase' },
-                                    React.createElement('th', { className: 'py-2 px-2 text-center' }, ''), // Prázdny stĺpec pre šípku
-                                    React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'Kategória'),
-                                    React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Názov tímu'),
-                                    React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Registroval'),
-                                    React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'Hráči'),
-                                    React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'R. tím (ž)'),
-                                    React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap' }, 'R. tím (m)'),
-                                    React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Doprava'),
-                                    React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Ubytovanie'),
-                                    React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Balík'),
-                                    // Dynamicky generované hlavičky pre veľkosti tričiek
-                                    (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `Vel. ${size.toUpperCase()}`)
-                                    )
-                                ),
                                 allTeamsFlattened.map(team => {
                                     const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
                                     // Generujeme titulok s popiskami, ktorý sa zobrazí priamo
@@ -1394,7 +1387,7 @@ function AllRegistrationsApp() {
                                             ),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._category || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.teamName || `Tím`),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team._registeredBy || '-'),
+                                            // ODSTRÁNENÉ: Registroval ${team._registeredBy || '-'}
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._players), // Používame novú vlastnosť
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._womenTeamMembersCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._menTeamMembersCount),
