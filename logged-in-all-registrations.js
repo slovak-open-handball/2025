@@ -541,82 +541,6 @@ function AllRegistrationsApp() {
     };
   }, []); // Prázdne závislosti, aby sa spustil len raz
 
-  // ODSTRÁNENÝ DUPLICITNÝ EFFECT PRE NAČÍTANIE POUŽÍVATEĽSKÝCH DÁT Z FIRESTORE
-  // Tento kód bol odstránený, pretože globalUserProfileData a udalosť globalDataUpdated
-  // už zabezpečujú aktuálne údaje o používateľovi.
-  /*
-  React.useEffect(() => {
-    let unsubscribeUserDoc;
-    if (isAuthReady && db && user) {
-      console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-      if (typeof window.showGlobalLoader === 'function') {
-        window.showGlobalLoader();
-      }
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
-        unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
-          if (docSnapshot.exists()) {
-            const userData = docSnapshot.data();
-            console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
-            setUserProfileData(userData); // !!! TOTO SPÔSOBOVALO MOŽNÚ NEKONEČNÚ SLUČKU !!!
-            setError('');
-            console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
-            if (typeof window.hideGlobalLoader === 'function') {
-              window.hideGlobalLoader();
-            }
-          } else {
-            console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-            if (typeof window.hideGlobalLoader === 'function') {
-              window.hideGlobalLoader();
-            }
-            setUser(null);
-            setUserProfileData(null);
-          }
-        }, error => {
-          console.error("AllRegistrationsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-          if (error.code === 'permission-denied') {
-              setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
-          } else if (error.code === 'unavailable') {
-              setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-          } else {
-              setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
-          }
-          if (typeof window.hideGlobalLoader === 'function') {
-            window.hideGlobalLoader();
-          }
-          setUser(null);
-          setUserProfileData(null);
-        });
-      } catch (e) {
-        console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-        setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-        if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader();
-        }
-        setUser(null);
-        setUserProfileData(null);
-      }
-    } else if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
-        if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader();
-        }
-        window.location.href = 'login.html';
-        return;
-    } else if (!isAuthReady || !db || user === undefined) { 
-        console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Current states: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
-    }
-    return () => {
-      if (unsubscribeUserDoc) {
-        console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument.");
-        unsubscribeUserDoc();
-      }
-    };
-  }, [isAuthReady, db, user, auth]);
-  */
-
-
   // Effect for fetching all users from Firestore and column order
   // Pre stabilitu závislostí sme premenné pre role a approved vytiahli mimo objekt userProfileData
   const userRole = userProfileData?.role;
@@ -631,7 +555,7 @@ function AllRegistrationsApp() {
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userRole, "approved:", userApproved, "isAuthReady:", isAuthReady);
 
 
-    if (isAuthReady && db && user && user.uid && userRole === 'admin' && userApproved === true) {
+    if (isAuthReady && db && user && user.uid && userProfileData && userRole === 'admin' && userApproved === true) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions met: Approved Admin. Proceeding to fetch data.");
         // Zobraziť globálny loader, ak je funkcia dostupná
         if (typeof window.showGlobalLoader === 'function') {
@@ -684,7 +608,6 @@ function AllRegistrationsApp() {
 
                         // Pridáme všetky stĺpce z defaultColumnOrder, ktoré neboli v savedOrder, na koniec
                         defaultColumnOrder.forEach(defaultCol => {
-                            // !!! OPRAVA: Preklep fFfCol.id zmenený na fCol.id !!!
                             if (!finalOrder.some(fCol => fCol.id === defaultCol.id)) { 
                                 finalOrder.push(defaultCol);
                             }
@@ -757,21 +680,16 @@ function AllRegistrationsApp() {
         }
         window.location.href = 'login.html';
         return;
-    } else if (isAuthReady && userProfileData && (userRole !== 'admin' || userApproved === false)) {
-        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] User is not an approved admin, not fetching data. Redirecting to my-data.html.");
-        setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-        if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader();
-        }
-        setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
-        window.location.href = 'logged-in-my-data.html';
-        return;
     } else {
-        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions not met for fetching data. Waiting for state updates.");
+        // Skryť loader aj ak používateľ nie je admin alebo nie je schválený, ale už máme info
+        if (typeof window.hideGlobalLoader === 'function') {
+            window.hideGlobalLoader();
+        }
+        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions not met for fetching data. Waiting for state updates or no action taken.");
     }
 
     // Dependencies now reflect the derived stable values or primitives
-  }, [db, user, isAuthReady, userRole, userApproved, collection, doc, onSnapshot, setDoc, defaultColumnOrder]);
+  }, [db, user, isAuthReady, userRole, userApproved, defaultColumnOrder]); // defaultColumnOrder ako závislosť
 
 
   // NOVINKA: useEffect pre sledovanie šírky menu-spacer a okna
@@ -827,10 +745,7 @@ function AllRegistrationsApp() {
 
           let valA, valB;
 
-          const getNestedValue = (obj, path) => {
-              return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
-          };
-
+          // NOVINKA: getNestedValue už je definované globálne, netreba tu znova
           if (columnId.includes('.')) {
               valA = getNestedValue(a, columnId);
               valB = getNestedValue(b, columnId);
@@ -1056,24 +971,6 @@ function AllRegistrationsApp() {
     }
   };
 
-  // Display loading state - now handled by global loader
-  if (!isAuthReady || user === undefined || !userProfileData) { 
-    // Počas načítania nevraciame nič, pretože globálny loader sa o to postará
-    // Tiež zabezpečíme, aby sa React komponent nevykreslil, kým nie sú dáta pripravené
-    return null;
-  }
-
-  // Ak používateľ existuje, ale nie je schválený admin, presmerujeme ho.
-  if (userProfileData && (userRole !== 'admin' || userApproved === false)) {
-      console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
-      // Skryť loader aj pri presmerovaní
-      if (typeof window.hideGlobalLoader === 'function') {
-        window.hideGlobalLoader();
-      }
-      window.location.href = 'logged-in-my-data.html';
-      return null;
-  }
-
   // Dynamický výpočet šírky pre biely obdĺžnik
   const calculateContentWidth = React.useCallback(() => {
     // Získanie responzívneho paddingu z .content-wrapper
@@ -1115,6 +1012,28 @@ function AllRegistrationsApp() {
       [userId]: !prev[userId]
     }));
   };
+
+  // Ak sa isAuthReady ešte nenastavilo na true, alebo user je null/undefined, nič nevykresľujeme.
+  if (!isAuthReady || user === undefined || user === null) {
+      console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/User. isAuthReady:", isAuthReady, "user:", user);
+      if (typeof window.showGlobalLoader === 'function') {
+        window.showGlobalLoader();
+      }
+      return null;
+  }
+  
+  // Až po tom, čo je user plne inicializovaný a máme userProfileData, môžeme kontrolovať rolu.
+  // Ak userProfileData nie je k dispozícii, alebo nie je admin/schválený, presmerujeme/zobrazíme chybu.
+  if (!userProfileData || userRole !== 'admin' || userApproved === false) {
+      console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor alebo dáta profilu chýbajú. Presmerovávam na logged-in-my-data.html.");
+      // Skryť loader aj pri presmerovaní
+      if (typeof window.hideGlobalLoader === 'function') {
+        window.hideGlobalLoader();
+      }
+      window.location.href = 'logged-in-my-data.html';
+      return null; // Zabezpečí, že sa nič nevykreslí pred presmerovaním
+  }
+
 
   // Ak je používateľ admin a schválený, zobrazíme mu tabuľku registrácií
   return React.createElement(
