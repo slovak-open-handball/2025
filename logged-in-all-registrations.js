@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
 // Tento súbor je načítaný ako modul, preto môže používať importy.
-import { collection, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component pre zobrazovanie dočasných správ
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
@@ -244,7 +244,22 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
 
 // Helper function to get nested values from an object
 const getNestedValue = (obj, path) => {
-    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+    // Handle path with array indices like 'teams.category.0.playerDetails.0.firstName'
+    const pathParts = path.split('.');
+    let current = obj;
+    for (const part of pathParts) {
+        const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/);
+        if (arrayMatch) {
+            const arrayKey = arrayMatch[1];
+            const arrayIndex = parseInt(arrayMatch[2]);
+            current = current && current[arrayKey] && current[arrayKey][arrayIndex] !== undefined
+                ? current[arrayKey][arrayIndex] : undefined;
+        } else {
+            current = current && current[part] !== undefined ? current[part] : undefined;
+        }
+        if (current === undefined) break;
+    }
+    return current;
 };
 
 // Helper function to get tshirt spans
@@ -282,7 +297,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -307,7 +322,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 
 
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal }) {
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db }) {
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -319,12 +334,22 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
     const formatDateToDMMYYYY = (dateString) => {
         if (!dateString) return '-';
+        // Handle Firebase Timestamp objects
+        if (dateString && typeof dateString.toDate === 'function') {
+            const date = dateString.toDate();
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${day}. ${month}. ${year}`;
+        }
+        // Handle plain date strings (e.g., YYYY-MM-DD)
         const [year, month, day] = dateString.split('-');
         if (year && month && day) {
             return `${day}. ${month}. ${year}`;
         }
         return dateString;
     };
+
 
     const allConsolidatedMembers = [];
 
@@ -333,6 +358,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             allConsolidatedMembers.push({
                 ...player,
                 type: 'Hráč',
+                originalArray: 'playerDetails',
+                originalIndex: index,
                 uniqueId: `${team.teamName}-player-${player.firstName || ''}-${player.lastName || ''}-${index}`
             });
         });
@@ -342,6 +369,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             allConsolidatedMembers.push({
                 ...member,
                 type: 'Člen realizačného tímu (muži)',
+                originalArray: 'menTeamMemberDetails',
+                originalIndex: index,
                 uniqueId: `${team.teamName}-menstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
             });
         });
@@ -351,6 +380,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             allConsolidatedMembers.push({
                 ...member,
                 type: 'Člen realizačného tímu (ženy)',
+                originalArray: 'womenTeamMemberDetails',
+                originalIndex: index,
                 uniqueId: `${team.teamName}-womenstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
             });
         });
@@ -359,6 +390,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         allConsolidatedMembers.push({
             ...team.driverDetails,
             type: 'Šofér',
+            originalArray: 'driverDetails', // Not an array, but for consistency
+            originalIndex: -1, // No index for single object
             uniqueId: `${team.teamName}-driver-${team.driverDetails.firstName || ''}-${team.driverDetails.lastName || ''}-0`
         });
     }
@@ -416,12 +449,27 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                             className: 'cursor-pointer hover:bg-gray-100', // Pridal som triedy pre vizuálnu spätnú väzbu
                             onClick: (e) => { // Pridal som obsluhu kliknutia na riadok člena
                                 e.stopPropagation();
-                                openEditModal(member, `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`);
+                                let memberPath = '';
+                                if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
+                                    memberPath = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
+                                } else if (member.originalArray === 'driverDetails') {
+                                    memberPath = `teams.${team._category}[${team._teamIndex}].driverDetails`;
+                                } else {
+                                    console.warn("Nepodarilo sa určiť cestu člena pre uloženie. Modálne okno bude len na prezeranie.");
+                                    openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null);
+                                    return;
+                                }
+
+                                openEditModal(
+                                    member,
+                                    `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`,
+                                    doc(db, 'users', team._userId),
+                                    memberPath
+                                );
                             }
                         },
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.type || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
@@ -470,8 +518,13 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 }
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data }) {
+function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, originalDataPath }) {
     const modalRef = React.useRef(null);
+    const [localEditedData, setLocalEditedData] = React.useState(data);
+
+    React.useEffect(() => {
+        setLocalEditedData(data); // Reset local data when `data` prop changes
+    }, [data]);
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -512,6 +565,8 @@ function DataEditModal({ isOpen, onClose, title, data }) {
         if (key === 'dateOfBirth') return 'Dátum narodenia';
         if (key === 'postalCode') return 'PSČ';
         if (key === 'approved') return 'Schválený';
+        if (key === 'email') return 'E-mail';
+        if (key === 'contactPhoneNumber') return 'Telefónne číslo';
 
 
         return key
@@ -521,84 +576,142 @@ function DataEditModal({ isOpen, onClose, title, data }) {
             .trim();
     };
 
-    // Helper to format values for placeholders
-    const formatValueForPlaceholder = (value, key) => {
+    // Helper to format values for display in input fields
+    const formatDisplayValue = (value) => {
         if (value === null || value === undefined) return '';
         if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
         if (value.toDate && typeof value.toDate === 'function') { // Firebase Timestamp
             return value.toDate().toLocaleString('sk-SK');
         }
         if (Array.isArray(value)) {
-            // Special handling for nested arrays in playerDetails etc.
-            if (key === 'playerDetails' || key === 'menTeamMemberDetails' || key === 'womenTeamMemberDetails' || key === 'tshirts') {
-                 // For complex arrays like playerDetails, show a summary or indicate complex data
-                 return `[${value.length} položiek] (Pozrite konzolu pre detaily)`;
-            }
+            // Arrays of primitives can be joined, complex arrays get a summary
             return value.map(item => {
                 if (typeof item === 'object' && item !== null) {
-                    return JSON.stringify(item);
+                    return JSON.stringify(item); // For objects in array, stringify
                 }
                 return String(item);
             }).join(', ');
         }
         if (typeof value === 'object') {
-             if (key === 'billing') { // Specific handling for billing to flatten
-                return Object.entries(value).map(([billKey, billValue]) => `${formatLabel(billKey)}: ${formatValueForPlaceholder(billValue)}`).join(', ');
-            } else if (key === 'address') {
-                 return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
-            } else if (key === 'packageDetails' && value.name) {
-                return value.name;
-            } else if (key === 'accommodation' && value.type) {
-                return value.type;
-            } else if (key === 'arrival' && value.type) {
-                return value.type;
+            // For general objects, stringify or special format
+            if (value.street || value.city) { // Heuristic for address objects
+                return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            }
+            if (value.name || value.type) { // Heuristic for package, accommodation, arrival
+                return value.name || value.type;
             }
             return JSON.stringify(value);
         }
         return String(value);
     };
 
-    const renderDataFields = (obj, parentKey = '') => {
-        if (!obj || typeof obj !== 'object' || Array.isArray(obj) && !['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'tshirts', 'parts'].includes(parentKey.split('.').pop())) {
-             // For primitive types or simple arrays at top level, just return a single input.
-             const labelText = parentKey ? formatLabel(parentKey) : 'Hodnota';
+    // Helper to handle input changes for nested data
+    const handleChange = (path, newValue) => {
+        setLocalEditedData(prevData => {
+            // Deep clone to ensure immutability
+            const newData = JSON.parse(JSON.stringify(prevData)); 
+            let current = newData;
+            const pathParts = path.split('.');
+
+            for (let i = 0; i < pathParts.length - 1; i++) {
+                const part = pathParts[i];
+                const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/); // Check for array index in path part e.g. "playerDetails[0]"
+                
+                if (arrayMatch) {
+                    const arrayKey = arrayMatch[1];
+                    const arrayIndex = parseInt(arrayMatch[2]);
+                    if (!current[arrayKey]) current[arrayKey] = [];
+                    // Ensure the array element exists
+                    if (!current[arrayKey][arrayIndex]) current[arrayKey][arrayIndex] = {};
+                    current = current[arrayKey][arrayIndex];
+                } else {
+                    if (!current[part]) current[part] = {};
+                    current = current[part];
+                }
+            }
+
+            const lastPart = pathParts[pathParts.length - 1];
+            const lastArrayMatch = lastPart.match(/^(.*?)\[(\d+)\]$/);
+            if (lastArrayMatch) {
+                const arrayKey = lastArrayMatch[1];
+                const arrayIndex = parseInt(lastArrayMatch[2]);
+                if (!current[arrayKey]) current[arrayKey] = [];
+                current[arrayKey][arrayIndex] = newValue;
+            } else {
+                // Type conversion if necessary (e.g., 'Áno'/'Nie' for boolean)
+                if (typeof getNestedValue(data, path) === 'boolean') {
+                    current[lastPart] = (newValue.toLowerCase() === 'áno' || newValue.toLowerCase() === 'true');
+                } else if (typeof getNestedValue(data, path) === 'number') {
+                    current[lastPart] = parseFloat(newValue) || 0; // Convert to number if original was number
+                } else {
+                    current[lastPart] = newValue;
+                }
+            }
+            return newData;
+        });
+    };
+
+    const renderDataFields = (obj, currentPath = '') => {
+        if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitive value or Timestamp
+             const labelText = currentPath ? formatLabel(currentPath) : 'Hodnota';
+             const isEditable = targetDocRef !== null && originalDataPath !== null; // Only editable if path for saving is known
+
+             // Determine input type or if it should be a checkbox
+             let inputType = 'text';
+             let isCheckbox = false;
+             if (typeof obj === 'boolean') {
+                 isCheckbox = true;
+             } else if (currentPath.toLowerCase().includes('password')) { // Hide password fields
+                 inputType = 'password';
+             }
+
              return React.createElement(
                 'div',
-                { key: parentKey, className: 'mb-4' },
+                { key: currentPath, className: 'mb-4' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                React.createElement('input', {
-                    type: 'text',
-                    readOnly: true,
-                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
-                    placeholder: formatValueForPlaceholder(obj, parentKey)
-                })
+                isCheckbox ? (
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        className: 'form-checkbox h-5 w-5 text-blue-600',
+                        checked: localEditedData !== null && getNestedValue(localEditedData, currentPath) === true,
+                        onChange: isEditable ? (e) => handleChange(currentPath, e.target.checked) : undefined,
+                        disabled: !isEditable
+                    })
+                ) : (
+                    React.createElement('input', {
+                        type: inputType,
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${isEditable ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
+                        value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, currentPath)) : '',
+                        onChange: isEditable ? (e) => handleChange(currentPath, e.target.value) : undefined,
+                        readOnly: !isEditable, // Read-only if not editable
+                    })
+                )
             );
         }
 
         return Object.entries(obj).map(([key, value]) => {
-            // Skip internal React/Firebase keys or keys that are too verbose/nested
-            if (key.startsWith('_') || key === 'teams' || key === 'columnOrder' || key === 'displayNotifications') {
+            // Skip internal React/Firebase keys or keys that are too verbose/nested, or sensitive
+            if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password'].includes(key)) {
                 return null;
             }
 
-            const fullKeyPath = parentKey ? `${parentKey}.${key}` : key;
+            const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
             const labelText = formatLabel(fullKeyPath);
 
-            // Handle nested objects and arrays
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                // Special handling for address, billing, packageDetails, accommodation, arrival
-                if (key === 'address' || key === 'billing' || key === 'packageDetails' || key === 'accommodation' || key === 'arrival') {
-                    // For these specific nested objects, display their content in a single input field.
-                    const formattedValue = formatValueForPlaceholder(value, key);
+                // If it's a known 'flat' object (address, billing), render its content in a single input.
+                // Otherwise, treat as a collapsible section.
+                if (['address', 'billing', 'packageDetails', 'accommodation', 'arrival'].includes(key)) {
                      return React.createElement(
                         'div',
                         { key: fullKeyPath, className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                         React.createElement('input', {
                             type: 'text',
-                            readOnly: true,
-                            className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
-                            placeholder: formattedValue
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${targetDocRef ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
+                            value: formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)),
+                            onChange: targetDocRef ? (e) => handleChange(fullKeyPath, e.target.value) : undefined,
+                            readOnly: !targetDocRef, // Editable if targetDocRef exists
                         })
                     );
                 }
@@ -618,70 +731,55 @@ function DataEditModal({ isOpen, onClose, title, data }) {
                             type: 'text',
                             readOnly: true,
                             className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
-                            placeholder: '(Prázdne)'
+                            value: '(Prázdne)'
                         })
                     );
                 }
                 // For arrays of objects (like playerDetails, team members, tshirts), create collapsible sections for each item
-                // or just display a summary if it's too long
-                if (key === 'playerDetails' || key === 'menTeamMemberDetails' || key === 'womenTeamMemberDetails') {
-                    return React.createElement(
-                        CollapsibleSection,
-                        { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
-                        value.map((item, index) => React.createElement(
-                            CollapsibleSection,
-                            { key: `${fullKeyPath}-${index}`, title: `${item.firstName || ''} ${item.lastName || ''} (${item.type || 'Člen'})`, defaultOpen: false, noOuterStyles: true },
-                            renderDataFields(item, `${fullKeyPath}[${index}]`)
-                        ))
-                    );
-                } else if (key === 'tshirts') {
-                    return React.createElement(
-                        CollapsibleSection,
-                        { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
-                        value.map((item, index) => React.createElement(
-                            'div',
-                            { key: `${fullKeyPath}-${index}`, className: 'mb-2 p-2 border rounded-md bg-gray-50' },
-                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, `Tričko ${index + 1}`),
-                            renderDataFields(item, `${fullKeyPath}[${index}]`)
-                        ))
-                    );
-                } else if (key === 'parts' && parentKey.endsWith('contents')) { // special case for LLM chat history parts
-                     return React.createElement(
-                        CollapsibleSection,
-                        { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
-                        value.map((item, index) => React.createElement(
-                            'div',
-                            { key: `${fullKeyPath}-${index}`, className: 'mb-2 p-2 border rounded-md bg-gray-50' },
-                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, `Časť ${index + 1}`),
-                            renderDataFields(item, `${fullKeyPath}[${index}]`)
-                        ))
-                    );
-                }
-                // For other arrays, display in a single input field
-                const formattedValue = formatValueForPlaceholder(value, key);
                 return React.createElement(
-                    'div',
-                    { key: fullKeyPath, className: 'mb-4' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                    React.createElement('input', {
-                        type: 'text',
-                        readOnly: true,
-                        className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
-                        placeholder: formattedValue
-                    })
+                    CollapsibleSection,
+                    { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
+                    value.map((item, index) => React.createElement(
+                        CollapsibleSection,
+                        { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
+                        renderDataFields(item, `${fullKeyPath}[${index}]`) // Recursive call for nested array item
+                    ))
                 );
             }
             // For primitive values (string, number, boolean, Timestamp)
+            const isEditableField = targetDocRef !== null && originalDataPath !== null;
+
+            // Determine input type or if it should be a checkbox
+            let inputType = 'text';
+            let isCheckbox = false;
+            if (typeof value === 'boolean') {
+                isCheckbox = true;
+            } else if (key.toLowerCase().includes('password')) { // Hide password fields
+                 inputType = 'password';
+            }
+
+
             return React.createElement(
                 'div',
                 { key: fullKeyPath, className: 'mb-4' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                React.createElement('input', {
-                    type: 'text',
-                    readOnly: true,
-                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
-                    placeholder: formatValueForPlaceholder(value, key)
-                })
+                isCheckbox ? (
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        className: 'form-checkbox h-5 w-5 text-blue-600',
+                        checked: localEditedData !== null && getNestedValue(localEditedData, fullKeyPath) === true,
+                        onChange: isEditableField ? (e) => handleChange(fullKeyPath, e.target.checked) : undefined,
+                        disabled: !isEditableField
+                    })
+                ) : (
+                    React.createElement('input', {
+                        type: inputType,
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${isEditableField ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
+                        value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)) : '',
+                        onChange: isEditableField ? (e) => handleChange(fullKeyPath, e.target.value) : undefined,
+                        readOnly: !isEditableField,
+                    })
+                )
             );
         });
     };
@@ -699,15 +797,19 @@ function DataEditModal({ isOpen, onClose, title, data }) {
             React.createElement(
                 'div',
                 { className: 'space-y-4' }, // Add some spacing between fields
-                renderDataFields(data)
+                renderDataFields(localEditedData)
             ),
             React.createElement(
                 'div',
                 { className: 'flex justify-end space-x-2 mt-4' },
                 React.createElement('button', {
-                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
+                    className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
                     onClick: onClose
-                }, 'Zavrieť')
+                }, 'Zavrieť'),
+                targetDocRef && React.createElement('button', { // Render Save button only if targetDocRef is provided (meaning data is savable)
+                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
+                    onClick: () => onSave(localEditedData, targetDocRef, originalDataPath)
+                }, 'Uložiť zmeny')
             )
         )
     );
@@ -768,15 +870,20 @@ function AllRegistrationsApp() {
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [editingData, setEditingData] = React.useState(null);
   const [editModalTitle, setEditModalTitle] = React.useState('');
+  const [editingDocRef, setEditingDocRef] = React.useState(null); // Document reference for saving
+  const [editingDataPath, setEditingDataPath] = React.useState(''); // Path within the document for saving
 
-  const openEditModal = (data, title) => {
+  const openEditModal = (data, title, targetDocRef = null, originalDataPath = '') => {
       // Remove sensitive or irrelevant keys before passing to modal
       const cleanedData = { ...data };
       delete cleanedData.password; // Príklad: odstránenie hesla
       delete cleanedData.emailVerified; // Príklad: odstránenie interných stavov
+      delete cleanedData.id; // ID je často súčasťou cesty a nemalo by sa upravovať
 
       setEditingData(cleanedData);
       setEditModalTitle(title);
+      setEditingDocRef(targetDocRef);
+      setEditingDataPath(originalDataPath);
       setIsEditModalOpen(true);
   };
 
@@ -784,6 +891,8 @@ function AllRegistrationsApp() {
       setIsEditModalOpen(false);
       setEditingData(null);
       setEditModalTitle('');
+      setEditingDocRef(null);
+      setEditingDataPath('');
   };
 
 
@@ -1437,6 +1546,57 @@ function AllRegistrationsApp() {
     }
   };
 
+  const handleSaveEditedData = React.useCallback(async (updatedData, targetDocRef, originalDataPath) => {
+    if (!targetDocRef) {
+        console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
+        setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie.", 'error');
+        return;
+    }
+
+    try {
+        if (typeof window.showGlobalLoader === 'function') {
+            window.showGlobalLoader();
+        }
+
+        const dataToSave = {};
+        // Filter out internal keys starting with '_' and 'id' from the updatedData
+        Object.keys(updatedData).forEach(key => {
+            if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex') {
+                dataToSave[key] = updatedData[key];
+            }
+        });
+
+        if (Object.keys(dataToSave).length === 0) {
+            setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+            return;
+        }
+
+        if (originalDataPath === '') {
+            // Updating a top-level user document
+            await updateDoc(targetDocRef, dataToSave);
+        } else {
+            // Updating a nested field (team, player, staff, driver)
+            // Example: { 'teams.Category.0.playerDetails.0': dataToSave }
+            // The value at the specified path will be completely replaced by dataToSave
+            const updates = { [originalDataPath]: dataToSave };
+            await updateDoc(targetDocRef, updates);
+        }
+
+        setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+
+    } catch (e) {
+        console.error("Chyba pri ukladaní dát do Firestore:", e);
+        setError(`Chyba pri ukladaní dát: ${e.message}`);
+        setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
+    } finally {
+        if (typeof window.hideGlobalLoader === 'function') {
+            window.hideGlobalLoader();
+        }
+        closeEditModal(); // Close modal after saving attempt
+    }
+}, [db, closeEditModal, setUserNotificationMessage, setError]);
+
+
   if (!isAuthReady || user === undefined || !userProfileData) {
     if (typeof window.hideGlobalLoader === 'function') {
       window.hideGlobalLoader();
@@ -1495,7 +1655,10 @@ function AllRegistrationsApp() {
         isOpen: isEditModalOpen,
         onClose: closeEditModal,
         title: editModalTitle,
-        data: editingData
+        data: editingData,
+        onSave: handleSaveEditedData, // Pass the save handler
+        targetDocRef: editingDocRef,    // Pass the document reference
+        originalDataPath: editingDataPath // Pass the path within the document
     }),
     React.createElement(
       'div',
@@ -1568,7 +1731,7 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
                                 )
                             )
                         ) : (
@@ -1635,7 +1798,12 @@ function AllRegistrationsApp() {
                                             'tr',
                                             {
                                                 className: `bg-white border-b hover:bg-gray-50 cursor-pointer`,
-                                                onClick: () => openEditModal(team, `Upraviť tím: ${team.teamName}`)
+                                                onClick: () => openEditModal(
+                                                    team,
+                                                    `Upraviť tím: ${team.teamName}`,
+                                                    doc(db, 'users', team._userId),
+                                                    `teams.${team._category}[${team._teamIndex}]`
+                                                )
                                             },
                                             React.createElement('td', {
                                                 className: 'py-3 px-2 text-center whitespace-nowrap min-w-max',
@@ -1668,7 +1836,8 @@ function AllRegistrationsApp() {
                                                     showDetailsAsCollapsible: false,
                                                     showUsersChecked: showUsers,
                                                     showTeamsChecked: showTeams,
-                                                    openEditModal: openEditModal // Preposielame openEditModal
+                                                    openEditModal: openEditModal, // Preposielame openEditModal
+                                                    db: db // Preposielame db
                                                 })
                                             )
                                         )
@@ -1697,7 +1866,12 @@ function AllRegistrationsApp() {
                                         'tr',
                                         {
                                             className: `bg-white border-b hover:bg-gray-50 cursor-pointer`,
-                                            onClick: () => openEditModal(u, `Upraviť používateľa: ${u.firstName} ${u.lastName}`)
+                                            onClick: () => openEditModal(
+                                                u,
+                                                `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
+                                                doc(db, 'users', u.id),
+                                                '' // Top-level user data
+                                            )
                                         },
                                         React.createElement('td', {
                                             className: 'py-3 px-2 text-center min-w-max',
@@ -1758,7 +1932,8 @@ function AllRegistrationsApp() {
                                                         showDetailsAsCollapsible: true,
                                                         showUsersChecked: showUsers,
                                                         showTeamsChecked: showTeams,
-                                                        openEditModal: openEditModal // Preposielame openEditModal
+                                                        openEditModal: openEditModal, // Preposielame openEditModal
+                                                        db: db // Preposielame db
                                                     })
                                                 })
                                             )
