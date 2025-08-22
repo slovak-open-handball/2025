@@ -471,12 +471,24 @@ function AllRegistrationsApp() {
             if (u.teams && Object.keys(u.teams).length > 0) {
                 Object.entries(u.teams).forEach(([category, teamList]) => {
                     teamList.forEach((team, teamIndex) => {
+                        // Calculate counts here and add them to the team object
+                        let menTeamMembersCount = 0;
+                        if (Array.isArray(team.menTeamMemberDetails)) {
+                            menTeamMembersCount = team.menTeamMemberDetails.length;
+                        }
+
+                        let womenTeamMembersCount = 0;
+                        if (Array.isArray(team.womenTeamMemberDetails)) {
+                            womenTeamMembersCount = team.womenTeamMemberDetails.length;
+                        }
                         teams.push({
                             ...team,
                             _userId: u.id, // Uložíme ID používateľa pre referenciu
                             _category: category,
                             _teamIndex: teamIndex,
-                            _registeredBy: `${u.firstName} ${u.lastName}` // Kto registroval
+                            _registeredBy: `${u.firstName} ${u.lastName}`, // Kto registroval
+                            _menTeamMembersCount: menTeamMembersCount,   // Add calculated count
+                            _womenTeamMembersCount: womenTeamMembersCount // Add calculated count
                         });
                     });
                 });
@@ -1157,9 +1169,9 @@ function AllRegistrationsApp() {
         // Pôvodné zobrazenie bez popisiek pre riadok v tabuľke
         titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, team._category || '-'));
         titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, team.teamName || `Tím`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, team.players || 0)); // Hráči
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, womenTeamMembersCount)); // R. tím (ž)
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount)); // R. tím (m)
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, team._players || 0)); // Hráči
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, team._womenTeamMembersCount)); // R. tím (ž)
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, team._menTeamMembersCount)); // R. tím (m)
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, team.arrival?.type || '-')); // Doprava
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, team.accommodation?.type || '-')); // Ubytovanie
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, team.packageDetails?.name || '-')); // Balík
@@ -1339,7 +1351,7 @@ function AllRegistrationsApp() {
                                 allTeamsFlattened.map(team => {
                                     const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
                                     // Generujeme titulok s popiskami, ktorý sa zobrazí priamo
-                                    const teamHeaderTitleContent = generateTeamHeaderTitle(team, availableTshirtSizes, true); 
+                                    const teamHeaderTitleContent = generateTeamHeaderTitle(team, availableTshirtSizes, true, showUsers, showTeams); 
                                     
                                     return React.createElement(
                                         React.Fragment,
@@ -1356,9 +1368,9 @@ function AllRegistrationsApp() {
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._category || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.teamName || `Tím`),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team._registeredBy || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team.players || 0),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, womenTeamMembersCount),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, menTeamMembersCount),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._players || 0), // Používame novú vlastnosť
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._womenTeamMembersCount),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap' }, team._menTeamMembersCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.arrival?.type || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.accommodation?.type || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap' }, team.packageDetails?.name || '-'),
