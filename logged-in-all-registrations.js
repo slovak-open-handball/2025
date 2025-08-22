@@ -234,7 +234,7 @@ function CollapsibleSection({ title, children, defaultOpen = false }) {
 }
 
 // TeamDetails Component - zobrazuje detaily tímov
-function TeamDetails({ user }) {
+function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ako prop
     if (!user || !user.teams || Object.keys(user.teams).length === 0) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -254,8 +254,8 @@ function TeamDetails({ user }) {
         return dateString; // Vráti pôvodný reťazec, ak formát nie je YYYY-MM-DD
     };
 
-    // NOVINKA: Definovanie poradia veľkostí tričiek pre triedenie
-    const tshirtSizeOrder = ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
+    // Definovanie poradia veľkostí tričiek pre triedenie (použijeme prop, ak je k dispozícii, inak fallback)
+    const currentTshirtSizeOrder = tshirtSizeOrder && tshirtSizeOrder.length > 0 ? tshirtSizeOrder : ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
 
     return React.createElement(
         'div',
@@ -284,20 +284,20 @@ function TeamDetails({ user }) {
                     });
                 }
 
-                // NOVINKA: Spracovanie a zoradenie veľkostí tričiek
-                const sortedTshirts = team.tshirts && team.tshirts.length > 0
-                    ? [...team.tshirts].sort((a, b) => {
-                        const sizeA = String(a.size).toLowerCase();
-                        const sizeB = String(b.size).toLowerCase();
-                        const indexA = tshirtSizeOrder.indexOf(sizeA);
-                        const indexB = tshirtSizeOrder.indexOf(sizeB);
+                // NOVINKA: Konvertovanie team.tshirts do mapy pre jednoduché vyhľadávanie
+                const teamTshirtsMap = new Map(
+                    (team.tshirts || []).map(t => [String(t.size).toLowerCase(), t.quantity || 0])
+                );
 
-                        if (indexA === -1 && indexB === -1) return sizeA.localeCompare(sizeB); // Ak ani jedna veľkosť nie je v zozname, abecedne
-                        if (indexA === -1) return 1; // A nie je v zozname, B je menšie
-                        if (indexB === -1) return -1; // B nie je v zozname, A je menšie
-                        return indexA - indexB; // Podľa definovaného poradia
-                    }).map(t => `${t.size}: ${t.quantity}`).join(', ')
-                    : '-';
+                // NOVINKA: Generovanie td elementov pre každú veľkosť trička
+                const tshirtCells = currentTshirtSizeOrder.map(size => {
+                    const quantity = teamTshirtsMap.get(size) || 0;
+                    return React.createElement('td', {
+                        key: `tshirt-${size}`,
+                        // Odstránené triedy 'hidden' pre zobrazenie na všetkých obrazovkách
+                        className: 'py-1 px-2 whitespace-nowrap text-gray-600'
+                    }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+                });
 
 
                 // KONŠTRUKCIA JEDNOHO RIADKU TABUĽKY PRE HLAVIČKU CollapsibleSection
@@ -318,8 +318,8 @@ function TeamDetails({ user }) {
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden xl:table-cell' }, `Doprava: ${team.arrival?.type || '-'}`),
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 2xl:table-cell' }, `Ubytovanie: ${team.accommodation?.type || '-'}`),
                             React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 3xl:table-cell' }, `Balík: ${team.packageDetails?.name || '-'}`),
-                            // ZMENA: Odstránené triedy 'hidden 4xl:table-cell' pre Tričká, aby boli vždy viditeľné
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600' }, `Tričká: ${sortedTshirts}`),
+                            // NOVINKA: Rozdelenie tričiek do samostatných stĺpcov
+                            ...tshirtCells,
                         )
                     )
                 );
@@ -327,9 +327,6 @@ function TeamDetails({ user }) {
                 return React.createElement(
                     CollapsibleSection,
                     { key: `${category}-${teamIndex}`, title: teamHeaderTable, defaultOpen: false }, // Používame tabuľku ako titul
-                    // Pôvodná detailná tabuľka pre tímové informácie bola odstránená,
-                    // pretože jej obsah je teraz v hlavičke CollapsibleSection.
-                    // Ostatné CollapsibleSections zostávajú
                     consolidatedMembers.length > 0 &&
                     React.createElement(
                         CollapsibleSection,
@@ -346,12 +343,10 @@ function TeamDetails({ user }) {
                                     React.createElement(
                                         'tr',
                                         null,
-                                        // NOVINKA: Stĺpec 'Typ'
                                         React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Typ'),
                                         React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
                                         React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Priezvisko'),
                                         React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Dátum narodenia'),
-                                        // 'Číslo dresu' a 'Reg. číslo' sú len pre hráčov, zobrazia sa prázdne, ak nie sú definované
                                         React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Číslo dresu'),
                                         React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Reg. číslo'),
                                         React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Adresa'),
@@ -367,9 +362,9 @@ function TeamDetails({ user }) {
                                             React.createElement('td', { className: 'px-4 py-2' }, member.type || '-'),
                                             React.createElement('td', { className: 'px-4 py-2' }, member.firstName || '-'),
                                             React.createElement('td', { className: 'px-4 py-2' }, member.lastName || '-'),
-                                            React.createElement('td', { className: 'px-4 py-2' }, formatDateToDMMYYYY(member.dateOfBirth)), // Aplikovanie formátovania dátumu
-                                            React.createElement('td', { className: 'px-4 py-2' }, member.jerseyNumber || '-'), // Zobrazí sa prázdne, ak nie je definované
-                                            React.createElement('td', { className: 'px-4 py-2' }, member.registrationNumber || '-'), // Zobrazí sa prázdne, ak nie je definované
+                                            React.createElement('td', { className: 'px-4 py-2' }, formatDateToDMMYYYY(member.dateOfBirth)),
+                                            React.createElement('td', { className: 'px-4 py-2' }, member.jerseyNumber || '-'),
+                                            React.createElement('td', { className: 'px-4 py-2' }, member.registrationNumber || '-'),
                                             React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
                                         )
                                     )
@@ -381,7 +376,7 @@ function TeamDetails({ user }) {
                     team.tshirts && team.tshirts.length > 0 &&
                     React.createElement(
                         CollapsibleSection,
-                        { title: 'Veľkosti tričiek (podrobný zoznam)', defaultOpen: false }, // Zmenený názov pre odlíšenie od súhrnu
+                        { title: 'Veľkosti tričiek (podrobný zoznam)', defaultOpen: false },
                         React.createElement(
                             'div',
                             { className: 'overflow-x-auto' },
@@ -401,7 +396,6 @@ function TeamDetails({ user }) {
                                 React.createElement(
                                     'tbody',
                                     { className: 'bg-white divide-y divide-gray-200' },
-                                    // Tu stále zostáva detailný zoznam tričiek
                                     team.tshirts.map((tshirt, tIndex) =>
                                         React.createElement(
                                             'tr',
@@ -445,7 +439,6 @@ function TeamDetails({ user }) {
                                         React.createElement(
                                             'tr',
                                             { key: mealIndex },
-                                            // Odstránené whitespace-nowrap
                                             React.createElement('td', { className: 'px-4 py-2' }, date),
                                             React.createElement('td', { className: 'px-4 py-2' }, meals.breakfast || 0),
                                             React.createElement('td', { className: 'px-4 py-2' }, meals.lunch || 0),
@@ -513,6 +506,12 @@ function AllRegistrationsApp() {
 
   // Stav pre sledovanie rozbalených riadkov (ID používateľa -> boolean)
   const [expandedRows, setExpandedRows] = React.useState({});
+
+  // NOVINKA: Stav pre dostupné veľkosti tričiek načítané z Firestore
+  const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
+  // Predvolené poradie veľkostí tričiek pre prípad, že sa nepodarí načítať z Firestore
+  const tshirtSizeOrderFallback = ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
+
 
   // Funkcia na prepínanie rozbalenia/zbalenia riadku
   const toggleRowExpansion = (userId) => {
@@ -844,6 +843,38 @@ function AllRegistrationsApp() {
         }
     };
   }, [db, userProfileData, isAuthReady, user, collection, doc, onSnapshot, setDoc]);
+
+  // NOVINKA: Effect pre načítanie dostupných veľkostí tričiek zo sekcie 'settings/sizeTshirts'
+  React.useEffect(() => {
+      let unsubscribeSettings;
+      if (db) {
+          const settingsDocRef = doc(db, 'settings', 'sizeTshirts');
+          unsubscribeSettings = onSnapshot(settingsDocRef, (docSnapshot) => {
+              if (docSnapshot.exists()) {
+                  const data = docSnapshot.data();
+                  if (data && Array.isArray(data.sizes)) {
+                      // Zoradíme veľkosti podľa 'order' atribútu a získame len ich názvy (lowercase)
+                      const sortedSizes = [...data.sizes].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => String(s.size).toLowerCase());
+                      setAvailableTshirtSizes(sortedSizes);
+                  } else {
+                      console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes'. Používam predvolené poradie.");
+                      setAvailableTshirtSizes(tshirtSizeOrderFallback);
+                  }
+              } else {
+                  console.warn("Firestore settings/sizeTshirts dokument neexistuje. Používam predvolené poradie.");
+                  setAvailableTshirtSizes(tshirtSizeOrderFallback);
+              }
+          }, error => {
+              console.error("Chyba pri načítaní veľkostí tričiek z Firestore:", error);
+              setAvailableTshirtSizes(tshirtSizeOrderFallback); // Použijeme fallback pri chybe
+          });
+      }
+      return () => {
+          if (unsubscribeSettings) {
+              unsubscribeSettings();
+          }
+      };
+  }, [db]); // Závisí od inštancie databázy
 
 
   // Sorting logic
@@ -1272,7 +1303,7 @@ function AllRegistrationsApp() {
                                     { key: `${u.id}-details`, className: 'bg-gray-100' },
                                     // Zväčšenie colspan o 2 pre globálny a individuálny rozbalovací stĺpec
                                     React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
-                                        React.createElement(TeamDetails, { user: u })
+                                        React.createElement(TeamDetails, { user: u, tshirtSizeOrder: availableTshirtSizes })
                                     )
                                 )
                             )
