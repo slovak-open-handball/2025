@@ -600,6 +600,33 @@ function AllRegistrationsApp() {
     return [];
   }, [filteredUsers, showUsers, showTeams]);
 
+  // Nové useMemo pre výpočty súhrnu, ktoré závisia od allTeamsFlattened
+  const teamSummary = React.useMemo(() => {
+      let totalPlayers = 0;
+      let totalMenTeamMembers = 0;
+      let totalWomenTeamMembers = 0;
+      const totalTshirtQuantities = new Map(availableTshirtSizes.map(size => [size, 0])); // Inicializácia mapy pre tričká
+
+      allTeamsFlattened.forEach(team => {
+          totalPlayers += team._players;
+          totalMenTeamMembers += team._menTeamMembersCount;
+          totalWomenTeamMembers += team._womenTeamMembersCount;
+
+          if (team._teamTshirtsMap) {
+              team._teamTshirtsMap.forEach((quantity, size) => {
+                  totalTshirtQuantities.set(size, (totalTshirtQuantities.get(size) || 0) + quantity);
+              });
+          }
+      });
+
+      return {
+          totalPlayers,
+          totalMenTeamMembers,
+          totalWomenTeamMembers,
+          totalTshirtQuantities
+      };
+  }, [allTeamsFlattened, availableTshirtSizes]);
+
 
   const toggleRowExpansion = (userId) => {
       setExpandedRows(prev => ({
@@ -1345,7 +1372,7 @@ function AllRegistrationsApp() {
                                                 className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
                                             }, '→')
                                         ),
-                                        React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center cursor-pointer' }, // Added cursor-pointer
+                                        React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center cursor-pointer' },
                                             col.label,
                                             currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
                                         )
@@ -1377,12 +1404,12 @@ function AllRegistrationsApp() {
                                             'tr',
                                             {
                                                 className: `bg-white border-b hover:bg-gray-50 cursor-pointer`,
-                                                onClick: () => openEditModal(team, `Upraviť tím: ${team.teamName}`) // Celý riadok otvára modal na úpravu
+                                                onClick: () => openEditModal(team, `Upraviť tím: ${team.teamName}`)
                                             },
                                             React.createElement('td', {
                                                 className: 'py-3 px-2 text-center whitespace-nowrap min-w-max',
-                                                onClick: (e) => { // Kliknutie na šípku rozbalí/zbalí riadok
-                                                    e.stopPropagation(); // Zastaví propagáciu udalosti na riadok
+                                                onClick: (e) => {
+                                                    e.stopPropagation();
                                                     toggleTeamRowExpansion(teamUniqueId);
                                                 }
                                             },
@@ -1424,13 +1451,13 @@ function AllRegistrationsApp() {
                                     React.createElement(
                                         'tr',
                                         {
-                                            className: `bg-white border-b hover:bg-gray-50 cursor-pointer`, // Vždy cursor-pointer pre úpravu riadku
-                                            onClick: () => openEditModal(u, `Upraviť používateľa: ${u.firstName} ${u.lastName}`) // Kliknutie na riadok otvorí modal na úpravu
+                                            className: `bg-white border-b hover:bg-gray-50 cursor-pointer`,
+                                            onClick: () => openEditModal(u, `Upraviť používateľa: ${u.firstName} ${u.lastName}`)
                                         },
                                         React.createElement('td', {
                                             className: 'py-3 px-2 text-center min-w-max',
-                                            onClick: (e) => { // Kliknutie na šípku rozbalí/zbalí riadok
-                                                e.stopPropagation(); // Zastaví propagáciu udalosti na riadok
+                                            onClick: (e) => {
+                                                e.stopPropagation();
                                                 if (shouldShowExpander(u)) {
                                                     toggleRowExpansion(u.id);
                                                 }
@@ -1493,6 +1520,45 @@ function AllRegistrationsApp() {
                                     )
                                 )
                             ))
+                        )
+                    )
+                )
+            )
+        ),
+        // Nová sekcia súhrnu pod tabuľkou
+        (!showUsers && showTeams) && allTeamsFlattened.length > 0 && React.createElement(
+            'div',
+            { className: 'mt-6 p-4 bg-gray-100 rounded-lg shadow-md' },
+            React.createElement('h2', { className: 'text-xl font-bold text-gray-800 mb-4' }, 'Súhrn registrácií tímov'),
+            React.createElement(
+                'div',
+                { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' },
+                React.createElement(
+                    'div',
+                    { className: 'bg-white p-3 rounded-md shadow-sm' },
+                    React.createElement('p', { className: 'text-gray-700 font-semibold' }, 'Celkový počet hráčov: ', React.createElement('span', { className: 'text-blue-600' }, teamSummary.totalPlayers))
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'bg-white p-3 rounded-md shadow-sm' },
+                    React.createElement('p', { className: 'text-gray-700 font-semibold' }, 'Celkový počet členov R. tímu (ž): ', React.createElement('span', { className: 'text-blue-600' }, teamSummary.totalWomenTeamMembers))
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'bg-white p-3 rounded-md shadow-sm' },
+                    React.createElement('p', { className: 'text-gray-700 font-semibold' }, 'Celkový počet členov R. tímu (m): ', React.createElement('span', { className: 'text-blue-600' }, teamSummary.totalMenTeamMembers))
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'bg-white p-3 rounded-md shadow-sm lg:col-span-3' },
+                    React.createElement('p', { className: 'text-gray-700 font-semibold mb-2' }, 'Tričká podľa veľkosti:'),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-wrap gap-x-4 gap-y-2' },
+                        (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : tshirtSizeOrderFallback).map(size =>
+                            React.createElement('span', { key: `summary-tshirt-${size}`, className: 'text-gray-600' },
+                                React.createElement('strong', null, size.toUpperCase()), `: `, teamSummary.totalTshirtQuantities.get(size) || 0
+                            )
                         )
                     )
                 )
