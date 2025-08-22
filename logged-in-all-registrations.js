@@ -263,24 +263,41 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'Tímové detaily'),
         Object.entries(user.teams).flatMap(([category, teamList]) =>
             teamList.map((team, teamIndex) => {
-                const consolidatedMembers = [];
+                // --- Collect all members including driver for the meal plan table ---
+                const allConsolidatedMembers = [];
 
                 if (team.playerDetails && team.playerDetails.length > 0) {
-                    team.playerDetails.forEach(player => {
-                        consolidatedMembers.push({ ...player, type: 'Hráč' });
+                    team.playerDetails.forEach((player, index) => {
+                        allConsolidatedMembers.push({
+                            ...player,
+                            type: 'Hráč',
+                            uniqueId: `${team.teamName}-player-${player.firstName || ''}-${player.lastName || ''}-${index}`
+                        });
                     });
                 }
-                const menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
-                const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
-
                 if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
-                    team.menTeamMemberDetails.forEach(member => {
-                        consolidatedMembers.push({ ...member, type: 'Člen realizačného tímu' });
+                    team.menTeamMemberDetails.forEach((member, index) => {
+                        allConsolidatedMembers.push({
+                            ...member,
+                            type: 'Člen realizačného tímu (muži)',
+                            uniqueId: `${team.teamName}-menstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
+                        });
                     });
                 }
                 if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
-                    team.womenTeamMemberDetails.forEach(member => {
-                        consolidatedMembers.push({ ...member, type: 'Člen realizačného tímu' });
+                    team.womenTeamMemberDetails.forEach((member, index) => {
+                        allConsolidatedMembers.push({
+                            ...member,
+                            type: 'Člen realizačného tímu (ženy)',
+                            uniqueId: `${team.teamName}-womenstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
+                        });
+                    });
+                }
+                if (team.driverDetails) {
+                    allConsolidatedMembers.push({
+                        ...team.driverDetails,
+                        type: 'Šofér',
+                        uniqueId: `${team.teamName}-driver-${team.driverDetails.firstName || ''}-${team.driverDetails.lastName || ''}-0`
                     });
                 }
 
@@ -293,13 +310,21 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                 // NOVINKA: Generovanie span elementov pre každú veľkosť trička pre hlavičku
                 const tshirtSpans = currentTshirtSizeOrder.map(size => {
                     const quantity = teamTshirtsMap.get(size) || 0;
-                    // ODSTRÁNENÉ: Podmienené triedy visibilityClass, aby sa všetky veľkosti zobrazovali stále
-                    // Teraz sa vždy zobrazí ako inline-block
                     return React.createElement('span', {
                         key: `tshirt-summary-${size}`,
                         className: `text-gray-600 mr-2 inline-block` // Vždy inline-block
                     }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
                 });
+
+                // --- Meal dates and types for dynamic headers/cells ---
+                const mealDates = team.packageDetails && team.packageDetails.meals ? Object.keys(team.packageDetails.meals).sort() : [];
+                const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
+                const mealTypeLabels = {
+                    breakfast: 'Raňajky',
+                    lunch: 'Obed',
+                    dinner: 'Večera',
+                    refreshment: 'Občerstvenie'
+                };
 
 
                 // KONŠTRUKCIA HLAVIČKY PRE CollapsibleSection
@@ -319,90 +344,123 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                 );
                 
                 return React.createElement(
-                    CollapsibleSection,
-                    { key: `${category}-${teamIndex}`, title: teamHeaderTitle, defaultOpen: false }, // Používame div ako titul
-                    // ODSTRÁNENÉ: Predchádzajúca samostatná tabuľka pre tričká, keďže sú teraz v hlavičke CollapsibleSection
-                    consolidatedMembers.length > 0 &&
+                    React.Fragment, // Použijeme Fragment, aby sa nepridával zbytočný div
+                    { key: `${category}-${teamIndex}` },
                     React.createElement(
                         CollapsibleSection,
-                        { title: 'Detaily členov tímu (hráči a realizačný tím)', defaultOpen: false },
+                        { title: teamHeaderTitle, defaultOpen: false }, // Používame div ako titul
+                        allConsolidatedMembers.length > 0 &&
                         React.createElement(
-                            'div',
-                            { className: 'overflow-x-auto' },
+                            CollapsibleSection,
+                            { title: 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: false }, // Updated title
                             React.createElement(
-                                'table',
-                                { className: 'min-w-full divide-y divide-gray-200' },
+                                'div',
+                                { className: 'overflow-x-auto' }, // Keep overflow-x-auto as table will be wide
                                 React.createElement(
-                                    'thead',
-                                    { className: 'bg-gray-50' },
+                                    'table',
+                                    { className: 'min-w-full divide-y divide-gray-200' },
                                     React.createElement(
-                                        'tr',
-                                        null,
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Typ'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Priezvisko'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Dátum narodenia'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Číslo dresu'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Reg. číslo'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Adresa'),
-                                    )
-                                ),
-                                React.createElement(
-                                    'tbody',
-                                    { className: 'bg-white divide-y divide-gray-200' },
-                                    consolidatedMembers.map((member, mIndex) =>
+                                        'thead',
+                                        { className: 'bg-gray-50' },
                                         React.createElement(
                                             'tr',
-                                            { key: mIndex },
-                                            React.createElement('td', { className: 'px-4 py-2' }, member.type || '-'),
-                                            React.createElement('td', { className: 'px-4 py-2' }, member.firstName || '-'),
-                                            React.createElement('td', { className: 'px-4 py-2' }, member.lastName || '-'),
-                                            React.createElement('td', { className: 'px-4 py-2' }, formatDateToDMMYYYY(member.dateOfBirth)),
-                                            React.createElement('td', { className: 'px-4 py-2' }, member.jerseyNumber || '-'),
-                                            React.createElement('td', { className: 'px-4 py-2' }, member.registrationNumber || '-'),
-                                            React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
+                                            null,
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Typ'),
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Priezvisko'),
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Dátum narodenia'),
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Číslo dresu'),
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Reg. číslo'),
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Adresa'),
+                                            // Dynamic meal date headers
+                                            mealDates.map(date =>
+                                                React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200' },
+                                                    React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)), // Display formatted date
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'flex justify-around text-[10px] font-normal' },
+                                                        mealTypes.map(type =>
+                                                            React.createElement('span', { key: `${date}-${type}-sub`, className: 'w-1/4' }, mealTypeLabels[type])
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'tbody',
+                                        { className: 'bg-white divide-y divide-gray-200' },
+                                        allConsolidatedMembers.map((member) =>
+                                            React.createElement(
+                                                'tr',
+                                                { key: member.uniqueId },
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.type || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.firstName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, member.lastName || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap' }, formatDateToDMMYYYY(member.dateOfBirth)),
+                                                React.createElement('td', { className: 'px-4 py-2' }, member.jerseyNumber || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, member.registrationNumber || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
+                                                // Dynamic meal checkboxes
+                                                mealDates.map(date =>
+                                                    React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200' },
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex justify-around' },
+                                                            mealTypes.map(type => {
+                                                                const isChecked = team.packageDetails.meals[date] && team.packageDetails.meals[date][type] === 1;
+                                                                return React.createElement('input', {
+                                                                    key: `${member.uniqueId}-${date}-${type}-checkbox`,
+                                                                    type: 'checkbox',
+                                                                    checked: isChecked,
+                                                                    disabled: true, // Checkboxes are read-only
+                                                                    className: 'form-checkbox h-4 w-4 text-blue-600'
+                                                                });
+                                                            })
+                                                        )
+                                                    )
+                                                )
+                                            )
                                         )
                                     )
                                 )
                             )
-                        )
-                    ),
+                        ),
 
-                    team.packageDetails?.meals && Object.keys(team.packageDetails.meals).length > 0 &&
-                    React.createElement(
-                        CollapsibleSection,
-                        { title: 'Stravovanie', defaultOpen: false },
+                        // The original 'Stravovanie' summary section is removed as per the request.
+                        // However, if there are still any other sections that should be displayed
+                        // outside the 'Detaily členov tímu' collapsible, they should be here.
+                        // For example, if 'tshirts' section was supposed to be at this level:
+                        team.tshirts && team.tshirts.length > 0 &&
                         React.createElement(
-                            'div',
-                            { className: 'overflow-x-auto' },
+                            CollapsibleSection,
+                            { title: 'Veľkosti tričiek (podrobný zoznam)', defaultOpen: false },
                             React.createElement(
-                                'table',
-                                { className: 'min-w-full divide-y divide-gray-200' },
+                                'div',
+                                { className: 'overflow-x-auto' },
                                 React.createElement(
-                                    'thead',
-                                    { className: 'bg-gray-50' },
+                                    'table',
+                                    { className: 'min-w-full divide-y divide-gray-200' },
                                     React.createElement(
-                                        'tr',
-                                        null,
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Dátum'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Raňajky'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Obed'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Večera'),
-                                        React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Občerstvenie'),
-                                    )
-                                ),
-                                React.createElement(
-                                    'tbody',
-                                    { className: 'bg-white divide-y divide-gray-200' },
-                                    Object.entries(team.packageDetails.meals).map(([date, meals], mealIndex) =>
+                                        'thead',
+                                        { className: 'bg-gray-50' },
                                         React.createElement(
                                             'tr',
-                                            { key: mealIndex },
-                                            React.createElement('td', { className: 'px-4 py-2' }, date),
-                                            React.createElement('td', { className: 'px-4 py-2' }, meals.breakfast || 0),
-                                            React.createElement('td', { className: 'px-4 py-2' }, meals.lunch || 0),
-                                            React.createElement('td', { className: 'px-4 py-2' }, meals.dinner || 0),
-                                            React.createElement('td', { className: 'px-4 py-2' }, meals.refreshment || 0),
+                                            null,
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Veľkosť'),
+                                            React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Množstvo'),
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'tbody',
+                                        { className: 'bg-white divide-y divide-gray-200' },
+                                        team.tshirts.map((tshirt, tIndex) =>
+                                            React.createElement(
+                                                'tr',
+                                                { key: tIndex },
+                                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.size || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, tshirt.quantity || 0),
+                                            )
                                         )
                                     )
                                 )
