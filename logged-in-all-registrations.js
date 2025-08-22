@@ -283,7 +283,7 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                             uniqueId: `${team.teamName}-menstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
                         });
                     });
-                }
+                });
                 if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
                     team.womenTeamMemberDetails.forEach((member, index) => {
                         allConsolidatedMembers.push({
@@ -918,20 +918,12 @@ function AllRegistrationsApp() {
               return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
           };
 
-          if (columnId.includes('.')) {
-              valA = getNestedValue(a, columnId);
-              valB = getNestedValue(b, columnId);
-          } else {
-              valA = a[columnId];
-              valB = b[columnId];
-          }
-
-          console.log(`handleSort: Porovnávam hodnoty pre ${columnId} (typ: ${type}): A=${valA}, B=${valB}`);
-
+          valA = getNestedValue(a, columnId);
+          valB = getNestedValue(b, columnId);
 
           if (type === 'date') {
               const dateA = valA && typeof valA.toDate === 'function' ? valA.toDate() : new Date(0);
-              const dateB = valB && typeof valA.toDate === 'function' ? valB.toDate() : new Date(0);
+              const dateB = valB && typeof valB.toDate === 'function' ? valB.toDate() : new Date(0);
               return direction === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
           } else if (type === 'boolean') {
               const boolA = Boolean(valA);
@@ -955,8 +947,8 @@ function AllRegistrationsApp() {
       console.log("AllRegistrationsApp: Aktuálny stav allUsers:", allUsers);
 
       setFilterColumn(column);
-      // NOVINKA: Filtrovať adminov len z uniqueColumnValues, ak je to potrebné
-      const values = [...new Set(allUsers.map(u => { // allUsers obsahuje aj adminov
+      // Filter out admins when generating unique column values
+      const values = [...new Set(allUsers.filter(u => u.role !== 'admin').map(u => {
           let val;
           if (column === 'registrationDate' && u.registrationDate && typeof u.registrationDate.toDate === 'function') {
               val = u.registrationDate.toDate().toLocaleString('sk-SK');
@@ -999,25 +991,26 @@ function AllRegistrationsApp() {
 
   // Effect to re-apply filters when activeFilters, allUsers, showUsers, or showTeams change
   React.useEffect(() => {
-      let currentFiltered = [...allUsers]; // allUsers teraz obsahuje aj adminov
+      let currentFiltered = [...allUsers];
 
-      // 1. Filter out admin roles first from allUsers, regardless of other filters.
+      // 1. Vždy odfiltrovať používateľov s rolou 'admin'
       currentFiltered = currentFiltered.filter(user => user.role !== 'admin');
 
       let usersToDisplay = [];
 
-      // Logic for global checkboxes based on clarification
-      if (showUsers) { // If "Zobraziť používateľov" is checked, always show all non-admin users
+      // Logika pre globálne checkboxy
+      if (showUsers) {
+          // Ak je zaškrtnuté "Zobraziť používateľov", zobrazia sa všetci ne-admin používatelia.
           usersToDisplay = currentFiltered;
       } else if (!showUsers && showTeams) {
-          // Only "Zobraziť tímy" checked: Display only users who have teams
+          // Ak je zaškrtnuté IBA "Zobraziť tímy", zobrazia sa iba používatelia, ktorí majú priradené tímy.
           usersToDisplay = currentFiltered.filter(user => user.teams && Object.keys(user.teams).length > 0);
       } else { // (!showUsers && !showTeams)
-          // Neither checked: Display no users
+          // Ak nie je zaškrtnutý ani jeden checkbox, nezobrazí sa nič.
           usersToDisplay = [];
       }
 
-      // 3. Apply column-specific activeFilters to usersToDisplay
+      // 3. Aplikovať stĺpcové filtre na zoznam usersToDisplay
       Object.keys(activeFilters).forEach(column => {
           const filterValues = activeFilters[column];
           if (filterValues.length > 0) {
@@ -1043,7 +1036,7 @@ function AllRegistrationsApp() {
           }
       });
       setFilteredUsers(usersToDisplay);
-  }, [allUsers, activeFilters, showUsers, showTeams]); // Added showUsers and showTeams to dependencies
+  }, [allUsers, activeFilters, showUsers, showTeams]); // Závisí aj od showUsers a showTeams
 
 
   // useEffect for updating header link visibility
@@ -1235,7 +1228,7 @@ function AllRegistrationsApp() {
         ),
         React.createElement(
             'div',
-            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' },
+            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' }, {/* Added flex-wrap and gap for responsiveness */}
             React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
                 React.createElement('input', {
                     type: 'checkbox',
@@ -1341,7 +1334,6 @@ function AllRegistrationsApp() {
                                     React.createElement('td', { className: 'py-3 px-2 text-center' },
                                         u.role !== 'admin' ? React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼') : ''
                                     ),
-                                    // ODSTRÁNENÉ: Dynamicky generované bunky pre veľkosti tričiek z HLAVNÉHO RIADKU
                                     columnOrder.filter(col => col.visible).map(col => (
                                         React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' },
                                             // Conditional rendering for user data based on global filters
@@ -1349,6 +1341,7 @@ function AllRegistrationsApp() {
                                                 // If only "Show Teams" is active, display minimal info for the user row
                                                 col.id === 'billing.clubName' ? getNestedValue(u, col.id) || '-' :
                                                 col.id === 'email' ? getNestedValue(u, col.id) :
+                                                (u.teams && Object.keys(u.teams).length > 0 && col.id === 'firstName') ? '(Tímová registrácia)' : // Example placeholder
                                                 '-' // For other user-specific columns, just a dash
                                             ) : (
                                                 // Original logic for when "Show Users" is active (alone or with teams)
