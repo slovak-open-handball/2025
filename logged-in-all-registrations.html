@@ -98,7 +98,7 @@
         /* Prispôsobenie pre React root, aby sa jeho šírka dynamicky menila */
         #root {
             flex-grow: 1;
-            /* ODSTRÁNENÉ: width: 100%; */
+            width: 100%; /* Zabezpečí, že #root využije dostupnú šírku */
             max-width: 1200px; /* Obmedzenie maximálnej šírky pre biely obdĺžnik */
             margin-left: auto; /* Vycentrovanie v rámci #main-content-area */
             margin-right: auto; /* Vycentrovanie v rámci #main-content-area */
@@ -117,7 +117,7 @@
     <main id="main-content-area" class="flex-grow flex">
         <!-- Tento div slúži ako 'spacer' pre ľavé menu a jeho šírka sa bude dynamicky meniť pomocou JS v logged-in-left-menu.js -->
         <div id="menu-spacer" class="flex-shrink-0 w-16 transition-all duration-300"></div> 
-        <div id="root" class="flex-grow px-4 sm:px-6 lg:px-8 py-8">
+        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div class="flex justify-center pt-16">
                 <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
             </div>
