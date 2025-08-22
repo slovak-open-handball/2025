@@ -50,25 +50,20 @@
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
             margin-left: 0; /* Bude dynamicky nastavené JS z logged-in-left-menu.js */
-            /* ODSTRÁNENÉ: padding: 1rem; */ /* Padding bude nastavený na root elemente */
             flex-grow: 1;
             display: flex;
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
-            /* NOVINKA: Pridáme padding-right pre symetriu a zabezpečenie priestoru */
-            padding-right: 1rem; /* Predvolený pravý okraj */
             transition: margin-left 0.3s ease-in-out; /* Hladký prechod */
         }
 
-        /* NOVINKA: Nastavíme flex-basis na 0 a flex-shrink na 1, aby sa flexibilne zmenšovalo */
+        /* Štýly pre React root, ktorý bude teraz "bielym obdĺžnikom" */
         #root {
-            flex-grow: 1;
-            flex-shrink: 1; /* Umožní zmenšenie, ak je to potrebné */
-            flex-basis: 0; /* Základná veľkosť pred rastom */
-            width: 100%; /* Zabezpečuje, aby zabralo 100% dostupného flex priestoru */
-            max-width: 1200px; /* Obmedzenie maximálnej šírky pre biely obdĺžnik */
-            margin-left: auto; /* Centrovanie v dostupnom priestore */
-            margin-right: auto; /* Centrovanie v dostupnom priestore */
-            padding: 1rem; /* Zabezpečenie vnútornej medzery pre obsah */
+            background-color: #ffffff; /* Biely obdĺžnik */
+            padding: 2rem; /* Vnútorná medzera pre obsah */
+            border-radius: 0.5rem; /* Zaoblené rohy */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tieň */
+            width: 100%; /* Zabezpečí, aby zabralo celú šírku svojho flexibilného rodiča */
+            max-width: 1200px; /* Obmedzenie maximálnej šírky */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
         }
 
@@ -78,7 +73,6 @@
                 width: 100% !important; /* Na mobiloch zaberá celú šírku */
                 justify-content: center; /* Stále centrovať obsah */
                 align-items: flex-start;
-                padding-right: 1rem; /* Aj na mobiloch zachováme pravý okraj */
             }
         }
         /* Štýly pre plávajúce tlačidlo */
@@ -122,9 +116,13 @@
     <main id="main-content-area" class="flex-grow flex">
         <!-- Tento div slúži ako 'spacer' pre ľavé menu a jeho šírka sa bude dynamicky meniť pomocou JS v logged-in-left-menu.js -->
         <div id="menu-spacer" class="flex-shrink-0 w-16 transition-all duration-300"></div> 
-        <div id="root" class="flex-grow w-full px-4 sm:px-6 lg:px-8 py-8">
-            <div class="flex justify-center pt-16">
-                <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+
+        <!-- Nový obalový div pre obsah, ktorý zabezpečí symetrické okraje a centrovanie -->
+        <div class="flex-grow flex justify-center pt-8 pb-8 px-4 sm:px-6 lg:px-8">
+            <div id="root">
+                <div class="flex justify-center pt-16">
+                    <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+                </div>
             </div>
         </div>
     </main>
