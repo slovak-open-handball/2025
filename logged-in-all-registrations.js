@@ -1296,18 +1296,18 @@ function AllRegistrationsApp() {
                                     allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼'
                                     )
                                 ),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Category'), // Added min-w-max
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Team Name'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Kategória'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Názov tímu'), // Added min-w-max
                                 // REMOVED: 'Registered by' header
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Players'), // Added min-w-max
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Staff (W)'), // Added min-w-max
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Staff (M)'), // Added min-w-max
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Transport'), // Added min-w-max
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Accommodation'), // Added min-w-max
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Package'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Hráči'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (ž)'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (m)'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'), // Added min-w-max
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'), // Added min-w-max
                                 // Dynamically generated headers for T-shirt sizes
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Size ${size.toUpperCase()}`) // Added min-w-max
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`) // Added min-w-max
                                 )
                             )
                         ) : ( // "Show Users" mode (alone or with teams)
@@ -1331,7 +1331,8 @@ function AllRegistrationsApp() {
                                         onMouseEnter: () => setHoveredColumn(col.id),
                                         onMouseLeave: () => setHoveredColumn(null)
                                     },
-                                        React.createElement('div', { className: 'flex flex-col items-center justify-center h-full' },
+                                        // ZMENA: Upravený div pre ikony tak, aby boli vedľa seba
+                                        React.createElement('div', { className: 'flex items-center justify-center h-full space-x-1' }, // Changed to flex-row and added space-x-1
                                             index > 0 && React.createElement('button', {
                                                 onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
                                                 className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
