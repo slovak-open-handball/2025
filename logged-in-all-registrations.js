@@ -255,7 +255,7 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
 }
 
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible }) { // Zmenený prop na showDetailsAsCollapsible
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked }) { // Pridané showUsersChecked, showTeamsChecked
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -391,10 +391,13 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible })
         )
     );
 
+    // Dynamic title for collapsible section based on selected checkboxes
+    const collapsibleSectionTitle = generateTeamHeaderTitle(team, tshirtSizeOrder, true, showUsersChecked, showTeamsChecked);
+
     if (showDetailsAsCollapsible) {
         return React.createElement(
             CollapsibleSection,
-            { title: 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: false }, // defaultOpen nastavené na false pre zobrazenie tlačidla
+            { title: collapsibleSectionTitle, defaultOpen: false }, // Používame dynamický title
             teamDetailsTable
         );
     } else {
@@ -444,7 +447,7 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: true, visible: true },
+    { id: 'country', label: 'Krajina', type: true, visible: true }, // Changed to string for consistency if it's always string
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
@@ -494,7 +497,7 @@ function AllRegistrationsApp() {
                             _registeredBy: `${u.firstName} ${u.lastName}`, // Kto registroval
                             _menTeamMembersCount: menTeamMembersCount,   // Add calculated count
                             _womenTeamMembersCount: womenTeamMembersCount, // Add calculated count
-                            _players: team.players || 0, // Ensure players count is also available
+                            _players: team.playerDetails ? team.playerDetails.length : 0, // Ensure players count is also available
                             _teamTshirtsMap: teamTshirtsMap // Add the tshirt map
                         });
                     });
@@ -1377,18 +1380,16 @@ function AllRegistrationsApp() {
                                                 React.createElement('td', { key: `tshirt-data-${teamUniqueId}-${size}`, className: 'py-3 px-2 text-center whitespace-nowrap' }, team._teamTshirtsMap.get(size) || '-')
                                             )
                                         ),
-                                        expandedTeamRows[teamUniqueId] && React.createElement(
+                                        expandedTeamRows[teamUniqueId] && (!showUsers && showTeams) && React.createElement( // Zobraziť iba ak je "Zobraziť tímy" a NIE "Zobraziť používateľov"
                                             'tr',
                                             { key: `${teamUniqueId}-details`, className: 'bg-gray-100' },
                                             React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
-                                                React.createElement('div', { className: 'p-4 bg-gray-50 rounded-lg' },
-                                                    React.createElement('div', { className: 'font-semibold text-gray-700 mb-2' }, teamHeaderTitleContent), // Priamy nadpis
-                                                    React.createElement(TeamDetailsContent, {
-                                                        team: team,
-                                                        tshirtSizeOrder: availableTshirtSizes,
-                                                        showDetailsAsCollapsible: false // Priamy režim pre "iba tímy"
-                                                    })
-                                                )
+                                                // V tomto režime sa nezobrazuje samostatný nadpis, pretože už je v CollapsibleSection title
+                                                React.createElement(TeamDetailsContent, {
+                                                    team: team,
+                                                    tshirtSizeOrder: availableTshirtSizes,
+                                                    showDetailsAsCollapsible: false // Priamy režim pre "iba tímy"
+                                                })
                                             )
                                         )
                                     );
@@ -1450,11 +1451,13 @@ function AllRegistrationsApp() {
                                                             _registeredBy: `${u.firstName} ${u.lastName}`, // Pridávame kto registroval
                                                             _menTeamMembersCount: menTeamMembersCount,
                                                             _womenTeamMembersCount: womenTeamMembersCount,
-                                                            _players: team.players || 0,
+                                                            _players: team.playerDetails ? team.playerDetails.length : 0,
                                                             _teamTshirtsMap: teamTshirtsMap // Pridávame mapu tričiek
                                                         },
                                                         tshirtSizeOrder: availableTshirtSizes,
-                                                        showDetailsAsCollapsible: true // S tlačidlom pre "používateľov a tímy"
+                                                        showDetailsAsCollapsible: true, // S tlačidlom pre "používateľov a tímy"
+                                                        showUsersChecked: showUsers,    // Pass current showUsers state
+                                                        showTeamsChecked: showTeams     // Pass current showTeams state
                                                     })
                                                 })
                                             )
