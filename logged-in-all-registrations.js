@@ -1267,7 +1267,7 @@ function AllRegistrationsApp() {
             { className: 'overflow-x-auto relative shadow-md sm:rounded-lg' },
             React.createElement(
                 'table',
-                { className: 'w-full text-sm text-left text-gray-500' },
+                { className: 'text-sm text-left text-gray-500' }, // Removed 'w-full' from here
                 React.createElement(
                     'thead',
                     { className: 'text-xs text-gray-700 uppercase bg-gray-50' },
