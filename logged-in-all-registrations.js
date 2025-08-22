@@ -366,6 +366,7 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                             { title: 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: false }, // Updated title
                             React.createElement(
                                 'div',
+                                { className: '' }, // ODSTRÁNENÉ: overflow-x-auto trieda
                                 React.createElement(
                                     'table',
                                     { className: 'min-w-full divide-y divide-gray-200' },
@@ -1000,29 +1001,31 @@ function AllRegistrationsApp() {
   React.useEffect(() => {
       let currentFiltered = [...allUsers]; // allUsers teraz obsahuje aj adminov
 
-      // 1. Filter out admins (existing logic, applies to all cases)
+      // 1. Filter out admin roles first from allUsers, regardless of other filters.
       currentFiltered = currentFiltered.filter(user => user.role !== 'admin');
 
-      // 2. Apply global checkboxes filter
-      // If both are checked, no additional filtering needed here based on user/team type
-      // If only showUsers is true, filter for users WITHOUT teams
-      // If only showTeams is true, filter for users WITH teams
-      // If neither is true, currentFiltered will become empty
-      if (!showUsers && showTeams) { // Only show teams
-          currentFiltered = currentFiltered.filter(user => user.teams && Object.keys(user.teams).length > 0);
-      } else if (showUsers && !showTeams) { // Only show users (without teams)
-          currentFiltered = currentFiltered.filter(user => !user.teams || Object.keys(user.teams).length === 0);
-      } else if (!showUsers && !showTeams) { // Show neither
-          currentFiltered = [];
+      let finalFiltered = [];
+
+      // Logic for global checkboxes
+      if (showUsers && showTeams) {
+          // If both are checked, include all non-admin users
+          finalFiltered = currentFiltered;
+      } else if (showUsers && !showTeams) {
+          // Only show users without teams
+          finalFiltered = currentFiltered.filter(user => !user.teams || Object.keys(user.teams).length === 0);
+      } else if (!showUsers && showTeams) {
+          // Only show users with teams
+          finalFiltered = currentFiltered.filter(user => user.teams && Object.keys(user.teams).length > 0);
+      } else if (!showUsers && !showTeams) {
+          // Show neither, so empty array
+          finalFiltered = [];
       }
-      // If both showUsers and showTeams are true, no filtering needed in this step, all non-admin users remain.
 
-
-      // 3. Apply column-specific activeFilters
+      // 3. Apply column-specific activeFilters to finalFiltered
       Object.keys(activeFilters).forEach(column => {
           const filterValues = activeFilters[column];
           if (filterValues.length > 0) {
-              currentFiltered = currentFiltered.filter(user => {
+              finalFiltered = finalFiltered.filter(user => {
                   let userValue;
                   if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
                       userValue = user.registrationDate.toDate().toLocaleString('sk-SK').toLowerCase();
@@ -1043,7 +1046,7 @@ function AllRegistrationsApp() {
               });
           }
       });
-      setFilteredUsers(currentFiltered);
+      setFilteredUsers(finalFiltered);
   }, [allUsers, activeFilters, showUsers, showTeams]); // Added showUsers and showTeams to dependencies
 
 
@@ -1236,7 +1239,7 @@ function AllRegistrationsApp() {
         ),
         React.createElement(
             'div',
-            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' }, 
+            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' }, {/* Added flex-wrap and gap for responsiveness */}
             React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
                 React.createElement('input', {
                     type: 'checkbox',
