@@ -210,7 +210,7 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 
 // CollapsibleSection Component - pre rozbaľovacie sekcie
 function CollapsibleSection({ title, children, defaultOpen = false }) {
-  const [isOpen, setIsOpen] = React.useState(defaultOpen); // Opravené: pridaný operátor '='
+  const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
   return React.createElement(
     'div',
@@ -743,11 +743,15 @@ function AllRegistrationsApp() {
             // Používame Firebase v9 modulárnu syntax
             const usersCollectionRef = collection(db, 'users');
             unsubscribeAllUsers = onSnapshot(usersCollectionRef, snapshot => {
-                const usersData = snapshot.docs.map(doc => ({ // doc from snapshot is a QueryDocumentSnapshot, not the doc function
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
+                // Filtrovať používateľov s rolou 'admin'
+                const usersData = snapshot.docs
+                    .map(doc => ({ // doc from snapshot is a QueryDocumentSnapshot, not the doc function
+                        id: doc.id,
+                        ...doc.data()
+                    }))
+                    .filter(user => user.role !== 'admin'); // NOVINKA: Filtrujeme administrátorov
+
+                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní (bez adminov):", usersData.length, "používateľov.");
                 setAllUsers(usersData);
                 setFilteredUsers(usersData);
                 if (typeof window.hideGlobalLoader === 'function') {
@@ -860,7 +864,8 @@ function AllRegistrationsApp() {
       console.log("AllRegistrationsApp: Aktuálny stav allUsers:", allUsers);
 
       setFilterColumn(column);
-      const values = [...new Set(allUsers.map(u => {
+      // NOVINKA: Filtrovať adminov aj z uniqueColumnValues
+      const values = [...new Set(allUsers.filter(u => u.role !== 'admin').map(u => {
           let val;
           if (column === 'registrationDate' && u.registrationDate && typeof u.registrationDate.toDate === 'function') {
               val = u.registrationDate.toDate().toLocaleString('sk-SK');
@@ -904,6 +909,9 @@ function AllRegistrationsApp() {
   // Effect to re-apply filters when activeFilters or allUsers change
   React.useEffect(() => {
       let currentFiltered = [...allUsers];
+
+      // NOVINKA: Vždy odfiltrujte adminov
+      currentFiltered = currentFiltered.filter(user => user.role !== 'admin');
 
       Object.keys(activeFilters).forEach(column => {
           const filterValues = activeFilters[column];
