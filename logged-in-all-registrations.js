@@ -394,7 +394,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible })
     if (showDetailsAsCollapsible) {
         return React.createElement(
             CollapsibleSection,
-            { title: collapsibleTitle || 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: true },
+            { title: 'Detaily členov tímu (hráči, realizačný tím a šofér) a stravovanie', defaultOpen: false }, // defaultOpen nastavené na false pre zobrazenie tlačidla
             teamDetailsTable
         );
     } else {
@@ -1420,7 +1420,11 @@ function AllRegistrationsApp() {
                                                 teamList.map((team, teamIndex) =>
                                                     React.createElement(TeamDetailsContent, {
                                                         key: `${u.id}-${category}-${teamIndex}-details-content`,
-                                                        team: team,
+                                                        team: {
+                                                            ...team,
+                                                            _category: category, // Pridávame kategóriu
+                                                            _registeredBy: `${u.firstName} ${u.lastName}` // Pridávame kto registroval
+                                                        },
                                                         tshirtSizeOrder: availableTshirtSizes,
                                                         showDetailsAsCollapsible: true // S tlačidlom pre "používateľov a tímy"
                                                     })
