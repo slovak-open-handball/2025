@@ -260,7 +260,7 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
     return React.createElement(
         'div',
         { className: 'p-4 bg-gray-50 rounded-lg' },
-//        React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'Tímové detaily'),
+        React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'Tímové detaily'),
         Object.entries(user.teams).flatMap(([category, teamList]) =>
             teamList.map((team, teamIndex) => {
                 const consolidatedMembers = [];
@@ -665,51 +665,36 @@ function AllRegistrationsApp() {
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
             unsubscribeColumnOrder = onSnapshot(columnOrderDocRef, docSnapshot => {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists());
-                let newOrderToSet = defaultColumnOrder;
+                let newOrderToSet = defaultColumnOrder; // Začneme s predvoleným poradím
 
                 if (docSnapshot.exists()) {
                     const savedOrder = docSnapshot.data().order;
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Raw savedOrder from Firestore:", savedOrder);
 
                     if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
-                        // Vytvoríme mapu pre rýchle vyhľadávanie uložených nastavení (hlavne pre viditeľnosť)
                         const savedSettingsMap = new Map(savedOrder.map(col => [col.id, col]));
+                        const finalOrder = [];
 
-                        // Zlúčime predvolené definície stĺpcov s uloženými nastaveniami viditeľnosti
-                        let mergedOrder = defaultColumnOrder.map(defaultCol => {
+                        // Prejdeme cez defaultColumnOrder, aby sme zachovali jeho štruktúru a poradie
+                        defaultColumnOrder.forEach(defaultCol => {
                             const savedColSettings = savedSettingsMap.get(defaultCol.id);
                             if (savedColSettings) {
-                                // Ak existujú uložené nastavenia, použijeme ich pre 'visible',
-                                // ale 'label' VŽDY prevezmeme z 'defaultCol' (predvolenej definície)
-                                return {
+                                // Ak je stĺpec v savedOrder, použijeme jeho viditeľnosť, inak predvolenú
+                                finalOrder.push({
                                     ...defaultCol,
-                                    visible: savedColSettings.visible !== undefined ? savedColSettings.visible : true
-                                };
-                            }
-                            // Ak nie sú uložené nastavenia, použijeme len predvolenú definíciu
-                            return defaultCol;
-                        });
-
-                        // Vytvoríme finálne poradie stĺpcov na základe 'savedOrder'
-                        // Ak sa stĺpec nachádza v savedOrder, použijeme jeho pozíciu.
-                        // Ak nie, pridáme ho na koniec, ak nie je už v mergedOrder.
-                        const finalOrder = [];
-                        savedOrder.forEach(savedCol => {
-                            const foundMergedCol = mergedOrder.find(mCol => mCol.id === savedCol.id);
-                            if (foundMergedCol) {
-                                finalOrder.push(foundMergedCol);
-                            }
-                        });
-
-                        // Pridáme všetky stĺpce z defaultColumnOrder, ktoré neboli v savedOrder, na koniec
-                        defaultColumnOrder.forEach(defaultCol => {
-                            if (!finalOrder.some(fCol => fCol.id === defaultCol.id)) {
+                                    visible: savedColSettings.visible !== undefined ? savedColSettings.visible : defaultCol.visible
+                                });
+                            } else {
+                                // Ak nie je v savedOrder, použijeme predvolenú definíciu
                                 finalOrder.push(defaultCol);
                             }
                         });
 
+                        // ODSTRÁNENÉ: Logika, ktorá pridávala stĺpce, ktoré neboli v defaultColumnOrder
+                        // Tým sa zabezpečí, že sa nezobrazia nežiaduce stĺpce z Firestore
                         newOrderToSet = finalOrder;
-                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané uložené poradie:", newOrderToSet);
+                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané poradie:", newOrderToSet);
+
                     } else {
                         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
                         // Používame Firebase v9 modulárnu syntax
@@ -812,11 +797,14 @@ function AllRegistrationsApp() {
               if (docSnapshot.exists()) {
                   const data = docSnapshot.data();
                   if (data && Array.isArray(data.sizes)) {
-                      // Zoradíme veľkosti podľa 'order' atribútu a získame len ich názvy
-                      const sortedSizes = [...data.sizes].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => String(s.size).trim());
+                      // OPRAVA: Mapovanie pre settings/sizeTshirts, kde sú veľkosti uložené ako reťazce priamo
+                      const sortedSizes = [...data.sizes]
+                          .sort((a, b) => (a.order || 0) - (b.order || 0)) // Používame 'order', ak existuje
+                          .map(s => typeof s === 'object' && s.size ? String(s.size).trim() : String(s).trim()); // OPRAVA: Priame mapovanie reťazca alebo objektu s .size
+
                       setAvailableTshirtSizes(sortedSizes);
                   } else {
-                      console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes'. Používam predvolené poradie.");
+                      console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes' alebo má neočakávaný formát. Používam predvolené poradie.");
                       setAvailableTshirtSizes(tshirtSizeOrderFallback);
                   }
               } else {
