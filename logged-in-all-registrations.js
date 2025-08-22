@@ -282,7 +282,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -670,7 +670,10 @@ function AllRegistrationsApp() {
       if (window.isGlobalAuthReady && window.auth && window.db) {
         setIsAuthReady(true);
         setUser(window.auth.currentUser);
-        setUserProfileData(window.globalUserProfileData);
+        // Ensure userProfileData is set from global data if available
+        if (window.globalUserProfileData) {
+            setUserProfileData(window.globalUserProfileData);
+        }
         return true;
       }
       return false;
@@ -1337,7 +1340,7 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`)
                                 )
                             )
                         ) : (
@@ -1441,7 +1444,20 @@ function AllRegistrationsApp() {
                                             )
                                         )
                                     );
-                                })
+                                }),
+                                // Súhrnný riadok pre režim "iba tímy"
+                                (allTeamsFlattened.length > 0 && !showUsers && showTeams) && React.createElement(
+                                    'tr',
+                                    { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
+                                    React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 3 }, 'Súhrn:'), // Colspan 3 pre prázdnu šípku, kategóriu a názov tímu
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers), // Hráči
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenTeamMembers), // R. tím (ž)
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenTeamMembers), // R. tím (m)
+                                    React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Tričká:'), // Doprava, Ubytovanie, Balík
+                                    (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
+                                        React.createElement('td', { key: `summary-tshirt-${size}`, className: 'py-3 px-2 text-center' }, teamSummary.totalTshirtQuantities.get(size) || 0)
+                                    )
+                                )
                             )
                         ) : (
                             filteredUsers.map(u => (
@@ -1520,45 +1536,6 @@ function AllRegistrationsApp() {
                                     )
                                 )
                             ))
-                        )
-                    )
-                )
-            )
-        ),
-        // Nová sekcia súhrnu pod tabuľkou
-        (!showUsers && showTeams) && allTeamsFlattened.length > 0 && React.createElement(
-            'div',
-            { className: 'mt-6 p-4 bg-gray-100 rounded-lg shadow-md' },
-            React.createElement('h2', { className: 'text-xl font-bold text-gray-800 mb-4' }, 'Súhrn registrácií tímov'),
-            React.createElement(
-                'div',
-                { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' },
-                React.createElement(
-                    'div',
-                    { className: 'bg-white p-3 rounded-md shadow-sm' },
-                    React.createElement('p', { className: 'text-gray-700 font-semibold' }, 'Celkový počet hráčov: ', React.createElement('span', { className: 'text-blue-600' }, teamSummary.totalPlayers))
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'bg-white p-3 rounded-md shadow-sm' },
-                    React.createElement('p', { className: 'text-gray-700 font-semibold' }, 'Celkový počet členov R. tímu (ž): ', React.createElement('span', { className: 'text-blue-600' }, teamSummary.totalWomenTeamMembers))
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'bg-white p-3 rounded-md shadow-sm' },
-                    React.createElement('p', { className: 'text-gray-700 font-semibold' }, 'Celkový počet členov R. tímu (m): ', React.createElement('span', { className: 'text-blue-600' }, teamSummary.totalMenTeamMembers))
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'bg-white p-3 rounded-md shadow-sm lg:col-span-3' },
-                    React.createElement('p', { className: 'text-gray-700 font-semibold mb-2' }, 'Tričká podľa veľkosti:'),
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-wrap gap-x-4 gap-y-2' },
-                        (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : tshirtSizeOrderFallback).map(size =>
-                            React.createElement('span', { key: `summary-tshirt-${size}`, className: 'text-gray-600' },
-                                React.createElement('strong', null, size.toUpperCase()), `: `, teamSummary.totalTshirtQuantities.get(size) || 0
-                            )
                         )
                     )
                 )
