@@ -1230,7 +1230,11 @@ function AllRegistrationsApp() {
                                     },
                                     allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▼' : '▲'
                                     ),
-                                    React.createElement('span', null, 'Tímové Registrácie')
+                                    React.createElement('span', null,
+                                        'Tímové Registrácie: ', // Ponecháme základný text
+                                        // Pridáme popisky pre jednotlivé údaje
+                                        'Kategória, Názov tímu, Registroval, Hráči, R. tím (ž), R. tím (m), Doprava, Ubytovanie, Balík, Veľkosti tričiek'
+                                    )
                                 )
                             )
                         ) : ( // Režim "Zobraziť používateľov" (samostatne alebo s tímami)
@@ -1306,12 +1310,12 @@ function AllRegistrationsApp() {
                                     { className: 'flex flex-wrap items-center justify-between w-full' },
                                     React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, team._category || '-'),
                                     React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, ` - ${team.teamName || `Tím`}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, `Hráči: ${team.players || 0}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`),
-                                    React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`),
+                                    React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, `${team.players || 0}`), // Odstránené "Hráči:"
+                                    React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, `${womenTeamMembersCount}`), // Odstránené "R. tím (ž):"
+                                    React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, `${menTeamMembersCount}`), // Odstránené "R. tím (m):"
+                                    React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, `${team.arrival?.type || '-'}`), // Odstránené "Doprava:"
+                                    React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, `${team.accommodation?.type || '-'}`), // Odstránené "Ubytovanie:"
+                                    React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, `${team.packageDetails?.name || '-'}`), // Odstránené "Balík:"
                                     ...getTshirtSpans(team, availableTshirtSizes),
                                 );
 
