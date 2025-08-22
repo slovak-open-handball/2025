@@ -208,227 +208,6 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
     );
 }
 
-// Pomocné funkcie pre formátovanie a získavanie hodnôt
-const formatPostalCode = (postalCode) => {
-  if (!postalCode) return '-';
-  const cleaned = String(postalCode).replace(/\s/g, '');
-  if (cleaned.length === 5) {
-    return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
-  }
-  return postalCode;
-};
-
-const getNestedValue = (obj, path) => {
-  return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
-};
-
-// NOVINKA: Komponent pre zobrazenie detailov o tíme
-function TeamDetailsRow({ team, colSpan, teamCategory }) {
-  const getAddressString = (address) => {
-    if (!address) return '-';
-    const parts = [address.street, address.houseNumber, address.city, formatPostalCode(address.postalCode), address.country].filter(Boolean);
-    return parts.join(', ');
-  };
-
-  const getMealsSummary = (meals) => {
-    if (!meals) return 'N/A';
-    const mealDates = Object.keys(meals).sort();
-    if (mealDates.length === 0) return 'Žiadne jedlá';
-
-    return mealDates.map(date => {
-      const dayMeals = meals[date];
-      const mealParts = [];
-      if (dayMeals.breakfast) mealParts.push(`Raňajky (${dayMeals.breakfast})`);
-      if (dayMeals.lunch) mealParts.push(`Obed (${dayMeals.lunch})`);
-      if (dayMeals.dinner) mealParts.push(`Večera (${dayMeals.dinner})`);
-      if (dayMeals.refreshment) mealParts.push(`Občerstvenie (${dayMeals.refreshment})`);
-      return `${date}: ${mealParts.join(', ')}`;
-    }).join('; ');
-  };
-
-  return React.createElement(
-    'tr',
-    { className: 'bg-gray-100' },
-    React.createElement(
-      'td',
-      { colSpan: colSpan, className: 'p-4 border-t-2 border-gray-300' },
-      React.createElement(
-        'div',
-        { className: 'bg-white p-4 rounded-lg shadow-sm' },
-        React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, `Detaily tímu: ${teamCategory}`),
-        React.createElement('p', { className: 'text-gray-700 mb-2' }, React.createElement('strong', null, 'Názov tímu: '), team.teamName || '-'),
-
-        // Hráči
-        team.playerDetails && team.playerDetails.length > 0 && React.createElement(
-          'div',
-          { className: 'mt-4' },
-          React.createElement('h5', { className: 'font-semibold text-md mb-2' }, 'Hráči:'),
-          React.createElement(
-            'div',
-            { className: 'overflow-x-auto' },
-            React.createElement(
-              'table',
-              { className: 'min-w-full text-sm text-gray-600' },
-              React.createElement(
-                'thead',
-                { className: 'bg-gray-50' },
-                React.createElement(
-                  'tr',
-                  null,
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Meno'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Priezvisko'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Číslo dresu'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Dátum narodenia'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Registračné číslo'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Adresa')
-                )
-              ),
-              React.createElement(
-                'tbody',
-                { className: 'bg-white divide-y divide-gray-200' },
-                team.playerDetails.map((player, pIdx) =>
-                  React.createElement(
-                    'tr',
-                    { key: pIdx },
-                    React.createElement('td', { className: 'py-2 px-3' }, player.firstName || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, player.lastName || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, player.jerseyNumber || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, player.dateOfBirth || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, player.registrationNumber || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, getAddressString(player.address))
-                  )
-                )
-              )
-            )
-          )
-        ),
-
-        // Členovia realizačného tímu (Ženy)
-        team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0 && React.createElement(
-          'div',
-          { className: 'mt-4' },
-          React.createElement('h5', { className: 'font-semibold text-md mb-2' }, 'Členovia realizačného tímu (Ženy):'),
-          React.createElement(
-            'div',
-            { className: 'overflow-x-auto' },
-            React.createElement(
-              'table',
-              { className: 'min-w-full text-sm text-gray-600' },
-              React.createElement(
-                'thead',
-                { className: 'bg-gray-50' },
-                React.createElement(
-                  'tr',
-                  null,
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Meno'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Priezvisko'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Dátum narodenia'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Adresa')
-                )
-              ),
-              React.createElement(
-                'tbody',
-                { className: 'bg-white divide-y divide-gray-200' },
-                team.womenTeamMemberDetails.map((member, mIdx) =>
-                  React.createElement(
-                    'tr',
-                    { key: mIdx },
-                    React.createElement('td', { className: 'py-2 px-3' }, member.firstName || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, member.lastName || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, member.dateOfBirth || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, getAddressString(member.address))
-                  )
-                )
-              )
-            )
-          )
-        ),
-
-        // Členovia realizačného tímu (Muži)
-        team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0 && React.createElement(
-          'div',
-          { className: 'mt-4' },
-          React.createElement('h5', { className: 'font-semibold text-md mb-2' }, 'Členovia realizačného tímu (Muži):'),
-          React.createElement(
-            'div',
-            { className: 'overflow-x-auto' },
-            React.createElement(
-              'table',
-              { className: 'min-w-full text-sm text-gray-600' },
-              React.createElement(
-                'thead',
-                { className: 'bg-gray-50' },
-                React.createElement(
-                  'tr',
-                  null,
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Meno'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Priezvisko'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Dátum narodenia'),
-                  React.createElement('th', { className: 'py-2 px-3 text-left' }, 'Adresa')
-                )
-              ),
-              React.createElement(
-                'tbody',
-                { className: 'bg-white divide-y divide-gray-200' },
-                team.menTeamMemberDetails.map((member, mIdx) =>
-                  React.createElement(
-                    'tr',
-                    { key: mIdx },
-                    React.createElement('td', { className: 'py-2 px-3' }, member.firstName || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, member.lastName || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, member.dateOfBirth || '-'),
-                    React.createElement('td', { className: 'py-2 px-3' }, getAddressString(member.address))
-                  )
-                )
-              )
-            )
-          )
-        ),
-
-        // Detaily balíka
-        team.packageDetails && React.createElement(
-            'div',
-            { className: 'mt-4' },
-            React.createElement('h5', { className: 'font-semibold text-md mb-2' }, 'Detaily balíka:'),
-            React.createElement('p', null, React.createElement('strong', null, 'Názov: '), team.packageDetails.name || '-'),
-            React.createElement('p', null, React.createElement('strong', null, 'Cena: '), `${team.packageDetails.price || 0} €`),
-            React.createElement('p', null, React.createElement('strong', null, 'Účastnícka karta: '), `${team.packageDetails.participantCard || 0} ks`),
-            team.packageDetails.meals && React.createElement('div', { className: 'mt-2' }, React.createElement('strong', null, 'Stravovanie: '), getMealsSummary(team.packageDetails.meals)),
-        ),
-
-        // Detaily ubytovania
-        team.accommodation && React.createElement(
-            'div',
-            { className: 'mt-4' },
-            React.createElement('h5', { className: 'font-semibold text-md mb-2' }, 'Detaily ubytovania:'),
-            React.createElement('p', null, React.createElement('strong', null, 'Typ ubytovania: '), team.accommodation.type || '-'),
-        ),
-        // Detaily dopravy
-        team.arrival && React.createElement(
-          'div',
-          { className: 'mt-4' },
-          React.createElement('h5', { className: 'font-semibold text-md mb-2' }, 'Detaily dopravy:'),
-          React.createElement('p', null, React.createElement('strong', null, 'Typ dopravy: '), team.arrival.type || '-'),
-          team.arrival.time && React.createElement('p', null, React.createElement('strong', null, 'Čas príchodu: '), team.arrival.time),
-          team.arrival.drivers && team.arrival.drivers.length > 0 && React.createElement('p', null, React.createElement('strong', null, 'Vodiči: '), team.arrival.drivers.join(', ')),
-        ),
-
-        // Tielka
-        team.tshirts && team.tshirts.length > 0 && React.createElement(
-            'div',
-            { className: 'mt-4' },
-            React.createElement('h5', { className: 'font-semibold text-md mb-2' }, 'Tričká:'),
-            React.createElement(
-                'ul',
-                { className: 'list-disc list-inside' },
-                team.tshirts.map((tshirt, idx) => React.createElement('li', { key: idx }, `${tshirt.size}: ${tshirt.quantity} ks`))
-            )
-        )
-      )
-    )
-  );
-}
-
 
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() {
@@ -441,6 +220,7 @@ function AllRegistrationsApp() {
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
 
+  // Removed local loading state for users and column order
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
@@ -456,9 +236,6 @@ function AllRegistrationsApp() {
   // NOVINKA: Stav pre šírku menu a šírku okna
   const [menuSpacerWidth, setMenuSpacerWidth] = React.useState(0);
   const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
-
-  // NOVINKA: Stav pre rozbalené riadky tímov
-  const [expandedRows, setExpandedRows] = React.useState({}); // { userId: true/false }
 
   // Stav pre poradie stĺpcov
   const defaultColumnOrder = [
@@ -478,7 +255,6 @@ function AllRegistrationsApp() {
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
     { id: 'country', label: 'Krajina', type: 'string', visible: true },
-    { id: 'teams', label: 'Tímy', type: 'nested', visible: true }, // NOVINKA: Stĺpec pre tímy
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
@@ -685,7 +461,7 @@ function AllRegistrationsApp() {
 
                         // Pridáme všetky stĺpce z defaultColumnOrder, ktoré neboli v savedOrder, na koniec
                         defaultColumnOrder.forEach(defaultCol => {
-                            if (!finalOrder.some(fCol => fFfCol.id === defaultCol.id)) {
+                            if (!finalOrder.some(fCol => fCol.id === defaultCol.id)) {
                                 finalOrder.push(defaultCol);
                             }
                         });
@@ -1083,6 +859,21 @@ function AllRegistrationsApp() {
       return null;
   }
 
+  // Funkcia na formátovanie PSČ
+  const formatPostalCode = (postalCode) => {
+    if (!postalCode) return '-';
+    const cleaned = String(postalCode).replace(/\s/g, '');
+    if (cleaned.length === 5) {
+      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
+    }
+    return postalCode;
+  };
+
+  // Funkcia na získanie vnorenej hodnoty
+  const getNestedValue = (obj, path) => {
+    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+  };
+
   // Dynamický výpočet šírky pre biely obdĺžnik
   const calculateContentWidth = React.useCallback(() => {
     // Získanie responzívneho paddingu z .content-wrapper
@@ -1115,15 +906,8 @@ function AllRegistrationsApp() {
     return `${finalWidth}px`;
   }, [windowWidth, menuSpacerWidth]); // Závisí od týchto stavov
 
-  const dynamicWidth = React.useMemo(() => calculateContentWidth(), [calculateContentWidth]);
+  const dynamicWidth = calculateContentWidth();
 
-  // NOVINKA: Funkcia na prepínanie rozbalených riadkov
-  const toggleRowExpansion = (userId) => {
-    setExpandedRows(prev => ({
-      ...prev,
-      [userId]: !prev[userId]
-    }));
-  };
 
   // Ak je používateľ admin a schválený, zobrazíme mu tabuľku registrácií
   return React.createElement(
@@ -1189,7 +973,6 @@ function AllRegistrationsApp() {
                               key: col.id, 
                               scope: 'col', 
                               className: 'py-3 px-6 cursor-pointer relative group',
-                              onClick: col.id !== 'teams' ? () => handleSort(col.id) : undefined, // Len ak stĺpec nie je 'teams'
                               onMouseEnter: () => setHoveredColumn(col.id),
                               onMouseLeave: () => setHoveredColumn(null)
                           },
@@ -1199,7 +982,7 @@ function AllRegistrationsApp() {
                                           onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
                                           className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
                                       }, '←'),
-                                      col.id !== 'teams' && React.createElement('button', { // Filter tlačidlo len pre bežné stĺpce
+                                      React.createElement('button', { 
                                           onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
                                           className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
                                       }, '⚙️'),
@@ -1208,9 +991,9 @@ function AllRegistrationsApp() {
                                           className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
                                       }, '→')
                                   ),
-                                  React.createElement('span', { className: 'flex items-center' },
+                                  React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center' },
                                       col.label,
-                                      currentSort.column === col.id && col.id !== 'teams' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
+                                      currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
                                   )
                               )
                           ))
@@ -1228,42 +1011,20 @@ function AllRegistrationsApp() {
                       )
                   ) : (
                       filteredUsers.map(u => (
-                          React.createElement(React.Fragment, { key: u.id },
-                              React.createElement(
-                                  'tr',
-                                  { className: 'bg-white border-b hover:bg-gray-50' },
-                                  columnOrder.filter(col => col.visible).map(col => (
-                                      React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' }, 
-                                          col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
-                                          col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
-                                          col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
-                                          col.id === 'teams' ? ( // NOVINKA: Tlačidlo pre rozbalenie tímov
-                                              Object.keys(u.teams || {}).length > 0 ? 
-                                              React.createElement('button', {
-                                                  onClick: () => toggleRowExpansion(u.id),
-                                                  className: 'text-blue-600 hover:text-blue-800 font-semibold'
-                                              }, expandedRows[u.id] ? 'Skryť tímy ▲' : 'Zobraziť tímy ▼')
-                                              : 'Žiadne tímy'
-                                          ) :
-                                          getNestedValue(u, col.id) || '-'
-                                      )
-                                  ))
-                              ),
-                              // NOVINKA: Podtabuľka s detailmi tímov
-                              expandedRows[u.id] && u.teams && Object.keys(u.teams).length > 0 &&
-                                Object.keys(u.teams).map(teamCategory => 
-                                    (u.teams[teamCategory] && Array.isArray(u.teams[teamCategory])) && 
-                                    u.teams[teamCategory].map((team, teamIdx) => 
-                                        React.createElement(TeamDetailsRow, {
-                                            key: `${u.id}-${teamCategory}-${teamIdx}`,
-                                            team: team,
-                                            colSpan: columnOrder.filter(c => c.visible).length,
-                                            teamCategory: teamCategory
-                                        })
-                                    )
-                                )
-                          ))
-                      )
+                          React.createElement(
+                              'tr',
+                              { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
+                              columnOrder.filter(col => col.visible).map(col => (
+                                  // ODSTRÁNENÉ whitespace-nowrap Z `td` elementu
+                                  React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' }, 
+                                      col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
+                                      col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
+                                      col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
+                                      getNestedValue(u, col.id) || '-'
+                                  )
+                              ))
+                          )
+                      ))
                   )
               )
           )
