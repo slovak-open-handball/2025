@@ -303,33 +303,62 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                 });
 
 
-                // KONŠTRUKCIA JEDNOHO RIADKU TABUĽKY PRE HLAVIČKU CollapsibleSection
-                const teamHeaderTable = React.createElement(
-                    'table',
-                    { className: 'w-full text-sm text-left text-gray-700' },
-                    React.createElement(
-                        'tbody',
-                        null,
-                        React.createElement(
-                            'tr',
-                            null,
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap font-semibold text-gray-900' }, category || '-'),
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap' }, ` - ${team.teamName || `Tím ${teamIndex + 1}`}`),
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden sm:table-cell' }, `Hráči: ${team.players || 0}`),
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden md:table-cell' }, `R. tím (ž): ${womenTeamMembersCount}`),
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden lg:table-cell' }, `R. tím (m): ${menTeamMembersCount}`),
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden xl:table-cell' }, `Doprava: ${team.arrival?.type || '-'}`),
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 2xl:table-cell' }, `Ubytovanie: ${team.accommodation?.type || '-'}`),
-                            React.createElement('td', { className: 'py-1 px-2 whitespace-nowrap text-gray-600 hidden 3xl:table-cell' }, `Balík: ${team.packageDetails?.name || '-'}`),
-                            // NOVINKA: Rozdelenie tričiek do samostatných stĺpcov
-                            ...tshirtCells,
-                        )
-                    )
+                // KONŠTRUKCIA HLAVIČKY PRE CollapsibleSection
+                // Toto bola pôvodne tabuľka, teraz ju zjednodušíme, aby sa predišlo duplikáciám
+                // a aby sa hlavičky tričiek zobrazovali samostatne pod ňou v TeamDetails
+                const teamHeaderTitle = React.createElement(
+                    'div',
+                    { className: 'flex flex-wrap items-center justify-between w-full' },
+                    React.createElement('span', { className: 'font-semibold text-gray-900 mr-2' }, category || '-'),
+                    React.createElement('span', { className: 'text-gray-700 mr-4' }, ` - ${team.teamName || `Tím ${teamIndex + 1}`}`),
+                    React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2' }, `Hráči: ${team.players || 0}`),
+                    React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2' }, `R. tím (ž): ${womenTeamMembersCount}`),
+                    React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2' }, `R. tím (m): ${menTeamMembersCount}`),
+                    React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2' }, `Doprava: ${team.arrival?.type || '-'}`),
+                    React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2' }, `Ubytovanie: ${team.accommodation?.type || '-'}`),
+                    React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline' }, `Balík: ${team.packageDetails?.name || '-'}`),
                 );
                 
                 return React.createElement(
                     CollapsibleSection,
-                    { key: `${category}-${teamIndex}`, title: teamHeaderTable, defaultOpen: false }, // Používame tabuľku ako titul
+                    { key: `${category}-${teamIndex}`, title: teamHeaderTitle, defaultOpen: false }, // Používame div ako titul
+                    // NOVINKA: Zobrazenie hlavičiek tričiek v samostatnej tabuľke v rámci CollapsibleSection
+                    React.createElement(
+                        'div',
+                        { className: 'overflow-x-auto mb-4' },
+                        React.createElement(
+                            'table',
+                            { className: 'min-w-full divide-y divide-gray-200' },
+                            React.createElement(
+                                'thead',
+                                { className: 'bg-gray-50' },
+                                React.createElement(
+                                    'tr',
+                                    null,
+                                    // Hlavičky pre veľkosti tričiek
+                                    currentTshirtSizeOrder.map(size =>
+                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, size.toUpperCase())
+                                    )
+                                )
+                            ),
+                            React.createElement(
+                                'tbody',
+                                { className: 'bg-white divide-y divide-gray-200' },
+                                React.createElement(
+                                    'tr',
+                                    null,
+                                    // Bunky s množstvami pre veľkosti tričiek
+                                    currentTshirtSizeOrder.map(size => {
+                                        const quantity = teamTshirtsMap.get(size) || teamTshirtsMap.get(size.toLowerCase()) || 0;
+                                        return React.createElement('td', {
+                                            key: `tshirt-quantity-${size}`,
+                                            className: 'px-4 py-2'
+                                        }, quantity > 0 ? quantity : '-');
+                                    })
+                                )
+                            )
+                        )
+                    ),
                     consolidatedMembers.length > 0 &&
                     React.createElement(
                         CollapsibleSection,
@@ -513,7 +542,7 @@ function AllRegistrationsApp() {
   // NOVINKA: Stav pre dostupné veľkosti tričiek načítané z Firestore
   const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
   // Predvolené poradie veľkostí tričiek pre prípad, že sa nepodarí načítať z Firestore
-  const tshirtSizeOrderFallback = ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
+  const tshirtSizeOrderFallback = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 
   // Funkcia na prepínanie rozbalenia/zbalenia riadku
@@ -1159,7 +1188,7 @@ function AllRegistrationsApp() {
 
   // Funkcia na získanie vnorenej hodnoty
   const getNestedValue = (obj, path) => {
-    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+    return path.split('.').reduce((acc, part => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
   };
 
   // Ak je používateľ admin a schválený, zobrazíme mu tabuľku registrácií
@@ -1233,6 +1262,7 @@ function AllRegistrationsApp() {
                         // Pôvodný stĺpec pre individuálne rozbalenie/zbalenie ostáva
                         React.createElement('th', { scope: 'col', className: 'py-3 px-2' }, ''),
                         // Dynamicky generované hlavičky pre veľkosti tričiek
+                        // Tieto hlavičky teraz zobrazujú názvy veľkostí, nie 'Undefined'
                         availableTshirtSizes.map(size =>
                             React.createElement('th', { key: `header-${size}`, scope: 'col', className: 'py-3 px-2 text-center' }, size.toUpperCase())
                         ),
