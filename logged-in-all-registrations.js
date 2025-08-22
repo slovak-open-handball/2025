@@ -255,7 +255,8 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
     };
 
     // Definovanie poradia veľkostí tričiek pre triedenie (použijeme prop, ak je k dispozícii, inak fallback)
-    const currentTshirtSizeOrder = tshirtSizeOrder && tshirtSizeOrder.length > 0 ? tshirtSizeOrder : ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
+    // ZMENA: currentTshirtSizeOrder teraz uchováva presné názvy veľkostí z Firestore
+    const currentTshirtSizeOrder = tshirtSizeOrder && tshirtSizeOrder.length > 0 ? tshirtSizeOrder : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
     return React.createElement(
         'div',
@@ -285,16 +286,18 @@ function TeamDetails({ user, tshirtSizeOrder }) { // Pridaný tshirtSizeOrder ak
                 }
 
                 // NOVINKA: Konvertovanie team.tshirts do mapy pre jednoduché vyhľadávanie
+                // Použijeme presné názvy veľkostí, ak sú definované v team.tshirts
                 const teamTshirtsMap = new Map(
-                    (team.tshirts || []).map(t => [String(t.size).toLowerCase(), t.quantity || 0])
+                    (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
                 );
 
                 // NOVINKA: Generovanie td elementov pre každú veľkosť trička
                 const tshirtCells = currentTshirtSizeOrder.map(size => {
-                    const quantity = teamTshirtsMap.get(size) || 0;
+                    // Skontrolujeme kľúč, či existuje v mape.
+                    // Použijeme trim() pre prípad, že veľkosti z Firestore majú biele znaky
+                    const quantity = teamTshirtsMap.get(size) || teamTshirtsMap.get(size.toLowerCase()) || 0;
                     return React.createElement('td', {
                         key: `tshirt-${size}`,
-                        // Odstránené triedy 'hidden' pre zobrazenie na všetkých obrazovkách
                         className: 'py-1 px-2 whitespace-nowrap text-gray-600'
                     }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
                 });
@@ -854,7 +857,7 @@ function AllRegistrationsApp() {
                   const data = docSnapshot.data();
                   if (data && Array.isArray(data.sizes)) {
                       // Zoradíme veľkosti podľa 'order' atribútu a získame len ich názvy (lowercase)
-                      const sortedSizes = [...data.sizes].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => String(s.size).toLowerCase());
+                      const sortedSizes = [...data.sizes].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => String(s.size).trim()); // Použijeme trim() pre názvy
                       setAvailableTshirtSizes(sortedSizes);
                   } else {
                       console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes'. Používam predvolené poradie.");
@@ -1229,6 +1232,10 @@ function AllRegistrationsApp() {
                         ),
                         // Pôvodný stĺpec pre individuálne rozbalenie/zbalenie ostáva
                         React.createElement('th', { scope: 'col', className: 'py-3 px-2' }, ''),
+                        // Dynamicky generované hlavičky pre veľkosti tričiek
+                        availableTshirtSizes.map(size =>
+                            React.createElement('th', { key: `header-${size}`, scope: 'col', className: 'py-3 px-2 text-center' }, size.toUpperCase())
+                        ),
                         columnOrder.filter(col => col.visible).map((col, index) => (
                             React.createElement('th', {
                                 key: col.id,
@@ -1268,26 +1275,35 @@ function AllRegistrationsApp() {
                         React.createElement(
                             'tr',
                             null,
-                            // NOVINKA: Zväčšenie colspan o 2 pre globálny a individuálny rozbalovací stĺpec
-                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                            // Zväčšenie colspan o počet dostupných veľkostí tričiek
+                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2 + availableTshirtSizes.length, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
                         )
                     ) : (
                         filteredUsers.map(u => (
                             React.createElement(
-                                React.Fragment, // Oprava: Správne volanie React.Fragment
+                                React.Fragment,
                                 { key: u.id },
                                 React.createElement(
                                     'tr',
                                     {
-                                        className: `bg-white border-b hover:bg-gray-50 ${u.role !== 'admin' ? 'cursor-pointer' : ''}`, // Len cursor-pointer pre non-admins
-                                        onClick: u.role !== 'admin' ? () => toggleRowExpansion(u.id) : undefined // Len klikateľné pre non-admins
+                                        className: `bg-white border-b hover:bg-gray-50 ${u.role !== 'admin' ? 'cursor-pointer' : ''}`,
+                                        onClick: u.role !== 'admin' ? () => toggleRowExpansion(u.id) : undefined
                                     },
-                                    // Prázdna bunka pre globálny toggle
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, ''),
-                                    // NOVINKA: Ikonka pre rozbalenie/zbalenie individuálneho riadku (len pre non-admins)
                                     React.createElement('td', { className: 'py-3 px-2 text-center' },
                                         u.role !== 'admin' ? React.createElement('span', { className: 'text-gray-500' }, expandedRows[u.id] ? '▲' : '▼') : ''
                                     ),
+                                    // Dynamicky generované bunky pre veľkosti tričiek
+                                    availableTshirtSizes.map(size => {
+                                        const teamTshirtsMap = new Map(
+                                            (u.teams ? Object.values(u.teams).flat().flatMap(t => t.tshirts || []) : []).map(t => [String(t.size).trim(), t.quantity || 0])
+                                        );
+                                        const quantity = teamTshirtsMap.get(size) || teamTshirtsMap.get(size.toLowerCase()) || 0;
+                                        return React.createElement('td', {
+                                            key: `${u.id}-tshirt-${size}`,
+                                            className: 'py-3 px-2 text-center text-gray-600'
+                                        }, quantity > 0 ? quantity : '-');
+                                    }),
                                     columnOrder.filter(col => col.visible).map(col => (
                                         React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left' },
                                             col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
@@ -1297,12 +1313,10 @@ function AllRegistrationsApp() {
                                         )
                                     ))
                                 ),
-                                // NOVINKA: Zobrazenie detailov tímov, ak je riadok rozbalený a používateľ nie je admin
                                 expandedRows[u.id] && u.role !== 'admin' && React.createElement(
                                     'tr',
                                     { key: `${u.id}-details`, className: 'bg-gray-100' },
-                                    // Zväčšenie colspan o 2 pre globálny a individuálny rozbalovací stĺpec
-                                    React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
+                                    React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2 + availableTshirtSizes.length, className: 'p-0' },
                                         React.createElement(TeamDetails, { user: u, tshirtSizeOrder: availableTshirtSizes })
                                     )
                                 )
