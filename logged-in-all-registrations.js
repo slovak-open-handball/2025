@@ -299,7 +299,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -1361,7 +1361,7 @@ function AllRegistrationsApp() {
                                     React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Balík'),
                                     // Dynamicky generované hlavičky pre veľkosti tričiek
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `Vel. ${size.toUpperCase()}`)
+                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `${size.toUpperCase()}`)
                                     )
                                 ),
                                 allTeamsFlattened.map(team => {
