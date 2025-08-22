@@ -1219,8 +1219,8 @@ function AllRegistrationsApp() {
                         )
                     ) : (
                         filteredUsers.map(u => (
-                            React.Fragment
-                            (
+                            React.createElement(
+                                React.Fragment, // Oprava: Správne volanie React.Fragment
                                 { key: u.id },
                                 React.createElement(
                                     'tr',
