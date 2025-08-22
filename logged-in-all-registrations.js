@@ -268,6 +268,9 @@ function TeamDetails({ user }) {
                         consolidatedMembers.push({ ...player, type: 'Hráč' });
                     });
                 }
+                const menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+
                 if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
                     team.menTeamMemberDetails.forEach(member => {
                         consolidatedMembers.push({ ...member, type: 'Člen realizačného tímu' });
@@ -280,17 +283,70 @@ function TeamDetails({ user }) {
                 }
 
                 // NOVINKA: Zlúčenie názvu kategórie a názvu tímu do jedného nadpisu
-                const teamTitle = `${category}: ${team.teamName || `Tím ${teamIndex + 1}`} - Detaily`; // Nový nadpis
-                // Odstránená úroveň CollapsibleSection pre názov tímu.
+                const teamTitle = `${category} - ${team.teamName || `Tím ${teamIndex + 1}`}`;
+                
                 return React.createElement(
                     CollapsibleSection,
                     { key: `${category}-${teamIndex}`, title: teamTitle, defaultOpen: false },
-                    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700' },
-                        React.createElement('p', null, React.createElement('strong', null, 'Počet hráčov:'), ` ${team.players || 0}`),
-                        React.createElement('p', null, React.createElement('strong', null, 'Ubytovanie:'), ` ${team.accommodation?.type || '-'}`),
-                        React.createElement('p', null, React.createElement('strong', null, 'Doprava:'), ` ${team.arrival?.type || '-'}`),
-                        team.packageDetails && React.createElement('p', null, React.createElement('strong', null, 'Názov balíka:'), ` ${team.packageDetails.name || '-'}`),
-                        team.packageDetails && React.createElement('p', null, React.createElement('strong', null, 'Cena balíka:'), ` ${team.packageDetails.price || '-'} €`),
+                    React.createElement(
+                        'div',
+                        { className: 'overflow-x-auto mb-4' }, // Pridaný mb-4 pre medzeru pod tabuľkou
+                        React.createElement(
+                            'table',
+                            { className: 'min-w-full text-sm text-left text-gray-700' },
+                            React.createElement(
+                                'tbody',
+                                null,
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white border-b' },
+                                    React.createElement('td', { className: 'py-2 px-4 whitespace-nowrap font-medium text-gray-900' }, 'Kategória:'),
+                                    React.createElement('td', { className: 'py-2 px-4' }, category || '-'),
+                                ),
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white border-b' },
+                                    React.createElement('td', { className: 'py-2 px-4 whitespace-nowrap font-medium text-gray-900' }, 'Názov tímu:'),
+                                    React.createElement('td', { className: 'py-2 px-4' }, team.teamName || `Tím ${teamIndex + 1}`),
+                                ),
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white border-b' },
+                                    React.createElement('td', { className: 'py-2 px-4 whitespace-nowrap font-medium text-gray-900' }, 'Počet hráčov:'),
+                                    React.createElement('td', { className: 'py-2 px-4' }, team.players || 0),
+                                ),
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white border-b' },
+                                    React.createElement('td', { className: 'py-2 px-4 whitespace-nowrap font-medium text-gray-900' }, 'Členovia realizačného tímu (ženy):'),
+                                    React.createElement('td', { className: 'py-2 px-4' }, womenTeamMembersCount),
+                                ),
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white border-b' },
+                                    React.createElement('td', { className: 'py-2 px-4 whitespace-nowrap font-medium text-gray-900' }, 'Členovia realizačného tímu (muži):'),
+                                    React.createElement('td', { className: 'py-2 px-4' }, menTeamMembersCount),
+                                ),
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white border-b' },
+                                    React.createElement('td', { className: 'py-2 px-4 whitespace-nowrap font-medium text-gray-900' }, 'Typ dopravy:'),
+                                    React.createElement('td', { className: 'py-2 px-4' }, team.arrival?.type || '-'),
+                                ),
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white border-b' },
+                                    React.createElement('td', { className: 'py-2 px-4 whitespace-nowrap font-medium text-gray-900' }, 'Typ ubytovania:'),
+                                    React.createElement('td', { className: 'py-2 px-4' }, team.accommodation?.type || '-'),
+                                ),
+                                React.createElement(
+                                    'tr',
+                                    { className: 'bg-white' },
+                                    React.createElement('td', { className: 'py-2 px-4 whitespace-nowrap font-medium text-gray-900' }, 'Názov balíka:'),
+                                    React.createElement('td', { className: 'py-2 px-4' }, team.packageDetails?.name || '-'),
+                                )
+                            )
+                        )
                     ),
 
                     consolidatedMembers.length > 0 &&
