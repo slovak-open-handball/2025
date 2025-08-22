@@ -242,9 +242,10 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
         className: buttonClasses,
         onClick: handleToggle // Použijeme nový univerzálny handleToggle
       },
+      // Šípka na začiatku
+      React.createElement('span', { className: 'text-gray-500 mr-2' }, currentIsOpen ? '▲' : '▼'),
       // Titul sa bude rendrovať buď ako string alebo ako React element (tabuľka)
-      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700' }, title) : title,
-      React.createElement('span', { className: 'text-gray-500' }, currentIsOpen ? '▲' : '▼')
+      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700' }, title) : title
     ),
     currentIsOpen && React.createElement(
       'div',
@@ -299,7 +300,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -840,7 +841,7 @@ function AllRegistrationsApp() {
                 setAllUsers(usersData);
                 setFilteredUsers(usersData);
                 if (typeof window.showGlobalLoader === 'function') {
-                  window.showGlobalLoader();
+                  window.hideGlobalLoader();
                 }
             }, error => {
                 console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní všetkých používateľov z Firestore:", error);
@@ -1363,7 +1364,7 @@ function AllRegistrationsApp() {
                                     React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap' }, 'Balík'),
                                     // Dynamicky generované hlavičky pre veľkosti tričiek
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `${size.toUpperCase()}`)
+                                        React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap' }, `Vel. ${size.toUpperCase()}`)
                                     )
                                 ),
                                 allTeamsFlattened.map(team => {
