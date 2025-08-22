@@ -243,6 +243,16 @@ function TeamDetails({ user }) {
         return `${address.street || ''} ${address.houseNumber || ''}, ${address.postalCode || ''} ${address.city || ''}, ${address.country || ''}`;
     };
 
+    // NOVINKA: Funkcia na formátovanie dátumu na DD. MM. YYYY
+    const formatDateToDMMYYYY = (dateString) => {
+        if (!dateString) return '-';
+        const [year, month, day] = dateString.split('-');
+        if (year && month && day) {
+            return `${day}. ${month}. ${year}`;
+        }
+        return dateString; // Vráti pôvodný reťazec, ak formát nie je YYYY-MM-DD
+    };
+
     return React.createElement(
         'div',
         { className: 'p-4 bg-gray-50 rounded-lg' },
@@ -319,7 +329,7 @@ function TeamDetails({ user }) {
                                                 React.createElement('td', { className: 'px-4 py-2' }, member.type || '-'),
                                                 React.createElement('td', { className: 'px-4 py-2' }, member.firstName || '-'),
                                                 React.createElement('td', { className: 'px-4 py-2' }, member.lastName || '-'),
-                                                React.createElement('td', { className: 'px-4 py-2' }, member.dateOfBirth || '-'),
+                                                React.createElement('td', { className: 'px-4 py-2' }, formatDateToDMMYYYY(member.dateOfBirth)), // Aplikovanie formátovania dátumu
                                                 React.createElement('td', { className: 'px-4 py-2' }, member.jerseyNumber || '-'), // Zobrazí sa prázdne, ak nie je definované
                                                 React.createElement('td', { className: 'px-4 py-2' }, member.registrationNumber || '-'), // Zobrazí sa prázdne, ak nie je definované
                                                 React.createElement('td', { className: 'px-4 py-2 whitespace-normal' }, formatAddress(member.address)),
