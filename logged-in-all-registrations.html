@@ -56,20 +56,21 @@
             transition: margin-left 0.3s ease-in-out; /* Hladký prechod */
         }
 
-        /* Štýly pre React root, ktorý bude teraz "bielym obdĺžnikom" */
+        /* Štýly pre React root, ktorý slúži ako kontajner, nie ako biely obdĺžnik */
         #root {
-            background-color: #ffffff; /* Biely obdĺžnik */
-            padding: 2rem; /* Vnútorná medzera pre obsah */
-            border-radius: 0.5rem; /* Zaoblené rohy */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tieň */
-            /* ODSTRÁNENÉ: width: 100%; */
+            /* ODSTRÁNENÉ vizuálne štýly pre "biely obdĺžnik" z tohto elementu */
+            /* background-color: #ffffff; */
+            /* padding: 2rem; */
+            /* border-radius: 0.5rem; */
+            /* box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); */
+            
             max-width: 1200px; /* Obmedzenie maximálnej šírky */
             box-sizing: border-box; /* Započítanie paddingu do šírky */
-            margin-left: auto; /* NOVINKA: Centrovanie v rámci rodiča */
-            margin-right: auto; /* NOVINKA: Centrovanie v rámci rodiča */
-            flex-grow: 1; /* NOVINKA: Umožní elementu rásť */
-            flex-shrink: 1; /* NOVINKA: Umožní elementu zmenšovať sa */
-            min-width: 0; /* NOVINKA: Zabezpečí, že sa element môže zmenšiť pod svojou obsahovou šírkou */
+            margin-left: auto; /* Centrovanie v rámci rodiča */
+            margin-right: auto; /* Centrovanie v rámci rodiča */
+            flex-grow: 1; /* Umožní elementu rásť */
+            flex-shrink: 1; /* Umožní elementu zmenšovať sa */
+            min-width: 0; /* Zabezpečí, že sa element môže zmenšiť pod svojou obsahovou šírkou */
         }
 
         @media (max-width: 768px) {
@@ -122,9 +123,10 @@
         <!-- Tento div slúži ako 'spacer' pre ľavé menu a jeho šírka sa bude dynamicky meniť pomocou JS v logged-in-left-menu.js -->
         <div id="menu-spacer" class="flex-shrink-0 w-16 transition-all duration-300"></div> 
 
-        <!-- Nový obalový div pre obsah, ktorý zabezpečí symetrické okraje a centrovanie -->
+        <!-- Obalový div pre obsah, ktorý zabezpečí symetrické okraje a centrovanie -->
         <div class="flex-grow flex justify-center pt-8 pb-8 px-4 sm:px-6 lg:px-8">
             <div id="root">
+                <!-- Načítavací indikátor vnútri #root, už bez bieleho pozadia a tieňa z #root CSS -->
                 <div class="flex justify-center pt-16">
                     <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
                 </div>
