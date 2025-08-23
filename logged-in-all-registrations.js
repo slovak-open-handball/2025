@@ -554,24 +554,24 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
 function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, originalDataPath }) {
     const modalRef = React.useRef(null);
-    const [localEditedData, setLocalEditedData] = React.useState(data);
-
-    // Add a state to store the user's role, fetched from global userProfileData
+    const [localEditedData, setLocalEditedData] = React.useState(data); 
     const [userRole, setUserRole] = React.useState('');
-    // New state for the role of the user being edited
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
 
     React.useEffect(() => {
-        // Fetch user's role from window.globalUserProfileData
+        // Fetch user's role from window.globalUserProfileData safely
+        let currentUserRole = '';
         if (window.globalUserProfileData && window.globalUserProfileData.role) {
-            setUserRole(window.globalUserProfileData.role);
-        } else {
-            setUserRole(''); // Default to empty if not found
+            currentUserRole = window.globalUserProfileData.role;
         }
+        setUserRole(currentUserRole);
 
-        const initialData = JSON.parse(JSON.stringify(data));
+        // Ensure data is an object before cloning and accessing properties
+        // If 'data' is null or undefined, use an empty object to prevent errors
+        const safeData = data || {}; 
+        const initialData = JSON.parse(JSON.stringify(safeData));
 
-        // Determine if the user being edited is an admin
+        // Determine if the user being edited is an admin safely
         setIsTargetUserAdmin(initialData.role === 'admin');
 
         if (title.includes('Upraviť používateľa')) {
@@ -593,7 +593,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
         
         setLocalEditedData(initialData); 
-    }, [data, title, window.globalUserProfileData]); // Depend on globalUserProfileData for role updates
+    }, [data, title, window.globalUserProfileData]); 
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
