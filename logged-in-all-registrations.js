@@ -452,25 +452,14 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                             React.createElement('button', { // Gear icon for editing member details
                                 onClick: (e) => {
                                     e.stopPropagation();
-                                    let targetDocRefForMember = null;
+                                    const targetDocRefForMember = doc(db, 'users', team._userId);
                                     let memberPathForSaving = '';
-                                    let resolvedTitle = `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`;
-
-                                    // If team._userId is present, create the doc reference
-                                    if (team._userId && typeof team._userId === 'string') {
-                                        targetDocRefForMember = doc(db, 'users', team._userId);
-                                        if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
-                                            memberPathForSaving = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
-                                        } else if (member.originalArray === 'driverDetails') {
-                                            memberPathForSaving = `teams.${team._category}[${team._teamIndex}].driverDetails`;
-                                        }
-                                    } else {
-                                        // This case should ideally not happen if data is loaded, but as a fallback
-                                        console.warn("Upozornenie: Chýba alebo je neplatné ID používateľa pre tím. Údaje člena sú editovateľné, ale zmeny nebude možné uložiť.", team);
-                                        setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje člena sú editovateľné, ale zmeny nebude možné uložiť.`, 'warning');
-                                        targetDocRefForMember = null; // Ensure it's null, so save button is hidden
-                                        resolvedTitle = `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''} (ID chýba)`;
+                                    if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
+                                        memberPathForSaving = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
+                                    } else if (member.originalArray === 'driverDetails') {
+                                        memberPathForSaving = `teams.${team._category}[${team._teamIndex}].driverDetails`;
                                     }
+                                    const resolvedTitle = `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`;
                                     
                                     openEditModal(
                                         member,
@@ -690,7 +679,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     };
 
     // Determine if data is savable (i.e., a valid Firestore targetDocRef exists)
-    const isSavable = targetDocRef !== null && originalDataPath !== null;
+    const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
         if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitive value or Timestamp
@@ -712,7 +701,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 isCheckbox ? (
                     React.createElement('input', {
                         type: 'checkbox',
-                        className: `form-checkbox h-5 w-5 text-blue-600 ${!isSavable ? 'opacity-70 cursor-not-allowed' : ''}`, // Always editable, but visual cue if not savable
+                        className: `form-checkbox h-5 w-5 text-blue-600`,
                         checked: localEditedData !== null && getNestedValue(localEditedData, currentPath) === true,
                         onChange: (e) => handleChange(currentPath, e.target.checked),
                         disabled: !isSavable // Disable if not savable
@@ -720,7 +709,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 ) : (
                     React.createElement('input', {
                         type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 ${!isSavable ? 'opacity-70' : ''}`, // Always editable
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                         value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, currentPath)) : '',
                         onChange: (e) => handleChange(currentPath, e.target.value),
                         readOnly: !isSavable, // Only read-only if not savable
@@ -748,7 +737,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                         React.createElement('input', {
                             type: 'text',
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 ${!isSavable ? 'opacity-70' : ''}`, // Always editable
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                             value: formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)),
                             onChange: (e) => handleChange(fullKeyPath, e.target.value),
                             readOnly: !isSavable, // Only read-only if not savable
@@ -805,18 +794,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 isCheckbox ? (
                     React.createElement('input', {
                         type: 'checkbox',
-                        className: `form-checkbox h-5 w-5 text-blue-600 ${!isSavable ? 'opacity-70 cursor-not-allowed' : ''}`, // Always editable, but visual cue if not savable
+                        className: `form-checkbox h-5 w-5 text-blue-600`,
                         checked: localEditedData !== null && getNestedValue(localEditedData, fullKeyPath) === true,
-                        onChange: (e) => handleChange(fullKeyPath, e.target.checked),
-                        disabled: !isSavable // Disable if not savable
+                        onChange: (e) => handleChange(currentPath, e.target.checked),
+                        disabled: !isSavable
                     })
                 ) : (
                     React.createElement('input', {
                         type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 ${!isSavable ? 'opacity-70' : ''}`, // Always editable
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                         value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)) : '',
                         onChange: (e) => handleChange(fullKeyPath, e.target.value),
-                        readOnly: !isSavable, // Only read-only if not savable
+                        readOnly: !isSavable,
                     })
                 )
             );
@@ -853,6 +842,60 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         )
     );
 }
+
+// Helper to update a nested object by path and return the modified top-level field for Firestore update
+const updateNestedObjectByPath = (obj, path, value) => {
+    // Deep clone the object to ensure immutability during modification
+    const newObj = JSON.parse(JSON.stringify(obj));
+    const pathParts = path.split('.');
+    let current = newObj;
+
+    for (let i = 0; i < pathParts.length - 1; i++) {
+        const part = pathParts[i];
+        const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/);
+
+        if (arrayMatch) {
+            const arrayKey = arrayMatch[1];
+            const arrayIndex = parseInt(arrayMatch[2]);
+            if (!current[arrayKey]) current[arrayKey] = [];
+            // Expand array if index is out of bounds
+            while (current[arrayKey].length <= arrayIndex) {
+                current[arrayKey].push({});
+            }
+            current = current[arrayKey][arrayIndex];
+        } else {
+            if (!current[part]) current[part] = {};
+            current = current[part];
+        }
+    }
+
+    const lastPart = pathParts[pathParts.length - 1];
+    const lastArrayMatch = lastPart.match(/^(.*?)\[(\d+)\]$/);
+
+    if (lastArrayMatch) {
+        const arrayKey = lastArrayMatch[1];
+        const arrayIndex = parseInt(lastArrayMatch[2]);
+        if (!current[arrayKey]) current[arrayKey] = [];
+        // Expand array if index is out of bounds
+        while (current[arrayKey].length <= arrayIndex) {
+            current[arrayKey].push({});
+        }
+        current[arrayKey][arrayIndex] = value;
+    } else {
+        current[lastPart] = value;
+    }
+
+    // Determine the top-level field that was modified for the Firestore update
+    // This needs to handle cases like 'teams.Juniors[0]' where 'teams' is the top-level part.
+    const firstPathPart = pathParts[0];
+    const topLevelField = firstPathPart.includes('[') ? firstPathPart.substring(0, firstPathPart.indexOf('[')) : firstPathPart;
+
+    return {
+        updatedObject: newObj,
+        topLevelField: topLevelField
+    };
+};
+
 
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() {
@@ -1588,17 +1631,14 @@ function AllRegistrationsApp() {
   const handleSaveEditedData = React.useCallback(async (updatedData, targetDocRef, originalDataPath) => {
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
-        setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error'); // Updated message
+        setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
         return;
     }
 
     try {
-        if (typeof window.showGlobalLoader === 'function') {
-            window.showGlobalLoader();
-        }
+        window.showGlobalLoader();
 
         const dataToSave = {};
-        // Filter out internal keys starting with '_' and 'id' from the updatedData
         Object.keys(updatedData).forEach(key => {
             if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex') {
                 dataToSave[key] = updatedData[key];
@@ -1614,10 +1654,17 @@ function AllRegistrationsApp() {
             // Updating a top-level user document
             await updateDoc(targetDocRef, dataToSave);
         } else {
-            // Updating a nested field (team, player, staff, driver)
-            // Example: { 'teams.Category.0.playerDetails.0': dataToSave }
-            // The value at the specified path will be completely replaced by dataToSave
-            const updates = { [originalDataPath]: dataToSave };
+            // Nested update: fetch the document, modify locally, and then send the updated top-level field
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+            }
+            const currentDocData = docSnapshot.data();
+
+            const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, dataToSave);
+
+            // Construct the update object for Firestore
+            const updates = { [topLevelField]: updatedObject[topLevelField] };
             await updateDoc(targetDocRef, updates);
         }
 
@@ -1628,10 +1675,8 @@ function AllRegistrationsApp() {
         setError(`Chyba pri ukladaní dát: ${e.message}`);
         setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
     } finally {
-        if (typeof window.hideGlobalLoader === 'function') {
-            window.hideGlobalLoader();
-        }
-        closeEditModal(); // Close modal after saving attempt
+        window.hideGlobalLoader();
+        closeEditModal();
     }
 }, [db, closeEditModal, setUserNotificationMessage, setError]);
 
@@ -2024,6 +2069,8 @@ function AllRegistrationsApp() {
                                                             ...team,
                                                             _category: category,
                                                             _registeredBy: `${u.firstName} ${u.lastName}`,
+                                                            _userId: u.id, // Ensure _userId is passed here
+                                                            _teamIndex: teamIndex, // Ensure _teamIndex is passed here
                                                             _menTeamMembersCount: menTeamMembersCount,
                                                             _womenTeamMembersCount: womenTeamMembersCount,
                                                             _players: team.playerDetails ? team.playerDetails.length : 0,
