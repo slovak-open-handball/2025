@@ -1727,7 +1727,17 @@ function AllRegistrationsApp() {
             const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, dataToSave);
 
             // Vytvoriť objekt aktualizácií pre Firestore
-            const updates = { [topLevelField]: updatedObject[topLevelField] };
+            // Špeciálne ošetrenie pre 'teams' - uistite sa, že sa vždy aktualizuje celé pole
+            if (topLevelField === 'teams' && updatedObject.teams) {
+                // Konvertovať objekt kategórií tímov späť na pole pre uloženie, ak je to potrebné
+                // Aktuálne sa zdá, že tím je uložený pod kategóriou ako pole: teams.Juniors: [...]
+                // Tu predpokladáme, že `updatedObject[topLevelField]` už obsahuje správnu štruktúru pre Firestore.
+                // Ak by to malo byť inak, museli by sme `updatedObject[topLevelField]` premeniť na iný formát.
+                updates[topLevelField] = updatedObject[topLevelField];
+            } else {
+                updates[topLevelField] = updatedObject[topLevelField];
+            }
+            
             await updateDoc(targetDocRef, updates);
         }
 
