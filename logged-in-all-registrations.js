@@ -620,51 +620,51 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (value === null || value === undefined) return '';
         if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
         
-        // Explicitly handle Firebase Timestamp objects
+        // Explicitne spracovať objekty Firebase Timestamp
         if (value && typeof value === 'object' && value.toDate && typeof value.toDate === 'function') {
             try {
                 return value.toDate().toLocaleString('sk-SK');
             } catch (e) {
-                console.error("Error formatting Timestamp:", value, e);
-                return `[Timestamp Error: ${e.message}]`; // Fallback to a string representation
+                console.error("Chyba pri formátovaní Timestamp:", value, e);
+                return `[Chyba Timestamp: ${e.message}]`; // Záložná reťazcová reprezentácia
             }
         }
         
-        // Handle arrays
+        // Spracovať polia
         if (Array.isArray(value)) {
             return value.map(item => {
                 if (typeof item === 'object' && item !== null) {
-                    // If an object within an array, try to stringify it, or use a placeholder
+                    // Ak objekt v poli, pokúsiť sa ho previesť na reťazec JSON, alebo použiť zástupný symbol
                     try {
                         return JSON.stringify(item);
                     } catch (e) {
-                        console.error("Error stringifying array item object:", item, e);
-                        return '[Object Error]';
+                        console.error("Chyba pri prevode objektu poľa na reťazec:", item, e);
+                        return '[Chyba objektu]';
                     }
                 }
                 return String(item);
             }).join(', ');
         }
         
-        // Handle other objects
+        // Spracovať iné objekty
         if (typeof value === 'object') {
-            // Specific heuristics for common objects
-            if (value.street || value.city) { // Heuristic for address objects
+            // Heuristika pre bežné objekty
+            if (value.street || value.city) { // Heuristika pre adresné objekty
                 return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
             }
-            if (value.name || value.type) { // Heuristic for package, accommodation, arrival
+            if (value.name || value.type) { // Heuristika pre balík, ubytovanie, príchod
                 return value.name || value.type;
             }
-            // Fallback for any other object
+            // Záložná možnosť pre akýkoľvek iný objekt
             try {
                 return JSON.stringify(value);
             } catch (e) {
-                console.error("Error stringifying object:", value, e);
-                return '[Object Error]'; // Fallback to a string representation
+                console.error("Chyba pri prevode objektu na reťazec:", value, e);
+                return '[Chyba objektu]'; // Záložná reťazcová reprezentácia
             }
         }
         
-        return String(value); // Default to string for primitives
+        return String(value); // Predvolene na reťazec pre primitívne typy
     };
 
     // Helper to handle input changes for nested data
@@ -700,11 +700,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 if (!current[arrayKey]) current[arrayKey] = [];
                 current[arrayKey][arrayIndex] = newValue;
             } else {
-                // Type conversion if necessary (e.g., 'Áno'/'Nie' for boolean)
+                // Konverzia typu v prípade potreby (napr. 'Áno'/'Nie' pre boolean)
                 if (typeof getNestedValue(data, path) === 'boolean') {
                     current[lastPart] = (newValue.toLowerCase() === 'áno' || newValue.toLowerCase() === 'true');
                 } else if (typeof getNestedValue(data, path) === 'number') {
-                    current[lastPart] = parseFloat(newValue) || 0; // Convert to number if original was number
+                    current[lastPart] = parseFloat(newValue) || 0; // Prevod na číslo, ak bol pôvodne číslo
                 } else {
                     current[lastPart] = newValue;
                 }
@@ -713,32 +713,33 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         });
     };
 
-    // Determine if data is savable (i.e., a valid Firestore targetDocRef exists)
+    // Určiť, či je možné dáta uložiť (t.j. existuje platný targetDocRef pre Firestore)
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
-        // Explicitly exclude 'isMenuToggle' if the modal title is for a user
-        if (title.includes('Upraviť používateľa') && currentPath.split('.').pop() === 'isMenuToggle') {
+        // Okamžite vylúčiť 'isMenuToggle' ak je titulok modálneho okna pre používateľa, bez ohľadu na úroveň vnorenia
+        const currentKey = currentPath.split('.').pop();
+        if (title.includes('Upraviť používateľa') && currentKey === 'isMenuToggle') {
             return null;
         }
 
-        if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitive value or Timestamp
+        if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitívna hodnota alebo Timestamp
              const labelText = currentPath ? formatLabel(currentPath) : 'Hodnota';
 
-             // Skip displaying specific fields for 'Upraviť používateľa'
-             const lastPathPart = currentPath.split('.').pop();
+             // Preskočiť zobrazovanie špecifických polí pre 'Upraviť používateľa'
+             const lastPathPart = currentKey; // Už je vypočítané
              if (title.includes('Upraviť používateľa')) {
                  if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(lastPathPart)) {
                      return null;
                  }
              }
 
-             // Determine input type or if it should be a checkbox
+             // Určiť typ vstupu alebo či má byť checkbox
              let inputType = 'text';
              let isCheckbox = false;
              if (typeof obj === 'boolean') {
                  isCheckbox = true;
-             } else if (currentPath.toLowerCase().includes('password')) { // Hide password fields
+             } else if (currentPath.toLowerCase().includes('password')) { // Skryť polia pre heslo
                  inputType = 'password';
              }
 
@@ -752,7 +753,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         className: `form-checkbox h-5 w-5 text-blue-600`,
                         checked: localEditedData !== null && getNestedValue(localEditedData, currentPath) === true,
                         onChange: (e) => handleChange(currentPath, e.target.checked),
-                        disabled: !isSavable // Disable if not savable
+                        disabled: !isSavable // Zakázať, ak nie je možné uložiť
                     })
                 ) : (
                     React.createElement('input', {
@@ -760,14 +761,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                         value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, currentPath)) : '',
                         onChange: (e) => handleChange(currentPath, e.target.value),
-                        readOnly: !isSavable, // Only read-only if not savable
+                        readOnly: !isSavable, // Len na čítanie, ak nie je možné uložiť
                     })
                 )
             );
         }
 
         return Object.entries(obj).map(([key, value]) => {
-            // Skip internal React/Firebase keys or keys that are too verbose/nested, or sensitive
+            // Preskočiť interné kľúče React/Firebase alebo kľúče, ktoré sú príliš rozsiahle/vnorené, alebo citlivé
             if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password'].includes(key)) {
                 return null;
             }
@@ -779,19 +780,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
 
-            // Skip displaying specific fields for 'Upraviť používateľa'
+            // Preskočiť zobrazovanie špecifických polí pre 'Upraviť používateľa'
             if (title.includes('Upraviť používateľa')) {
                  if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
                      return null;
                  }
             }
 
-
             const labelText = formatLabel(fullKeyPath);
 
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                // If it's a known 'flat' object (address, billing), render its content in a single input.
-                // Otherwise, treat as a collapsible section.
+                // Ak je to známy 'plochý' objekt (adresa, fakturácia), vykresliť jeho obsah do jedného vstupu.
+                // Inak, spracovať ako rozbaľovaciu sekciu.
                 if (['address', 'billing', 'packageDetails', 'accommodation', 'arrival'].includes(key)) {
                      return React.createElement(
                         'div',
@@ -802,11 +802,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                             value: formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)),
                             onChange: (e) => handleChange(fullKeyPath, e.target.value),
-                            readOnly: !isSavable, // Only read-only if not savable
+                            readOnly: !isSavable, // Len na čítanie, ak nie je možné uložiť
                         })
                     );
                 }
-                // For other nested objects, create a collapsible section
+                // Pre iné vnorené objekty, vytvoriť rozbaľovaciu sekciu
                 return React.createElement(
                     CollapsibleSection,
                     { key: fullKeyPath, title: labelText, defaultOpen: false, noOuterStyles: true },
@@ -826,25 +826,25 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         })
                     );
                 }
-                // For arrays of objects (like playerDetails, team members, tshirts), create collapsible sections for each item
+                // Pre polia objektov (ako playerDetails, team members, tshirts), vytvoriť rozbaľovacie sekcie pre každú položku
                 return React.createElement(
                     CollapsibleSection,
                     { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
                     value.map((item, index) => React.createElement(
                         CollapsibleSection,
                         { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
-                        renderDataFields(item, `${fullKeyPath}[${index}]`) // Recursive call for nested array item
+                        renderDataFields(item, `${fullKeyPath}[${index}]`) // Rekurzívne volanie pre položku vnoreného poľa
                     ))
                 );
             }
-            // For primitive values (string, number, boolean, Timestamp)
+            // Pre primitívne hodnoty (reťazec, číslo, boolean, Timestamp)
 
-            // Determine input type or if it should be a checkbox
+            // Určiť typ vstupu alebo či má byť checkbox
             let inputType = 'text';
             let isCheckbox = false;
             if (typeof value === 'boolean') {
                 isCheckbox = true;
-            } else if (key.toLowerCase().includes('password')) { // Hide password fields
+            } else if (key.toLowerCase().includes('password')) { // Skryť polia pre heslo
                  inputType = 'password';
             }
 
@@ -880,13 +880,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         React.createElement(
             'div',
             {
-                ref: modalRef, // Attach ref here
+                ref: modalRef, // Pripojiť ref tu
                 className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto'
             },
             React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, title),
             React.createElement(
                 'div',
-                { className: 'space-y-4' }, // Add some spacing between fields
+                { className: 'space-y-4' }, // Pridať medzery medzi polia
                 renderDataFields(localEditedData)
             ),
             React.createElement(
@@ -896,7 +896,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
                     onClick: onClose
                 }, 'Zavrieť'),
-                isSavable && React.createElement('button', { // Render Save button only if targetDocRef is provided (meaning data is savable)
+                isSavable && React.createElement('button', { // Vykresliť tlačidlo Uložiť iba ak je poskytnutý targetDocRef (čo znamená, že dáta je možné uložiť)
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                     onClick: () => onSave(localEditedData, targetDocRef, originalDataPath)
                 }, 'Uložiť zmeny')
@@ -905,9 +905,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     );
 }
 
-// Helper to update a nested object by path and return the modified top-level field for Firestore update
+// Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenie upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
 const updateNestedObjectByPath = (obj, path, value) => {
-    // Deep clone the object to ensure immutability during modification
+    // Hlboká kópia objektu na zabezpečenie nemennosti počas modifikácie
     const newObj = JSON.parse(JSON.stringify(obj));
     const pathParts = path.split('.');
     let current = newObj;
@@ -920,7 +920,7 @@ const updateNestedObjectByPath = (obj, path, value) => {
             const arrayKey = arrayMatch[1];
             const arrayIndex = parseInt(arrayMatch[2]);
             if (!current[arrayKey]) current[arrayKey] = [];
-            // Expand array if index is out of bounds
+            // Rozšíriť pole, ak je index mimo rozsahu
             while (current[arrayKey].length <= arrayIndex) {
                 current[arrayKey].push({});
             }
@@ -938,7 +938,7 @@ const updateNestedObjectByPath = (obj, path, value) => {
         const arrayKey = lastArrayMatch[1];
         const arrayIndex = parseInt(lastArrayMatch[2]);
         if (!current[arrayKey]) current[arrayKey] = [];
-        // Expand array if index is out of bounds
+        // Rozšíriť pole, ak je index mimo rozsahu
         while (current[arrayKey].length <= arrayIndex) {
             current[arrayKey].push({});
         }
@@ -947,8 +947,8 @@ const updateNestedObjectByPath = (obj, path, value) => {
         current[lastPart] = value;
     }
 
-    // Determine the top-level field that was modified for the Firestore update
-    // This needs to handle cases like 'teams.Juniors[0]' where 'teams' is the top-level part.
+    // Určiť pole najvyššej úrovne, ktoré bolo upravené pre aktualizáciu Firestore
+    // To musí spracovať prípady ako 'teams.Juniors[0]', kde 'teams' je časť najvyššej úrovne.
     const firstPathPart = pathParts[0];
     const topLevelField = firstPathPart.includes('[') ? firstPathPart.substring(0, firstPathPart.indexOf('[')) : firstPathPart;
 
@@ -959,7 +959,7 @@ const updateNestedObjectByPath = (obj, path, value) => {
 };
 
 
-// Main React component for the logged-in-all-registrations.html page
+// Hlavný React komponent pre stránku logged-in-all-registrations.html
 function AllRegistrationsApp() {
   const auth = window.auth;
   const db = window.db;
@@ -1014,11 +1014,11 @@ function AllRegistrationsApp() {
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [editingData, setEditingData] = React.useState(null);
   const [editModalTitle, setEditModalTitle] = React.useState('');
-  const [editingDocRef, setEditingDocRef] = React.useState(null); // Document reference for saving
-  const [editingDataPath, setEditingDataPath] = React.useState(''); // Path within the document for saving
+  const [editingDocRef, setEditingDocRef] = React.useState(null); // Referencia na dokument pre uloženie
+  const [editingDataPath, setEditingDataPath] = React.useState(''); // Cesta v dokumente pre uloženie
 
   const openEditModal = (data, title, targetDocRef = null, originalDataPath = '') => {
-      // Remove sensitive or irrelevant keys before passing to modal
+      // Odstrániť citlivé alebo irelevantné kľúče pred odovzdaním do modálneho okna
       const cleanedData = { ...data };
       delete cleanedData.password; // Príklad: odstránenie hesla
       delete cleanedData.emailVerified; // Príklad: odstránenie interných stavov
@@ -1151,7 +1151,7 @@ function AllRegistrationsApp() {
       if (window.isGlobalAuthReady && window.auth && window.db) {
         setIsAuthReady(true);
         setUser(window.auth.currentUser);
-        // Ensure userProfileData is set from global data if available
+        // Zabezpečiť, aby sa userProfileData nastavili z globálnych dát, ak sú k dispozícii
         if (window.globalUserProfileData) {
             setUserProfileData(window.globalUserProfileData);
         }
@@ -1713,10 +1713,10 @@ function AllRegistrationsApp() {
         }
 
         if (originalDataPath === '') {
-            // Updating a top-level user document
+            // Aktualizácia dokumentu používateľa najvyššej úrovne
             await updateDoc(targetDocRef, dataToSave);
         } else {
-            // Nested update: fetch the document, modify locally, and then send the updated top-level field
+            // Vnorená aktualizácia: načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
@@ -1725,7 +1725,7 @@ function AllRegistrationsApp() {
 
             const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, dataToSave);
 
-            // Construct the update object for Firestore
+            // Vytvoriť objekt aktualizácií pre Firestore
             const updates = { [topLevelField]: updatedObject[topLevelField] };
             await updateDoc(targetDocRef, updates);
         }
@@ -1774,11 +1774,11 @@ function AllRegistrationsApp() {
       return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
   };
 
-  // New helper function for formatting values in table cells
+  // Nová pomocná funkcia na formátovanie hodnôt v bunkách tabuľky
   const formatTableCellValue = (value, columnId) => {
     if (value === null || value === undefined) return '-';
 
-    // Specific formatting based on column ID
+    // Špecifické formátovanie na základe ID stĺpca
     if (columnId === 'registrationDate') {
         if (value && typeof value.toDate === 'function') {
             return value.toDate().toLocaleString('sk-SK');
@@ -1786,35 +1786,35 @@ function AllRegistrationsApp() {
     } else if (columnId === 'approved') {
         return value ? 'Áno' : 'Nie';
     } else if (columnId === 'postalCode') {
-        return formatPostalCode(value); // Reuses the existing formatPostalCode
+        return formatPostalCode(value); // Znovu použije existujúcu funkciu formatPostalCode
     }
 
-    // Generic formatting for other cases, similar to formatDisplayValue
+    // Všeobecné formátovanie pre iné prípady, podobné formatDisplayValue
     if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
     if (Array.isArray(value)) {
         return value.map(item => {
             if (typeof item === 'object' && item !== null) {
-                // For nested objects in arrays, provide a summary or simplified string
+                // Pre vnorené objekty v poliach poskytnúť súhrn alebo zjednodušený reťazec
                 if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
-                if (item.size) return item.size; // For t-shirt sizes
-                return '[Objekt]'; // Generic for other objects
+                if (item.size) return item.size; // Pre veľkosti tričiek
+                return '[Objekt]'; // Všeobecné pre iné objekty
             }
             return String(item);
         }).join(', ');
     }
     if (typeof value === 'object') {
-        // Heuristics for common complex objects
-        if (value.street || value.city) { // Address object
+        // Heuristika pre bežné komplexné objekty
+        if (value.street || value.city) { // Adresný objekt
             return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
-        if (value.name || value.type) { // Package, accommodation, arrival object
+        if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
         }
-        // Fallback for any other object
+        // Záložná možnosť pre akýkoľvek iný objekt
         try {
             return JSON.stringify(value);
         } catch (e) {
-            console.error("Error stringifying object for table cell:", value, e);
+            console.error("Chyba pri prevode objektu na reťazec pre bunku tabuľky:", value, e);
             return '[Objekt]';
         }
     }
@@ -1849,9 +1849,9 @@ function AllRegistrationsApp() {
         onClose: closeEditModal,
         title: editModalTitle,
         data: editingData,
-        onSave: handleSaveEditedData, // Pass the save handler
-        targetDocRef: editingDocRef,    // Pass the document reference
-        originalDataPath: editingDataPath // Pass the path within the document
+        onSave: handleSaveEditedData, // Odovzdať handler na uloženie
+        targetDocRef: editingDocRef,    // Odovzdať referenciu na dokument
+        originalDataPath: editingDataPath // Odovzdať cestu v dokumente
     }),
     React.createElement(
       'div',
@@ -1990,22 +1990,22 @@ function AllRegistrationsApp() {
                                         React.createElement(
                                             'tr',
                                             {
-                                                className: `bg-white border-b hover:bg-gray-50`, // Removed cursor-pointer
+                                                className: `bg-white border-b hover:bg-gray-50`, // Odstránený cursor-pointer
                                             },
                                             React.createElement('td', {
-                                                className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center', // Added flex for alignment
+                                                className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center', // Pridaný flex pre zarovnanie
                                             },
-                                                React.createElement('button', { // Expander button
+                                                React.createElement('button', { // Tlačidlo expandera
                                                     onClick: (e) => {
                                                         e.stopPropagation();
                                                         toggleTeamRowExpansion(teamUniqueId);
                                                     },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1' // Added mr-1
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1' // Pridaný mr-1
                                                 }, expandedTeamRows[teamUniqueId] ? '▲' : '▼'),
-                                                React.createElement('button', { // Gear icon for editing team
+                                                React.createElement('button', { // Ikona ozubeného kolieska pre úpravu tímu
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        // Now directly create the targetDocRef, assuming _userId is valid
+                                                        // Teraz priamo vytvoriť targetDocRef, za predpokladu, že _userId je platné
                                                         const targetDocRefForTeam = doc(db, 'users', team._userId);
                                                         const teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
                                                         const resolvedTitle = `Upraviť tím: ${team.teamName}`;
@@ -2072,28 +2072,28 @@ function AllRegistrationsApp() {
                                     React.createElement(
                                         'tr',
                                         {
-                                            className: `bg-white border-b hover:bg-gray-50`, // Removed cursor-pointer
+                                            className: `bg-white border-b hover:bg-gray-50`, // Odstránený cursor-pointer
                                         },
                                         React.createElement('td', {
-                                            className: 'py-3 px-2 text-center min-w-max flex items-center justify-center', // Added flex for alignment
+                                            className: 'py-3 px-2 text-center min-w-max flex items-center justify-center', // Pridaný flex pre zarovnanie
                                         },
                                             shouldShowExpander(u)
-                                                ? React.createElement('button', { // Expander button
+                                                ? React.createElement('button', { // Tlačidlo expandera
                                                     onClick: (e) => {
                                                         e.stopPropagation();
                                                         toggleRowExpansion(u.id);
                                                     },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1' // Added mr-1
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1' // Pridaný mr-1
                                                 }, expandedRows[u.id] ? '▲' : '▼')
-                                                : React.createElement('span', { className: 'mr-1' }, '-'), // Placeholder for non-expandable rows
-                                            React.createElement('button', { // Gear icon for editing user
+                                                : React.createElement('span', { className: 'mr-1' }, '-'), // Zástupný symbol pre nerozšíriteľné riadky
+                                            React.createElement('button', { // Ikona ozubeného kolieska pre úpravu používateľa
                                                 onClick: (e) => {
                                                     e.stopPropagation();
                                                     openEditModal(
                                                         u,
                                                         `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
                                                         doc(db, 'users', u.id),
-                                                        '' // Top-level user data
+                                                        '' // Dáta používateľa najvyššej úrovne
                                                     );
                                                 },
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
@@ -2131,8 +2131,8 @@ function AllRegistrationsApp() {
                                                             ...team,
                                                             _category: category,
                                                             _registeredBy: `${u.firstName} ${u.lastName}`,
-                                                            _userId: u.id, // Ensure _userId is passed here
-                                                            _teamIndex: teamIndex, // Ensure _teamIndex is passed here
+                                                            _userId: u.id, // Zabezpečiť, aby sa _userId odovzdalo sem
+                                                            _teamIndex: teamIndex, // Zabezpečiť, aby sa _teamIndex odovzdalo sem
                                                             _menTeamMembersCount: menTeamMembersCount,
                                                             _womenTeamMembersCount: womenTeamMembersCount,
                                                             _players: team.playerDetails ? team.playerDetails.length : 0,
