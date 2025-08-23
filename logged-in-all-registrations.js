@@ -624,7 +624,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         // Explicitne spracovať objekty Firebase Timestamp
         if (value && typeof value === 'object' && value.toDate && typeof value.toDate === 'function') {
             try {
-                return value.toDate().toLocaleString('sk-SK');
+                // Formát DD. MM. YYYY hh:mm pre modálne okno
+                const date = value.toDate();
+                const options = {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                };
+                return date.toLocaleString('sk-SK', options);
             } catch (e) {
                 console.error("Chyba pri formátovaní Timestamp:", value, e);
                 return `[Chyba Timestamp: ${e.message}]`; // Záložná reťazcová reprezentácia
@@ -833,7 +843,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
                     value.map((item, index) => React.createElement(
                         CollapsibleSection,
-                        { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
+                        { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
                         renderDataFields(item, `${fullKeyPath}[${index}]`) // Rekurzívne volanie pre položku vnoreného poľa
                     ))
                 );
@@ -1505,7 +1515,17 @@ function AllRegistrationsApp() {
       const values = [...new Set(allUsers.map(u => {
           let val;
           if (column === 'registrationDate' && u.registrationDate && typeof u.registrationDate.toDate === 'function') {
-              val = u.registrationDate.toDate().toLocaleString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+              // Použiť rovnaký formát ako v tabuľke
+              const date = u.registrationDate.toDate();
+              const options = {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+              };
+              val = date.toLocaleString('sk-SK', options);
           } else if (column.includes('.')) {
               const parts = column.split('.');
               let nestedVal = u;
@@ -1562,7 +1582,17 @@ function AllRegistrationsApp() {
               usersToDisplay = usersToDisplay.filter(user => {
                   let userValue;
                   if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
-                      userValue = user.registrationDate.toDate().toLocaleString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).toLowerCase();
+                      // Použiť rovnaký formát ako pri získavaní jedinečných hodnôt
+                      const date = user.registrationDate.toDate();
+                      const options = {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false
+                      };
+                      userValue = date.toLocaleString('sk-SK', options).toLowerCase();
                   } else if (column.includes('.')) {
                       const parts = column.split('.');
                       let nestedVal = user;
