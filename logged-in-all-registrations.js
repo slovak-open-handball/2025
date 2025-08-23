@@ -805,30 +805,27 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             const labelText = formatLabel(fullKeyPath);
 
+            // Special handling for objects that are NOT arrays and NOT Timestamps,
+            // which should always be visible (i.e., defaultOpen: true).
+            // This includes 'billing', 'address', 'packageDetails', 'accommodation', 'arrival'.
+            // For these, we want to expand their *internal* fields, not just show a single text input for the whole object.
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                // Ponechať 'address', 'packageDetails', 'accommodation', 'arrival' ako "ploché" objekty
-                // 'billing' bol odstránený z tohto zoznamu, aby sa spracoval rekurzívne
-                if (['address', 'packageDetails', 'accommodation', 'arrival'].includes(key)) {
-                     return React.createElement(
-                        'div',
-                        { key: fullKeyPath, className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                        React.createElement('input', {
-                            type: 'text',
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                            value: formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)),
-                            onChange: (e) => handleChange(fullKeyPath, e.target.value),
-                            readOnly: !isSavable, // Len na čítanie, ak nie je možné uložiť
-                        })
-                    );
-                }
-                // Pre iné vnorené objekty (vrátane 'billing'), vytvoriť rozbaľovaciu sekciu
+                const shouldBeAlwaysOpen = ['billing', 'address', 'packageDetails', 'accommodation', 'arrival'].includes(key);
+
                 return React.createElement(
                     CollapsibleSection,
-                    { key: fullKeyPath, title: labelText, defaultOpen: false, noOuterStyles: true },
+                    {
+                        key: fullKeyPath,
+                        title: labelText,
+                        defaultOpen: shouldBeAlwaysOpen, // Set to true for billing, address etc.
+                        noOuterStyles: true // Keep it clean without outer borders
+                    },
+                    // Recursively render fields within this object
                     renderDataFields(value, fullKeyPath)
                 );
-            } else if (Array.isArray(value)) {
+            }
+            // Existing handling for arrays of objects (which should remain collapsible)
+            else if (Array.isArray(value)) {
                 if (value.length === 0) {
                      return React.createElement(
                         'div',
@@ -842,51 +839,51 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         })
                     );
                 }
-                // Pre polia objektov (ako playerDetails, team members, tshirts), vytvoriť rozbaľovacie sekcie pre každú položku
+                // For arrays of objects (like playerDetails, team members, tshirts), create collapsible sections for each item
                 return React.createElement(
                     CollapsibleSection,
                     { key: fullKeyPath, title: `${labelText} (${value.length})`, defaultOpen: false, noOuterStyles: true },
                     value.map((item, index) => React.createElement(
                         CollapsibleSection,
                         { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
-                        renderDataFields(item, `${fullKeyPath}[${index}]`) // Rekurzívne volanie pre položku vnoreného poľa
+                        renderDataFields(item, `${fullKeyPath}[${index}]`) // Recursive call for nested array item
                     ))
                 );
             }
-            // Pre primitívne hodnoty (reťazec, číslo, boolean, Timestamp)
+            // For primitive values (string, number, boolean, Timestamp)
+            else {
+                // Determine input type or if it's a checkbox
+                let inputType = 'text';
+                let isCheckbox = false;
+                if (typeof value === 'boolean') {
+                    isCheckbox = true;
+                } else if (key.toLowerCase().includes('password')) { // Hide password fields
+                    inputType = 'password';
+                }
 
-            // Určiť typ vstupu alebo či má byť checkbox
-            let inputType = 'text';
-            let isCheckbox = false;
-            if (typeof value === 'boolean') {
-                isCheckbox = true;
-            } else if (key.toLowerCase().includes('password')) { // Skryť polia pre heslo
-                 inputType = 'password';
+                return React.createElement(
+                    'div',
+                    { key: fullKeyPath, className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                    isCheckbox ? (
+                        React.createElement('input', {
+                            type: 'checkbox',
+                            className: `form-checkbox h-5 w-5 text-blue-600`,
+                            checked: localEditedData !== null && getNestedValue(localEditedData, fullKeyPath) === true,
+                            onChange: (e) => handleChange(fullKeyPath, e.target.checked),
+                            disabled: !isSavable
+                        })
+                    ) : (
+                        React.createElement('input', {
+                            type: inputType,
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
+                            value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)) : '',
+                            onChange: (e) => handleChange(fullKeyPath, e.target.value),
+                            readOnly: !isSavable,
+                        })
+                    )
+                );
             }
-
-
-            return React.createElement(
-                'div',
-                { key: fullKeyPath, className: 'mb-4' },
-                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                isCheckbox ? (
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        className: `form-checkbox h-5 w-5 text-blue-600`,
-                        checked: localEditedData !== null && getNestedValue(localEditedData, fullKeyPath) === true,
-                        onChange: (e) => handleChange(fullKeyPath, e.target.checked),
-                        disabled: !isSavable
-                    })
-                ) : (
-                    React.createElement('input', {
-                        type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)) : '',
-                        onChange: (e) => handleChange(fullKeyPath, e.target.value),
-                        readOnly: !isSavable,
-                    })
-                )
-            );
         });
     };
 
