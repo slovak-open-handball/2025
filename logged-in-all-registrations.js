@@ -777,9 +777,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         // Define all possible user fields for editing
         const allUserFields = [
-            'firstName', 'lastName', 'contactPhoneNumber', 'note', // note is now top-level
+            'firstName', 'lastName', 'contactPhoneNumber',
             'billing.clubName', 'billing.ico', 'billing.dic', 'billing.icDph',
-            'street', 'houseNumber', 'city', 'postalCode', 'country'
+            'street', 'houseNumber', 'city', 'postalCode', 'country', 'note' // note is now explicitly last
         ];
 
         let fieldsToRenderForUser = allUserFields;
@@ -841,8 +841,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (currentPath === '' && title.includes('Upraviť používateľa')) {
             const elements = [];
             
-            // Render basic user fields first: firstName, lastName, contactPhoneNumber, note
-            ['firstName', 'lastName', 'contactPhoneNumber', 'note'].forEach(path => {
+            // Render basic user fields first
+            ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
                 if (fieldsToRenderForUser.includes(path)) {
                     elements.push(renderField(path, getNestedValue(localEditedData, path)));
                 }
@@ -864,7 +864,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 );
             }
 
-            // Render address section if relevant fields are included, excluding 'note'
+            // Render address section if relevant fields are included
             const addressFieldsInScope = allUserFields.filter(p => 
                 ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
             );
@@ -882,6 +882,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     )
                 );
             }
+
+            // Render 'note' field last, if it's in scope
+            if (fieldsToRenderForUser.includes('note')) {
+                elements.push(renderField('note', getNestedValue(localEditedData, 'note')));
+            }
+
             return elements.filter(Boolean); // Filter out any nulls if fieldsToRenderForUser excluded some
         } else if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
             // This case handles individual fields that are not part of the top-level user data,
