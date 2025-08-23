@@ -595,16 +595,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'approved') return 'Schválený';
         if (key === 'email') return 'E-mail';
         if (key === 'contactPhoneNumber') return 'Telefónne číslo';
-        if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla'; // Added translation
-        if (key === 'password') return 'Heslo'; // Added translation
-        if (key === 'role') return 'Rola'; // Added translation
-        if (key === 'firstName') return 'Meno'; // Added translation
-        if (key === 'lastName') return 'Priezvisko'; // Added translation
-        if (key === 'houseNumber') return 'Číslo domu'; // Added translation
-        if (key === 'city') return 'Mesto'; // Added translation
-        if (key === 'country') return 'Krajina'; // Added translation
-        if (key === 'street') return 'Ulica'; // Added translation
-        if (key === 'displayNotifications') return 'Zobrazovať notifikácie'; // Added translation
+        if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla';
+        if (key === 'password') return 'Heslo';
+        if (key === 'role') return 'Rola';
+        if (key === 'firstName') return 'Meno';
+        if (key === 'lastName') return 'Priezvisko';
+        if (key === 'houseNumber') return 'Číslo domu';
+        if (key === 'city') return 'Mesto';
+        if (key === 'country') return 'Krajina';
+        if (key === 'street') return 'Ulica';
+        if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
+        if (key === 'isMenuToggle') return 'Prepínač menu';
 
 
         return key
@@ -721,7 +722,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
              // Skip displaying specific fields for 'Upraviť používateľa'
              if (title.includes('Upraviť používateľa')) {
-                 if (currentPath === 'passwordLastChanged' || currentPath === 'registrationDate' || currentPath === 'email' || currentPath === 'approved') {
+                 if (currentPath === 'passwordLastChanged' || currentPath === 'registrationDate' || currentPath === 'email' || currentPath === 'approved' || currentPath === 'isMenuToggle') {
                      return null;
                  }
              }
@@ -769,7 +770,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             // Skip displaying specific fields for 'Upraviť používateľa'
             if (title.includes('Upraviť používateľa')) {
-                 if (key === 'passwordLastChanged' || key === 'registrationDate' || key === 'email' || key === 'approved') {
+                 if (key === 'passwordLastChanged' || key === 'registrationDate' || key === 'email' || key === 'approved' || key === 'isMenuToggle') {
                      return null;
                  }
             }
