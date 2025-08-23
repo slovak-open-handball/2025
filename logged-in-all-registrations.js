@@ -328,15 +328,29 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
 
-    const formatAddress = (address) => {
-        if (!address) return '-';
-        // Predpokladáme, že tieto polia sú priamo na objekte `member`
-        const street = address.street || '';
-        const houseNumber = address.houseNumber || '';
-        const postalCode = address.postalCode || '';
-        const city = address.city || '';
-        const country = address.country || '';
-        return `${street} ${houseNumber}, ${postalCode} ${city}, ${country}`;
+    const formatAddress = (member) => { // Zmenený názov z 'address' na 'member' pre väčšiu prehľadnosť
+        if (!member) return '-';
+
+        let addressData = member;
+        // Ak existuje vnorený objekt 'address', použiť ho
+        if (member.address && typeof member.address === 'object') {
+            addressData = member.address;
+        }
+
+        const street = addressData.street || '';
+        const houseNumber = addressData.houseNumber || '';
+        const postalCode = addressData.postalCode || '';
+        const city = addressData.city || '';
+        const country = addressData.country || '';
+
+        // Odstrániť prebytočné čiarky a medzery
+        const parts = [
+            `${street} ${houseNumber}`.trim(),
+            `${postalCode} ${city}`.trim(),
+            country.trim()
+        ].filter(p => p !== ''); // Odstrániť prázdne časti
+
+        return parts.join(', ');
     };
 
     const formatDateToDMMYYYY = (dateString) => {
@@ -779,7 +793,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         const allUserFields = [
             'firstName', 'lastName', 'contactPhoneNumber',
             'billing.clubName', 'billing.ico', 'billing.dic', 'billing.icDph',
-            'street', 'houseNumber', 'city', 'postalCode', 'country', 'note' // note is now explicitly last
+            'street', 'houseNumber', 'city', 'postalCode', 'country', 'note' 
         ];
 
         let fieldsToRenderForUser = allUserFields;
@@ -1138,7 +1152,7 @@ function AllRegistrationsApp() {
 
                         let womenTeamMembersCount = 0;
                         if (Array.isArray(team.womenTeamMemberDetails)) {
-                            womenTeamMembersCount = team.womenTeamMemberDetails.length;
+                            womenTeamMemberDetails = team.womenTeamMemberDetails.length;
                         }
 
                         const teamTshirtsMap = new Map(
