@@ -571,24 +571,24 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         if (title.includes('Upraviť používateľa')) {
             // For non-admin users, or if role is not set, initialize all user fields
-            if (userRole !== 'admin') {
-                // Initialize top-level address fields
-                if (initialData.street === undefined) initialData.street = '';
-                if (initialData.houseNumber === undefined) initialData.houseNumber = '';
-                if (initialData.city === undefined) initialData.city = '';
-                if (initialData.postalCode === undefined) initialData.postalCode = '';
-                if (initialData.country === undefined) initialData.country = '';
+            // Removed condition `if (userRole !== 'admin')` so that all fields are initialized for admin too
+            // Initialize top-level address fields
+            if (initialData.street === undefined) initialData.street = '';
+            if (initialData.houseNumber === undefined) initialData.houseNumber = '';
+            if (initialData.city === undefined) initialData.city = '';
+            if (initialData.postalCode === undefined) initialData.postalCode = '';
+            if (initialData.country === undefined) initialData.country = '';
 
-                // Initialize billing and other fields as before
-                if (!initialData.billing) initialData.billing = {};
-                if (initialData.billing.clubName === undefined) initialData.billing.clubName = '';
-                if (initialData.billing.ico === undefined) initialData.billing.ico = '';
-                if (initialData.billing.dic === undefined) initialData.billing.dic = '';
-                if (initialData.billing.icDph === undefined) initialData.billing.icDph = '';
+            // Initialize billing and other fields as before
+            if (!initialData.billing) initialData.billing = {};
+            if (initialData.billing.clubName === undefined) initialData.billing.clubName = '';
+            if (initialData.billing.ico === undefined) initialData.billing.ico = '';
+            if (initialData.billing.dic === undefined) initialData.billing.dic = '';
+            if (initialData.billing.icDph === undefined) initialData.billing.icDph = '';
 
-                if (initialData.contactPhoneNumber === undefined) initialData.contactPhoneNumber = '';
-                if (initialData.note === undefined) initialData.note = '';
-            }
+            if (initialData.contactPhoneNumber === undefined) initialData.contactPhoneNumber = '';
+            if (initialData.note === undefined) initialData.note = '';
+            
             // Always initialize firstName and lastName regardless of role
             if (initialData.firstName === undefined) initialData.firstName = '';
             if (initialData.lastName === undefined) initialData.lastName = '';
@@ -791,13 +791,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             'note'
         ];
 
-        // Conditional rendering for admin users
-        if (title.includes('Upraviť používateľa') && userRole === 'admin') {
-            userFieldOrder = [
-                'firstName',
-                'lastName'
-            ];
-        }
+        // Removed conditional rendering for admin users based on userRole
+        // Admins will now see all user fields for editing a user.
 
         const renderedFields = new Set(); 
 
@@ -805,6 +800,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             if (renderedFields.has(path)) return null; 
 
             const key = path.split('.').pop();
+            // These fields should still be hidden regardless of user role when editing a user profile
             if (title.includes('Upraviť používateľa') &&
                 ['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
                 return null;
@@ -847,30 +843,24 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         };
 
         if (currentPath === '' && title.includes('Upraviť používateľa')) {
+            // For editing a user, always render all user-specific fields
             return userFieldOrder.map(path => {
                 const value = getNestedValue(localEditedData, path);
                 
-                // For billing and address, only render if not an admin
-                if (userRole !== 'admin') {
-                    if (path.startsWith('billing.') && !renderedFields.has('billing')) {
-                        renderedFields.add('billing'); 
-                        return React.createElement(
-                            'div',
-                            { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel('billing')),
-                            userFieldOrder.filter(p => p.startsWith('billing.')).map(billingPath => {
-                                const billingValue = getNestedValue(localEditedData, billingPath);
-                                return renderField(billingPath, billingValue);
-                            })
-                        );
-                    } else if (!path.includes('.')) { // Top-level fields (including address fields)
-                        // This handles firstName, lastName, contactPhoneNumber, street, houseNumber, city, postalCode, country, note
-                        return renderField(path, value);
-                    }
-                } else { // Admin role, only render firstName and lastName
-                    if (['firstName', 'lastName'].includes(path)) {
-                        return renderField(path, value);
-                    }
+                // Render billing section if path starts with 'billing.'
+                if (path.startsWith('billing.') && !renderedFields.has('billing')) {
+                    renderedFields.add('billing'); // Mark billing section as rendered
+                    return React.createElement(
+                        'div',
+                        { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel('billing')),
+                        userFieldOrder.filter(p => p.startsWith('billing.')).map(billingPath => {
+                            const billingValue = getNestedValue(localEditedData, billingPath);
+                            return renderField(billingPath, billingValue);
+                        })
+                    );
+                } else if (!path.includes('.')) { // Top-level fields (including address fields)
+                    return renderField(path, value);
                 }
                 return null;
             }).filter(Boolean); 
