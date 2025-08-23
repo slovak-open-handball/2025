@@ -605,6 +605,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'country') return 'Krajina';
         if (key === 'street') return 'Ulica';
         if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
+        // Opravený názov kľúča databázy z 'isMenuToggle' na 'isMenuToggled'
         if (key === 'isMenuToggled') return 'Prepínač menu';
 
 
@@ -995,7 +996,7 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: 'Krajina', type: true, visible: true },
+    { id: 'country', type: true, visible: true },
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
@@ -1504,7 +1505,7 @@ function AllRegistrationsApp() {
       const values = [...new Set(allUsers.map(u => {
           let val;
           if (column === 'registrationDate' && u.registrationDate && typeof u.registrationDate.toDate === 'function') {
-              val = u.registrationDate.toDate().toLocaleString('sk-SK');
+              val = u.registrationDate.toDate().toLocaleString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
           } else if (column.includes('.')) {
               const parts = column.split('.');
               let nestedVal = u;
@@ -1561,7 +1562,7 @@ function AllRegistrationsApp() {
               usersToDisplay = usersToDisplay.filter(user => {
                   let userValue;
                   if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
-                      userValue = user.registrationDate.toDate().toLocaleString('sk-SK').toLowerCase();
+                      userValue = user.registrationDate.toDate().toLocaleString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).toLowerCase();
                   } else if (column.includes('.')) {
                       const parts = column.split('.');
                       let nestedVal = user;
@@ -1781,7 +1782,17 @@ function AllRegistrationsApp() {
     // Špecifické formátovanie na základe ID stĺpca
     if (columnId === 'registrationDate') {
         if (value && typeof value.toDate === 'function') {
-            return value.toDate().toLocaleString('sk-SK');
+            // Formát DD. MM. YYYY hh:mm
+            const date = value.toDate();
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false // Použiť 24-hodinový formát
+            };
+            return date.toLocaleString('sk-SK', options);
         }
     } else if (columnId === 'approved') {
         return value ? 'Áno' : 'Nie';
