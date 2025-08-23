@@ -605,7 +605,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'country') return 'Krajina';
         if (key === 'street') return 'Ulica';
         if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
-        if (key === 'isMenuToggle') return 'Prepínač menu';
+        if (key === 'isMenuToggled') return 'Prepínač menu';
 
 
         return key
@@ -717,9 +717,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
-        // Okamžite vylúčiť 'isMenuToggle' ak je titulok modálneho okna pre používateľa, bez ohľadu na úroveň vnorenia
+        // Okamžite vylúčiť 'isMenuToggled' ak je titulok modálneho okna pre používateľa, bez ohľadu na úroveň vnorenia
         const currentKey = currentPath.split('.').pop();
-        if (title.includes('Upraviť používateľa') && currentKey === 'isMenuToggle') {
+        if (title.includes('Upraviť používateľa') && currentKey === 'isMenuToggled') {
             return null;
         }
 
@@ -773,8 +773,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 return null;
             }
 
-            // Exclude 'isMenuToggle' if the modal title is for a user, regardless of path
-            if (title.includes('Upraviť používateľa') && key === 'isMenuToggle') {
+            // Exclude 'isMenuToggled' if the modal title is for a user, regardless of path
+            if (title.includes('Upraviť používateľa') && key === 'isMenuToggled') {
                 return null;
             }
 
