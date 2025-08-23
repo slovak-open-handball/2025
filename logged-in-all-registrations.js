@@ -330,7 +330,13 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
     const formatAddress = (address) => {
         if (!address) return '-';
-        return `${address.street || ''} ${address.houseNumber || ''}, ${address.postalCode || ''} ${address.city || ''}, ${address.country || ''}`;
+        // Predpokladáme, že tieto polia sú priamo na objekte `member`
+        const street = address.street || '';
+        const houseNumber = address.houseNumber || '';
+        const postalCode = address.postalCode || '';
+        const city = address.city || '';
+        const country = address.country || '';
+        return `${street} ${houseNumber}, ${postalCode} ${city}, ${country}`;
     };
 
     const formatDateToDMMYYYY = (dateString) => {
@@ -478,7 +484,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member.address)),
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)), // Pass the member object directly for formatAddress
                         mealDates.map(date =>
                             React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' },
                                 React.createElement(
@@ -566,13 +572,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (title.includes('Upraviť používateľa')) {
             // For non-admin users, or if role is not set, initialize all user fields
             if (userRole !== 'admin') {
-                if (!initialData.address) initialData.address = {};
-                if (initialData.address.street === undefined) initialData.address.street = '';
-                if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
-                if (initialData.address.city === undefined) initialData.address.city = '';
-                if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
-                if (initialData.address.country === undefined) initialData.address.country = '';
+                // Initialize top-level address fields
+                if (initialData.street === undefined) initialData.street = '';
+                if (initialData.houseNumber === undefined) initialData.houseNumber = '';
+                if (initialData.city === undefined) initialData.city = '';
+                if (initialData.postalCode === undefined) initialData.postalCode = '';
+                if (initialData.country === undefined) initialData.country = '';
 
+                // Initialize billing and other fields as before
                 if (!initialData.billing) initialData.billing = {};
                 if (initialData.billing.clubName === undefined) initialData.billing.clubName = '';
                 if (initialData.billing.ico === undefined) initialData.billing.ico = '';
@@ -626,7 +633,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'tshirts') return 'Tričká';
         if (key === 'registrationDate') return 'Dátum registrácie';
         if (key === 'dateOfBirth') return 'Dátum narodenia';
+        // Updated labels for top-level address fields
+        if (key === 'street') return 'Ulica';
+        if (key === 'houseNumber') return 'Číslo domu';
+        if (key === 'city') return 'Mesto/Obec';
         if (key === 'postalCode') return 'PSČ';
+        if (key === 'country') return 'Krajina';
         if (key === 'approved') return 'Schválený';
         if (key === 'email') return 'E-mail';
         if (key === 'contactPhoneNumber') return 'Telefónne číslo';
@@ -635,11 +647,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'role') return 'Rola';
         if (key === 'firstName') return 'Meno';
         if (key === 'lastName') return 'Priezvisko';
-        if (key === 'address.houseNumber') return 'Číslo domu';
-        if (key === 'address.city') return 'Mesto/Obec';
-        if (key === 'address.country') return 'Krajina';
-        if (key === 'address.street') return 'Ulica';
-        if (key === 'address.postalCode') return 'PSČ';
         if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
         if (key === 'isMenuToggled') return 'Prepínač menu';
         if (key === 'note') return 'Poznámka';
@@ -652,7 +659,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     };
 
     // Helper to format values for display in input fields
-    const formatDisplayValue = (value) => {
+    const formatDisplayValue = (value, path) => { // Added path to formatDisplayValue
         if (value === null || value === undefined) return '';
         if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
         
@@ -694,8 +701,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
         
         if (typeof value === 'object') {
-            if (value.street || value.city) { 
-                return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            // Heuristika pre bežné komplexné objekty (už len pre vnorené objekty)
+            if (path && (path.includes('address.') || ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(path))) { // Removed this check here
+                // This block is no longer relevant for top-level address fields being directly on 'value'
+                // This means 'value' itself would contain street, city, etc.
+                // If the value is an object that represents an address (e.g., from member details)
+                if (value.street || value.city) {
+                    return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+                }
             }
             if (value.name || value.type) { 
                 return value.name || value.type;
@@ -770,11 +783,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             'billing.ico',
             'billing.dic',
             'billing.icDph',
-            'address.street',
-            'address.houseNumber',
-            'address.city',
-            'address.postalCode',
-            'address.country',
+            'street',          // Changed to top-level
+            'houseNumber',     // Changed to top-level
+            'city',            // Changed to top-level
+            'postalCode',      // Changed to top-level
+            'country',         // Changed to top-level
             'note'
         ];
 
@@ -825,7 +838,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     React.createElement('input', {
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, path)) : '',
+                        value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, path), path) : '', // Pass path here
                         onChange: (e) => handleChange(path, e.target.value),
                         readOnly: !isSavable,
                     })
@@ -850,18 +863,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 return renderField(billingPath, billingValue);
                             })
                         );
-                    } else if (path.startsWith('address.') && !renderedFields.has('address')) {
-                        renderedFields.add('address'); 
-                        return React.createElement(
-                            'div',
-                            { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel('address')),
-                            userFieldOrder.filter(p => p.startsWith('address.')).map(addressPath => {
-                                const addressValue = getNestedValue(localEditedData, addressPath);
-                                return renderField(addressPath, addressValue);
-                            })
-                        );
-                    } else if (!path.includes('.')) { 
+                    } else if (!path.includes('.')) { // Top-level fields (including address fields)
+                        // This handles firstName, lastName, contactPhoneNumber, street, houseNumber, city, postalCode, country, note
                         return renderField(path, value);
                     }
                 } else { // Admin role, only render firstName and lastName
@@ -1057,7 +1060,7 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', type: true, visible: true },
+    { id: 'country', label: 'Krajina', type: 'string', visible: true }, // Added label
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
@@ -1530,7 +1533,12 @@ function AllRegistrationsApp() {
 
           let valA, valB;
 
-          if (columnId.includes('.')) {
+          // Access top-level address fields directly
+          if (['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(columnId)) {
+            valA = a[columnId];
+            valB = b[columnId];
+          }
+          else if (columnId.includes('.')) {
               valA = getNestedValue(a, columnId);
               valB = getNestedValue(b, columnId);
           } else {
@@ -1610,6 +1618,7 @@ function AllRegistrationsApp() {
               }
               val = nestedVal;
           } else {
+              // Access top-level address fields directly for filtering
               val = u[column];
           }
           if (typeof val === 'boolean') {
@@ -1686,6 +1695,7 @@ function AllRegistrationsApp() {
                       }
                       userValue = String(nestedVal || '').toLowerCase();
                   } else {
+                      // Access top-level address fields directly for filtering
                       userValue = String(user[column] || '').toLowerCase();
                   }
                   if (typeof user[column] === 'boolean') {
@@ -1901,7 +1911,7 @@ function AllRegistrationsApp() {
   };
 
   // Nová pomocná funkcia na formátovanie hodnôt v bunkách tabuľky
-  const formatTableCellValue = (value, columnId) => {
+  const formatTableCellValue = (value, columnId, userObject) => { // Added userObject
     if (value === null || value === undefined) return '-';
 
     // Špecifické formátovanie na základe ID stĺpca
@@ -1939,6 +1949,10 @@ function AllRegistrationsApp() {
     } else if (columnId === 'postalCode') {
         return formatPostalCode(value); // Znovu použije existujúcu funkciu formatPostalCode
     }
+    // Handle top-level address fields
+    else if (['street', 'houseNumber', 'city', 'country'].includes(columnId)) {
+        return value;
+    }
 
     // Všeobecné formátovanie pre iné prípady, podobné formatDisplayValue
     if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
@@ -1955,7 +1969,8 @@ function AllRegistrationsApp() {
     }
     if (typeof value === 'object') {
         // Heuristika pre bežné komplexné objekty
-        if (value.street || value.city) { // Adresný objekt
+        // Adresný objekt (len pre vnorené, ak by sa taký našiel)
+        if (value.street || value.city) {
             return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
@@ -2253,7 +2268,7 @@ function AllRegistrationsApp() {
                                         columnOrder.filter(col => col.visible).map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
                                                 // Tu som zmenil prístup k hodnote, aby sa vždy použila formatTableCellValue
-                                                formatTableCellValue(getNestedValue(u, col.id), col.id)
+                                                formatTableCellValue(getNestedValue(u, col.id), col.id, u) // Pass user object here
                                             )
                                         ))
                                     ),
