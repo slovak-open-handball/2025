@@ -297,7 +297,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -446,37 +446,41 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         'tr',
                         {
                             key: member.uniqueId,
-                            className: 'cursor-pointer hover:bg-gray-100', // Pridal som triedy pre vizuálnu spätnú väzbu
-                            onClick: (e) => { // Pridal som obsluhu kliknutia na riadok člena
-                                e.stopPropagation();
-                                
-                                // Pridaná kontrola pre team._userId
-                                if (!team._userId || typeof team._userId !== 'string') {
-                                    console.error("Chyba: Chýba ID používateľa pre tím. Nemôžem otvoriť editačné modálne okno.", team);
-                                    openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null); // Otvoriť v režime iba na čítanie
-                                    return;
-                                }
-
-                                let memberPath = '';
-                                if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
-                                    memberPath = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
-                                } else if (member.originalArray === 'driverDetails') {
-                                    memberPath = `teams.${team._category}[${team._teamIndex}].driverDetails`;
-                                } else {
-                                    console.warn("Nepodarilo sa určiť cestu člena pre uloženie. Modálne okno bude len na prezeranie.");
-                                    openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null);
-                                    return;
-                                }
-
-                                openEditModal(
-                                    member,
-                                    `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`,
-                                    doc(db, 'users', team._userId),
-                                    memberPath
-                                );
-                            }
+                            className: 'hover:bg-gray-50', // Removed cursor-pointer from tr
                         },
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.type || '-'),
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' },
+                            React.createElement('button', { // Gear icon for editing member details
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    // Pridaná kontrola pre team._userId
+                                    if (!team._userId || typeof team._userId !== 'string') {
+                                        console.error("Chyba: Chýba ID používateľa pre tím. Nemôžem otvoriť editačné modálne okno.", team);
+                                        openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null); // Otvoriť v režime iba na čítanie
+                                        return;
+                                    }
+
+                                    let memberPath = '';
+                                    if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
+                                        memberPath = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
+                                    } else if (member.originalArray === 'driverDetails') {
+                                        memberPath = `teams.${team._category}[${team._teamIndex}].driverDetails`;
+                                    } else {
+                                        console.warn("Nepodarilo sa určiť cestu člena pre uloženie. Modálne okno bude len na prezeranie.");
+                                        openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null);
+                                        return;
+                                    }
+
+                                    openEditModal(
+                                        member,
+                                        `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`,
+                                        doc(db, 'users', team._userId),
+                                        memberPath
+                                    );
+                                },
+                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-2' // Added mr-2 for spacing
+                            }, '⚙️'),
+                            member.type || '-'
+                        ),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
@@ -1810,7 +1814,7 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`)
                                 )
                             )
                         ) : (
@@ -1876,22 +1880,30 @@ function AllRegistrationsApp() {
                                         React.createElement(
                                             'tr',
                                             {
-                                                className: `bg-white border-b hover:bg-gray-50 cursor-pointer`,
-                                                onClick: () => openEditModal(
-                                                    team,
-                                                    `Upraviť tím: ${team.teamName}`,
-                                                    doc(db, 'users', team._userId),
-                                                    `teams.${team._category}[${team._teamIndex}]`
-                                                )
+                                                className: `bg-white border-b hover:bg-gray-50`, // Removed cursor-pointer
                                             },
                                             React.createElement('td', {
-                                                className: 'py-3 px-2 text-center whitespace-nowrap min-w-max',
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    toggleTeamRowExpansion(teamUniqueId);
-                                                }
+                                                className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center', // Added flex for alignment
                                             },
-                                                React.createElement('span', { className: 'text-gray-500' }, expandedTeamRows[teamUniqueId] ? '▲' : '▼')
+                                                React.createElement('button', { // Expander button
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        toggleTeamRowExpansion(teamUniqueId);
+                                                    },
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1' // Added mr-1
+                                                }, expandedTeamRows[teamUniqueId] ? '▲' : '▼'),
+                                                React.createElement('button', { // Gear icon for editing team
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        openEditModal(
+                                                            team,
+                                                            `Upraviť tím: ${team.teamName}`,
+                                                            doc(db, 'users', team._userId),
+                                                            `teams.${team._category}[${team._teamIndex}]`
+                                                        );
+                                                    },
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                                                }, '⚙️')
                                             ),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._category || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.teamName || `Tím`),
@@ -1944,28 +1956,32 @@ function AllRegistrationsApp() {
                                     React.createElement(
                                         'tr',
                                         {
-                                            className: `bg-white border-b hover:bg-gray-50 cursor-pointer`,
-                                            onClick: () => openEditModal(
-                                                u,
-                                                `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
-                                                doc(db, 'users', u.id),
-                                                '' // Top-level user data
-                                            )
+                                            className: `bg-white border-b hover:bg-gray-50`, // Removed cursor-pointer
                                         },
                                         React.createElement('td', {
-                                            className: 'py-3 px-2 text-center min-w-max',
-                                            onClick: (e) => {
-                                                e.stopPropagation();
-                                                if (shouldShowExpander(u)) {
-                                                    toggleRowExpansion(u.id);
-                                                }
-                                            }
+                                            className: 'py-3 px-2 text-center min-w-max flex items-center justify-center', // Added flex for alignment
                                         },
-                                            React.createElement('span', { className: 'text-gray-500' },
-                                                shouldShowExpander(u)
-                                                    ? (expandedRows[u.id] ? '▲' : '▼')
-                                                    : '-'
-                                            )
+                                            shouldShowExpander(u)
+                                                ? React.createElement('button', { // Expander button
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        toggleRowExpansion(u.id);
+                                                    },
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1' // Added mr-1
+                                                }, expandedRows[u.id] ? '▲' : '▼')
+                                                : React.createElement('span', { className: 'mr-1' }, '-'), // Placeholder for non-expandable rows
+                                            React.createElement('button', { // Gear icon for editing user
+                                                onClick: (e) => {
+                                                    e.stopPropagation();
+                                                    openEditModal(
+                                                        u,
+                                                        `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
+                                                        doc(db, 'users', u.id),
+                                                        '' // Top-level user data
+                                                    );
+                                                },
+                                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                                            }, '⚙️')
                                         ),
                                         columnOrder.filter(col => col.visible).map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
