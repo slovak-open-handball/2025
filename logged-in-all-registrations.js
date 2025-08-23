@@ -571,6 +571,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const [localEditedData, setLocalEditedData] = React.useState(data); 
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
+    const inputRefs = React.useRef({}); // Na uchovávanie referencií na vstupné polia pre manipuláciu s kurzorom
 
     React.useEffect(() => {
         // Fetch user's role from window.globalUserProfileData safely
@@ -781,6 +782,88 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         });
     };
 
+    // Handler pre IČO a DIČ (iba čísla)
+    const handleNumericInput = (e, path) => {
+        const value = e.target.value.replace(/\D/g, ''); // Odstráni všetky nečíselné znaky
+        handleChange(path, value);
+    };
+
+    // Handler pre IČ DPH (prvé 2 veľké písmená, potom čísla)
+    const handleIcDphChange = (e, path) => {
+        let value = e.target.value;
+        let formattedValue = '';
+
+        // Prvé dva znaky musia byť veľké písmená
+        if (value.length > 0) {
+            formattedValue += value[0].toUpperCase();
+        }
+        if (value.length > 1) {
+            formattedValue += value[1].toUpperCase();
+        }
+        // Zvyšné znaky musia byť čísla
+        if (value.length > 2) {
+            formattedValue += value.substring(2).replace(/\D/g, '');
+        }
+        handleChange(path, formattedValue);
+    };
+
+    // Handler pre PSČ (číslice, medzera po 3. číslici)
+    const handlePostalCodeChange = (e) => {
+        const input = e.target;
+        const originalInput = input.value;
+        let cursorPosition = input.selectionStart;
+
+        // Odstráni všetky nečíselné znaky
+        let cleanedValue = originalInput.replace(/\D/g, '');
+        cleanedValue = cleanedValue.substring(0, 5); // Maximálne 5 číslic
+
+        let formattedValue = cleanedValue;
+        if (cleanedValue.length > 3) {
+            formattedValue = cleanedValue.substring(0, 3) + ' ' + cleanedValue.substring(3);
+            if (cursorPosition === 4 && originalInput.charAt(3) !== ' ' && cleanedValue.length === 4) {
+                // Ak bola medzera práve vložená a kurzor je za ňou
+                cursorPosition++;
+            }
+        } else if (cursorPosition === 4 && originalInput.length === 5 && originalInput.charAt(3) === ' ' && e.nativeEvent.inputType === 'deleteContentBackward') {
+            // Edge case: "123| 4" -> backspace by user, remove "3 "
+            cursorPosition -= 2; // Move cursor back past the '3' and space
+        } else if (originalInput.length === 3 && formattedValue.length === 4 && e.nativeEvent.inputType === 'insertText') {
+            // Edge case: User typed 3 chars, then 4th char. Space was inserted. Cursor moves.
+            cursorPosition++;
+        }
+
+        handleChange('postalCode', formattedValue);
+
+        // React controlled components make setting cursor position directly problematic.
+        // Use setTimeout to allow state update to render, then set cursor.
+        // This is a common workaround for this scenario.
+        setTimeout(() => {
+            if (inputRefs.current['postalCode']) {
+                inputRefs.current['postalCode'].selectionStart = cursorPosition;
+                inputRefs.current['postalCode'].selectionEnd = cursorPosition;
+            }
+        }, 0);
+    };
+
+    const handlePostalCodeKeyDown = (e) => {
+        const input = e.target;
+        const value = input.value;
+        const selectionStart = input.selectionStart;
+
+        if (e.key === 'Backspace' && selectionStart === 4 && value.charAt(selectionStart - 1) === ' ') {
+            e.preventDefault(); // Zabrániť predvolenému Backspace
+            const newValue = value.substring(0, selectionStart - 2) + value.substring(selectionStart);
+            handleChange('postalCode', newValue);
+            setTimeout(() => {
+                if (inputRefs.current['postalCode']) {
+                    inputRefs.current['postalCode'].selectionStart = selectionStart - 2;
+                    inputRefs.current['postalCode'].selectionEnd = selectionStart - 2;
+                }
+            }, 0);
+        }
+    };
+
+
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
@@ -821,11 +904,32 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             const labelText = formatLabel(path);
             let inputType = 'text';
             let isCheckbox = false;
+            let customProps = {}; // Pre vlastné handlery a inputMode
 
             if (typeof value === 'boolean') {
                 isCheckbox = true;
             } else if (path.toLowerCase().includes('password')) {
                 inputType = 'password';
+            } else if (path === 'billing.ico' || path === 'billing.dic') {
+                customProps = {
+                    onChange: (e) => handleNumericInput(e, path),
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                    maxLength: 10 // Príklad: IČO/DIČ má zvyčajne max 10 číslic
+                };
+            } else if (path === 'billing.icDph') {
+                customProps = {
+                    onChange: (e) => handleIcDphChange(e, path),
+                    maxLength: 12 // Príklad: SK1234567890 (2 písmená + 10 číslic)
+                };
+            } else if (path === 'postalCode') {
+                customProps = {
+                    onChange: handlePostalCodeChange,
+                    onKeyDown: handlePostalCodeKeyDown,
+                    inputMode: 'numeric',
+                    pattern: '[0-9 ]*',
+                    maxLength: 6 // Formát: DDD PP (3+1+2=6 znakov)
+                };
             }
 
             return React.createElement(
@@ -842,15 +946,49 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     })
                 ) : (
                     React.createElement('input', {
+                        ref: el => inputRefs.current[key] = el, // Uloženie referencie
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, path), path) : '',
-                        onChange: (e) => handleChange(path, e.target.value),
+                        value: localEditedData !== null ? formatDisplayValue(getNestedDataForInput(localEditedData, path), path) : '', // Použijeme novú funkciu
+                        onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
                         readOnly: !isSavable,
+                        ...customProps // Pridanie vlastných propov
                     })
                 )
             );
         };
+
+        // Pomocná funkcia na získanie správnych dát pre vstup, aby sa predišlo opakovanému formátovaniu
+        const getManagedValue = (obj, path) => {
+            const value = getNestedValue(obj, path);
+            if (path === 'postalCode') {
+                // Pre postalCode nechceme, aby bol formát 'DDD PP' odovzdaný do inputu ako hodnota,
+                // pretože to by kolidovalo s logikou onChange. Input sám formátuje.
+                // Tu potrebujeme len čisté číslice.
+                return String(value || '').replace(/\D/g, '');
+            }
+            return value;
+        };
+
+        // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
+        const getEditedDataForInput = (obj, path) => {
+            const value = getNestedValue(obj, path);
+            // Pre PSČ zabezpečíme, aby input dostal len vyčistené číslice, pretože formatDisplayValue už formátuje s medzerou
+            // a onChange potrebuje pracovať s číslami pred vlastnou formátovacou logikou.
+            if (path === 'postalCode') {
+                return String(value || '').replace(/\s/g, ''); // Odstráni medzery, aby input pracoval len s číslami
+            }
+            return value;
+        };
+        //  Použijeme novú pomocnú funkciu
+        const getNestedDataForInput = (obj, path) => {
+            const value = getNestedValue(obj, path);
+            if (path === 'postalCode') {
+                return String(value || '').replace(/\s/g, '');
+            }
+            return value;
+        };
+
 
         if (currentPath === '' && title.includes('Upraviť používateľa')) {
             const elements = [];
@@ -858,7 +996,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             // Render basic user fields first
             ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
                 if (fieldsToRenderForUser.includes(path)) {
-                    elements.push(renderField(path, getNestedValue(localEditedData, path)));
+                    elements.push(renderField(path, getNestedDataForInput(localEditedData, path)));
                 }
             });
 
@@ -871,7 +1009,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
                         React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
                         billingFieldsInScope.map(billingPath => {
-                            const billingValue = getNestedValue(localEditedData, billingPath);
+                            const billingValue = getNestedDataForInput(localEditedData, billingPath);
                             return renderField(billingPath, billingValue);
                         })
                     )
@@ -890,7 +1028,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
                         React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
                         addressFieldsInScope.map(addressPath => {
-                            const addressValue = getNestedValue(localEditedData, addressPath);
+                            const addressValue = getNestedDataForInput(localEditedData, addressPath);
                             return renderField(addressPath, addressValue);
                         })
                     )
@@ -899,7 +1037,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             // Render 'note' field last, if it's in scope
             if (fieldsToRenderForUser.includes('note')) {
-                elements.push(renderField('note', getNestedValue(localEditedData, 'note')));
+                elements.push(renderField('note', getNestedDataForInput(localEditedData, 'note')));
             }
 
             return elements.filter(Boolean); // Filter out any nulls if fieldsToRenderForUser excluded some
