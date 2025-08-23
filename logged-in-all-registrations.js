@@ -717,14 +717,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
+        // Explicitly exclude 'isMenuToggle' if the modal title is for a user
+        if (title.includes('Upraviť používateľa') && currentPath.split('.').pop() === 'isMenuToggle') {
+            return null;
+        }
+
         if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitive value or Timestamp
              const labelText = currentPath ? formatLabel(currentPath) : 'Hodnota';
 
              // Skip displaying specific fields for 'Upraviť používateľa'
-             // This condition needs to check the last part of the currentPath, which is the actual key
              const lastPathPart = currentPath.split('.').pop();
              if (title.includes('Upraviť používateľa')) {
-                 if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'isMenuToggle', 'role'].includes(lastPathPart)) {
+                 if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(lastPathPart)) {
                      return null;
                  }
              }
@@ -768,11 +772,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 return null;
             }
 
+            // Exclude 'isMenuToggle' if the modal title is for a user, regardless of path
+            if (title.includes('Upraviť používateľa') && key === 'isMenuToggle') {
+                return null;
+            }
+
             const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
 
             // Skip displaying specific fields for 'Upraviť používateľa'
             if (title.includes('Upraviť používateľa')) {
-                 if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'isMenuToggle', 'role'].includes(key)) {
+                 if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
                      return null;
                  }
             }
