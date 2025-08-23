@@ -777,9 +777,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         // Define all possible user fields for editing
         const allUserFields = [
-            'firstName', 'lastName', 'contactPhoneNumber',
+            'firstName', 'lastName', 'contactPhoneNumber', 'note', // note is now top-level
             'billing.clubName', 'billing.ico', 'billing.dic', 'billing.icDph',
-            'street', 'houseNumber', 'city', 'postalCode', 'country', 'note'
+            'street', 'houseNumber', 'city', 'postalCode', 'country'
         ];
 
         let fieldsToRenderForUser = allUserFields;
@@ -841,8 +841,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (currentPath === '' && title.includes('Upraviť používateľa')) {
             const elements = [];
             
-            // Render basic user fields first
-            ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
+            // Render basic user fields first: firstName, lastName, contactPhoneNumber, note
+            ['firstName', 'lastName', 'contactPhoneNumber', 'note'].forEach(path => {
                 if (fieldsToRenderForUser.includes(path)) {
                     elements.push(renderField(path, getNestedValue(localEditedData, path)));
                 }
@@ -864,9 +864,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 );
             }
 
-            // Render address section if relevant fields are included
+            // Render address section if relevant fields are included, excluding 'note'
             const addressFieldsInScope = allUserFields.filter(p => 
-                ['street', 'houseNumber', 'city', 'postalCode', 'country', 'note'].includes(p) && fieldsToRenderForUser.includes(p)
+                ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
             );
             
             if (addressFieldsInScope.length > 0) {
