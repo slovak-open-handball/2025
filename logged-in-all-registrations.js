@@ -621,11 +621,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (value === null || value === undefined) return '';
         if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
         
-        // Explicitne spracovať objekty Firebase Timestamp
-        if (value && typeof value === 'object' && value.toDate && typeof value.toDate === 'function') {
+        let date;
+        // Explicitne spracovať objekty Firebase Timestamp alebo podobné objekty s 'seconds' a 'nanoseconds'
+        if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+             if (typeof value.toDate === 'function') { // Ak je to skutočný Timestamp
+                date = value.toDate();
+            } else { // Ak je to len štruktúra podobná Timestampu
+                date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
+            }
             try {
                 // Formát DD. MM. YYYY hh:mm pre modálne okno
-                const date = value.toDate();
                 const options = {
                     day: '2-digit',
                     month: '2-digit',
@@ -1006,7 +1011,7 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: 'Krajina', type: 'string', visible: true  },
+    { id: 'country', type: true, visible: true },
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
@@ -1488,8 +1493,24 @@ function AllRegistrationsApp() {
           }
 
           if (type === 'date') {
-              const dateA = valA && typeof valA.toDate === 'function' ? valA.toDate() : new Date(0);
-              const dateB = valB && typeof valB.toDate === 'function' ? valB.toDate() : new Date(0);
+              // Ensure we're comparing actual Date objects, handling the {seconds, nanoseconds} map format
+              let dateA, dateB;
+              if (valA && typeof valA.toDate === 'function') {
+                  dateA = valA.toDate();
+              } else if (valA && typeof valA === 'object' && valA.seconds !== undefined && valA.nanoseconds !== undefined) {
+                  dateA = new Date(valA.seconds * 1000 + valA.nanoseconds / 1000000);
+              } else {
+                  dateA = new Date(0); // Fallback to epoch if not a valid date format
+              }
+
+              if (valB && typeof valB.toDate === 'function') {
+                  dateB = valB.toDate();
+              } else if (valB && typeof valB === 'object' && valB.seconds !== undefined && valB.nanoseconds !== undefined) {
+                  dateB = new Date(valB.seconds * 1000 + valB.nanoseconds / 1000000);
+              } else {
+                  dateB = new Date(0); // Fallback to epoch if not a valid date format
+              }
+              
               return direction === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
           } else if (type === 'boolean') {
               const boolA = Boolean(valA);
@@ -1514,9 +1535,18 @@ function AllRegistrationsApp() {
       setFilterColumn(column);
       const values = [...new Set(allUsers.map(u => {
           let val;
-          if (column === 'registrationDate' && u.registrationDate && typeof u.registrationDate.toDate === 'function') {
+          if (column === 'registrationDate') {
+              let date;
+              const registrationDateValue = u.registrationDate;
+              if (registrationDateValue && typeof registrationDateValue.toDate === 'function') {
+                  date = registrationDateValue.toDate();
+              } else if (registrationDateValue && typeof registrationDateValue === 'object' && registrationDateValue.seconds !== undefined && registrationDateValue.nanoseconds !== undefined) {
+                  date = new Date(registrationDateValue.seconds * 1000 + registrationDateValue.nanoseconds / 1000000);
+              } else {
+                  return ''; // Return empty string for invalid date values
+              }
+
               // Použiť rovnaký formát ako v tabuľke
-              const date = u.registrationDate.toDate();
               const options = {
                   day: '2-digit',
                   month: '2-digit',
@@ -1581,9 +1611,18 @@ function AllRegistrationsApp() {
           if (filterValues.length > 0) {
               usersToDisplay = usersToDisplay.filter(user => {
                   let userValue;
-                  if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
+                  if (column === 'registrationDate') {
+                      let date;
+                      const registrationDateValue = user.registrationDate;
+                      if (registrationDateValue && typeof registrationDateValue.toDate === 'function') {
+                          date = registrationDateValue.toDate();
+                      } else if (registrationDateValue && typeof registrationDateValue === 'object' && registrationDateValue.seconds !== undefined && registrationDateValue.nanoseconds !== undefined) {
+                          date = new Date(registrationDateValue.seconds * 1000 + registrationDateValue.nanoseconds / 1000000);
+                      } else {
+                          return false; // Filter out if date is not valid
+                      }
+
                       // Použiť rovnaký formát ako pri získavaní jedinečných hodnôt
-                      const date = user.registrationDate.toDate();
                       const options = {
                           day: '2-digit',
                           month: '2-digit',
@@ -1821,9 +1860,21 @@ function AllRegistrationsApp() {
 
     // Špecifické formátovanie na základe ID stĺpca
     if (columnId === 'registrationDate') {
+        let date;
+        // Ak je to Firebase Timestamp objekt s .toDate() metódou
         if (value && typeof value.toDate === 'function') {
+            date = value.toDate();
+        } 
+        // Ak je to mapa {seconds, nanoseconds} a nemá .toDate() metódu
+        else if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+            // Vytvorenie Date objektu zo sekúnd a nanosekúnd
+            date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
+        } else {
+            return '-'; // Vrátiť pomlčku, ak hodnota nie je platný dátumový formát
+        }
+
+        try {
             // Formát DD. MM. YYYY hh:mm
-            const date = value.toDate();
             const options = {
                 day: '2-digit',
                 month: '2-digit',
@@ -1833,6 +1884,9 @@ function AllRegistrationsApp() {
                 hour12: false // Použiť 24-hodinový formát
             };
             return date.toLocaleString('sk-SK', options);
+        } catch (e) {
+            console.error("Chyba pri formátovaní dátumu v tabuľke:", value, e);
+            return '[Chyba Dátumu]'; // Záložná reťazcová reprezentácia pri chybe
         }
     } else if (columnId === 'approved') {
         return value ? 'Áno' : 'Nie';
