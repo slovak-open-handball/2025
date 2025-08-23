@@ -739,7 +739,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             return null;
         }
 
-        if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitívna hodnota alebo Timestamp
+        if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) { // Primitívna hodnota alebo Timestamp
              const labelText = currentPath ? formatLabel(currentPath) : 'Hodnota';
 
              // Preskočiť zobrazovanie špecifických polí pre 'Upraviť používateľa'
@@ -806,9 +806,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             const labelText = formatLabel(fullKeyPath);
 
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                // Ak je to známy 'plochý' objekt (adresa, fakturácia), vykresliť jeho obsah do jedného vstupu.
-                // Inak, spracovať ako rozbaľovaciu sekciu.
-                if (['address', 'billing', 'packageDetails', 'accommodation', 'arrival'].includes(key)) {
+                // Ponechať 'address', 'packageDetails', 'accommodation', 'arrival' ako "ploché" objekty
+                // 'billing' bol odstránený z tohto zoznamu, aby sa spracoval rekurzívne
+                if (['address', 'packageDetails', 'accommodation', 'arrival'].includes(key)) {
                      return React.createElement(
                         'div',
                         { key: fullKeyPath, className: 'mb-4' },
@@ -822,7 +822,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         })
                     );
                 }
-                // Pre iné vnorené objekty, vytvoriť rozbaľovaciu sekciu
+                // Pre iné vnorené objekty (vrátane 'billing'), vytvoriť rozbaľovaciu sekciu
                 return React.createElement(
                     CollapsibleSection,
                     { key: fullKeyPath, title: labelText, defaultOpen: false, noOuterStyles: true },
