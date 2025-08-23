@@ -808,21 +808,29 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             // Special handling for objects that are NOT arrays and NOT Timestamps,
             // which should always be visible (i.e., defaultOpen: true).
             // This includes 'billing', 'address', 'packageDetails', 'accommodation', 'arrival'.
-            // For these, we want to expand their *internal* fields, not just show a single text input for the whole object.
+            // For 'billing' specifically, we want its children to be rendered directly, not in a CollapsibleSection for billing itself.
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                const shouldBeAlwaysOpen = ['billing', 'address', 'packageDetails', 'accommodation', 'arrival'].includes(key);
-
-                return React.createElement(
-                    CollapsibleSection,
-                    {
-                        key: fullKeyPath,
-                        title: labelText,
-                        defaultOpen: shouldBeAlwaysOpen, // Set to true for billing, address etc.
-                        noOuterStyles: true // Keep it clean without outer borders
-                    },
-                    // Recursively render fields within this object
-                    renderDataFields(value, fullKeyPath)
-                );
+                // If it's one of these "always open" objects, render its children directly
+                if (['billing', 'address', 'packageDetails', 'accommodation', 'arrival'].includes(key)) {
+                    return React.createElement(
+                        'div',
+                        { key: fullKeyPath, className: 'pl-4 border-l border-gray-200 mb-4' }, // Add some indentation for clarity
+                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, labelText), // Add a subheading for clarity
+                        renderDataFields(value, fullKeyPath) // Recursively render fields within this object
+                    );
+                } else {
+                    // For other nested objects, keep them collapsible by default
+                    return React.createElement(
+                        CollapsibleSection,
+                        {
+                            key: fullKeyPath,
+                            title: labelText,
+                            defaultOpen: false, 
+                            noOuterStyles: true 
+                        },
+                        renderDataFields(value, fullKeyPath)
+                    );
+                }
             }
             // Existing handling for arrays of objects (which should remain collapsible)
             else if (Array.isArray(value)) {
