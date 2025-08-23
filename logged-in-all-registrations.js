@@ -550,32 +550,45 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const modalRef = React.useRef(null);
     const [localEditedData, setLocalEditedData] = React.useState(data);
 
+    // Add a state to store the user's role, fetched from global userProfileData
+    const [userRole, setUserRole] = React.useState('');
+
     React.useEffect(() => {
-        // Deep clone to ensure immutability
+        // Fetch user's role from window.globalUserProfileData
+        if (window.globalUserProfileData && window.globalUserProfileData.role) {
+            setUserRole(window.globalUserProfileData.role);
+        } else {
+            setUserRole(''); // Default to empty if not found
+        }
+
         const initialData = JSON.parse(JSON.stringify(data));
 
-        // Ensure address object and its sub-fields exist for binding if it's a user edit modal
         if (title.includes('Upraviť používateľa')) {
-            if (!initialData.address) initialData.address = {};
-            if (initialData.address.street === undefined) initialData.address.street = '';
-            if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
-            if (initialData.address.city === undefined) initialData.address.city = '';
-            if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
-            if (initialData.address.country === undefined) initialData.address.country = '';
+            // For non-admin users, or if role is not set, initialize all user fields
+            if (userRole !== 'admin') {
+                if (!initialData.address) initialData.address = {};
+                if (initialData.address.street === undefined) initialData.address.street = '';
+                if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
+                if (initialData.address.city === undefined) initialData.address.city = '';
+                if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
+                if (initialData.address.country === undefined) initialData.address.country = '';
 
-            // Ensure billing object and its sub-fields exist for binding
-            if (!initialData.billing) initialData.billing = {};
-            if (initialData.billing.clubName === undefined) initialData.billing.clubName = '';
-            if (initialData.billing.ico === undefined) initialData.billing.ico = '';
-            if (initialData.billing.dic === undefined) initialData.billing.dic = '';
-            if (initialData.billing.icDph === undefined) initialData.billing.icDph = '';
+                if (!initialData.billing) initialData.billing = {};
+                if (initialData.billing.clubName === undefined) initialData.billing.clubName = '';
+                if (initialData.billing.ico === undefined) initialData.billing.ico = '';
+                if (initialData.billing.dic === undefined) initialData.billing.dic = '';
+                if (initialData.billing.icDph === undefined) initialData.billing.icDph = '';
 
-            // And for note, which is a top-level field
-            if (initialData.note === undefined) initialData.note = '';
+                if (initialData.contactPhoneNumber === undefined) initialData.contactPhoneNumber = '';
+                if (initialData.note === undefined) initialData.note = '';
+            }
+            // Always initialize firstName and lastName regardless of role
+            if (initialData.firstName === undefined) initialData.firstName = '';
+            if (initialData.lastName === undefined) initialData.lastName = '';
         }
         
-        setLocalEditedData(initialData); // Reset local data when `data` prop changes or if it's initialized
-    }, [data, title]); // Depend on 'data' and 'title' to re-initialize for different modals/data
+        setLocalEditedData(initialData); 
+    }, [data, title, userRole]); // Depend on userRole for re-initialization
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -597,7 +610,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     // Helper to format keys for labels
     const formatLabel = (key) => {
-        // Handle common nested keys for better display
         if (key === 'billing.clubName') return 'Názov klubu (Fakturácia)';
         if (key === 'billing.ico') return 'IČO (Fakturácia)';
         if (key === 'billing.dic') return 'DIČ (Fakturácia)';
@@ -623,10 +635,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'role') return 'Rola';
         if (key === 'firstName') return 'Meno';
         if (key === 'lastName') return 'Priezvisko';
-        if (key === 'address.houseNumber') return 'Číslo domu'; // Opravené pre presnú cestu
-        if (key === 'address.city') return 'Mesto/Obec';       // Opravené pre presnú cestu
-        if (key === 'address.country') return 'Krajina';     // Opravené pre presnú cestu
-        if (key === 'address.street') return 'Ulica';           // Opravené pre presnú cestu
+        if (key === 'address.houseNumber') return 'Číslo domu';
+        if (key === 'address.city') return 'Mesto/Obec';
+        if (key === 'address.country') return 'Krajina';
+        if (key === 'address.street') return 'Ulica';
         if (key === 'address.postalCode') return 'PSČ';
         if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
         if (key === 'isMenuToggled') return 'Prepínač menu';
@@ -645,15 +657,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
         
         let date;
-        // Explicitne spracovať objekty Firebase Timestamp alebo podobné objekty s 'seconds' a 'nanoseconds'
         if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
-             if (typeof value.toDate === 'function') { // Ak je to skutočný Timestamp
+             if (typeof value.toDate === 'function') { 
                 date = value.toDate();
-            } else { // Ak je to len štruktúra podobná Timestampu
+            } else { 
                 date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
             }
             try {
-                // Formát DD. MM. YYYY hh:mm pre modálne okno
                 const options = {
                     day: '2-digit',
                     month: '2-digit',
@@ -665,15 +675,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 return date.toLocaleString('sk-SK', options);
             } catch (e) {
                 console.error("Chyba pri formátovaní Timestamp:", value, e);
-                return `[Chyba Timestamp: ${e.message}]`; // Záložná reťazcová reprezentácia
+                return `[Chyba Timestamp: ${e.message}]`; 
             }
         }
         
-        // Spracovať polia
         if (Array.isArray(value)) {
             return value.map(item => {
                 if (typeof item === 'object' && item !== null) {
-                    // Ak objekt v poli, pokúsiť sa ho previesť na reťazec JSON, alebo použiť zástupný symbol
                     try {
                         return JSON.stringify(item);
                     } catch (e) {
@@ -685,44 +693,39 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             }).join(', ');
         }
         
-        // Spracovať iné objekty
         if (typeof value === 'object') {
-            // Heuristika pre bežné objekty
-            if (value.street || value.city) { // Heuristika pre adresné objekty
+            if (value.street || value.city) { 
                 return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
             }
-            if (value.name || value.type) { // Heuristika pre balík, ubytovanie, príchod
+            if (value.name || value.type) { 
                 return value.name || value.type;
             }
-            // Záložná možnosť pre akýkoľvek iný objekt
             try {
                 return JSON.stringify(value);
             } catch (e) {
                 console.error("Chyba pri prevode objektu na reťazec:", value, e);
-                return '[Chyba objektu]'; // Záložná reťazcová reprezentácia
+                return '[Chyba objektu]'; 
             }
         }
         
-        return String(value); // Predvolene na reťazec pre primitívne typy
+        return String(value); 
     };
 
     // Helper to handle input changes for nested data
     const handleChange = (path, newValue) => {
         setLocalEditedData(prevData => {
-            // Deep clone to ensure immutability
             const newData = JSON.parse(JSON.stringify(prevData)); 
             let current = newData;
             const pathParts = path.split('.');
 
             for (let i = 0; i < pathParts.length - 1; i++) {
                 const part = pathParts[i];
-                const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/); // Check for array index in path part e.g. "playerDetails[0]"
+                const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/); 
                 
                 if (arrayMatch) {
                     const arrayKey = arrayMatch[1];
                     const arrayIndex = parseInt(arrayMatch[2]);
                     if (!current[arrayKey]) current[arrayKey] = [];
-                    // Ensure the array element exists
                     if (!current[arrayKey][arrayIndex]) current[arrayKey][arrayIndex] = {};
                     current = current[arrayKey][arrayIndex];
                 } else {
@@ -739,11 +742,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 if (!current[arrayKey]) current[arrayKey] = [];
                 current[arrayKey][arrayIndex] = newValue;
             } else {
-                // Konverzia typu v prípade potreby (napr. 'Áno'/'Nie' pre boolean)
                 if (typeof getNestedValue(data, path) === 'boolean') {
                     current[lastPart] = (newValue.toLowerCase() === 'áno' || newValue.toLowerCase() === 'true');
                 } else if (typeof getNestedValue(data, path) === 'number') {
-                    current[lastPart] = parseFloat(newValue) || 0; // Prevod na číslo, ak bol pôvodne číslo
+                    current[lastPart] = parseFloat(newValue) || 0; 
                 } else {
                     current[lastPart] = newValue;
                 }
@@ -752,7 +754,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         });
     };
 
-    // Určiť, či je možné dáta uložiť (t.j. existuje platný targetDocRef pre Firestore)
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
@@ -761,7 +762,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             return null;
         }
 
-        const userFieldOrder = [
+        let userFieldOrder = [
             'firstName',
             'lastName',
             'contactPhoneNumber',
@@ -776,6 +777,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             'address.country',
             'note'
         ];
+
+        // Conditional rendering for admin users
+        if (title.includes('Upraviť používateľa') && userRole === 'admin') {
+            userFieldOrder = [
+                'firstName',
+                'lastName'
+            ];
+        }
 
         const renderedFields = new Set(); 
 
@@ -827,30 +836,38 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (currentPath === '' && title.includes('Upraviť používateľa')) {
             return userFieldOrder.map(path => {
                 const value = getNestedValue(localEditedData, path);
-                if (path.startsWith('billing.') && !renderedFields.has('billing')) {
-                    renderedFields.add('billing'); 
-                    return React.createElement(
-                        'div',
-                        { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel('billing')),
-                        userFieldOrder.filter(p => p.startsWith('billing.')).map(billingPath => {
-                            const billingValue = getNestedValue(localEditedData, billingPath);
-                            return renderField(billingPath, billingValue);
-                        })
-                    );
-                } else if (path.startsWith('address.') && !renderedFields.has('address')) {
-                    renderedFields.add('address'); 
-                    return React.createElement(
-                        'div',
-                        { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel('address')),
-                        userFieldOrder.filter(p => p.startsWith('address.')).map(addressPath => {
-                            const addressValue = getNestedValue(localEditedData, addressPath);
-                            return renderField(addressPath, addressValue);
-                        })
-                    );
-                } else if (!path.includes('.')) { 
-                    return renderField(path, value);
+                
+                // For billing and address, only render if not an admin
+                if (userRole !== 'admin') {
+                    if (path.startsWith('billing.') && !renderedFields.has('billing')) {
+                        renderedFields.add('billing'); 
+                        return React.createElement(
+                            'div',
+                            { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel('billing')),
+                            userFieldOrder.filter(p => p.startsWith('billing.')).map(billingPath => {
+                                const billingValue = getNestedValue(localEditedData, billingPath);
+                                return renderField(billingPath, billingValue);
+                            })
+                        );
+                    } else if (path.startsWith('address.') && !renderedFields.has('address')) {
+                        renderedFields.add('address'); 
+                        return React.createElement(
+                            'div',
+                            { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel('address')),
+                            userFieldOrder.filter(p => p.startsWith('address.')).map(addressPath => {
+                                const addressValue = getNestedValue(localEditedData, addressPath);
+                                return renderField(addressPath, addressValue);
+                            })
+                        );
+                    } else if (!path.includes('.')) { 
+                        return renderField(path, value);
+                    }
+                } else { // Admin role, only render firstName and lastName
+                    if (['firstName', 'lastName'].includes(path)) {
+                        return renderField(path, value);
+                    }
                 }
                 return null;
             }).filter(Boolean); 
