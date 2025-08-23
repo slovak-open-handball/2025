@@ -869,7 +869,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         type: 'checkbox',
                         className: `form-checkbox h-5 w-5 text-blue-600`,
                         checked: localEditedData !== null && getNestedValue(localEditedData, fullKeyPath) === true,
-                        onChange: (e) => handleChange(currentPath, e.target.checked),
+                        onChange: (e) => handleChange(fullKeyPath, e.target.checked),
                         disabled: !isSavable
                     })
                 ) : (
@@ -1006,7 +1006,7 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: 'Krajina', type: 'string', visible: true },
+    { id: 'country', type: true, visible: true },
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
@@ -1756,7 +1756,7 @@ function AllRegistrationsApp() {
 
             const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, dataToSave);
 
-            // Vytvoriť objekt aktualizácií pre Firestore
+            const updates = {};
             // Špeciálne ošetrenie pre 'teams' - uistite sa, že sa vždy aktualizuje celé pole
             if (topLevelField === 'teams' && updatedObject.teams) {
                 // Konvertovať objekt kategórií tímov späť na pole pre uloženie, ak je to potrebné
