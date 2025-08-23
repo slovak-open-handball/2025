@@ -5,6 +5,7 @@
 // Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
 // Tento súbor je načítaný ako modul, preto môže používať importy.
 import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { countryDialCodes } from './countryDialCodes.js'; // Import zoznamu predvolieb
 
 // NotificationModal Component pre zobrazovanie dočasných správ
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
@@ -57,6 +58,74 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
       React.createElement('p', { className: 'font-semibold' }, message)
     )
   );
+}
+
+// DialCodeSelectionModal Component - Nové modálne okno pre výber predvoľby
+function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDialCode }) {
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const modalRef = React.useRef(null);
+
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    const filteredCodes = countryDialCodes.filter(country =>
+        country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        country.dialCode.includes(searchTerm)
+    );
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4' },
+        React.createElement(
+            'div',
+            { ref: modalRef, className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto' },
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-lg font-semibold' }, 'Vybrať predvoľbu'),
+                React.createElement('button', {
+                    className: 'text-gray-500 hover:text-gray-700',
+                    onClick: onClose
+                }, '✕')
+            ),
+            React.createElement('input', {
+                type: 'text',
+                placeholder: 'Hľadať krajinu alebo kód...',
+                className: 'w-full px-3 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                value: searchTerm,
+                onChange: (e) => setSearchTerm(e.target.value)
+            }),
+            React.createElement(
+                'div',
+                { className: 'space-y-2' },
+                filteredCodes.map(country =>
+                    React.createElement('button', {
+                        key: country.code,
+                        className: `w-full text-left p-2 rounded-md hover:bg-blue-100 ${currentDialCode === country.dialCode ? 'bg-blue-200 font-medium' : ''}`,
+                        onClick: () => {
+                            onSelectDialCode(country.dialCode);
+                            onClose();
+                        }
+                    }, `${country.name} (${country.dialCode})`)
+                )
+            )
+        )
+    );
 }
 
 // FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
@@ -565,6 +634,48 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     }
 }
 
+// Pomocné funkcie pre spracovanie telefónneho čísla
+const parsePhoneNumber = (fullPhoneNumber, dialCodes) => {
+    let bestMatchDialCode = '';
+    let numberWithoutDialCode = String(fullPhoneNumber || '').replace(/\D/g, ''); // Odstrániť nečíselné znaky
+
+    // Zoradiť predvoľby zostupne podľa dĺžky pre správne priradenie najdlhšej zhody
+    const sortedDialCodes = [...dialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+
+    for (const country of sortedDialCodes) {
+        const cleanDialCode = country.dialCode.replace('+', '');
+        if (numberWithoutDialCode.startsWith(cleanDialCode)) {
+            bestMatchDialCode = country.dialCode;
+            numberWithoutDialCode = numberWithoutDialCode.substring(cleanDialCode.length);
+            break;
+        }
+    }
+
+    const defaultDialCode = dialCodes.find(c => c.code === 'SK')?.dialCode || (dialCodes.length > 0 ? dialCodes[0].dialCode : '');
+
+    return {
+        dialCode: bestMatchDialCode || defaultDialCode,
+        numberWithoutDialCode: numberWithoutDialCode
+    };
+};
+
+const formatNumberGroups = (numberString) => {
+    if (!numberString) return '';
+    return numberString.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 '); // Odstrániť nečíselné a rozdeliť
+};
+
+const combinePhoneNumber = (dialCode, numberWithoutDialCode) => {
+    const cleanDialCode = String(dialCode || '').replace(/\D/g, '');
+    const cleanNumber = String(numberWithoutDialCode || '').replace(/\D/g, '');
+    if (cleanDialCode && cleanNumber) {
+        return `+${cleanDialCode}${cleanNumber}`;
+    } else if (cleanNumber) {
+        return cleanNumber;
+    }
+    return '';
+};
+
+
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
 function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, originalDataPath }) {
     const modalRef = React.useRef(null);
@@ -572,6 +683,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
     const inputRefs = React.useRef({}); // Na uchovávanie referencií na vstupné polia pre manipuláciu s kurzorom
+
+    // Stavy pre Phone Input
+    const [displayDialCode, setDisplayDialCode] = React.useState('');
+    const [displayPhoneNumber, setDisplayPhoneNumber] = React.useState('');
+    const [isDialCodeModalOpen, setIsDialCodeModalOpen] = React.useState(false);
 
     React.useEffect(() => {
         // Fetch user's role from window.globalUserProfileData safely
@@ -605,6 +721,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             if (initialData.postalCode === undefined) initialData.postalCode = '';
             if (initialData.country === undefined) initialData.country = '';
             if (initialData.note === undefined) initialData.note = '';
+
+            // Initial parsing of phone number
+            const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
+            setDisplayDialCode(dialCode);
+            setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
         }
         
         setLocalEditedData(initialData); 
@@ -889,6 +1010,19 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
     };
 
+    // Handler pre ContactPhoneNumber
+    const handleContactPhoneNumberChange = (e) => {
+        const value = e.target.value;
+        const cleanedValue = value.replace(/\D/g, ''); // Iba číslice
+        setDisplayPhoneNumber(formatNumberGroups(cleanedValue)); // Formátovať pre zobrazenie
+        // Skutočná hodnota sa uloží pri volaní onSave
+    };
+
+    const handleSelectDialCode = (newDialCode) => {
+        setDisplayDialCode(newDialCode);
+        // Ak je potrebné okamžite aktualizovať localEditedData, môžete to urobiť tu
+        // Ale pre "contactPhoneNumber" to necháme na onSave, aby sme sa vyhli zbytočným re-renderom
+    };
 
     const isSavable = targetDocRef !== null;
 
@@ -956,6 +1090,34 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     pattern: '[0-9 ]*',
                     maxLength: 6 // Formát: DDD PP (3+1+2=6 znakov)
                 };
+            } else if (path === 'contactPhoneNumber') {
+                const countryName = countryDialCodes.find(c => c.dialCode === displayDialCode)?.name;
+                return React.createElement(
+                    'div',
+                    { key: path, className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                    React.createElement(
+                        'div',
+                        { className: 'flex' },
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                            onClick: () => setIsDialCodeModalOpen(true),
+                            disabled: !isSavable
+                        }, countryName ? `${countryName} (${displayDialCode})` : displayDialCode || 'Vybrať predvoľbu'),
+                        React.createElement('input', {
+                            ref: el => inputRefs.current[path] = el,
+                            type: 'tel',
+                            className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: displayPhoneNumber,
+                            onChange: handleContactPhoneNumberChange,
+                            readOnly: !isSavable,
+                            inputMode: 'tel',
+                            placeholder: 'Zadajte telefónne číslo',
+                            maxLength: 15 // Príklad: pre 10 číslic + 3 medzery
+                        })
+                    )
+                );
             }
 
             return React.createElement(
@@ -989,6 +1151,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             const value = getNestedValue(obj, path);
             if (path === 'postalCode') {
                 return String(value || '').replace(/\s/g, '');
+            }
+            // For contactPhoneNumber, we are handling its display state separately,
+            // so this function should return the raw value if it's not postalCode.
+            if (path === 'contactPhoneNumber') {
+                // Return the full number, parsePhoneNumber will handle extraction
+                return value;
             }
             return value;
         };
@@ -1138,10 +1306,23 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 }, 'Zavrieť'),
                 isSavable && React.createElement('button', {
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
-                    onClick: () => onSave(localEditedData, targetDocRef, originalDataPath)
+                    onClick: () => {
+                        const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
+                        const updatedDataForSave = {
+                            ...localEditedData,
+                            contactPhoneNumber: fullPhoneNumber
+                        };
+                        onSave(updatedDataForSave, targetDocRef, originalDataPath);
+                    }
                 }, 'Uložiť zmeny')
             )
-        )
+        ),
+        React.createElement(DialCodeSelectionModal, {
+            isOpen: isDialCodeModalOpen,
+            onClose: () => setIsDialCodeModalOpen(false),
+            onSelectDialCode: handleSelectDialCode,
+            currentDialCode: displayDialCode
+        })
     );
 }
 
@@ -2124,6 +2305,10 @@ function AllRegistrationsApp() {
         return value ? 'Áno' : 'Nie';
     } else if (columnId === 'postalCode') {
         return formatPostalCode(value); // Znovu použije existujúcu funkciu formatPostalCode
+    } else if (columnId === 'contactPhoneNumber') {
+        const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value, countryDialCodes);
+        const formattedNumber = formatNumberGroups(numberWithoutDialCode);
+        return `${dialCode} ${formattedNumber}`;
     }
     // Handle top-level address fields
     else if (['street', 'houseNumber', 'city', 'country'].includes(columnId)) {
