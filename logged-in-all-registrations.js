@@ -721,8 +721,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
              const labelText = currentPath ? formatLabel(currentPath) : 'Hodnota';
 
              // Skip displaying specific fields for 'Upraviť používateľa'
+             // This condition needs to check the last part of the currentPath, which is the actual key
+             const lastPathPart = currentPath.split('.').pop();
              if (title.includes('Upraviť používateľa')) {
-                 if (currentPath === 'passwordLastChanged' || currentPath === 'registrationDate' || currentPath === 'email' || currentPath === 'approved' || currentPath === 'isMenuToggle' || currentPath === 'role') {
+                 if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'isMenuToggle', 'role'].includes(lastPathPart)) {
                      return null;
                  }
              }
@@ -770,7 +772,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             // Skip displaying specific fields for 'Upraviť používateľa'
             if (title.includes('Upraviť používateľa')) {
-                 if (key === 'passwordLastChanged' || key === 'registrationDate' || key === 'email' || key === 'approved' || key === 'isMenuToggle' || key === 'role') {
+                 if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'isMenuToggle', 'role'].includes(key)) {
                      return null;
                  }
             }
