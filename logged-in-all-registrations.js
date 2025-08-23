@@ -322,7 +322,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 
 
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db }) {
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage }) {
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -452,10 +452,11 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                             React.createElement('button', { // Gear icon for editing member details
                                 onClick: (e) => {
                                     e.stopPropagation();
-                                    // Pridaná kontrola pre team._userId
+                                    // Kontrola pre team._userId: Ak chýba, otvorí modálne okno v režime iba na prezeranie.
                                     if (!team._userId || typeof team._userId !== 'string') {
-                                        console.error("Chyba: Chýba ID používateľa pre tím. Nemôžem otvoriť editačné modálne okno.", team);
-                                        openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null); // Otvoriť v režime iba na čítanie
+                                        console.warn("Upozornenie: Chýba ID používateľa pre tím. Modálne okno sa otvorí len v režime prezerania.", team);
+                                        openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null);
+                                        setUserNotificationMessage("Chýba ID používateľa. Údaje člena sa otvoria v režime iba na prezeranie.", 'info');
                                         return;
                                     }
 
@@ -465,8 +466,9 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     } else if (member.originalArray === 'driverDetails') {
                                         memberPath = `teams.${team._category}[${team._teamIndex}].driverDetails`;
                                     } else {
-                                        console.warn("Nepodarilo sa určiť cestu člena pre uloženie. Modálne okno bude len na prezeranie.");
+                                        console.warn("Upozornenie: Nepodarilo sa určiť cestu člena pre uloženie. Modálne okno sa otvorí len v režime prezerania.");
                                         openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null);
+                                        setUserNotificationMessage("Nepodarilo sa určiť cestu člena. Údaje sa otvoria v režime iba na prezeranie.", 'info');
                                         return;
                                     }
 
@@ -1895,6 +1897,13 @@ function AllRegistrationsApp() {
                                                 React.createElement('button', { // Gear icon for editing team
                                                     onClick: (e) => {
                                                         e.stopPropagation();
+                                                        // Kontrola pre team._userId: Ak chýba, otvorí modálne okno v režime iba na prezeranie.
+                                                        if (!team._userId || typeof team._userId !== 'string') {
+                                                            console.warn("Upozornenie: Chýba ID používateľa pre tím. Modálne okno sa otvorí len v režime prezerania.", team);
+                                                            openEditModal(team, `Prezerať tím: ${team.teamName}`, null, null);
+                                                            setUserNotificationMessage("Chýba ID používateľa pre tím. Údaje tímu sa otvoria v režime iba na prezeranie.", 'info');
+                                                            return;
+                                                        }
                                                         openEditModal(
                                                             team,
                                                             `Upraviť tím: ${team.teamName}`,
@@ -1928,7 +1937,8 @@ function AllRegistrationsApp() {
                                                     showUsersChecked: showUsers,
                                                     showTeamsChecked: showTeams,
                                                     openEditModal: openEditModal, // Preposielame openEditModal
-                                                    db: db // Preposielame db
+                                                    db: db, // Preposielame db
+                                                    setUserNotificationMessage: setUserNotificationMessage // Preposielame setUserNotificationMessage
                                                 })
                                             )
                                         )
@@ -2025,7 +2035,8 @@ function AllRegistrationsApp() {
                                                         showUsersChecked: showUsers,
                                                         showTeamsChecked: showTeams,
                                                         openEditModal: openEditModal, // Preposielame openEditModal
-                                                        db: db // Preposielame db
+                                                        db: db, // Preposielame db
+                                                        setUserNotificationMessage: setUserNotificationMessage // Preposielame setUserNotificationMessage
                                                     })
                                                 })
                                             )
