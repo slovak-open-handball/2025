@@ -203,7 +203,7 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 }
 
 // CollapsibleSection Component - pre rozbaľovacie sekcie
-function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, defaultOpen = false, noOuterStyles = false }) {
+function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, defaultOpen = false, noOuterStyles = false, actionElement = null }) {
   const isControlled = isOpenProp !== undefined;
   const [internalIsOpen, setInternalIsOpen] = React.useState(defaultOpen);
   const currentIsOpen = isControlled ? isOpenProp : internalIsOpen;
@@ -231,8 +231,9 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
         className: buttonClasses,
         onClick: handleToggle
       },
-      React.createElement('span', { className: 'text-gray-500 mr-2' }, currentIsOpen ? '▲' : '▼'),
-      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700' }, title) : title
+      React.createElement('span', { className: 'text-gray-500 mr-2' }, currentIsOpen ? '▲' : '▼'), // Expander arrow
+      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title), // flex-grow to push actionElement to the right
+      actionElement && React.createElement('div', { className: 'flex-shrink-0 ml-2' }, actionElement) // New action element
     ),
     currentIsOpen && React.createElement(
       'div',
@@ -504,10 +505,33 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
     const collapsibleSectionTitle = generateTeamHeaderTitle(team, tshirtSizeOrder, true, showUsersChecked, showTeamsChecked);
 
+    // Create the edit button for the team itself
+    const teamEditButtonElement = React.createElement('button', {
+        onClick: (e) => {
+            e.stopPropagation(); // Prevent the collapsible section from toggling
+            const targetDocRefForTeam = doc(db, 'users', team._userId);
+            const teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
+            const resolvedTitle = `Upraviť tím: ${team.teamName}`;
+
+            openEditModal(
+                team,
+                resolvedTitle,
+                targetDocRefForTeam,
+                teamPathForSaving
+            );
+        },
+        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none ml-2'
+    }, '⚙️');
+
+
     if (showDetailsAsCollapsible) {
         return React.createElement(
             CollapsibleSection,
-            { title: collapsibleSectionTitle, defaultOpen: false },
+            {
+                title: collapsibleSectionTitle,
+                defaultOpen: false,
+                actionElement: teamEditButtonElement // Pass the new edit button for the team
+            },
             teamDetailsTable
         );
     } else {
