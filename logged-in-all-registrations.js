@@ -551,8 +551,31 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const [localEditedData, setLocalEditedData] = React.useState(data);
 
     React.useEffect(() => {
-        setLocalEditedData(data); // Reset local data when `data` prop changes
-    }, [data]);
+        // Deep clone to ensure immutability
+        const initialData = JSON.parse(JSON.stringify(data));
+
+        // Ensure address object and its sub-fields exist for binding if it's a user edit modal
+        if (title.includes('Upraviť používateľa')) {
+            if (!initialData.address) initialData.address = {};
+            if (initialData.address.street === undefined) initialData.address.street = '';
+            if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
+            if (initialData.address.city === undefined) initialData.address.city = '';
+            if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
+            if (initialData.address.country === undefined) initialData.address.country = '';
+
+            // Ensure billing object and its sub-fields exist for binding
+            if (!initialData.billing) initialData.billing = {};
+            if (initialData.billing.clubName === undefined) initialData.billing.clubName = '';
+            if (initialData.billing.ico === undefined) initialData.billing.ico = '';
+            if (initialData.billing.dic === undefined) initialData.billing.dic = '';
+            if (initialData.billing.icDph === undefined) initialData.billing.icDph = '';
+
+            // And for note, which is a top-level field
+            if (initialData.note === undefined) initialData.note = '';
+        }
+        
+        setLocalEditedData(initialData); // Reset local data when `data` prop changes or if it's initialized
+    }, [data, title]); // Depend on 'data' and 'title' to re-initialize for different modals/data
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -600,20 +623,19 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'role') return 'Rola';
         if (key === 'firstName') return 'Meno';
         if (key === 'lastName') return 'Priezvisko';
-        if (key === 'houseNumber') return 'Číslo domu';
-        if (key === 'city') return 'Mesto';
-        if (key === 'country') return 'Krajina';
-        if (key === 'street') return 'Ulica';
+        if (key === 'address.houseNumber') return 'Číslo domu'; // Opravené pre presnú cestu
+        if (key === 'address.city') return 'Mesto/Obec';       // Opravené pre presnú cestu
+        if (key === 'address.country') return 'Krajina';     // Opravené pre presnú cestu
+        if (key === 'address.street') return 'Ulica';           // Opravené pre presnú cestu
+        if (key === 'address.postalCode') return 'PSČ';
         if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
-        // Opravený názov kľúča databázy z 'isMenuToggle' na 'isMenuToggled'
         if (key === 'isMenuToggled') return 'Prepínač menu';
         if (key === 'note') return 'Poznámka';
 
-
         return key
-            .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-            .replace(/^./, str => str.toUpperCase()) // Capitalize the first letter
-            .replace(/\./g, ' ') // Replace dots with spaces
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, str => str.toUpperCase())
+            .replace(/\./g, ' ')
             .trim();
     };
 
@@ -734,13 +756,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
-        // Okamžite vylúčiť 'isMenuToggled' ak je titulok modálneho okna pre používateľa, bez ohľadu na úroveň vnorenia
         const currentKey = currentPath.split('.').pop();
         if (title.includes('Upraviť používateľa') && currentKey === 'isMenuToggled') {
             return null;
         }
 
-        // Definované poradie pre polia používateľa
         const userFieldOrder = [
             'firstName',
             'lastName',
@@ -749,7 +769,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             'billing.ico',
             'billing.dic',
             'billing.icDph',
-            'address.street', // Predpokladám, že adresa je vnorená v objekte 'address'
+            'address.street',
             'address.houseNumber',
             'address.city',
             'address.postalCode',
@@ -757,19 +777,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             'note'
         ];
 
-        const renderedFields = new Set(); // Sledovať už vykreslené polia
+        const renderedFields = new Set(); 
 
         const renderField = (path, value) => {
-            if (renderedFields.has(path)) return null; // Nevykresľovať, ak už bolo vykreslené
+            if (renderedFields.has(path)) return null; 
 
-            // Vylúčiť špecifické polia zobrazené v modálnom okne používateľa
             const key = path.split('.').pop();
             if (title.includes('Upraviť používateľa') &&
                 ['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
                 return null;
             }
             
-            renderedFields.add(path); // Označiť pole ako vykreslené
+            renderedFields.add(path); 
 
             const labelText = formatLabel(path);
             let inputType = 'text';
@@ -805,13 +824,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             );
         };
 
-        // Renderovať polia podľa definovaného poradia pre používateľské dáta
         if (currentPath === '' && title.includes('Upraviť používateľa')) {
             return userFieldOrder.map(path => {
                 const value = getNestedValue(localEditedData, path);
-                // Pre billing a address, vykreslíme nadpisy a potom ich vnorené polia
                 if (path.startsWith('billing.') && !renderedFields.has('billing')) {
-                    renderedFields.add('billing'); // Označiť billing ako "nadpis vykreslený"
+                    renderedFields.add('billing'); 
                     return React.createElement(
                         'div',
                         { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
@@ -822,7 +839,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         })
                     );
                 } else if (path.startsWith('address.') && !renderedFields.has('address')) {
-                    renderedFields.add('address'); // Označiť address ako "nadpis vykreslený"
+                    renderedFields.add('address'); 
                     return React.createElement(
                         'div',
                         { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
@@ -832,32 +849,27 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             return renderField(addressPath, addressValue);
                         })
                     );
-                } else if (!path.includes('.')) { // Top-level fields
+                } else if (!path.includes('.')) { 
                     return renderField(path, value);
                 }
                 return null;
-            }).filter(Boolean); // Odfiltrovať null hodnoty
+            }).filter(Boolean); 
 
         } else if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
-            // Primitívne hodnoty alebo Timestampy
             return renderField(currentPath, obj);
         }
 
-        // Predvolené vykresľovanie pre ostatné vnorené objekty (okrem hlavného používateľa)
         return Object.entries(obj).map(([key, value]) => {
-            // Preskočiť interné kľúče React/Firebase alebo kľúče, ktoré sú príliš rozsiahle/vnorené, alebo citlivé
             if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password'].includes(key)) {
                 return null;
             }
 
             const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
-            if (renderedFields.has(fullKeyPath)) return null; // Ak už bolo vykreslené, preskočiť
+            if (renderedFields.has(fullKeyPath)) return null; 
 
-            // Špeciálne ošetrenie pre objekty, ktoré nie sú polia a nie sú Timestampy
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                // Pre 'packageDetails', 'accommodation', 'arrival' sa stále zobrazia vnorené polia
                 if (['packageDetails', 'accommodation', 'arrival'].includes(key)) {
-                    renderedFields.add(fullKeyPath); // Označiť ako vykreslené
+                    renderedFields.add(fullKeyPath); 
                     return React.createElement(
                         'div',
                         { key: fullKeyPath, className: 'pl-4 border-l border-gray-200 mb-4' },
@@ -865,7 +877,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         renderDataFields(value, fullKeyPath)
                     );
                 } else {
-                    // Ostatné vnorené objekty zostanú v CollapsibleSection
                     return React.createElement(
                         CollapsibleSection,
                         {
@@ -878,7 +889,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     );
                 }
             }
-            // Existujúce spracovanie pre polia objektov (ktoré by mali zostať zbaliteľné)
             else if (Array.isArray(value)) {
                 if (value.length === 0) {
                      return React.createElement(
@@ -893,18 +903,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         })
                     );
                 }
-                // Pre polia objektov (napr. playerDetails, členovia tímu, tričká) vytvorte rozbaľovacie sekcie pre každú položku
                 return React.createElement(
                     CollapsibleSection,
                     { key: fullKeyPath, title: `${formatLabel(fullKeyPath)} (${value.length})`, defaultOpen: false, noOuterStyles: true },
                     value.map((item, index) => React.createElement(
                         CollapsibleSection,
                         { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
-                        renderDataFields(item, `${fullKeyPath}[${index}]`) // Rekurzívne volanie pre vnorenú položku poľa
+                        renderDataFields(item, `${fullKeyPath}[${index}]`) 
                     ))
                 );
             }
-            // Pre primitívne hodnoty (reťazec, číslo, boolean, Timestamp), ktoré ešte neboli vykreslené
             else {
                 return renderField(fullKeyPath, value);
             }
@@ -917,13 +925,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         React.createElement(
             'div',
             {
-                ref: modalRef, // Pripojiť ref tu
+                ref: modalRef,
                 className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto'
             },
             React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, title),
             React.createElement(
                 'div',
-                { className: 'space-y-4' }, // Pridať medzery medzi polia
+                { className: 'space-y-4' },
                 renderDataFields(localEditedData)
             ),
             React.createElement(
@@ -933,7 +941,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
                     onClick: onClose
                 }, 'Zavrieť'),
-                isSavable && React.createElement('button', { // Vykresliť tlačidlo Uložiť iba ak je poskytnutý targetDocRef (čo znamená, že dáta je možné uložiť)
+                isSavable && React.createElement('button', {
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                     onClick: () => onSave(localEditedData, targetDocRef, originalDataPath)
                 }, 'Uložiť zmeny')
