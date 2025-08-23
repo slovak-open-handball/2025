@@ -722,7 +722,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
              // Skip displaying specific fields for 'Upraviť používateľa'
              if (title.includes('Upraviť používateľa')) {
-                 if (currentPath === 'passwordLastChanged' || currentPath === 'registrationDate' || currentPath === 'email' || currentPath === 'approved' || currentPath === 'isMenuToggle') {
+                 if (currentPath === 'passwordLastChanged' || currentPath === 'registrationDate' || currentPath === 'email' || currentPath === 'approved' || currentPath === 'isMenuToggle' || currentPath === 'role') {
                      return null;
                  }
              }
@@ -770,7 +770,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             // Skip displaying specific fields for 'Upraviť používateľa'
             if (title.includes('Upraviť používateľa')) {
-                 if (key === 'passwordLastChanged' || key === 'registrationDate' || key === 'email' || key === 'approved' || key === 'isMenuToggle') {
+                 if (key === 'passwordLastChanged' || key === 'registrationDate' || key === 'email' || key === 'approved' || key === 'isMenuToggle' || key === 'role') {
                      return null;
                  }
             }
