@@ -2152,6 +2152,7 @@ function AllRegistrationsApp() {
                                         ),
                                         columnOrder.filter(col => col.visible).map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
+                                                // Tu som zmenil prístup k hodnote, aby sa vždy použila formatTableCellValue
                                                 formatTableCellValue(getNestedValue(u, col.id), col.id)
                                             )
                                         ))
