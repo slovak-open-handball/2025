@@ -404,7 +404,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 originalArray: 'womenTeamMemberDetails',
                 originalIndex: index,
                 uniqueId: `${team.teamName}-womenstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
-            });
+        });
         });
     }
     if (team.driverDetails) {
@@ -792,19 +792,45 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const handleIcDphChange = (e, path) => {
         let value = e.target.value;
         let formattedValue = '';
+        let cursorPosition = e.target.selectionStart;
 
-        // Prvé dva znaky musia byť veľké písmená
+        // Spracovanie prvých dvoch znakov (iba písmená, veľké)
         if (value.length > 0) {
-            formattedValue += value[0].toUpperCase();
+            if (/[a-zA-Z]/.test(value[0])) {
+                formattedValue += value[0].toUpperCase();
+            } else {
+                // Ak prvý znak nie je písmeno, ignorujeme ho a posunieme kurzor
+                value = value.substring(1);
+                cursorPosition = Math.max(0, cursorPosition - 1);
+            }
         }
         if (value.length > 1) {
-            formattedValue += value[1].toUpperCase();
+            if (/[a-zA-Z]/.test(value[1])) {
+                formattedValue += value[1].toUpperCase();
+            } else {
+                // Ak druhý znak nie je písmeno, ignorujeme ho a posunieme kurzor
+                value = formattedValue + value.substring(2); // Len zvyšok bez druhého znaku
+                cursorPosition = Math.max(formattedValue.length, cursorPosition - 1);
+            }
         }
-        // Zvyšné znaky musia byť čísla
+
+        // Spracovanie zvyšných znakov (iba čísla)
         if (value.length > 2) {
             formattedValue += value.substring(2).replace(/\D/g, '');
         }
+        
+        // Obmedziť celkovú dĺžku (2 písmená + 10 číslic = 12 znakov)
+        formattedValue = formattedValue.substring(0, 12);
+
         handleChange(path, formattedValue);
+
+        // Obnoviť pozíciu kurzora po formátovaní
+        setTimeout(() => {
+            if (inputRefs.current['billing.icDph']) { // Používame plnú cestu pre ref
+                inputRefs.current['billing.icDph'].selectionStart = cursorPosition;
+                inputRefs.current['billing.icDph'].selectionEnd = cursorPosition;
+            }
+        }, 0);
     };
 
     // Handler pre PSČ (číslice, medzera po 3. číslici)
@@ -946,7 +972,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     })
                 ) : (
                     React.createElement('input', {
-                        ref: el => inputRefs.current[key] = el, // Uloženie referencie
+                        ref: el => inputRefs.current[path] = el, // Uloženie referencie s plnou cestou
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                         value: localEditedData !== null ? formatDisplayValue(getNestedDataForInput(localEditedData, path), path) : '', // Použijeme novú funkciu
@@ -1268,7 +1294,8 @@ function AllRegistrationsApp() {
 
                         let womenTeamMembersCount = 0;
                         if (Array.isArray(team.womenTeamMemberDetails)) {
-                            womenTeamMemberDetails = team.womenTeamMemberDetails.length;
+                            // OPRAVA: Premenná womenTeamMembersCount sa aktualizuje správne
+                            womenTeamMembersCount = team.womenTeamMemberDetails.length; 
                         }
 
                         const teamTshirtsMap = new Map(
@@ -1555,7 +1582,7 @@ function AllRegistrationsApp() {
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
                     setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
                         .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
-                        .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
+                            .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
                 }
 
                 setColumnOrder(newOrderToSet);
