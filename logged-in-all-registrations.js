@@ -456,25 +456,22 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     let memberPathForSaving = '';
                                     let resolvedTitle = `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`;
 
-                                    try {
-                                        // Minimal check: if _userId is undefined/null/empty string, doc() will throw
-                                        if (!team._userId || typeof team._userId !== 'string') {
-                                            throw new Error('Chýba alebo je neplatné ID používateľa pre tím.');
-                                        }
+                                    // If team._userId is present, create the doc reference
+                                    if (team._userId && typeof team._userId === 'string') {
                                         targetDocRefForMember = doc(db, 'users', team._userId);
-
                                         if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
                                             memberPathForSaving = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
                                         } else if (member.originalArray === 'driverDetails') {
                                             memberPathForSaving = `teams.${team._category}[${team._teamIndex}].driverDetails`;
                                         }
-                                    } catch (error) {
-                                        console.warn("Upozornenie: Chyba pri vytváraní odkazu na dokument pre člena tímu:", error.message, team);
+                                    } else {
+                                        // This case should ideally not happen if data is loaded, but as a fallback
+                                        console.warn("Upozornenie: Chýba alebo je neplatné ID používateľa pre tím. Údaje člena sú editovateľné, ale zmeny nebude možné uložiť.", team);
                                         setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje člena sú editovateľné, ale zmeny nebude možné uložiť.`, 'warning');
-                                        targetDocRefForMember = null; // Ensure it's null if error
+                                        targetDocRefForMember = null; // Ensure it's null, so save button is hidden
                                         resolvedTitle = `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''} (ID chýba)`;
                                     }
-
+                                    
                                     openEditModal(
                                         member,
                                         resolvedTitle,
@@ -1901,22 +1898,10 @@ function AllRegistrationsApp() {
                                                 React.createElement('button', { // Gear icon for editing team
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        let targetDocRefForTeam = null;
-                                                        let teamPathForSaving = '';
-                                                        let resolvedTitle = `Upraviť tím: ${team.teamName}`;
-
-                                                        try {
-                                                            if (!team._userId || typeof team._userId !== 'string') {
-                                                                throw new Error('Chýba alebo je neplatné ID používateľa pre tím.');
-                                                            }
-                                                            targetDocRefForTeam = doc(db, 'users', team._userId);
-                                                            teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
-                                                        } catch (error) {
-                                                            console.warn("Upozornenie: Chyba pri vytváraní odkazu na dokument pre tím:", error.message, team);
-                                                            setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje tímu sú editovateľné, ale zmeny nebude možné uložiť.`, 'warning');
-                                                            targetDocRefForTeam = null;
-                                                            resolvedTitle = `Prezerať tím: ${team.teamName} (ID chýba)`;
-                                                        }
+                                                        // Now directly create the targetDocRef, assuming _userId is valid
+                                                        const targetDocRefForTeam = doc(db, 'users', team._userId);
+                                                        const teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
+                                                        const resolvedTitle = `Upraviť tím: ${team.teamName}`;
 
                                                         openEditModal(
                                                             team,
