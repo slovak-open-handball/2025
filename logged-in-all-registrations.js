@@ -470,7 +470,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                         }
                                     } catch (error) {
                                         console.warn("Upozornenie: Chyba pri vytváraní odkazu na dokument pre člena tímu:", error.message, team);
-                                        setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje člena sa otvoria len na prezeranie.`, 'warning');
+                                        setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje člena sú editovateľné, ale zmeny nebude možné uložiť.`, 'warning');
                                         targetDocRefForMember = null; // Ensure it's null if error
                                         resolvedTitle = `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''} (ID chýba)`;
                                     }
@@ -692,9 +692,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         });
     };
 
-    const renderDataFields = (obj, currentPath = '') => {
-        const isEditableGlobal = targetDocRef !== null && originalDataPath !== null;
+    // Determine if data is savable (i.e., a valid Firestore targetDocRef exists)
+    const isSavable = targetDocRef !== null && originalDataPath !== null;
 
+    const renderDataFields = (obj, currentPath = '') => {
         if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitive value or Timestamp
              const labelText = currentPath ? formatLabel(currentPath) : 'Hodnota';
 
@@ -714,18 +715,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 isCheckbox ? (
                     React.createElement('input', {
                         type: 'checkbox',
-                        className: 'form-checkbox h-5 w-5 text-blue-600',
+                        className: `form-checkbox h-5 w-5 text-blue-600 ${!isSavable ? 'opacity-70 cursor-not-allowed' : ''}`, // Always editable, but visual cue if not savable
                         checked: localEditedData !== null && getNestedValue(localEditedData, currentPath) === true,
-                        onChange: isEditableGlobal ? (e) => handleChange(currentPath, e.target.checked) : undefined,
-                        disabled: !isEditableGlobal // Disable if not editable
+                        onChange: (e) => handleChange(currentPath, e.target.checked),
+                        disabled: !isSavable // Disable if not savable
                     })
                 ) : (
                     React.createElement('input', {
                         type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${isEditableGlobal ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 ${!isSavable ? 'opacity-70' : ''}`, // Always editable
                         value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, currentPath)) : '',
-                        onChange: isEditableGlobal ? (e) => handleChange(currentPath, e.target.value) : undefined,
-                        readOnly: !isEditableGlobal, // Read-only if not editable
+                        onChange: (e) => handleChange(currentPath, e.target.value),
+                        readOnly: !isSavable, // Only read-only if not savable
                     })
                 )
             );
@@ -750,10 +751,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                         React.createElement('input', {
                             type: 'text',
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${isEditableGlobal ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 ${!isSavable ? 'opacity-70' : ''}`, // Always editable
                             value: formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)),
-                            onChange: isEditableGlobal ? (e) => handleChange(fullKeyPath, e.target.value) : undefined,
-                            readOnly: !isEditableGlobal, // Editable if targetDocRef exists
+                            onChange: (e) => handleChange(fullKeyPath, e.target.value),
+                            readOnly: !isSavable, // Only read-only if not savable
                         })
                     );
                 }
@@ -789,7 +790,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 );
             }
             // For primitive values (string, number, boolean, Timestamp)
-            const isEditableField = isEditableGlobal; // Use the global editability status
 
             // Determine input type or if it should be a checkbox
             let inputType = 'text';
@@ -808,18 +808,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 isCheckbox ? (
                     React.createElement('input', {
                         type: 'checkbox',
-                        className: 'form-checkbox h-5 w-5 text-blue-600',
+                        className: `form-checkbox h-5 w-5 text-blue-600 ${!isSavable ? 'opacity-70 cursor-not-allowed' : ''}`, // Always editable, but visual cue if not savable
                         checked: localEditedData !== null && getNestedValue(localEditedData, fullKeyPath) === true,
-                        onChange: isEditableField ? (e) => handleChange(fullKeyPath, e.target.checked) : undefined,
-                        disabled: !isEditableField
+                        onChange: (e) => handleChange(fullKeyPath, e.target.checked),
+                        disabled: !isSavable // Disable if not savable
                     })
                 ) : (
                     React.createElement('input', {
                         type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${isEditableField ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 ${!isSavable ? 'opacity-70' : ''}`, // Always editable
                         value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)) : '',
-                        onChange: isEditableField ? (e) => handleChange(fullKeyPath, e.target.value) : undefined,
-                        readOnly: !isEditableField,
+                        onChange: (e) => handleChange(fullKeyPath, e.target.value),
+                        readOnly: !isSavable, // Only read-only if not savable
                     })
                 )
             );
@@ -848,7 +848,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
                     onClick: onClose
                 }, 'Zavrieť'),
-                targetDocRef && React.createElement('button', { // Render Save button only if targetDocRef is provided (meaning data is savable)
+                isSavable && React.createElement('button', { // Render Save button only if targetDocRef is provided (meaning data is savable)
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                     onClick: () => onSave(localEditedData, targetDocRef, originalDataPath)
                 }, 'Uložiť zmeny')
@@ -1591,7 +1591,7 @@ function AllRegistrationsApp() {
   const handleSaveEditedData = React.useCallback(async (updatedData, targetDocRef, originalDataPath) => {
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
-        setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie.", 'error');
+        setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error'); // Updated message
         return;
     }
 
@@ -1913,7 +1913,7 @@ function AllRegistrationsApp() {
                                                             teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
                                                         } catch (error) {
                                                             console.warn("Upozornenie: Chyba pri vytváraní odkazu na dokument pre tím:", error.message, team);
-                                                            setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje tímu sa otvoria len na prezeranie.`, 'warning');
+                                                            setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje tímu sú editovateľné, ale zmeny nebude možné uložiť.`, 'warning');
                                                             targetDocRefForTeam = null;
                                                             resolvedTitle = `Prezerať tím: ${team.teamName} (ID chýba)`;
                                                         }
