@@ -958,29 +958,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             );
         };
 
-        // Pomocná funkcia na získanie správnych dát pre vstup, aby sa predišlo opakovanému formátovaniu
-        const getManagedValue = (obj, path) => {
-            const value = getNestedValue(obj, path);
-            if (path === 'postalCode') {
-                // Pre postalCode nechceme, aby bol formát 'DDD PP' odovzdaný do inputu ako hodnota,
-                // pretože to by kolidovalo s logikou onChange. Input sám formátuje.
-                // Tu potrebujeme len čisté číslice.
-                return String(value || '').replace(/\D/g, '');
-            }
-            return value;
-        };
-
         // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
-        const getEditedDataForInput = (obj, path) => {
-            const value = getNestedValue(obj, path);
-            // Pre PSČ zabezpečíme, aby input dostal len vyčistené číslice, pretože formatDisplayValue už formátuje s medzerou
-            // a onChange potrebuje pracovať s číslami pred vlastnou formátovacou logikou.
-            if (path === 'postalCode') {
-                return String(value || '').replace(/\s/g, ''); // Odstráni medzery, aby input pracoval len s číslami
-            }
-            return value;
-        };
-        //  Použijeme novú pomocnú funkciu
         const getNestedDataForInput = (obj, path) => {
             const value = getNestedValue(obj, path);
             if (path === 'postalCode') {
