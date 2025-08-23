@@ -595,6 +595,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'approved') return 'Schválený';
         if (key === 'email') return 'E-mail';
         if (key === 'contactPhoneNumber') return 'Telefónne číslo';
+        if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla'; // Added translation
+        if (key === 'password') return 'Heslo'; // Added translation
+        if (key === 'role') return 'Rola'; // Added translation
+        if (key === 'firstName') return 'Meno'; // Added translation
+        if (key === 'lastName') return 'Priezvisko'; // Added translation
+        if (key === 'houseNumber') return 'Číslo domu'; // Added translation
+        if (key === 'city') return 'Mesto'; // Added translation
+        if (key === 'country') return 'Krajina'; // Added translation
+        if (key === 'street') return 'Ulica'; // Added translation
+        if (key === 'displayNotifications') return 'Zobrazovať notifikácie'; // Added translation
 
 
         return key
@@ -709,6 +719,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitive value or Timestamp
              const labelText = currentPath ? formatLabel(currentPath) : 'Hodnota';
 
+             // Skip displaying specific fields for 'Upraviť používateľa'
+             if (title.includes('Upraviť používateľa')) {
+                 if (currentPath === 'passwordLastChanged' || currentPath === 'registrationDate' || currentPath === 'email' || currentPath === 'approved') {
+                     return null;
+                 }
+             }
+
              // Determine input type or if it should be a checkbox
              let inputType = 'text';
              let isCheckbox = false;
@@ -749,6 +766,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             }
 
             const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
+
+            // Skip displaying specific fields for 'Upraviť používateľa'
+            if (title.includes('Upraviť používateľa')) {
+                 if (key === 'passwordLastChanged' || key === 'registrationDate' || key === 'email' || key === 'approved') {
+                     return null;
+                 }
+            }
+
+
             const labelText = formatLabel(fullKeyPath);
 
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
