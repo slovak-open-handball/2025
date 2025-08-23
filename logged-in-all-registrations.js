@@ -454,23 +454,30 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     e.stopPropagation();
                                     let targetDocRefForMember = null;
                                     let memberPathForSaving = '';
+                                    let resolvedTitle = `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`;
 
-                                    // Attempt to create targetDocRef only if _userId is present and valid
-                                    if (team._userId && typeof team._userId === 'string') {
+                                    try {
+                                        // Minimal check: if _userId is undefined/null/empty string, doc() will throw
+                                        if (!team._userId || typeof team._userId !== 'string') {
+                                            throw new Error('Chýba alebo je neplatné ID používateľa pre tím.');
+                                        }
                                         targetDocRefForMember = doc(db, 'users', team._userId);
+
                                         if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
                                             memberPathForSaving = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
                                         } else if (member.originalArray === 'driverDetails') {
                                             memberPathForSaving = `teams.${team._category}[${team._teamIndex}].driverDetails`;
                                         }
-                                    } else {
-                                        console.warn("Upozornenie: Chýba alebo je neplatné ID používateľa pre tím. Údaje člena sa otvoria v režime iba na prezeranie.", team);
-                                        setUserNotificationMessage("Chýba ID používateľa pre tím. Údaje člena sa otvoria v režime iba na prezeranie.", 'info');
+                                    } catch (error) {
+                                        console.warn("Upozornenie: Chyba pri vytváraní odkazu na dokument pre člena tímu:", error.message, team);
+                                        setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje člena sa otvoria len na prezeranie.`, 'warning');
+                                        targetDocRefForMember = null; // Ensure it's null if error
+                                        resolvedTitle = `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''} (ID chýba)`;
                                     }
 
                                     openEditModal(
                                         member,
-                                        targetDocRefForMember ? `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}` : `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`,
+                                        resolvedTitle,
                                         targetDocRefForMember,
                                         memberPathForSaving
                                     );
@@ -1896,18 +1903,24 @@ function AllRegistrationsApp() {
                                                         e.stopPropagation();
                                                         let targetDocRefForTeam = null;
                                                         let teamPathForSaving = '';
+                                                        let resolvedTitle = `Upraviť tím: ${team.teamName}`;
 
-                                                        if (team._userId && typeof team._userId === 'string') {
+                                                        try {
+                                                            if (!team._userId || typeof team._userId !== 'string') {
+                                                                throw new Error('Chýba alebo je neplatné ID používateľa pre tím.');
+                                                            }
                                                             targetDocRefForTeam = doc(db, 'users', team._userId);
                                                             teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
-                                                        } else {
-                                                            console.warn("Upozornenie: Chýba alebo je neplatné ID používateľa pre tím. Údaje tímu sa otvoria v režime iba na prezeranie.", team);
-                                                            setUserNotificationMessage("Chýba ID používateľa pre tím. Údaje tímu sa otvoria v režime iba na prezeranie.", 'info');
+                                                        } catch (error) {
+                                                            console.warn("Upozornenie: Chyba pri vytváraní odkazu na dokument pre tím:", error.message, team);
+                                                            setUserNotificationMessage(`Chyba: Chýba platné ID používateľa pre tím. Údaje tímu sa otvoria len na prezeranie.`, 'warning');
+                                                            targetDocRefForTeam = null;
+                                                            resolvedTitle = `Prezerať tím: ${team.teamName} (ID chýba)`;
                                                         }
 
                                                         openEditModal(
                                                             team,
-                                                            targetDocRefForTeam ? `Upraviť tím: ${team.teamName}` : `Prezerať tím: ${team.teamName}`,
+                                                            resolvedTitle,
                                                             targetDocRefForTeam,
                                                             teamPathForSaving
                                                         );
