@@ -452,31 +452,27 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                             React.createElement('button', { // Gear icon for editing member details
                                 onClick: (e) => {
                                     e.stopPropagation();
-                                    // Kontrola pre team._userId: Ak chýba, otvorí modálne okno v režime iba na prezeranie.
-                                    if (!team._userId || typeof team._userId !== 'string') {
-                                        console.warn("Upozornenie: Chýba ID používateľa pre tím. Modálne okno sa otvorí len v režime prezerania.", team);
-                                        openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null);
-                                        setUserNotificationMessage("Chýba ID používateľa. Údaje člena sa otvoria v režime iba na prezeranie.", 'info');
-                                        return;
-                                    }
+                                    let targetDocRefForMember = null;
+                                    let memberPathForSaving = '';
 
-                                    let memberPath = '';
-                                    if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
-                                        memberPath = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
-                                    } else if (member.originalArray === 'driverDetails') {
-                                        memberPath = `teams.${team._category}[${team._teamIndex}].driverDetails`;
+                                    // Attempt to create targetDocRef only if _userId is present and valid
+                                    if (team._userId && typeof team._userId === 'string') {
+                                        targetDocRefForMember = doc(db, 'users', team._userId);
+                                        if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
+                                            memberPathForSaving = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
+                                        } else if (member.originalArray === 'driverDetails') {
+                                            memberPathForSaving = `teams.${team._category}[${team._teamIndex}].driverDetails`;
+                                        }
                                     } else {
-                                        console.warn("Upozornenie: Nepodarilo sa určiť cestu člena pre uloženie. Modálne okno sa otvorí len v režime prezerania.");
-                                        openEditModal(member, `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`, null, null);
-                                        setUserNotificationMessage("Nepodarilo sa určiť cestu člena. Údaje sa otvoria v režime iba na prezeranie.", 'info');
-                                        return;
+                                        console.warn("Upozornenie: Chýba alebo je neplatné ID používateľa pre tím. Údaje člena sa otvoria v režime iba na prezeranie.", team);
+                                        setUserNotificationMessage("Chýba ID používateľa pre tím. Údaje člena sa otvoria v režime iba na prezeranie.", 'info');
                                     }
 
                                     openEditModal(
                                         member,
-                                        `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`,
-                                        doc(db, 'users', team._userId),
-                                        memberPath
+                                        targetDocRefForMember ? `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}` : `Prezerať ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`,
+                                        targetDocRefForMember,
+                                        memberPathForSaving
                                     );
                                 },
                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-2' // Added mr-2 for spacing
@@ -690,9 +686,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     };
 
     const renderDataFields = (obj, currentPath = '') => {
+        const isEditableGlobal = targetDocRef !== null && originalDataPath !== null;
+
         if (!obj || typeof obj !== 'object' || obj.toDate) { // Primitive value or Timestamp
              const labelText = currentPath ? formatLabel(currentPath) : 'Hodnota';
-             const isEditable = targetDocRef !== null && originalDataPath !== null; // Only editable if path for saving is known
 
              // Determine input type or if it should be a checkbox
              let inputType = 'text';
@@ -712,16 +709,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         type: 'checkbox',
                         className: 'form-checkbox h-5 w-5 text-blue-600',
                         checked: localEditedData !== null && getNestedValue(localEditedData, currentPath) === true,
-                        onChange: isEditable ? (e) => handleChange(currentPath, e.target.checked) : undefined,
-                        disabled: !isEditable
+                        onChange: isEditableGlobal ? (e) => handleChange(currentPath, e.target.checked) : undefined,
+                        disabled: !isEditableGlobal // Disable if not editable
                     })
                 ) : (
                     React.createElement('input', {
                         type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${isEditable ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${isEditableGlobal ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
                         value: localEditedData !== null ? formatDisplayValue(getNestedValue(localEditedData, currentPath)) : '',
-                        onChange: isEditable ? (e) => handleChange(currentPath, e.target.value) : undefined,
-                        readOnly: !isEditable, // Read-only if not editable
+                        onChange: isEditableGlobal ? (e) => handleChange(currentPath, e.target.value) : undefined,
+                        readOnly: !isEditableGlobal, // Read-only if not editable
                     })
                 )
             );
@@ -746,10 +743,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                         React.createElement('input', {
                             type: 'text',
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${targetDocRef ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm ${isEditableGlobal ? 'bg-white' : 'bg-gray-50 text-gray-700'} p-2`,
                             value: formatDisplayValue(getNestedValue(localEditedData, fullKeyPath)),
-                            onChange: targetDocRef ? (e) => handleChange(fullKeyPath, e.target.value) : undefined,
-                            readOnly: !targetDocRef, // Editable if targetDocRef exists
+                            onChange: isEditableGlobal ? (e) => handleChange(fullKeyPath, e.target.value) : undefined,
+                            readOnly: !isEditableGlobal, // Editable if targetDocRef exists
                         })
                     );
                 }
@@ -785,7 +782,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 );
             }
             // For primitive values (string, number, boolean, Timestamp)
-            const isEditableField = targetDocRef !== null && originalDataPath !== null;
+            const isEditableField = isEditableGlobal; // Use the global editability status
 
             // Determine input type or if it should be a checkbox
             let inputType = 'text';
@@ -889,7 +886,7 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: 'Krajina', type: true, visible: true },
+    { id: 'country', type: true, visible: true },
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
@@ -1897,18 +1894,22 @@ function AllRegistrationsApp() {
                                                 React.createElement('button', { // Gear icon for editing team
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        // Kontrola pre team._userId: Ak chýba, otvorí modálne okno v režime iba na prezeranie.
-                                                        if (!team._userId || typeof team._userId !== 'string') {
-                                                            console.warn("Upozornenie: Chýba ID používateľa pre tím. Modálne okno sa otvorí len v režime prezerania.", team);
-                                                            openEditModal(team, `Prezerať tím: ${team.teamName}`, null, null);
+                                                        let targetDocRefForTeam = null;
+                                                        let teamPathForSaving = '';
+
+                                                        if (team._userId && typeof team._userId === 'string') {
+                                                            targetDocRefForTeam = doc(db, 'users', team._userId);
+                                                            teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
+                                                        } else {
+                                                            console.warn("Upozornenie: Chýba alebo je neplatné ID používateľa pre tím. Údaje tímu sa otvoria v režime iba na prezeranie.", team);
                                                             setUserNotificationMessage("Chýba ID používateľa pre tím. Údaje tímu sa otvoria v režime iba na prezeranie.", 'info');
-                                                            return;
                                                         }
+
                                                         openEditModal(
                                                             team,
-                                                            `Upraviť tím: ${team.teamName}`,
-                                                            doc(db, 'users', team._userId),
-                                                            `teams.${team._category}[${team._teamIndex}]`
+                                                            targetDocRefForTeam ? `Upraviť tím: ${team.teamName}` : `Prezerať tím: ${team.teamName}`,
+                                                            targetDocRefForTeam,
+                                                            teamPathForSaving
                                                         );
                                                     },
                                                     className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
