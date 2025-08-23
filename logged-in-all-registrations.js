@@ -93,7 +93,11 @@ function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDial
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4' },
         React.createElement(
             'div',
-            { ref: modalRef, className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto' },
+            {
+                ref: modalRef,
+                className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto',
+                onClick: (e) => e.stopPropagation() // Zastaví bublanie udalosti
+            },
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -1091,7 +1095,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     maxLength: 6 // Formát: DDD PP (3+1+2=6 znakov)
                 };
             } else if (path === 'contactPhoneNumber') {
-                const countryName = countryDialCodes.find(c => c.dialCode === displayDialCode)?.name;
+                // Tlačidlo teraz zobrazuje len predvoľbu
                 return React.createElement(
                     'div',
                     { key: path, className: 'mb-4' },
@@ -1104,7 +1108,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
                             onClick: () => setIsDialCodeModalOpen(true),
                             disabled: !isSavable
-                        }, countryName ? `${countryName} (${displayDialCode})` : displayDialCode || 'Vybrať predvoľbu'),
+                        }, displayDialCode || 'Vybrať predvoľbu'), // Zobrazuje iba predvoľbu
                         React.createElement('input', {
                             ref: el => inputRefs.current[path] = el,
                             type: 'tel',
