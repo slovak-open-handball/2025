@@ -615,10 +615,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     // Helper to format keys for labels
     const formatLabel = (key) => {
-        if (key === 'billing.clubName') return 'Názov klubu (Fakturácia)';
-        if (key === 'billing.ico') return 'IČO (Fakturácia)';
-        if (key === 'billing.dic') return 'DIČ (Fakturácia)';
-        if (key === 'billing.icDph') return 'IČ DPH (Fakturácia)';
+        // Remove " (Fakturácia)" from all labels
+        let label = key
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, str => str.toUpperCase())
+            .replace(/\./g, ' ')
+            .trim()
+            .replace(' (Fakturácia)', ''); // Remove the specific text
+
+        if (key === 'billing.clubName') return 'Názov klubu';
+        if (key === 'billing.ico') return 'IČO';
+        if (key === 'billing.dic') return 'DIČ';
+        if (key === 'billing.icDph') return 'IČ DPH';
         if (key === 'accommodation.type') return 'Typ ubytovania';
         if (key === 'arrival.type') return 'Typ dopravy';
         if (key === 'packageDetails.name') return 'Názov balíka';
@@ -649,11 +657,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'isMenuToggled') return 'Prepínač menu';
         if (key === 'note') return 'Poznámka';
 
-        return key
-            .replace(/([A-Z])/g, ' $1')
-            .replace(/^./, str => str.toUpperCase())
-            .replace(/\./g, ' ')
-            .trim();
+        return label;
     };
 
     // Helper to format values for display in input fields
@@ -835,33 +839,50 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         };
 
         if (currentPath === '' && title.includes('Upraviť používateľa')) {
-            return fieldsToRenderForUser.map(path => {
-                const value = getNestedValue(localEditedData, path);
-                
-                // Special handling for billing section
-                if (path.startsWith('billing.')) {
-                    if (!renderedFields.has('billing')) { // Render billing section only once
-                        renderedFields.add('billing');
-                        // Filter billing paths to only include those in fieldsToRenderForUser
-                        const billingFields = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
-                        if (billingFields.length === 0) return null; // If no billing fields should be rendered, skip
-                        return React.createElement(
-                            'div',
-                            { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel('billing')),
-                            billingFields.map(billingPath => {
-                                const billingValue = getNestedValue(localEditedData, billingPath);
-                                return renderField(billingPath, billingValue);
-                            })
-                        );
-                    }
-                    return null; // Already rendered or not in fieldsToRenderForUser
-                } else if (!path.includes('.')) { // Top-level fields
-                    return renderField(path, value);
+            const elements = [];
+            
+            // Render basic user fields first
+            ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
+                if (fieldsToRenderForUser.includes(path)) {
+                    elements.push(renderField(path, getNestedValue(localEditedData, path)));
                 }
-                return null;
-            }).filter(Boolean); 
+            });
 
+            // Render billing section if relevant fields are included
+            const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
+            if (billingFieldsInScope.length > 0) {
+                elements.push(
+                    React.createElement(
+                        'div',
+                        { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
+                        billingFieldsInScope.map(billingPath => {
+                            const billingValue = getNestedValue(localEditedData, billingPath);
+                            return renderField(billingPath, billingValue);
+                        })
+                    )
+                );
+            }
+
+            // Render address section if relevant fields are included
+            const addressFieldsInScope = allUserFields.filter(p => 
+                ['street', 'houseNumber', 'city', 'postalCode', 'country', 'note'].includes(p) && fieldsToRenderForUser.includes(p)
+            );
+            
+            if (addressFieldsInScope.length > 0) {
+                elements.push(
+                    React.createElement(
+                        'div',
+                        { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
+                        addressFieldsInScope.map(addressPath => {
+                            const addressValue = getNestedValue(localEditedData, addressPath);
+                            return renderField(addressPath, addressValue);
+                        })
+                    )
+                );
+            }
+            return elements.filter(Boolean); // Filter out any nulls if fieldsToRenderForUser excluded some
         } else if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
             // This case handles individual fields that are not part of the top-level user data,
             // or nested fields that are being rendered in a collapsible section (e.g., team member details).
