@@ -639,7 +639,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         const fetchCategories = async () => {
             if (db) {
                 try {
-                    const categoriesCollectionRef = collection(db, 'settings', 'categories', 'names'); // Upravená cesta
+                    // Cesta k podkolekcii 'names' v 'settings/categories'
+                    const categoriesCollectionRef = collection(db, 'settings', 'categories', 'names');
+                    // Pridanie orderBy pre abecedné zoradenie
                     const q = query(categoriesCollectionRef, orderBy('name'));
                     const snapshot = await getDocs(q); // Použiť getDocs namiesto onSnapshot pre jednorazové načítanie
                     const fetchedCategories = snapshot.docs.map(doc => doc.data().name);
@@ -1209,10 +1211,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             return teamElements;
         } else if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
-            // Táto časť sa nezobrazí pre úpravu tímu v zmysle nového požiadavku, pretože
-            // filtre `title.includes('Upraviť tím')` spracujú všetko vyššie.
-            // Zostáva pre úpravy iných vnorených objektov (napr. member detailov)
-            // v iných kontextoch, ak nie sú potlačené.
             return renderField(currentPath, obj);
         }
 
@@ -1633,7 +1631,7 @@ function AllRegistrationsApp() {
           unsubscribeGlobalAuth();
       }
     };
-  }, []);
+  }, [isAuthReady, db, user, auth]);
 
 
   React.useEffect(() => {
@@ -2121,12 +2119,23 @@ function AllRegistrationsApp() {
 
             const updates = {};
             // Špeciálne ošetrenie pre 'teams' - uistite sa, že sa vždy aktualizuje celé pole
-            if (topLevelField === 'teams' && updatedObject.teams) {
-                // Konvertovať objekt kategórií tímov späť na pole pre uloženie, ak je to potrebné
-                // Aktuálne sa zdá, že tím je uložený pod kategóriou ako pole: teams.Juniors: [...]
-                // Tu predpokladáme, že `updatedObject[topLevelField]` už obsahuje správnu štruktúru pre Firestore.
-                // Ak by to malo byť inak, museli by sme `updatedObject[topLevelField]` premeniť na iný formát.
-                updates[topLevelField] = updatedObject[topLevelField];
+            if (topLevelField === 'teams') {
+                // originalDataPath pre tímy bude vyzerať ako 'teams.Juniors[0]'
+                const pathParts = originalDataPath.split('.');
+                const category = pathParts[1]; // napr. 'Juniors'
+                const teamIndex = parseInt(pathParts[2].match(/\[(\d+)\]$/)[1]); // napr. 0
+
+                // Získať aktuálne tímy pre danú kategóriu
+                const currentCategoryTeams = currentDocData.teams?.[category] || [];
+                // Vytvoriť novú kópiu pre nemennosť
+                const newCategoryTeams = [...currentCategoryTeams];
+                
+                // Aktualizovať konkrétny tím na danom indexe
+                newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...dataToSave };
+
+                // Nastaviť aktualizované pole späť do objektu 'teams'
+                updates[`teams.${category}`] = newCategoryTeams;
+
             } else {
                 updates[topLevelField] = updatedObject[topLevelField];
             }
