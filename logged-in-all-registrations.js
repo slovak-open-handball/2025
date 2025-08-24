@@ -240,8 +240,8 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
         onClick: handleToggle
       },
       React.createElement('span', { className: 'text-gray-500 mr-2' }, currentIsOpen ? '▲' : '▼'), // Expander arrow
-      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title), // flex-grow to push actionElement to the right
-      actionElement && React.createElement('div', { className: 'flex-shrink-0 ml-2' }, actionElement) // New action element
+      actionElement && React.createElement('div', { className: 'flex-shrink-0 mr-2' }, actionElement), // New action element, moved before title
+      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title) // flex-grow to push actionElement to the right
     ),
     currentIsOpen && React.createElement(
       'div',
@@ -548,7 +548,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 teamPathForSaving
             );
         },
-        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none ml-2'
+        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none' // Removed ml-2
     }, '⚙️');
 
 
