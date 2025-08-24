@@ -1195,7 +1195,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
-        // console.log(`renderDataFields: called with currentPath: ${currentPath}, obj:`, obj); // Debug log
+        console.log(`renderDataFields: called with currentPath: ${currentPath}, obj:`, obj); // Debug log
 
         // Skryť isMenuToggled pre úpravu používateľa
         if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
@@ -1203,6 +1203,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
 
         // Definícia poradia polí pre hráčov/členov RT/šoférov
+        // Všimnite si, že 'address' je teraz prefix, nie samostatný objekt
         const memberFieldsOrder = [
             'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
@@ -1229,9 +1230,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         const renderedFields = new Set(); 
 
         const renderField = (path, value) => {
-            // console.log(`renderField called for path: ${path}, value: ${value}, typeof value: ${typeof value}`); // Debug log
+            console.log(`  renderField called for path: ${path}, value:`, value, `typeof value: ${typeof value}`); // Debug log
             if (renderedFields.has(path)) {
-                // console.log(`  Path ${path} already rendered, returning null.`); // Debug log
+                console.log(`    Path ${path} already rendered, returning null.`); // Debug log
                 return null; 
             }
             
@@ -1284,7 +1285,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 };
             } else if (path === 'contactPhoneNumber') {
                 // Tlačidlo teraz zobrazuje len predvoľbu
-                // console.log(`  Rendering phone number input for path: ${path}`); // Debug log
+                console.log(`    Rendering phone number input for path: ${path}`); // Debug log
                 return React.createElement(
                     'div',
                     { key: path, className: 'mb-4' },
@@ -1313,7 +1314,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 );
             }
 
-            // console.log(`  Rendering generic input for path: ${path}, label: ${labelText}, inputType: ${inputType}, isCheckbox: ${isCheckbox}`); // Debug log
+            console.log(`    Rendering generic input for path: ${path}, label: ${labelText}, inputType: ${inputType}, isCheckbox: ${isCheckbox}`); // Debug log
             return React.createElement(
                 'div',
                 { key: path, className: 'mb-4' },
@@ -1360,8 +1361,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 console.log('renderDataFields: memberFieldsOrder:', memberFieldsOrder); // Debug log
                 // Vykresľujeme polia explicitne v určenom poradí
                 memberFieldsOrder.forEach(path => {
-                    const valueToRender = getNestedValue(localEditedData, path);
-                    // console.log(`renderDataFields: Attempting to render for path: ${path}, value:`, valueToRender); // Debug log
+                    const valueToRender = getNestedValue(localEditedData, path); // !!! POUŽÍVAJTE localEditedData !!!
+                    console.log(`  renderDataFields: Attempting to render for path: ${path}, value:`, valueToRender); // Debug log
                     memberElements.push(renderField(path, valueToRender));
                 });
                 console.log('renderDataFields: memberElements after forEach:', memberElements); // Debug log
@@ -1612,16 +1613,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 return teamElements;
             }
         } else { // Pre všetky ostatné prípady (vnorené objekty alebo iné, ako vyššie špecifikované typy úprav)
-            // console.log(`renderDataFields: Generic rendering for currentPath: ${currentPath}`); // Debug log
+            console.log(`renderDataFields: Generic rendering for currentPath: ${currentPath}, obj:`, obj); // Debug log
             if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
-                // console.log(`  Returning single field for path: ${currentPath}`); // Debug log
+                console.log(`  Returning single field for path: ${currentPath}`); // Debug log
                 return renderField(currentPath, obj);
             }
 
+            // Táto časť sa už nemala volať pre členov (hráčov/RT/šoférov)
             return Object.entries(obj).map(([key, value]) => {
                 // Filtrovať interné kľúče a kľúče, ktoré sú už spracované na najvyššej úrovni pre tímy
                 if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password', 'packageDetails', 'accommodation', 'arrival', 'tshirts'].includes(key)) {
-                    // console.log(`  Filtering out key: ${key}`); // Debug log
+                    console.log(`  Filtering out key: ${key}`); // Debug log
                     return null;
                 }
                 
@@ -1629,7 +1631,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
                 if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
                     // Pre vnorené objekty, ktoré nie sú priamo spracované logikou najvyššej úrovne
-                    // console.log(`  Rendering CollapsibleSection for object: ${fullKeyPath}`); // Debug log
+                    console.log(`  Rendering CollapsibleSection for object: ${fullKeyPath}`); // Debug log
                     return React.createElement(
                         CollapsibleSection,
                         {
@@ -1643,7 +1645,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 } else if (Array.isArray(value)) {
                     // Pre polia, tiež v rozbaľovacej sekcii
                     if (value.length === 0) {
-                        // console.log(`  Rendering empty array message for: ${fullKeyPath}`); // Debug log
+                        console.log(`  Rendering empty array message for: ${fullKeyPath}`); // Debug log
                         return React.createElement(
                             'div',
                             { key: fullKeyPath, className: 'mb-4' },
@@ -1656,7 +1658,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             })
                         );
                     }
-                    // console.log(`  Rendering CollapsibleSection for array: ${fullKeyPath}`); // Debug log
+                    console.log(`  Rendering CollapsibleSection for array: ${fullKeyPath}`); // Debug log
                     return React.createElement(
                         'div',
                         { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
@@ -1668,7 +1670,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     );
                 } else {
                     // Vykreslenie jednoduchých polí
-                    // console.log(`  Rendering single field for: ${fullKeyPath}`); // Debug log
+                    console.log(`  Rendering simple field for: ${fullKeyPath}`); // Debug log
                     return renderField(fullKeyPath, value);
                 }
             }).filter(Boolean);
@@ -1688,7 +1690,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             React.createElement(
                 'div',
                 { className: 'space-y-4' },
-                renderDataFields(localEditedData)
+                renderDataFields(localEditedData) // Tu odovzdávame localEditedData
             ),
             React.createElement(
                 'div',
