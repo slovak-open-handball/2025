@@ -639,21 +639,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         const fetchCategories = async () => {
             if (db) {
                 try {
-                    // Zmena: Získavame referenciu na dokument, nie na kolekciu
-                    const categoriesDocRef = doc(db, 'settings', 'categories');
-                    const docSnapshot = await getDoc(categoriesDocRef); // Používame getDoc pre dokument
+                    // Zmena: Získavame referenciu na kolekciu 'categories' pod dokumentom 'settings'
+                    const categoriesCollectionRef = collection(db, 'settings', 'categories');
+                    // Používame getDocs pre kolekciu a získame všetky dokumenty
+                    const querySnapshot = await getDocs(query(categoriesCollectionRef, orderBy('name'))); 
+                    
+                    const fetchedCategories = [];
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data && data.name) {
+                            fetchedCategories.push(String(data.name).trim());
+                        }
+                    });
+                    // Kategórie už sú zoradené v query, ale môžeme pre istotu aj tu
+                    setCategories(fetchedCategories.sort());
 
-                    if (docSnapshot.exists()) {
-                        const data = docSnapshot.data();
-                        // Predpokladáme, že kategórie sú uložené v poli s názvom 'list' (napr. ako pole reťazcov)
-                        const fetchedCategories = (data.list || []).map(item =>
-                            typeof item === 'object' && item.name ? item.name : String(item)
-                        ).sort(); // Pridávame sort pre abecedné zoradenie
-                        setCategories(fetchedCategories);
-                    } else {
-                        console.warn("Firestore dokument 'settings/categories' neexistuje. Žiadne kategórie neboli načítané.");
-                        setCategories([]);
-                    }
                 } catch (error) {
                     console.error("Chyba pri načítaní kategórií z Firestore:", error);
                 }
