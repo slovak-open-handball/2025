@@ -639,14 +639,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         const fetchCategories = async () => {
             if (db) {
                 try {
-                    // Cesta k podkolekcii 'names' v 'settings/categories'
-                    // Opravená cesta: predpokladáme, že kategórie sú priamo dokumenty v kolekcii 'settings/categories'
-                    const categoriesCollectionRef = collection(db, 'settings', 'categories');
-                    // Pridanie orderBy pre abecedné zoradenie
-                    const q = query(categoriesCollectionRef, orderBy('name'));
-                    const snapshot = await getDocs(q); // Použiť getDocs namiesto onSnapshot pre jednorazové načítanie
-                    const fetchedCategories = snapshot.docs.map(doc => doc.data().name);
-                    setCategories(fetchedCategories);
+                    // Zmena: Získavame referenciu na dokument, nie na kolekciu
+                    const categoriesDocRef = doc(db, 'settings', 'categories');
+                    const docSnapshot = await getDoc(categoriesDocRef); // Používame getDoc pre dokument
+
+                    if (docSnapshot.exists()) {
+                        const data = docSnapshot.data();
+                        // Predpokladáme, že kategórie sú uložené v poli s názvom 'list' (napr. ako pole reťazcov)
+                        const fetchedCategories = (data.list || []).map(item =>
+                            typeof item === 'object' && item.name ? item.name : String(item)
+                        ).sort(); // Pridávame sort pre abecedné zoradenie
+                        setCategories(fetchedCategories);
+                    } else {
+                        console.warn("Firestore dokument 'settings/categories' neexistuje. Žiadne kategórie neboli načítané.");
+                        setCategories([]);
+                    }
                 } catch (error) {
                     console.error("Chyba pri načítaní kategórií z Firestore:", error);
                 }
@@ -1761,7 +1768,7 @@ function AllRegistrationsApp() {
                 if (typeof window.hideGlobalLoader === 'function') {
                   window.hideGlobalLoader();
                 }
-                setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
+                setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`); // Použite error.message
             });
         } catch (e) {
             console.error("AllRegistrationsApp: [Effect: AllUsers] Chyba pri nastavovaní onSnapshot pre všetkých používateľov (try-catch):", e);
@@ -1839,7 +1846,7 @@ function AllRegistrationsApp() {
       }
       setCurrentSort({ column: columnId, direction });
 
-      const sorted = [...filteredUsers].doprava((a, b) => {
+      const sorted = [...filteredUsers].sort((a, b) => {
           const columnDef = defaultColumnOrder.find(col => col.id === columnId); // Use defaultColumnOrder
           console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
           console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
