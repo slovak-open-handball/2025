@@ -301,8 +301,8 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${playersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (ž): ${womenDriversCount}`)); 
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (m): ${menDriversCount}`)); 
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (šofér Ž): ${womenDriversCount}`)); 
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (šofér M): ${menDriversCount}`)); 
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
@@ -313,7 +313,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -477,17 +477,49 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
         try {
             const userDocRef = doc(db, 'users', team._userId);
+            const docSnapshot = await getDoc(userDocRef); // Fetch the entire user document
+
+            if (!docSnapshot.exists()) {
+                throw new Error("Používateľský dokument sa nenašiel.");
+            }
+
+            const userData = docSnapshot.data();
+            const teamsData = { ...userData.teams }; // Create a mutable copy of the teams object
+
             const teamCategory = team._category;
             const teamIndex = team._teamIndex;
-            const memberArray = member.originalArray;
+            const memberArrayType = member.originalArray;
             const memberIndex = member.originalIndex;
 
-            // Dynamicky vytvoriť cestu pre aktualizáciu konkrétneho jedla
-            // Napr.: `teams.Juniors[0].playerDetails[0].packageDetails.meals.2025-08-24.dinner`
-            const mealUpdatePath = `teams.${teamCategory}[${teamIndex}].${memberArray}[${memberIndex}].packageDetails.meals.${date}.${mealType}`;
-            
+            // Deep clone the relevant parts to ensure immutability until update
+            const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
+            const teamToUpdate = updatedCategoryTeams[teamIndex];
+
+            if (!teamToUpdate) {
+                throw new Error("Tím sa nenašiel pre aktualizáciu stravovania.");
+            }
+
+            const memberArrayToUpdate = teamToUpdate[memberArrayType];
+
+            if (!memberArrayToUpdate || memberArrayToUpdate[memberIndex] === undefined) {
+                throw new Error("Člen tímu sa nenašiel pre aktualizáciu stravovania.");
+            }
+
+            const memberToUpdate = memberArrayToUpdate[memberIndex];
+
+            // Ensure packageDetails.meals and packageDetails.meals[date] exist
+            if (!memberToUpdate.packageDetails) memberToUpdate.packageDetails = {};
+            if (!memberToUpdate.packageDetails.meals) memberToUpdate.packageDetails.meals = {};
+            if (!memberToUpdate.packageDetails.meals[date]) memberToUpdate.packageDetails.meals[date] = {};
+
+            // Update the specific meal type for the member
+            memberToUpdate.packageDetails.meals[date][mealType] = isChecked ? 1 : 0;
+
+            // Reconstruct the full path and update only the top-level array
+            // The path for updateDoc should be a valid top-level field or a nested map field, not an array element with index.
+            // We are updating the entire array for the specific category.
             const updatePayload = {
-                [mealUpdatePath]: isChecked ? 1 : 0
+                [`teams.${teamCategory}`]: updatedCategoryTeams
             };
 
             await updateDoc(userDocRef, updatePayload);
@@ -590,10 +622,12 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                         const teamPackageMealSetting = team.packageDetails?.meals?.[date]?.[type];
 
                                         // Predvolený stav:
-                                        // 1. Ak existuje individuálne nastavenie člena, použiť to.
+                                        // 1. Ak existuje individuálne nastavenie člena (nie je undefined), použiť to.
                                         // 2. Inak, ak existuje nastavenie z balíka, použiť to.
                                         // 3. Inak, predvolene false (0).
-                                        const isChecked = (memberMealSetting !== undefined ? memberMealSetting === 1 : (teamPackageMealSetting === 1));
+                                        const isChecked = (memberMealSetting !== undefined)
+                                            ? (memberMealSetting === 1)
+                                            : (teamPackageMealSetting === 1);
 
                                         return React.createElement('input', {
                                                             key: `${member.uniqueId}-${date}-${type}-checkbox`,
@@ -843,7 +877,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         setIsTargetUserHall(initialData.role === 'hall'); 
 
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         if (title.includes('Upraviť používateľa')) {
@@ -1331,7 +1365,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
@@ -3018,7 +3052,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || '',} ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
@@ -3127,13 +3161,13 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Hráči'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (ž)'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (m)'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (ž)'), 
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (m)'), 
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (šofér Ž)'), 
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (šofér M)'), 
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`)
                                 )
                             )
                         ) : (
