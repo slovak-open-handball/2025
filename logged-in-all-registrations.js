@@ -1281,7 +1281,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     };
 
     const renderDataFields = (obj, currentPath = '') => {
-        const isEditingMember = title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra');
+        // Zmenená podmienka pre robustnejšie porovnanie
+        const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť šofér');
+
         console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
 
         // Skryť isMenuToggled pre úpravu používateľa
