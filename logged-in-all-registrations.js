@@ -200,11 +200,7 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
                 React.createElement('button', {
                     className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
                     onClick: handleClear
-                }, 'Vymazať filter'),
-                React.createElement('button', {
-                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
-                    onClick: handleApply
-                }, 'Použiť filter')
+                }, 'Vymazať filter')
             )
         )
     );
@@ -630,25 +626,38 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const [displayPhoneNumber, setDisplayPhoneNumber] = React.useState('');
     const [isDialCodeModalOpen, setIsDialCodeModalOpen] = React.useState(false);
 
-    // Nové stavy pre kategórie tímov
+    // Stavy pre kategórie tímov
     const [categories, setCategories] = React.useState([]);
     const [selectedCategory, setSelectedCategory] = React.useState('');
 
+    // Stavy pre typ dopravy
+    const [selectedArrivalType, setSelectedArrivalType] = React.useState('');
+    const arrivalOptions = [
+        'verejná doprava - vlak',
+        'verejná doprava - autobus',
+        'vlastná doprava',
+        'bez dopravy'
+    ];
+
+    // Stavy pre typ ubytovania
+    const [accommodationTypes, setAccommodationTypes] = React.useState([]);
+    const [selectedAccommodationType, setSelectedAccommodationType] = React.useState('');
+
+
     React.useEffect(() => {
-        // Načítať kategórie z Firestore
-        const fetchCategories = async () => {
-            if (db) {
+        const fetchTeamDataForSelects = async () => {
+            if (db && title.includes('Upraviť tím')) {
+                // Načítanie kategórií
                 try {
-                    // Správna referencia na dokument 'categories'
                     const categoriesDocRef = doc(db, 'settings', 'categories');
-                    const docSnapshot = await getDoc(categoriesDocRef); // Získanie JEDNÉHO dokumentu
+                    const docSnapshot = await getDoc(categoriesDocRef);
 
                     if (docSnapshot.exists()) {
                         const categoriesData = docSnapshot.data();
-                        const fetchedCategories = Object.values(categoriesData) // Získanie hodnôt z mapy (objektov kategórií)
-                            .filter(item => item && item.name) // Filtrovať neplatné položky a tie bez 'name'
-                            .map(item => String(item.name).trim()) // Získať názov kategórie
-                            .sort(); // Zoradiť abecedne
+                        const fetchedCategories = Object.values(categoriesData)
+                            .filter(item => item && item.name)
+                            .map(item => String(item.name).trim())
+                            .sort();
                         setCategories(fetchedCategories);
                     } else {
                         console.warn("Firestore dokument 'settings/categories' neexistuje. Žiadne kategórie neboli načítané.");
@@ -657,11 +666,35 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 } catch (error) {
                     console.error("Chyba pri načítaní kategórií z Firestore:", error);
                 }
+
+                // Načítanie typov ubytovania
+                try {
+                    const accommodationDocRef = doc(db, 'settings', 'accommodation');
+                    const docSnapshot = await getDoc(accommodationDocRef);
+
+                    if (docSnapshot.exists()) {
+                        const accommodationData = docSnapshot.data();
+                        if (accommodationData && Array.isArray(accommodationData.types)) {
+                            const fetchedAccommodationTypes = accommodationData.types
+                                .map(item => String(item.type).trim())
+                                .sort();
+                            setAccommodationTypes(fetchedAccommodationTypes);
+                        } else {
+                            console.warn("Firestore dokument 'settings/accommodation' neobsahuje pole 'types' alebo má neočakávaný formát.");
+                            setAccommodationTypes([]);
+                        }
+                    } else {
+                        console.warn("Firestore dokument 'settings/accommodation' neexistuje. Žiadne typy ubytovania neboli načítané.");
+                        setAccommodationTypes([]);
+                    }
+                } catch (error) {
+                    console.error("Chyba pri načítaní typov ubytovania z Firestore:", error);
+                }
             }
         };
 
         if (title.includes('Upraviť tím')) {
-            fetchCategories();
+            fetchTeamDataForSelects();
         }
     }, [db, title]);
 
@@ -703,6 +736,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             // Inicializovať selectedCategory s existujúcou kategóriou tímu
             setSelectedCategory(initialData._category || initialData.category || ''); // Použiť _category pre flattened tímy
             if (initialData.teamName === undefined) initialData.teamName = '';
+            
+            // Inicializovať vybraný typ dopravy
+            setSelectedArrivalType(initialData.arrival?.type || '');
+            
+            // Inicializovať vybraný typ ubytovania
+            setSelectedAccommodationType(initialData.accommodation?.type || '');
         }
         
         setLocalEditedData(initialData); 
@@ -1179,7 +1218,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             return elements.filter(Boolean); 
         } else if (currentPath === '' && title.includes('Upraviť tím')) {
-            // Úprava tímu: Kategória (select) a Názov tímu (input)
             const teamElements = [];
 
             // 1. Kategória tímu (Selectbox)
@@ -1192,14 +1230,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         'select',
                         {
                             className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                            value: selectedCategory, // Predvyplnená hodnota
+                            value: selectedCategory,
                             onChange: (e) => {
                                 setSelectedCategory(e.target.value);
-                                handleChange('_category', e.target.value); // Aktualizovať aj localEditedData
+                                handleChange('_category', e.target.value);
                             },
                             disabled: !isSavable
                         },
-                        // Zabezpečiť, že ak aktuálna kategória nie je v zozname, stále sa zobrazí
                         selectedCategory && !categories.includes(selectedCategory) &&
                             React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
                         categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
@@ -1220,6 +1257,58 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         onChange: (e) => handleChange('teamName', e.target.value),
                         readOnly: !isSavable
                     })
+                )
+            );
+
+            // 3. Typ dopravy (Selectbox)
+            teamElements.push(
+                React.createElement(
+                    'div',
+                    { key: 'arrival.type', className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ dopravy'),
+                    React.createElement(
+                        'select',
+                        {
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: selectedArrivalType,
+                            onChange: (e) => {
+                                setSelectedArrivalType(e.target.value);
+                                handleChange('arrival.type', e.target.value); // Aktualizovať vnorené pole
+                            },
+                            disabled: !isSavable
+                        },
+                        React.createElement('option', { value: '', disabled: true }, 'Vyberte typ dopravy'),
+                        // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
+                        selectedArrivalType && !arrivalOptions.includes(selectedArrivalType) &&
+                            React.createElement('option', { key: selectedArrivalType, value: selectedArrivalType, disabled: true, hidden: true }, selectedArrivalType),
+                        arrivalOptions.map(option => React.createElement('option', { key: option, value: option }, option))
+                    )
+                )
+            );
+
+            // 4. Typ ubytovania (Selectbox)
+            teamElements.push(
+                React.createElement(
+                    'div',
+                    { key: 'accommodation.type', className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ ubytovania'),
+                    React.createElement(
+                        'select',
+                        {
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: selectedAccommodationType,
+                            onChange: (e) => {
+                                setSelectedAccommodationType(e.target.value);
+                                handleChange('accommodation.type', e.target.value); // Aktualizovať vnorené pole
+                            },
+                            disabled: !isSavable
+                        },
+                        React.createElement('option', { value: '', disabled: true }, 'Vyberte typ ubytovania'),
+                        // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
+                        selectedAccommodationType && !accommodationTypes.includes(selectedAccommodationType) &&
+                            React.createElement('option', { key: selectedAccommodationType, value: selectedAccommodationType, disabled: true, hidden: true }, selectedAccommodationType),
+                        accommodationTypes.map(option => React.createElement('option', { key: option, value: option }, option))
+                    )
                 )
             );
 
@@ -1244,7 +1333,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             if (renderedFields.has(fullKeyPath)) return null; 
 
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                if (['packageDetails', 'accommodation', 'arrival'].includes(key)) {
+                if (['packageDetails'].includes(key)) { // accommodation a arrival teraz majú samostatné selectboxy
                     renderedFields.add(fullKeyPath); 
                     return React.createElement(
                         'div',
@@ -1331,7 +1420,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 ...localEditedData,
                                 category: selectedCategory, // Uložiť vybranú kategóriu
                                 _category: selectedCategory, // Aktualizovať aj internú _category pre zobrazenie
-                                teamName: localEditedData.teamName
+                                teamName: localEditedData.teamName,
+                                arrival: { type: selectedArrivalType }, // Uložiť vybraný typ dopravy
+                                accommodation: { type: selectedAccommodationType } // Uložiť vybraný typ ubytovania
                             };
 
                             // Vytvoríme "pseudo" originalDataPath pre to, aby updateNestedObjectByPath vedelo, kam uložiť dataToSave
