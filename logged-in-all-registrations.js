@@ -1783,17 +1783,34 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         try {
                             window.showGlobalLoader();
 
-                            // Vždy skontrolujte originalDataPath pred použitím
-                            if (!originalDataPath) {
-                                throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna. Zmeny neboli uložené.");
-                            }
+                            // LOGGING originalDataPath pre debugging
                             console.log("DEBUG Save Button Click: originalDataPath:", originalDataPath);
 
+                            if (originalDataPath === '') {
+                                // Logic for top-level user update (when originalDataPath is empty)
+                                console.log("DEBUG Top-Level User Save: Executing top-level user update.");
+                                const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
+                                const dataToSave = { ...localEditedData };
+                                if (dataToSave.contactPhoneNumber !== undefined) {
+                                    dataToSave.contactPhoneNumber = fullPhoneNumber;
+                                }
 
-                            // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
-                            if (title.includes('Upraviť tím')) {
+                                const finalUserDataToSave = {};
+                                Object.keys(dataToSave).forEach(key => {
+                                    // Filter out internal _keys, and other system-related keys
+                                    if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
+                                        finalUserDataToSave[key] = dataToSave[key];
+                                    }
+                                });
+
+                                console.log("DEBUG Top-Level User Save: Final Data to save:", finalUserDataToSave);
+                                await updateDoc(targetDocRef, finalUserDataToSave);
+                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+                                onClose();
+
+                            } else if (title.includes('Upraviť tím')) {
                                 console.log("DEBUG Team Save: Original Data Path:", originalDataPath);
-                                if (!originalDataPath || !originalDataPath.includes('[') || !originalDataPath.includes(']')) {
+                                if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
                                     throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
                                 }
 
@@ -1864,23 +1881,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success'); // Notifikácia o úspechu
                                 onClose(); // Zatvoriť modálne okno po úspechu
 
-                            } else {
-                                const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                                // Vytvoríme aktualizovaný objekt s dátami na uloženie
-                                const updatedDataForSave = { ...localEditedData };
-
-                                // Ak je k dispozícii telefónne číslo, aktualizujeme ho
-                                if (updatedDataForSave.contactPhoneNumber !== undefined) {
-                                    updatedDataForSave.contactPhoneNumber = fullPhoneNumber;
-                                }
-
-                                // Ak editujeme člena tímu/hráča/šoféra, originalDataPath bude obsahovať aj index poľa
-                                // Potrebujeme prejsť pôvodnú štruktúru cez updateNestedObjectByPath
-                                if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
+                            } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
                                     originalDataPath.includes('womenTeamMemberDetails') || originalDataPath.includes('driverDetailsMale') || originalDataPath.includes('driverDetailsFemale')) {
                                     
                                     console.log("DEBUG Member Save: Original Data Path:", originalDataPath);
-                                    if (!originalDataPath || !originalDataPath.includes('[') || !originalDataPath.includes(']')) {
+                                    if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
                                         throw new Error("Neplatný formát cesty člena pre úpravu. Očakáva sa 'teams.category[index].memberArray[index]'.");
                                     }
 
@@ -1935,13 +1940,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                         const memberToUpdate = { ...teamToUpdate[memberArrayPath][memberArrayIndex] };
                                         
                                         // Aktualizácia všetkých polí z localEditedData
-                                        Object.keys(updatedDataForSave).forEach(key => {
+                                        Object.keys(localEditedData).forEach(key => { // Používame localEditedData priamo
                                             if (key.startsWith('address.')) {
                                                 const addressKey = key.split('.')[1];
                                                 if (!memberToUpdate.address) memberToUpdate.address = {};
-                                                memberToUpdate.address[addressKey] = updatedDataForSave[key];
-                                            } else {
-                                                memberToUpdate[key] = updatedDataForSave[key];
+                                                memberToUpdate.address[addressKey] = localEditedData[key];
+                                            } else if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
+                                                memberToUpdate[key] = localEditedData[key];
                                             }
                                         });
 
@@ -1967,13 +1972,24 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     }
                                 } else {
                                     // Pôvodná logika pre vnorené aktualizácie, ktoré nie sú tímy ani členovia
+                                    // Tu už originalDataPath musí byť definovaná
+                                    if (!originalDataPath) {
+                                        throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu. Zmeny neboli uložené.");
+                                    }
                                     const docSnapshot = await getDoc(targetDocRef);
                                     if (!docSnapshot.exists()) {
                                         throw new Error("Dokument sa nenašiel pre aktualizáciu.");
                                     }
                                     const currentDocData = docSnapshot.data();
 
-                                    const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataForSave);
+                                    const dataToSave = {};
+                                     Object.keys(localEditedData).forEach(key => {
+                                        if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
+                                            dataToSave[key] = localEditedData[key];
+                                        }
+                                     });
+
+                                    const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, dataToSave);
 
                                     const updates = {};
                                     updates[topLevelField] = updatedObject[topLevelField];
@@ -2991,7 +3007,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || '',} ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
@@ -3134,7 +3150,8 @@ function AllRegistrationsApp() {
                                                 className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
                                             }, '⚙️')
                                             // Removed right move button
-                                        ),
+                                        )
+                                        ,
                                         React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center cursor-pointer' },
                                             col.label,
                                             currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
