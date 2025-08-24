@@ -1165,7 +1165,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             setTimeout(() => {
                 if (inputRefs.current[path]) { // Použijeme path
                     inputRefs.current[path].selectionStart = selectionStart - 2;
-                    inputRefs.current[path].selectionEnd = selectionStart - 2;
+                    if (inputRefs.current[path]) inputRefs.current[path].selectionEnd = selectionStart - 2;
                 }
             }, 0);
         }
@@ -1194,7 +1194,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
 
         // Definícia poradia polí pre hráčov/členov RT/šoférov
-        // Všimnite si, že všetky adresné polia sú teraz s prefixom 'address.'
         const memberFieldsOrder = [
             'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
@@ -1217,6 +1216,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             fieldsToRenderForUser = ['firstName', 'lastName'];
         }
 
+        // Set to track fields that have already been rendered to prevent duplicates
         const renderedFields = new Set(); 
 
         const renderField = (path, value) => {
@@ -1261,7 +1261,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     onChange: (e) => handleIcDphChange(e, path),
                     maxLength: 12 
                 };
-            } else if (path.includes('postalCode')) { // Upravené pre 'address.postalCode'
+            } else if (path.includes('postalCode')) { // Upravené pre 'address.postalCode' a 'postalCode'
                 customProps = {
                     onChange: (e) => handlePostalCodeChange(e, path), // Pass path to handler
                     onKeyDown: (e) => handlePostalCodeKeyDown(e, path), // Pass path to handler
@@ -1337,293 +1337,275 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             return value;
         };
 
+        // HLAVNÁ LOGIKA VYKRESLOVANIA POLÍ
+        if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
+            if (isEditingMember) { // A ak upravujeme Hráča/Člena RT/Šoféra
+                const memberElements = [];
+                // Vykresľujeme polia explicitne v určenom poradí
+                memberFieldsOrder.forEach(path => {
+                    memberElements.push(renderField(path, getNestedValue(localEditedData, path)));
+                });
+                return memberElements.filter(Boolean);
+            } else if (title.includes('Upraviť používateľa')) { // Ak upravujeme Používateľa
+                const elements = [];
+                
+                ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
+                    if (fieldsToRenderForUser.includes(path)) {
+                        elements.push(renderField(path, getNestedDataForInput(localEditedData, path)));
+                    }
+                });
 
-        if (currentPath === '' && isEditingMember) {
-            const memberElements = [];
-            // Iterujeme cez memberFieldsOrder pre explicitné poradie
-            memberFieldsOrder.forEach(path => {
-                memberElements.push(renderField(path, getNestedValue(localEditedData, path)));
-            });
-            return memberElements.filter(Boolean);
-        }
-        else if (currentPath === '' && title.includes('Upraviť používateľa')) {
-            const elements = [];
-            
-            ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
-                if (fieldsToRenderForUser.includes(path)) {
-                    elements.push(renderField(path, getNestedDataForInput(localEditedData, path)));
+                const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
+                if (billingFieldsInScope.length > 0) {
+                    elements.push(
+                        React.createElement(
+                            'div',
+                            { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
+                            billingFieldsInScope.map(billingPath => {
+                                const billingValue = getNestedDataForInput(localEditedData, billingPath);
+                                return renderField(billingPath, billingValue);
+                            })
+                        )
+                    );
                 }
-            });
 
-            const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
-            if (billingFieldsInScope.length > 0) {
-                elements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
-                        billingFieldsInScope.map(billingPath => {
-                            const billingValue = getNestedDataForInput(localEditedData, billingPath);
-                            return renderField(billingPath, billingValue);
-                        })
-                    )
+                const addressFieldsInScope = allUserFields.filter(p => 
+                    ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
                 );
-            }
+                
+                if (addressFieldsInScope.length > 0) {
+                    elements.push(
+                        React.createElement(
+                            'div',
+                            { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
+                            addressFieldsInScope.map(addressPath => {
+                                const addressValue = getNestedDataForInput(localEditedData, addressPath);
+                                return renderField(addressPath, addressValue);
+                            })
+                        )
+                    );
+                }
 
-            const addressFieldsInScope = allUserFields.filter(p => 
-                ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
-            );
-            
-            if (addressFieldsInScope.length > 0) {
-                elements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
-                        addressFieldsInScope.map(addressPath => {
-                            const addressValue = getNestedDataForInput(localEditedData, addressPath);
-                            return renderField(addressPath, addressValue);
-                        })
-                    )
-                );
-            }
+                if (fieldsToRenderForUser.includes('note')) {
+                    elements.push(renderField('note', getNestedDataForInput(localEditedData, 'note')));
+                }
 
-            if (fieldsToRenderForUser.includes('note')) {
-                elements.push(renderField('note', getNestedDataForInput(localEditedData, 'note')));
-            }
+                return elements.filter(Boolean); 
+            } else if (title.includes('Upraviť tím')) { // Ak upravujeme Tím
+                const teamElements = [];
 
-            return elements.filter(Boolean); 
-        } else if (currentPath === '' && title.includes('Upraviť tím')) {
-            const teamElements = [];
-
-            // 1. Kategória tímu (Selectbox)
-            teamElements.push(
-                React.createElement(
-                    'div',
-                    { key: '_category', className: 'mb-4' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
-                    React.createElement(
-                        'select',
-                        {
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                            value: selectedCategory,
-                            onChange: (e) => {
-                                setSelectedCategory(e.target.value);
-                                handleChange('_category', e.target.value);
-                            },
-                            disabled: !isSavable
-                        },
-                        selectedCategory && !categories.includes(selectedCategory) &&
-                            React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
-                        categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
-                    )
-                )
-            );
-
-            // 2. Názov tímu (Inputbox)
-            teamElements.push(
-                React.createElement(
-                    'div',
-                    { key: 'teamName', className: 'mb-4' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Názov tímu'),
-                    React.createElement('input', {
-                        type: 'text',
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                        value: localEditedData.teamName || '',
-                        onChange: (e) => handleChange('teamName', e.target.value),
-                        readOnly: !isSavable
-                    })
-                )
-            );
-
-            // 3. Typ dopravy (Selectbox)
-            teamElements.push(
-                React.createElement(
-                    'div',
-                    { key: 'arrival.type', className: 'mb-4' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ dopravy'),
-                    React.createElement(
-                        'select',
-                        {
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                            value: selectedArrivalType,
-                            onChange: (e) => {
-                                setSelectedArrivalType(e.target.value);
-                                handleChange('arrival.type', e.target.value); // Aktualizovať vnorené pole
-                            },
-                            disabled: !isSavable
-                        },
-                        React.createElement('option', { value: '', disabled: true }, 'Vyberte typ dopravy'),
-                        // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
-                        selectedArrivalType && !arrivalOptions.includes(selectedArrivalType) &&
-                            React.createElement('option', { key: selectedArrivalType, value: selectedArrivalType, disabled: true, hidden: true }, selectedArrivalType),
-                        arrivalOptions.map(option => React.createElement('option', { key: option, value: option }, option))
-                    )
-                )
-            );
-
-            // 4. Typ ubytovania (Selectbox)
-            teamElements.push(
-                React.createElement(
-                    'div',
-                    { key: 'accommodation.type', className: 'mb-4' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ ubytovania'),
-                    React.createElement(
-                        'select',
-                        {
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                            value: selectedAccommodationType,
-                            onChange: (e) => {
-                                setSelectedAccommodationType(e.target.value);
-                                handleChange('accommodation.type', e.target.value); // Aktualizovať vnorené pole
-                            },
-                            disabled: !isSavable
-                        },
-                        React.createElement('option', { value: '', disabled: true }, 'Vyberte typ ubytovania'),
-                        // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
-                        selectedAccommodationType && !accommodationTypes.includes(selectedAccommodationType) &&
-                            React.createElement('option', { key: selectedAccommodationType, value: selectedAccommodationType, disabled: true, hidden: true }, selectedAccommodationType),
-                        accommodationTypes.map(option => React.createElement('option', { key: option, value: option }, option))
-                    )
-                )
-            );
-
-            // 5. Názov balíka (Selectbox)
-            teamElements.push(
-                React.createElement(
-                    'div',
-                    { key: 'packageDetails.name', className: 'mb-4' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Balík'),
-                    React.createElement(
-                        'select',
-                        {
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                            value: selectedPackageName,
-                            onChange: (e) => {
-                                setSelectedPackageName(e.target.value);
-                                // Nájdite celý objekt balíka na základe vybraného názvu
-                                const selectedPackage = packages.find(pkg => pkg.name === e.target.value);
-                                if (selectedPackage) {
-                                    // Uložiť celý objekt do packageDetails, ale bez 'id' a iných interných kľúčov
-                                    const { id, ...packageDataToSave } = selectedPackage;
-                                    handleChange('packageDetails', packageDataToSave);
-                                } else {
-                                    handleChange('packageDetails', null); // Ak balík nebol nájdený
-                                }
-                            },
-                            disabled: !isSavable
-                        },
-                        React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
-                        selectedPackageName && !packages.some(pkg => pkg.name === selectedPackageName) &&
-                            React.createElement('option', { key: selectedPackageName, value: selectedPackageName, disabled: true, hidden: true }, selectedPackageName),
-                        packages.map(pkg => React.createElement('option', { key: pkg.id, value: pkg.name }, pkg.name))
-                    )
-                )
-            );
-
-            // 6. Tričká
-            if (availableTshirtSizes.length > 0) {
-                const usedSizes = teamTshirts.map(entry => entry.size); // Get all sizes currently selected across all rows
+                // 1. Kategória tímu (Selectbox)
                 teamElements.push(
                     React.createElement(
                         'div',
-                        { key: 'tshirts-section', className: 'mb-4' },
-                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Tričká'),
-                        // Render existing t-shirt entries
-                        teamTshirts.map(tshirtEntry =>
-                            React.createElement(
-                                'div',
-                                { key: tshirtEntry.tempId, className: 'flex items-center mb-2' },
-                                React.createElement(
-                                    'select',
-                                    {
-                                        className: `mt-1 block w-32 rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                        value: tshirtEntry.size,
-                                        onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value),
-                                        disabled: !isSavable
-                                    },
-                                    // Option for the currently selected size, always show it
-                                    // Even if it might be considered 'used' by another entry in some edge case or if no longer available globally
-                                    availableTshirtSizes.includes(tshirtEntry.size) ? 
-                                        React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size }, tshirtEntry.size)
-                                    : (tshirtEntry.size && React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size, disabled: true, hidden: true }, `${tshirtEntry.size} (Neplatná)`)),
-
-                                    // Only show other available sizes that are not currently used by other entries
-                                    availableTshirtSizes
-                                        .filter(size => !usedSizes.includes(size) || size === tshirtEntry.size) // Filter out already used sizes, but keep the current entry's size
-                                        .map(size => (
-                                            size !== tshirtEntry.size ? // Avoid duplicating the already rendered current size option
-                                            React.createElement('option', {
-                                                key: size,
-                                                value: size,
-                                            }, size) : null
-                                        ))
-                                ),
-                                React.createElement('input', {
-                                    type: 'number',
-                                    min: '0',
-                                    className: `mt-1 block flex-grow rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                    value: tshirtEntry.quantity,
-                                    onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'quantity', e.target.value),
-                                    readOnly: !isSavable
-                                }),
-                                React.createElement('button', {
-                                    type: 'button',
-                                    onClick: () => removeTshirtEntry(tshirtEntry.tempId),
-                                    className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 focus:outline-none text-xl leading-none', // Circular delete button
-                                    style: { lineHeight: '10px' }, // Adjust line height to center the '-'
-                                }, '-')
-                            )
-                        ),
-                        // Wrap the add button in a div for centering
-                        React.createElement('div', { className: 'flex justify-center mt-2' },
-                            React.createElement('button', {
-                                type: 'button',
-                                onClick: addTshirtEntry,
-                                className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none text-xl leading-none', // Changed color to blue, made round, text-xl for larger +, line-height for centering
-                                style: { lineHeight: '10px' }, // Adjust line height to center the '+'
-                                disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
-                            }, '+')
+                        { key: '_category', className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
+                        React.createElement(
+                            'select',
+                            {
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                value: selectedCategory,
+                                onChange: (e) => {
+                                    setSelectedCategory(e.target.value);
+                                    handleChange('_category', e.target.value);
+                                },
+                                disabled: !isSavable
+                            },
+                            selectedCategory && !categories.includes(selectedCategory) &&
+                                React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
+                            categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
                         )
                     )
                 );
+
+                // 2. Názov tímu (Inputbox)
+                teamElements.push(
+                    React.createElement(
+                        'div',
+                        { key: 'teamName', className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Názov tímu'),
+                        React.createElement('input', {
+                            type: 'text',
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: localEditedData.teamName || '',
+                            onChange: (e) => handleChange('teamName', e.target.value),
+                            readOnly: !isSavable
+                        })
+                    )
+                );
+
+                // 3. Typ dopravy (Selectbox)
+                teamElements.push(
+                    React.createElement(
+                        'div',
+                        { key: 'arrival.type', className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ dopravy'),
+                        React.createElement(
+                            'select',
+                            {
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                value: selectedArrivalType,
+                                onChange: (e) => {
+                                    setSelectedArrivalType(e.target.value);
+                                    handleChange('arrival.type', e.target.value); // Aktualizovať vnorené pole
+                                },
+                                disabled: !isSavable
+                            },
+                            React.createElement('option', { value: '', disabled: true }, 'Vyberte typ dopravy'),
+                            // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
+                            selectedArrivalType && !arrivalOptions.includes(selectedArrivalType) &&
+                                React.createElement('option', { key: selectedArrivalType, value: selectedArrivalType, disabled: true, hidden: true }, selectedArrivalType),
+                            arrivalOptions.map(option => React.createElement('option', { key: option, value: option }, option))
+                        )
+                    )
+                );
+
+                // 4. Typ ubytovania (Selectbox)
+                teamElements.push(
+                    React.createElement(
+                        'div',
+                        { key: 'accommodation.type', className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ ubytovania'),
+                        React.createElement(
+                            'select',
+                            {
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                value: selectedAccommodationType,
+                                onChange: (e) => {
+                                    setSelectedAccommodationType(e.target.value);
+                                    handleChange('accommodation.type', e.target.value); // Aktualizovať vnorené pole
+                                },
+                                disabled: !isSavable
+                            },
+                            React.createElement('option', { value: '', disabled: true }, 'Vyberte typ ubytovania'),
+                            // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
+                            selectedAccommodationType && !accommodationTypes.includes(selectedAccommodationType) &&
+                                React.createElement('option', { key: selectedAccommodationType, value: selectedAccommodationType, disabled: true, hidden: true }, selectedAccommodationType),
+                            accommodationTypes.map(option => React.createElement('option', { key: option, value: option }, option))
+                        )
+                    )
+                );
+
+                // 5. Názov balíka (Selectbox)
+                teamElements.push(
+                    React.createElement(
+                        'div',
+                        { key: 'packageDetails.name', className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Balík'),
+                        React.createElement(
+                            'select',
+                            {
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                value: selectedPackageName,
+                                onChange: (e) => {
+                                    setSelectedPackageName(e.target.value);
+                                    // Nájdite celý objekt balíka na základe vybraného názvu
+                                    const selectedPackage = packages.find(pkg => pkg.name === e.target.value);
+                                    if (selectedPackage) {
+                                        // Uložiť celý objekt do packageDetails, ale bez 'id' a iných interných kľúčov
+                                        const { id, ...packageDataToSave } = selectedPackage;
+                                        handleChange('packageDetails', packageDataToSave);
+                                    } else {
+                                        handleChange('packageDetails', null); // Ak balík nebol nájdený
+                                    }
+                                },
+                                disabled: !isSavable
+                            },
+                            React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
+                            selectedPackageName && !packages.some(pkg => pkg.name === selectedPackageName) &&
+                                React.createElement('option', { key: selectedPackageName, value: selectedPackageName, disabled: true, hidden: true }, selectedPackageName),
+                            packages.map(pkg => React.createElement('option', { key: pkg.id, value: pkg.name }, pkg.name))
+                        )
+                    )
+                );
+
+                // 6. Tričká
+                if (availableTshirtSizes.length > 0) {
+                    const usedSizes = teamTshirts.map(entry => entry.size); // Get all sizes currently selected across all rows
+                    teamElements.push(
+                        React.createElement(
+                            'div',
+                            { key: 'tshirts-section', className: 'mb-4' },
+                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Tričká'),
+                            // Render existing t-shirt entries
+                            teamTshirts.map(tshirtEntry =>
+                                React.createElement(
+                                    'div',
+                                    { key: tshirtEntry.tempId, className: 'flex items-center mb-2' },
+                                    React.createElement(
+                                        'select',
+                                        {
+                                            className: `mt-1 block w-32 rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                            value: tshirtEntry.size,
+                                            onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value),
+                                            disabled: !isSavable
+                                        },
+                                        // Option for the currently selected size, always show it
+                                        // Even if it might be considered 'used' by another entry in some edge case or if no longer available globally
+                                        availableTshirtSizes.includes(tshirtEntry.size) ? 
+                                            React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size }, tshirtEntry.size)
+                                        : (tshirtEntry.size && React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size, disabled: true, hidden: true }, `${tshirtEntry.size} (Neplatná)`)),
+
+                                        // Only show other available sizes that are not currently used by other entries
+                                        availableTshirtSizes
+                                            .filter(size => !usedSizes.includes(size) || size === tshirtEntry.size) // Filter out already used sizes, but keep the current entry's size
+                                            .map(size => (
+                                                size !== tshirtEntry.size ? // Avoid duplicating the already rendered current size option
+                                                React.createElement('option', {
+                                                    key: size,
+                                                    value: size,
+                                                }, size) : null
+                                            ))
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: '0',
+                                        className: `mt-1 block flex-grow rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                        value: tshirtEntry.quantity,
+                                        onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'quantity', e.target.value),
+                                        readOnly: !isSavable
+                                    }),
+                                    React.createElement('button', {
+                                        type: 'button',
+                                        onClick: () => removeTshirtEntry(tshirtEntry.tempId),
+                                        className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 focus:outline-none text-xl leading-none', // Circular delete button
+                                        style: { lineHeight: '10px' }, // Adjust line height to center the '-'
+                                    }, '-')
+                                )
+                            ),
+                            // Wrap the add button in a div for centering
+                            React.createElement('div', { className: 'flex justify-center mt-2' },
+                                React.createElement('button', {
+                                    type: 'button',
+                                    onClick: addTshirtEntry,
+                                    className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none text-xl leading-none', // Changed color to blue, made round, text-xl for larger +, line-height for centering
+                                    style: { lineHeight: '10px' }, // Adjust line height to center the '+'
+                                    disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
+                                }, '+')
+                            )
+                        )
+                    );
+                }
+
+                return teamElements;
+            }
+        } else { // Pre všetky ostatné prípady (vnorené objekty alebo iné, ako vyššie špecifikované typy úprav)
+            if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
+                return renderField(currentPath, obj);
             }
 
-            return teamElements;
-        } else if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
-            return renderField(currentPath, obj);
-        }
-
-        // Ak sme v režime úpravy tímu, detaily členov nebudeme zobrazovať (sú riešené vyššie, alebo sa úpravujú samostatne).
-        if (title.includes('Upraviť tím') && ['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetailsMale', 'driverDetailsFemale'].includes(key)) {
-             return null;
-        }
-
-        // TOTO JE KRITICKÁ ZMENA: Ak sme v režime úpravy člena a key je 'address', ignorujeme rekurzívne vykreslenie.
-        // Adresné polia už boli vykreslené jednotlivo podľa memberFieldsOrder.
-        if (isEditingMember && key === 'address') {
-            return null;
-        }
-
-        // Táto časť spracováva vnorené objekty/polia, ktoré nie sú priamo polia profilu používateľa (napr. dáta tímu)
-        return Object.entries(obj).map(([key, value]) => {
-            if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password'].includes(key)) {
-                return null;
-            }
-
-            const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
-            if (renderedFields.has(fullKeyPath)) return null; 
-
-            if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                // packageDetails sa teraz spracováva pomocou selectboxu, takže ho nezobrazujeme tu
-                if (['packageDetails'].includes(key)) {
-                    return null;
-                } else if (['accommodation', 'arrival'].includes(key)) { // accommodation a arrival teraz majú samostatné selectboxy
-                    return null;
-                } else if (['tshirts'].includes(key) && title.includes('Upraviť tím')) { // Tričká sa spracovávajú samostatne
+            return Object.entries(obj).map(([key, value]) => {
+                // Filtrovať interné kľúče a kľúče, ktoré sú už spracované na najvyššej úrovni pre tímy
+                if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password', 'packageDetails', 'accommodation', 'arrival', 'tshirts'].includes(key)) {
                     return null;
                 }
-                else {
+                
+                const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
+
+                if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
+                    // Pre vnorené objekty, ktoré nie sú priamo spracované logikou najvyššej úrovne
                     return React.createElement(
                         CollapsibleSection,
                         {
@@ -1634,37 +1616,36 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         },
                         renderDataFields(value, fullKeyPath)
                     );
-                }
-            }
-            else if (Array.isArray(value)) {
-                if (value.length === 0) {
-                     return React.createElement(
+                } else if (Array.isArray(value)) {
+                    // Pre polia, tiež v rozbaľovacej sekcii
+                    if (value.length === 0) {
+                        return React.createElement(
+                            'div',
+                            { key: fullKeyPath, className: 'mb-4' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, formatLabel(fullKeyPath)),
+                            React.createElement('input', {
+                                type: 'text',
+                                readOnly: true,
+                                className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
+                                value: '(Prázdne)'
+                            })
+                        );
+                    }
+                    return React.createElement(
                         'div',
-                        { key: fullKeyPath, className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, formatLabel(fullKeyPath)),
-                        React.createElement('input', {
-                            type: 'text',
-                            readOnly: true,
-                            className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
-                            value: '(Prázdne)'
-                        })
+                        { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
+                        value.map((item, index) => React.createElement(
+                            CollapsibleSection,
+                            { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: false },
+                            renderDataFields(item, `${fullKeyPath}[${index}]`)
+                        ))
                     );
+                } else {
+                    // Vykreslenie jednoduchých polí
+                    return renderField(fullKeyPath, value);
                 }
-                // Pre pole v CollapsibleSection, zobrazíme súhrn (napr. meno, priezvisko)
-                return React.createElement(
-                    'div',
-                    { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
-                    value.map((item, index) => React.createElement(
-                        CollapsibleSection,
-                        { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: false },
-                        renderDataFields(item, `${fullKeyPath}[${index}]`) 
-                    ))
-                );
-            }
-            else {
-                return renderField(fullKeyPath, value);
-            }
-        }).filter(Boolean); // Filtrujeme null hodnoty pre skryté sekcie
+            }).filter(Boolean);
+        }
     };
 
     return React.createElement(
