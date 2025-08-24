@@ -1868,28 +1868,36 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                        originalDataPath.includes('womenTeamMemberDetails') || originalDataPath.includes('driverDetailsMale') || originalDataPath.includes('driverDetailsFemale')) {
                                 // Logika pre aktualizáciu člena tímu/hráča/šoféra
                                 console.log("DEBUG Member Save: Original Data Path:", originalDataPath);
-                                if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
-                                    throw new Error("Neplatný formát cesty člena pre úpravu. Očakáva sa 'teams.category[index].memberArray[index]'.");
+                                // Cesta by mala vyzerať ako "teams.CATEGORY[TEAM_INDEX].MEMBER_ARRAY[MEMBER_INDEX]"
+                                // Rozdelením podľa '.' dostaneme ['teams', 'CATEGORY[TEAM_INDEX]', 'MEMBER_ARRAY[MEMBER_INDEX]']
+                                const pathParts = originalDataPath.split('.');
+                                if (pathParts.length !== 3) { // Očakávame 3 časti: teams, category[index], memberArray[index]
+                                    throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty (teams.category[index].memberArray[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
                                 }
 
-                                const pathParts = originalDataPath.split('.');
-                                if (pathParts.length < 4) {
-                                    throw new Error(`Neplatný formát cesty člena. Očakáva sa 4+ segmentov, našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
-                                }
-                                const categoryAndIndexPart = pathParts[1];
-                                const memberArrayPath = pathParts[2];
-                                const memberIndexPart = pathParts[3];
+                                const topLevelPath = pathParts[0]; // 'teams' - pre validáciu, ak je potrebná
+                                const categoryAndIndexPart = pathParts[1]; // napr. 'Juniors[0]'
+                                const memberArrayAndIndexPart = pathParts[2]; // napr. 'playerDetails[0]'
+                                
+                                console.log("DEBUG Member Save: Path Parts:", pathParts);
+                                console.log("DEBUG Member Save: Category And Index Part:", categoryAndIndexPart);
+                                console.log("DEBUG Member Save: Member Array And Index Part:", memberArrayAndIndexPart);
 
                                 const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-                                const memberIndexMatch = memberIndexPart.match(/^\[(\d+)\]$/);
+                                const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
 
-                                if (!categoryMatch || !memberIndexMatch) {
-                                    throw new Error(`Neplatný formát kategórie/indexu tímu alebo člena: ${categoryAndIndexPart}, ${memberIndexPart}.`);
+                                if (!categoryMatch) {
+                                    throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
                                 }
+                                if (!memberArrayMatch) {
+                                    throw new Error(`Neplatný formát poľa člena tímu a indexu: ${memberArrayAndIndexPart}.`);
+                                }
+
                                 const category = categoryMatch[1];
                                 const teamIndex = parseInt(categoryMatch[2]);
-                                const memberArrayIndex = parseInt(memberIndexMatch[1]);
-
+                                const memberArrayPath = memberArrayMatch[1]; // napr. 'playerDetails'
+                                const memberArrayIndex = parseInt(memberArrayMatch[2]); // napr. 0
+                                
                                 const docSnapshot = await getDoc(targetDocRef);
                                 if (!docSnapshot.exists()) {
                                     throw new Error("Dokument sa nenašiel pre aktualizáciu.");
@@ -1902,6 +1910,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
                                     const memberToUpdate = { ...teamToUpdate[memberArrayPath][memberArrayIndex] };
                                     
+                                    // finalDataToSave už odfiltroval interné kľúče
                                     Object.keys(finalDataToSave).forEach(key => {
                                         if (key.startsWith('address.')) {
                                             const addressKey = key.split('.')[1];
@@ -2962,7 +2971,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || '',} ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
