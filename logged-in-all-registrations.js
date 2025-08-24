@@ -584,9 +584,16 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     'div',
                                     { className: 'flex justify-around' },
                                     mealTypes.map(type => {
-                                        // Ak packageDetails.meals.date.type neexistuje, predvolene je 0 (nezaškrtnuté)
-                                        const memberMeals = member.packageDetails?.meals;
-                                        const isChecked = memberMeals?.[date]?.[type] === 1;
+                                        // Získať stav z individuálneho nastavenia člena (ak existuje)
+                                        const memberMealSetting = member.packageDetails?.meals?.[date]?.[type];
+                                        // Získať stav z balíka tímu (ak existuje)
+                                        const teamPackageMealSetting = team.packageDetails?.meals?.[date]?.[type];
+
+                                        // Predvolený stav:
+                                        // 1. Ak existuje individuálne nastavenie člena, použiť to.
+                                        // 2. Inak, ak existuje nastavenie z balíka, použiť to.
+                                        // 3. Inak, predvolene false (0).
+                                        const isChecked = (memberMealSetting !== undefined ? memberMealSetting === 1 : (teamPackageMealSetting === 1));
 
                                         return React.createElement('input', {
                                                             key: `${member.uniqueId}-${date}-${type}-checkbox`,
@@ -836,7 +843,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         setIsTargetUserHall(initialData.role === 'hall'); 
 
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         if (title.includes('Upraviť používateľa')) {
@@ -1324,7 +1331,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
