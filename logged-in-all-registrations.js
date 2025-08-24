@@ -816,7 +816,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
-        } else if (title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra')) {
+        } else if (title.includes('Upraviť Hráča') || title.includes('Upraviť Člen realizačného tímu') || title.includes('Upraviť Šoféra')) {
             // Inicializovať adresné polia, ak neexistujú, a nastaviť ich na prázdny reťazec
             if (!initialData.address) initialData.address = {};
             if (initialData.address.street === undefined) initialData.address.street = '';
@@ -1283,7 +1283,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
