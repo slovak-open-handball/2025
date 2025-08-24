@@ -940,8 +940,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'dateOfBirth') return 'Dátum narodenia';
         if (key === 'address.street') return 'Ulica';
         if (key === 'address.houseNumber') return 'Popisné číslo';
-        if (key === 'address.city') return 'Mesto/Obec';
         if (key === 'address.postalCode') return 'PSČ';
+        if (key === 'address.city') return 'Mesto/Obec';
         if (key === 'address.country') return 'Krajina';
         if (key === 'street') return 'Ulica';
         if (key === 'houseNumber') return 'Popisné číslo';
@@ -1194,40 +1194,27 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     const isSavable = targetDocRef !== null;
 
-    const renderDataFields = (obj, currentPath = '') => {
-        console.log(`renderDataFields: called with currentPath: ${currentPath}, obj:`, obj); // Debug log
-
-        // Skryť isMenuToggled pre úpravu používateľa
-        if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
-            return null;
+    // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
+    const getNestedDataForInput = (obj, path) => {
+        const value = getNestedValue(obj, path);
+        if (path.includes('postalCode')) { // Upravené pre address.postalCode
+            return String(value || '').replace(/\s/g, '');
         }
+        if (path === 'contactPhoneNumber') {
+            return value;
+        }
+        return value;
+    };
 
-        // Definícia poradia polí pre hráčov/členov RT/šoférov
-        // Všimnite si, že 'address' je teraz prefix, nie samostatný objekt
+    // Nová funkcia pre vykresľovanie polí člena tímu/hráča/šoféra
+    const renderMemberFields = () => {
+        console.log('renderMemberFields: called. localEditedData:', localEditedData); // Debug log
+        const memberElements = [];
         const memberFieldsOrder = [
             'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
         ];
-        
-        const isEditingMember = title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra');
-
-
-        const allUserFields = [
-            'firstName', 'lastName', 'contactPhoneNumber',
-            'billing.clubName', 'billing.ico', 'billing.dic', 'billing.icDph',
-            'street', 'houseNumber', 'city', 'postalCode', 'country', 'note' 
-        ];
-
-        let fieldsToRenderForUser = allUserFields;
-
-        // Condition for admin or hall editing another admin or hall
-        const isCurrentUserAdmin = userRole === 'admin';
-        if (title.includes('Upraviť používateľa') && isCurrentUserAdmin && (isTargetUserAdmin || isTargetUserHall)) {
-            fieldsToRenderForUser = ['firstName', 'lastName'];
-        }
-
-        // Set to track fields that have already been rendered to prevent duplicates
-        const renderedFields = new Set(); 
+        const renderedFields = new Set(); // To track fields already rendered to prevent duplicates
 
         const renderField = (path, value) => {
             console.log(`  renderField called for path: ${path}, value:`, value, `typeof value: ${typeof value}`); // Debug log
@@ -1235,85 +1222,34 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 console.log(`    Path ${path} already rendered, returning null.`); // Debug log
                 return null; 
             }
-            
             renderedFields.add(path); 
 
-            const key = path.split('.').pop();
-            // These fields should always be hidden when editing a user profile (regardless of roles)
-            if (title.includes('Upraviť používateľa') &&
-                ['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
-                return null;
-            }
-            
             const labelText = formatLabel(path);
             let inputType = 'text';
             let isCheckbox = false;
-            let customProps = {}; // Pre vlastné handlery a inputMode
+            let customProps = {}; 
 
             if (typeof value === 'boolean') {
                 isCheckbox = true;
-            } else if (path.toLowerCase().includes('password')) {
-                inputType = 'password';
-            } else if (path.includes('dateOfBirth')) { // Special handling for dateOfBirth
+            } else if (path.includes('dateOfBirth')) {
                 inputType = 'date';
-            } else if (path.includes('jerseyNumber') || path.includes('registrationNumber')) { // Handling for jersey and registration number
+            } else if (path.includes('jerseyNumber') || path.includes('registrationNumber')) {
                  customProps = {
                     onChange: (e) => handleNumericInput(e, path),
                     inputMode: 'numeric',
                     pattern: '[0-9]*',
-                    maxLength: path.includes('jerseyNumber') ? 3 : 20 // Max 3 pre dres, 20 pre registráciu
+                    maxLength: path.includes('jerseyNumber') ? 3 : 20
                 };
-            } else if (path === 'billing.ico' || path === 'billing.dic') {
+            } else if (path.includes('postalCode')) {
                 customProps = {
-                    onChange: (e) => handleNumericInput(e, path),
-                    inputMode: 'numeric',
-                    pattern: '[0-9]*',
-                    maxLength: 10 
-                };
-            } else if (path === 'billing.icDph') {
-                customProps = {
-                    onChange: (e) => handleIcDphChange(e, path),
-                    maxLength: 12 
-                };
-            } else if (path.includes('postalCode')) { // Upravené pre 'address.postalCode' a 'postalCode'
-                customProps = {
-                    onChange: (e) => handlePostalCodeChange(e, path), // Pass path to handler
-                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path), // Pass path to handler
+                    onChange: (e) => handlePostalCodeChange(e, path),
+                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
                     inputMode: 'numeric',
                     pattern: '[0-9 ]*',
                     maxLength: 6 
                 };
-            } else if (path === 'contactPhoneNumber') {
-                // Tlačidlo teraz zobrazuje len predvoľbu
-                console.log(`    Rendering phone number input for path: ${path}`); // Debug log
-                return React.createElement(
-                    'div',
-                    { key: path, className: 'mb-4' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                    React.createElement(
-                        'div',
-                        { className: 'flex' },
-                        React.createElement('button', {
-                            type: 'button',
-                            className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                            onClick: () => setIsDialCodeModalOpen(true),
-                            disabled: !isSavable
-                        }, displayDialCode || 'Vybrať predvoľbu'), // Zobrazuje iba predvoľbu
-                        React.createElement('input', {
-                            ref: el => inputRefs.current[path] = el,
-                            type: 'tel',
-                            className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                            value: displayPhoneNumber,
-                            onChange: handleContactPhoneNumberChange,
-                            readOnly: !isSavable,
-                            inputMode: 'tel',
-                            placeholder: 'Zadajte telefónne číslo',
-                            maxLength: 15 
-                        })
-                    )
-                );
             }
-
+            
             console.log(`    Rendering generic input for path: ${path}, label: ${labelText}, inputType: ${inputType}, isCheckbox: ${isCheckbox}`); // Debug log
             return React.createElement(
                 'div',
@@ -1323,56 +1259,159 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     React.createElement('input', {
                         type: 'checkbox',
                         className: `form-checkbox h-5 w-5 text-blue-600`,
-                        checked: localEditedData !== null && getNestedValue(localEditedData, path) === true,
+                        checked: getNestedValue(localEditedData, path) === true,
                         onChange: (e) => handleChange(path, e.target.checked),
                         disabled: !isSavable
                     })
                 ) : (
                     React.createElement('input', {
-                        ref: el => inputRefs.current[path] = el, // Uloženie referencie s plnou cestou
+                        ref: el => inputRefs.current[path] = el,
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: localEditedData !== null ? formatDisplayValue(getNestedDataForInput(localEditedData, path), path) : '', // Použijeme novú funkciu
+                        value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path),
                         onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
                         readOnly: !isSavable,
-                        ...customProps // Pridanie vlastných propov
+                        ...customProps 
                     })
                 )
             );
         };
 
-        // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
-        const getNestedDataForInput = (obj, path) => {
-            const value = getNestedValue(obj, path);
-            if (path.includes('postalCode')) { // Upravené pre address.postalCode
-                return String(value || '').replace(/\s/g, '');
-            }
-            if (path === 'contactPhoneNumber') {
-                return value;
-            }
-            return value;
-        };
+        memberFieldsOrder.forEach(path => {
+            const valueToRender = getNestedValue(localEditedData, path);
+            console.log(`  renderMemberFields: Attempting to render for path: ${path}, value:`, valueToRender); // Debug log
+            memberElements.push(renderField(path, valueToRender));
+        });
 
-        // HLAVNÁ LOGIKA VYKRESLOVANIA POLÍ
+        return memberElements.filter(Boolean);
+    };
+
+    const renderDataFields = (obj, currentPath = '') => {
+        console.log(`renderDataFields: called with currentPath: ${currentPath}, obj:`, obj); // Debug log
+
+        // Skryť isMenuToggled pre úpravu používateľa
+        if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
+            return null;
+        }
+
+        const isEditingMember = title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra');
+
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
-            if (isEditingMember) { // A ak upravujeme Hráča/Člena RT/Šoféra
-                const memberElements = [];
-                console.log('renderDataFields: isEditingMember is TRUE. localEditedData:', localEditedData); // Debug log
-                console.log('renderDataFields: memberFieldsOrder:', memberFieldsOrder); // Debug log
-                // Vykresľujeme polia explicitne v určenom poradí
-                memberFieldsOrder.forEach(path => {
-                    const valueToRender = getNestedValue(localEditedData, path); // !!! POUŽÍVAJTE localEditedData !!!
-                    console.log(`  renderDataFields: Attempting to render for path: ${path}, value:`, valueToRender); // Debug log
-                    memberElements.push(renderField(path, valueToRender));
-                });
-                console.log('renderDataFields: memberElements after forEach:', memberElements); // Debug log
-                return memberElements.filter(Boolean); // THIS IS THE CRITICAL LINE
-            } else if (title.includes('Upraviť používateľa')) { // Ak upravujeme Používateľa
+            if (isEditingMember) {
+                return renderMemberFields(); // Voláme novú dedikovanú funkciu
+            } else if (title.includes('Upraviť používateľa')) { 
                 const elements = [];
                 
+                const allUserFields = [
+                    'firstName', 'lastName', 'contactPhoneNumber',
+                    'billing.clubName', 'billing.ico', 'billing.dic', 'billing.icDph',
+                    'street', 'houseNumber', 'city', 'postalCode', 'country', 'note' 
+                ];
+                let fieldsToRenderForUser = allUserFields;
+                const isCurrentUserAdmin = userRole === 'admin';
+                if (isCurrentUserAdmin && (isTargetUserAdmin || isTargetUserHall)) {
+                    fieldsToRenderForUser = ['firstName', 'lastName'];
+                }
+
+                const renderedFields = new Set(); // Track rendered fields for the user form
+
+
+                const renderUserField = (path, value) => {
+                    if (renderedFields.has(path)) return null;
+                    renderedFields.add(path);
+
+                    const key = path.split('.').pop();
+                    if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
+                        return null;
+                    }
+                    
+                    const labelText = formatLabel(path);
+                    let inputType = 'text';
+                    let isCheckbox = false;
+                    let customProps = {}; 
+
+                    if (typeof value === 'boolean') {
+                        isCheckbox = true;
+                    } else if (path.toLowerCase().includes('password')) {
+                        inputType = 'password';
+                    } else if (path === 'billing.ico' || path === 'billing.dic') {
+                        customProps = {
+                            onChange: (e) => handleNumericInput(e, path),
+                            inputMode: 'numeric',
+                            pattern: '[0-9]*',
+                            maxLength: 10 
+                        };
+                    } else if (path === 'billing.icDph') {
+                        customProps = {
+                            onChange: (e) => handleIcDphChange(e, path),
+                            maxLength: 12 
+                        };
+                    } else if (path.includes('postalCode')) {
+                        customProps = {
+                            onChange: (e) => handlePostalCodeChange(e, path),
+                            onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
+                            inputMode: 'numeric',
+                            pattern: '[0-9 ]*',
+                            maxLength: 6 
+                        };
+                    } else if (path === 'contactPhoneNumber') {
+                        return React.createElement(
+                            'div',
+                            { key: path, className: 'mb-4' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                            React.createElement(
+                                'div',
+                                { className: 'flex' },
+                                React.createElement('button', {
+                                    type: 'button',
+                                    className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                                    onClick: () => setIsDialCodeModalOpen(true),
+                                    disabled: !isSavable
+                                }, displayDialCode || 'Vybrať predvoľbu'),
+                                React.createElement('input', {
+                                    ref: el => inputRefs.current[path] = el,
+                                    type: 'tel',
+                                    className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: displayPhoneNumber,
+                                    onChange: handleContactPhoneNumberChange,
+                                    readOnly: !isSavable,
+                                    inputMode: 'tel',
+                                    placeholder: 'Zadajte telefónne číslo',
+                                    maxLength: 15 
+                                })
+                            )
+                        );
+                    }
+
+                    return React.createElement(
+                        'div',
+                        { key: path, className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                        isCheckbox ? (
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                className: `form-checkbox h-5 w-5 text-blue-600`,
+                                checked: getNestedValue(localEditedData, path) === true,
+                                onChange: (e) => handleChange(path, e.target.checked),
+                                disabled: !isSavable
+                            })
+                        ) : (
+                            React.createElement('input', {
+                                ref: el => inputRefs.current[path] = el,
+                                type: inputType,
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
+                                value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path),
+                                onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
+                                readOnly: !isSavable,
+                                ...customProps
+                            })
+                        )
+                    );
+                };
+
                 ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
                     if (fieldsToRenderForUser.includes(path)) {
-                        elements.push(renderField(path, getNestedDataForInput(localEditedData, path)));
+                        elements.push(renderUserField(path, getNestedDataForInput(localEditedData, path)));
                     }
                 });
 
@@ -1385,7 +1424,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
                             billingFieldsInScope.map(billingPath => {
                                 const billingValue = getNestedDataForInput(localEditedData, billingPath);
-                                return renderField(billingPath, billingValue);
+                                return renderUserField(billingPath, billingValue);
                             })
                         )
                     );
@@ -1403,14 +1442,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
                             addressFieldsInScope.map(addressPath => {
                                 const addressValue = getNestedDataForInput(localEditedData, addressPath);
-                                return renderField(addressPath, addressValue);
+                                return renderUserField(addressPath, addressValue);
                             })
                         )
                     );
                 }
 
                 if (fieldsToRenderForUser.includes('note')) {
-                    elements.push(renderField('note', getNestedDataForInput(localEditedData, 'note')));
+                    elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
                 }
 
                 return elements.filter(Boolean); 
@@ -1613,25 +1652,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 return teamElements;
             }
         } else { // Pre všetky ostatné prípady (vnorené objekty alebo iné, ako vyššie špecifikované typy úprav)
-            console.log(`renderDataFields: Generic rendering for currentPath: ${currentPath}, obj:`, obj); // Debug log
-            if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
-                console.log(`  Returning single field for path: ${currentPath}`); // Debug log
-                return renderField(currentPath, obj);
-            }
-
             // Táto časť sa už nemala volať pre členov (hráčov/RT/šoférov)
             return Object.entries(obj).map(([key, value]) => {
-                // Filtrovať interné kľúče a kľúče, ktoré sú už spracované na najvyššej úrovni pre tímy
                 if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password', 'packageDetails', 'accommodation', 'arrival', 'tshirts'].includes(key)) {
-                    console.log(`  Filtering out key: ${key}`); // Debug log
                     return null;
                 }
                 
                 const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
 
                 if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                    // Pre vnorené objekty, ktoré nie sú priamo spracované logikou najvyššej úrovne
-                    console.log(`  Rendering CollapsibleSection for object: ${fullKeyPath}`); // Debug log
                     return React.createElement(
                         CollapsibleSection,
                         {
@@ -1643,9 +1672,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         renderDataFields(value, fullKeyPath)
                     );
                 } else if (Array.isArray(value)) {
-                    // Pre polia, tiež v rozbaľovacej sekcii
                     if (value.length === 0) {
-                        console.log(`  Rendering empty array message for: ${fullKeyPath}`); // Debug log
                         return React.createElement(
                             'div',
                             { key: fullKeyPath, className: 'mb-4' },
@@ -1658,7 +1685,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             })
                         );
                     }
-                    console.log(`  Rendering CollapsibleSection for array: ${fullKeyPath}`); // Debug log
                     return React.createElement(
                         'div',
                         { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
@@ -1669,9 +1695,60 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         ))
                     );
                 } else {
-                    // Vykreslenie jednoduchých polí
-                    console.log(`  Rendering simple field for: ${fullKeyPath}`); // Debug log
-                    return renderField(fullKeyPath, value);
+                    // Pre tento generický renderField potrebujeme, aby fungoval ako renderUserField,
+                    // len s cestou a hodnotou (bez špeciálnych podmienok pre telefónne číslo atď.)
+                    const labelText = formatLabel(fullKeyPath);
+                    let inputType = 'text';
+                    let isCheckbox = false;
+                    let customProps = {}; 
+
+                    if (typeof value === 'boolean') {
+                        isCheckbox = true;
+                    } else if (fullKeyPath.toLowerCase().includes('password')) {
+                        inputType = 'password';
+                    } else if (fullKeyPath.includes('dateOfBirth')) {
+                         inputType = 'date';
+                    } else if (fullKeyPath.includes('jerseyNumber') || fullKeyPath.includes('registrationNumber')) {
+                         customProps = {
+                            onChange: (e) => handleNumericInput(e, fullKeyPath),
+                            inputMode: 'numeric',
+                            pattern: '[0-9]*',
+                            maxLength: fullKeyPath.includes('jerseyNumber') ? 3 : 20
+                        };
+                    } else if (fullKeyPath.includes('postalCode')) {
+                        customProps = {
+                            onChange: (e) => handlePostalCodeChange(e, fullKeyPath),
+                            onKeyDown: (e) => handlePostalCodeKeyDown(e, fullKeyPath),
+                            inputMode: 'numeric',
+                            pattern: '[0-9 ]*',
+                            maxLength: 6 
+                        };
+                    }
+                    
+                    return React.createElement(
+                        'div',
+                        { key: fullKeyPath, className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                        isCheckbox ? (
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                className: `form-checkbox h-5 w-5 text-blue-600`,
+                                checked: getNestedValue(localEditedData, fullKeyPath) === true,
+                                onChange: (e) => handleChange(fullKeyPath, e.target.checked),
+                                disabled: !isSavable
+                            })
+                        ) : (
+                            React.createElement('input', {
+                                ref: el => inputRefs.current[fullKeyPath] = el,
+                                type: inputType,
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
+                                value: formatDisplayValue(getNestedDataForInput(localEditedData, fullKeyPath), fullKeyPath),
+                                onChange: (e) => (customProps.onChange ? customProps.onChange(e, fullKeyPath) : handleChange(fullKeyPath, e.target.value)),
+                                readOnly: !isSavable,
+                                ...customProps
+                            })
+                        )
+                    );
                 }
             }).filter(Boolean);
         }
