@@ -640,7 +640,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             if (db) {
                 try {
                     // Cesta k podkolekcii 'names' v 'settings/categories'
-                    const categoriesCollectionRef = collection(db, 'settings', 'categories', 'names');
+                    // Opravená cesta: predpokladáme, že kategórie sú priamo dokumenty v kolekcii 'settings/categories'
+                    const categoriesCollectionRef = collection(db, 'settings', 'categories');
                     // Pridanie orderBy pre abecedné zoradenie
                     const q = query(categoriesCollectionRef, orderBy('name'));
                     const snapshot = await getDocs(q); // Použiť getDocs namiesto onSnapshot pre jednorazové načítanie
@@ -1185,7 +1186,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         {
                             className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                             value: selectedCategory,
-                            onChange: (e) => setSelectedCategory(e.target.value),
+                            onChange: (e) => handleChange('_category', e.target.value), // Updated to use handleChange for consistency
                             disabled: !isSavable
                         },
                         categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
@@ -1308,12 +1309,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     onClick: () => {
                         // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
                         if (title.includes('Upraviť tím')) {
+                            // originalDataPath je pre tím ako 'teams.Juniors[0]'
+                            const pathParts = originalDataPath.split('.');
+                            const category = pathParts[1]; // napr. 'Juniors'
+                            const teamIndex = parseInt(pathParts[2].match(/\[(\d+)\]$/)[1]); // napr. 0
+
                             const updatedTeamData = {
                                 ...localEditedData,
                                 category: selectedCategory, // Uložiť vybranú kategóriu
-                                teamName: localEditedData.teamName // Názov tímu je už v localEditedData
+                                _category: selectedCategory, // Aktualizovať aj internú _category pre zobrazenie
+                                teamName: localEditedData.teamName
                             };
-                            onSave(updatedTeamData, targetDocRef, originalDataPath);
+
+                            // Vytvoríme "pseudo" originalDataPath pre to, aby updateNestedObjectByPath vedelo, kam uložiť dataToSave
+                            const tempPath = `teams.${category}[${teamIndex}]`;
+                            onSave(updatedTeamData, targetDocRef, tempPath); // Odovzdať upravené dáta tímu a správnu cestu
                         } else {
                             const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
                             const updatedDataForSave = {
@@ -1829,7 +1839,7 @@ function AllRegistrationsApp() {
       }
       setCurrentSort({ column: columnId, direction });
 
-      const sorted = [...filteredUsers].sort((a, b) => {
+      const sorted = [...filteredUsers].doprava((a, b) => {
           const columnDef = defaultColumnOrder.find(col => col.id === columnId); // Use defaultColumnOrder
           console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
           console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
