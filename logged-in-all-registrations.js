@@ -647,6 +647,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const [packages, setPackages] = React.useState([]);
     const [selectedPackageName, setSelectedPackageName] = React.useState('');
 
+    // Stavy pre tričká
+    const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
+    const [teamTshirts, setTeamTshirts] = React.useState({}); // Map { size: quantity }
+
 
     React.useEffect(() => {
         const fetchTeamDataForSelects = async () => {
@@ -708,6 +712,24 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     console.error("Chyba pri načítaní balíkov z Firestore:", error);
                     setPackages([]);
                 }
+
+                // Načítanie veľkostí tričiek
+                try {
+                    const sizeTshirtsDocRef = doc(db, 'settings', 'sizeTshirts');
+                    const docSnapshot = await getDoc(sizeTshirtsDocRef);
+                    if (docSnapshot.exists()) {
+                        const data = docSnapshot.data();
+                        if (data && Array.isArray(data.sizes)) {
+                            setAvailableTshirtSizes(data.sizes.map(s => String(s).trim()));
+                        } else {
+                            console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes'.");
+                        }
+                    } else {
+                        console.warn("Firestore settings/sizeTshirts dokument neexistuje.");
+                    }
+                } catch (error) {
+                    console.error("Chyba pri načítaní veľkostí tričiek z Firestore:", error);
+                }
             }
         };
 
@@ -763,6 +785,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             // Inicializovať selectedPackageName s existujúcim názvom balíka tímu
             setSelectedPackageName(initialData.packageDetails?.name || '');
+
+            // Inicializovať teamTshirts
+            const initialTshirts = {};
+            (initialData.tshirts || []).forEach(tshirt => {
+                if (tshirt.size) {
+                    initialTshirts[tshirt.size] = tshirt.quantity || 0;
+                }
+            });
+            setTeamTshirts(initialTshirts);
         }
         
         setLocalEditedData(initialData); 
@@ -1055,6 +1086,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         // Ak je potrebné okamžite aktualizovať localEditedData, môžete to urobiť tu
         // Ale pre "contactPhoneNumber" to necháme na onSave, aby sme sa vyhli zbytočným re-renderom
     };
+
+    // Handler pre zmenu počtu tričiek
+    const handleTshirtQuantityChange = (size, quantity) => {
+        setTeamTshirts(prev => ({
+            ...prev,
+            [size]: Math.max(0, parseInt(quantity, 10) || 0) // Zabezpečiť, že je to číslo a nie je záporné
+        }));
+    };
+
 
     const isSavable = targetDocRef !== null;
 
@@ -1366,6 +1406,32 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 )
             );
 
+            // 6. Tričká
+            if (availableTshirtSizes.length > 0) {
+                teamElements.push(
+                    React.createElement(
+                        'div',
+                        { key: 'tshirts-section', className: 'mb-4' },
+                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Tričká'),
+                        availableTshirtSizes.map(size =>
+                            React.createElement(
+                                'div',
+                                { key: `tshirt-${size}`, className: 'flex items-center mb-2' },
+                                React.createElement('span', { className: 'w-24 text-gray-700 mr-2' }, `Veľkosť ${size.toUpperCase()}:`),
+                                React.createElement('input', {
+                                    type: 'number',
+                                    min: '0',
+                                    className: `mt-1 block flex-grow rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: teamTshirts[size] || 0,
+                                    onChange: (e) => handleTshirtQuantityChange(size, e.target.value),
+                                    readOnly: !isSavable
+                                })
+                            )
+                        )
+                    )
+                );
+            }
+
             return teamElements;
         } else if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
             return renderField(currentPath, obj);
@@ -1392,7 +1458,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     return null;
                 } else if (['accommodation', 'arrival'].includes(key)) { // accommodation a arrival teraz majú samostatné selectboxy
                     return null;
-                } else {
+                } else if (['tshirts'].includes(key) && title.includes('Upraviť tím')) { // Tričká sa spracovávajú samostatne
+                    return null;
+                }
+                else {
                     return React.createElement(
                         CollapsibleSection,
                         {
@@ -1481,6 +1550,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     throw new Error("Invalid team path format.");
                                 }
 
+                                // Konvertovať teamTshirts objekt na pole pre uloženie
+                                const tshirtsToSave = Object.entries(teamTshirts)
+                                    .filter(([, quantity]) => quantity > 0) // Filtrovať len tričká s množstvom > 0
+                                    .map(([size, quantity]) => ({ size, quantity }));
+
+
                                 const updatedTeamData = {
                                     ...localEditedData,
                                     category: selectedCategory, // Uložiť vybranú kategóriu
@@ -1489,7 +1564,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     arrival: { type: selectedArrivalType }, // Uložiť vybraný typ dopravy
                                     accommodation: { type: selectedAccommodationType }, // Uložiť vybraný typ ubytovania
                                     // Uložiť celý objekt balíka, ak je vybratý
-                                    packageDetails: packages.find(pkg => pkg.name === selectedPackageName) || null
+                                    packageDetails: packages.find(pkg => pkg.name === selectedPackageName) || null,
+                                    tshirts: tshirtsToSave // Uložiť údaje o tričkách
                                 };
 
                                 // Načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
