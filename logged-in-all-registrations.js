@@ -1209,7 +1209,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     // Nová funkcia pre vykresľovanie polí člena tímu/hráča/šoféra
     const renderMemberFields = () => {
-        console.log('renderMemberFields: called. localEditedData:', localEditedData); // Debug log
+        console.log('DataEditModal: renderMemberFields called. localEditedData:', localEditedData); // Debug log
         const memberElements = [];
         const memberFieldsOrder = [
             'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
@@ -1218,7 +1218,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         
         memberFieldsOrder.forEach(path => {
             const value = getNestedValue(localEditedData, path);
-            console.log(`  renderField for path: ${path}, value:`, value, `typeof value: ${typeof value}`); // Debug log
+            console.log(`DataEditModal:   renderMemberFields: For path: ${path}, raw value:`, value, `(type: ${typeof value})`); // Debug log
 
             const labelText = formatLabel(path);
             let inputType = 'text';
@@ -1248,7 +1248,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             
             // Log the value that is actually passed to the input component
             const inputValue = formatDisplayValue(getNestedDataForInput(localEditedData, path), path);
-            console.log(`    Input value for path ${path}: "${inputValue}"`);
+            console.log(`DataEditModal:     renderMemberFields: Input value for path ${path}: "${inputValue}"`);
 
             memberElements.push(React.createElement(
                 'div',
@@ -1280,7 +1280,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     };
 
     const renderDataFields = (obj, currentPath = '') => {
-        console.log(`renderDataFields: called with currentPath: ${currentPath}, obj:`, obj); // Debug log
+        console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, obj:`, obj); // Debug log
 
         // Skryť isMenuToggled pre úpravu používateľa
         if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
@@ -1291,6 +1291,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
             if (isEditingMember) {
+                console.log('DataEditModal: renderDataFields: isEditingMember is true, calling renderMemberFields.');
                 return renderMemberFields(); // Voláme novú dedikovanú funkciu
             } else if (title.includes('Upraviť používateľa')) { 
                 const elements = [];
