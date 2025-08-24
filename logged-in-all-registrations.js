@@ -1108,9 +1108,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         // Obnoviť pozíciu kurzora po formátovaní
         setTimeout(() => {
-            if (inputRefs.current['billing.icDph']) { // Používame plnú cestu pre ref
-                inputRefs.current['billing.icDph'].selectionStart = cursorPosition;
-                inputRefs.current['billing.icDph'].selectionEnd = cursorPosition;
+            if (inputRefs.current[path]) { // Používame plnú cestu pre ref
+                inputRefs.current[path].selectionStart = cursorPosition;
+                inputRefs.current[path].selectionEnd = cursorPosition;
             }
         }, 0);
     };
@@ -1188,12 +1188,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
-        const currentKey = currentPath.split('.').pop();
-        if (title.includes('Upraviť používateľa') && currentKey === 'isMenuToggled') {
+        // Skryť isMenuToggled pre úpravu používateľa
+        if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
             return null;
         }
 
         // Definícia poradia polí pre hráčov/členov RT/šoférov
+        // Všimnite si, že všetky adresné polia sú teraz s prefixom 'address.'
         const memberFieldsOrder = [
             'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
@@ -1339,6 +1340,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         if (currentPath === '' && isEditingMember) {
             const memberElements = [];
+            // Iterujeme cez memberFieldsOrder pre explicitné poradie
             memberFieldsOrder.forEach(path => {
                 memberElements.push(renderField(path, getNestedValue(localEditedData, path)));
             });
@@ -1569,7 +1571,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     type: 'button',
                                     onClick: () => removeTshirtEntry(tshirtEntry.tempId),
                                     className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 focus:outline-none text-xl leading-none', // Circular delete button
-                                    style: { lineHeight: '1rem' } // Adjust line height to center the '-'
+                                    style: { lineHeight: '10px' }, // Adjust line height to center the '-'
                                 }, '-')
                             )
                         ),
@@ -1597,6 +1599,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
              return null;
         }
 
+        // TOTO JE KRITICKÁ ZMENA: Ak sme v režime úpravy člena a key je 'address', ignorujeme rekurzívne vykreslenie.
+        // Adresné polia už boli vykreslené jednotlivo podľa memberFieldsOrder.
+        if (isEditingMember && key === 'address') {
+            return null;
+        }
+
         // Táto časť spracováva vnorené objekty/polia, ktoré nie sú priamo polia profilu používateľa (napr. dáta tímu)
         return Object.entries(obj).map(([key, value]) => {
             if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password'].includes(key)) {
@@ -1605,13 +1613,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
             if (renderedFields.has(fullKeyPath)) return null; 
-
-            // Špeciálne ošetrenie pre 'address' objekt. Ak už je `isEditingMember`, tento `address` objekt sa
-            // nebude zobrazovať ako CollapsibleSection, pretože jeho polia sú explicitne definované
-            // v `memberFieldsOrder` a vykresľujú sa priamo.
-            if (isEditingMember && key === 'address') {
-                return null; 
-            }
 
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
                 // packageDetails sa teraz spracováva pomocou selectboxu, takže ho nezobrazujeme tu
@@ -1649,12 +1650,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         })
                     );
                 }
+                // Pre pole v CollapsibleSection, zobrazíme súhrn (napr. meno, priezvisko)
                 return React.createElement(
-                    CollapsibleSection,
-                    { key: fullKeyPath, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
+                    'div',
+                    { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
                     value.map((item, index) => React.createElement(
                         CollapsibleSection,
-                        { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
+                        { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: false },
                         renderDataFields(item, `${fullKeyPath}[${index}]`) 
                     ))
                 );
@@ -1757,6 +1759,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
                             } else {
                                 const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
+                                // Vytvoríme aktualizovaný objekt s dátami na uloženie
+                                const updatedDataForSave = { ...localEditedData };
+
+                                // Ak je k dispozícii telefónne číslo, aktualizujeme ho
+                                if (updatedDataForSave.contactPhoneNumber !== undefined) {
+                                    updatedDataForSave.contactPhoneNumber = fullPhoneNumber;
+                                }
+
                                 // Ak editujeme člena tímu/hráča/šoféra, originalDataPath bude obsahovať aj index poľa
                                 // Potrebujeme prejsť pôvodnú štruktúru cez updateNestedObjectByPath
                                 if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
@@ -1793,21 +1803,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                         // Vytvoríme kópiu, aby sme nemodifikovali priamo state
                                         const memberToUpdate = { ...teamToUpdate[memberArrayPath][memberArrayIndex] };
                                         
-                                        // Aktualizácia contactPhoneNumber
-                                        if (updatedData.contactPhoneNumber !== undefined) {
-                                            memberToUpdate.contactPhoneNumber = updatedData.contactPhoneNumber;
-                                        }
-
-                                        // Aktualizácia ostatných polí
-                                        Object.keys(updatedData).forEach(key => {
-                                            if (key !== 'contactPhoneNumber') {
-                                                if (key.startsWith('address.')) {
-                                                    const addressKey = key.split('.')[1];
-                                                    if (!memberToUpdate.address) memberToUpdate.address = {};
-                                                    memberToUpdate.address[addressKey] = updatedData[key];
-                                                } else {
-                                                    memberToUpdate[key] = updatedData[key];
-                                                }
+                                        // Aktualizácia všetkých polí z localEditedData
+                                        Object.keys(updatedDataForSave).forEach(key => {
+                                            if (key.startsWith('address.')) {
+                                                const addressKey = key.split('.')[1];
+                                                if (!memberToUpdate.address) memberToUpdate.address = {};
+                                                memberToUpdate.address[addressKey] = updatedDataForSave[key];
+                                            } else {
+                                                memberToUpdate[key] = updatedDataForSave[key];
                                             }
                                         });
 
@@ -1838,7 +1841,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     }
                                     const currentDocData = docSnapshot.data();
 
-                                    const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedData);
+                                    const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataForSave);
 
                                     const updates = {};
                                     updates[topLevelField] = updatedObject[topLevelField];
@@ -2339,35 +2342,35 @@ function AllRegistrationsApp() {
   }, [db, userProfileData, isAuthReady, user, collection, doc, onSnapshot, setDoc]);
 
   React.useEffect(() => {
-      let unsubscribeSettings;
-      if (db) {
-          const settingsDocRef = doc(db, 'settings', 'sizeTshirts');
-          unsubscribeSettings = onSnapshot(settingsDocRef, (docSnapshot) => {
-              if (docSnapshot.exists()) {
-                  const data = docSnapshot.data();
-                  if (data && Array.isArray(data.sizes)) {
-                      const availableSizesFromDb = [...data.sizes]
-                          .map(s => typeof s === 'object' && s.size ? String(s.size).trim() : String(s).trim()); 
+    let unsubscribeSettings;
+    if (db) {
+        const settingsDocRef = doc(db, 'settings', 'sizeTshirts');
+        unsubscribeSettings = onSnapshot(settingsDocRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const data = docSnapshot.data();
+                if (data && Array.isArray(data.sizes)) {
+                    const availableSizesFromDb = [...data.sizes]
+                        .map(s => typeof s === 'object' && s.size ? String(s.size).trim() : String(s).trim()); 
 
-                      setAvailableTshirtSizes(availableSizesFromDb);
-                  } else {
-                      console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes' alebo má neočakávaný formát. Používam predvolené poradie.");
-                      setAvailableTshirtSizes(tshirtSizeOrderFallback);
-                  }
-              } else {
-                  console.warn("Firestore settings/sizeTshirts dokument neexistuje. Používam predvolené poradie.");
-                  setAvailableTshirtSizes(tshirtSizeOrderFallback);
-              }
-          }, error => {
-              console.error("Chyba pri načítaní veľkostí tričiek z Firestore:", error);
-              setAvailableTshirtSizes(tshirtSizeOrderFallback);
-          });
-      }
-      return () => {
-          if (unsubscribeSettings) {
-              unsubscribeSettings();
-          }
-      };
+                    setAvailableTshirtSizes(availableSizesFromDb);
+                } else {
+                    console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes' alebo má neočakávaný formát. Používam predvolené poradie.");
+                    setAvailableTshirtSizes(tshirtSizeOrderFallback);
+                }
+            } else {
+                console.warn("Firestore settings/sizeTshirts dokument neexistuje. Používam predvolené poradie.");
+                setAvailableTshirtSizes(tshirtSizeOrderFallback);
+            }
+        }, error => {
+            console.error("Chyba pri načítaní veľkostí tričiek z Firestore:", error);
+            setAvailableTshirtSizes(tshirtSizeOrderFallback);
+        });
+    }
+    return () => {
+        if (unsubscribeSettings) {
+            unsubscribeSettings();
+        }
+    };
   }, [db]);
 
 
