@@ -1215,15 +1215,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
         ];
-        const renderedFields = new Set(); // To track fields already rendered to prevent duplicates
-
-        const renderField = (path, value) => {
-            console.log(`  renderField called for path: ${path}, value:`, value, `typeof value: ${typeof value}`); // Debug log
-            if (renderedFields.has(path)) {
-                console.log(`    Path ${path} already rendered, returning null.`); // Debug log
-                return null; 
-            }
-            renderedFields.add(path); 
+        
+        memberFieldsOrder.forEach(path => {
+            const value = getNestedValue(localEditedData, path);
+            console.log(`  renderField for path: ${path}, value:`, value, `typeof value: ${typeof value}`); // Debug log
 
             const labelText = formatLabel(path);
             let inputType = 'text';
@@ -1255,7 +1250,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             const inputValue = formatDisplayValue(getNestedDataForInput(localEditedData, path), path);
             console.log(`    Input value for path ${path}: "${inputValue}"`);
 
-            return React.createElement(
+            memberElements.push(React.createElement(
                 'div',
                 { key: path, className: 'mb-4' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
@@ -1278,13 +1273,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         ...customProps 
                     })
                 )
-            );
-        };
-
-        memberFieldsOrder.forEach(path => {
-            const valueToRender = getNestedValue(localEditedData, path);
-            console.log(`  renderMemberFields: Attempting to render for path: ${path}, value:`, valueToRender); // Debug log
-            memberElements.push(renderField(path, valueToRender));
+            ));
         });
 
         return memberElements.filter(Boolean);
