@@ -30,7 +30,7 @@ import {
 import {
     getFirestore,
     doc,
-    getDoc,
+    getDoc, // Potrebujeme getDoc pre jednorazové načítanie
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -95,14 +95,31 @@ const handleAuthState = async () => {
             // Správna cesta k profilovému dokumentu na základe poskytnutých pravidiel
             const userDocRef = doc(db, `users/${user.uid}`);
             
-            // Unsubscribe from previous snapshot listener if it exists
+            // Predtým, než sa pokúsime pripojiť onSnapshot,
+            // najprv jednorazovo skúsime získať dokument.
+            // Tým sa vyhneme race condition pri prvej registrácii.
+            const docSnap = await getDoc(userDocRef);
+
+            if (!docSnap.exists()) {
+                console.warn("AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Nastavujem globalUserProfileData na null a čakám na vytvorenie.");
+                window.globalUserProfileData = null;
+                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                
+                // Kľúčová zmena: Ak dokument neexistuje, nepripojíme onSnapshot ihneď,
+                // ale necháme to na skript admin-register.js, aby dokončil svoju prácu.
+                // Akonáhle admin-register.js vytvorí dokument, onAuthStateChanged sa znova spustí
+                // (kvôli zmene v db) a tentokrát dokument už existovať bude.
+                return; 
+            }
+
+            // Ak dokument existuje, môžeme bezpečne pripojiť onSnapshot
             if (window.unsubscribeUserDoc) {
                 window.unsubscribeUserDoc();
             }
 
-            window.unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const userProfileData = { id: docSnap.id, ...docSnap.data() };
+            window.unsubscribeUserDoc = onSnapshot(userDocRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const userProfileData = { id: snapshot.id, ...snapshot.data() };
                     
                     // Logika pre neschváleného administrátora
                     if (userProfileData.role === 'admin' && userProfileData.approved === false) {
@@ -166,7 +183,7 @@ const handleAuthState = async () => {
                         const loginPath = `${appBasePath}/login.html`; // Plná cesta k prihlasovacej stránke
 
                         // Presmeruje len vtedy, ak je používateľ na prihlasovacej stránke
-                        if (currentPath === loginPath) {
+                        if (currentPath.includes(loginPath)) { // Používame includes pre robustnosť
                             console.log("AuthManager: Schválený používateľ sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.");
                             window.location.href = targetPath;
                         } else {
