@@ -798,7 +798,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         setIsTargetUserHall(initialData.role === 'hall'); 
 
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         if (title.includes('Upraviť používateľa')) {
@@ -1286,7 +1286,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
@@ -1784,17 +1784,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             window.showGlobalLoader();
                             // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
                             if (title.includes('Upraviť tím')) {
-                                console.log("DEBUG: Original Data Path for team save:", originalDataPath); // ADDED LOG
-                                const pathParts = originalDataPath.split('.');
-                                console.log("DEBUG: Path Parts for team save:", pathParts); // ADDED LOG
+                                console.log("DEBUG Team Save: Original Data Path:", originalDataPath);
+                                if (!originalDataPath || !originalDataPath.includes('[') || !originalDataPath.includes(']')) {
+                                    throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
+                                }
 
+                                const pathParts = originalDataPath.split('.');
+                                if (pathParts.length < 2) {
+                                    throw new Error("Neplatný formát cesty tímu. Chýbajú segmenty.");
+                                }
                                 const categoryAndIndexPart = pathParts[1];
-                                console.log("DEBUG: Category And Index Part for team save:", categoryAndIndexPart); // ADDED LOG
+                                console.log("DEBUG Team Save: Category And Index Part:", categoryAndIndexPart);
                                 
-                                // Pridaná robustnejšia kontrola
                                 if (typeof categoryAndIndexPart !== 'string') {
-                                    console.error("AllRegistrationsApp: Chyba: 'categoryAndIndexPart' nie je reťazec, je to:", categoryAndIndexPart, "pre originalDataPath:", originalDataPath);
-                                    throw new Error("Invalid team path format: category and index part missing.");
+                                    throw new Error(`Chyba: 'categoryAndIndexPart' nie je reťazec, je to: ${categoryAndIndexPart}. Neočakávaný formát originalDataPath: ${originalDataPath}`);
                                 }
 
                                 const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
@@ -1806,8 +1809,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     category = categoryMatch[1]; // e.g., 'U10 D'
                                     teamIndex = parseInt(categoryMatch[2]); // e.g., 0
                                 } else {
-                                    console.error("AllRegistrationsApp: Chyba: Neočakávaný formát originalDataPath pre tím. Očakávam 'category[index]'.", originalDataPath);
-                                    throw new Error("Invalid team path format.");
+                                    throw new Error(`Neplatný formát cesty tímu. Očakáva sa 'category[index]', ale našiel sa: ${categoryAndIndexPart}.`);
                                 }
 
                                 // Konvertovať teamTshirts pole na formát pre uloženie do databázy
@@ -1842,14 +1844,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     // Aktualizovať konkrétny tím na danom indexe
                                     newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...updatedTeamData };
                                 } else {
-                                    console.error("AllRegistrationsApp: Chyba: Index tímu mimo rozsahu pre aktualizáciu.", teamIndex, "Dĺžka tímov kategórie:", newCategoryTeams.length);
-                                    throw new Error("Invalid team index for update.");
+                                    throw new Error(`Index tímu ${teamIndex} je mimo rozsahu pre aktualizáciu. Dĺžka tímov kategórie ${category}: ${newCategoryTeams.length}.`);
                                 }
 
                                 // Nastaviť aktualizované pole späť do objektu 'teams'
                                 const updates = {};
                                 updates[`teams.${category}`] = newCategoryTeams;
                                 
+                                console.log("DEBUG Team Save: Updates object before updateDoc:", updates); // LOGGING THE UPDATES OBJECT
                                 await updateDoc(targetDocRef, updates);
                                 setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success'); // Notifikácia o úspechu
                                 onClose(); // Zatvoriť modálne okno po úspechu
@@ -1869,11 +1871,31 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
                                     originalDataPath.includes('womenTeamMemberDetails') || originalDataPath.includes('driverDetailsMale') || originalDataPath.includes('driverDetailsFemale')) {
                                     
+                                    console.log("DEBUG Member Save: Original Data Path:", originalDataPath);
+                                    if (!originalDataPath || !originalDataPath.includes('[') || !originalDataPath.includes(']')) {
+                                        throw new Error("Neplatný formát cesty člena pre úpravu. Očakáva sa 'teams.category[index].memberArray[index]'.");
+                                    }
+
                                     const pathParts = originalDataPath.split('.');
+                                    if (pathParts.length < 4) { // Musí mať aspoň 4 časti: teams, category[index], memberArray, [index]
+                                        throw new Error(`Neplatný formát cesty člena. Očakáva sa 4+ segmentov, našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
+                                    }
                                     const topLevelPath = pathParts[0]; // 'teams'
                                     const categoryAndIndexPart = pathParts[1]; // 'Juniors[0]'
                                     const memberArrayPath = pathParts[2]; // 'playerDetails'
                                     const memberIndexPart = pathParts[3]; // '[0]'
+                                    
+                                    console.log("DEBUG Member Save: Path Parts:", pathParts);
+                                    console.log("DEBUG Member Save: Category And Index Part:", categoryAndIndexPart);
+                                    console.log("DEBUG Member Save: Member Index Part:", memberIndexPart);
+
+                                    if (typeof categoryAndIndexPart !== 'string') {
+                                        throw new Error(`Chyba: 'categoryAndIndexPart' nie je reťazec, je to: ${categoryAndIndexPart}. Neočakávaný formát originalDataPath: ${originalDataPath}`);
+                                    }
+                                    if (typeof memberIndexPart !== 'string') {
+                                        throw new Error(`Chyba: 'memberIndexPart' nie je reťazec, je to: ${memberIndexPart}. Neočakávaný formát originalDataPath: ${originalDataPath}`);
+                                    }
+
 
                                     const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
                                     const memberIndexMatch = memberIndexPart.match(/^\[(\d+)\]$/);
@@ -1882,9 +1904,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     if (categoryMatch) {
                                         category = categoryMatch[1];
                                         teamIndex = parseInt(categoryMatch[2]);
+                                    } else {
+                                        throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
                                     }
                                     if (memberIndexMatch) {
                                         memberArrayIndex = parseInt(memberIndexMatch[1]);
+                                    } else {
+                                        throw new Error(`Neplatný formát indexu člena tímu: ${memberIndexPart}.`);
                                     }
 
                                     const docSnapshot = await getDoc(targetDocRef);
@@ -1924,14 +1950,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
                                         const updates = {};
                                         updates[`teams.${category}`] = updatedTeamsForCategory;
+                                        console.log("DEBUG Member Save: Updates object before updateDoc:", updates); // LOGGING THE UPDATES OBJECT
                                         await updateDoc(targetDocRef, updates);
                                         setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                         onClose();
                                     } else {
-                                        throw new Error("Člen tímu pre aktualizáciu sa nenašiel.");
+                                        throw new Error(`Člen tímu pre aktualizáciu sa nenašiel na ceste: ${originalDataPath}.`);
                                     }
                                 } else {
-                                    // Pôvodná logika pre vnorené aktualizácie, ktoré nie sú tímy
+                                    // Pôvodná logika pre vnorené aktualizácie, ktoré nie sú tímy ani členovia
                                     const docSnapshot = await getDoc(targetDocRef);
                                     if (!docSnapshot.exists()) {
                                         throw new Error("Dokument sa nenašiel pre aktualizáciu.");
@@ -1943,6 +1970,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     const updates = {};
                                     updates[topLevelField] = updatedObject[topLevelField];
                                     
+                                    console.log("DEBUG Generic Nested Save: Updates object before updateDoc:", updates); // LOGGING THE UPDATES OBJECT
                                     await updateDoc(targetDocRef, updates);
                                     setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                     onClose();
@@ -1970,6 +1998,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
 // Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenie upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
 const updateNestedObjectByPath = (obj, path, value) => {
+    console.log("DEBUG updateNestedObjectByPath: Path:", path); // LOGGING
     // Hlboká kópia objektu na zabezpečenie nemennosti počas modifikácie
     const newObj = JSON.parse(JSON.stringify(obj));
     const pathParts = path.split('.');
@@ -2014,6 +2043,12 @@ const updateNestedObjectByPath = (obj, path, value) => {
     // To musí spracovať prípady ako 'teams.Juniors[0]', kde 'teams' je časť najvyššej úrovne.
     const firstPathPart = pathParts[0];
     const topLevelField = firstPathPart.includes('[') ? firstPathPart.substring(0, firstPathPart.indexOf('[')) : firstPathPart;
+
+    console.log("DEBUG updateNestedObjectByPath: First Path Part:", firstPathPart, "Top Level Field:", topLevelField); // LOGGING
+
+    if (!topLevelField) {
+        throw new Error(`Vygenerovaná cesta najvyššej úrovne pre aktualizáciu je prázdna. Pôvodná cesta: ${path}`);
+    }
 
     return {
         updatedObject: newObj,
@@ -2757,22 +2792,26 @@ function AllRegistrationsApp() {
 
         if (originalDataPath === '') {
             // Aktualizácia dokumentu používateľa najvyššej úrovne
+            console.log("DEBUG Top-Level Save: Data to save:", dataToSave);
             await updateDoc(targetDocRef, dataToSave);
         } else {
             // Špeciálne ošetrenie pre 'teams' - uistite sa, že sa vždy aktualizuje celé pole
             // originalDataPath pre tímy bude vyzerať ako 'teams.Juniors[0]'
             if (originalDataPath.startsWith('teams.')) {
-                console.log("DEBUG: Original Data Path for team save:", originalDataPath); // ADDED LOG
+                console.log("DEBUG Team Save (handleSaveEditedData): Original Data Path:", originalDataPath); 
+                if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
+                    throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
+                }
+
                 const pathParts = originalDataPath.split('.');
-                console.log("DEBUG: Path Parts for team save:", pathParts); // ADDED LOG
-
+                if (pathParts.length < 2) {
+                    throw new Error("Neplatný formát cesty tímu. Chýbajú segmenty.");
+                }
                 const categoryAndIndexPart = pathParts[1];
-                console.log("DEBUG: Category And Index Part for team save:", categoryAndIndexPart); // ADDED LOG
-
-                // Pridaná robustnejšia kontrola
+                console.log("DEBUG Team Save (handleSaveEditedData): Category And Index Part:", categoryAndIndexPart);
+                
                 if (typeof categoryAndIndexPart !== 'string') {
-                    console.error("AllRegistrationsApp: Chyba: 'categoryAndIndexPart' nie je reťazec, je to:", categoryAndIndexPart, "pre originalDataPath:", originalDataPath);
-                    throw new Error("Invalid team path format: category and index part missing.");
+                    throw new Error(`Chyba: 'categoryAndIndexPart' nie je reťazec, je to: ${categoryAndIndexPart}. Neočakávaný formát originalDataPath: ${originalDataPath}`);
                 }
 
                 const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
@@ -2784,8 +2823,7 @@ function AllRegistrationsApp() {
                     category = categoryMatch[1]; // e.g., 'U10 D'
                     teamIndex = parseInt(categoryMatch[2]); // e.g., 0
                 } else {
-                    console.error("AllRegistrationsApp: Chyba: Neočakávaný formát originalDataPath pre tím. Očakávam 'category[index]'.", originalDataPath);
-                    throw new Error("Invalid team path format.");
+                    throw new Error(`Neplatný formát cesty tímu. Očakáva sa 'category[index]', ale našiel sa: ${categoryAndIndexPart}.`);
                 }
 
                 // Načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
@@ -2811,6 +2849,7 @@ function AllRegistrationsApp() {
                 const updates = {};
                 updates[`teams.${category}`] = newCategoryTeams;
                 
+                console.log("DEBUG Team Save (handleSaveEditedData): Updates object before updateDoc:", updates); // LOGGING THE UPDATES OBJECT
                 await updateDoc(targetDocRef, updates);
 
             } else {
@@ -2826,6 +2865,7 @@ function AllRegistrationsApp() {
                 const updates = {};
                 updates[topLevelField] = updatedObject[topLevelField];
                 
+                console.log("DEBUG Generic Nested Save (handleSaveEditedData): Updates object before updateDoc:", updates); // LOGGING THE UPDATES OBJECT
                 await updateDoc(targetDocRef, updates);
             }
         }
@@ -2939,7 +2979,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || '',} ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
