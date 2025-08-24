@@ -1252,8 +1252,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             memberElements.push(React.createElement(
                 'div',
-                { key: path, className: 'mb-4' },
-                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                { key: path, className: 'mb-4 border-2 border-red-500 bg-red-100 text-red-700 p-2 rounded' }, // Vizuálne debugovanie
+                React.createElement('label', { className: 'block text-sm font-medium mb-1' }, labelText),
+                React.createElement('span', { className: 'block text-xs italic mb-1' }, `(Aktuálna hodnota: "${inputValue}")`), // Debug zobrazenie hodnoty
                 isCheckbox ? (
                     React.createElement('input', {
                         type: 'checkbox',
@@ -1280,18 +1281,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     };
 
     const renderDataFields = (obj, currentPath = '') => {
-        console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, obj:`, obj); // Debug log
+        const isEditingMember = title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra');
+        console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
 
         // Skryť isMenuToggled pre úpravu používateľa
         if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
             return null;
         }
 
-        const isEditingMember = title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra');
-
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
             if (isEditingMember) {
-                console.log('DataEditModal: renderDataFields: isEditingMember is true, calling renderMemberFields.');
+                console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
                 return renderMemberFields(); // Voláme novú dedikovanú funkciu
             } else if (title.includes('Upraviť používateľa')) { 
                 const elements = [];
