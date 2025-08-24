@@ -643,6 +643,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
     const [selectedAccommodationType, setSelectedAccommodationType] = React.useState('');
 
+    // Stavy pre balíky
+    const [packages, setPackages] = React.useState([]);
+    const [selectedPackageName, setSelectedPackageName] = React.useState('');
+
 
     React.useEffect(() => {
         const fetchTeamDataForSelects = async () => {
@@ -689,6 +693,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     }
                 } catch (error) {
                     console.error("Chyba pri načítaní typov ubytovania z Firestore:", error);
+                }
+
+                // Načítanie balíkov
+                try {
+                    const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
+                    const querySnapshot = await getDocs(packagesCollectionRef);
+                    const fetchedPackages = querySnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    setPackages(fetchedPackages);
+                } catch (error) {
+                    console.error("Chyba pri načítaní balíkov z Firestore:", error);
+                    setPackages([]);
                 }
             }
         };
@@ -742,6 +760,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             
             // Inicializovať vybraný typ ubytovania
             setSelectedAccommodationType(initialData.accommodation?.type || '');
+
+            // Inicializovať selectedPackageName s existujúcim názvom balíka tímu
+            setSelectedPackageName(initialData.packageDetails?.name || '');
         }
         
         setLocalEditedData(initialData); 
@@ -1312,6 +1333,39 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 )
             );
 
+            // 5. Názov balíka (Selectbox)
+            teamElements.push(
+                React.createElement(
+                    'div',
+                    { key: 'packageDetails.name', className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Balík'),
+                    React.createElement(
+                        'select',
+                        {
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: selectedPackageName,
+                            onChange: (e) => {
+                                setSelectedPackageName(e.target.value);
+                                // Nájdite celý objekt balíka na základe vybraného názvu
+                                const selectedPackage = packages.find(pkg => pkg.name === e.target.value);
+                                if (selectedPackage) {
+                                    // Uložiť celý objekt do packageDetails, ale bez 'id' a iných interných kľúčov
+                                    const { id, ...packageDataToSave } = selectedPackage;
+                                    handleChange('packageDetails', packageDataToSave);
+                                } else {
+                                    handleChange('packageDetails', null); // Ak balík nebol nájdený
+                                }
+                            },
+                            disabled: !isSavable
+                        },
+                        React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
+                        selectedPackageName && !packages.some(pkg => pkg.name === selectedPackageName) &&
+                            React.createElement('option', { key: selectedPackageName, value: selectedPackageName, disabled: true, hidden: true }, selectedPackageName),
+                        packages.map(pkg => React.createElement('option', { key: pkg.id, value: pkg.name }, pkg.name))
+                    )
+                )
+            );
+
             return teamElements;
         } else if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
             return renderField(currentPath, obj);
@@ -1333,14 +1387,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             if (renderedFields.has(fullKeyPath)) return null; 
 
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                if (['packageDetails'].includes(key)) { // accommodation a arrival teraz majú samostatné selectboxy
-                    renderedFields.add(fullKeyPath); 
-                    return React.createElement(
-                        'div',
-                        { key: fullKeyPath, className: 'pl-4 border-l border-gray-200 mb-4' },
-                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel(fullKeyPath)), // Dynamický nadpis
-                        renderDataFields(value, fullKeyPath)
-                    );
+                // packageDetails sa teraz spracováva pomocou selectboxu, takže ho nezobrazujeme tu
+                if (['packageDetails'].includes(key)) {
+                    return null;
+                } else if (['accommodation', 'arrival'].includes(key)) { // accommodation a arrival teraz majú samostatné selectboxy
+                    return null;
                 } else {
                     return React.createElement(
                         CollapsibleSection,
@@ -1436,7 +1487,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     _category: selectedCategory, // Aktualizovať aj internú _category pre zobrazenie
                                     teamName: localEditedData.teamName,
                                     arrival: { type: selectedArrivalType }, // Uložiť vybraný typ dopravy
-                                    accommodation: { type: selectedAccommodationType } // Uložiť vybraný typ ubytovania
+                                    accommodation: { type: selectedAccommodationType }, // Uložiť vybraný typ ubytovania
+                                    // Uložiť celý objekt balíka, ak je vybratý
+                                    packageDetails: packages.find(pkg => pkg.name === selectedPackageName) || null
                                 };
 
                                 // Načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
