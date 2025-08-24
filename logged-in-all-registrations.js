@@ -326,6 +326,11 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 };
 
 
+// Pomocná funkcia na overenie, či je kľúč vo formáte dátumu YYYY-MM-DD
+const isDateKey = (key) => {
+    return /^\d{4}-\d{2}-\d{2}$/.test(key);
+};
+
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
 function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage }) {
     if (!team) {
@@ -421,16 +426,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         });
     }
 
-    // Filter out meal dates that might correspond to "PARTICIPANTCARD" (if any, though usually dynamic)
+    // Filtrujeme kľúče, aby sme sa uistili, že sú to platné dátumy jedál
     const mealDates = (team.packageDetails && team.packageDetails.meals ? Object.keys(team.packageDetails.meals).sort() : [])
-        // Removed specific filter condition, as "PARTICIPANTCARD" is usually a conceptual grouping,
-        // not a direct date key. If a date key itself was "PARTICIPANTCARD", this would need a more complex solution.
-        // For now, assuming "PARTICIPANTCARD" is a header, not a date.
-        // If there was a specific date associated with PARTICIPANTCARD, e.g., '23. 08. 2025' in your image,
-        // and you wanted to remove that *specific date column* for meals, you'd add:
-        // .filter(date => date !== 'YYYY-MM-DD_OF_PARTICIPANTCARD') // replace with actual date string
-    ;
-
+        .filter(key => isDateKey(key)); // Používame novú pomocnú funkciu
+    
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
     const mealTypeLabels = {
         breakfast: 'Raňajky',
@@ -458,19 +457,9 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Číslo dresu'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Reg. číslo'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Adresa'),
-                    // Hlavička "PARTICIPANTCARD" sa teraz explicitne vylučuje, ak sa objaví ako dátum
-                    mealDates.map(date => {
-                        // Skontrolujte, či dátum zodpovedá "PARTICIPANTCARD" z vášho screenshotu
-                        // V screenshot-e je "PARTICIPANTCARD" ako samostatný stĺpec, nie dátum.
-                        // Ak by bol jeden z dátumových kľúčov v meals objektu "PARTICIPANTCARD" alebo podobný,
-                        // tu by sa dal odfiltrovať:
-                        // if (date === 'PARTICIPANTCARD_DATE_KEY') return null; // Prispôsobte podľa skutočného kľúča
-
-                        // Ak predpokladáme, že "PARTICIPANTCARD" je len hlavička bez konkrétneho dátumu,
-                        // potom ho tu nemusíme špecificky filtrovať, pretože mealDates obsahuje iba dátumy.
-                        // Ale je dôležité, aby sa hlavička "PARTICIPANTCARD" nerenderovala vyššie.
-
-                        return React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
+                    // Hlavičky stĺpcov pre jedlo sa generujú len pre platné dátumy
+                    mealDates.map(date =>
+                        React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
                             React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
                             React.createElement(
                                 'div',
@@ -479,8 +468,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     React.createElement('span', { key: `${date}-${type}-sub`, className: 'w-1/4' }, mealTypeLabels[type])
                                 )
                             )
-                        );
-                    })
+                        )
+                    )
                 )
             ),
             React.createElement(
@@ -491,10 +480,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         'tr',
                         {
                             key: member.uniqueId,
-                            className: 'hover:bg-gray-50', // Removed cursor-pointer from tr
+                            className: 'hover:bg-gray-50',
                         },
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' },
-                            React.createElement('button', { // Gear icon for editing member details
+                            React.createElement('button', {
                                 onClick: (e) => {
                                     e.stopPropagation();
                                     const targetDocRefForMember = doc(db, 'users', team._userId);
@@ -513,7 +502,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                         memberPathForSaving
                                     );
                                 },
-                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-2' // Added mr-2 for spacing
+                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-2'
                             }, '⚙️'),
                             member.type || '-'
                         ),
@@ -522,8 +511,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)), // Pass the member object directly for formatAddress
-                        // Bunky s jedlom zostávajú
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)),
+                        // Bunky s jedlom sa generujú len pre platné dátumy
                         mealDates.map(date =>
                             React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' },
                                 React.createElement(
@@ -565,7 +554,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 teamPathForSaving
             );
         },
-        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none' // Removed ml-2
+        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
     }, '⚙️');
 
 
@@ -575,7 +564,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             {
                 title: collapsibleSectionTitle,
                 defaultOpen: false,
-                actionElement: teamEditButtonElement // Pass the new edit button for the team
+                actionElement: teamEditButtonElement
             },
             teamDetailsTable
         );
@@ -2830,22 +2819,21 @@ function AllRegistrationsApp() {
                                         React.createElement(
                                             'tr',
                                             {
-                                                className: `bg-white border-b hover:bg-gray-50`, // Odstránený cursor-pointer
+                                                className: `bg-white border-b hover:bg-gray-50`,
                                             },
                                             React.createElement('td', {
-                                                className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center', // Pridaný flex pre zarovnanie
+                                                className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center',
                                             },
-                                                React.createElement('button', { // Tlačidlo expandera
+                                                React.createElement('button', {
                                                     onClick: (e) => {
                                                         e.stopPropagation();
                                                         toggleTeamRowExpansion(teamUniqueId);
                                                     },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1' // Pridaný mr-1
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
                                                 }, expandedTeamRows[teamUniqueId] ? '▲' : '▼'),
-                                                React.createElement('button', { // Ikona ozubeného kolieska pre úpravu tímu
+                                                React.createElement('button', {
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        // Teraz priamo vytvoriť targetDocRef, za predpokladu, že _userId je platné
                                                         const targetDocRefForTeam = doc(db, 'users', team._userId);
                                                         const teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
                                                         const resolvedTitle = `Upraviť tím: ${team.teamName}`;
@@ -2875,16 +2863,16 @@ function AllRegistrationsApp() {
                                         expandedTeamRows[teamUniqueId] && (!showUsers && showTeams) && React.createElement(
                                             'tr',
                                             { key: `${teamUniqueId}-details`, className: 'bg-gray-100' },
-                                            React.createElement('td', { colSpan: defaultColumnOrder.length + 2, className: 'p-0' }, // Use defaultColumnOrder.length
+                                            React.createElement('td', { colSpan: defaultColumnOrder.length + 2, className: 'p-0' },
                                                 React.createElement(TeamDetailsContent, {
                                                     team: team,
                                                     tshirtSizeOrder: availableTshirtSizes,
                                                     showDetailsAsCollapsible: false,
                                                     showUsersChecked: showUsers,
                                                     showTeamsChecked: showTeams,
-                                                    openEditModal: openEditModal, // Preposielame openEditModal
-                                                    db: db, // Preposielame db
-                                                    setUserNotificationMessage: setUserNotificationMessage // Preposielame setUserNotificationMessage
+                                                    openEditModal: openEditModal,
+                                                    db: db,
+                                                    setUserNotificationMessage: setUserNotificationMessage
                                                 })
                                             )
                                         )
@@ -2894,11 +2882,11 @@ function AllRegistrationsApp() {
                                 (allTeamsFlattened.length > 0 && !showUsers && showTeams) && React.createElement(
                                     'tr',
                                     { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
-                                    React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 3 }, 'Súhrn:'), // Colspan 3 pre prázdnu šípku, kategóriu a názov tímu
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers), // Hráči
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenTeamMembers), // R. tím (ž)
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenTeamMembers), // R. tím (m)
-                                    React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Tričká:'), // Doprava, Ubytovanie, Balík
+                                    React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 3 }, 'Súhrn:'),
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers),
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenTeamMembers),
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenTeamMembers),
+                                    React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Tričká:'),
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
                                         React.createElement('td', { key: `summary-tshirt-${size}`, className: 'py-3 px-2 text-center' }, teamSummary.totalTshirtQuantities.get(size) || 0)
                                     )
@@ -2912,28 +2900,28 @@ function AllRegistrationsApp() {
                                     React.createElement(
                                         'tr',
                                         {
-                                            className: `bg-white border-b hover:bg-gray-50`, // Odstránený cursor-pointer
+                                            className: `bg-white border-b hover:bg-gray-50`,
                                         },
                                         React.createElement('td', {
-                                            className: 'py-3 px-2 text-center min-w-max flex items-center justify-center', // Pridaný flex pre zarovnanie
+                                            className: 'py-3 px-2 text-center min-w-max flex items-center justify-center',
                                         },
                                             shouldShowExpander(u)
-                                                ? React.createElement('button', { // Tlačidlo expandera
+                                                ? React.createElement('button', {
                                                     onClick: (e) => {
                                                         e.stopPropagation();
                                                         toggleRowExpansion(u.id);
                                                     },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1' // Pridaný mr-1
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
                                                 }, expandedRows[u.id] ? '▲' : '▼')
-                                                : React.createElement('span', { className: 'mr-1' }, '-'), // Zástupný symbol pre nerozšíriteľné riadky
-                                            React.createElement('button', { // Ikona ozubeného kolieska pre úpravu používateľa
+                                                : React.createElement('span', { className: 'mr-1' }, '-'),
+                                            React.createElement('button', {
                                                 onClick: (e) => {
                                                     e.stopPropagation();
                                                     openEditModal(
                                                         u,
                                                         `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
                                                         doc(db, 'users', u.id),
-                                                        '' // Dáta používateľa najvyššej úrovne
+                                                        ''
                                                     );
                                                 },
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
@@ -2941,8 +2929,7 @@ function AllRegistrationsApp() {
                                         ),
                                         columnOrder.map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
-                                                // Tu som zmenil prístup k hodnote, aby sa vždy použila formatTableCellValue
-                                                formatTableCellValue(getNestedValue(u, col.id), col.id, u) // Pass user object here
+                                                formatTableCellValue(getNestedValue(u, col.id), col.id, u)
                                             )
                                         ))
                                     ),
@@ -2972,8 +2959,8 @@ function AllRegistrationsApp() {
                                                             ...team,
                                                             _category: category,
                                                             _registeredBy: `${u.firstName} ${u.lastName}`,
-                                                            _userId: u.id, // Zabezpečiť, aby sa _userId odovzdalo sem
-                                                            _teamIndex: teamIndex, // Zabezpečiť, aby sa _teamIndex odovzdalo sem
+                                                            _userId: u.id,
+                                                            _teamIndex: teamIndex,
                                                             _menTeamMembersCount: menTeamMembersCount,
                                                             _womenTeamMembersCount: womenTeamMembersCount,
                                                             _players: team.playerDetails ? team.playerDetails.length : 0,
@@ -2983,9 +2970,9 @@ function AllRegistrationsApp() {
                                                         showDetailsAsCollapsible: true,
                                                         showUsersChecked: showUsers,
                                                         showTeamsChecked: showTeams,
-                                                        openEditModal: openEditModal, // Preposielame openEditModal
-                                                        db: db, // Preposielame db
-                                                        setUserNotificationMessage: setUserNotificationMessage // Preposielame setUserNotificationMessage
+                                                        openEditModal: openEditModal,
+                                                        db: db,
+                                                        setUserNotificationMessage: setUserNotificationMessage
                                                     })
                                                 })
                                             )
