@@ -95,117 +95,133 @@ const handleAuthState = async () => {
             // Správna cesta k profilovému dokumentu na základe poskytnutých pravidiel
             const userDocRef = doc(db, `users/${user.uid}`);
             
-            // Predtým, než sa pokúsime pripojiť onSnapshot,
-            // najprv jednorazovo skúsime získať dokument.
-            // Tým sa vyhneme race condition pri prvej registrácii.
-            const docSnap = await getDoc(userDocRef);
+            // Funkcia na opakované pokusy o načítanie dokumentu
+            const loadUserProfileData = async (retries = 0) => {
+                const MAX_RETRIES = 5; // Maximálny počet pokusov
+                const RETRY_DELAY = 500; // Oneskorenie medzi pokusmi v ms
 
-            if (!docSnap.exists()) {
-                console.warn("AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Nastavujem globalUserProfileData na null a čakám na vytvorenie.");
-                window.globalUserProfileData = null;
-                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                
-                // Kľúčová zmena: Ak dokument neexistuje, nepripojíme onSnapshot ihneď,
-                // ale necháme to na skript admin-register.js, aby dokončil svoju prácu.
-                // Akonáhle admin-register.js vytvorí dokument, onAuthStateChanged sa znova spustí
-                // (kvôli zmene v db) a tentokrát dokument už existovať bude.
-                return; 
-            }
+                try {
+                    const docSnap = await getDoc(userDocRef);
 
-            // Ak dokument existuje, môžeme bezpečne pripojiť onSnapshot
-            if (window.unsubscribeUserDoc) {
-                window.unsubscribeUserDoc();
-            }
-
-            window.unsubscribeUserDoc = onSnapshot(userDocRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    const userProfileData = { id: snapshot.id, ...snapshot.data() };
-                    
-                    // Logika pre neschváleného administrátora
-                    if (userProfileData.role === 'admin' && userProfileData.approved === false) {
-                        console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa a posielam e-mail s pripomenutím.");
-
-                        const adminEmail = userProfileData.email;
-                        const adminFirstName = userProfileData.firstName || '';
-                        const adminLastName = userProfileData.lastName || '';
-
-                        const emailPayload = {
-                            action: 'sendAdminApprovalReminder',
-                            email: adminEmail,
-                            firstName: adminFirstName,
-                            lastName: adminLastName,
-                        };
-
-                        let retryCount = 0;
-                        const maxRetries = 3;
-                        const baseDelay = 1000; // 1 second
-
-                        const sendReminderEmail = async () => {
-                            try {
-                                console.log("AuthManager: Pokúšam sa odoslať e-mail s pripomenutím schválenia admina...");
-                                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    mode: 'no-cors', // Dôležité pre Apps Script, aby sa predišlo CORS chybám
-                                    body: JSON.stringify(emailPayload)
-                                });
-                                console.log("AuthManager: Apps Script odpoveď pre pripomenutie schválenia (no-cors):", response);
-                            } catch (emailError) {
-                                console.error("AuthManager: Chyba pri odosielaní e-mailu s pripomenutím schválenia:", emailError);
-                                if (retryCount < maxRetries) {
-                                    retryCount++;
-                                    const delay = baseDelay * Math.pow(2, retryCount - 1);
-                                    console.log(`AuthManager: Opakujem pokus o odoslanie e-mailu za ${delay / 1000} sekúnd (pokus ${retryCount}/${maxRetries}).`);
-                                    setTimeout(sendReminderEmail, delay);
-                                } else {
-                                    console.error("AuthManager: Maximálny počet pokusov na odoslanie e-mailu s pripomenutím schválenia dosiahnutý.");
-                                }
-                            }
-                        };
-                        sendReminderEmail(); // Iniciovanie odoslania e-mailu
-
-                        signOut(auth).then(() => {
+                    if (!docSnap.exists()) {
+                        if (retries < MAX_RETRIES) {
+                            console.warn(`AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Pokus ${retries + 1}/${MAX_RETRIES}. Opakujem za ${RETRY_DELAY / 1000}s.`);
+                            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                            return loadUserProfileData(retries + 1); // Rekurzívny volanie s zvýšením počtu pokusov
+                        } else {
+                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený ani po opakovaných pokusoch. Pravdepodobne nastal problém pri zápise.");
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                            window.location.href = `${appBasePath}/login.html?status=unapproved_admin`; 
-                        }).catch((error) => {
-                            console.error("AuthManager: Chyba pri odhlasovaní neschváleného administrátora:", error);
-                        });
-                        return; // Zastaví ďalšie spracovanie pre tohto používateľa
-                    } 
-                    // NOVÁ LOGIKA: Presmerovanie schválených používateľov (admin, user, hall s approved: true)
-                    // ALE LEN AK SÚ NA PRIHLASOVACEJ STRÁNKE
-                    else if (userProfileData.approved === true) {
-                        const currentPath = window.location.pathname;
-                        const targetPath = `${appBasePath}/logged-in-my-data.html`;
-                        const loginPath = `${appBasePath}/login.html`; // Plná cesta k prihlasovacej stránke
-
-                        // Presmeruje len vtedy, ak je používateľ na prihlasovacej stránke
-                        if (currentPath.includes(loginPath)) { // Používame includes pre robustnosť
-                            console.log("AuthManager: Schválený používateľ sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.");
-                            window.location.href = targetPath;
-                        } else {
-                            // Používateľ je schválený a NIE JE na prihlasovacej stránke,
-                            // takže zostane na aktuálnej stránke.
-                            console.log("AuthManager: Schválený používateľ je už prihlásený a nie je na prihlasovacej stránke. Zostávam na aktuálnej stránke.");
+                            // V tomto bode už môžeme odhlásiť, ak po viacerých pokusoch dokument stále neexistuje
+                            // alebo presmerovať na stránku s chybou.
+                            // Pre teraz sa len vynuluje globalUserProfileData.
+                            return;
                         }
                     }
 
-                    window.globalUserProfileData = userProfileData;
-                    console.log("AuthManager: Používateľské dáta načítané:", userProfileData);
-                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                } else {
-                    console.error("AuthManager: Profil používateľa nebol nájdený!");
+                    // Ak dokument existuje, môžeme bezpečne pripojiť onSnapshot
+                    if (window.unsubscribeUserDoc) {
+                        window.unsubscribeUserDoc();
+                    }
+
+                    window.unsubscribeUserDoc = onSnapshot(userDocRef, (snapshot) => {
+                        if (snapshot.exists()) {
+                            const userProfileData = { id: snapshot.id, ...snapshot.data() };
+                            
+                            // Logika pre neschváleného administrátora
+                            if (userProfileData.role === 'admin' && userProfileData.approved === false) {
+                                console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa a posielam e-mail s pripomenutím.");
+
+                                const adminEmail = userProfileData.email;
+                                const adminFirstName = userProfileData.firstName || '';
+                                const adminLastName = userProfileData.lastName || '';
+
+                                const emailPayload = {
+                                    action: 'sendAdminApprovalReminder',
+                                    email: adminEmail,
+                                    firstName: adminFirstName,
+                                    lastName: adminLastName,
+                                };
+
+                                let innerRetryCount = 0; // Pre retry odosielania emailu
+                                const innerMaxRetries = 3;
+                                const innerBaseDelay = 1000; // 1 second
+
+                                const sendReminderEmail = async () => {
+                                    try {
+                                        console.log("AuthManager: Pokúšam sa odoslať e-mail s pripomenutím schválenia admina...");
+                                        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                            },
+                                            mode: 'no-cors', // Dôležité pre Apps Script, aby sa predišlo CORS chybám
+                                            body: JSON.stringify(emailPayload)
+                                        });
+                                        console.log("AuthManager: Apps Script odpoveď pre pripomenutie schválenia (no-cors):", response);
+                                    } catch (emailError) {
+                                        console.error("AuthManager: Chyba pri odosielaní e-mailu s pripomenutím schválenia:", emailError);
+                                        if (innerRetryCount < innerMaxRetries) {
+                                            innerRetryCount++;
+                                            const delay = innerBaseDelay * Math.pow(2, innerRetryCount - 1);
+                                            console.log(`AuthManager: Opakujem pokus o odoslanie e-mailu za ${delay / 1000} sekúnd (pokus ${innerRetryCount}/${innerMaxRetries}).`);
+                                            setTimeout(sendReminderEmail, delay);
+                                        } else {
+                                            console.error("AuthManager: Maximálny počet pokusov na odoslanie e-mailu s pripomenutím schválenia dosiahnutý.");
+                                        }
+                                    }
+                                };
+                                sendReminderEmail(); // Iniciovanie odoslania e-mailu
+
+                                signOut(auth).then(() => {
+                                    window.globalUserProfileData = null;
+                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                                    window.location.href = `${appBasePath}/login.html?status=unapproved_admin`; 
+                                }).catch((error) => {
+                                    console.error("AuthManager: Chyba pri odhlasovaní neschváleného administrátora:", error);
+                                });
+                                return; // Zastaví ďalšie spracovanie pre tohto používateľa
+                            } 
+                            // NOVÁ LOGIKA: Presmerovanie schválených používateľov (admin, user, hall s approved: true)
+                            // ALE LEN AK SÚ NA PRIHLASOVACEJ STRÁNKE
+                            else if (userProfileData.approved === true) {
+                                const currentPath = window.location.pathname;
+                                const targetPath = `${appBasePath}/logged-in-my-data.html`;
+                                const loginPath = `${appBasePath}/login.html`; // Plná cesta k prihlasovacej stránke
+
+                                // Presmeruje len vtedy, ak je používateľ na prihlasovacej stránke
+                                if (currentPath.includes(loginPath)) { // Používame includes pre robustnosť
+                                    console.log("AuthManager: Schválený používateľ sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.");
+                                    window.location.href = targetPath;
+                                } else {
+                                    // Používateľ je schválený a NIE JE na prihlasovacej stránke,
+                                    // takže zostane na aktuálnej stránke.
+                                    console.log("AuthManager: Schválený používateľ je už prihlásený a nie je na prihlasovacej stránke. Zostávam na aktuálnej stránke.");
+                                }
+                            }
+
+                            window.globalUserProfileData = userProfileData;
+                            console.log("AuthManager: Používateľské dáta načítané:", userProfileData);
+                            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                        } else {
+                            console.error("AuthManager: Profil používateľa nebol nájdený!");
+                            window.globalUserProfileData = null;
+                            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                        }
+                    }, (error) => {
+                        console.error("AuthManager: Chyba pri načítaní profilu:", error);
+                        window.globalUserProfileData = null;
+                        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                    });
+                } catch (error) {
+                    console.error("AuthManager: Chyba pri jednorazovom načítaní profilu:", error);
                     window.globalUserProfileData = null;
                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                 }
-            }, (error) => {
-                console.error("AuthManager: Chyba pri načítaní profilu:", error);
-                window.globalUserProfileData = null;
-                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-            });
+            };
+
+            loadUserProfileData(); // Spustenie načítania s opakovanými pokusmi
+
         } else {
             console.log("AuthManager: Používateľ odhlásený.");
             window.globalUserProfileData = null;
