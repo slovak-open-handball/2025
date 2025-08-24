@@ -1179,7 +1179,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     return React.createElement(
                         'div',
                         { key: fullKeyPath, className: 'pl-4 border-l border-gray-200 mb-4' },
-                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel(fullKeyPath)),
+                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
                         renderDataFields(value, fullKeyPath)
                     );
                 } else {
