@@ -313,7 +313,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -2085,7 +2085,8 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Popisné číslo', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: 'Krajina', type: 'string', visible: true }, // Added label
+    { id: 'country', label: 'Krajina', type: 'string', visible: true },
+    { id: 'note', label: 'Poznámka', type: 'string', visible: true }, // Pridaný stĺpec "Poznámka"
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder); // Keep columnOrder for definitions
 
@@ -2102,9 +2103,9 @@ function AllRegistrationsApp() {
 
   // Stavy pre modálne okno na úpravu
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-  const [editingData, setEditingData] = React.useState(null);
+  const [editingData, setEditingData] = null; // Zmenené na null
   const [editModalTitle, setEditModalTitle] = React.useState('');
-  const [editingDocRef, setEditingDocRef] = React.useState(null); // Referencia na dokument pre uloženie
+  const [editingDocRef, setEditingDocRef] = null; // Zmenené na null
   const [editingDataPath, setEditingDataPath] = React.useState(''); // Cesta v dokumente pre uloženie
 
   const openEditModal = (data, title, targetDocRef = null, originalDataPath = '') => {
@@ -2517,7 +2518,7 @@ function AllRegistrationsApp() {
           let valA, valB;
 
           // Access top-level address fields directly
-          if (['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(columnId)) {
+          if (['street', 'houseNumber', 'city', 'postalCode', 'country', 'note'].includes(columnId)) { // Added 'note'
             valA = a[columnId];
             valB = b[columnId];
           }
@@ -2950,7 +2951,7 @@ function AllRegistrationsApp() {
         return `${dialCode} ${formattedNumber}`;
     }
     // Handle top-level address fields
-    else if (['street', 'houseNumber', 'city', 'country'].includes(columnId)) {
+    else if (['street', 'houseNumber', 'city', 'country', 'note'].includes(columnId)) { // Added 'note'
         return value;
     }
 
@@ -2971,7 +2972,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || '',} ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
@@ -3086,7 +3087,7 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`)
                                 )
                             )
                         ) : (
