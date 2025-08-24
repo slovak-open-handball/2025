@@ -302,7 +302,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
             return React.createElement('span', {
                 key: `tshirt-summary-label-${size}`,
                 className: `text-gray-600 mr-2 inline-block whitespace-nowrap`
-            }, `${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
+            }, `Vel. ${size.toUpperCase()}: ${quantity > 0 ? quantity : '-'}`);
         });
         titleParts.push(...tshirtDataWithLabels);
 
@@ -1412,9 +1412,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
                         if (title.includes('Upraviť tím')) {
                             // originalDataPath je pre tím ako 'teams.Juniors[0]'
-                            const pathParts = originalDataPath.split('.');
-                            const category = pathParts[1]; // napr. 'Juniors'
-                            const teamIndex = parseInt(pathParts[2].match(/\[(\d+)\]$/)[1]); // napr. 0
+                            const pathParts = originalDataPath.split('.'); // e.g., ['teams', 'U10 D[0]']
+
+                            const categoryAndIndexPart = pathParts[1]; // e.g., 'U10 D[0]'
+                            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+
+                            let category;
+                            let teamIndex;
+
+                            if (categoryMatch) {
+                                category = categoryMatch[1]; // e.g., 'U10 D'
+                                teamIndex = parseInt(categoryMatch[2]); // e.g., 0
+                            } else {
+                                console.error("AllRegistrationsApp: Chyba: Neočakávaný formát originalDataPath pre tím. Očakávam 'category[index]'.", originalDataPath);
+                                throw new Error("Invalid team path format.");
+                            }
 
                             const updatedTeamData = {
                                 ...localEditedData,
@@ -1425,9 +1437,31 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 accommodation: { type: selectedAccommodationType } // Uložiť vybraný typ ubytovania
                             };
 
-                            // Vytvoríme "pseudo" originalDataPath pre to, aby updateNestedObjectByPath vedelo, kam uložiť dataToSave
-                            const tempPath = `teams.${category}[${teamIndex}]`;
-                            onSave(updatedTeamData, targetDocRef, tempPath); // Odovzdať upravené dáta tímu a správnu cestu
+                            // Načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
+                            const docSnapshot = await getDoc(targetDocRef);
+                            if (!docSnapshot.exists()) {
+                                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+                            }
+                            const currentDocData = docSnapshot.data();
+
+                            // Safely get the current teams for the category
+                            const currentCategoryTeams = currentDocData.teams?.[category] || [];
+                            const newCategoryTeams = [...currentCategoryTeams]; // Create a new array for immutability
+
+                            if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
+                                // Aktualizovať konkrétny tím na danom indexe
+                                newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...updatedTeamData };
+                            } else {
+                                console.error("AllRegistrationsApp: Chyba: Index tímu mimo rozsahu pre aktualizáciu.", teamIndex, "Dĺžka tímov kategórie:", newCategoryTeams.length);
+                                throw new Error("Invalid team index for update.");
+                            }
+
+                            // Nastaviť aktualizované pole späť do objektu 'teams'
+                            const updates = {};
+                            updates[`teams.${category}`] = newCategoryTeams;
+                            
+                            await updateDoc(targetDocRef, updates);
+
                         } else {
                             const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
                             const updatedDataForSave = {
@@ -2222,39 +2256,65 @@ function AllRegistrationsApp() {
             // Aktualizácia dokumentu používateľa najvyššej úrovne
             await updateDoc(targetDocRef, dataToSave);
         } else {
-            // Vnorená aktualizácia: načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
-            const docSnapshot = await getDoc(targetDocRef);
-            if (!docSnapshot.exists()) {
-                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
-            }
-            const currentDocData = docSnapshot.data();
-
-            const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, dataToSave);
-
-            const updates = {};
             // Špeciálne ošetrenie pre 'teams' - uistite sa, že sa vždy aktualizuje celé pole
-            if (topLevelField === 'teams') {
-                // originalDataPath pre tímy bude vyzerať ako 'teams.Juniors[0]'
-                const pathParts = originalDataPath.split('.');
-                const category = pathParts[1]; // napr. 'Juniors'
-                const teamIndex = parseInt(pathParts[2].match(/\[(\d+)\]$/)[1]); // napr. 0
+            // originalDataPath pre tímy bude vyzerať ako 'teams.Juniors[0]'
+            if (originalDataPath.startsWith('teams.')) {
+                const pathParts = originalDataPath.split('.'); // e.g., ['teams', 'U10 D[0]']
 
-                // Získať aktuálne tímy pre danú kategóriu
+                const categoryAndIndexPart = pathParts[1]; // e.g., 'U10 D[0]'
+                const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+
+                let category;
+                let teamIndex;
+
+                if (categoryMatch) {
+                    category = categoryMatch[1]; // e.g., 'U10 D'
+                    teamIndex = parseInt(categoryMatch[2]); // e.g., 0
+                } else {
+                    console.error("AllRegistrationsApp: Chyba: Neočakávaný formát originalDataPath pre tím. Očakávam 'category[index]'.", originalDataPath);
+                    throw new Error("Invalid team path format.");
+                }
+
+                // Načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
+                const docSnapshot = await getDoc(targetDocRef);
+                if (!docSnapshot.exists()) {
+                    throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+                }
+                const currentDocData = docSnapshot.data();
+
+                // Safely get the current teams for the category
                 const currentCategoryTeams = currentDocData.teams?.[category] || [];
-                // Vytvoriť novú kópiu pre nemennosť
-                const newCategoryTeams = [...currentCategoryTeams];
-                
-                // Aktualizovať konkrétny tím na danom indexe
-                newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...dataToSave };
+                const newCategoryTeams = [...currentCategoryTeams]; // Create a new array for immutability
+
+                if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
+                    // Aktualizovať konkrétny tím na danom indexe
+                    newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...dataToSave };
+                } else {
+                    console.error("AllRegistrationsApp: Chyba: Index tímu mimo rozsahu pre aktualizáciu.", teamIndex, "Dĺžka tímov kategórie:", newCategoryTeams.length);
+                    throw new Error("Invalid team index for update.");
+                }
 
                 // Nastaviť aktualizované pole späť do objektu 'teams'
+                const updates = {};
                 updates[`teams.${category}`] = newCategoryTeams;
+                
+                await updateDoc(targetDocRef, updates);
 
             } else {
+                // Pôvodná logika pre vnorené aktualizácie, ktoré nie sú tímy
+                const docSnapshot = await getDoc(targetDocRef);
+                if (!docSnapshot.exists()) {
+                    throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+                }
+                const currentDocData = docSnapshot.data();
+
+                const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, dataToSave);
+
+                const updates = {};
                 updates[topLevelField] = updatedObject[topLevelField];
+                
+                await updateDoc(targetDocRef, updates);
             }
-            
-            await updateDoc(targetDocRef, updates);
         }
 
         setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
@@ -2477,7 +2537,7 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `Vel. ${size.toUpperCase()}`)
                                 )
                             )
                         ) : (
