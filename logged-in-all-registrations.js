@@ -449,8 +449,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Číslo dresu'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Reg. číslo'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Adresa'),
-                    // Odstránený stĺpec PARTICIPANTCARD a jeho podstĺpce
-                    /*
+                    // Odstránená hlavička PARTICIPANTCARD
                     mealDates.map(date =>
                         React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
                             React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
@@ -463,7 +462,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                             )
                         )
                     )
-                    */
                 )
             ),
             React.createElement(
@@ -506,8 +504,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)), // Pass the member object directly for formatAddress
-                        // Odstránené bunky s jedlom
-                        /*
                         mealDates.map(date =>
                             React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' },
                                 React.createElement(
@@ -526,7 +522,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                 )
                             )
                         )
-                        */
                     )
                 )
             )
@@ -1094,7 +1089,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         setTimeout(() => {
             if (inputRefs.current['postalCode']) {
                 inputRefs.current['postalCode'].selectionStart = cursorPosition;
-                inputRefs.current['postalCode'].selectionEnd = cursorPosition;
+                inputRefs.current['postalCode'].selectionStart = cursorPosition;
             }
         }, 0);
     };
@@ -1567,7 +1562,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 }
                 return React.createElement(
                     CollapsibleSection,
-                    { key: fullKeyPath, title: `${formatLabel(fullKeyPath)} (${value.length})`, defaultOpen: false, noOuterStyles: true },
+                    { key: fullKeyPath, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
                     value.map((item, index) => React.createElement(
                         CollapsibleSection,
                         { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: true },
@@ -1730,7 +1725,7 @@ const updateNestedObjectByPath = (obj, path, value) => {
 
     if (lastArrayMatch) {
         const arrayKey = lastArrayMatch[1];
-        const arrayIndex = parseInt(lastArrayMatch[2]);
+        const arrayIndex = parseInt(arrayMatch[2]);
         if (!current[arrayKey]) current[arrayKey] = [];
         // Rozšíriť pole, ak je index mimo rozsahu
         while (current[arrayKey].length <= arrayIndex) {
@@ -2642,7 +2637,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || '', value.postalCode || ''}, ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || '', value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
