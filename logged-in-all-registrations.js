@@ -612,7 +612,7 @@ const combinePhoneNumber = (dialCode, numberWithoutDialCode) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, originalDataPath }) {
+function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, originalDataPath, setUserNotificationMessage, setError }) { // Pridané setUserNotificationMessage a setError
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
@@ -1409,66 +1409,77 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 isSavable && React.createElement('button', {
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                     onClick: async () => { // Changed to async function here
-                        // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
-                        if (title.includes('Upraviť tím')) {
-                            // originalDataPath je pre tím ako 'teams.Juniors[0]'
-                            const pathParts = originalDataPath.split('.'); // e.g., ['teams', 'U10 D[0]']
+                        try {
+                            window.showGlobalLoader();
+                            // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
+                            if (title.includes('Upraviť tím')) {
+                                // originalDataPath je pre tím ako 'teams.Juniors[0]'
+                                const pathParts = originalDataPath.split('.'); // e.g., ['teams', 'U10 D[0]']
 
-                            const categoryAndIndexPart = pathParts[1]; // e.g., 'U10 D[0]'
-                            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+                                const categoryAndIndexPart = pathParts[1]; // e.g., 'U10 D[0]'
+                                const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
 
-                            let category;
-                            let teamIndex;
+                                let category;
+                                let teamIndex;
 
-                            if (categoryMatch) {
-                                category = categoryMatch[1]; // e.g., 'U10 D'
-                                teamIndex = parseInt(categoryMatch[2]); // e.g., 0
+                                if (categoryMatch) {
+                                    category = categoryMatch[1]; // e.g., 'U10 D'
+                                    teamIndex = parseInt(categoryMatch[2]); // e.g., 0
+                                } else {
+                                    console.error("AllRegistrationsApp: Chyba: Neočakávaný formát originalDataPath pre tím. Očakávam 'category[index]'.", originalDataPath);
+                                    throw new Error("Invalid team path format.");
+                                }
+
+                                const updatedTeamData = {
+                                    ...localEditedData,
+                                    category: selectedCategory, // Uložiť vybranú kategóriu
+                                    _category: selectedCategory, // Aktualizovať aj internú _category pre zobrazenie
+                                    teamName: localEditedData.teamName,
+                                    arrival: { type: selectedArrivalType }, // Uložiť vybraný typ dopravy
+                                    accommodation: { type: selectedAccommodationType } // Uložiť vybraný typ ubytovania
+                                };
+
+                                // Načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
+                                const docSnapshot = await getDoc(targetDocRef);
+                                if (!docSnapshot.exists()) {
+                                    throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+                                }
+                                const currentDocData = docSnapshot.data();
+
+                                // Safely get the current teams for the category
+                                const currentCategoryTeams = currentDocData.teams?.[category] || [];
+                                const newCategoryTeams = [...currentCategoryTeams]; // Create a new array for immutability
+
+                                if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
+                                    // Aktualizovať konkrétny tím na danom indexe
+                                    newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...updatedTeamData };
+                                } else {
+                                    console.error("AllRegistrationsApp: Chyba: Index tímu mimo rozsahu pre aktualizáciu.", teamIndex, "Dĺžka tímov kategórie:", newCategoryTeams.length);
+                                    throw new Error("Invalid team index for update.");
+                                }
+
+                                // Nastaviť aktualizované pole späť do objektu 'teams'
+                                const updates = {};
+                                updates[`teams.${category}`] = newCategoryTeams;
+                                
+                                await updateDoc(targetDocRef, updates);
+                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success'); // Notifikácia o úspechu
+                                onClose(); // Zatvoriť modálne okno po úspechu
+
                             } else {
-                                console.error("AllRegistrationsApp: Chyba: Neočakávaný formát originalDataPath pre tím. Očakávam 'category[index]'.", originalDataPath);
-                                throw new Error("Invalid team path format.");
+                                const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
+                                const updatedDataForSave = {
+                                    ...localEditedData,
+                                    contactPhoneNumber: fullPhoneNumber
+                                };
+                                onSave(updatedDataForSave, targetDocRef, originalDataPath);
                             }
-
-                            const updatedTeamData = {
-                                ...localEditedData,
-                                category: selectedCategory, // Uložiť vybranú kategóriu
-                                _category: selectedCategory, // Aktualizovať aj internú _category pre zobrazenie
-                                teamName: localEditedData.teamName,
-                                arrival: { type: selectedArrivalType }, // Uložiť vybraný typ dopravy
-                                accommodation: { type: selectedAccommodationType } // Uložiť vybraný typ ubytovania
-                            };
-
-                            // Načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
-                            const docSnapshot = await getDoc(targetDocRef);
-                            if (!docSnapshot.exists()) {
-                                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
-                            }
-                            const currentDocData = docSnapshot.data();
-
-                            // Safely get the current teams for the category
-                            const currentCategoryTeams = currentDocData.teams?.[category] || [];
-                            const newCategoryTeams = [...currentCategoryTeams]; // Create a new array for immutability
-
-                            if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
-                                // Aktualizovať konkrétny tím na danom indexe
-                                newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...updatedTeamData };
-                            } else {
-                                console.error("AllRegistrationsApp: Chyba: Index tímu mimo rozsahu pre aktualizáciu.", teamIndex, "Dĺžka tímov kategórie:", newCategoryTeams.length);
-                                throw new Error("Invalid team index for update.");
-                            }
-
-                            // Nastaviť aktualizované pole späť do objektu 'teams'
-                            const updates = {};
-                            updates[`teams.${category}`] = newCategoryTeams;
-                            
-                            await updateDoc(targetDocRef, updates);
-
-                        } else {
-                            const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                            const updatedDataForSave = {
-                                ...localEditedData,
-                                contactPhoneNumber: fullPhoneNumber
-                            };
-                            onSave(updatedDataForSave, targetDocRef, originalDataPath);
+                        } catch (e) {
+                            console.error("Chyba pri ukladaní dát do Firestore:", e);
+                            setError(`Chyba pri ukladaní dát: ${e.message}`);
+                            setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error'); // Notifikácia o chybe
+                        } finally {
+                            window.hideGlobalLoader();
                         }
                     }
                 }, 'Uložiť zmeny')
@@ -2467,7 +2478,9 @@ function AllRegistrationsApp() {
         data: editingData,
         onSave: handleSaveEditedData, // Odovzdať handler na uloženie
         targetDocRef: editingDocRef,    // Odovzdať referenciu na dokument
-        originalDataPath: editingDataPath // Odovzdať cestu v dokumente
+        originalDataPath: editingDataPath, // Odovzdať cestu v dokumente
+        setUserNotificationMessage: setUserNotificationMessage, // Preposielame setter notifikácie
+        setError: setError // Preposielame setter chýb
     }),
     React.createElement(
       'div',
