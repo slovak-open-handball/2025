@@ -421,7 +421,16 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         });
     }
 
-    const mealDates = team.packageDetails && team.packageDetails.meals ? Object.keys(team.packageDetails.meals).sort() : [];
+    // Filter out meal dates that might correspond to "PARTICIPANTCARD" (if any, though usually dynamic)
+    const mealDates = (team.packageDetails && team.packageDetails.meals ? Object.keys(team.packageDetails.meals).sort() : [])
+        // Removed specific filter condition, as "PARTICIPANTCARD" is usually a conceptual grouping,
+        // not a direct date key. If a date key itself was "PARTICIPANTCARD", this would need a more complex solution.
+        // For now, assuming "PARTICIPANTCARD" is a header, not a date.
+        // If there was a specific date associated with PARTICIPANTCARD, e.g., '23. 08. 2025' in your image,
+        // and you wanted to remove that *specific date column* for meals, you'd add:
+        // .filter(date => date !== 'YYYY-MM-DD_OF_PARTICIPANTCARD') // replace with actual date string
+    ;
+
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
     const mealTypeLabels = {
         breakfast: 'Raňajky',
@@ -449,10 +458,19 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Číslo dresu'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Reg. číslo'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Adresa'),
-                    // Hlavička PARTICIPANTCARD už nie je renderovaná.
-                    // Ale stĺpce s dátumami a podstĺpcami pre jedlá zostávajú.
-                    mealDates.map(date =>
-                        React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
+                    // Hlavička "PARTICIPANTCARD" sa teraz explicitne vylučuje, ak sa objaví ako dátum
+                    mealDates.map(date => {
+                        // Skontrolujte, či dátum zodpovedá "PARTICIPANTCARD" z vášho screenshotu
+                        // V screenshot-e je "PARTICIPANTCARD" ako samostatný stĺpec, nie dátum.
+                        // Ak by bol jeden z dátumových kľúčov v meals objektu "PARTICIPANTCARD" alebo podobný,
+                        // tu by sa dal odfiltrovať:
+                        // if (date === 'PARTICIPANTCARD_DATE_KEY') return null; // Prispôsobte podľa skutočného kľúča
+
+                        // Ak predpokladáme, že "PARTICIPANTCARD" je len hlavička bez konkrétneho dátumu,
+                        // potom ho tu nemusíme špecificky filtrovať, pretože mealDates obsahuje iba dátumy.
+                        // Ale je dôležité, aby sa hlavička "PARTICIPANTCARD" nerenderovala vyššie.
+
+                        return React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
                             React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
                             React.createElement(
                                 'div',
@@ -461,8 +479,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     React.createElement('span', { key: `${date}-${type}-sub`, className: 'w-1/4' }, mealTypeLabels[type])
                                 )
                             )
-                        )
-                    )
+                        );
+                    })
                 )
             ),
             React.createElement(
@@ -1798,8 +1816,8 @@ function AllRegistrationsApp() {
   const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
   const tshirtSizeOrderFallback = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
-  const [showUsers, setShowUsers] = React.useState(true);
-  const [showTeams, setShowTeams] = React.useState(true);
+  const [showUsers, setShowUsers] => React.useState(true);
+  const [showTeams, setShowTeams] => React.useState(true);
 
   // Stavy pre modálne okno na úpravu
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
