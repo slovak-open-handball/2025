@@ -1816,8 +1816,8 @@ function AllRegistrationsApp() {
   const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
   const tshirtSizeOrderFallback = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
-  const [showUsers, setShowUsers] => React.useState(true);
-  const [showTeams, setShowTeams] => React.useState(true);
+  const [showUsers, setShowUsers] = React.useState(true);
+  const [showTeams, setShowTeams] = React.useState(true);
 
   // Stavy pre modálne okno na úpravu
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
