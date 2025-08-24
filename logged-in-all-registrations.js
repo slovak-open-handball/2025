@@ -737,6 +737,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
+            // Ak je otvorené modálne okno na výber predvoľby, nezatvárať rodičovské modálne okno
+            if (isDialCodeModalOpen) {
+                return;
+            }
             if (modalRef.current && !modalRef.current.contains(event.target)) {
                 onClose();
             }
@@ -749,7 +753,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, isDialCodeModalOpen]); // Pridaná závislosť na isDialCodeModalOpen
 
     if (!isOpen) return null;
 
