@@ -797,6 +797,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         setIsTargetUserAdmin(initialData.role === 'admin');
         setIsTargetUserHall(initialData.role === 'hall'); 
 
+        const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť šofér');
+
         if (title.includes('Upraviť používateľa')) {
             if (initialData.firstName === undefined) initialData.firstName = '';
             if (initialData.lastName === undefined) initialData.lastName = '';
@@ -816,7 +820,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
-        } else if (title.includes('Upraviť Hráča') || title.includes('Upraviť Člen realizačného tímu') || title.includes('Upraviť Šoféra')) {
+        } else if (isEditingMember) { // Používame robustnejšiu detekciu
             // Inicializovať adresné polia, ak neexistujú, a nastaviť ich na prázdny reťazec
             if (!initialData.address) initialData.address = {};
             if (initialData.address.street === undefined) initialData.address.street = '';
@@ -1252,9 +1256,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             memberElements.push(React.createElement(
                 'div',
-                { key: path, className: 'mb-4 border-2 border-red-500 bg-red-100 text-red-700 p-2 rounded' }, // Vizuálne debugovanie
+                { key: path, className: 'mb-4' }, // Odstránené červené štýly
                 React.createElement('label', { className: 'block text-sm font-medium mb-1' }, labelText),
-                React.createElement('span', { className: 'block text-xs italic mb-1' }, `(Aktuálna hodnota: "${inputValue}")`), // Debug zobrazenie hodnoty
+                // Odstránený riadok s aktuálnou hodnotou
                 isCheckbox ? (
                     React.createElement('input', {
                         type: 'checkbox',
@@ -1283,7 +1287,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
@@ -2917,7 +2921,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || '',} ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
