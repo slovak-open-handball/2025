@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
 // Tento súbor je načítaný ako modul, preto môže používať importy.
-import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from './countryDialCodes.js'; // Import zoznamu predvolieb
 
 // NotificationModal Component pre zobrazovanie dočasných správ
@@ -618,16 +618,43 @@ const combinePhoneNumber = (dialCode, numberWithoutDialCode) => {
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
 function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, originalDataPath }) {
     const modalRef = React.useRef(null);
+    const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
-    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); // Nový stav pre rolu 'hall'
-    const inputRefs = React.useRef({}); // Na uchovávanie referencií na vstupné polia pre manipuláciu s kurzorom
+    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); 
+    const inputRefs = React.useRef({}); 
 
     // Stavy pre Phone Input
     const [displayDialCode, setDisplayDialCode] = React.useState('');
     const [displayPhoneNumber, setDisplayPhoneNumber] = React.useState('');
     const [isDialCodeModalOpen, setIsDialCodeModalOpen] = React.useState(false);
+
+    // Nové stavy pre kategórie tímov
+    const [categories, setCategories] = React.useState([]);
+    const [selectedCategory, setSelectedCategory] = React.useState('');
+
+    React.useEffect(() => {
+        // Načítať kategórie z Firestore
+        const fetchCategories = async () => {
+            if (db) {
+                try {
+                    const categoriesCollectionRef = collection(db, 'settings', 'categories', 'names'); // Upravená cesta
+                    const q = query(categoriesCollectionRef, orderBy('name'));
+                    const snapshot = await getDocs(q); // Použiť getDocs namiesto onSnapshot pre jednorazové načítanie
+                    const fetchedCategories = snapshot.docs.map(doc => doc.data().name);
+                    setCategories(fetchedCategories);
+                } catch (error) {
+                    console.error("Chyba pri načítaní kategórií z Firestore:", error);
+                }
+            }
+        };
+
+        if (title.includes('Upraviť tím')) {
+            fetchCategories();
+        }
+    }, [db, title]);
+
 
     React.useEffect(() => {
         // Fetch user's role from window.globalUserProfileData safely
@@ -637,17 +664,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
         setUserRole(currentUserRole);
 
-        // Ensure data is an object before cloning and accessing properties
-        // If 'data' is null or undefined, use an empty object to prevent errors
         const safeData = data || {}; 
         const initialData = JSON.parse(JSON.stringify(safeData));
 
-        // Determine if the user being edited is an admin safely
         setIsTargetUserAdmin(initialData.role === 'admin');
-        setIsTargetUserHall(initialData.role === 'hall'); // Nastavenie stavu pre rolu 'hall'
+        setIsTargetUserHall(initialData.role === 'hall'); 
 
         if (title.includes('Upraviť používateľa')) {
-            // These fields should always be initialized for editing, regardless of who edits whom
             if (initialData.firstName === undefined) initialData.firstName = '';
             if (initialData.lastName === undefined) initialData.lastName = '';
             if (initialData.contactPhoneNumber === undefined) initialData.contactPhoneNumber = '';
@@ -663,18 +686,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             if (initialData.country === undefined) initialData.country = '';
             if (initialData.note === undefined) initialData.note = '';
 
-            // Initial parsing of phone number
             const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
+        } else if (title.includes('Upraviť tím')) {
+            // Inicializovať selectedCategory s existujúcou kategóriou tímu
+            setSelectedCategory(initialData._category || initialData.category || ''); // Použiť _category pre flattened tímy
+            if (initialData.teamName === undefined) initialData.teamName = '';
         }
         
         setLocalEditedData(initialData); 
-    }, [data, title, window.globalUserProfileData]); 
+    }, [data, title, window.globalUserProfileData, db]); 
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
-            // Ak je otvorené modálne okno na výber predvoľby, nezatvárať rodičovské modálne okno
             if (isDialCodeModalOpen) {
                 return;
             }
@@ -690,19 +715,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose, isDialCodeModalOpen]); // Pridaná závislosť na isDialCodeModalOpen
+    }, [isOpen, onClose, isDialCodeModalOpen]); 
 
     if (!isOpen) return null;
 
     // Helper to format keys for labels
     const formatLabel = (key) => {
-        // Remove " (Fakturácia)" from all labels
         let label = key
             .replace(/([A-Z])/g, ' $1')
             .replace(/^./, str => str.toUpperCase())
             .replace(/\./g, ' ')
             .trim()
-            .replace(' (Fakturácia)', ''); // Remove the specific text
+            .replace(' (Fakturácia)', ''); 
 
         if (key === 'billing.clubName') return 'Názov klubu';
         if (key === 'billing.ico') return 'IČO';
@@ -720,7 +744,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'tshirts') return 'Tričká';
         if (key === 'registrationDate') return 'Dátum registrácie';
         if (key === 'dateOfBirth') return 'Dátum narodenia';
-        // Updated labels for top-level address fields
         if (key === 'street') return 'Ulica';
         if (key === 'houseNumber') return 'Číslo domu';
         if (key === 'city') return 'Mesto/Obec';
@@ -737,12 +760,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
         if (key === 'isMenuToggled') return 'Prepínač menu';
         if (key === 'note') return 'Poznámka';
+        if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
 
         return label;
     };
 
     // Helper to format values for display in input fields
-    const formatDisplayValue = (value, path) => { // Added path to formatDisplayValue
+    const formatDisplayValue = (value, path) => { 
         if (value === null || value === undefined) return '';
         if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
         
@@ -784,13 +808,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
         
         if (typeof value === 'object') {
-            // Heuristika pre bežné komplexné objekty (už len pre vnorené objekty)
-            if (path && (path.includes('address.') || ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(path))) { 
-                // This block is no longer relevant for top-level address fields being directly on 'value'
-                if (value.street || value.city) {
-                    return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
-                }
-            }
             if (value.name || value.type) { 
                 return value.name || value.type;
             }
@@ -1097,10 +1114,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             if (path === 'postalCode') {
                 return String(value || '').replace(/\s/g, '');
             }
-            // For contactPhoneNumber, we are handling its display state separately,
-            // so this function should return the raw value if it's not postalCode.
             if (path === 'contactPhoneNumber') {
-                // Return the full number, parsePhoneNumber will handle extraction
                 return value;
             }
             return value;
@@ -1110,14 +1124,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (currentPath === '' && title.includes('Upraviť používateľa')) {
             const elements = [];
             
-            // Render basic user fields first
             ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
                 if (fieldsToRenderForUser.includes(path)) {
                     elements.push(renderField(path, getNestedDataForInput(localEditedData, path)));
                 }
             });
 
-            // Render billing section if relevant fields are included
             const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
             if (billingFieldsInScope.length > 0) {
                 elements.push(
@@ -1133,7 +1145,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 );
             }
 
-            // Render address section if relevant fields are included
             const addressFieldsInScope = allUserFields.filter(p => 
                 ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
             );
@@ -1152,21 +1163,66 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 );
             }
 
-            // Render 'note' field last, if it's in scope
             if (fieldsToRenderForUser.includes('note')) {
                 elements.push(renderField('note', getNestedDataForInput(localEditedData, 'note')));
             }
 
-            return elements.filter(Boolean); // Filter out any nulls if fieldsToRenderForUser excluded some
+            return elements.filter(Boolean); 
+        } else if (currentPath === '' && title.includes('Upraviť tím')) {
+            // Úprava tímu: Kategória (select) a Názov tímu (input)
+            const teamElements = [];
+
+            // 1. Kategória tímu (Selectbox)
+            teamElements.push(
+                React.createElement(
+                    'div',
+                    { key: '_category', className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
+                    React.createElement(
+                        'select',
+                        {
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: selectedCategory,
+                            onChange: (e) => setSelectedCategory(e.target.value),
+                            disabled: !isSavable
+                        },
+                        categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
+                    )
+                )
+            );
+
+            // 2. Názov tímu (Inputbox)
+            teamElements.push(
+                React.createElement(
+                    'div',
+                    { key: 'teamName', className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Názov tímu'),
+                    React.createElement('input', {
+                        type: 'text',
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                        value: localEditedData.teamName || '',
+                        onChange: (e) => handleChange('teamName', e.target.value),
+                        readOnly: !isSavable
+                    })
+                )
+            );
+
+            return teamElements;
         } else if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
-            // This case handles individual fields that are not part of the top-level user data,
-            // or nested fields that are being rendered in a collapsible section (e.g., team member details).
-            // It should not be affected by the admin editing admin rule for the main user profile.
+            // Táto časť sa nezobrazí pre úpravu tímu v zmysle nového požiadavku, pretože
+            // filtre `title.includes('Upraviť tím')` spracujú všetko vyššie.
+            // Zostáva pre úpravy iných vnorených objektov (napr. member detailov)
+            // v iných kontextoch, ak nie sú potlačené.
             return renderField(currentPath, obj);
         }
 
-        // This part handles nested objects/arrays that are not directly user profile fields (e.g., team data)
-        // It should also not be affected by the admin editing admin rule.
+        // Ak sme v režime úpravy tímu, detaily členov nebudeme zobrazovať.
+        // Ak je title.includes('Upraviť tím') a kľúč je playerDetails, menTeamMemberDetails, womenTeamMemberDetails, driverDetails, vráť null
+        if (title.includes('Upraviť tím') && ['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetails'].includes(key)) {
+             return null;
+        }
+
+        // Táto časť spracováva vnorené objekty/polia, ktoré nie sú priamo polia profilu používateľa (napr. dáta tímu)
         return Object.entries(obj).map(([key, value]) => {
             if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password'].includes(key)) {
                 return null;
@@ -1181,7 +1237,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     return React.createElement(
                         'div',
                         { key: fullKeyPath, className: 'pl-4 border-l border-gray-200 mb-4' },
-                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
+                        React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, formatLabel(fullKeyPath)), // Dynamický nadpis
                         renderDataFields(value, fullKeyPath)
                     );
                 } else {
@@ -1224,7 +1280,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             else {
                 return renderField(fullKeyPath, value);
             }
-        });
+        }).filter(Boolean); // Filtrujeme null hodnoty pre skryté sekcie
     };
 
     return React.createElement(
@@ -1252,12 +1308,22 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 isSavable && React.createElement('button', {
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                     onClick: () => {
-                        const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                        const updatedDataForSave = {
-                            ...localEditedData,
-                            contactPhoneNumber: fullPhoneNumber
-                        };
-                        onSave(updatedDataForSave, targetDocRef, originalDataPath);
+                        // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
+                        if (title.includes('Upraviť tím')) {
+                            const updatedTeamData = {
+                                ...localEditedData,
+                                category: selectedCategory, // Uložiť vybranú kategóriu
+                                teamName: localEditedData.teamName // Názov tímu je už v localEditedData
+                            };
+                            onSave(updatedTeamData, targetDocRef, originalDataPath);
+                        } else {
+                            const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
+                            const updatedDataForSave = {
+                                ...localEditedData,
+                                contactPhoneNumber: fullPhoneNumber
+                            };
+                            onSave(updatedDataForSave, targetDocRef, originalDataPath);
+                        }
                     }
                 }, 'Uložiť zmeny')
             )
