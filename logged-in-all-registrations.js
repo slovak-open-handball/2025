@@ -530,6 +530,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                             member.type || '-'
                         ),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
@@ -831,6 +832,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     quantity: tshirt.quantity || 0
                 }));
             setTeamTshirts(initialTshirts);
+        } else if (title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra')) {
+            // Inicializovať adresné polia, ak neexistujú
+            if (!initialData.address) initialData.address = {};
+            if (initialData.address.street === undefined) initialData.address.street = '';
+            if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
+            if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
+            if (initialData.address.city === undefined) initialData.address.city = '';
+            if (initialData.address.country === undefined) initialData.address.country = '';
+            // Ďalšie polia pre členov tímu, ktoré by mohli chýbať
+            if (initialData.firstName === undefined) initialData.firstName = '';
+            if (initialData.lastName === undefined) initialData.lastName = '';
+            if (initialData.dateOfBirth === undefined) initialData.dateOfBirth = '';
+            if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
+            if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
         }
         
         setLocalEditedData(initialData); 
@@ -916,8 +931,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'tshirts') return 'Tričká';
         if (key === 'registrationDate') return 'Dátum registrácie';
         if (key === 'dateOfBirth') return 'Dátum narodenia';
+        if (key === 'address.street') return 'Ulica';
+        if (key === 'address.houseNumber') return 'Popisné číslo';
+        if (key === 'address.city') return 'Mesto/Obec';
+        if (key === 'address.postalCode') return 'PSČ';
+        if (key === 'address.country') return 'Krajina';
         if (key === 'street') return 'Ulica';
-        if (key === 'houseNumber') return 'Číslo domu';
+        if (key === 'houseNumber') return 'Popisné číslo';
         if (key === 'city') return 'Mesto/Obec';
         if (key === 'postalCode') return 'PSČ';
         if (key === 'country') return 'Krajina';
@@ -946,8 +966,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
         
         let date;
+        // Ak je to dátum narodenia (firstName, lastName, dateOfBirth atď. sú v core data), vráti YYYY-MM-DD formát
         if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            return value; // For date inputs, return YYYY-MM-DD format
+            return value; 
         }
         if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
              if (typeof value.toDate === 'function') { 
@@ -1095,7 +1116,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     };
 
     // Handler pre PSČ (číslice, medzera po 3. číslici)
-    const handlePostalCodeChange = (e) => {
+    const handlePostalCodeChange = (e, path) => { // path pridaná
         const input = e.target;
         const originalInput = input.value;
         let cursorPosition = input.selectionStart;
@@ -1119,20 +1140,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             cursorPosition++;
         }
 
-        handleChange('postalCode', formattedValue);
+        handleChange(path, formattedValue); // Použijeme path
 
         // React controlled components make setting cursor position directly problematic.
         // Use setTimeout to allow state update to render, then set cursor.
         // This is a common workaround for this scenario.
         setTimeout(() => {
-            if (inputRefs.current['postalCode']) {
-                inputRefs.current['postalCode'].selectionStart = cursorPosition;
-                inputRefs.current['postalCode'].selectionEnd = cursorPosition;
+            if (inputRefs.current[path]) { // Použijeme path
+                inputRefs.current[path].selectionStart = cursorPosition;
+                inputRefs.current[path].selectionEnd = cursorPosition;
             }
         }, 0);
     };
 
-    const handlePostalCodeKeyDown = (e) => {
+    const handlePostalCodeKeyDown = (e, path) => { // path pridaná
         const input = e.target;
         const value = input.value;
         const selectionStart = input.selectionStart;
@@ -1140,11 +1161,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (e.key === 'Backspace' && selectionStart === 4 && value.charAt(selectionStart - 1) === ' ') {
             e.preventDefault(); // Zabrániť predvolenému Backspace
             const newValue = value.substring(0, selectionStart - 2) + value.substring(selectionStart);
-            handleChange('postalCode', newValue);
+            handleChange(path, newValue); // Použijeme path
             setTimeout(() => {
-                if (inputRefs.current['postalCode']) {
-                    inputRefs.current['postalCode'].selectionStart = selectionStart - 2;
-                    inputRefs.current['postalCode'].selectionEnd = selectionStart - 2;
+                if (inputRefs.current[path]) { // Použijeme path
+                    inputRefs.current[path].selectionStart = selectionStart - 2;
+                    inputRefs.current[path].selectionEnd = selectionStart - 2;
                 }
             }, 0);
         }
@@ -1218,29 +1239,34 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 isCheckbox = true;
             } else if (path.toLowerCase().includes('password')) {
                 inputType = 'password';
-            } else if (path === 'dateOfBirth') { // Special handling for dateOfBirth
+            } else if (path.includes('dateOfBirth')) { // Special handling for dateOfBirth
                 inputType = 'date';
-            } else if (path === 'billing.ico' || path === 'billing.dic' || path === 'jerseyNumber' || path === 'registrationNumber') {
+            } else if (path.includes('jerseyNumber') || path.includes('registrationNumber')) { // Handling for jersey and registration number
+                 customProps = {
+                    onChange: (e) => handleNumericInput(e, path),
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                    maxLength: path.includes('jerseyNumber') ? 3 : 20 // Max 3 pre dres, 20 pre registráciu
+                };
+            } else if (path === 'billing.ico' || path === 'billing.dic') {
                 customProps = {
                     onChange: (e) => handleNumericInput(e, path),
                     inputMode: 'numeric',
                     pattern: '[0-9]*',
-                    maxLength: 10 // Príklad: IČO/DIČ má zvyčajne max 10 číslic, dres/registrácia tiež obmedzíme
+                    maxLength: 10 
                 };
-                if (path === 'jerseyNumber') customProps.maxLength = 3; // Max 3 číslice pre dres
-                if (path === 'registrationNumber') customProps.maxLength = 20; // Max 20 znakov pre registráciu
             } else if (path === 'billing.icDph') {
                 customProps = {
                     onChange: (e) => handleIcDphChange(e, path),
-                    maxLength: 12 // Príklad: SK1234567890 (2 písmená + 10 číslic)
+                    maxLength: 12 
                 };
-            } else if (path === 'address.postalCode' || path === 'postalCode') { // Pridaná podpora pre address.postalCode
+            } else if (path.includes('postalCode')) { // Upravené pre 'address.postalCode'
                 customProps = {
-                    onChange: handlePostalCodeChange,
-                    onKeyDown: handlePostalCodeKeyDown,
+                    onChange: (e) => handlePostalCodeChange(e, path), // Pass path to handler
+                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path), // Pass path to handler
                     inputMode: 'numeric',
                     pattern: '[0-9 ]*',
-                    maxLength: 6 // Formát: DDD PP (3+1+2=6 znakov)
+                    maxLength: 6 
                 };
             } else if (path === 'contactPhoneNumber') {
                 // Tlačidlo teraz zobrazuje len predvoľbu
@@ -1266,7 +1292,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             readOnly: !isSavable,
                             inputMode: 'tel',
                             placeholder: 'Zadajte telefónne číslo',
-                            maxLength: 15 // Príklad: pre 10 číslic + 3 medzery
+                            maxLength: 15 
                         })
                     )
                 );
@@ -1553,7 +1579,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 type: 'button',
                                 onClick: addTshirtEntry,
                                 className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none text-xl leading-none', // Changed color to blue, made round, text-xl for larger +, line-height for centering
-                                style: { lineHeight: '1rem' }, // Adjust line height to center the '+'
+                                style: { lineHeight: '10px' }, // Adjust line height to center the '+'
                                 disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
                             }, '+')
                         )
@@ -1579,6 +1605,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
             if (renderedFields.has(fullKeyPath)) return null; 
+
+            // Špeciálne ošetrenie pre 'address' objekt. Ak už je `isEditingMember`, tento `address` objekt sa
+            // nebude zobrazovať ako CollapsibleSection, pretože jeho polia sú explicitne definované
+            // v `memberFieldsOrder` a vykresľujú sa priamo.
+            if (isEditingMember && key === 'address') {
+                return null; 
+            }
 
             if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
                 // packageDetails sa teraz spracováva pomocou selectboxu, takže ho nezobrazujeme tu
@@ -1724,10 +1757,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
                             } else {
                                 const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                                const updatedDataForSave = {
-                                    ...localEditedData,
-                                    contactPhoneNumber: fullPhoneNumber
-                                };
                                 // Ak editujeme člena tímu/hráča/šoféra, originalDataPath bude obsahovať aj index poľa
                                 // Potrebujeme prejsť pôvodnú štruktúru cez updateNestedObjectByPath
                                 if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
@@ -1761,8 +1790,29 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     const teamToUpdate = teams[teamIndex];
 
                                     if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
+                                        // Vytvoríme kópiu, aby sme nemodifikovali priamo state
+                                        const memberToUpdate = { ...teamToUpdate[memberArrayPath][memberArrayIndex] };
+                                        
+                                        // Aktualizácia contactPhoneNumber
+                                        if (updatedData.contactPhoneNumber !== undefined) {
+                                            memberToUpdate.contactPhoneNumber = updatedData.contactPhoneNumber;
+                                        }
+
+                                        // Aktualizácia ostatných polí
+                                        Object.keys(updatedData).forEach(key => {
+                                            if (key !== 'contactPhoneNumber') {
+                                                if (key.startsWith('address.')) {
+                                                    const addressKey = key.split('.')[1];
+                                                    if (!memberToUpdate.address) memberToUpdate.address = {};
+                                                    memberToUpdate.address[addressKey] = updatedData[key];
+                                                } else {
+                                                    memberToUpdate[key] = updatedData[key];
+                                                }
+                                            }
+                                        });
+
                                         const updatedMemberArray = [...teamToUpdate[memberArrayPath]];
-                                        updatedMemberArray[memberArrayIndex] = { ...updatedMemberArray[memberArrayIndex], ...updatedDataForSave };
+                                        updatedMemberArray[memberArrayIndex] = memberToUpdate;
 
                                         const updatedTeam = {
                                             ...teamToUpdate,
@@ -1788,7 +1838,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     }
                                     const currentDocData = docSnapshot.data();
 
-                                    const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataForSave);
+                                    const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedData);
 
                                     const updates = {};
                                     updates[topLevelField] = updatedObject[topLevelField];
@@ -1905,7 +1955,7 @@ function AllRegistrationsApp() {
     { id: 'billing.dic', label: 'DIČ', type: 'string', visible: true },
     { id: 'billing.icDph', label: 'IČ DPH', type: true },
     { id: 'street', label: 'Ulica', type: 'string', visible: true },
-    { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
+    { id: 'houseNumber', label: 'Popisné číslo', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
     { id: 'country', label: 'Krajina', type: 'string', visible: true }, // Added label
