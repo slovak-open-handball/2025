@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
 // Tento súbor je načítaný ako modul, preto môže používať importy.
-import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from './countryDialCodes.js'; // Import zoznamu predvolieb
 
 // NotificationModal Component pre zobrazovanie dočasných správ
