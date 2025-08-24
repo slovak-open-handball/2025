@@ -465,6 +465,41 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         dinner: 'Večera',
         refreshment: 'Občerstvenie'
     };
+
+    // Nová funkcia na spracovanie zmeny stravovania
+    const handleMealChange = async (member, date, mealType, isChecked) => {
+        if (!db || !team._userId) {
+            setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
+            return;
+        }
+
+        window.showGlobalLoader();
+
+        try {
+            const userDocRef = doc(db, 'users', team._userId);
+            const teamCategory = team._category;
+            const teamIndex = team._teamIndex;
+            const memberArray = member.originalArray;
+            const memberIndex = member.originalIndex;
+
+            // Dynamicky vytvoriť cestu pre aktualizáciu konkrétneho jedla
+            // Napr.: `teams.Juniors[0].playerDetails[0].packageDetails.meals.2025-08-24.dinner`
+            const mealUpdatePath = `teams.${teamCategory}[${teamIndex}].${memberArray}[${memberIndex}].packageDetails.meals.${date}.${mealType}`;
+            
+            const updatePayload = {
+                [mealUpdatePath]: isChecked ? 1 : 0
+            };
+
+            await updateDoc(userDocRef, updatePayload);
+            setUserNotificationMessage(`Stravovanie pre ${member.firstName} ${member.lastName} bolo aktualizované.`, 'success');
+
+        } catch (error) {
+            console.error("Chyba pri aktualizácii stravovania v Firestore:", error);
+            setUserNotificationMessage(`Chyba pri aktualizácii stravovania: ${error.message}`, 'error');
+        } finally {
+            window.hideGlobalLoader();
+        }
+    };
                 
     const teamDetailsTable = React.createElement(
         'div',
@@ -549,12 +584,15 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     'div',
                                     { className: 'flex justify-around' },
                                     mealTypes.map(type => {
-                                        const isChecked = team.packageDetails.meals[date] && team.packageDetails.meals[date][type] === 1;
+                                        // Ak packageDetails.meals.date.type neexistuje, predvolene je 0 (nezaškrtnuté)
+                                        const memberMeals = member.packageDetails?.meals;
+                                        const isChecked = memberMeals?.[date]?.[type] === 1;
+
                                         return React.createElement('input', {
                                                             key: `${member.uniqueId}-${date}-${type}-checkbox`,
                                                             type: 'checkbox',
                                                             checked: isChecked,
-                                                            disabled: true,
+                                                            onChange: (e) => handleMealChange(member, date, type, e.target.checked),
                                                             className: 'form-checkbox h-4 w-4 text-blue-600'
                                         });
                                     })
@@ -1810,7 +1848,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 // Logika pre aktualizáciu používateľa na najvyššej úrovni
                                 console.log("DEBUG Top-Level User Save: Executing top-level user update. Data:", finalDataToSave);
                                 await updateDoc(targetDocRef, finalDataToSave);
-                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                 onClose();
                                 return;
                             } else if (title.includes('Upraviť tím')) {
@@ -1861,7 +1899,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 updates[`teams.${category}`] = newCategoryTeams;
                                 console.log("DEBUG Team Save: Updates object before updateDoc:", updates);
                                 await updateDoc(targetDocRef, updates);
-                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                 onClose();
                                 return;
                             } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
@@ -1936,7 +1974,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     updates[`teams.${category}`] = updatedTeamsForCategory;
                                     console.log("DEBUG Member Save: Updates object before updateDoc:", updates);
                                     await updateDoc(targetDocRef, updates);
-                                    setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                                    setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                     onClose();
                                     return;
                                 } else {
@@ -1960,7 +1998,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 
                                 console.log("DEBUG Generic Nested Save: Updates object before updateDoc:", updates);
                                 await updateDoc(targetDocRef, updates);
-                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                 onClose();
                                 return;
                             }
@@ -2864,7 +2902,7 @@ function AllRegistrationsApp() {
             }
         }
 
-        setUserNotificationMessage("Zmeny boli uložené.", 'success');
+        setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
 
     } catch (e) {
         console.error("Chyba pri ukladaní dát do Firestore:", e);
