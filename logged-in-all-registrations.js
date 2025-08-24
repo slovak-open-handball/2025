@@ -282,6 +282,8 @@ const getTshirtSpans = (team, tshirtSizeOrder) => {
 const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false, showUsersChecked = false, showTeamsChecked = false) => {
     const menTeamMembersCount = team._menTeamMembersCount !== undefined ? team._menTeamMembersCount : 0;
     const womenTeamMembersCount = team._womenTeamMembersCount !== undefined ? team._womenTeamMembersCount : 0;
+    const menDriversCount = team._menDriversCount !== undefined ? team._menDriversCount : 0; // Nová premenná
+    const womenDriversCount = team._womenDriversCount !== undefined ? team._womenDriversCount : 0; // Nová premenná
     const playersCount = team._players !== undefined ? team._players : 0;
 
     const titleParts = [];
@@ -292,6 +294,8 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${playersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (šofér Ž): ${womenDriversCount}`)); // Nové
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (šofér M): ${menDriversCount}`)); // Nové
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
@@ -312,9 +316,11 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, playersCount));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, womenTeamMembersCount));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, team.arrival?.type || '-'));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, team.accommodation?.type || '-'));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, team.packageDetails?.name || '-'));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, womenDriversCount)); // Nové
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, menDriversCount)); // Nové
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, team.arrival?.type || '-'));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 4xl:inline mr-2 whitespace-nowrap' }, team.accommodation?.type || '-'));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 5xl:inline mr-2 whitespace-nowrap' }, team.packageDetails?.name || '-'));
         titleParts.push(...getTshirtSpans(team, availableTshirtSizes));
     }
 
@@ -416,13 +422,24 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         });
         });
     }
-    if (team.driverDetails) {
+    // Pridanie šoféra muža, ak existuje
+    if (team.driverDetailsMale) {
         allConsolidatedMembers.push({
-            ...team.driverDetails,
-            type: 'Šofér',
-            originalArray: 'driverDetails', // Not an array, but for consistency
-            originalIndex: -1, // No index for single object
-            uniqueId: `${team.teamName}-driver-${team.driverDetails.firstName || ''}-${team.driverDetails.lastName || ''}-0`
+            ...team.driverDetailsMale,
+            type: 'Šofér (muž)',
+            originalArray: 'driverDetailsMale',
+            originalIndex: -1,
+            uniqueId: `${team.teamName}-driver-male-${team.driverDetailsMale.firstName || ''}-${team.driverDetailsMale.lastName || ''}-0`
+        });
+    }
+    // Pridanie šoféra ženy, ak existuje
+    if (team.driverDetailsFemale) {
+        allConsolidatedMembers.push({
+            ...team.driverDetailsFemale,
+            type: 'Šofér (žena)',
+            originalArray: 'driverDetailsFemale',
+            originalIndex: -1,
+            uniqueId: `${team.teamName}-driver-female-${team.driverDetailsFemale.firstName || ''}-${team.driverDetailsFemale.lastName || ''}-0`
         });
     }
 
@@ -490,8 +507,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     let memberPathForSaving = '';
                                     if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
                                         memberPathForSaving = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
-                                    } else if (member.originalArray === 'driverDetails') {
-                                        memberPathForSaving = `teams.${team._category}[${team._teamIndex}].driverDetails`;
+                                    } else if (member.originalArray === 'driverDetailsMale') { // Pre šoféra muža
+                                        memberPathForSaving = `teams.${team._category}[${team._teamIndex}].driverDetailsMale`;
+                                    } else if (member.originalArray === 'driverDetailsFemale') { // Pre šoféra ženu
+                                        memberPathForSaving = `teams.${team._category}[${team._teamIndex}].driverDetailsFemale`;
                                     }
                                     const resolvedTitle = `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`;
                                     
@@ -889,7 +908,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (key === 'playerDetails') return 'Detaily hráčov';
         if (key === 'menTeamMemberDetails') return 'Detaily členov R. tímu (muži)';
         if (key === 'womenTeamMemberDetails') return 'Detaily členov R. tímu (ženy)';
-        if (key === 'driverDetails') return 'Detaily šoféra';
+        if (key === 'driverDetailsMale') return 'Detaily šoféra (muž)'; // Nové
+        if (key === 'driverDetailsFemale') return 'Detaily šoféra (žena)'; // Nové
         if (key === 'tshirts') return 'Tričká';
         if (key === 'registrationDate') return 'Dátum registrácie';
         if (key === 'dateOfBirth') return 'Dátum narodenia';
@@ -1520,7 +1540,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         // Ak sme v režime úpravy tímu, detaily členov nebudeme zobrazovať.
         // Ak je title.includes('Upraviť tím') a kľúč je playerDetails, menTeamMemberDetails, womenTeamMemberDetails, driverDetails, vráť null
-        if (title.includes('Upraviť tím') && ['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetails'].includes(key)) {
+        if (title.includes('Upraviť tím') && ['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetailsMale', 'driverDetailsFemale'].includes(key)) { // Pridané driverDetailsMale/Female
              return null;
         }
 
@@ -1852,8 +1872,16 @@ function AllRegistrationsApp() {
 
                         let womenTeamMembersCount = 0;
                         if (Array.isArray(team.womenTeamMemberDetails)) {
-                            // OPRAVA: Premenná womenTeamMembersCount sa aktualizuje správne
                             womenTeamMembersCount = team.womenTeamMemberDetails.length; 
+                        }
+                        
+                        let menDriversCount = 0; // Nové
+                        if (team.driverDetailsMale && Object.keys(team.driverDetailsMale).length > 0) {
+                            menDriversCount = 1; // Ak existuje objekt pre šoféra muža, počítame ho
+                        }
+                        let womenDriversCount = 0; // Nové
+                        if (team.driverDetailsFemale && Object.keys(team.driverDetailsFemale).length > 0) {
+                            womenDriversCount = 1; // Ak existuje objekt pre šoféra ženu, počítame ju
                         }
 
                         const teamTshirtsMap = new Map(
@@ -1868,6 +1896,8 @@ function AllRegistrationsApp() {
                             _registeredBy: `${u.firstName} ${u.lastName}`,
                             _menTeamMembersCount: menTeamMembersCount,
                             _womenTeamMembersCount: womenTeamMembersCount,
+                            _menDriversCount: menDriversCount, // Nové
+                            _womenDriversCount: womenDriversCount, // Nové
                             _players: team.playerDetails ? team.playerDetails.length : 0,
                             _teamTshirtsMap: teamTshirtsMap
                         });
@@ -1885,12 +1915,16 @@ function AllRegistrationsApp() {
       let totalPlayers = 0;
       let totalMenTeamMembers = 0;
       let totalWomenTeamMembers = 0;
+      let totalMenDrivers = 0; // Nové
+      let totalWomenDrivers = 0; // Nové
       const totalTshirtQuantities = new Map(availableTshirtSizes.map(size => [size, 0])); // Inicializácia mapy pre tričká
 
       allTeamsFlattened.forEach(team => {
           totalPlayers += team._players;
           totalMenTeamMembers += team._menTeamMembersCount;
           totalWomenTeamMembers += team._womenTeamMembersCount;
+          totalMenDrivers += team._menDriversCount; // Nové
+          totalWomenDrivers += team._womenDriversCount; // Nové
 
           if (team._teamTshirtsMap) {
               team._teamTshirtsMap.forEach((quantity, size) => {
@@ -1903,6 +1937,8 @@ function AllRegistrationsApp() {
           totalPlayers,
           totalMenTeamMembers,
           totalWomenTeamMembers,
+          totalMenDrivers, // Nové
+          totalWomenDrivers, // Nové
           totalTshirtQuantities
       };
   }, [allTeamsFlattened, availableTshirtSizes]);
@@ -2755,6 +2791,8 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Hráči'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (ž)'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (m)'),
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (šofér Ž)'), // Nové
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (šofér M)'), // Nové
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
@@ -2853,6 +2891,8 @@ function AllRegistrationsApp() {
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenTeamMembersCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menTeamMembersCount),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenDriversCount), // Nové
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menDriversCount), // Nové
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.arrival?.type || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'),
@@ -2886,6 +2926,8 @@ function AllRegistrationsApp() {
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers),
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenTeamMembers),
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenTeamMembers),
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenDrivers), // Nové
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenDrivers), // Nové
                                     React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Tričká:'),
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
                                         React.createElement('td', { key: `summary-tshirt-${size}`, className: 'py-3 px-2 text-center' }, teamSummary.totalTshirtQuantities.get(size) || 0)
@@ -2949,6 +2991,16 @@ function AllRegistrationsApp() {
                                                         womenTeamMembersCount = team.womenTeamMemberDetails.length;
                                                     }
 
+                                                    let menDriversCount = 0; // Nové
+                                                    if (team.driverDetailsMale && Object.keys(team.driverDetailsMale).length > 0) {
+                                                        menDriversCount = 1;
+                                                    }
+                                                    let womenDriversCount = 0; // Nové
+                                                    if (team.driverDetailsFemale && Object.keys(team.driverDetailsFemale).length > 0) {
+                                                        womenDriversCount = 1;
+                                                    }
+
+
                                                     const teamTshirtsMap = new Map(
                                                         (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
                                                     );
@@ -2963,6 +3015,8 @@ function AllRegistrationsApp() {
                                                             _teamIndex: teamIndex,
                                                             _menTeamMembersCount: menTeamMembersCount,
                                                             _womenTeamMembersCount: womenTeamMembersCount,
+                                                            _menDriversCount: menDriversCount, // Nové
+                                                            _womenDriversCount: womenDriversCount, // Nové
                                                             _players: team.playerDetails ? team.playerDetails.length : 0,
                                                             _teamTshirtsMap: teamTshirtsMap
                                                         },
