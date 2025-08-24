@@ -1782,6 +1782,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     onClick: async () => { // Changed to async function here
                         try {
                             window.showGlobalLoader();
+
+                            // Vždy skontrolujte originalDataPath pred použitím
+                            if (!originalDataPath) {
+                                throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna. Zmeny neboli uložené.");
+                            }
+                            console.log("DEBUG Save Button Click: originalDataPath:", originalDataPath);
+
+
                             // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
                             if (title.includes('Upraviť tím')) {
                                 console.log("DEBUG Team Save: Original Data Path:", originalDataPath);
@@ -1999,6 +2007,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 // Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenie upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
 const updateNestedObjectByPath = (obj, path, value) => {
     console.log("DEBUG updateNestedObjectByPath: Path:", path); // LOGGING
+    if (!path) {
+        throw new Error(`Vygenerovaná cesta najvyššej úrovne pre aktualizáciu je prázdna. Pôvodná cesta: ${path}`);
+    }
+
     // Hlboká kópia objektu na zabezpečenie nemennosti počas modifikácie
     const newObj = JSON.parse(JSON.stringify(obj));
     const pathParts = path.split('.');
@@ -2302,7 +2314,7 @@ function AllRegistrationsApp() {
     let unsubscribeGlobalAuth;
     if (window.auth) {
         unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
-            // console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+            // console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "N/A");
             setUser(currentUser);
             setUserProfileData(window.globalUserProfileData);
             if (!currentUser) {
@@ -2979,7 +2991,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || '',} ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
