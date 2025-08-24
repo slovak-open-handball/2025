@@ -822,6 +822,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
         } else if (isEditingMember) { // Používame robustnejšiu detekciu
             // Inicializovať adresné polia, ak neexistujú, a nastaviť ich na prázdny reťazec
+            // Toto je kľúčové pre správne zobrazenie input boxov pre členov realizačného tímu, hráčov a šoférov
             if (!initialData.address) initialData.address = {};
             if (initialData.address.street === undefined) initialData.address.street = '';
             if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
@@ -1213,7 +1214,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     // Nová funkcia pre vykresľovanie polí člena tímu/hráča/šoféra
     const renderMemberFields = () => {
-        console.log('DataEditModal: renderMemberFields called. localEditedData:', localEditedData); // Debug log
+        // console.log('DataEditModal: renderMemberFields called. localEditedData:', localEditedData); // Debug log
         const memberElements = [];
         const memberFieldsOrder = [
             'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
@@ -1222,7 +1223,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         
         memberFieldsOrder.forEach(path => {
             const value = getNestedValue(localEditedData, path);
-            console.log(`DataEditModal:   renderMemberFields: For path: ${path}, raw value:`, value, `(type: ${typeof value})`); // Debug log
+            // console.log(`DataEditModal:   renderMemberFields: For path: ${path}, raw value:`, value, `(type: ${typeof value})`); // Debug log
 
             const labelText = formatLabel(path);
             let inputType = 'text';
@@ -1250,14 +1251,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 };
             }
             
-            // Log the value that is actually passed to the input component
-            const inputValue = formatDisplayValue(getNestedDataForInput(localEditedData, path), path);
-            console.log(`DataEditModal:     renderMemberFields: Input value for path ${path}: "${inputValue}"`);
+            // console.log(`DataEditModal:     renderMemberFields: Input value for path ${path}: "${inputValue}"`);
 
             memberElements.push(React.createElement(
                 'div',
                 { key: path, className: 'mb-4' }, // Odstránené červené štýly
-                React.createElement('label', { className: 'block text-sm font-medium mb-1' }, labelText),
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                 // Odstránený riadok s aktuálnou hodnotou
                 isCheckbox ? (
                     React.createElement('input', {
@@ -1272,7 +1271,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         ref: el => inputRefs.current[path] = el,
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: inputValue, // Use the logged inputValue
+                        value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path), // Používame formatDisplayValue
                         onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
                         readOnly: !isSavable,
                         ...customProps 
@@ -1290,7 +1289,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
-        console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
+        // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
 
         // Skryť isMenuToggled pre úpravu používateľa
         if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
@@ -1299,7 +1298,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
             if (isEditingMember) {
-                console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
+                // console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
                 return renderMemberFields(); // Voláme novú dedikovanú funkciu
             } else if (title.includes('Upraviť používateľa')) { 
                 const elements = [];
@@ -1785,10 +1784,19 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             window.showGlobalLoader();
                             // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
                             if (title.includes('Upraviť tím')) {
-                                // originalDataPath je pre tím ako 'teams.Juniors[0]'
-                                const pathParts = originalDataPath.split('.'); // e.g., ['teams', 'U10 D[0]']
+                                console.log("DEBUG: Original Data Path for team save:", originalDataPath); // ADDED LOG
+                                const pathParts = originalDataPath.split('.');
+                                console.log("DEBUG: Path Parts for team save:", pathParts); // ADDED LOG
 
-                                const categoryAndIndexPart = pathParts[1]; // e.g., 'U10 D[0]'
+                                const categoryAndIndexPart = pathParts[1];
+                                console.log("DEBUG: Category And Index Part for team save:", categoryAndIndexPart); // ADDED LOG
+                                
+                                // Pridaná robustnejšia kontrola
+                                if (typeof categoryAndIndexPart !== 'string') {
+                                    console.error("AllRegistrationsApp: Chyba: 'categoryAndIndexPart' nie je reťazec, je to:", categoryAndIndexPart, "pre originalDataPath:", originalDataPath);
+                                    throw new Error("Invalid team path format: category and index part missing.");
+                                }
+
                                 const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
 
                                 let category;
@@ -2084,7 +2092,7 @@ function AllRegistrationsApp() {
       setEditingDocRef(targetDocRef);
       setEditingDataPath(originalDataPath);
       setIsEditModalOpen(true);
-      console.log("openEditModal: Opening modal with title:", title, "data:", cleanedData, "path:", originalDataPath); // Debug log
+      // console.log("openEditModal: Opening modal with title:", title, "data:", cleanedData, "path:", originalDataPath); // Debug log
   };
 
   const closeEditModal = () => {
@@ -2093,7 +2101,7 @@ function AllRegistrationsApp() {
       setEditModalTitle('');
       setEditingDocRef(null);
       setEditingDataPath('');
-      console.log("closeEditModal: Closing modal."); // Debug log
+      // console.log("closeEditModal: Closing modal."); // Debug log
   };
 
 
@@ -2243,7 +2251,7 @@ function AllRegistrationsApp() {
       }, 100);
 
       const handleGlobalDataUpdate = (event) => {
-        console.log('AllRegistrationsApp: Prijatá udalosť "globalDataUpdated". Aktualizujem lokálny stav.');
+        // console.log('AllRegistrationsApp: Prijatá udalosť "globalDataUpdated". Aktualizujem lokálny stav.');
         setIsAuthReady(true);
         setUser(window.auth?.currentUser || null);
         setUserProfileData(event.detail);
@@ -2259,11 +2267,11 @@ function AllRegistrationsApp() {
     let unsubscribeGlobalAuth;
     if (window.auth) {
         unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
-            console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+            // console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
             setUser(currentUser);
             setUserProfileData(window.globalUserProfileData);
             if (!currentUser) {
-                console.log("AllRegistrationsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+                // console.log("AllRegistrationsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
                 window.location.href = 'login.html';
             }
         });
@@ -2281,7 +2289,7 @@ function AllRegistrationsApp() {
     let unsubscribeUserDoc;
 
     if (isAuthReady && db && user) {
-      console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+      // console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
       if (typeof window.showGlobalLoader === 'function') {
         window.showGlobalLoader();
       }
@@ -2291,7 +2299,7 @@ function AllRegistrationsApp() {
         unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
-            console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
+            // console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
 
             setUserProfileData(userData);
             setError('');
@@ -2305,7 +2313,7 @@ function AllRegistrationsApp() {
               window.hideGlobalLoader();
             }
 
-            console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
+            // console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
           } else {
             console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
@@ -2340,19 +2348,19 @@ function AllRegistrationsApp() {
         setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+        // console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
         }
         window.location.href = 'login.html';
         return;
     } else if (!isAuthReady || !db || user === undefined) {
-        console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
+        // console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
     }
 
     return () => {
       if (unsubscribeUserDoc) {
-        console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument.");
+        // console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
@@ -2363,12 +2371,12 @@ function AllRegistrationsApp() {
     let unsubscribeAllUsers;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-    console.log("AllRegistrationsApp: [Effect: AllUsers] Spustené.");
-    console.log("AllRegistrationsApp: [Effect: AllUsers] Stav snímky - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
+    // console.log("AllRegistrationsApp: [Effect: AllUsers] Spustené.");
+    // console.log("AllRegistrationsApp: [Effect: AllUsers] Stav snímky - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
 
 
     if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-        console.log("AllRegistrationsApp: [Effect: AllUsers] Podmienky splnené: Schválený administrátor. Pokračujem v načítaní dát.");
+        // console.log("AllRegistrationsApp: [Effect: AllUsers] Podmienky splnené: Schválený administrátor. Pokračujem v načítaní dát.");
         if (typeof window.showGlobalLoader === 'function') {
           window.showGlobalLoader();
         }
@@ -2382,7 +2390,7 @@ function AllRegistrationsApp() {
                         ...doc.data()
                     }));
 
-                console.log("AllRegistrationsApp: [Effect: AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
+                // console.log("AllRegistrationsApp: [Effect: AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
                 setAllUsers(usersData);
                 setFilteredUsers(usersData);
                 if (typeof window.hideGlobalLoader === 'function') {
@@ -2405,14 +2413,14 @@ function AllRegistrationsApp() {
             setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
         }
     } else if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: [Effect: AllUsers] Používateľ je null, nenačítavam dáta. Presmerovávam na login.html.");
+        // console.log("AllRegistrationsApp: [Effect: AllUsers] Používateľ je null, nenačítavam dáta. Presmerovávam na login.html.");
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
         }
         window.location.href = 'login.html';
         return;
     } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
-        console.log("AllRegistrationsApp: [Effect: AllUsers] Používateľ nie je schválený administrátor, nenačítavam dáta. Presmerovávam na my-data.html.");
+        // console.log("AllRegistrationsApp: [Effect: AllUsers] Používateľ nie je schválený administrátor, nenačítavam dáta. Presmerovávam na my-data.html.");
         setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
@@ -2421,12 +2429,12 @@ function AllRegistrationsApp() {
         window.location.href = 'logged-in-my-data.html';
         return;
     } else {
-        console.log("AllRegistrationsApp: [Effect: AllUsers] Podmienky pre načítanie dát nesplnené. Čakám na aktualizácie stavu.");
+        // console.log("AllRegistrationsApp: [Effect: AllUsers] Podmienky pre načítanie dát nesplnené. Čakám na aktualizácie stavu.");
     }
 
     return () => {
         if (unsubscribeAllUsers) {
-            console.log("AllRegistrationsApp: [Effect: AllUsers] Ruším odber onSnapshot pre všetkých používateľov.");
+            // console.log("AllRegistrationsApp: [Effect: AllUsers] Ruším odber onSnapshot pre všetkých používateľov.");
             unsubscribeAllUsers();
         }
     };
@@ -2474,8 +2482,8 @@ function AllRegistrationsApp() {
 
       const sorted = [...filteredUsers].sort((a, b) => {
           const columnDef = defaultColumnOrder.find(col => col.id === columnId); // Use defaultColumnOrder
-          console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
-          console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
+          // console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
+          // console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
 
           const type = columnDef ? columnDef.type : 'string';
 
@@ -2527,12 +2535,12 @@ function AllRegistrationsApp() {
           }
       });
       setFilteredUsers(sorted);
-      console.log("handleSort: Prvých 5 zoradených používateľov:", sorted.slice(0, 5).map(u => ({ id: u.id, [columnId]: getNestedValue(u, columnId) })));
+      // console.log("handleSort: Prvých 5 zoradených používateľov:", sorted.slice(0, 5).map(u => ({ id: u.id, [columnId]: getNestedValue(u, columnId) })));
   };
 
   const openFilterModal = (column) => {
-      console.log("AllRegistrationsApp: openFilterModal volaná pre stĺpec:", column);
-      console.log("AllRegistrationsApp: Aktuálny stav allUsers:", allUsers);
+      // console.log("AllRegistrationsApp: openFilterModal volaná pre stĺpec:", column);
+      // console.log("AllRegistrationsApp: Aktuálny stav allUsers:", allUsers);
 
       setFilterColumn(column);
       const values = [...new Set(allUsers.map(u => {
@@ -2658,7 +2666,7 @@ function AllRegistrationsApp() {
 
 
   React.useEffect(() => {
-    console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. Používateľ: ${user ? user.uid : 'null'}`);
+    // console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. Používateľ: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -2674,13 +2682,13 @@ function AllRegistrationsApp() {
       profileLink.classList.remove('hidden');
       logoutButton.classList.remove('hidden');
       registerLink.classList.add('hidden');
-      console.log("AllRegistrationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
+      // console.log("AllRegistrationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
     } else {
       authLink.classList.remove('hidden');
       profileLink.classList.add('hidden');
       logoutButton.classList.add('hidden');
       registerLink.classList.remove('hidden');
-      console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
+      // console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
     }
   }, [user]);
 
@@ -2754,9 +2762,19 @@ function AllRegistrationsApp() {
             // Špeciálne ošetrenie pre 'teams' - uistite sa, že sa vždy aktualizuje celé pole
             // originalDataPath pre tímy bude vyzerať ako 'teams.Juniors[0]'
             if (originalDataPath.startsWith('teams.')) {
-                const pathParts = originalDataPath.split('.'); // e.g., ['teams', 'U10 D[0]']
+                console.log("DEBUG: Original Data Path for team save:", originalDataPath); // ADDED LOG
+                const pathParts = originalDataPath.split('.');
+                console.log("DEBUG: Path Parts for team save:", pathParts); // ADDED LOG
 
-                const categoryAndIndexPart = pathParts[1]; // e.g., 'U10 D[0]'
+                const categoryAndIndexPart = pathParts[1];
+                console.log("DEBUG: Category And Index Part for team save:", categoryAndIndexPart); // ADDED LOG
+
+                // Pridaná robustnejšia kontrola
+                if (typeof categoryAndIndexPart !== 'string') {
+                    console.error("AllRegistrationsApp: Chyba: 'categoryAndIndexPart' nie je reťazec, je to:", categoryAndIndexPart, "pre originalDataPath:", originalDataPath);
+                    throw new Error("Invalid team path format: category and index part missing.");
+                }
+
                 const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
 
                 let category;
@@ -2833,7 +2851,7 @@ function AllRegistrationsApp() {
   }
 
   if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
-      console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
+      // console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
       setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
       if (typeof window.hideGlobalLoader === 'function') {
         window.hideGlobalLoader();
@@ -2921,7 +2939,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || '',} ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
