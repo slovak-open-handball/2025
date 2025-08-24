@@ -210,71 +210,6 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
     );
 }
 
-// ColumnVisibilityModal Component
-function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibility }) {
-    const [tempColumns, setTempColumns] = React.useState(columns);
-
-    React.useEffect(() => {
-        setTempColumns(columns);
-    }, [columns, isOpen]);
-
-    if (!isOpen) return null;
-
-    const handleToggleVisibility = (columnId) => {
-        setTempColumns(prev =>
-            prev.map(col =>
-                col.id === columnId ? { ...col, visible: !col.visible } : col
-            )
-        );
-    };
-
-    const handleSave = () => {
-        onSaveColumnVisibility(tempColumns);
-        onClose();
-    };
-
-    return React.createElement(
-        'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
-        React.createElement(
-            'div',
-            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-md' },
-            React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, 'Viditeľnosť stĺpcov'),
-            React.createElement(
-                'div',
-                { className: 'max-h-80 overflow-y-auto mb-4 border border-gray-200 rounded-md p-2' },
-                tempColumns.map((col) =>
-                    React.createElement(
-                        'div',
-                        { key: col.id, className: 'flex items-center justify-between py-2 border-b last:border-b-0' },
-                        React.createElement('label', { className: 'flex items-center cursor-pointer' },
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                className: 'form-checkbox h-5 w-5 text-blue-600 mr-2',
-                                checked: col.visible,
-                                onChange: () => handleToggleVisibility(col.id),
-                            }),
-                            React.createElement('span', { className: 'text-gray-700' }, col.label)
-                        )
-                    )
-                )
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex justify-end space-x-2' },
-                React.createElement('button', {
-                    className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
-                    onClick: onClose
-                }, 'Zrušiť'),
-                React.createElement('button', {
-                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
-                    onClick: handleSave
-                }, 'Uložiť zmeny')
-            )
-        )
-    );
-}
-
 // CollapsibleSection Component - pre rozbaľovacie sekcie
 function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, defaultOpen = false, noOuterStyles = false, actionElement = null }) {
   const isControlled = isOpenProp !== undefined;
@@ -1426,9 +1361,9 @@ function AllRegistrationsApp() {
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
     { id: 'country', label: 'Krajina', type: 'string', visible: true }, // Added label
   ];
-  const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
-  const [hoveredColumn, setHoveredColumn] = React.useState(null);
-  const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
+  const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder); // Keep columnOrder for definitions
+
+  const [hoveredColumn, setHoveredColumn] = React.useState(null); // Keep for sorting feedback
 
   const [expandedRows, setExpandedRows] = React.useState({});
   const [expandedTeamRows, setExpandedTeamRows] = React.useState({});
@@ -1717,73 +1652,16 @@ function AllRegistrationsApp() {
 
   React.useEffect(() => {
     let unsubscribeAllUsers;
-    let unsubscribeColumnOrder;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Spustené.");
-    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Stav snímky - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
+    console.log("AllRegistrationsApp: [Effect: AllUsers] Spustené.");
+    console.log("AllRegistrationsApp: [Effect: AllUsers] Stav snímky - db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A", "isAuthReady:", isAuthReady);
 
 
     if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Podmienky splnené: Schválený administrátor. Pokračujem v načítaní dát.");
+        console.log("AllRegistrationsApp: [Effect: AllUsers] Podmienky splnené: Schválený administrátor. Pokračujem v načítaní dát.");
         if (typeof window.showGlobalLoader === 'function') {
           window.showGlobalLoader();
-        }
-
-        try {
-            const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
-
-            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Pokúšam sa nastaviť onSnapshot pre columnOrder na ceste:", columnOrderDocRef.path);
-            unsubscribeColumnOrder = onSnapshot(columnOrderDocRef, docSnapshot => {
-                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot prijaté dáta. Existuje:", docSnapshot.exists());
-                let newOrderToSet = defaultColumnOrder;
-
-                if (docSnapshot.exists()) {
-                    const savedOrder = docSnapshot.data().order;
-                    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Surové uložené poradie z Firestore:", savedOrder);
-
-                    if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
-                        const savedSettingsMap = new Map(savedOrder.map(col => [col.id, col]));
-                        const finalOrder = [];
-
-                        defaultColumnOrder.forEach(defaultCol => {
-                            const savedColSettings = savedSettingsMap.get(defaultCol.id);
-                            if (savedColSettings) {
-                                finalOrder.push({
-                                    ...defaultCol,
-                                    visible: savedColSettings.visible !== undefined ? savedColSettings.visible : defaultCol.visible
-                                });
-                            } else {
-                                finalOrder.push(defaultCol);
-                            }
-                        });
-
-                        newOrderToSet = finalOrder;
-                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané poradie:", newOrderToSet);
-
-                    } else {
-                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
-                        setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
-                            .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
-                            .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
-                    }
-                } else {
-                    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
-                    setDoc(columnOrderDocRef, { order: defaultColumnOrder }, { merge: true })
-                        .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
-                            .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
-                }
-
-                setColumnOrder(newOrderToSet);
-            }, error => {
-                console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní poradia stĺpcov z Firestore (onSnapshot error):", error);
-                setError(`Chyba pri načítaní poradia stĺpcov: ${error.message}`);
-                setColumnOrder(defaultColumnOrder);
-            });
-        } catch (e) {
-            console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri nastavovaní onSnapshot pre poradie stĺpcov (try-catch):", e);
-            setError(`Chyba pri inicializácii poradia stĺpcov: ${e.message}`);
-            setColumnOrder(defaultColumnOrder);
         }
 
         try {
@@ -1795,14 +1673,14 @@ function AllRegistrationsApp() {
                         ...doc.data()
                     }));
 
-                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
+                console.log("AllRegistrationsApp: [Effect: AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
                 setAllUsers(usersData);
                 setFilteredUsers(usersData);
                 if (typeof window.hideGlobalLoader === 'function') {
                   window.hideGlobalLoader();
                 }
             }, error => {
-                console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní všetkých používateľov z Firestore:", error);
+                console.error("AllRegistrationsApp: [Effect: AllUsers] Chyba pri načítaní všetkých používateľov z Firestore:", error);
                 setError(`Chyba pri načítaní používateľov: ${error.message}`);
                 if (typeof window.hideGlobalLoader === 'function') {
                   window.hideGlobalLoader();
@@ -1810,7 +1688,7 @@ function AllRegistrationsApp() {
                 setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
             });
         } catch (e) {
-            console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri nastavovaní onSnapshot pre všetkých používateľov (try-catch):", e);
+            console.error("AllRegistrationsApp: [Effect: AllUsers] Chyba pri nastavovaní onSnapshot pre všetkých používateľov (try-catch):", e);
             setError(`Chyba pri načítaní používateľov: ${e.message}`);
             if (typeof window.hideGlobalLoader === 'function') {
               window.hideGlobalLoader();
@@ -1818,14 +1696,14 @@ function AllRegistrationsApp() {
             setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
         }
     } else if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Používateľ je null, nenačítavam dáta. Presmerovávam na login.html.");
+        console.log("AllRegistrationsApp: [Effect: AllUsers] Používateľ je null, nenačítavam dáta. Presmerovávam na login.html.");
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
         }
         window.location.href = 'login.html';
         return;
     } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
-        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Používateľ nie je schválený administrátor, nenačítavam dáta. Presmerovávam na my-data.html.");
+        console.log("AllRegistrationsApp: [Effect: AllUsers] Používateľ nie je schválený administrátor, nenačítavam dáta. Presmerovávam na my-data.html.");
         setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
@@ -1834,17 +1712,13 @@ function AllRegistrationsApp() {
         window.location.href = 'logged-in-my-data.html';
         return;
     } else {
-        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Podmienky pre načítanie dát nesplnené. Čakám na aktualizácie stavu.");
+        console.log("AllRegistrationsApp: [Effect: AllUsers] Podmienky pre načítanie dát nesplnené. Čakám na aktualizácie stavu.");
     }
 
     return () => {
         if (unsubscribeAllUsers) {
-            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Ruším odber onSnapshot pre všetkých používateľov.");
+            console.log("AllRegistrationsApp: [Effect: AllUsers] Ruším odber onSnapshot pre všetkých používateľov.");
             unsubscribeAllUsers();
-        }
-        if (unsubscribeColumnOrder) {
-            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Ruším odber onSnapshot pre poradie stĺpcov.");
-            unsubscribeColumnOrder();
         }
     };
   }, [db, userProfileData, isAuthReady, user, collection, doc, onSnapshot, setDoc]);
@@ -1890,7 +1764,7 @@ function AllRegistrationsApp() {
       setCurrentSort({ column: columnId, direction });
 
       const sorted = [...filteredUsers].sort((a, b) => {
-          const columnDef = columnOrder.find(col => col.id === columnId);
+          const columnDef = defaultColumnOrder.find(col => col.id === columnId); // Use defaultColumnOrder
           console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
           console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
 
@@ -2138,48 +2012,9 @@ function AllRegistrationsApp() {
     };
   }, [handleLogout]);
 
-  const moveColumn = async (columnId, direction) => {
-    const currentIndex = columnOrder.findIndex(col => col.id === columnId);
-    if (currentIndex === -1) return;
+  // Removed moveColumn function and related logic as column reordering is no longer supported.
 
-    const newColumnOrder = [...columnOrder];
-    const columnToMove = newColumnOrder.splice(currentIndex, 1)[0];
-
-    let newIndex;
-    if (direction === 'left') {
-      newIndex = Math.max(0, currentIndex - 1);
-    } else { // 'right'
-      newIndex = Math.min(newColumnOrder.length, currentIndex + 1);
-    }
-
-    newColumnOrder.splice(newIndex, 0, columnToMove);
-    setColumnOrder(newColumnOrder);
-
-    if (db && user && user.uid) {
-        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
-        try {
-            await setDoc(columnOrderDocRef, { order: newColumnOrder }, { merge: true });
-            console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
-        } catch (e) {
-            console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
-            setUserNotificationMessage(`Chyba pri ukladaní poradia stĺpcov: ${e.message}`);
-        }
-    }
-  };
-
-  const handleSaveColumnVisibility = async (updatedColumns) => {
-    setColumnOrder(updatedColumns);
-    if (db && user && user.uid) {
-        const columnOrderDocRef = doc(db, 'users', user.uid, 'columnOrder', 'columnOrder');
-        try {
-            await setDoc(columnOrderDocRef, { order: updatedColumns }, { merge: true });
-            setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
-        } catch (e) {
-            console.error("AllRegistrationsApp: Chyba pri ukladaní viditeľnosti stĺpcov do Firestore:", e);
-            setUserNotificationMessage(`Chyba pri ukladaní viditeľnosti stĺpcov: ${e.message}`, 'error');
-        }
-    }
-  };
+  // Removed handleSaveColumnVisibility function as column visibility is no longer user-configurable.
 
   const handleSaveEditedData = React.useCallback(async (updatedData, targetDocRef, originalDataPath) => {
     if (!targetDocRef) {
@@ -2373,12 +2208,7 @@ function AllRegistrationsApp() {
         initialFilterValues: activeFilters[filterColumn] || [],
         uniqueColumnValues: uniqueColumnValues
     }),
-    React.createElement(ColumnVisibilityModal, {
-        isOpen: showColumnVisibilityModal,
-        onClose: () => setShowColumnVisibilityModal(false),
-        columns: columnOrder,
-        onSaveColumnVisibility: handleSaveColumnVisibility,
-    }),
+    // Removed ColumnVisibilityModal component rendering
     React.createElement(DataEditModal, {
         isOpen: isEditModalOpen,
         onClose: closeEditModal,
@@ -2423,10 +2253,7 @@ function AllRegistrationsApp() {
                 }),
                 React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť tímy')
             ),
-            React.createElement('button', {
-                onClick: () => setShowColumnVisibilityModal(true),
-                className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
-            }, 'Upraviť stĺpce')
+            // Removed "Upraviť stĺpce" button
         ),
         React.createElement(
             'div',
@@ -2472,27 +2299,21 @@ function AllRegistrationsApp() {
                                     filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▲' : '▼'
                                     )
                                 ),
-                                columnOrder.filter(col => col.visible).map((col, index) => (
+                                columnOrder.map((col) => ( // Iterate directly over columnOrder
                                     React.createElement('th', {
                                         key: col.id,
                                         scope: 'col',
-                                        className: `py-3 px-6 relative group ${col.id === 'toggle' || col.id === 'expander' ? '' : 'whitespace-nowrap'} min-w-max`,
+                                        className: `py-3 px-6 relative group whitespace-nowrap min-w-max`,
                                         onMouseEnter: () => setHoveredColumn(col.id),
                                         onMouseLeave: () => setHoveredColumn(null)
                                     },
                                         React.createElement('div', { className: 'flex items-center justify-center h-full space-x-1' },
-                                            index > 0 && React.createElement('button', {
-                                                onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
-                                                className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
-                                            }, '←'),
+                                            // Removed left/right move buttons
                                             React.createElement('button', {
                                                 onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); },
                                                 className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
-                                            }, '⚙️'),
-                                            index < columnOrder.filter(c => c.visible).length - 1 && React.createElement('button', {
-                                                onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
-                                                className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`
-                                            }, '→')
+                                            }, '⚙️')
+                                            // Removed right move button
                                         ),
                                         React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center cursor-pointer' },
                                             col.label,
@@ -2511,7 +2332,7 @@ function AllRegistrationsApp() {
                         React.createElement(
                             'tr',
                             null,
-                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                            React.createElement('td', { colSpan: columnOrder.length + 1, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
                         )
                     ) : (
                         (!showUsers && showTeams) ? (
@@ -2570,7 +2391,7 @@ function AllRegistrationsApp() {
                                         expandedTeamRows[teamUniqueId] && (!showUsers && showTeams) && React.createElement(
                                             'tr',
                                             { key: `${teamUniqueId}-details`, className: 'bg-gray-100' },
-                                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 2, className: 'p-0' },
+                                            React.createElement('td', { colSpan: defaultColumnOrder.length + 2, className: 'p-0' }, // Use defaultColumnOrder.length
                                                 React.createElement(TeamDetailsContent, {
                                                     team: team,
                                                     tshirtSizeOrder: availableTshirtSizes,
@@ -2634,7 +2455,7 @@ function AllRegistrationsApp() {
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                             }, '⚙️')
                                         ),
-                                        columnOrder.filter(col => col.visible).map(col => (
+                                        columnOrder.map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
                                                 // Tu som zmenil prístup k hodnote, aby sa vždy použila formatTableCellValue
                                                 formatTableCellValue(getNestedValue(u, col.id), col.id, u) // Pass user object here
@@ -2644,7 +2465,7 @@ function AllRegistrationsApp() {
                                     expandedRows[u.id] && showTeams && React.createElement(
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
-                                        React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length + 1, className: 'p-0' },
+                                        React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
                                             Object.entries(u.teams || {}).map(([category, teamList]) =>
                                                 teamList.map((team, teamIndex) => {
                                                     let menTeamMembersCount = 0;
