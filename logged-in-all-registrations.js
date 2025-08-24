@@ -253,18 +253,19 @@ const getNestedValue = (obj, path) => {
     const pathParts = path.split('.');
     let current = obj;
     for (const part of pathParts) {
-        if (current === undefined || current === null) { // Handle undefined or null intermediate objects
-            // console.log(`getNestedValue: current is undefined/null at part ${part}, path: ${path}`); // Debug log
+        // Zabezpečiť, že current nie je null alebo undefined predtým, ako sa pokúsite získať vlastnosť
+        if (current === undefined || current === null) {
+            // console.log(`getNestedValue: current is undefined/null at part ${part}, path: ${path}. Returning undefined.`); // Debug log
             return undefined;
         }
         const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/);
         if (arrayMatch) {
             const arrayKey = arrayMatch[1];
             const arrayIndex = parseInt(arrayMatch[2]);
-            current = current && Array.isArray(current[arrayKey]) && current[arrayKey][arrayIndex] !== undefined
+            current = (current && Array.isArray(current[arrayKey]) && current[arrayKey][arrayIndex] !== undefined)
                 ? current[arrayKey][arrayIndex] : undefined;
         } else {
-            current = current && current[part] !== undefined ? current[part] : undefined;
+            current = (current && current[part] !== undefined) ? current[part] : undefined;
         }
         // console.log(`getNestedValue: After part ${part}, current:`, current); // Debug log
         if (current === undefined) break;
@@ -816,7 +817,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
         } else if (title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra')) {
-            // Inicializovať adresné polia, ak neexistujú
+            // Inicializovať adresné polia, ak neexistujú, a nastaviť ich na prázdny reťazec
             if (!initialData.address) initialData.address = {};
             if (initialData.address.street === undefined) initialData.address.street = '';
             if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
@@ -1250,7 +1251,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 };
             }
             
-            console.log(`    Rendering generic input for path: ${path}, label: ${labelText}, inputType: ${inputType}, isCheckbox: ${isCheckbox}`); // Debug log
+            // Log the value that is actually passed to the input component
+            const inputValue = formatDisplayValue(getNestedDataForInput(localEditedData, path), path);
+            console.log(`    Input value for path ${path}: "${inputValue}"`);
+
             return React.createElement(
                 'div',
                 { key: path, className: 'mb-4' },
@@ -1268,7 +1272,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         ref: el => inputRefs.current[path] = el,
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path),
+                        value: inputValue, // Use the logged inputValue
                         onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
                         readOnly: !isSavable,
                         ...customProps 
