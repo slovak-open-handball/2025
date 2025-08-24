@@ -249,21 +249,27 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
 
 // Helper function to get nested values from an object
 const getNestedValue = (obj, path) => {
-    // Handle path with array indices like 'teams.category.0.playerDetails.0.firstName'
+    // console.log(`getNestedValue: obj:`, obj, `path: ${path}`); // Debug log
     const pathParts = path.split('.');
     let current = obj;
     for (const part of pathParts) {
+        if (current === undefined || current === null) { // Handle undefined or null intermediate objects
+            // console.log(`getNestedValue: current is undefined/null at part ${part}, path: ${path}`); // Debug log
+            return undefined;
+        }
         const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/);
         if (arrayMatch) {
             const arrayKey = arrayMatch[1];
             const arrayIndex = parseInt(arrayMatch[2]);
-            current = current && current[arrayKey] && current[arrayKey][arrayIndex] !== undefined
+            current = current && Array.isArray(current[arrayKey]) && current[arrayKey][arrayIndex] !== undefined
                 ? current[arrayKey][arrayIndex] : undefined;
         } else {
             current = current && current[part] !== undefined ? current[part] : undefined;
         }
+        // console.log(`getNestedValue: After part ${part}, current:`, current); // Debug log
         if (current === undefined) break;
     }
+    // console.log(`getNestedValue: Final value for path ${path}:`, current); // Debug log
     return current;
 };
 
@@ -809,6 +815,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
+        } else if (title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra')) {
+            // Inicializovať adresné polia, ak neexistujú
+            if (!initialData.address) initialData.address = {};
+            if (initialData.address.street === undefined) initialData.address.street = '';
+            if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
+            if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
+            if (initialData.address.city === undefined) initialData.address.city = '';
+            if (initialData.address.country === undefined) initialData.address.country = '';
+            // Ďalšie polia pre členov tímu, ktoré by mohli chýbať
+            if (initialData.firstName === undefined) initialData.firstName = '';
+            if (initialData.lastName === undefined) initialData.lastName = '';
+            if (initialData.dateOfBirth === undefined) initialData.dateOfBirth = '';
+            if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
+            if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
         } else if (title.includes('Upraviť tím')) {
             // Inicializovať selectedCategory s existujúcou kategóriou tímu
             setSelectedCategory(initialData._category || initialData.category || ''); // Použiť _category pre flattened tímy
@@ -832,23 +852,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     quantity: tshirt.quantity || 0
                 }));
             setTeamTshirts(initialTshirts);
-        } else if (title.includes('Upraviť Hráča') || title.includes('Upraviť Člena realizačného tímu') || title.includes('Upraviť Šoféra')) {
-            // Inicializovať adresné polia, ak neexistujú
-            if (!initialData.address) initialData.address = {};
-            if (initialData.address.street === undefined) initialData.address.street = '';
-            if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
-            if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
-            if (initialData.address.city === undefined) initialData.address.city = '';
-            if (initialData.address.country === undefined) initialData.address.country = '';
-            // Ďalšie polia pre členov tímu, ktoré by mohli chýbať
-            if (initialData.firstName === undefined) initialData.firstName = '';
-            if (initialData.lastName === undefined) initialData.lastName = '';
-            if (initialData.dateOfBirth === undefined) initialData.dateOfBirth = '';
-            if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
-            if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
         }
         
         setLocalEditedData(initialData); 
+        console.log("DataEditModal useEffect: localEditedData initialized to:", initialData); // Debug log
     }, [data, title, window.globalUserProfileData, db, availableTshirtSizes]); // Pridané availableTshirtSizes ako závislosť
 
 
@@ -1188,6 +1195,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const isSavable = targetDocRef !== null;
 
     const renderDataFields = (obj, currentPath = '') => {
+        // console.log(`renderDataFields: called with currentPath: ${currentPath}, obj:`, obj); // Debug log
+
         // Skryť isMenuToggled pre úpravu používateľa
         if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
             return null;
@@ -1220,7 +1229,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         const renderedFields = new Set(); 
 
         const renderField = (path, value) => {
-            if (renderedFields.has(path)) return null; 
+            // console.log(`renderField called for path: ${path}, value: ${value}, typeof value: ${typeof value}`); // Debug log
+            if (renderedFields.has(path)) {
+                // console.log(`  Path ${path} already rendered, returning null.`); // Debug log
+                return null; 
+            }
+            
+            renderedFields.add(path); 
 
             const key = path.split('.').pop();
             // These fields should always be hidden when editing a user profile (regardless of roles)
@@ -1229,8 +1244,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 return null;
             }
             
-            renderedFields.add(path); 
-
             const labelText = formatLabel(path);
             let inputType = 'text';
             let isCheckbox = false;
@@ -1271,6 +1284,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 };
             } else if (path === 'contactPhoneNumber') {
                 // Tlačidlo teraz zobrazuje len predvoľbu
+                // console.log(`  Rendering phone number input for path: ${path}`); // Debug log
                 return React.createElement(
                     'div',
                     { key: path, className: 'mb-4' },
@@ -1299,6 +1313,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 );
             }
 
+            // console.log(`  Rendering generic input for path: ${path}, label: ${labelText}, inputType: ${inputType}, isCheckbox: ${isCheckbox}`); // Debug log
             return React.createElement(
                 'div',
                 { key: path, className: 'mb-4' },
@@ -1341,11 +1356,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
             if (isEditingMember) { // A ak upravujeme Hráča/Člena RT/Šoféra
                 const memberElements = [];
+                console.log('renderDataFields: isEditingMember is TRUE. localEditedData:', localEditedData); // Debug log
+                console.log('renderDataFields: memberFieldsOrder:', memberFieldsOrder); // Debug log
                 // Vykresľujeme polia explicitne v určenom poradí
                 memberFieldsOrder.forEach(path => {
-                    memberElements.push(renderField(path, getNestedValue(localEditedData, path)));
+                    const valueToRender = getNestedValue(localEditedData, path);
+                    // console.log(`renderDataFields: Attempting to render for path: ${path}, value:`, valueToRender); // Debug log
+                    memberElements.push(renderField(path, valueToRender));
                 });
-                return memberElements.filter(Boolean);
+                console.log('renderDataFields: memberElements after forEach:', memberElements); // Debug log
+                return memberElements.filter(Boolean); // THIS IS THE CRITICAL LINE
             } else if (title.includes('Upraviť používateľa')) { // Ak upravujeme Používateľa
                 const elements = [];
                 
@@ -1592,13 +1612,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 return teamElements;
             }
         } else { // Pre všetky ostatné prípady (vnorené objekty alebo iné, ako vyššie špecifikované typy úprav)
+            // console.log(`renderDataFields: Generic rendering for currentPath: ${currentPath}`); // Debug log
             if (!obj || typeof obj !== 'object' || (obj.toDate && typeof obj.toDate === 'function')) {
+                // console.log(`  Returning single field for path: ${currentPath}`); // Debug log
                 return renderField(currentPath, obj);
             }
 
             return Object.entries(obj).map(([key, value]) => {
                 // Filtrovať interné kľúče a kľúče, ktoré sú už spracované na najvyššej úrovni pre tímy
                 if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password', 'packageDetails', 'accommodation', 'arrival', 'tshirts'].includes(key)) {
+                    // console.log(`  Filtering out key: ${key}`); // Debug log
                     return null;
                 }
                 
@@ -1606,6 +1629,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
                 if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
                     // Pre vnorené objekty, ktoré nie sú priamo spracované logikou najvyššej úrovne
+                    // console.log(`  Rendering CollapsibleSection for object: ${fullKeyPath}`); // Debug log
                     return React.createElement(
                         CollapsibleSection,
                         {
@@ -1619,6 +1643,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 } else if (Array.isArray(value)) {
                     // Pre polia, tiež v rozbaľovacej sekcii
                     if (value.length === 0) {
+                        // console.log(`  Rendering empty array message for: ${fullKeyPath}`); // Debug log
                         return React.createElement(
                             'div',
                             { key: fullKeyPath, className: 'mb-4' },
@@ -1631,6 +1656,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             })
                         );
                     }
+                    // console.log(`  Rendering CollapsibleSection for array: ${fullKeyPath}`); // Debug log
                     return React.createElement(
                         'div',
                         { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
@@ -1642,6 +1668,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     );
                 } else {
                     // Vykreslenie jednoduchých polí
+                    // console.log(`  Rendering single field for: ${fullKeyPath}`); // Debug log
                     return renderField(fullKeyPath, value);
                 }
             }).filter(Boolean);
@@ -1976,6 +2003,7 @@ function AllRegistrationsApp() {
       setEditingDocRef(targetDocRef);
       setEditingDataPath(originalDataPath);
       setIsEditModalOpen(true);
+      console.log("openEditModal: Opening modal with title:", title, "data:", cleanedData, "path:", originalDataPath); // Debug log
   };
 
   const closeEditModal = () => {
@@ -1984,6 +2012,7 @@ function AllRegistrationsApp() {
       setEditModalTitle('');
       setEditingDocRef(null);
       setEditingDataPath('');
+      console.log("closeEditModal: Closing modal."); // Debug log
   };
 
 
