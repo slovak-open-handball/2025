@@ -1437,6 +1437,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
             // 6. Tričká
             if (availableTshirtSizes.length > 0) {
+                const usedSizes = teamTshirts.map(entry => entry.size); // Get all sizes currently selected across all rows
                 teamElements.push(
                     React.createElement(
                         'div',
@@ -1455,21 +1456,22 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                         onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value),
                                         disabled: !isSavable
                                     },
-                                    // Option pre aktuálnu veľkosť, ak nie je v availableTshirtSizes (napr. zmazaná)
-                                    // a nie je zároveň súčasťou existujúcich availableTshirtSizes (vtedy je disabled a hidden)
-                                    (!availableTshirtSizes.includes(tshirtEntry.size) && tshirtEntry.size) &&
-                                        React.createElement('option', { key: 'invalid-size', value: tshirtEntry.size, disabled: true, hidden: true }, `${tshirtEntry.size} (Neplatná)`),
+                                    // Option for the currently selected size, always show it
+                                    // Even if it might be considered 'used' by another entry in some edge case or if no longer available globally
+                                    availableTshirtSizes.includes(tshirtEntry.size) ? 
+                                        React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size }, tshirtEntry.size)
+                                    : (tshirtEntry.size && React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size, disabled: true, hidden: true }, `${tshirtEntry.size} (Neplatná)`)),
 
-                                    availableTshirtSizes.map(size => {
-                                        const isUsedByAnotherEntry = teamTshirts.some(
-                                            entry => entry.tempId !== tshirtEntry.tempId && entry.size === size
-                                        );
-                                        return React.createElement('option', {
-                                            key: size,
-                                            value: size,
-                                            disabled: isUsedByAnotherEntry
-                                        }, size);
-                                    })
+                                    // Only show other available sizes that are not currently used by other entries
+                                    availableTshirtSizes
+                                        .filter(size => !usedSizes.includes(size) || size === tshirtEntry.size) // Filter out already used sizes, but keep the current entry's size
+                                        .map(size => (
+                                            size !== tshirtEntry.size ? // Avoid duplicating the already rendered current size option
+                                            React.createElement('option', {
+                                                key: size,
+                                                value: size,
+                                            }, size) : null
+                                        ))
                                 ),
                                 React.createElement('input', {
                                     type: 'number',
@@ -1482,8 +1484,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 React.createElement('button', {
                                     type: 'button',
                                     onClick: () => removeTshirtEntry(tshirtEntry.tempId),
-                                    className: 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none'
-                                }, '🗑️')
+                                    className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 focus:outline-none text-xl leading-none', // Circular delete button
+                                    style: { lineHeight: '1rem' } // Adjust line height to center the '-'
+                                }, '-')
                             )
                         ),
                         React.createElement('button', {
@@ -1491,7 +1494,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             onClick: addTshirtEntry,
                             className: 'mt-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none',
                             disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
-                        }, 'Pridať novú veľkosť trička')
+                        }, '+') // Changed button text to '+'
                     )
                 );
             }
