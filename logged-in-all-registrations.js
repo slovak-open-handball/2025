@@ -1408,7 +1408,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 }, 'Zavrieť'),
                 isSavable && React.createElement('button', {
                     className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
-                    onClick: () => {
+                    onClick: async () => { // Changed to async function here
                         // Špeciálne spracovanie pre uloženie tímu - kategória a názov tímu
                         if (title.includes('Upraviť tím')) {
                             // originalDataPath je pre tím ako 'teams.Juniors[0]'
