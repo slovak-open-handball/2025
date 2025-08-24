@@ -1489,12 +1489,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 }, '-')
                             )
                         ),
-                        React.createElement('button', {
-                            type: 'button',
-                            onClick: addTshirtEntry,
-                            className: 'mt-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none',
-                            disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
-                        }, '+') // Changed button text to '+'
+                        // Wrap the add button in a div for centering
+                        React.createElement('div', { className: 'flex justify-center mt-2' },
+                            React.createElement('button', {
+                                type: 'button',
+                                onClick: addTshirtEntry,
+                                className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none text-xl leading-none', // Changed color to blue, made round, text-xl for larger +, line-height for centering
+                                style: { lineHeight: '1rem' }, // Adjust line height to center the '+'
+                                disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
+                            }, '+')
+                        )
                     )
                 );
             }
@@ -2632,7 +2636,7 @@ function AllRegistrationsApp() {
         // Heuristika pre bežné komplexné objekty
         // Adresný objekt (len pre vnorené, ak by sa taký našiel)
         if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || '', value.country || ''}`;
         }
         if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
             return value.name || value.type;
