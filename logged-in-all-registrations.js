@@ -639,21 +639,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         const fetchCategories = async () => {
             if (db) {
                 try {
-                    // Zmena: Získavame referenciu na kolekciu 'categories' pod dokumentom 'settings'
-                    const categoriesCollectionRef = collection(db, 'settings', 'categories');
-                    // Používame getDocs pre kolekciu a získame všetky dokumenty
-                    const querySnapshot = await getDocs(query(categoriesCollectionRef, orderBy('name'))); 
-                    
-                    const fetchedCategories = [];
-                    querySnapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (data && data.name) {
-                            fetchedCategories.push(String(data.name).trim());
-                        }
-                    });
-                    // Kategórie už sú zoradené v query, ale môžeme pre istotu aj tu
-                    setCategories(fetchedCategories.sort());
+                    // Správna referencia na dokument 'categories'
+                    const categoriesDocRef = doc(db, 'settings', 'categories');
+                    const docSnapshot = await getDoc(categoriesDocRef); // Získanie JEDNÉHO dokumentu
 
+                    if (docSnapshot.exists()) {
+                        const categoriesData = docSnapshot.data();
+                        const fetchedCategories = Object.values(categoriesData) // Získanie hodnôt z mapy (objektov kategórií)
+                            .filter(item => item && item.name) // Filtrovať neplatné položky a tie bez 'name'
+                            .map(item => String(item.name).trim()) // Získať názov kategórie
+                            .sort(); // Zoradiť abecedne
+                        setCategories(fetchedCategories);
+                    } else {
+                        console.warn("Firestore dokument 'settings/categories' neexistuje. Žiadne kategórie neboli načítané.");
+                        setCategories([]);
+                    }
                 } catch (error) {
                     console.error("Chyba pri načítaní kategórií z Firestore:", error);
                 }
@@ -1192,10 +1192,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         'select',
                         {
                             className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                            value: selectedCategory,
-                            onChange: (e) => handleChange('_category', e.target.value), // Updated to use handleChange for consistency
+                            value: selectedCategory, // Predvyplnená hodnota
+                            onChange: (e) => {
+                                setSelectedCategory(e.target.value);
+                                handleChange('_category', e.target.value); // Aktualizovať aj localEditedData
+                            },
                             disabled: !isSavable
                         },
+                        // Zabezpečiť, že ak aktuálna kategória nie je v zozname, stále sa zobrazí
+                        selectedCategory && !categories.includes(selectedCategory) &&
+                            React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
                         categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
                     )
                 )
@@ -1437,7 +1443,7 @@ function AllRegistrationsApp() {
     { id: 'billing.clubName', label: 'Názov klubu', type: 'string', visible: true },
     { id: 'billing.ico', label: 'IČO', type: 'string', visible: true },
     { id: 'billing.dic', label: 'DIČ', type: 'string', visible: true },
-    { id: 'billing.icDph', label: 'IČ DPH', type: 'string', visible: true },
+    { id: 'billing.icDph', label: 'IČ DPH', type: true },
     { id: 'street', label: 'Ulica', type: 'string', visible: true },
     { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: 'string', visible: true },
