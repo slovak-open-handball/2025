@@ -798,7 +798,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         setIsTargetUserHall(initialData.role === 'hall'); 
 
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         if (title.includes('Upraviť používateľa')) {
@@ -1286,7 +1286,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
@@ -2085,7 +2085,8 @@ function AllRegistrationsApp() {
     { id: 'houseNumber', label: 'Popisné číslo', type: 'string', visible: true },
     { id: 'city', label: 'Mesto/Obec', type: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
-    { id: 'country', label: 'Krajina', type: 'string', visible: true }, // Added label
+    { id: 'country', label: 'Krajina', type: 'string', visible: true },
+    { id: 'note', label: 'Poznámka', type: 'string', visible: true }, // Pridaný stĺpec "Poznámka"
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder); // Keep columnOrder for definitions
 
@@ -2102,9 +2103,9 @@ function AllRegistrationsApp() {
 
   // Stavy pre modálne okno na úpravu
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-  const [editingData, setEditingData] = React.useState(null);
+  const [editingData, setEditingData] = React.useState(null); // Initialized to null
   const [editModalTitle, setEditModalTitle] = React.useState('');
-  const [editingDocRef, setEditingDocRef] = React.useState(null); // Referencia na dokument pre uloženie
+  const [editingDocRef, setEditingDocRef] = React.useState(null); // Initialized to null
   const [editingDataPath, setEditingDataPath] = React.useState(''); // Cesta v dokumente pre uloženie
 
   const openEditModal = (data, title, targetDocRef = null, originalDataPath = '') => {
@@ -2137,7 +2138,8 @@ function AllRegistrationsApp() {
         let teams = [];
         filteredUsers.forEach(u => {
             if (u.teams && Object.keys(u.teams).length > 0) {
-                Object.entries(u.teams).forEach(([category, teamList]) => {
+                Object.entries(u.teams).forEach(([category, teamListRaw]) => { // Renamed teamList to teamListRaw
+                    const teamList = Array.isArray(teamListRaw) ? teamListRaw : []; // Defensive check
                     teamList.forEach((team, teamIndex) => {
                         let menTeamMembersCount = 0;
                         if (Array.isArray(team.menTeamMemberDetails)) {
@@ -2517,7 +2519,7 @@ function AllRegistrationsApp() {
           let valA, valB;
 
           // Access top-level address fields directly
-          if (['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(columnId)) {
+          if (['street', 'houseNumber', 'city', 'postalCode', 'country', 'note'].includes(columnId)) { // Added 'note'
             valA = a[columnId];
             valB = b[columnId];
           }
@@ -2950,7 +2952,7 @@ function AllRegistrationsApp() {
         return `${dialCode} ${formattedNumber}`;
     }
     // Handle top-level address fields
-    else if (['street', 'houseNumber', 'city', 'country'].includes(columnId)) {
+    else if (['street', 'houseNumber', 'city', 'country', 'note'].includes(columnId)) { // Added 'note'
         return value;
     }
 
@@ -3269,8 +3271,8 @@ function AllRegistrationsApp() {
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
                                         React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
-                                            Object.entries(u.teams || {}).map(([category, teamList]) =>
-                                                teamList.map((team, teamIndex) => {
+                                            Object.entries(u.teams || {}).map(([category, teamListRaw]) => // Renamed to teamListRaw
+                                                (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => { // Defensive check
                                                     let menTeamMembersCount = 0;
                                                     if (Array.isArray(team.menTeamMemberDetails)) {
                                                         menTeamMembersCount = team.menTeamMemberDetails.length;
