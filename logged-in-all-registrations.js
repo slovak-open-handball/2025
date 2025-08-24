@@ -649,7 +649,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     // Stavy pre tričká
     const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
-    const [teamTshirts, setTeamTshirts] = React.useState({}); // Map { size: quantity }
+    // Zmenené teamTshirts na pole objektov, každý s tempId pre React kľúče
+    const [teamTshirts, setTeamTshirts] = React.useState([]); // [{ tempId: 'uuid', size: 'S', quantity: 5 }]
+
+    // Utility to generate a unique ID for new t-shirt entries
+    const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
 
 
     React.useEffect(() => {
@@ -786,18 +790,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             // Inicializovať selectedPackageName s existujúcim názvom balíka tímu
             setSelectedPackageName(initialData.packageDetails?.name || '');
 
-            // Inicializovať teamTshirts
-            const initialTshirts = {};
-            (initialData.tshirts || []).forEach(tshirt => {
-                if (tshirt.size) {
-                    initialTshirts[tshirt.size] = tshirt.quantity || 0;
-                }
-            });
+            // Inicializovať teamTshirts ako pole objektov { tempId, size, quantity }
+            const initialTshirts = (initialData.tshirts || [])
+                .filter(tshirt => tshirt.size && (tshirt.quantity || 0) > 0) // Only include with quantity > 0
+                .map(tshirt => ({
+                    tempId: generateUniqueId(), // Assign a temporary unique ID
+                    size: String(tshirt.size).trim(),
+                    quantity: tshirt.quantity || 0
+                }));
             setTeamTshirts(initialTshirts);
         }
         
         setLocalEditedData(initialData); 
-    }, [data, title, window.globalUserProfileData, db]); 
+    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes]); // Pridané availableTshirtSizes ako závislosť
+
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -819,6 +825,38 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     }, [isOpen, onClose, isDialCodeModalOpen]); 
 
     if (!isOpen) return null;
+
+    // Handler pre zmenu veľkosti alebo počtu tričiek
+    const handleTshirtEntryChange = (tempId, field, value) => {
+        setTeamTshirts(prev =>
+            prev.map(entry =>
+                entry.tempId === tempId
+                    ? { ...entry, [field]: field === 'quantity' ? Math.max(0, parseInt(value, 10) || 0) : value }
+                    : entry
+            )
+        );
+    };
+
+    // Handler pre odstránenie riadku s tričkom
+    const removeTshirtEntry = (tempId) => {
+        setTeamTshirts(prev => prev.filter(entry => entry.tempId !== tempId));
+    };
+
+    // Handler pre pridanie nového riadku s tričkom
+    const addTshirtEntry = () => {
+        const currentlyUsedSizes = teamTshirts.map(entry => entry.size);
+        const availableSizesForNewEntry = availableTshirtSizes.filter(size => !currentlyUsedSizes.includes(size));
+
+        if (availableSizesForNewEntry.length > 0) {
+            setTeamTshirts(prev => [
+                ...prev,
+                { tempId: generateUniqueId(), size: availableSizesForNewEntry[0], quantity: 0 }
+            ]);
+        } else {
+            setUserNotificationMessage("Všetky dostupné veľkosti tričiek sú už pridané.", 'info');
+        }
+    };
+
 
     // Helper to format keys for labels
     const formatLabel = (key) => {
@@ -1086,15 +1124,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         // Ak je potrebné okamžite aktualizovať localEditedData, môžete to urobiť tu
         // Ale pre "contactPhoneNumber" to necháme na onSave, aby sme sa vyhli zbytočným re-renderom
     };
-
-    // Handler pre zmenu počtu tričiek
-    const handleTshirtQuantityChange = (size, quantity) => {
-        setTeamTshirts(prev => ({
-            ...prev,
-            [size]: Math.max(0, parseInt(quantity, 10) || 0) // Zabezpečiť, že je to číslo a nie je záporné
-        }));
-    };
-
 
     const isSavable = targetDocRef !== null;
 
@@ -1413,21 +1442,56 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         'div',
                         { key: 'tshirts-section', className: 'mb-4' },
                         React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Tričká'),
-                        availableTshirtSizes.map(size =>
+                        // Render existing t-shirt entries
+                        teamTshirts.map(tshirtEntry =>
                             React.createElement(
                                 'div',
-                                { key: `tshirt-${size}`, className: 'flex items-center mb-2' },
-                                React.createElement('span', { className: 'w-24 text-gray-700 mr-2' }, `Veľkosť ${size.toUpperCase()}:`),
+                                { key: tshirtEntry.tempId, className: 'flex items-center mb-2' },
+                                React.createElement(
+                                    'select',
+                                    {
+                                        className: `mt-1 block w-32 rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                        value: tshirtEntry.size,
+                                        onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value),
+                                        disabled: !isSavable
+                                    },
+                                    // Option pre aktuálnu veľkosť, ak nie je v availableTshirtSizes (napr. zmazaná)
+                                    // a nie je zároveň súčasťou existujúcich availableTshirtSizes (vtedy je disabled a hidden)
+                                    (!availableTshirtSizes.includes(tshirtEntry.size) && tshirtEntry.size) &&
+                                        React.createElement('option', { key: 'invalid-size', value: tshirtEntry.size, disabled: true, hidden: true }, `${tshirtEntry.size} (Neplatná)`),
+
+                                    availableTshirtSizes.map(size => {
+                                        const isUsedByAnotherEntry = teamTshirts.some(
+                                            entry => entry.tempId !== tshirtEntry.tempId && entry.size === size
+                                        );
+                                        return React.createElement('option', {
+                                            key: size,
+                                            value: size,
+                                            disabled: isUsedByAnotherEntry
+                                        }, size);
+                                    })
+                                ),
                                 React.createElement('input', {
                                     type: 'number',
                                     min: '0',
-                                    className: `mt-1 block flex-grow rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                    value: teamTshirts[size] || 0,
-                                    onChange: (e) => handleTshirtQuantityChange(size, e.target.value),
+                                    className: `mt-1 block flex-grow rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: tshirtEntry.quantity,
+                                    onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'quantity', e.target.value),
                                     readOnly: !isSavable
-                                })
+                                }),
+                                React.createElement('button', {
+                                    type: 'button',
+                                    onClick: () => removeTshirtEntry(tshirtEntry.tempId),
+                                    className: 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none'
+                                }, '🗑️')
                             )
-                        )
+                        ),
+                        React.createElement('button', {
+                            type: 'button',
+                            onClick: addTshirtEntry,
+                            className: 'mt-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none',
+                            disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
+                        }, 'Pridať novú veľkosť trička')
                     )
                 );
             }
@@ -1550,11 +1614,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     throw new Error("Invalid team path format.");
                                 }
 
-                                // Konvertovať teamTshirts objekt na pole pre uloženie
-                                const tshirtsToSave = Object.entries(teamTshirts)
-                                    .filter(([, quantity]) => quantity > 0) // Filtrovať len tričká s množstvom > 0
-                                    .map(([size, quantity]) => ({ size, quantity }));
-
+                                // Konvertovať teamTshirts pole na formát pre uloženie do databázy
+                                const tshirtsToSave = teamTshirts
+                                    .filter(entry => entry.size && entry.quantity > 0) // Filtrovať neplatné/nulové množstvá
+                                    .map(({ size, quantity }) => ({ size, quantity })); // Odstrániť tempId
 
                                 const updatedTeamData = {
                                     ...localEditedData,
