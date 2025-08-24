@@ -621,6 +621,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const [localEditedData, setLocalEditedData] = React.useState(data); 
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
+    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); // Nový stav pre rolu 'hall'
     const inputRefs = React.useRef({}); // Na uchovávanie referencií na vstupné polia pre manipuláciu s kurzorom
 
     // Stavy pre Phone Input
@@ -643,6 +644,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         // Determine if the user being edited is an admin safely
         setIsTargetUserAdmin(initialData.role === 'admin');
+        setIsTargetUserHall(initialData.role === 'hall'); // Nastavenie stavu pre rolu 'hall'
 
         if (title.includes('Upraviť používateľa')) {
             // These fields should always be initialized for editing, regardless of who edits whom
@@ -984,9 +986,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
         let fieldsToRenderForUser = allUserFields;
 
-        // Condition for admin editing another admin
+        // Condition for admin or hall editing another admin or hall
         const isCurrentUserAdmin = userRole === 'admin';
-        if (title.includes('Upraviť používateľa') && isCurrentUserAdmin && isTargetUserAdmin) {
+        if (title.includes('Upraviť používateľa') && isCurrentUserAdmin && (isTargetUserAdmin || isTargetUserHall)) {
             fieldsToRenderForUser = ['firstName', 'lastName'];
         }
 
