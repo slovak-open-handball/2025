@@ -38,7 +38,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     };
   }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
 
-  // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak sú notifikácie zakázané
+  // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak ak sú notifikácie zakázané
   if ((!show && !message) || !displayNotificationsEnabled) return null;
 
   return React.createElement(
@@ -1932,37 +1932,50 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         try {
                             window.showGlobalLoader();
 
-                            console.log("DEBUG Save Button Click: originalDataPath:", originalDataPath);
+                            // console.log("DEBUG DataEditModal Save Button Click: originalDataPath:", originalDataPath); // Debug log
 
-                            const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                            const dataWithPhoneNumber = { ...localEditedData };
-                            if (dataWithPhoneNumber.contactPhoneNumber !== undefined) {
-                                dataWithPhoneNumber.contactPhoneNumber = fullPhoneNumber;
+                            const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
+                            
+                            // 1. Zostaviť plné telefónne číslo
+                            if (dataToPrepareForSave.contactPhoneNumber !== undefined) {
+                                dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
                             }
 
-                            // Pass the original 'data' prop from DataEditModal to the onSave handler
-                            // Prepare originalData and modifiedData for comparison for notification
-                            const originalDataForCompare = JSON.parse(JSON.stringify(data));
-                            const modifiedDataForCompare = JSON.parse(JSON.stringify(dataWithPhoneNumber)); // This is localEditedData + phone
-
-                            // Special handling for team-specific select inputs and tshirts to ensure they are included in the comparison
+                            // 2. Spracovať špecifické polia tímu, ak upravujeme tím
                             if (title.includes('Upraviť tím')) {
-                                // Update the modifiedDataForCompare with the current selected states from the form
-                                modifiedDataForCompare.category = selectedCategory;
-                                modifiedDataForCompare._category = selectedCategory; // Ensure _category is consistent if category is updated
-                                modifiedDataForCompare.arrival = { type: selectedArrivalType };
-                                modifiedDataForCompare.accommodation = { type: selectedAccommodationType };
-                                modifiedDataForCompare.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
-                                modifiedDataForCompare.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
-
-                                // For original data, also ensure category and other fields are correctly represented for comparison
-                                originalDataForCompare.category = data.category || data._category || '';
-                                originalDataForCompare._category = data._category || '';
-                                originalDataForCompare.arrival = data.arrival || { type: '' };
-                                originalDataForCompare.accommodation = data.accommodation || { type: '' };
-                                originalDataForCompare.packageDetails = data.packageDetails || null;
-                                originalDataForCompare.tshirts = (data.tshirts || []).map(({ size, quantity }) => ({ size, quantity }));
+                                dataToPrepareForSave.category = selectedCategory;
+                                dataToPrepareForSave._category = selectedCategory; 
+                                dataToPrepareForSave.arrival = { type: selectedArrivalType };
+                                dataToPrepareForSave.accommodation = { type: selectedAccommodationType };
+                                dataToPrepareForSave.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
+                                dataToPrepareForSave.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
                             }
+
+                            // 3. Filtrovanie interných kľúčov a prázdnych polí pre finálny objekt na uloženie
+                            const finalDataToSave = {};
+                            Object.keys(dataToPrepareForSave).forEach(key => {
+                                // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
+                                if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
+                                    const value = dataToPrepareForSave[key];
+                                    // Exclude empty strings
+                                    if (typeof value === 'string' && value.trim() === '') {
+                                        // Skip empty strings
+                                        // console.log(`DEBUG: Skipping empty string field in DataEditModal: ${key}`);
+                                    } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
+                                        // Skip empty objects (e.g., empty address object if all its sub-fields are empty)
+                                        // console.log(`DEBUG: Skipping empty object field in DataEditModal: ${key}`);
+                                    }
+                                    else {
+                                        finalDataToSave[key] = value;
+                                    }
+                                }
+                            });
+                            
+                            // console.log("DEBUG DataEditModal: Final data prepared for saving:", finalDataToSave); // Debug log
+
+                            // 4. Porovnať s pôvodnými dátami pre notifikáciu
+                            const originalDataForCompare = JSON.parse(JSON.stringify(data)); // Original data passed as prop
+                            const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
 
                             const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
 
@@ -1971,26 +1984,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 onClose();
                                 return;
                             }
-
-                            // Filtrovanie interných kľúčov a systémových kľúčov pre všetky operácie ukladania
-                            const finalDataToSave = {};
-                            Object.keys(dataWithPhoneNumber).forEach(key => {
-                                // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
-                                if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
-                                    const value = dataWithPhoneNumber[key];
-                                    // Exclude empty strings
-                                    if (typeof value === 'string' && value.trim() === '') {
-                                        // Skip empty strings
-                                        // console.log(`DEBUG: Skipping empty string field: ${key}`);
-                                    } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
-                                        // Skip empty objects (e.g., empty address object if all its sub-fields are empty)
-                                        // console.log(`DEBUG: Skipping empty object field: ${key}`);
-                                    }
-                                    else {
-                                        finalDataToSave[key] = value;
-                                    }
-                                }
-                            });
 
                             // --- Save Notification to Firestore ---
                             const userEmail = window.auth.currentUser?.email;
@@ -2005,11 +1998,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             }
                             // --- End Save Notification ---
 
-                            // Now, call the onSave prop from AllRegistrationsApp, passing the original 'data' along
-                            onSave(finalDataToSave, targetDocRef, originalDataPath, data); // Pass 'data' prop here
+                            // Teraz zavolať prop onSave z AllRegistrationsApp s kompletne pripravenými dátami
+                            onSave(finalDataToSave, targetDocRef, originalDataPath); // Pass only what AllRegistrationsApp needs to perform the Firestore update
 
                         } catch (e) {
-                            console.error("Chyba pri ukladaní dát do Firestore:", e);
+                            console.error("Chyba v DataEditModal pri príprave dát na uloženie:", e);
                             setError(`Chyba pri ukladaní dát: ${e.message}`);
                             setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
                         } finally {
@@ -2030,7 +2023,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
 // Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenie upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
 const updateNestedObjectByPath = (obj, path, value) => {
-    console.log("DEBUG updateNestedObjectByPath: Path:", path); // LOGGING
+    // console.log("DEBUG updateNestedObjectByPath: Path:", path); // LOGGING
     if (!path) {
         throw new Error(`Vygenerovaná cesta najvyššej úrovne pre aktualizáciu je prázdna. Pôvodná cesta: ${path}`);
     }
@@ -2080,7 +2073,7 @@ const updateNestedObjectByPath = (obj, path, value) => {
     const firstPathPart = pathParts[0];
     const topLevelField = firstPathPart.includes('[') ? firstPathPart.substring(0, firstPathPart.indexOf('[')) : firstPathPart;
 
-    console.log("DEBUG updateNestedObjectByPath: First Path Part:", firstPathPart, "Top Level Field:", topLevelField); // LOGGING
+    // console.log("DEBUG updateNestedObjectByPath: First Path Part:", firstPathPart, "Top Level Field:", topLevelField); // LOGGING
 
     if (!topLevelField) {
         throw new Error(`Vygenerovaná cesta najvyššej úrovne pre aktualizáciu je prázdna. Pôvodná cesta: ${path}`);
@@ -2553,7 +2546,7 @@ function AllRegistrationsApp() {
       }
       setCurrentSort({ column: columnId, direction });
 
-      const sorted = [...filteredUsers].sort((a, b) => {
+      const sorted = [...filteredUsers].doprava((a, b) => {
           const columnDef = defaultColumnOrder.find(col => col.id === columnId); // Use defaultColumnOrder
           // console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
           // console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
@@ -2806,7 +2799,7 @@ function AllRegistrationsApp() {
 
   // Removed handleSaveColumnVisibility function as column visibility is no longer user-configurable.
 
-  const handleSaveEditedData = React.useCallback(async (updatedData, targetDocRef, originalDataPath, originalModalData) => { // Added originalModalData here
+  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath) => {
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
         setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
@@ -2816,87 +2809,26 @@ function AllRegistrationsApp() {
     try {
         window.showGlobalLoader();
 
-        // Prepare originalData and modifiedData for comparison for notification
-        const originalDataForCompare = JSON.parse(JSON.stringify(originalModalData)); // Use originalModalData
-        const modifiedDataForCompare = JSON.parse(JSON.stringify(updatedData)); 
-
-        // Apply phone number update to modifiedDataForCompare for accurate notification
-        if (originalDataForCompare.contactPhoneNumber !== undefined) {
-             modifiedDataForCompare.contactPhoneNumber = combinePhoneNumber(localEditedData.contactPhoneNumber.dialCode || displayDialCode, localEditedData.contactPhoneNumber.numberWithoutDialCode || displayPhoneNumber.replace(/\s/g, ''));
-        }
-
-        // Special handling for team-specific select inputs and tshirts to ensure they are included in the comparison
-        if (editModalTitle.includes('Upraviť tím')) { // Use editModalTitle to determine context
-            // Update the modifiedDataForCompare with the current selected states from the form
-            modifiedDataForCompare.category = selectedCategory;
-            modifiedDataForCompare._category = selectedCategory; // Ensure _category is consistent if category is updated
-            modifiedDataForCompare.arrival = { type: selectedArrivalType };
-            modifiedDataForCompare.accommodation = { type: selectedAccommodationType };
-            modifiedDataForCompare.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
-            modifiedDataForCompare.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
-
-            // For original data, also ensure category and other fields are correctly represented for comparison
-            originalDataForCompare.category = originalModalData.category || originalModalData._category || '';
-            originalDataForCompare._category = originalModalData._category || '';
-            originalDataForCompare.arrival = originalModalData.arrival || { type: '' };
-            originalDataForCompare.accommodation = originalModalData.accommodation || { type: '' };
-            originalDataForCompare.packageDetails = originalModalData.packageDetails || null;
-            originalDataForCompare.tshirts = (originalModalData.tshirts || []).map(({ size, quantity }) => ({ size, quantity }));
-        }
-
-        const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
-
-        if (generatedChanges.length === 0) {
-            setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
-            onClose();
-            return;
-        }
-
-        // Filtrovanie interných kľúčov a systémových kľúčov pre všetky operácie ukladania
-        const finalDataToSave = {};
-        Object.keys(updatedData).forEach(key => {
-            // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
-            if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
-                const value = updatedData[key];
-                // Exclude empty strings
-                if (typeof value === 'string' && value.trim() === '') {
-                    // Skip empty strings
-                    // console.log(`DEBUG: Skipping empty string field: ${key}`);
-                } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
-                    // Skip empty objects (e.g., empty address object if all its sub-fields are empty)
-                    // console.log(`DEBUG: Skipping empty object field: ${key}`);
-                }
-                else {
-                    finalDataToSave[key] = value;
-                }
-            }
-        });
-
-
-        // --- Save Notification to Firestore ---
-        const userEmail = window.auth.currentUser?.email;
-        if (generatedChanges.length > 0 && userEmail) {
-            const notificationsCollectionRef = collection(db, 'notifications');
-            await addDoc(notificationsCollectionRef, {
-                userEmail,
-                changes: generatedChanges,
-                timestamp: serverTimestamp()
-            });
-            console.log("Notifikácia o zmene uložená do Firestore.");
-        }
+        // All data preparation, including phone number and team-specific fields,
+        // and change generation has been moved to DataEditModal.
+        // We now directly use the `updatedDataFromModal` provided by DataEditModal,
+        // which is already the final data to save after filtering empty strings/objects.
+        
+        // --- Save Notification to Firestore (Changes already generated and saved in DataEditModal) ---
+        // The DataEditModal is now responsible for generating and saving the notification.
+        // We only proceed with the Firestore update here.
         // --- End Save Notification ---
-
 
         if (originalDataPath === '') {
             // Logika pre aktualizáciu používateľa na najvyššej úrovni
-            console.log("DEBUG Top-Level User Save: Executing top-level user update. Data:", finalDataToSave);
-            await updateDoc(targetDocRef, finalDataToSave);
+            // console.log("DEBUG AllRegistrationsApp Top-Level User Save: Executing top-level user update. Data:", updatedDataFromModal); // Debug log
+            await updateDoc(targetDocRef, updatedDataFromModal);
             setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
-            closeEditModal(); // Changed from onClose to closeEditModal
+            closeEditModal(); 
             return;
-        } else if (editModalTitle.includes('Upraviť tím')) { // Use editModalTitle here
+        } else if (editModalTitle.includes('Upraviť tím')) { 
             // Logika pre aktualizáciu tímu
-            console.log("DEBUG Team Save: Original Data Path:", originalDataPath);
+            // console.log("DEBUG AllRegistrationsApp Team Save: Original Data Path:", originalDataPath); // Debug log
             if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
                 throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
             }
@@ -2909,20 +2841,9 @@ function AllRegistrationsApp() {
             }
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
-
-            const tshirtsToSave = teamTshirts
-                .filter(entry => entry.size && entry.quantity > 0)
-                .map(({ size, quantity }) => ({ size, quantity }));
-
-            const updatedTeamSpecificData = {
-                ...finalDataToSave,
-                category: selectedCategory,
-                _category: selectedCategory,
-                arrival: { type: selectedArrivalType },
-                accommodation: { type: selectedAccommodationType },
-                packageDetails: packages.find(pkg => pkg.name === selectedPackageName) || null,
-                tshirts: tshirtsToSave
-            };
+            
+            // updatedDataFromModal už obsahuje spracované balíky, tričká, kategórie atď.
+            const updatedTeamSpecificData = updatedDataFromModal;
 
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
@@ -2940,30 +2861,25 @@ function AllRegistrationsApp() {
 
             const updates = {};
             updates[`teams.${category}`] = newCategoryTeams;
-            console.log("DEBUG Team Save: Updates object before updateDoc:", updates);
+            // console.log("DEBUG AllRegistrationsApp Team Save: Updates object before updateDoc:", updates); // Debug log
             await updateDoc(targetDocRef, updates);
             setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
-            closeEditModal(); // Changed from onClose to closeEditModal
+            closeEditModal(); 
             return;
         } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
                    originalDataPath.includes('womenTeamMemberDetails') || originalDataPath.includes('driverDetailsMale') || originalDataPath.includes('driverDetailsFemale')) {
             // Logika pre aktualizáciu člena tímu/hráča/šoféra
-            console.log("DEBUG Member Save: Original Data Path:", originalDataPath);
+            // console.log("DEBUG AllRegistrationsApp Member Save: Original Data Path:", originalDataPath); // Debug log
             // Cesta by mala vyzerať ako "teams.CATEGORY[TEAM_INDEX].MEMBER_ARRAY[MEMBER_INDEX]"
-            // Rozdelením podľa '.' dostaneme ['teams', 'CATEGORY[TEAM_INDEX]', 'MEMBER_ARRAY[MEMBER_INDEX]']
             const pathParts = originalDataPath.split('.');
-            if (pathParts.length !== 3) { // Očakávame 3 časti: teams, category[index], memberArray[index]
+            if (pathParts.length !== 3) {
                 throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty (teams.category[index].memberArray[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
             }
 
-            const topLevelPath = pathParts[0]; // 'teams' - pre validáciu, ak je potrebná
-            const categoryAndIndexPart = pathParts[1]; // napr. 'Juniors[0]'
-            const memberArrayAndIndexPart = pathParts[2]; // napr. 'playerDetails[0]'
+            const topLevelPath = pathParts[0]; 
+            const categoryAndIndexPart = pathParts[1]; 
+            const memberArrayAndIndexPart = pathParts[2]; 
             
-            console.log("DEBUG Member Save: Path Parts:", pathParts);
-            console.log("DEBUG Member Save: Category And Index Part:", categoryAndIndexPart);
-            console.log("DEBUG Member Save: Member Array And Index Part:", memberArrayAndIndexPart);
-
             const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
             const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
 
@@ -2976,8 +2892,8 @@ function AllRegistrationsApp() {
 
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
-            const memberArrayPath = memberArrayMatch[1]; // napr. 'playerDetails'
-            const memberArrayIndex = parseInt(memberArrayMatch[2]); // napr. 0
+            const memberArrayPath = memberArrayMatch[1]; 
+            const memberArrayIndex = parseInt(memberArrayMatch[2]); 
             
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
@@ -2991,14 +2907,14 @@ function AllRegistrationsApp() {
             if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
                 const memberToUpdate = { ...teamToUpdate[memberArrayPath][memberArrayIndex] };
                 
-                // finalDataToSave už odfiltroval interné kľúče
-                Object.keys(finalDataToSave).forEach(key => {
+                // updatedDataFromModal už obsahuje finalDataToSave pre člena tímu
+                Object.keys(updatedDataFromModal).forEach(key => {
                     if (key.startsWith('address.')) {
                         const addressKey = key.split('.')[1];
                         if (!memberToUpdate.address) memberToUpdate.address = {};
-                        memberToUpdate.address[addressKey] = finalDataToSave[key];
+                        memberToUpdate.address[addressKey] = updatedDataFromModal[key];
                     } else {
-                        memberToUpdate[key] = finalDataToSave[key];
+                        memberToUpdate[key] = updatedDataFromModal[key];
                     }
                 });
 
@@ -3015,16 +2931,16 @@ function AllRegistrationsApp() {
 
                 const updates = {};
                 updates[`teams.${category}`] = updatedTeamsForCategory;
-                console.log("DEBUG Member Save: Updates object before updateDoc:", updates);
+                // console.log("DEBUG AllRegistrationsApp Member Save: Updates object before updateDoc:", updates); // Debug log
                 await updateDoc(targetDocRef, updates);
                 setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
-                closeEditModal(); // Changed from onClose to closeEditModal
+                closeEditModal(); 
                 return;
             } else {
                 throw new Error(`Člen tímu pre aktualizáciu sa nenašiel na ceste: ${originalDataPath}.`);
             }
         } else {
-            // Všeobecná vnorená aktualizácia (napr. ak sa priamo upravuje nové komplexné pole)
+            // Všeobecná vnorená aktualizácia
             if (!originalDataPath) {
                 throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu. Zmeny neboli uložené.");
             }
@@ -3034,25 +2950,25 @@ function AllRegistrationsApp() {
             }
             const currentDocData = docSnapshot.data();
 
-            const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, finalDataToSave);
+            const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataFromModal);
 
             const updates = {};
             updates[topLevelField] = updatedObject[topLevelField];
             
-            console.log("DEBUG Generic Nested Save: Updates object before updateDoc:", updates);
+            // console.log("DEBUG AllRegistrationsApp Generic Nested Save: Updates object before updateDoc:", updates); // Debug log
             await updateDoc(targetDocRef, updates);
             setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
-            closeEditModal(); // Changed from onClose to closeEditModal
+            closeEditModal(); 
             return;
         }
     } catch (e) {
-        console.error("Chyba pri ukladaní dát do Firestore:", e);
+        console.error("Chyba pri ukladaní dát do Firestore (AllRegistrationsApp handleSaveEditedData):", e);
         setError(`Chyba pri ukladaní dát: ${e.message}`);
         setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
     } finally {
         window.hideGlobalLoader();
     }
-}, [db, closeEditModal, setUserNotificationMessage, setError, editingData, displayDialCode, displayPhoneNumber, localEditedData, selectedCategory, selectedArrivalType, selectedAccommodationType, selectedPackageName, packages, teamTshirts, editModalTitle]); // Pridané závislosti
+}, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle]); // remove editingData, localEditedData, displayDialCode, etc.
 
 
   if (!isAuthReady || user === undefined || !userProfileData) {
