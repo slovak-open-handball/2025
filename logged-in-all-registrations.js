@@ -921,7 +921,27 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         const updatedValue = updated[key];
 
         // Špeciálne pre "address" a "billing" (ak existujú ako objekty)
-        if ((key === 'address' || key === 'billing') && typeof originalValue === 'object' && typeof updatedValue === 'object' && originalValue !== null && updatedValue !== null) {
+        if (key === 'address' && typeof originalValue === 'object' && typeof updatedValue === 'object' && originalValue !== null && updatedValue !== null) {
+            const addressChanges = [];
+            const addressFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
+            for (const field of addressFields) {
+                const oldAddressPart = originalValue[field] || '-';
+                const newAddressPart = updatedValue[field] || '-';
+                if (oldAddressPart !== newAddressPart) {
+                    // Ignorovať zmeny na "-"
+                    if (newAddressPart !== '-') {
+                        addressChanges.push(`Zmena ${formatLabel(field)}: z '${oldAddressPart}' na '${newAddressPart}'`);
+                    }
+                }
+            }
+            if (addressChanges.length > 0) {
+                changes.push(...addressChanges); // Pridať každú zmenu adresy samostatne do hlavného poľa zmien
+            }
+            continue; // Pokračovať na ďalší kľúč, adresa je spracovaná
+        }
+
+        // Špeciálne pre "billing" (ak existujú ako objekty)
+        if (key === 'billing' && typeof originalValue === 'object' && typeof updatedValue === 'object' && originalValue !== null && updatedValue !== null) {
             const nestedChanges = getChangesForNotification(originalValue, updatedValue, formatDateFn); // Pass formatDateFn recursively
             if (nestedChanges.length > 0) {
                 changes.push(`${formatLabel(key)}: ${nestedChanges.join(', ')}`);
@@ -929,29 +949,40 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             continue; // Skip further processing for this key
         }
 
+        // Ignorovať interné kľúče, ktoré by nemali byť v notifikáciách
+        if (key.startsWith('_') || ['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password', 'emailVerified', 'isMenuToggled', 'role', 'approved'].includes(key)) {
+            continue;
+        }
+
         // Porovnanie hodnôt (s ohľadom na null/undefined a typy)
         if (originalValue !== updatedValue) {
+            const formattedOriginal = originalValue === undefined || originalValue === null || originalValue === '' ? '-' : (typeof originalValue === 'boolean' ? (originalValue ? 'Áno' : 'Nie') : String(originalValue));
+            const formattedUpdated = updatedValue === undefined || updatedValue === null || updatedValue === '' ? '-' : (typeof updatedValue === 'boolean' ? (updatedValue ? 'Áno' : 'Nie') : String(updatedValue));
+
+            // Ignorovať notifikácie, ak sa hodnota zmení na "-"
+            if (formattedUpdated === '-') {
+                 continue; // Preskočiť túto zmenu
+            }
+            
             // Predpokladáme, že pre jednoduché typy je to priama zmena
             // Pre dátum narodenia formátujeme
             if (key === 'dateOfBirth') {
-                const formattedOriginal = formatDateFn(originalValue); // Use passed formatDateFn
-                const formattedUpdated = formatDateFn(updatedValue);   // Use passed formatDateFn
-                if (formattedOriginal !== formattedUpdated) {
-                    changes.push(`Zmena ${formatLabel(key)}: z '${formattedOriginal || '-'}' na '${formattedUpdated || '-'}'`);
+                const formattedOriginalDate = formatDateFn(originalValue); // Use passed formatDateFn
+                const formattedUpdatedDate = formatDateFn(updatedValue);   // Use passed formatDateFn
+                if (formattedOriginalDate !== formattedUpdatedDate) {
+                    // Ignorovať zmeny na "-"
+                    if (formattedUpdatedDate !== '-') {
+                        changes.push(`Zmena ${formatLabel(key)}: z '${formattedOriginalDate || '-'}' na '${formattedUpdatedDate || '-'}'`);
+                    }
                 }
-            } else if (typeof originalValue === 'boolean' || typeof updatedValue === 'boolean') {
-                 const originalBool = originalValue === true ? 'Áno' : 'Nie';
-                 const updatedBool = updatedValue === true ? 'Áno' : 'Nie';
-                 if (originalBool !== updatedBool) {
-                     changes.push(`Zmena ${formatLabel(key)}: z '${originalBool}' na '${updatedBool}'`);
-                 }
             } else {
-                 changes.push(`Zmena ${formatLabel(key)}: z '${originalValue || '-'}' na '${updatedValue || '-'}'`);
+                 changes.push(`Zmena ${formatLabel(key)}: z '${formattedOriginal}' na '${formattedUpdated}'`);
             }
         }
     }
     return changes;
 };
+
 
 // Helper to format values for display in input fields
 const formatDisplayValue = (value, path) => { 
@@ -1308,7 +1339,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         if (availableSizesForNewEntry.length > 0) {
             setTeamTshirts(prev => [
                 ...prev,
-                { tempId: generateUniqueId(), size: availableTshirtSizes[0], quantity: 0 } // Default to first available size
+                { tempId: generateUniqueId(), size: availableSizesForNewEntry[0], quantity: 0 } // Default to first available size
             ]);
         } else {
             setUserNotificationMessage("Všetky dostupné veľkosti tričiek sú už pridané.", 'info');
