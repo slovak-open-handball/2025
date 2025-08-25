@@ -1991,7 +1991,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 // Logika pre aktualizáciu používateľa na najvyššej úrovni
                                 console.log("DEBUG Top-Level User Save: Executing top-level user update. Data:", finalDataToSave);
                                 await updateDoc(targetDocRef, finalDataToSave);
-                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
                                 onClose();
                                 return;
                             } else if (title.includes('Upraviť tím')) {
@@ -2042,7 +2042,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 updates[`teams.${category}`] = newCategoryTeams;
                                 console.log("DEBUG Team Save: Updates object before updateDoc:", updates);
                                 await updateDoc(targetDocRef, updates);
-                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
                                 onClose();
                                 return;
                             } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
@@ -2117,7 +2117,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     updates[`teams.${category}`] = updatedTeamsForCategory;
                                     console.log("DEBUG Member Save: Updates object before updateDoc:", updates);
                                     await updateDoc(targetDocRef, updates);
-                                    setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+                                    setUserNotificationMessage("Zmeny boli uložené.", 'success');
                                     onClose();
                                     return;
                                 } else {
@@ -2141,7 +2141,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 
                                 console.log("DEBUG Generic Nested Save: Updates object before updateDoc:", updates);
                                 await updateDoc(targetDocRef, updates);
-                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
                                 onClose();
                                 return;
                             }
@@ -3045,7 +3045,7 @@ function AllRegistrationsApp() {
             }
         }
 
-        setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+        setUserNotificationMessage("Zmeny boli uložené.", 'success');
 
     } catch (e) {
         console.error("Chyba pri ukladaní dát do Firestore:", e);
