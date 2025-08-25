@@ -2192,7 +2192,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                     const notificationsCollectionRef = collection(db, 'notifications');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName} ${finalDataToSave.lastName || ''}`.trim()] : generatedChanges,
+                                        changes: isNewEntry ? [`Nový člen bol pridaný: '''${finalDataToSave.firstName} ${finalDataToSave.lastName' || ''}`.trim()] : generatedChanges,
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
