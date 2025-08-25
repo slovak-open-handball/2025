@@ -2031,6 +2031,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         const changes = [];
         const allKeys = new Set([...Object.keys(original || {}), ...Object.keys(updated || {})]);
 
+        console.log(`DEBUG getChangesForNotification - pathPrefix: ${pathPrefix}`);
+        console.log('DEBUG getChangesForNotification - original:', original);
+        console.log('DEBUG getChangesForNotification - updated:', updated);
+        console.log('DEBUG getChangesForNotification - allKeys:', [...allKeys]);
+
         for (const key of allKeys) {
             // Skip internal keys, password, etc.
             if (key.startsWith('_') || ['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password'].includes(key)) {
@@ -2041,9 +2046,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
             const originalValue = getNestedValue(original, currentFullPath);
             const updatedValue = getNestedValue(updated, currentFullPath);
 
-            // Treat null and undefined as equivalent for comparison if both are falsy
             const safeOriginalValue = originalValue === undefined ? null : originalValue;
             const safeUpdatedValue = updatedValue === undefined ? null : updatedValue;
+
+            console.log(`  DEBUG comparing ${currentFullPath}: original='${safeOriginalValue}' (type: ${typeof safeOriginalValue}) vs updated='${safeUpdatedValue}' (type: ${typeof safeUpdatedValue})`);
 
             // Recursive comparison for objects (not arrays or Timestamps)
             if (
@@ -2063,6 +2069,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                 changes.push(`Zmena ${formatLabel(currentFullPath)}: z '${formatDisplayValue(safeOriginalValue, currentFullPath)}' na '${formatDisplayValue(safeUpdatedValue, currentFullPath)}'`);
             }
         }
+        console.log(`DEBUG getChangesForNotification - Final changes for pathPrefix ${pathPrefix}:`, changes);
         return changes;
     };
 
@@ -2144,10 +2151,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                     }
                                 });
                                 
-                                // console.log("DEBUG DataEditModal: Final data prepared for saving:", finalDataToSave); // Debug log
+                                console.log("DEBUG: DataEditModal - onSave click. Final data prepared for saving:", finalDataToSave); // Debug log
 
                                 // 4. Porovnať s pôvodnými dátami pre notifikáciu
-                                const originalDataForCompare = JSON.parse(JSON.stringify(data)); // Original data passed as prop
+                                const originalDataForCompare = JSON.parse(JSON.stringify(data)); // Original data passed as prop (empty for new)
                                 const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
 
                                 // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania fakturačné a adresné údaje
@@ -2163,11 +2170,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                     delete originalDataForCompare.contactPhoneNumber;
                                 }
 
+                                console.log("DEBUG: DataEditModal - onSave click. originalDataForCompare for diff:", originalDataForCompare);
+                                console.log("DEBUG: DataEditModal - onSave click. modifiedDataForCompare for diff:", modifiedDataForCompare);
 
                                 const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
+                                
+                                console.log("DEBUG: DataEditModal - onSave click. generatedChanges.length (before conditional):", generatedChanges.length);
+                                console.log("DEBUG: DataEditModal - onSave click. isNewEntry (modal state):", isNewEntry);
 
-                                // If it's a new entry, we always consider it a change
-                                if (generatedChanges.length === 0 && !isNewEntry) {
+                                // Zjednodušená podmienka: Ak nie sú žiadne detegované zmeny, notifikovať a vrátiť sa.
+                                // Pre nové záznamy sa očakáva, že generatedChanges.length > 0, ak sa zadali údaje.
+                                if (generatedChanges.length === 0) {
                                     setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
                                     onClose();
                                     return;
@@ -2175,12 +2188,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
                                 // --- Save Notification to Firestore ---
                                 const userEmail = window.auth.currentUser?.email;
-                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) { // Notify also for new entries
+                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) { // Notify also for new entries (if changes or it's a new entry)
                                     const notificationsCollectionRef = collection(db, 'notifications');
-                                    const notificationMessage = isNewEntry ? 'Nový člen bol pridaný.' : generatedChanges.join(', ');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName} ${finalDataToSave.lastName}`] : generatedChanges,
+                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName} ${finalDataToSave.lastName || ''}`.trim()] : generatedChanges,
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
@@ -3122,26 +3134,23 @@ function AllRegistrationsApp() {
             }
 
             const categoryAndIndexPart = pathParts[1]; 
-            const memberArrayAndIndexPart = pathParts[2]; 
-            
-            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
             
             let memberArrayPath;
             let memberArrayIndex;
 
             if (isNewEntryFlag) {
                 // For new entries, the path ends with `[-1]`. We just need the array name.
-                const arrayNameMatch = memberArrayAndIndexPart.match(/^(.*?)\[-1\]$/);
+                const arrayNameMatch = pathParts[2].match(/^(.*?)\[-1\]$/);
                 if (!arrayNameMatch) {
-                    throw new Error(`Neplatný formát poľa člena tímu pre nový záznam (očakáva sa [-1]): ${memberArrayAndIndexPart}.`);
+                    throw new Error(`Neplatný formát poľa člena tímu pre nový záznam (očakáva sa [-1]): ${pathParts[2]}.`);
                 }
                 memberArrayPath = arrayNameMatch[1]; // e.g., "playerDetails"
                 memberArrayIndex = -1; // Indicate it's a new entry, not a specific index
             } else {
                 // For existing entries, parse the actual index.
-                const existingMemberMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+                const existingMemberMatch = pathParts[2].match(/^(.*?)\[(\d+)\]$/);
                 if (!existingMemberMatch) {
-                    throw new Error(`Neplatný formát poľa člena tímu a indexu: ${memberArrayAndIndexPart}.`);
+                    throw new Error(`Neplatný formát poľa člena tímu a indexu: ${pathParts[2]}.`);
                 }
                 memberArrayPath = existingMemberMatch[1];
                 memberArrayIndex = parseInt(existingMemberMatch[2]);
@@ -3165,7 +3174,7 @@ function AllRegistrationsApp() {
                 // Pridanie nového člena
                 const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} }; // Zabezpečiť address objekt
                 currentMemberArray.push(newMember);
-                setUserNotificationMessage("Nový člen bol pridaný do tímu.", 'success');
+                setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
             } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
                 // Aktualizácia existujúceho člena
                 const memberToUpdate = { ...currentMemberArray[memberArrayIndex] };
@@ -3179,7 +3188,7 @@ function AllRegistrationsApp() {
                     }
                 });
                 currentMemberArray[memberArrayIndex] = memberToUpdate;
-                setUserNotificationMessage("Zmeny člena boli uložené.", 'success');
+                setUserNotificationMessage("Zmeny člena boli úspešne uložené.", 'success');
             } else {
                 throw new Error(`Člen tímu pre aktualizáciu/pridanie sa nenašiel na ceste: ${originalDataPath} a isNewEntryFlag: ${isNewEntryFlag}.`);
             }
@@ -3284,7 +3293,7 @@ function AllRegistrationsApp() {
             updates[`teams.${category}`] = updatedTeamsForCategory;
             await updateDoc(targetDocRef, updates);
 
-            setUserNotificationMessage(`${memberName} bol odstránený z tímu.`, 'success');
+            setUserNotificationMessage(`${memberName} bol úspešne odstránený z tímu.`, 'success');
             closeEditModal();
         } else {
             throw new Error(`Člen tímu na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
