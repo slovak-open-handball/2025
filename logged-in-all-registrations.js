@@ -2205,20 +2205,19 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
                                 // 3. Filtrovanie interných kľúčov a prázdnych polí pre finálny objekt na uloženie
                                 const finalDataToSave = {};
-                                Object.keys(dataToPrepareForSave).forEach(key => {
-                                    // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
-                                    if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
-                                        const value = dataToPrepareForSave[key];
-                                        // Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
-                                        // aby sa zmeny na "" správne uložili.
-                                        if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) { 
-                                            // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
-                                            // console.log(`DEBUG: Skipping 'billing' field for admin/hall user in DataEditModal.`);
-                                        } else {
-                                            finalDataToSave[key] = value;
-                                        }
-                                    }
-                                });
+                                  Object.keys(dataToPrepareForSave).forEach(key => {
+                                      // Upravená podmienka: Vylúčte len špecifické interné kľúče
+                                      if (key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
+                                          const value = dataToPrepareForSave[key];                                          
+
+                                        if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
+                                              // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
+                                          } else {
+                                              // Ak kľúč nie je na zozname vylúčených, pridajte ho do finalDataToSave
+                                              finalDataToSave[key] = value;
+                                          }
+                                      }
+                                  });
                                 
                                 console.log("DEBUG: DataEditModal - onSave click. Final data prepared for saving:", finalDataToSave); // Debug log
 
