@@ -2283,23 +2283,17 @@ const updateNestedObjectByPath = (obj, path, value) => {
     };
 };
 
-// Helper function to recalculate and update team member counts within the team object
+// Simplified recalculateTeamCounts function
 const recalculateTeamCounts = (teamToUpdate) => {
-    // console.log("recalculateTeamCounts: Pôvodný tím:", teamToUpdate);
-    const updatedTeam = { ...teamToUpdate };
-    updatedTeam.players = updatedTeam.playerDetails?.length || 0;
-    updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails || [];
-    updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails || [];
-    updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale || [];
-    updatedTeam.driverDetailsFemale = updatedTeam.driverDetailsFemale || [];
-
-    // The counts are stored in the team object itself for aggregation
-    // The derived properties `_menTeamMembersCount`, etc. in `allTeamsFlattened` memo will use these.
-    // If the team document had explicit separate fields for counts, we'd update them here.
-    // For now, it's just updating the array lengths and `players` for consistency.
-
-    // console.log("recalculateTeamCounts: Aktualizovaný tím s počtami:", updatedTeam);
-    return updatedTeam;
+    // Ensure all member arrays are defined, even if empty
+    teamToUpdate.playerDetails = teamToUpdate.playerDetails || [];
+    teamToUpdate.menTeamMemberDetails = teamToUpdate.menTeamMemberDetails || [];
+    teamToUpdate.womenTeamMemberDetails = teamToUpdate.womenTeamMemberDetails || [];
+    teamToUpdate.driverDetailsMale = teamToUpdate.driverDetailsMale || [];
+    teamToUpdate.driverDetailsFemale = teamToUpdate.driverDetailsFemale || [];
+    // No need to explicitly update `players`, `menTeamMembersCount` etc. here,
+    // as they are derived properties in `allTeamsFlattened` based on the array lengths.
+    return teamToUpdate;
 };
 
 
@@ -3131,19 +3125,30 @@ function AllRegistrationsApp() {
             const memberArrayAndIndexPart = pathParts[2]; 
             
             const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-            const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+            
+            let memberArrayPath;
+            let memberArrayIndex;
 
-            if (!categoryMatch) {
-                throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
-            }
-            if (!memberArrayMatch) {
-                throw new Error(`Neplatný formát poľa člena tímu a indexu: ${memberArrayAndIndexPart}.`);
+            if (isNewEntryFlag) {
+                // For new entries, the path ends with `[-1]`. We just need the array name.
+                const arrayNameMatch = memberArrayAndIndexPart.match(/^(.*?)\[-1\]$/);
+                if (!arrayNameMatch) {
+                    throw new Error(`Neplatný formát poľa člena tímu pre nový záznam (očakáva sa [-1]): ${memberArrayAndIndexPart}.`);
+                }
+                memberArrayPath = arrayNameMatch[1]; // e.g., "playerDetails"
+                memberArrayIndex = -1; // Indicate it's a new entry, not a specific index
+            } else {
+                // For existing entries, parse the actual index.
+                const existingMemberMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+                if (!existingMemberMatch) {
+                    throw new Error(`Neplatný formát poľa člena tímu a indexu: ${memberArrayAndIndexPart}.`);
+                }
+                memberArrayPath = existingMemberMatch[1];
+                memberArrayIndex = parseInt(existingMemberMatch[2]);
             }
 
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
-            const memberArrayPath = memberArrayMatch[1]; 
-            const memberArrayIndex = parseInt(memberArrayMatch[2]); // Bude -1 pre nový záznam
 
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
