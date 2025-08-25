@@ -301,8 +301,8 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${playersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (ž): ${womenDriversCount}`)); 
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (m): ${menDriversCount}`)); 
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `šofér (ž): ${womenDriversCount}`)); 
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `šofér (m): ${menDriversCount}`)); 
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
@@ -896,14 +896,32 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         const safeData = data || {}; 
         const initialData = JSON.parse(JSON.stringify(safeData));
 
-        setIsTargetUserAdmin(initialData.role === 'admin');
-        setIsTargetUserHall(initialData.role === 'hall'); 
+        const isUserBeingEditedAdmin = initialData.role === 'admin';
+        const isUserBeingEditedHall = initialData.role === 'hall';
+        
+        setIsTargetUserAdmin(isUserBeingEditedAdmin);
+        setIsTargetUserHall(isUserBeingEditedHall);
+
+        // Ak sa upravuje admin alebo hall používateľ, odstráňte tieto polia, aby sa nezobrazovali a neukladali
+        if (isUserBeingEditedAdmin || isUserBeingEditedHall) {
+            delete initialData.billing;
+            delete initialData.street;
+            delete initialData.houseNumber;
+            delete initialData.city;
+            delete initialData.postalCode;
+            delete initialData.country;
+            delete initialData.note;
+            delete initialData.contactPhoneNumber; // Tiež odstránime tel. číslo
+            setDisplayDialCode(''); // Vyčistiť stavy tel. čísla
+            setDisplayPhoneNumber('');
+        }
+
 
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
                                 title.toLowerCase().includes('upraviť člen realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
-        if (title.includes('Upraviť používateľa')) {
+        if (title.includes('Upraviť používateľa') && !(isUserBeingEditedAdmin || isUserBeingEditedHall)) { // Len pre bežných používateľov
             if (initialData.firstName === undefined) initialData.firstName = '';
             if (initialData.lastName === undefined) initialData.lastName = '';
             if (initialData.contactPhoneNumber === undefined) initialData.contactPhoneNumber = '';
@@ -1421,9 +1439,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 const isUserBeingEditedAdminOrHall = isTargetUserAdmin || isTargetUserHall;
 
                 // Ak aktuálny používateľ je admin A používateľ, ktorého upravujeme, je admin ALEBO hall,
-                // zobrazíme len meno, priezvisko a telefónne číslo. Ostatné skryjeme.
+                // zobrazíme len meno a priezvisko. Telefónne číslo, fakturačné údaje, adresa a poznámka sa skryjú.
                 if (isCurrentUserAdmin && isUserBeingEditedAdminOrHall) {
-                    fieldsToRenderForUser = ['firstName', 'lastName', 'contactPhoneNumber'];
+                    fieldsToRenderForUser = ['firstName', 'lastName']; // Len meno a priezvisko
                 }
 
                 const renderedFields = new Set(); // Track rendered fields for the user form
@@ -1468,6 +1486,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             maxLength: 6 
                         };
                     } else if (path === 'contactPhoneNumber') {
+                        // Nezobrazovať tlačidlo a input pre admin/hall používateľov
+                        if (isUserBeingEditedAdminOrHall) return null;
                         return React.createElement(
                             'div',
                             { key: path, className: 'mb-4' },
@@ -1522,47 +1542,50 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                     );
                 };
 
-                ['firstName', 'lastName', 'contactPhoneNumber'].forEach(path => {
-                    if (fieldsToRenderForUser.includes(path)) {
-                        elements.push(renderUserField(path, getNestedDataForInput(localEditedData, path)));
-                    }
+                // Vykresliť len povolené polia pre používateľa
+                fieldsToRenderForUser.forEach(path => {
+                    elements.push(renderUserField(path, getNestedDataForInput(localEditedData, path)));
                 });
 
-                const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
-                if (billingFieldsInScope.length > 0) {
-                    elements.push(
-                        React.createElement(
-                            'div',
-                            { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
-                            billingFieldsInScope.map(billingPath => {
-                                const billingValue = getNestedDataForInput(localEditedData, billingPath);
-                                return renderUserField(billingPath, billingValue);
-                            })
-                        )
-                    );
-                }
+                // Zabezpečiť, aby sa prázdne billing, adresa a poznámka NEVYKRESLOVALI
+                // ak je používateľ admin/hall
+                if (!isUserBeingEditedAdminOrHall) {
+                    const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
+                    if (billingFieldsInScope.length > 0) {
+                        elements.push(
+                            React.createElement(
+                                'div',
+                                { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                                React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
+                                billingFieldsInScope.map(billingPath => {
+                                    const billingValue = getNestedDataForInput(localEditedData, billingPath);
+                                    return renderUserField(billingPath, billingValue);
+                                })
+                            )
+                        );
+                    }
 
-                const addressFieldsInScope = allUserFields.filter(p => 
-                    ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
-                );
-                
-                if (addressFieldsInScope.length > 0) {
-                    elements.push(
-                        React.createElement(
-                            'div',
-                            { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
-                            addressFieldsInScope.map(addressPath => {
-                                const addressValue = getNestedDataForInput(localEditedData, addressPath);
-                                return renderUserField(addressPath, addressValue);
-                            })
-                        )
+                    const addressFieldsInScope = allUserFields.filter(p => 
+                        ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
                     );
-                }
+                    
+                    if (addressFieldsInScope.length > 0) {
+                        elements.push(
+                            React.createElement(
+                                'div',
+                                { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                                React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
+                                addressFieldsInScope.map(addressPath => {
+                                    const addressValue = getNestedDataForInput(localEditedData, addressPath);
+                                    return renderUserField(addressPath, addressValue);
+                                })
+                            )
+                        );
+                    }
 
-                if (fieldsToRenderForUser.includes('note')) {
-                    elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
+                    if (fieldsToRenderForUser.includes('note')) {
+                        elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
+                    }
                 }
 
                 return elements.filter(Boolean); 
@@ -1940,10 +1963,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
                             const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
                             
-                            // 1. Zostaviť plné telefónne číslo
-                            if (dataToPrepareForSave.contactPhoneNumber !== undefined) {
+                            // 1. Zostaviť plné telefónne číslo (len ak sa neupravuje admin/hall používateľ)
+                            if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) {
                                 dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
+                            } else if (isTargetUserAdmin || isTargetUserHall) {
+                                // Ak sa upravuje admin/hall používateľ, zabezpečiť, že sa contactPhoneNumber vôbec neuloží
+                                delete dataToPrepareForSave.contactPhoneNumber;
                             }
+
 
                             // 2. Spracovať špecifické polia tímu, ak upravujeme tím
                             if (title.includes('Upraviť tím')) {
@@ -1968,8 +1995,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
                                         // Skip empty objects (e.g., empty address object if all its sub-fields are empty)
                                         // console.log(`DEBUG: Skipping empty object field in DataEditModal: ${key}`);
-                                    }
-                                    else {
+                                    } else if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
+                                        // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
+                                        // console.log(`DEBUG: Skipping 'billing' field for admin/hall user in DataEditModal.`);
+                                    } else {
                                         finalDataToSave[key] = value;
                                     }
                                 }
@@ -1980,6 +2009,19 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             // 4. Porovnať s pôvodnými dátami pre notifikáciu
                             const originalDataForCompare = JSON.parse(JSON.stringify(data)); // Original data passed as prop
                             const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
+
+                            // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania fakturačné a adresné údaje
+                            if (isTargetUserAdmin || isTargetUserHall) {
+                                delete originalDataForCompare.billing;
+                                delete originalDataForCompare.street;
+                                delete originalDataForCompare.houseNumber;
+                                delete originalDataForCompare.city;
+                                delete originalDataForCompare.postalCode;
+                                delete originalDataForCompare.country;
+                                delete originalDataForCompare.note;
+                                delete originalDataForCompare.contactPhoneNumber;
+                            }
+
 
                             const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
 
@@ -2016,7 +2058,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 }, 'Uložiť zmeny')
             )
         ),
-        React.createElement(DialCodeSelectionModal, {
+        // DialCodeSelectionModal sa zobrazí iba vtedy, ak sa upravuje používateľ a NIE JE to admin/hall
+        !(isTargetUserAdmin || isTargetUserHall) && React.createElement(DialCodeSelectionModal, {
             isOpen: isDialCodeModalOpen,
             onClose: () => setIsDialCodeModalOpen(false),
             onSelectDialCode: handleSelectDialCode,
@@ -2821,7 +2864,7 @@ function AllRegistrationsApp() {
         // --- Save Notification to Firestore (Changes already generated and saved in DataEditModal) ---
         // The DataEditModal is now responsible for generating and saving the notification.
         // We only proceed with the Firestore update here.
-        // --- End Save Notification ---
+        // --- End Notification ---
 
         if (originalDataPath === '') {
             // Logika pre aktualizáciu používateľa na najvyššej úrovni
@@ -2972,7 +3015,7 @@ function AllRegistrationsApp() {
     } finally {
         window.hideGlobalLoader();
     }
-}, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle]); 
+}, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle, isTargetUserAdmin, isTargetUserHall, displayDialCode, displayPhoneNumber]); 
 
 
   if (!isAuthReady || user === undefined || !userProfileData) {
@@ -3180,8 +3223,8 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Hráči'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (ž)'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (m)'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (ž)'), 
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (m)'), 
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'šofér (ž)'), 
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'šofér (m)'), 
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
