@@ -3085,7 +3085,7 @@ function AllRegistrationsApp() {
         if (originalDataPath === '') {
             // Logika pre aktualizáciu používateľa na najvyššej úrovni
             await updateDoc(targetDocRef, updatedDataFromModal);
-            setUserNotificationMessage("Zmeny boli uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (editModalTitle.includes('Upraviť tím')) { 
@@ -3122,7 +3122,7 @@ function AllRegistrationsApp() {
             const updates = {};
             updates[`teams.${category}`] = newCategoryTeams;
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
@@ -3134,6 +3134,11 @@ function AllRegistrationsApp() {
             }
 
             const categoryAndIndexPart = pathParts[1]; 
+            // <--- Zmena tu: Deklarácia categoryMatch v tomto bloku
+            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+            if (!categoryMatch) {
+                throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
+            }
             
             let memberArrayPath;
             let memberArrayIndex;
@@ -3221,7 +3226,7 @@ function AllRegistrationsApp() {
             updates[topLevelField] = updatedObject[topLevelField];
             
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
             closeEditModal(); 
             return;
         }
