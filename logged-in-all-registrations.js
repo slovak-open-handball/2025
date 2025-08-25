@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
 // Tento súbor je načítaný ako modul, preto môže používať importy.
-import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from './countryDialCodes.js'; // Import zoznamu predvolieb
 
 // NotificationModal Component pre zobrazovanie dočasných správ
@@ -301,8 +301,8 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${playersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `šofér (ž): ${womenDriversCount}`)); 
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `šofér (m): ${menDriversCount}`)); 
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (ž): ${womenDriversCount}`)); 
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (m): ${menDriversCount}`)); 
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
@@ -507,6 +507,17 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
             const memberToUpdate = memberArrayToUpdate[memberIndex];
 
+            // --- Notification Logic - Capture original value before modification ---
+            const userEmail = window.auth.currentUser?.email;
+            const changes = [];
+            const originalMealValue = memberToUpdate.packageDetails?.meals?.[date]?.[mealType] === 1 ? 'Áno' : 'Nie';
+            const newMealValue = isChecked ? 'Áno' : 'Nie';
+
+            if (originalMealValue !== newMealValue) {
+                changes.push(`Zmena Stravovanie (${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}): z '${originalMealValue}' na '${newMealValue}'`);
+            }
+            // --- End Notification Logic ---
+
             // Ensure packageDetails.meals and packageDetails.meals[date] exist
             if (!memberToUpdate.packageDetails) memberToUpdate.packageDetails = {};
             if (!memberToUpdate.packageDetails.meals) memberToUpdate.packageDetails.meals = {};
@@ -524,6 +535,18 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
             await updateDoc(userDocRef, updatePayload);
             setUserNotificationMessage(`Stravovanie pre ${member.firstName} ${member.lastName} bolo aktualizované.`, 'success');
+
+            // --- Save Notification to Firestore ---
+            if (changes.length > 0 && userEmail) {
+                const notificationsCollectionRef = collection(db, 'notifications');
+                await addDoc(notificationsCollectionRef, {
+                    userEmail,
+                    changes,
+                    timestamp: serverTimestamp()
+                });
+                console.log("Notifikácia o zmene stravovania uložená do Firestore.");
+            }
+            // --- End Save Notification ---
 
         } catch (error) {
             console.error("Chyba pri aktualizácii stravovania v Firestore:", error);
@@ -1088,6 +1111,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             return value.map(item => {
                 if (typeof item === 'object' && item !== null) {
                     try {
+                        // Special handling for t-shirt objects
+                        if (item.size && item.quantity !== undefined) {
+                            return `${item.size}: ${item.quantity}`;
+                        }
+                        // For other complex objects in arrays, provide a simplified representation
+                        if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
                         return JSON.stringify(item);
                     } catch (e) {
                         console.error("Chyba pri prevode objektu poľa na reťazec:", item, e);
@@ -1834,6 +1863,41 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
     };
 
+    // Helper function to get changes for notification
+    const getChangesForNotification = (original, updated, pathPrefix = '') => {
+        const changes = [];
+        const allKeys = new Set([...Object.keys(original || {}), ...Object.keys(updated || {})]);
+
+        for (const key of allKeys) {
+            // Skip internal keys, password, etc.
+            if (key.startsWith('_') || ['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password'].includes(key)) {
+                continue;
+            }
+
+            const currentFullPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+            const originalValue = getNestedValue(original, currentFullPath);
+            const updatedValue = getNestedValue(updated, currentFullPath);
+
+            // Treat null and undefined as equivalent for comparison if both are falsy
+            const safeOriginalValue = originalValue === undefined ? null : originalValue;
+            const safeUpdatedValue = updatedValue === undefined ? null : updatedValue;
+
+            // Recursive comparison for objects (not arrays or Timestamps)
+            if (
+                typeof safeOriginalValue === 'object' && safeOriginalValue !== null && !Array.isArray(safeOriginalValue) && typeof safeOriginalValue.toDate !== 'function' &&
+                typeof safeUpdatedValue === 'object' && safeUpdatedValue !== null && !Array.isArray(safeUpdatedValue) && typeof safeUpdatedValue.toDate !== 'function'
+            ) {
+                changes.push(...getChangesForNotification(safeOriginalValue, safeUpdatedValue, currentFullPath));
+            }
+            // Compare values directly (primitives, arrays, Timestamps, or type changes)
+            else if (JSON.stringify(safeOriginalValue) !== JSON.stringify(safeUpdatedValue)) {
+                changes.push(`Zmena ${formatLabel(currentFullPath)}: z '${formatDisplayValue(safeOriginalValue, currentFullPath)}' na '${formatDisplayValue(safeUpdatedValue, currentFullPath)}'`);
+            }
+        }
+        return changes;
+    };
+
+
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4' },
@@ -1864,11 +1928,41 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
                             console.log("DEBUG Save Button Click: originalDataPath:", originalDataPath);
 
-                            // Pripojenie dial kódu k telefónnemu číslu, ak je k dispozícii
                             const fullPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
                             const dataWithPhoneNumber = { ...localEditedData };
                             if (dataWithPhoneNumber.contactPhoneNumber !== undefined) {
                                 dataWithPhoneNumber.contactPhoneNumber = fullPhoneNumber;
+                            }
+
+                            // Prepare originalData and modifiedData for comparison for notification
+                            const originalDataForCompare = JSON.parse(JSON.stringify(data));
+                            const modifiedDataForCompare = JSON.parse(JSON.stringify(dataWithPhoneNumber)); // This is localEditedData + phone
+
+                            // Special handling for team-specific select inputs and tshirts to ensure they are included in the comparison
+                            if (title.includes('Upraviť tím')) {
+                                // Update the modifiedDataForCompare with the current selected states from the form
+                                modifiedDataForCompare.category = selectedCategory;
+                                modifiedDataForCompare._category = selectedCategory; // Ensure _category is consistent if category is updated
+                                modifiedDataForCompare.arrival = { type: selectedArrivalType };
+                                modifiedDataForCompare.accommodation = { type: selectedAccommodationType };
+                                modifiedDataForCompare.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
+                                modifiedDataForCompare.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
+
+                                // For original data, also ensure category and other fields are correctly represented for comparison
+                                originalDataForCompare.category = data.category || data._category || '';
+                                originalDataForCompare._category = data._category || '';
+                                originalDataForCompare.arrival = data.arrival || { type: '' };
+                                originalDataForCompare.accommodation = data.accommodation || { type: '' };
+                                originalDataForCompare.packageDetails = data.packageDetails || null;
+                                originalDataForCompare.tshirts = (data.tshirts || []).map(({ size, quantity }) => ({ size, quantity }));
+                            }
+
+                            const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
+
+                            if (generatedChanges.length === 0) {
+                                setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+                                onClose();
+                                return;
                             }
 
                             // Filtrovanie interných kľúčov a systémových kľúčov pre všetky operácie ukladania
@@ -1879,11 +1973,19 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 }
                             });
 
-                            if (Object.keys(finalDataToSave).length === 0) {
-                                setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
-                                onClose();
-                                return;
+                            // --- Save Notification to Firestore ---
+                            const userEmail = window.auth.currentUser?.email;
+                            if (generatedChanges.length > 0 && userEmail) {
+                                const notificationsCollectionRef = collection(db, 'notifications');
+                                await addDoc(notificationsCollectionRef, {
+                                    userEmail,
+                                    changes: generatedChanges,
+                                    timestamp: serverTimestamp()
+                                });
+                                console.log("Notifikácia o zmene uložená do Firestore.");
                             }
+                            // --- End Save Notification ---
+
 
                             if (originalDataPath === '') {
                                 // Logika pre aktualizáciu používateľa na najvyššej úrovni
@@ -2853,7 +2955,7 @@ function AllRegistrationsApp() {
 
         const dataToSave = {};
         Object.keys(updatedData).forEach(key => {
-            if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex') {
+            if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
                 dataToSave[key] = updatedData[key];
             }
         });
@@ -3161,8 +3263,8 @@ function AllRegistrationsApp() {
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Hráči'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (ž)'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (m)'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'šofér (ž)'), 
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'šofér (m)'), 
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (ž)'), 
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (m)'), 
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
