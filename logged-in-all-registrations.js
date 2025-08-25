@@ -932,9 +932,17 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     for (const key of keys) {
         // Ignorovať interné a špecifické kľúče
         if (ignoredKeys.has(key) || key.startsWith('_')) {
+            // Špeciálne ošetrenie pre _category, ak je to kľúč, ktorý sa má notifikovať explicitne
+            if (key === '_category') {
+                const originalCategory = original[key] || '-';
+                const updatedCategory = updated[key] || '-';
+                if (originalCategory !== updatedCategory) {
+                    changes.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
+                }
+            }
             continue;
         }
-        
+
         const originalValue = original[key];
         const updatedValue = updated[key];
 
@@ -963,6 +971,69 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             continue; // Skip further processing for this key
         }
 
+        // --- Špecifické notifikácie pre tímové detaily ---
+
+        // Názov tímu
+        if (key === 'teamName') {
+            const originalTeamName = originalValue || '-';
+            const updatedTeamName = updatedValue || '-';
+            if (originalTeamName !== updatedTeamName) {
+                changes.push(`Zmena Názov tímu: z '${originalTeamName}' na '${updatedTeamName}'`);
+            }
+            continue;
+        }
+
+        // Typ dopravy
+        if (key === 'arrival' && originalValue?.type !== updatedValue?.type) {
+            const originalArrival = originalValue?.type || '-';
+            const updatedArrival = updatedValue?.type || '-';
+            changes.push(`Zmena Typ dopravy: z '${originalArrival}' na '${updatedArrival}'`);
+            continue;
+        }
+
+        // Typ ubytovania
+        if (key === 'accommodation' && originalValue?.type !== updatedValue?.type) {
+            const originalAccommodation = originalValue?.type || '-';
+            const updatedAccommodation = updatedValue?.type || '-';
+            changes.push(`Zmena Typ ubytovania: z '${originalAccommodation}' na '${updatedAccommodation}'`);
+            continue;
+        }
+
+        // Balík
+        if (key === 'packageDetails' && originalValue?.name !== updatedValue?.name) {
+            const originalPackageName = originalValue?.name || '-';
+            const updatedPackageName = updatedValue?.name || '-';
+            changes.push(`Zmena Balík: z '${originalPackageName}' na '${updatedPackageName}'`);
+            continue;
+        }
+
+        // Tričká
+        if (key === 'tshirts') {
+            const originalTshirtsMap = new Map((originalValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
+            const updatedTshirtsMap = new Map((updatedValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
+
+            const allSizes = new Set([...Array.from(originalTshirtsMap.keys()), ...Array.from(updatedTshirtsMap.keys())]);
+
+            for (const size of allSizes) {
+                const oldQuantity = originalTshirtsMap.get(size) || 0;
+                const newQuantity = updatedTshirtsMap.get(size) || 0;
+
+                if (oldQuantity !== newQuantity) {
+                    if (oldQuantity === 0 && newQuantity > 0) {
+                        changes.push(`Pridané tričko (${size}): ${newQuantity}`);
+                    } else if (newQuantity === 0 && oldQuantity > 0) {
+                        changes.push(`Odstránené tričko (${size}): ${oldQuantity}`);
+                    } else {
+                        changes.push(`Zmena Veľkosť trička a ich počet: z '${size} - ${oldQuantity}' na '${size} - ${newQuantity}'`);
+                    }
+                }
+            }
+            continue;
+        }
+
+        // --- Koniec špecifických notifikácií ---
+
+
         // Porovnanie hodnôt (s ohľadom na null/undefined a typy)
         if (originalValue !== updatedValue) {
             // Formátovanie pôvodných a aktualizovaných hodnôt
@@ -971,9 +1042,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
             // Ignorovať notifikácie, ak sa nová hodnota zmení na "-"
             if (formattedUpdated === '-') {
-                 continue; 
+                 continue;
             }
-            
+
             // Špeciálne pre dátum narodenia
             if (key === 'dateOfBirth') {
                 const formattedOriginalDate = formatDateFn(originalValue);
@@ -990,7 +1061,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     }
     return changes;
 };
-
 
 // Helper to format values for display in input fields
 const formatDisplayValue = (value, path) => { 
