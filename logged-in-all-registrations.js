@@ -1562,7 +1562,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             React.createElement(
                                 'div',
                                 { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                                React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
+                                // PÔVODNE TU BOL NADPIS: React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
                                 billingFieldsInScope.map(billingPath => {
                                     const billingValue = getNestedDataForInput(localEditedData, billingPath);
                                     return renderUserField(billingPath, billingValue);
@@ -1580,7 +1580,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             React.createElement(
                                 'div',
                                 { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                                React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
+                                // PÔVODNE TU BOL NADPIS: React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
                                 addressFieldsInScope.map(addressPath => {
                                     const addressValue = getNestedDataForInput(localEditedData, addressPath);
                                     return renderUserField(addressPath, addressValue);
