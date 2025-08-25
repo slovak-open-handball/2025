@@ -2184,7 +2184,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
 
                                 // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania adresné a fakturačné polia
-                                if (localIsTargetUserAdmin || localIsTargetUserHall) {
+                                if (isTargetUserAdmin || isTargetUserHall) { // <--- POUŽITIE isTargetUserAdmin a isTargetUserHall zo stavu komponentu
                                     delete originalDataForCompare.address;
                                     delete originalDataForCompare.billing; // Opravené na 'billing' namiesto 'billingAddress'
                                     delete modifiedDataForCompare.address;
@@ -2222,7 +2222,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 // --- End Notification ---
 
                                 // Teraz zavolať prop onSave z AllRegistrationsApp s kompletne pripravenými dátami
-                                onSave(finalDataToSave, targetDocRef, originalDataPath, isNewEntry); // Pass only what AllRegistrationsApp needs to perform the Firestore update
+                                // ODOSLAŤ isTargetUserAdmin a isTargetUserHall AKO PARAMETRE
+                                onSave(finalDataToSave, targetDocRef, originalDataPath, isNewEntry, isTargetUserAdmin, isTargetUserHall); // <--- ZMENA TU
 
                             } catch (e) {
                                 console.error("Chyba v DataEditModal pri príprave dát na uloženie:", e);
@@ -3089,7 +3090,7 @@ function AllRegistrationsApp() {
 
   // Removed handleSaveColumnVisibility function as column visibility is no longer user-configurable.
 
-  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag) => {
+  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag, isTargetUserAdminFromModal, isTargetUserHallFromModal) => { // <--- ZMENENÝ PODPIS FUNKCIE
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
         setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
@@ -3099,11 +3100,11 @@ function AllRegistrationsApp() {
     try {
         window.showGlobalLoader();
         
-        const isEditingUser = editModalTitle.includes('Upraviť používateľa');
-        const currentEditingDataRole = editingData?.role;
-        // Corrected: Derive these variables locally instead of relying on non-existent state from AllRegistrationsApp's scope
-        const localIsTargetUserAdmin = isEditingUser && currentEditingDataRole === 'admin';
-        const localIsTargetUserHall = isEditingUser && currentEditingDataRole === 'hall';
+        // Tieto premenné sú teraz odovzdávané ako argumenty, takže ich už netreba tu lokálne derivovať.
+        // const isEditingUser = editModalTitle.includes('Upraviť používateľa');
+        // const currentEditingDataRole = editingData?.role;
+        // const localIsTargetUserAdmin = isEditingUser && currentEditingDataRole === 'admin';
+        // const localIsTargetUserHall = isEditingUser && currentEditingDataRole === 'hall';
 
         if (originalDataPath === '') {
             // Logika pre aktualizáciu používateľa na najvyššej úrovni
@@ -3159,8 +3160,8 @@ function AllRegistrationsApp() {
             const originalDataForCompare = { ...currentDocData };
             const modifiedDataForCompare = { ...finalDataToSave };
 
-            // Pre admin/hall používateľov odstránime adresné a fakturačné polia z porovnávania zmien, aby sa predišlo falošným detekciám
-            if (localIsTargetUserAdmin || localIsTargetUserHall) {
+            // Použiť premenné odovzdané ako argumenty
+            if (isTargetUserAdminFromModal || isTargetUserHallFromModal) { // <--- ZMENA TU
                 delete originalDataForCompare.address;
                 delete originalDataForCompare.billing; // Opravené na 'billing' namiesto 'billingAddress'
                 delete modifiedDataForCompare.address;
@@ -3393,6 +3394,7 @@ function AllRegistrationsApp() {
         window.hideGlobalLoader();
     }
   }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle, editingData, getChangesForNotification]); // REMOVED MODAL-SPECIFIC STATES FROM DEPENDENCY ARRAY
+
 
   const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPath) => {
     if (!targetDocRef || !originalDataPath) {
