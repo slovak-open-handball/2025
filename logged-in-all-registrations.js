@@ -916,13 +916,25 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
     const keys = new Set([...Object.keys(original), ...Object.keys(updated)]);
 
+    const ignoredKeys = new Set([
+        '_userId', '_category', '_teamIndex', '_registeredBy', '_menTeamMembersCount',
+        '_womenTeamMembersCount', '_menDriversCount', '_womenDriversCount', '_players',
+        '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
+        'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
+        'registrationDate', 'passwordLastChanged' // Pridané ignorované kľúče pre dátumy
+    ]);
+
     for (const key of keys) {
+        // Ignorovať interné a špecifické kľúče
+        if (ignoredKeys.has(key) || key.startsWith('_')) {
+            continue;
+        }
+        
         const originalValue = original[key];
         const updatedValue = updated[key];
 
-        // Špeciálne pre "address" a "billing" (ak existujú ako objekty)
+        // Špeciálne pre "address" (ak existujú ako objekty)
         if (key === 'address' && typeof originalValue === 'object' && typeof updatedValue === 'object' && originalValue !== null && updatedValue !== null) {
-            const addressChanges = [];
             const addressFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
             for (const field of addressFields) {
                 const oldAddressPart = originalValue[field] || '-';
@@ -930,12 +942,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 if (oldAddressPart !== newAddressPart) {
                     // Ignorovať zmeny na "-"
                     if (newAddressPart !== '-') {
-                        addressChanges.push(`Zmena ${formatLabel(field)}: z '${oldAddressPart}' na '${newAddressPart}'`);
+                        changes.push(`Zmena ${formatLabel(field)}: z '${oldAddressPart}' na '${newAddressPart}'`);
                     }
                 }
-            }
-            if (addressChanges.length > 0) {
-                changes.push(...addressChanges); // Pridať každú zmenu adresy samostatne do hlavného poľa zmien
             }
             continue; // Pokračovať na ďalší kľúč, adresa je spracovaná
         }
@@ -949,29 +958,23 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             continue; // Skip further processing for this key
         }
 
-        // Ignorovať interné kľúče, ktoré by nemali byť v notifikáciách
-        if (key.startsWith('_') || ['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password', 'emailVerified', 'isMenuToggled', 'role', 'approved'].includes(key)) {
-            continue;
-        }
-
         // Porovnanie hodnôt (s ohľadom na null/undefined a typy)
         if (originalValue !== updatedValue) {
+            // Formátovanie pôvodných a aktualizovaných hodnôt
             const formattedOriginal = originalValue === undefined || originalValue === null || originalValue === '' ? '-' : (typeof originalValue === 'boolean' ? (originalValue ? 'Áno' : 'Nie') : String(originalValue));
             const formattedUpdated = updatedValue === undefined || updatedValue === null || updatedValue === '' ? '-' : (typeof updatedValue === 'boolean' ? (updatedValue ? 'Áno' : 'Nie') : String(updatedValue));
 
-            // Ignorovať notifikácie, ak sa hodnota zmení na "-"
+            // Ignorovať notifikácie, ak sa nová hodnota zmení na "-"
             if (formattedUpdated === '-') {
-                 continue; // Preskočiť túto zmenu
+                 continue; 
             }
             
-            // Predpokladáme, že pre jednoduché typy je to priama zmena
-            // Pre dátum narodenia formátujeme
+            // Špeciálne pre dátum narodenia
             if (key === 'dateOfBirth') {
-                const formattedOriginalDate = formatDateFn(originalValue); // Use passed formatDateFn
-                const formattedUpdatedDate = formatDateFn(updatedValue);   // Use passed formatDateFn
+                const formattedOriginalDate = formatDateFn(originalValue);
+                const formattedUpdatedDate = formatDateFn(updatedValue);
                 if (formattedOriginalDate !== formattedUpdatedDate) {
-                    // Ignorovať zmeny na "-"
-                    if (formattedUpdatedDate !== '-') {
+                    if (formattedUpdatedDate !== '-') { // Znova skontrolujeme, či nová hodnota nie je '-'
                         changes.push(`Zmena ${formatLabel(key)}: z '${formattedOriginalDate || '-'}' na '${formattedUpdatedDate || '-'}'`);
                     }
                 }
@@ -2180,12 +2183,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 const originalDataForCompare = JSON.parse(JSON.stringify(data)); // Original data passed as prop (empty for new)
                                 const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
 
-                                // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania fakturačné a adresné údaje
-                                if (isTargetUserAdmin || isTargetUserHall) { 
+                                // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania adresné a fakturačné polia
+                                if (localIsTargetUserAdmin || localIsTargetUserHall) {
                                     delete originalDataForCompare.address;
-                                    delete originalDataForCompare.billingAddress;
+                                    delete originalDataForCompare.billing; // Opravené na 'billing' namiesto 'billingAddress'
                                     delete modifiedDataForCompare.address;
-                                    delete modifiedDataForCompare.billingAddress;
+                                    delete modifiedDataForCompare.billing; // Opravené na 'billing' namiesto 'billingAddress'
                                 }
 
                                 console.log("DEBUG: DataEditModal - onSave click. originalDataForCompare for diff:", originalDataForCompare);
@@ -3159,9 +3162,9 @@ function AllRegistrationsApp() {
             // Pre admin/hall používateľov odstránime adresné a fakturačné polia z porovnávania zmien, aby sa predišlo falošným detekciám
             if (localIsTargetUserAdmin || localIsTargetUserHall) {
                 delete originalDataForCompare.address;
-                delete originalDataForCompare.billingAddress;
+                delete originalDataForCompare.billing; // Opravené na 'billing' namiesto 'billingAddress'
                 delete modifiedDataForCompare.address;
-                delete modifiedDataForCompare.billingAddress;
+                delete modifiedDataForCompare.billing; // Opravené na 'billing' namiesto 'billingAddress'
             }
 
             const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
