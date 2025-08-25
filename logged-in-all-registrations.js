@@ -961,10 +961,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             const originalCategory = originalValue || '-';
             const updatedCategory = updatedValue || '-';
             
-            // Generovať notifikáciu, len ak sú hodnoty skutočne odlišné
-            // a ak nová hodnota nie je '-' z pôvodnej hodnoty, ktorá nebola '-'
-            // Toto potlačí notifikáciu typu "U12 D" na "-"
-            if (originalCategory !== updatedCategory && !(originalCategory !== '-' && updatedCategory === '-')) {
+            // Generovať notifikáciu, len ak sú hodnoty skutočne odlišné.
+            // Ponecháme to jednoduché: ak sa líšia, je to zmena.
+            if (originalCategory !== updatedCategory) {
                  changes.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
             }
             continue;
