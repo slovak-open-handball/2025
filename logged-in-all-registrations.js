@@ -3134,7 +3134,6 @@ function AllRegistrationsApp() {
             }
 
             const categoryAndIndexPart = pathParts[1]; 
-            // <--- Zmena tu: Deklarácia categoryMatch v tomto bloku
             const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
             if (!categoryMatch) {
                 throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
@@ -3144,15 +3143,15 @@ function AllRegistrationsApp() {
             let memberArrayIndex;
 
             if (isNewEntryFlag) {
-                // For new entries, the path ends with `[-1]`. We just need the array name.
+                // Pre nové záznamy sa cesta končí na `[-1]`. Potrebujeme len názov poľa.
                 const arrayNameMatch = pathParts[2].match(/^(.*?)\[-1\]$/);
                 if (!arrayNameMatch) {
                     throw new Error(`Neplatný formát poľa člena tímu pre nový záznam (očakáva sa [-1]): ${pathParts[2]}.`);
                 }
-                memberArrayPath = arrayNameMatch[1]; // e.g., "playerDetails"
-                memberArrayIndex = -1; // Indicate it's a new entry, not a specific index
+                memberArrayPath = arrayNameMatch[1]; // napr. "playerDetails"
+                memberArrayIndex = -1; // Indikuje, že ide o nový záznam, nie špecifický index
             } else {
-                // For existing entries, parse the actual index.
+                // Pre existujúce záznamy parsujeme skutočný index.
                 const existingMemberMatch = pathParts[2].match(/^(.*?)\[(\d+)\]$/);
                 if (!existingMemberMatch) {
                     throw new Error(`Neplatný formát poľa člena tímu a indexu: ${pathParts[2]}.`);
@@ -3177,22 +3176,23 @@ function AllRegistrationsApp() {
 
             if (isNewEntryFlag) {
                 // Pridanie nového člena
-                const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} }; // Zabezpečiť address objekt
+                // Uistíme sa, že adresný objekt existuje
+                const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} };
                 currentMemberArray.push(newMember);
                 setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
             } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
                 // Aktualizácia existujúceho člena
-                const memberToUpdate = { ...currentMemberArray[memberArrayIndex] };
-                Object.keys(updatedDataFromModal).forEach(key => {
-                    if (key.startsWith('address.')) {
-                        const addressKey = key.split('.')[1];
-                        if (!memberToUpdate.address) memberToUpdate.address = {};
-                        memberToUpdate.address[addressKey] = updatedDataFromModal[key];
-                    } else {
-                        memberToUpdate[key] = updatedDataFromModal[key];
+                // Skopírujeme pôvodné dáta člena a potom ich prepíšeme aktualizovanými dátami
+                const originalMember = currentMemberArray[memberArrayIndex];
+                const updatedMember = {
+                    ...originalMember,
+                    ...updatedDataFromModal,
+                    address: {
+                        ...(originalMember.address || {}),
+                        ...(updatedDataFromModal.address || {})
                     }
-                });
-                currentMemberArray[memberArrayIndex] = memberToUpdate;
+                };
+                currentMemberArray[memberArrayIndex] = updatedMember;
                 setUserNotificationMessage("Zmeny člena boli úspešne uložené.", 'success');
             } else {
                 throw new Error(`Člen tímu pre aktualizáciu/pridanie sa nenašiel na ceste: ${originalDataPath} a isNewEntryFlag: ${isNewEntryFlag}.`);
