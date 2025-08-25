@@ -3221,7 +3221,7 @@ function AllRegistrationsApp() {
             }
 
             await updateDoc(targetDocRef, finalDataToSave);
-            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (editModalTitle.includes('Upraviť tím')) { 
@@ -3293,7 +3293,7 @@ function AllRegistrationsApp() {
             const updates = {};
             updates[`teams.${category}`] = newCategoryTeams;
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
@@ -3406,7 +3406,7 @@ function AllRegistrationsApp() {
             const updates = {};
             updates[`teams.${category}`] = updatedTeamsForCategory;
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         } else {
@@ -3426,7 +3426,7 @@ function AllRegistrationsApp() {
             updates[topLevelField] = updatedObject[topLevelField];
             
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         }
