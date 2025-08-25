@@ -644,7 +644,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
     const teamDetailsTable = React.createElement(
         'div',
-        { className: 'overflow-x-auto' },
+        { className: 'overflow-x-hidden' },
         React.createElement(
             'table',
             { className: 'min-w-full divide-y divide-gray-200' },
