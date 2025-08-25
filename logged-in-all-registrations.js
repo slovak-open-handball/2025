@@ -1,3 +1,4 @@
+
 // logged-in-all-registrations.js
 // Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-all-registrations.html
 // a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
