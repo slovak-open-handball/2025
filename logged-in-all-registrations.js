@@ -1840,29 +1840,29 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
             } else if (title.includes('Upraviť tím')) { // Ak upravujeme Tím
                 const teamElements = [];
 
-                // 1. Kategória tímu (Selectbox)
-                teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: '_category', className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedCategory,
-                                onChange: (e) => {
-                                    setSelectedCategory(e.target.value);
-                                    handleChange('_category', e.target.value);
-                                },
-                                disabled: !isSavable
-                            },
-                            selectedCategory && !categories.includes(selectedCategory) &&
-                                React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
-                            categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
-                        )
-                    )
-                );
+//                // 1. Kategória tímu (Selectbox)
+//                teamElements.push(
+//                    React.createElement(
+//                        'div',
+//                        { key: '_category', className: 'mb-4' },
+//                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
+//                        React.createElement(
+//                            'select',
+//                            {
+//                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+//                                value: selectedCategory,
+//                                onChange: (e) => {
+//                                    setSelectedCategory(e.target.value);
+//                                    handleChange('_category', e.target.value);
+//                                },
+//                                disabled: !isSavable
+//                            },
+//                            selectedCategory && !categories.includes(selectedCategory) &&
+//                                React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
+//                            categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
+//                        )
+//                    )
+//                );
 
                 // 2. Názov tímu (Inputbox)
                 teamElements.push(
