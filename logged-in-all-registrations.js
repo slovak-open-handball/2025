@@ -91,6 +91,59 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }) {
     );
 }
 
+// AddMemberTypeSelectionModal Component - Nové modálne okno pre výber typu člena tímu
+function AddMemberTypeSelectionModal({ isOpen, onClose, onSelectType }) {
+    const [selectedType, setSelectedType] = React.useState('');
+
+    if (!isOpen) return null;
+
+    const handleAdd = () => {
+        if (selectedType) {
+            onSelectType(selectedType);
+            onClose();
+            setSelectedType(''); // Resetovať pre ďalšie použitie
+        }
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-[1002] p-4' }, // Vyšší z-index
+        React.createElement(
+            'div',
+            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
+            React.createElement('h3', { className: 'text-lg font-semibold mb-4 text-gray-800' }, 'Vybrať typ člena tímu'),
+            React.createElement(
+                'select',
+                {
+                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    value: selectedType,
+                    onChange: (e) => setSelectedType(e.target.value)
+                },
+                React.createElement('option', { value: '', disabled: true }, 'Vyberte typ'),
+                React.createElement('option', { value: 'Hráč' }, 'Hráč'),
+                React.createElement('option', { value: 'Člen realizačného tímu (žena)' }, 'Člen realizačného tímu (žena)'),
+                React.createElement('option', { value: 'Člen realizačného tímu (muž)' }, 'Člen realizačného tímu (muž)'),
+                React.createElement('option', { value: 'Šofér (žena)' }, 'Šofér (žena)'),
+                React.createElement('option', { value: 'Šofér (muž)' }, 'Šofér (muž)')
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex justify-end space-x-2' },
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
+                    onClick: onClose
+                }, 'Zrušiť'),
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
+                    onClick: handleAdd,
+                    disabled: !selectedType
+                }, 'Pridať')
+            )
+        )
+    );
+}
+
+
 // DialCodeSelectionModal Component - Nové modálne okno pre výber predvoľby
 function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDialCode }) {
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -380,7 +433,7 @@ const isDateKey = (key) => {
 };
 
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage }) {
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember }) {
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -733,7 +786,16 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 defaultOpen: false,
                 actionElement: teamEditButtonElement
             },
-            teamDetailsTable
+            teamDetailsTable,
+            React.createElement('div', { className: 'flex justify-center mt-4' },
+                React.createElement('button', {
+                    className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                    onClick: (e) => {
+                        e.stopPropagation(); // Zabrániť prepínaniu sekcie
+                        onAddMember(team); // Zavolať funkciu na pridanie člena pre konkrétny tím
+                    }
+                }, '+')
+            )
         );
     } else {
         const shouldShowHeader = showUsersChecked || !showTeamsChecked;
@@ -741,7 +803,16 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             'div',
             { className: 'p-4 pt-0 bg-gray-50 rounded-lg' },
             shouldShowHeader && React.createElement('h3', { className: 'font-semibold text-gray-700 mb-2' }, 'Detaily členov tímu a stravovanie'),
-            teamDetailsTable
+            teamDetailsTable,
+            React.createElement('div', { className: 'flex justify-center mt-4' },
+                React.createElement('button', {
+                    className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                    onClick: (e) => {
+                        e.stopPropagation(); // Zabrániť prepínaniu sekcie
+                        onAddMember(team); // Zavolať funkciu na pridanie člena pre konkrétny tím
+                    }
+                }, '+')
+            )
         );
     }
 }
@@ -789,7 +860,7 @@ const combinePhoneNumber = (dialCode, numberWithoutDialCode) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError }) { // Pridané onDeleteMember
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry }) { // Pridané onDeleteMember
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
@@ -979,7 +1050,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
             const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
-        } else if (isEditingMember) { // Používame robustnejšiu detekciu
+        } else if (isEditingMember || isNewEntry) { // Používame robustnejšiu detekciu
             // Inicializovať adresné polia, ak neexistujú, a nastaviť ich na prázdny reťazec
             // Toto je kľúčové pre správne zobrazenie input boxov pre členov realizačného tímu, hráčov a šoférov
             if (!initialData.address) initialData.address = {};
@@ -1021,7 +1092,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         
         setLocalEditedData(initialData); 
         console.log("DataEditModal useEffect: localEditedData initialized to:", initialData); // Debug log
-    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes]); // Pridané availableTshirtSizes ako závislosť
+    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry]); // Pridané availableTshirtSizes a isNewEntry ako závislosť
 
 
     React.useEffect(() => {
@@ -1473,9 +1544,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
-        const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
+        const isEditingMemberOrNewEntry = title.toLowerCase().includes('upraviť hráč') || 
                                 title.toLowerCase().includes('upraviť člen realizačného tímu') || 
-                                title.toLowerCase().includes('upraviť šofér');
+                                title.toLowerCase().includes('upraviť šofér') || isNewEntry;
 
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
 
@@ -1485,7 +1556,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         }
 
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
-            if (isEditingMember) {
+            if (isEditingMemberOrNewEntry) { // Použiť novú premennú
                 // console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
                 return renderMemberFields(); // Voláme novú dedikovanú funkciu
             } else if (title.includes('Upraviť používateľa')) { 
@@ -2014,7 +2085,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mt-4' },
-                isEditingMember && React.createElement('button', { // Podmienene renderovať tlačidlo "Odstrániť"
+                // Tlačidlo "Odstrániť" sa zobrazí len ak sa nepridáva nový záznam
+                !isNewEntry && isEditingMember && React.createElement('button', { // Podmienene renderovať tlačidlo "Odstrániť"
                     className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
                     onClick: handleDeleteMemberClick,
                     disabled: !isSavable
@@ -2094,7 +2166,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
                                 const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
 
-                                if (generatedChanges.length === 0) {
+                                // If it's a new entry, we always consider it a change
+                                if (generatedChanges.length === 0 && !isNewEntry) {
                                     setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
                                     onClose();
                                     return;
@@ -2102,11 +2175,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
                                 // --- Save Notification to Firestore ---
                                 const userEmail = window.auth.currentUser?.email;
-                                if (generatedChanges.length > 0 && userEmail) {
+                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) { // Notify also for new entries
                                     const notificationsCollectionRef = collection(db, 'notifications');
+                                    const notificationMessage = isNewEntry ? 'Nový člen bol pridaný.' : generatedChanges.join(', ');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: generatedChanges,
+                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName} ${finalDataToSave.lastName}`] : generatedChanges,
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
@@ -2114,7 +2188,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 // --- End Notification ---
 
                                 // Teraz zavolať prop onSave z AllRegistrationsApp s kompletne pripravenými dátami
-                                onSave(finalDataToSave, targetDocRef, originalDataPath); // Pass only what AllRegistrationsApp needs to perform the Firestore update
+                                onSave(finalDataToSave, targetDocRef, originalDataPath, isNewEntry); // Pass only what AllRegistrationsApp needs to perform the Firestore update
 
                             } catch (e) {
                                 console.error("Chyba v DataEditModal pri príprave dát na uloženie:", e);
@@ -2209,6 +2283,25 @@ const updateNestedObjectByPath = (obj, path, value) => {
     };
 };
 
+// Helper function to recalculate and update team member counts within the team object
+const recalculateTeamCounts = (teamToUpdate) => {
+    // console.log("recalculateTeamCounts: Pôvodný tím:", teamToUpdate);
+    const updatedTeam = { ...teamToUpdate };
+    updatedTeam.players = updatedTeam.playerDetails?.length || 0;
+    updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails || [];
+    updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails || [];
+    updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale || [];
+    updatedTeam.driverDetailsFemale = updatedTeam.driverDetailsFemale || [];
+
+    // The counts are stored in the team object itself for aggregation
+    // The derived properties `_menTeamMembersCount`, etc. in `allTeamsFlattened` memo will use these.
+    // If the team document had explicit separate fields for counts, we'd update them here.
+    // For now, it's just updating the array lengths and `players` for consistency.
+
+    // console.log("recalculateTeamCounts: Aktualizovaný tím s počtami:", updatedTeam);
+    return updatedTeam;
+};
+
 
 // Hlavný React komponent pre stránku logged-in-all-registrations.html
 function AllRegistrationsApp() {
@@ -2268,8 +2361,13 @@ function AllRegistrationsApp() {
   const [editModalTitle, setEditModalTitle] = React.useState('');
   const [editingDocRef, setEditingDocRef] = React.useState(null); // Initialized to null
   const [editingDataPath, setEditingDataPath] = React.useState(''); // Cesta v dokumente pre uloženie
+  const [isNewEntry, setIsNewEntry] = React.useState(false); // Nový stav pre indikáciu, či ide o nový záznam
 
-  const openEditModal = (data, title, targetDocRef = null, originalDataPath = '') => {
+  // Nové stavy pre modálne okno na výber typu člena tímu
+  const [isAddMemberTypeSelectionModalOpen, setIsAddMemberTypeSelectionModalOpen] = React.useState(false);
+  const [currentTeamForNewMember, setCurrentTeamForNewMember] = React.useState(null); // Tím, do ktorého sa pridáva nový člen
+
+  const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
       // Odstrániť citlivé alebo irelevantné kľúče pred odovzdaním do modálneho okna
       const cleanedData = { ...data };
       delete cleanedData.password; // Príklad: odstránenie hesla
@@ -2280,8 +2378,9 @@ function AllRegistrationsApp() {
       setEditModalTitle(title);
       setEditingDocRef(targetDocRef);
       setEditingDataPath(originalDataPath);
+      setIsNewEntry(newEntryFlag); // Nastaviť príznak
       setIsEditModalOpen(true);
-      // console.log("openEditModal: Opening modal with title:", title, "data:", cleanedData, "path:", originalDataPath); // Debug log
+      // console.log("openEditModal: Opening modal with title:", title, "data:", cleanedData, "path:", originalDataPath, "isNewEntry:", newEntryFlag); // Debug log
   };
 
   const closeEditModal = () => {
@@ -2290,8 +2389,61 @@ function AllRegistrationsApp() {
       setEditModalTitle('');
       setEditingDocRef(null);
       setEditingDataPath('');
+      setIsNewEntry(false); // Resetovať príznak
       // console.log("closeEditModal: Closing modal."); // Debug log
   };
+
+  // Handler pre otvorenie modálneho okna na výber typu člena
+  const handleOpenAddMemberTypeModal = (team) => {
+      setCurrentTeamForNewMember(team);
+      setIsAddMemberTypeSelectionModalOpen(true);
+  };
+
+  // Handler po výbere typu člena a kliknutí na "Pridať"
+  const handleSelectedMemberTypeAndOpenEdit = React.useCallback((memberType) => {
+    if (!currentTeamForNewMember) {
+        setUserNotificationMessage("Chyba: Nebol vybraný žiadny tím pre pridanie člena.", 'error');
+        return;
+    }
+
+    const newMemberData = {}; // Prázdny objekt pre nového člena
+    let memberArrayPath = '';
+    let resolvedTitle = '';
+
+    switch (memberType) {
+        case 'Hráč':
+            memberArrayPath = 'playerDetails';
+            resolvedTitle = 'Pridať nového hráča';
+            break;
+        case 'Člen realizačného tímu (žena)':
+            memberArrayPath = 'womenTeamMemberDetails';
+            resolvedTitle = 'Pridať novú členku R. tímu (žena)';
+            break;
+        case 'Člen realizačného tímu (muž)':
+            memberArrayPath = 'menTeamMemberDetails';
+            resolvedTitle = 'Pridať nového člena R. tímu (muž)';
+            break;
+        case 'Šofér (žena)':
+            memberArrayPath = 'driverDetailsFemale';
+            resolvedTitle = 'Pridať novú šoférku (žena)';
+            break;
+        case 'Šofér (muž)':
+            memberArrayPath = 'driverDetailsMale';
+            resolvedTitle = 'Pridať nového šoféra (muž)';
+            break;
+        default:
+            setUserNotificationMessage("Neplatný typ člena tímu.", 'error');
+            return;
+    }
+
+    // Cesta pre uloženie nového člena: použijeme fiktívny index -1 na signalizáciu nového záznamu
+    const newMemberPath = `teams.${currentTeamForNewMember._category}[${currentTeamForNewMember._teamIndex}].${memberArrayPath}[-1]`;
+    const targetDocRefForNewMember = doc(db, 'users', currentTeamForNewMember._userId);
+
+    openEditModal(newMemberData, resolvedTitle, targetDocRefForNewMember, newMemberPath, true); // Nastaviť isNewEntry na true
+    setIsAddMemberTypeSelectionModalOpen(false); // Zatvoriť modal výberu typu
+    setCurrentTeamForNewMember(null); // Resetovať tím
+  }, [currentTeamForNewMember, db, openEditModal, setUserNotificationMessage]);
 
 
   const allTeamsFlattened = React.useMemo(() => {
@@ -2302,24 +2454,11 @@ function AllRegistrationsApp() {
                 Object.entries(u.teams).forEach(([category, teamListRaw]) => { // Renamed teamList to teamListRaw
                     const teamList = Array.isArray(teamListRaw) ? teamListRaw : []; // Defensive check
                     teamList.forEach((team, teamIndex) => {
-                        let menTeamMembersCount = 0;
-                        if (Array.isArray(team.menTeamMemberDetails)) {
-                            menTeamMembersCount = team.menTeamMemberDetails.length;
-                        }
-
-                        let womenTeamMembersCount = 0;
-                        if (Array.isArray(team.womenTeamMemberDetails)) {
-                            womenTeamMembersCount = team.womenTeamMemberDetails.length; 
-                        }
-                        
-                        let menDriversCount = 0; 
-                        if (Array.isArray(team.driverDetailsMale)) { // Skontroluj, či je to pole
-                            menDriversCount = team.driverDetailsMale.length; 
-                        }
-                        let womenDriversCount = 0; 
-                        if (Array.isArray(team.driverDetailsFemale)) { // Skontroluj, či je to pole
-                            womenDriversCount = team.driverDetailsFemale.length; 
-                        }
+                        let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                        let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                        let menDriversCount = team.driverDetailsMale?.length || 0; 
+                        let womenDriversCount = team.driverDetailsFemale?.length || 0; 
+                        let playersCount = team.playerDetails?.length || 0;
 
                         const teamTshirtsMap = new Map(
                           (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
@@ -2335,7 +2474,7 @@ function AllRegistrationsApp() {
                             _womenTeamMembersCount: womenTeamMembersCount,
                             _menDriversCount: menDriversCount, 
                             _womenDriversCount: womenDriversCount, 
-                            _players: team.playerDetails ? team.playerDetails.length : 0,
+                            _players: playersCount,
                             _teamTshirtsMap: teamTshirtsMap
                         });
                     });
@@ -2922,7 +3061,7 @@ function AllRegistrationsApp() {
 
   // Removed handleSaveColumnVisibility function as column visibility is no longer user-configurable.
 
-  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath) => {
+  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag) => {
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
         setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
@@ -2932,34 +3071,19 @@ function AllRegistrationsApp() {
     try {
         window.showGlobalLoader();
         
-        // Získame aktuálne hodnoty isTargetUserAdmin a isTargetUserHall priamo z `editingData`
-        // pre aktuálne otvorený modál (ak je to úprava používateľa)
         const isEditingUser = editModalTitle.includes('Upraviť používateľa');
         const currentEditingDataRole = editingData?.role;
         const localIsTargetUserAdmin = isEditingUser && currentEditingDataRole === 'admin';
         const localIsTargetUserHall = isEditingUser && currentEditingDataRole === 'hall';
 
-
-        // All data preparation, including phone number and team-specific fields,
-        // and change generation has been moved to DataEditModal.
-        // We now directly use the `updatedDataFromModal` provided by DataEditModal,
-        // which is already the final data to save after filtering empty strings/objects.
-        
-        // --- Save Notification to Firestore (Changes already generated and saved in DataEditModal) ---
-        // The DataEditModal is now responsible for generating and saving the notification.
-        // We only proceed with the Firestore update here.
-        // --- End Notification ---
-
         if (originalDataPath === '') {
             // Logika pre aktualizáciu používateľa na najvyššej úrovni
-            // console.log("DEBUG AllRegistrationsApp Top-Level User Save: Executing top-level user update. Data:", updatedDataFromModal); // Debug log
             await updateDoc(targetDocRef, updatedDataFromModal);
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (editModalTitle.includes('Upraviť tím')) { 
             // Logika pre aktualizáciu tímu
-            // console.log("DEBUG AllRegistrationsApp Team Save: Original Data Path:", originalDataPath); // Debug log
             if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
                 throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
             }
@@ -2973,7 +3097,6 @@ function AllRegistrationsApp() {
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
             
-            // updatedDataFromModal už obsahuje spracované balíky, tričká, kategórie atď.
             const updatedTeamSpecificData = updatedDataFromModal;
 
             const docSnapshot = await getDoc(targetDocRef);
@@ -2992,22 +3115,18 @@ function AllRegistrationsApp() {
 
             const updates = {};
             updates[`teams.${category}`] = newCategoryTeams;
-            // console.log("DEBUG AllRegistrationsApp Team Save: Updates object before updateDoc:", updates); // Debug log
             await updateDoc(targetDocRef, updates);
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
                    originalDataPath.includes('womenTeamMemberDetails') || originalDataPath.includes('driverDetailsMale') || originalDataPath.includes('driverDetailsFemale')) {
-            // Logika pre aktualizáciu člena tímu/hráča/šoféra
-            // console.log("DEBUG AllRegistrationsApp Member Save: Original Data Path:", originalDataPath); // Debug log
-            // Cesta by mala vyzerať ako "teams.CATEGORY[TEAM_INDEX].MEMBER_ARRAY[MEMBER_INDEX]"
+            // Logika pre aktualizáciu alebo pridanie člena tímu/hráča/šoféra
             const pathParts = originalDataPath.split('.');
             if (pathParts.length !== 3) {
                 throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty (teams.category[index].memberArray[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
             }
 
-            const topLevelPath = pathParts[0]; 
             const categoryAndIndexPart = pathParts[1]; 
             const memberArrayAndIndexPart = pathParts[2]; 
             
@@ -3024,8 +3143,8 @@ function AllRegistrationsApp() {
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
             const memberArrayPath = memberArrayMatch[1]; 
-            const memberArrayIndex = parseInt(memberArrayMatch[2]); 
-            
+            const memberArrayIndex = parseInt(memberArrayMatch[2]); // Bude -1 pre nový záznam
+
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
@@ -3033,12 +3152,18 @@ function AllRegistrationsApp() {
             const currentDocData = docSnapshot.data();
 
             const teams = currentDocData.teams?.[category] || [];
-            const teamToUpdate = teams[teamIndex];
+            const teamToUpdate = { ...teams[teamIndex] }; // Hlboká kópia tímu na úpravu
 
-            if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
-                const memberToUpdate = { ...teamToUpdate[memberArrayPath][memberArrayIndex] };
-                
-                // updatedDataFromModal už obsahuje finalDataToSave pre člena tímu
+            let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
+
+            if (isNewEntryFlag) {
+                // Pridanie nového člena
+                const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} }; // Zabezpečiť address objekt
+                currentMemberArray.push(newMember);
+                setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
+            } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
+                // Aktualizácia existujúceho člena
+                const memberToUpdate = { ...currentMemberArray[memberArrayIndex] };
                 Object.keys(updatedDataFromModal).forEach(key => {
                     if (key.startsWith('address.')) {
                         const addressKey = key.split('.')[1];
@@ -3048,28 +3173,23 @@ function AllRegistrationsApp() {
                         memberToUpdate[key] = updatedDataFromModal[key];
                     }
                 });
-
-                const updatedMemberArray = [...teamToUpdate[memberArrayPath]];
-                updatedMemberArray[memberArrayIndex] = memberToUpdate;
-
-                const updatedTeam = {
-                    ...teamToUpdate,
-                    [memberArrayPath]: updatedMemberArray
-                };
-
-                const updatedTeamsForCategory = [...teams];
-                updatedTeamsForCategory[teamIndex] = updatedTeam;
-
-                const updates = {};
-                updates[`teams.${category}`] = updatedTeamsForCategory;
-                // console.log("DEBUG AllRegistrationsApp Member Save: Updates object before updateDoc:", updates); // Debug log
-                await updateDoc(targetDocRef, updates);
-                setUserNotificationMessage("Zmeny boli uložené.", 'success');
-                closeEditModal(); 
-                return;
+                currentMemberArray[memberArrayIndex] = memberToUpdate;
+                setUserNotificationMessage("Zmeny člena boli úspešne uložené.", 'success');
             } else {
-                throw new Error(`Člen tímu pre aktualizáciu sa nenašiel na ceste: ${originalDataPath}.`);
+                throw new Error(`Člen tímu pre aktualizáciu/pridanie sa nenašiel na ceste: ${originalDataPath} a isNewEntryFlag: ${isNewEntryFlag}.`);
             }
+            
+            teamToUpdate[memberArrayPath] = currentMemberArray;
+            const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate); // Prepočítať počty
+
+            const updatedTeamsForCategory = [...teams];
+            updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
+
+            const updates = {};
+            updates[`teams.${category}`] = updatedTeamsForCategory;
+            await updateDoc(targetDocRef, updates);
+            closeEditModal(); 
+            return;
         } else {
             // Všeobecná vnorená aktualizácia
             if (!originalDataPath) {
@@ -3086,7 +3206,6 @@ function AllRegistrationsApp() {
             const updates = {};
             updates[topLevelField] = updatedObject[topLevelField];
             
-            // console.log("DEBUG AllRegistrationsApp Generic Nested Save: Updates object before updateDoc:", updates); // Debug log
             await updateDoc(targetDocRef, updates);
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
@@ -3141,7 +3260,7 @@ function AllRegistrationsApp() {
         const currentDocData = docSnapshot.data();
 
         const teams = currentDocData.teams?.[category] || [];
-        const teamToUpdate = teams[teamIndex];
+        const teamToUpdate = { ...teams[teamIndex] }; // Hlboká kópia tímu na úpravu
 
         if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
             const memberToRemove = teamToUpdate[memberArrayPath][memberArrayIndex];
@@ -3149,49 +3268,12 @@ function AllRegistrationsApp() {
 
             const updatedMemberArray = [...teamToUpdate[memberArrayPath]];
             updatedMemberArray.splice(memberArrayIndex, 1); // Odstráni člena z poľa
-
-            // Prepočíta počty po odstránení
-            let newPlayersCount = teamToUpdate.playerDetails ? teamToUpdate.playerDetails.length : 0;
-            let newMenTeamMembersCount = teamToUpdate.menTeamMemberDetails ? teamToUpdate.menTeamMemberDetails.length : 0;
-            let newWomenTeamMembersCount = teamToUpdate.womenTeamMemberDetails ? teamToUpdate.womenTeamMemberDetails.length : 0;
-            let newMenDriversCount = teamToUpdate.driverDetailsMale ? teamToUpdate.driverDetailsMale.length : 0;
-            let newWomenDriversCount = teamToUpdate.driverDetailsFemale ? teamToUpdate.driverDetailsFemale.length : 0;
-
-            if (memberArrayPath === 'playerDetails') newPlayersCount--;
-            else if (memberArrayPath === 'menTeamMemberDetails') newMenTeamMembersCount--;
-            else if (memberArrayPath === 'womenTeamMemberDetails') newWomenTeamMembersCount--;
-            else if (memberArrayPath === 'driverDetailsMale') newMenDriversCount--;
-            else if (memberArrayPath === 'driverDetailsFemale') newWomenDriversCount--;
             
-            // Zabezpečiť, že počty neklesnú pod nulu
-            newPlayersCount = Math.max(0, newPlayersCount);
-            newMenTeamMembersCount = Math.max(0, newMenTeamMembersCount);
-            newWomenTeamMembersCount = Math.max(0, newWomenTeamMembersCount);
-            newMenDriversCount = Math.max(0, newMenDriversCount);
-            newWomenDriversCount = Math.max(0, newWomenDriversCount);
-
-
-            const updatedTeam = {
-                ...teamToUpdate,
-                [memberArrayPath]: updatedMemberArray,
-                // Aktualizácia počtov v objekte tímu
-                players: newPlayersCount, // Použijte players pre zjednotenie s _players
-                menTeamMemberDetails: teamToUpdate.menTeamMemberDetails || [], // Zabezpečiť existenciu poľa
-                womenTeamMemberDetails: teamToUpdate.womenTeamMemberDetails || [],
-                driverDetailsMale: teamToUpdate.driverDetailsMale || [],
-                driverDetailsFemale: teamToUpdate.driverDetailsFemale || [],
-            };
-            // Tieto priradenia sú potrebné pre prepočet _players a _menTeamMembersCount v useMemo, ale nemali by sa priamo ukladať,
-            // ak nie sú súčasťou dátového modelu. Radšej ich priamo aktualizovať v objekte `updatedTeam`
-            if (memberArrayPath === 'playerDetails') updatedTeam.players = newPlayersCount;
-            if (memberArrayPath === 'menTeamMemberDetails') updatedTeam.menTeamMemberDetails = updatedMemberArray;
-            if (memberArrayPath === 'womenTeamMemberDetails') updatedTeam.womenTeamMemberDetails = updatedMemberArray;
-            if (memberArrayPath === 'driverDetailsMale') updatedTeam.driverDetailsMale = updatedMemberArray;
-            if (memberArrayPath === 'driverDetailsFemale') updatedTeam.driverDetailsFemale = updatedMemberArray;
-
+            teamToUpdate[memberArrayPath] = updatedMemberArray; // Aktualizujeme pole
+            const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate); // Prepočítať počty
 
             const updatedTeamsForCategory = [...teams];
-            updatedTeamsForCategory[teamIndex] = updatedTeam;
+            updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
 
             const updates = {};
             updates[`teams.${category}`] = updatedTeamsForCategory;
@@ -3352,7 +3434,14 @@ function AllRegistrationsApp() {
         targetDocRef: editingDocRef,    // Odovzdať referenciu na dokument
         originalDataPath: editingDataPath, // Odovzdať cestu v dokumente
         setUserNotificationMessage: setUserNotificationMessage, // Preposielame setter notifikácie
-        setError: setError // Preposielame setter chýb
+        setError: setError, // Preposielame setter chýb
+        isNewEntry: isNewEntry // Odovzdať príznak
+    }),
+    // Modálne okno na výber typu člena
+    React.createElement(AddMemberTypeSelectionModal, {
+        isOpen: isAddMemberTypeSelectionModalOpen,
+        onClose: () => setIsAddMemberTypeSelectionModalOpen(false),
+        onSelectType: handleSelectedMemberTypeAndOpenEdit
     }),
     React.createElement(
       'div',
@@ -3541,7 +3630,8 @@ function AllRegistrationsApp() {
                                                     showTeamsChecked: showTeams,
                                                     openEditModal: openEditModal,
                                                     db: db,
-                                                    setUserNotificationMessage: setUserNotificationMessage
+                                                    setUserNotificationMessage: setUserNotificationMessage,
+                                                    onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
                                                 })
                                             )
                                         )
@@ -3610,24 +3700,11 @@ function AllRegistrationsApp() {
                                         React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
                                             Object.entries(u.teams || {}).map(([category, teamListRaw]) => // Renamed to teamListRaw
                                                 (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => { // Defensive check
-                                                    let menTeamMembersCount = 0;
-                                                    if (Array.isArray(team.menTeamMemberDetails)) {
-                                                        menTeamMembersCount = team.menTeamMemberDetails.length;
-                                                    }
-
-                                                    let womenTeamMembersCount = 0;
-                                                    if (Array.isArray(team.womenTeamMemberDetails)) {
-                                                        womenTeamMembersCount = team.womenTeamMemberDetails.length;
-                                                    }
-
-                                                    let menDriversCount = 0; 
-                                                    if (Array.isArray(team.driverDetailsMale)) {
-                                                        menDriversCount = team.driverDetailsMale.length;
-                                                    }
-                                                    let womenDriversCount = 0; 
-                                                    if (Array.isArray(team.driverDetailsFemale)) {
-                                                        womenDriversCount = team.driverDetailsFemale.length;
-                                                    }
+                                                    let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                                                    let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                                                    let menDriversCount = team.driverDetailsMale?.length || 0; 
+                                                    let womenDriversCount = team.driverDetailsFemale?.length || 0; 
+                                                    let playersCount = team.playerDetails?.length || 0;
 
 
                                                     const teamTshirtsMap = new Map(
@@ -3646,7 +3723,7 @@ function AllRegistrationsApp() {
                                                             _womenTeamMembersCount: womenTeamMembersCount,
                                                             _menDriversCount: menDriversCount, 
                                                             _womenDriversCount: womenDriversCount, 
-                                                            _players: team.playerDetails ? team.playerDetails.length : 0,
+                                                            _players: playersCount,
                                                             _teamTshirtsMap: teamTshirtsMap
                                                         },
                                                         tshirtSizeOrder: availableTshirtSizes,
@@ -3655,7 +3732,8 @@ function AllRegistrationsApp() {
                                                         showTeamsChecked: showTeams,
                                                         openEditModal: openEditModal,
                                                         db: db,
-                                                        setUserNotificationMessage: setUserNotificationMessage
+                                                        setUserNotificationMessage: setUserNotificationMessage,
+                                                        onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
                                                     })
                                                 })
                                             )
