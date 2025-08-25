@@ -428,6 +428,26 @@ const isDateKey = (key) => {
     return /^\d{4}-\d{2}-\d{2}$/.test(key);
 };
 
+// Formátovanie dátumu na DD. MM. RRRR
+const formatDateToDMMYYYY = (dateString) => {
+    if (!dateString) return '-';
+    // Handle Firebase Timestamp objects
+    if (dateString && typeof dateString.toDate === 'function') {
+        const date = dateString.toDate();
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${day}. ${month}. ${year}`;
+    }
+    // Handle plain date strings (e.g., YYYY-MM-DD)
+    const [year, month, day] = dateString.split('-');
+    if (year && month && day) {
+        return `${day}. ${month}. ${year}`;
+    }
+    return dateString;
+};
+
+
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
 function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember }) {
     if (!team) {
@@ -457,187 +477,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         ].filter(p => p !== ''); // Odstrániť prázdne časti
 
         return parts.join(', ');
-    };
-
-    const formatDateToDMMYYYY = (dateString) => {
-        if (!dateString) return '-';
-        // Handle Firebase Timestamp objects
-        if (dateString && typeof dateString.toDate === 'function') {
-            const date = dateString.toDate();
-            const year = date.getFullYear();
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            return `${day}. ${month}. ${year}`;
-        }
-        // Handle plain date strings (e.g., YYYY-MM-DD)
-        const [year, month, day] = dateString.split('-');
-        if (year && month && day) {
-            return `${day}. ${month}. ${year}`;
-        }
-        return dateString;
-    };
-
-
-    const allConsolidatedMembers = [];
-
-    if (team.playerDetails && team.playerDetails.length > 0) {
-        team.playerDetails.forEach((player, index) => {
-            allConsolidatedMembers.push({
-                ...player,
-                type: 'Hráč',
-                originalArray: 'playerDetails',
-                originalIndex: index,
-                uniqueId: `${team.teamName}-player-${player.firstName || ''}-${player.lastName || ''}-${index}`
-            });
-        });
-    }
-    if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
-        team.menTeamMemberDetails.forEach((member, index) => {
-            allConsolidatedMembers.push({
-                ...member,
-                type: 'Člen realizačného tímu (muži)',
-                originalArray: 'menTeamMemberDetails',
-                originalIndex: index,
-                uniqueId: `${team.teamName}-menstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
-            });
-        });
-    };
-    if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
-        team.womenTeamMemberDetails.forEach((member, index) => {
-            allConsolidatedMembers.push({
-                ...member,
-                type: 'Člen realizačného tímu (ženy)',
-                originalArray: 'womenTeamMemberDetails',
-                originalIndex: index,
-                uniqueId: `${team.teamName}-womenstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
-            });
-        });
-    }
-    // Pridanie šoféra muža, ak existuje a je to pole
-    if (Array.isArray(team.driverDetailsMale) && team.driverDetailsMale.length > 0) {
-        team.driverDetailsMale.forEach((driver, index) => {
-            allConsolidatedMembers.push({
-                ...driver,
-                type: 'Šofér (muž)',
-                originalArray: 'driverDetailsMale',
-                originalIndex: index, // Použiť index, lebo je to pole
-                uniqueId: `${team.teamName}-driver-male-${driver.firstName || ''}-${driver.lastName || ''}-${index}`
-            });
-        });
-    }
-    // Pridanie šoféra ženy, ak existuje a je to pole
-    if (Array.isArray(team.driverDetailsFemale) && team.driverDetailsFemale.length > 0) {
-        team.driverDetailsFemale.forEach((driver, index) => {
-            allConsolidatedMembers.push({
-                ...driver,
-                type: 'Šofér (žena)',
-                originalArray: 'driverDetailsFemale',
-                originalIndex: index, // Použiť index, lebo je to pole
-                uniqueId: `${team.teamName}-driver-female-${driver.firstName || ''}-${driver.lastName || ''}-${index}`
-            });
-        });
-    }
-
-    // Filtrujeme kľúče, aby sme sa uistili, že sú to platné dátumy jedál
-    const mealDates = (team.packageDetails && team.packageDetails.meals ? Object.keys(team.packageDetails.meals).sort() : [])
-        .filter(key => isDateKey(key)); // Používame novú pomocnú funkciu
-    
-    const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
-    const mealTypeLabels = {
-        breakfast: 'Raňajky',
-        lunch: 'Obed',
-        dinner: 'Večera',
-        refreshment: 'Občerstvenie'
-    };
-
-    // Nová funkcia na spracovanie zmeny stravovania
-    const handleMealChange = async (member, date, mealType, isChecked) => {
-        if (!db || !team._userId) {
-            setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
-            return;
-        }
-
-        window.showGlobalLoader();
-
-        try {
-            const userDocRef = doc(db, 'users', team._userId);
-            const docSnapshot = await getDoc(userDocRef); // Fetch the entire user document
-
-            if (!docSnapshot.exists()) {
-                throw new Error("Používateľský dokument sa nenašiel.");
-            }
-
-            const userData = docSnapshot.data();
-            const teamsData = { ...userData.teams }; // Create a mutable copy of the teams object
-
-            const teamCategory = team._category;
-            const teamIndex = team._teamIndex;
-            const memberArrayType = member.originalArray;
-            const memberIndex = member.originalIndex;
-
-            // Deep clone the relevant parts to ensure immutability until update
-            const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
-            const teamToUpdate = updatedCategoryTeams[teamIndex];
-
-            if (!teamToUpdate) {
-                throw new Error("Tím sa nenašiel pre aktualizáciu stravovania.");
-            }
-
-            const memberArrayToUpdate = teamToUpdate[memberArrayType];
-
-            if (!memberArrayToUpdate || memberArrayToUpdate[memberIndex] === undefined) {
-                throw new Error("Člen tímu sa nenašiel pre aktualizáciu stravovania.");
-            }
-
-            const memberToUpdate = memberArrayToUpdate[memberIndex];
-
-            // --- Notification Logic - Capture original value before modification ---
-            const userEmail = window.auth.currentUser?.email;
-            const changes = [];
-            const originalMealValue = memberToUpdate.packageDetails?.meals?.[date]?.[mealType] === 1 ? 'Áno' : 'Nie';
-            const newMealValue = isChecked ? 'Áno' : 'Nie';
-
-            if (originalMealValue !== newMealValue) {
-                changes.push(`Zmena Stravovanie (${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}): z '${originalMealValue}' na '${newMealValue}'`);
-            }
-            // --- End Notification Logic ---
-
-            // Ensure packageDetails.meals and packageDetails.meals[date] exist
-            if (!memberToUpdate.packageDetails) memberToUpdate.packageDetails = {};
-            if (!memberToUpdate.packageDetails.meals) memberToUpdate.packageDetails.meals = {};
-            if (!memberToUpdate.packageDetails.meals[date]) memberToUpdate.packageDetails.meals[date] = {};
-
-            // Update the specific meal type for the member
-            memberToUpdate.packageDetails.meals[date][mealType] = isChecked ? 1 : 0;
-
-            // Reconstruct the full path and update only the top-level array
-            // The path for updateDoc should be a valid top-level field or a nested map field, not an array element with index.
-            // We are updating the entire array for the specific category.
-            const updatePayload = {
-                [`teams.${teamCategory}`]: updatedCategoryTeams
-            };
-
-            await updateDoc(userDocRef, updatePayload);
-            setUserNotificationMessage(`Stravovanie pre ${member.firstName} ${member.lastName} bolo aktualizované.`, 'success');
-
-            // --- Save Notification to Firestore ---
-            if (changes.length > 0 && userEmail) {
-                const notificationsCollectionRef = collection(db, 'notifications');
-                await addDoc(notificationsCollectionRef, {
-                    userEmail,
-                    changes,
-                    timestamp: serverTimestamp()
-                });
-                console.log("Notifikácia o zmene stravovania uložená do Firestore.");
-            }
-            // --- End Save Notification ---
-
-        } catch (error) {
-            console.error("Chyba pri aktualizácii stravovania v Firestore:", error);
-            setUserNotificationMessage(`Chyba pri aktualizácii stravovania: ${error.message}`, 'error');
-        } finally {
-            window.hideGlobalLoader();
-        }
     };
                 
     const teamDetailsTable = React.createElement(
@@ -910,7 +749,7 @@ const formatLabel = (key) => {
 };
 
 // Pomocná funkcia na porovnávanie zmien pre notifikácie
-const getChangesForNotification = (original, updated) => {
+const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
     const keys = new Set([...Object.keys(original), ...Object.keys(updated)]);
 
@@ -920,7 +759,7 @@ const getChangesForNotification = (original, updated) => {
 
         // Špeciálne pre "address" a "billing" (ak existujú ako objekty)
         if ((key === 'address' || key === 'billing') && typeof originalValue === 'object' && typeof updatedValue === 'object' && originalValue !== null && updatedValue !== null) {
-            const nestedChanges = getChangesForNotification(originalValue, updatedValue);
+            const nestedChanges = getChangesForNotification(originalValue, updatedValue, formatDateFn); // Pass formatDateFn recursively
             if (nestedChanges.length > 0) {
                 changes.push(`${formatLabel(key)}: ${nestedChanges.join(', ')}`);
             }
@@ -932,8 +771,8 @@ const getChangesForNotification = (original, updated) => {
             // Predpokladáme, že pre jednoduché typy je to priama zmena
             // Pre dátum narodenia formátujeme
             if (key === 'dateOfBirth') {
-                const formattedOriginal = formatDateToDMMYYYY(originalValue);
-                const formattedUpdated = formatDateToDMMYYYY(updatedValue);
+                const formattedOriginal = formatDateFn(originalValue); // Use passed formatDateFn
+                const formattedUpdated = formatDateFn(updatedValue);   // Use passed formatDateFn
                 if (formattedOriginal !== formattedUpdated) {
                     changes.push(`Zmena ${formatLabel(key)}: z '${formattedOriginal || '-'}' na '${formattedUpdated || '-'}'`);
                 }
@@ -1020,7 +859,7 @@ const formatDisplayValue = (value, path) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp }) { // Pridané onDeleteMember a getChangesForNotificationProp
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp, formatDateToDMMYYYY: formatDateToDMMYYYYProp }) { // Pridané onDeleteMember a getChangesForNotificationProp a formatDateToDMMYYYYProp
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
@@ -2158,7 +1997,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 console.log("DEBUG: DataEditModal - onSave click. originalDataForCompare for diff:", originalDataForCompare);
                                 console.log("DEBUG: DataEditModal - onSave click. modifiedDataForCompare for diff:", modifiedDataForCompare);
 
-                                const generatedChanges = getChangesForNotificationProp(originalDataForCompare, modifiedDataForCompare); // Použiť prop
+                                // Pass formatDateToDMMYYYYProp to getChangesForNotificationProp
+                                const generatedChanges = getChangesForNotificationProp(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYYProp); 
                                 
                                 console.log("DEBUG: DataEditModal - onSave click. generatedChanges.length (before conditional):", generatedChanges.length);
                                 console.log("DEBUG: DataEditModal - onSave click. isNewEntry (modal state):", isNewEntry);
@@ -2840,7 +2680,7 @@ function AllRegistrationsApp() {
                   dateB = new Date(0); // Fallback to epoch if not a valid date format
               }
               
-              return direction === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+              return direction === 'asc' ? dateA.getTime() - dateB.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
           } else if (type === 'boolean') {
               const boolA = Boolean(valA);
               const boolB = Boolean(valB);
@@ -3130,8 +2970,8 @@ function AllRegistrationsApp() {
                 delete modifiedDataForCompare.billingAddress;
             }
 
-            const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
-
+            const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
+            
             if (generatedChanges.length === 0) {
                 setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
                 closeEditModal();
@@ -3193,7 +3033,7 @@ function AllRegistrationsApp() {
                 }
             }
 
-            const generatedChanges = getChangesForNotification(originalTeam, updatedTeam);
+            const generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
 
             if (generatedChanges.length === 0) {
                 setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
@@ -3300,7 +3140,7 @@ function AllRegistrationsApp() {
                 }
 
 
-                const generatedChanges = getChangesForNotification(originalMember, updatedMember);
+                const generatedChanges = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
                 // console.log("DEBUG: Člen tímu - Generované zmeny:", generatedChanges);
 
                 if (generatedChanges.length === 0) {
@@ -3573,7 +3413,8 @@ function AllRegistrationsApp() {
         setUserNotificationMessage: setUserNotificationMessage, // Preposielame setter notifikácie
         setError: setError, // Preposielame setter chýb
         isNewEntry: isNewEntry, // Odovzdať príznak
-        getChangesForNotification: getChangesForNotification // Pass the helper function as a prop
+        getChangesForNotification: getChangesForNotification, // Pass the helper function as a prop
+        formatDateToDMMYYYY: formatDateToDMMYYYY // Pass formatDateToDMMYYYY as a prop
     }),
     // Modálne okno na výber typu člena
     React.createElement(AddMemberTypeSelectionModal, {
