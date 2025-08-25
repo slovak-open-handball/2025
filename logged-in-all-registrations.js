@@ -960,8 +960,11 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         if (key === '_category') {
             const originalCategory = originalValue || '-';
             const updatedCategory = updatedValue || '-';
+            
+            // Generovať notifikáciu, len ak sú hodnoty skutočne odlišné
+            // a ak sa nová hodnota nezmení na '-' z inej hodnoty ako '-'
             if (originalCategory !== updatedCategory) {
-                changes.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
+                 changes.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
             }
             continue;
         }
