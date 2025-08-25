@@ -921,7 +921,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         '_womenTeamMembersCount', '_menDriversCount', '_womenDriversCount', '_players',
         '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
         'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
-        'registrationDate', 'passwordLastChanged' // Pridané ignorované kľúče pre dátumy
+        'registrationDate', 'passwordLastChanged',
+        'teams', 'categories'
     ]);
 
     for (const key of keys) {
