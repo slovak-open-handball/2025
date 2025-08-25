@@ -1418,8 +1418,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 ];
                 let fieldsToRenderForUser = allUserFields;
                 const isCurrentUserAdmin = userRole === 'admin';
-                if (isCurrentUserAdmin && (isTargetUserAdmin || isTargetUserHall)) {
-                    fieldsToRenderForUser = ['firstName', 'lastName'];
+                const isUserBeingEditedAdminOrHall = isTargetUserAdmin || isTargetUserHall;
+
+                // Ak aktuálny používateľ je admin A používateľ, ktorého upravujeme, je admin ALEBO hall,
+                // zobrazíme len meno, priezvisko a telefónne číslo. Ostatné skryjeme.
+                if (isCurrentUserAdmin && isUserBeingEditedAdminOrHall) {
+                    fieldsToRenderForUser = ['firstName', 'lastName', 'contactPhoneNumber'];
                 }
 
                 const renderedFields = new Set(); // Track rendered fields for the user form
@@ -2546,7 +2550,7 @@ function AllRegistrationsApp() {
       }
       setCurrentSort({ column: columnId, direction });
 
-      const sorted = [...filteredUsers].doprava((a, b) => {
+      const sorted = [...filteredUsers].sort((a, b) => {
           const columnDef = defaultColumnOrder.find(col => col.id === columnId); // Use defaultColumnOrder
           // console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
           // console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
@@ -2968,7 +2972,7 @@ function AllRegistrationsApp() {
     } finally {
         window.hideGlobalLoader();
     }
-}, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle]); // remove editingData, localEditedData, displayDialCode, etc.
+}, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle]); 
 
 
   if (!isAuthReady || user === undefined || !userProfileData) {
