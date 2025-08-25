@@ -336,12 +336,12 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
 }
 
 // Helper function to get nested values from an object
-const getNestedValue = (obj, path, normalizeToEmptyString = false) => {
+const getNestedValue = (obj, path) => {
     const pathParts = path.split('.');
     let current = obj;
     for (const part of pathParts) {
         if (current === undefined || current === null) {
-            return normalizeToEmptyString ? '' : undefined;
+            return undefined; // Just return undefined if any part is null/undefined
         }
         const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/);
         if (arrayMatch) {
@@ -354,7 +354,7 @@ const getNestedValue = (obj, path, normalizeToEmptyString = false) => {
         }
         if (current === undefined) break;
     }
-    return normalizeToEmptyString && (current === null || current === undefined) ? '' : current;
+    return current; // Return the raw value, let caller normalize
 };
 
 // Helper function to get tshirt spans
@@ -1150,126 +1150,126 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
 
     // Helper to format keys for labels
-    const formatLabel = (key) => {
-        let label = key
-            .replace(/([A-Z])/g, ' $1')
-            .replace(/^./, str => str.toUpperCase())
-            .replace(/\./g, ' ')
-            .trim()
-            .replace(' (Fakturácia)', ''); 
-
-        if (key === 'billing.clubName') return 'Názov klubu';
-        if (key === 'billing.ico') return 'IČO';
-        if (key === 'billing.dic') return 'DIČ';
-        if (key === 'billing.icDph') return 'IČ DPH';
-        if (key === 'accommodation.type') return 'Typ ubytovania';
-        if (key === 'arrival.type') return 'Typ dopravy';
-        if (key === 'packageDetails.name') return 'Názov balíka';
-        if (key === 'packageDetails.meals') return 'Stravovanie';
-        if (key === 'teamName') return 'Názov tímu';
-        if (key === 'playerDetails') return 'Detaily hráčov';
-        if (key === 'menTeamMemberDetails') return 'Detaily členov R. tímu (muži)';
-        if (key === 'womenTeamMemberDetails') return 'Detaily členov R. tímu (ženy)';
-        if (key === 'driverDetailsMale') return 'Detaily šoféra (muž)'; 
-        if (key === 'driverDetailsFemale') return 'Detaily šoféra (žena)'; 
-        if (key === 'tshirts') return 'Tričká';
-        if (key === 'registrationDate') return 'Dátum registrácie';
-        if (key === 'dateOfBirth') return 'Dátum narodenia';
-        if (key === 'address.street') return 'Ulica';
-        if (key === 'address.houseNumber') return 'Popisné číslo';
-        if (key === 'address.postalCode') return 'PSČ';
-        if (key === 'address.city') return 'Mesto/Obec';
-        if (key === 'address.country') return 'Krajina';
-        if (key === 'street') return 'Ulica';
-        if (key === 'houseNumber') return 'Popisné číslo';
-        if (key === 'city') return 'Mesto/Obec';
-        if (key === 'postalCode') return 'PSČ';
-        if (key === 'country') return 'Krajina';
-        if (key === 'approved') return 'Schválený';
-        if (key === 'email') return 'E-mail';
-        if (key === 'contactPhoneNumber') return 'Telefónne číslo';
-        if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla';
-        if (key === 'password') return 'Heslo';
-        if (key === 'role') return 'Rola';
-        if (key === 'firstName') return 'Meno';
-        if (key === 'lastName') return 'Priezvisko';
-        if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
-        if (key === 'isMenuToggled') return 'Prepínač menu';
-        if (key === 'note') return 'Poznámka';
-        if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
-        if (key === 'jerseyNumber') return 'Číslo dresu';
-        if (key === 'registrationNumber') return 'Číslo registrácie';
-
-
-        return label;
-    };
-
-    // Helper to format values for display in input fields
-    const formatDisplayValue = (value, path) => { 
-        if (value === null || value === undefined) return '';
-        if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
-        
-        let date;
-        // Ak je to dátum narodenia (firstName, lastName, dateOfBirth atď. sú v core data), vráti YYYY-MM-DD formát
-        if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            return value; 
-        }
-        if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
-             if (typeof value.toDate === 'function') { 
-                date = value.toDate();
-            } else { 
-                date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
-            }
-            try {
-                const options = {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                };
-                return date.toLocaleString('sk-SK', options);
-            } catch (e) {
-                console.error("Chyba pri formátovaní Timestamp:", value, e);
-                return `[Chyba Timestamp: ${e.message}]`; 
-            }
-        }
-        
-        if (Array.isArray(value)) {
-            return value.map(item => {
-                if (typeof item === 'object' && item !== null) {
-                    try {
-                        // Special handling for t-shirt objects
-                        if (item.size && item.quantity !== undefined) {
-                            return `${item.size}: ${item.quantity}`;
-                        }
-                        // For other complex objects in arrays, provide a simplified representation
-                        if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
-                        return JSON.stringify(item);
-                    } catch (e) {
-                        console.error("Chyba pri prevode objektu poľa na reťazec:", item, e);
-                        return '[Chyba objektu]';
-                    }
-                }
-                return String(item);
-            }).join(', ');
-        }
-        
-        if (typeof value === 'object') {
-            if (value.name || value.type) { 
-                return value.name || value.type;
-            }
-            try {
-                return JSON.stringify(value);
-            } catch (e) {
-                console.error("Chyba pri prevode objektu na reťazec:", value, e);
-                return '[Chyba objektu]'; 
-            }
-        }
-        
-        return String(value); 
-    };
+//    const formatLabel = (key) => {
+//        let label = key
+//            .replace(/([A-Z])/g, ' $1')
+//            .replace(/^./, str => str.toUpperCase())
+//            .replace(/\./g, ' ')
+//            .trim()
+//            .replace(' (Fakturácia)', ''); 
+//
+//        if (key === 'billing.clubName') return 'Názov klubu';
+//        if (key === 'billing.ico') return 'IČO';
+//        if (key === 'billing.dic') return 'DIČ';
+//        if (key === 'billing.icDph') return 'IČ DPH';
+//        if (key === 'accommodation.type') return 'Typ ubytovania';
+//        if (key === 'arrival.type') return 'Typ dopravy';
+//        if (key === 'packageDetails.name') return 'Názov balíka';
+//        if (key === 'packageDetails.meals') return 'Stravovanie';
+//        if (key === 'teamName') return 'Názov tímu';
+//        if (key === 'playerDetails') return 'Detaily hráčov';
+//        if (key === 'menTeamMemberDetails') return 'Detaily členov R. tímu (muži)';
+//        if (key === 'womenTeamMemberDetails') return 'Detaily členov R. tímu (ženy)';
+//        if (key === 'driverDetailsMale') return 'Detaily šoféra (muž)'; 
+//        if (key === 'driverDetailsFemale') return 'Detaily šoféra (žena)'; 
+//        if (key === 'tshirts') return 'Tričká';
+//        if (key === 'registrationDate') return 'Dátum registrácie';
+//        if (key === 'dateOfBirth') return 'Dátum narodenia';
+//        if (key === 'address.street') return 'Ulica';
+//        if (key === 'address.houseNumber') return 'Popisné číslo';
+//        if (key === 'address.postalCode') return 'PSČ';
+//        if (key === 'address.city') return 'Mesto/Obec';
+//        if (key === 'address.country') return 'Krajina';
+//        if (key === 'street') return 'Ulica';
+//        if (key === 'houseNumber') return 'Popisné číslo';
+//        if (key === 'city') return 'Mesto/Obec';
+//        if (key === 'postalCode') return 'PSČ';
+//        if (key === 'country') return 'Krajina';
+//        if (key === 'approved') return 'Schválený';
+//        if (key === 'email') return 'E-mail';
+//        if (key === 'contactPhoneNumber') return 'Telefónne číslo';
+//        if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla';
+//        if (key === 'password') return 'Heslo';
+//        if (key === 'role') return 'Rola';
+//        if (key === 'firstName') return 'Meno';
+//        if (key === 'lastName') return 'Priezvisko';
+//        if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
+//        if (key === 'isMenuToggled') return 'Prepínač menu';
+//        if (key === 'note') return 'Poznámka';
+//        if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
+//        if (key === 'jerseyNumber') return 'Číslo dresu';
+//        if (key === 'registrationNumber') return 'Číslo registrácie';
+//
+//
+//        return label;
+//    };
+//
+//    // Helper to format values for display in input fields
+//    const formatDisplayValue = (value, path) => { 
+//        if (value === null || value === undefined) return '';
+//        if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
+//        
+//        let date;
+//        // Ak je to dátum narodenia (firstName, lastName, dateOfBirth atď. sú v core data), vráti YYYY-MM-DD formát
+//        if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+//            return value; 
+//        }
+//        if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+//             if (typeof value.toDate === 'function') { 
+//                date = value.toDate();
+//            } else { 
+//                date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
+//            }
+//            try {
+//                const options = {
+//                    day: '2-digit',
+//                    month: '2-digit',
+//                    year: 'numeric',
+//                    hour: '2-digit',
+//                    minute: '2-digit',
+//                    hour12: false
+//                };
+//                return date.toLocaleString('sk-SK', options);
+//            } catch (e) {
+//                console.error("Chyba pri formátovaní Timestamp:", value, e);
+//                return `[Chyba Timestamp: ${e.message}]`; 
+//            }
+//        }
+//        
+//        if (Array.isArray(value)) {
+//            return value.map(item => {
+//                if (typeof item === 'object' && item !== null) {
+//                    try {
+//                        // Special handling for t-shirt objects
+//                        if (item.size && item.quantity !== undefined) {
+//                            return `${item.size}: ${item.quantity}`;
+//                        }
+//                        // For other complex objects in arrays, provide a simplified representation
+//                        if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
+//                        return JSON.stringify(item);
+//                    } catch (e) {
+//                        console.error("Chyba pri prevode objektu poľa na reťazec:", item, e);
+//                        return '[Chyba objektu]';
+//                    }
+//                }
+//                return String(item);
+//            }).join(', ');
+//        }
+//        
+//        if (typeof value === 'object') {
+//            if (value.name || value.type) { 
+//                return value.name || value.type;
+//            }
+//            try {
+//                return JSON.stringify(value);
+//            } catch (e) {
+//                console.error("Chyba pri prevode objektu na reťazec:", value, e);
+//                return '[Chyba objektu]'; 
+//            }
+//        }
+//        
+//        return String(value); 
+//    };
 
     // Helper to handle input changes for nested data
     const handleChange = (path, newValue) => {
@@ -1439,12 +1439,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
     // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
     const getNestedDataForInput = (obj, path) => {
-        const value = getNestedValue(obj, path, true); // Používame normalizeToEmptyString=true
-        if (path.includes('postalCode')) { // Upravené pre address.postalCode
+        const value = getNestedValue(obj, path); // Používame neznormalizovaný getNestedValue (bez true)
+        if (value === null) return ''; // Pre zobrazenie v inpute null vždy ako ''
+        if (value === undefined) return ''; // Undefined taktiež ako ''
+        if (path.includes('postalCode')) {
             return String(value || '').replace(/\s/g, '');
-        }
-        if (path === 'contactPhoneNumber') {
-            return value;
         }
         return value;
     };
@@ -1525,7 +1524,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                         ref: el => inputRefs.current[path] = el,
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path), // Používame formatDisplayValue
+                        value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path), // Používa formatDisplayValue
                         onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
                         readOnly: !isSavable,
                         ...customProps 
