@@ -221,23 +221,27 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
   };
 
   const outerDivClasses = noOuterStyles ? '' : 'border border-gray-200 rounded-lg mb-2';
-  const buttonClasses = noOuterStyles ?
-    'flex justify-between items-center w-full px-4 py-2 text-left bg-transparent hover:bg-gray-100 focus:outline-none' :
-    'flex justify-between items-center w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none rounded-t-lg';
+  // ZMENA: Triedy pre hlavičku už nie sú pre tlačidlo
+  const headerClasses = noOuterStyles ?
+    'flex justify-between items-center w-full px-4 py-2 text-left bg-transparent' :
+    'flex justify-between items-center w-full px-4 py-2 text-left bg-gray-50 rounded-t-lg';
   const contentDivClasses = noOuterStyles ? 'p-2' : 'p-4 border-t border-gray-200';
 
   return React.createElement(
     'div',
     { className: outerDivClasses },
     React.createElement(
-      'button',
+      'div', // ZMENA: Zmenené z 'button' na 'div'
       {
-        className: buttonClasses,
-        onClick: handleToggle
+        className: headerClasses, // Použitie nových tried hlavičky
       },
-      React.createElement('span', { className: 'text-gray-500 mr-2' }, currentIsOpen ? '▲' : '▼'), // Expander arrow
-      actionElement && React.createElement('div', { className: 'flex-shrink-0 mr-2' }, actionElement), // New action element, moved before title
-      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title) // flex-grow to push actionElement to the right
+      // ZMENA: Šípka je teraz jediný klikateľný element na prepínanie
+      React.createElement('span', {
+        className: 'text-gray-500 mr-2 cursor-pointer p-1 rounded-full hover:bg-gray-200 focus:outline-none', // Pridaný cursor-pointer a štýly pre interaktivitu
+        onClick: handleToggle // Iba tento element spracúva prepínanie
+      }, currentIsOpen ? '▲' : '▼'),
+      actionElement && React.createElement('div', { className: 'flex-shrink-0 mr-2' }, actionElement), // Editovacie tlačidlo tímu, už má stopPropagation
+      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title) // Názov je len na zobrazenie
     ),
     currentIsOpen && React.createElement(
       'div',
@@ -918,7 +922,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
 
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         if (title.includes('Upraviť používateľa') && !(isUserBeingEditedAdmin || isUserBeingEditedHall)) { // Len pre bežných používateľov
@@ -1418,7 +1422,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
@@ -3033,8 +3037,8 @@ function AllRegistrationsApp() {
 
 
   if (!isAuthReady || user === undefined || !userProfileData) {
-    if (typeof window.hideGlobalLoader === 'function') {
-      window.hideGlobalLoader();
+    if (typeof window.showGlobalLoader === 'function') {
+      window.showGlobalLoader();
     }
     return null;
   }
@@ -3310,12 +3314,12 @@ function AllRegistrationsApp() {
                                             React.createElement('td', {
                                                 className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center',
                                             },
-                                                React.createElement('button', {
+                                                React.createElement('span', {
                                                     onClick: (e) => {
                                                         e.stopPropagation();
                                                         toggleTeamRowExpansion(teamUniqueId);
                                                     },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1 cursor-pointer'
                                                 }, expandedTeamRows[teamUniqueId] ? '▲' : '▼'),
                                                 React.createElement('button', {
                                                     onClick: (e) => {
