@@ -3323,8 +3323,8 @@ function AllRegistrationsApp() {
   if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
       // console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
       setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-      if (typeof window.hideGlobalLoader === 'function') {
-        window.hideGlobalLoader();
+      if (typeof window.showGlobalLoader === 'function') {
+        window.showGlobalLoader();
       }
       setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
       window.location.href = 'logged-in-my-data.html';
