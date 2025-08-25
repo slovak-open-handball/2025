@@ -426,7 +426,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 originalArray: 'womenTeamMemberDetails',
                 originalIndex: index,
                 uniqueId: `${team.teamName}-womenstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
-        });
+            });
         });
     }
     // Pridanie šoféra muža, ak existuje a je to pole
@@ -1349,7 +1349,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         
         memberFieldsOrder.forEach(path => {
             const value = getNestedValue(localEditedData, path);
-            // console.log(`DataEditModal:   renderMemberFields: For path: ${path}, raw value:`, value, `(type: ${typeof value})`); // Debug log
+            // console.log(`DataEditModal:   renderMemberFields: For path: ${path}, raw value:`, value, `(type: ${typeof value})`); // Debug log)
 
             const labelText = formatLabel(path);
             let inputType = 'text';
@@ -1933,7 +1933,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity50 flex justify-center items-center z-50 p-4' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4' },
         React.createElement(
             'div',
             {
@@ -1988,14 +1988,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
                                 if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
                                     const value = dataToPrepareForSave[key];
-                                    // Exclude empty strings
-                                    if (typeof value === 'string' && value.trim() === '') {
-                                        // Skip empty strings
-                                        // console.log(`DEBUG: Skipping empty string field in DataEditModal: ${key}`);
-                                    } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
-                                        // Skip empty objects (e.g., empty address object if all its sub-fields are empty)
-                                        // console.log(`DEBUG: Skipping empty object field in DataEditModal: ${key}`);
-                                    } else if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
+                                    // PÔVODNÁ LOGIKA: Preskakovala prázdne reťazce a objekty, čo spôsobovalo problém.
+                                    // if (typeof value === 'string' && value.trim() === '') {
+                                    //     // Skip empty strings
+                                    // } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
+                                    //     // Skip empty objects
+                                    // } else if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
+                                    //     // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
+                                    // } else {
+                                    //     finalDataToSave[key] = value;
+                                    // }
+
+                                    // NOVÁ LOGIKA: Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
+                                    // aby sa zmeny na "" správne uložili.
+                                    if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
                                         // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
                                         // console.log(`DEBUG: Skipping 'billing' field for admin/hall user in DataEditModal.`);
                                     } else {
@@ -2014,6 +2020,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             if (isTargetUserAdmin || isTargetUserHall) {
                                 delete originalDataForCompare.billing;
                                 delete originalDataForCompare.street;
+                                delete originalDataForCompare.originalDataPath; // Tiež odstrániť originalDataPath
                                 delete originalDataForCompare.houseNumber;
                                 delete originalDataForCompare.city;
                                 delete originalDataForCompare.postalCode;
@@ -2855,6 +2862,14 @@ function AllRegistrationsApp() {
 
     try {
         window.showGlobalLoader();
+        
+        // Získame aktuálne hodnoty isTargetUserAdmin a isTargetUserHall priamo z `editingData`
+        // pre aktuálne otvorený modál (ak je to úprava používateľa)
+        const isEditingUser = editModalTitle.includes('Upraviť používateľa');
+        const currentEditingDataRole = editingData?.role;
+        const localIsTargetUserAdmin = isEditingUser && currentEditingDataRole === 'admin';
+        const localIsTargetUserHall = isEditingUser && currentEditingDataRole === 'hall';
+
 
         // All data preparation, including phone number and team-specific fields,
         // and change generation has been moved to DataEditModal.
@@ -3015,7 +3030,8 @@ function AllRegistrationsApp() {
     } finally {
         window.hideGlobalLoader();
     }
-  }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle]); 
+  }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle, editingData]); // Pridané editingData ako závislosť
+
 
 
   if (!isAuthReady || user === undefined || !userProfileData) {
