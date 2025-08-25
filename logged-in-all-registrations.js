@@ -920,8 +920,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
     const keys = new Set([...Object.keys(original), ...Object.keys(updated)]);
 
-    const ignoredKeys = new Set([
-        '_userId', '_category', '_teamIndex', '_registeredBy', '_menTeamMembersCount',
+    // Tieto kľúče sú ignorované a nebudú generovať notifikácie
+    const ignoredAndInternalKeys = new Set([
+        '_userId', '_teamIndex', '_registeredBy', '_menTeamMembersCount',
         '_womenTeamMembersCount', '_menDriversCount', '_womenDriversCount', '_players',
         '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
         'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
@@ -929,49 +930,41 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         'teams', 'categories'
     ]);
 
+    // Tieto sú JEDINÉ kľúče, pre ktoré sa budú generovať notifikácie pri úprave údajov tímu
+    const allowedTeamNotificationKeys = new Set([
+        '_category',          // Kategória
+        'teamName',           // Názov tímu
+        'arrival',            // Typ dopravy
+        'accommodation',      // Typ ubytovania
+        'packageDetails',     // Balík
+        'tshirts'             // Tričká
+    ]);
+
     for (const key of keys) {
-        // Ignorovať interné a špecifické kľúče
-        if (ignoredKeys.has(key) || key.startsWith('_')) {
-            // Špeciálne ošetrenie pre _category, ak je to kľúč, ktorý sa má notifikovať explicitne
-            if (key === '_category') {
-                const originalCategory = original[key] || '-';
-                const updatedCategory = updated[key] || '-';
-                if (originalCategory !== updatedCategory) {
-                    changes.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
-                }
-            }
+        // Ignorovať interné kľúče, ktoré nie sú explicitne povolené pre notifikácie
+        if (ignoredAndInternalKeys.has(key) || (key.startsWith('_') && !allowedTeamNotificationKeys.has(key))) {
+            continue;
+        }
+
+        // Ak kľúč nie je v zozname povolených notifikácií pre tímy, preskočiť ho
+        if (!allowedTeamNotificationKeys.has(key)) {
             continue;
         }
 
         const originalValue = original[key];
         const updatedValue = updated[key];
 
-        // Špeciálne pre "address" (ak existujú ako objekty)
-        if (key === 'address' && typeof originalValue === 'object' && typeof updatedValue === 'object' && originalValue !== null && updatedValue !== null) {
-            const addressFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
-            for (const field of addressFields) {
-                const oldAddressPart = originalValue[field] || '-';
-                const newAddressPart = updatedValue[field] || '-';
-                if (oldAddressPart !== newAddressPart) {
-                    // Ignorovať zmeny na "-"
-                    if (newAddressPart !== '-') {
-                        changes.push(`Zmena ${formatLabel(field)}: z '${oldAddressPart}' na '${newAddressPart}'`);
-                    }
-                }
-            }
-            continue; // Pokračovať na ďalší kľúč, adresa je spracovaná
-        }
-
-        // Špeciálne pre "billing" (ak existujú ako objekty)
-        if (key === 'billing' && typeof originalValue === 'object' && typeof updatedValue === 'object' && originalValue !== null && updatedValue !== null) {
-            const nestedChanges = getChangesForNotification(originalValue, updatedValue, formatDateFn); // Pass formatDateFn recursively
-            if (nestedChanges.length > 0) {
-                changes.push(`${formatLabel(key)}: ${nestedChanges.join(', ')}`);
-            }
-            continue; // Skip further processing for this key
-        }
-
         // --- Špecifické notifikácie pre tímové detaily ---
+
+        // Kategória
+        if (key === '_category') {
+            const originalCategory = originalValue || '-';
+            const updatedCategory = updatedValue || '-';
+            if (originalCategory !== updatedCategory) {
+                changes.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
+            }
+            continue;
+        }
 
         // Názov tímu
         if (key === 'teamName') {
@@ -1029,34 +1022,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 }
             }
             continue;
-        }
-
-        // --- Koniec špecifických notifikácií ---
-
-
-        // Porovnanie hodnôt (s ohľadom na null/undefined a typy)
-        if (originalValue !== updatedValue) {
-            // Formátovanie pôvodných a aktualizovaných hodnôt
-            const formattedOriginal = originalValue === undefined || originalValue === null || originalValue === '' ? '-' : (typeof originalValue === 'boolean' ? (originalValue ? 'Áno' : 'Nie') : String(originalValue));
-            const formattedUpdated = updatedValue === undefined || updatedValue === null || updatedValue === '' ? '-' : (typeof updatedValue === 'boolean' ? (updatedValue ? 'Áno' : 'Nie') : String(updatedValue));
-
-            // Ignorovať notifikácie, ak sa nová hodnota zmení na "-"
-            if (formattedUpdated === '-') {
-                 continue;
-            }
-
-            // Špeciálne pre dátum narodenia
-            if (key === 'dateOfBirth') {
-                const formattedOriginalDate = formatDateFn(originalValue);
-                const formattedUpdatedDate = formatDateFn(updatedValue);
-                if (formattedOriginalDate !== formattedUpdatedDate) {
-                    if (formattedUpdatedDate !== '-') { // Znova skontrolujeme, či nová hodnota nie je '-'
-                        changes.push(`Zmena ${formatLabel(key)}: z '${formattedOriginalDate || '-'}' na '${formattedUpdatedDate || '-'}'`);
-                    }
-                }
-            } else {
-                 changes.push(`Zmena ${formatLabel(key)}: z '${formattedOriginal}' na '${formattedUpdated}'`);
-            }
         }
     }
     return changes;
