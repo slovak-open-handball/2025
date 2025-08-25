@@ -3165,7 +3165,7 @@ function AllRegistrationsApp() {
                 // Pridanie nového člena
                 const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} }; // Zabezpečiť address objekt
                 currentMemberArray.push(newMember);
-                setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
+                setUserNotificationMessage("Nový člen bol pridaný do tímu.", 'success');
             } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
                 // Aktualizácia existujúceho člena
                 const memberToUpdate = { ...currentMemberArray[memberArrayIndex] };
@@ -3179,7 +3179,7 @@ function AllRegistrationsApp() {
                     }
                 });
                 currentMemberArray[memberArrayIndex] = memberToUpdate;
-                setUserNotificationMessage("Zmeny člena boli úspešne uložené.", 'success');
+                setUserNotificationMessage("Zmeny člena boli uložené.", 'success');
             } else {
                 throw new Error(`Člen tímu pre aktualizáciu/pridanie sa nenašiel na ceste: ${originalDataPath} a isNewEntryFlag: ${isNewEntryFlag}.`);
             }
@@ -3284,7 +3284,7 @@ function AllRegistrationsApp() {
             updates[`teams.${category}`] = updatedTeamsForCategory;
             await updateDoc(targetDocRef, updates);
 
-            setUserNotificationMessage(`${memberName} bol úspešne odstránený z tímu.`, 'success');
+            setUserNotificationMessage(`${memberName} bol odstránený z tímu.`, 'success');
             closeEditModal();
         } else {
             throw new Error(`Člen tímu na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
