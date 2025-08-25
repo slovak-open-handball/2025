@@ -2239,7 +2239,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
                                 // Pass formatDateToDMMYYYYProp to getChangesForNotificationProp
                                 const generatedChanges = getChangesForNotificationProp(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYYProp); 
-                                
+
+                                // --- Explicitná kontrola pre zmenu kategórie ---
+                                // Zistite pôvodnú kategóriu (ak existuje)
+                                const originalCategory = originalDataForCompare?._category || '-';
+                                // Zistite novú kategóriu (ak existuje)
+                                const updatedCategory = modifiedDataForCompare?._category || '-';
+
+                                // Ak sa kategórie líšia a notifikácia ešte nebola pridaná
+                                if (originalCategory !== updatedCategory && !generatedChanges.some(change => change.includes('Zmena Kategórie:'))) {
+                                    generatedChanges.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
+                                }
+                                                              
                                 console.log("DEBUG: DataEditModal - onSave click. generatedChanges.length (before conditional):", generatedChanges.length);
                                 console.log("DEBUG: DataEditModal - onSave click. isNewEntry (modal state):", isNewEntry);
 
