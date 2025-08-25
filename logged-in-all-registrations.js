@@ -3602,6 +3602,7 @@ function AllRegistrationsApp() {
         columnName: filterColumn,
         onApplyFilter: applyFilter,
         initialFilterValues: activeFilters[filterColumn] || [],
+        onClearFilter: clearFilter,
         uniqueColumnValues: uniqueColumnValues
     }),
     // Removed ColumnVisibilityModal component rendering
