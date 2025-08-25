@@ -60,6 +60,90 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   );
 }
 
+// ConfirmationModal Component - Nové modálne okno pre potvrdenie
+function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }) {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-[1001] p-4' }, // Z-index vyšší ako DataEditModal
+        React.createElement(
+            'div',
+            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
+            React.createElement('h3', { className: 'text-lg font-semibold mb-4 text-gray-800' }, title),
+            React.createElement('p', { className: 'text-gray-700 mb-6' }, message),
+            React.createElement(
+                'div',
+                { className: 'flex justify-end space-x-2' },
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
+                    onClick: onClose
+                }, 'Zrušiť'),
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700',
+                    onClick: () => {
+                        onConfirm();
+                        onClose(); // Zatvoriť modálne okno po potvrdení
+                    }
+                }, 'Potvrdiť')
+            )
+        )
+    );
+}
+
+// AddMemberTypeSelectionModal Component - Nové modálne okno pre výber typu člena tímu
+function AddMemberTypeSelectionModal({ isOpen, onClose, onSelectType }) {
+    const [selectedType, setSelectedType] = React.useState('');
+
+    if (!isOpen) return null;
+
+    const handleAdd = () => {
+        if (selectedType) {
+            onSelectType(selectedType);
+            onClose();
+            setSelectedType(''); // Resetovať pre ďalšie použitie
+        }
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-[1002] p-4' }, // Vyšší z-index
+        React.createElement(
+            'div',
+            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
+            React.createElement('h3', { className: 'text-lg font-semibold mb-4 text-gray-800' }, 'Vybrať typ člena tímu'),
+            React.createElement(
+                'select',
+                {
+                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 mb-4 focus:outline-none focus:ring-2 focus:focus:ring-blue-500',
+                    value: selectedType,
+                    onChange: (e) => setSelectedType(e.target.value)
+                },
+                React.createElement('option', { value: '', disabled: true }, 'Vyberte typ'),
+                React.createElement('option', { value: 'Hráč' }, 'Hráč'),
+                React.createElement('option', { value: 'Člen realizačného tímu (žena)' }, 'Člen realizačného tímu (žena)'),
+                React.createElement('option', { value: 'Člen realizačného tímu (muž)' }, 'Člen realizačného tímu (muž)'),
+                React.createElement('option', { value: 'Šofér (žena)' }, 'Šofér (žena)'),
+                React.createElement('option', { value: 'Šofér (muž)' }, 'Šofér (muž)')
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex justify-end space-x-2' },
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
+                    onClick: onClose
+                }, 'Zrušiť'),
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
+                    onClick: handleAdd,
+                    disabled: !selectedType
+                }, 'Pridať')
+            )
+        )
+    );
+}
+
+
 // DialCodeSelectionModal Component - Nové modálne okno pre výber predvoľby
 function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDialCode }) {
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -221,24 +305,29 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
   };
 
   const outerDivClasses = noOuterStyles ? '' : 'border border-gray-200 rounded-lg mb-2';
-  const buttonClasses = noOuterStyles ?
-    'flex justify-between items-center w-full px-4 py-2 text-left bg-transparent hover:bg-gray-100 focus:outline-none' :
-    'flex justify-between items-center w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none rounded-t-lg';
+  // ZMENA: Triedy pre hlavičku už nie sú pre tlačidlo
+  const headerClasses = noOuterStyles ?
+    'flex justify-between items-center w-full px-4 py-2 text-left bg-transparent' :
+    'flex justify-between items-center w-full px-4 py-2 text-left bg-gray-50 rounded-t-lg';
   const contentDivClasses = noOuterStyles ? 'p-2' : 'p-4 border-t border-gray-200';
 
   return React.createElement(
     'div',
     { className: outerDivClasses },
     React.createElement(
-      'button',
+      'div', // ZMENA: Zmenené z 'button' na 'div'
       {
-        className: buttonClasses,
-        onClick: handleToggle
+        className: headerClasses, // Použitie nových tried hlavičky
       },
-      React.createElement('span', { className: 'text-gray-500 mr-2' }, currentIsOpen ? '▲' : '▼'), // Expander arrow
-      actionElement && React.createElement('div', { className: 'flex-shrink-0 mr-2' }, actionElement), // New action element, moved before title
-      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title) // flex-grow to push actionElement to the right
-    ),
+      // ZMENA: Šípka je teraz jediný klikateľný element na prepínanie
+      React.createElement('span', {
+        className: 'text-gray-500 mr-2 cursor-pointer p-1 rounded-full hover:bg-gray-200 focus:outline-none', // Pridaný cursor-pointer a štýly pre interaktivitu
+        onClick: handleToggle // Iba tento element spracúva prepínanie
+      }, currentIsOpen ? '▲' : '▼'),
+      actionElement && React.createElement('div', { className: 'flex-shrink-0 mr-2' }, actionElement), // Editovacie tlačidlo tímu, už má stopPropagation
+      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title) // Názov je len na zobrazenie
+    )
+    ,
     currentIsOpen && React.createElement(
       'div',
       { className: contentDivClasses },
@@ -249,14 +338,11 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
 
 // Helper function to get nested values from an object
 const getNestedValue = (obj, path) => {
-    // console.log(`getNestedValue: obj:`, obj, `path: ${path}`); // Debug log
     const pathParts = path.split('.');
     let current = obj;
     for (const part of pathParts) {
-        // Zabezpečiť, že current nie je null alebo undefined predtým, ako sa pokúsite získať vlastnosť
         if (current === undefined || current === null) {
-            // console.log(`getNestedValue: current is undefined/null at part ${part}, path: ${path}. Returning undefined.`); // Debug log
-            return undefined;
+            return undefined; // Just return undefined if any part is null/undefined
         }
         const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/);
         if (arrayMatch) {
@@ -267,11 +353,9 @@ const getNestedValue = (obj, path) => {
         } else {
             current = (current && current[part] !== undefined) ? current[part] : undefined;
         }
-        // console.log(`getNestedValue: After part ${part}, current:`, current); // Debug log
         if (current === undefined) break;
     }
-    // console.log(`getNestedValue: Final value for path ${path}:`, current); // Debug log
-    return current;
+    return current; // Return the raw value, let caller normalize
 };
 
 // Helper function to get tshirt spans
@@ -345,7 +429,7 @@ const isDateKey = (key) => {
 };
 
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage }) {
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember }) {
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -698,7 +782,16 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 defaultOpen: false,
                 actionElement: teamEditButtonElement
             },
-            teamDetailsTable
+            teamDetailsTable,
+            React.createElement('div', { className: 'flex justify-center mt-4' },
+                React.createElement('button', {
+                    className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                    onClick: (e) => {
+                        e.stopPropagation(); // Zabrániť prepínaniu sekcie
+                        onAddMember(team); // Zavolať funkciu na pridanie člena pre konkrétny tím
+                    }
+                }, '+')
+            )
         );
     } else {
         const shouldShowHeader = showUsersChecked || !showTeamsChecked;
@@ -706,7 +799,16 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             'div',
             { className: 'p-4 pt-0 bg-gray-50 rounded-lg' },
             shouldShowHeader && React.createElement('h3', { className: 'font-semibold text-gray-700 mb-2' }, 'Detaily členov tímu a stravovanie'),
-            teamDetailsTable
+            teamDetailsTable,
+            React.createElement('div', { className: 'flex justify-center mt-4' },
+                React.createElement('button', {
+                    className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                    onClick: (e) => {
+                        e.stopPropagation(); // Zabrániť prepínaniu sekcie
+                        onAddMember(team); // Zavolať funkciu na pridanie člena pre konkrétny tím
+                    }
+                }, '+')
+            )
         );
     }
 }
@@ -752,9 +854,173 @@ const combinePhoneNumber = (dialCode, numberWithoutDialCode) => {
     return '';
 };
 
+// Helper to format keys for labels
+const formatLabel = (key) => {
+    let label = key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .replace(/\./g, ' ')
+        .trim()
+        .replace(' (Fakturácia)', ''); 
+
+    if (key === 'billing.clubName') return 'Názov klubu';
+    if (key === 'billing.ico') return 'IČO';
+    if (key === 'billing.dic') return 'DIČ';
+    if (key === 'billing.icDph') return 'IČ DPH';
+    if (key === 'accommodation.type') return 'Typ ubytovania';
+    if (key === 'arrival.type') return 'Typ dopravy';
+    if (key === 'packageDetails.name') return 'Názov balíka';
+    if (key === 'packageDetails.meals') return 'Stravovanie';
+    if (key === 'teamName') return 'Názov tímu';
+    if (key === 'playerDetails') return 'Detaily hráčov';
+    if (key === 'menTeamMemberDetails') return 'Detaily členov R. tímu (muži)';
+    if (key === 'womenTeamMemberDetails') return 'Detaily členov R. tímu (ženy)';
+    if (key === 'driverDetailsMale') return 'Detaily šoféra (muž)'; 
+    if (key === 'driverDetailsFemale') return 'Detaily šoféra (žena)'; 
+    if (key === 'tshirts') return 'Tričká';
+    if (key === 'registrationDate') return 'Dátum registrácie';
+    if (key === 'dateOfBirth') return 'Dátum narodenia';
+    if (key === 'address.street') return 'Ulica';
+    if (key === 'address.houseNumber') return 'Popisné číslo';
+    if (key === 'address.postalCode') return 'PSČ';
+    if (key === 'address.city') return 'Mesto/Obec';
+    if (key === 'address.country') return 'Krajina';
+    if (key === 'street') return 'Ulica';
+    if (key === 'houseNumber') return 'Popisné číslo';
+    if (key === 'city') return 'Mesto/Obec';
+    if (key === 'postalCode') return 'PSČ';
+    if (key === 'country') return 'Krajina';
+    if (key === 'approved') return 'Schválený';
+    if (key === 'email') return 'E-mail';
+    if (key === 'contactPhoneNumber') return 'Telefónne číslo';
+    if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla';
+    if (key === 'password') return 'Heslo';
+    if (key === 'role') return 'Rola';
+    if (key === 'firstName') return 'Meno';
+    if (key === 'lastName') return 'Priezvisko';
+    if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
+    if (key === 'isMenuToggled') return 'Prepínač menu';
+    if (key === 'note') return 'Poznámka';
+    if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
+    if (key === 'jerseyNumber') return 'Číslo dresu';
+    if (key === 'registrationNumber') return 'Číslo registrácie';
+
+
+    return label;
+};
+
+// Pomocná funkcia na porovnávanie zmien pre notifikácie
+const getChangesForNotification = (original, updated) => {
+    const changes = [];
+    const keys = new Set([...Object.keys(original), ...Object.keys(updated)]);
+
+    for (const key of keys) {
+        const originalValue = original[key];
+        const updatedValue = updated[key];
+
+        // Špeciálne pre "address" a "billing" (ak existujú ako objekty)
+        if ((key === 'address' || key === 'billing') && typeof originalValue === 'object' && typeof updatedValue === 'object' && originalValue !== null && updatedValue !== null) {
+            const nestedChanges = getChangesForNotification(originalValue, updatedValue);
+            if (nestedChanges.length > 0) {
+                changes.push(`${formatLabel(key)}: ${nestedChanges.join(', ')}`);
+            }
+            continue; // Skip further processing for this key
+        }
+
+        // Porovnanie hodnôt (s ohľadom na null/undefined a typy)
+        if (originalValue !== updatedValue) {
+            // Predpokladáme, že pre jednoduché typy je to priama zmena
+            // Pre dátum narodenia formátujeme
+            if (key === 'dateOfBirth') {
+                const formattedOriginal = formatDateToDMMYYYY(originalValue);
+                const formattedUpdated = formatDateToDMMYYYY(updatedValue);
+                if (formattedOriginal !== formattedUpdated) {
+                    changes.push(`Zmena ${formatLabel(key)}: z '${formattedOriginal || '-'}' na '${formattedUpdated || '-'}'`);
+                }
+            } else if (typeof originalValue === 'boolean' || typeof updatedValue === 'boolean') {
+                 const originalBool = originalValue === true ? 'Áno' : 'Nie';
+                 const updatedBool = updatedValue === true ? 'Áno' : 'Nie';
+                 if (originalBool !== updatedBool) {
+                     changes.push(`Zmena ${formatLabel(key)}: z '${originalBool}' na '${updatedBool}'`);
+                 }
+            } else {
+                 changes.push(`Zmena ${formatLabel(key)}: z '${originalValue || '-'}' na '${updatedValue || '-'}'`);
+            }
+        }
+    }
+    return changes;
+};
+
+// Helper to format values for display in input fields
+const formatDisplayValue = (value, path) => { 
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
+    
+    let date;
+    // Ak je to dátum narodenia (firstName, lastName, dateOfBirth atď. sú v core data), vráti YYYY-MM-DD formát
+    if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return value; 
+    }
+    if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+         if (typeof value.toDate === 'function') { 
+            date = value.toDate();
+        } else { 
+            date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
+        }
+        try {
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            };
+            return date.toLocaleString('sk-SK', options);
+        } catch (e) {
+            console.error("Chyba pri formátovaní Timestamp:", value, e);
+            return `[Chyba Timestamp: ${e.message}]`; 
+        }
+    }
+    
+    if (Array.isArray(value)) {
+        return value.map(item => {
+            if (typeof item === 'object' && item !== null) {
+                try {
+                    // Special handling for t-shirt objects
+                    if (item.size && item.quantity !== undefined) {
+                        return `${item.size}: ${item.quantity}`;
+                    }
+                    // For other complex objects in arrays, provide a simplified representation
+                    if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
+                    return JSON.stringify(item);
+                } catch (e) {
+                    console.error("Chyba pri prevode objektu poľa na reťazec:", item, e);
+                    return '[Chyba objektu]';
+                }
+            }
+            return String(item);
+        }).join(', ');
+    }
+    
+    if (typeof value === 'object') {
+        if (value.name || value.type) { 
+            return value.name || value.type;
+        }
+        try {
+            return JSON.stringify(value);
+        } catch (e) {
+            console.error("Chyba pri prevode objektu na reťazec:", value, e);
+            return '[Chyba objektu]'; 
+        }
+    }
+    
+    return String(value); 
+};
+
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, originalDataPath, setUserNotificationMessage, setError }) { // Pridané setUserNotificationMessage a setError
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp }) { // Pridané onDeleteMember a getChangesForNotificationProp
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
@@ -793,6 +1059,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
     // Zmenené teamTshirts na pole objektov, každý s tempId pre React kľúče
     const [teamTshirts, setTeamTshirts] = React.useState([]); // [{ tempId: 'uuid', size: 'S', quantity: 5 }]
+
+    // Stavy pre potvrdenie odstránenia
+    const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = React.useState(false);
+    const [deleteConfirmMessage, setDeleteConfirmMessage] = React.useState('');
 
     // Utility to generate a unique ID for new t-shirt entries
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
@@ -940,7 +1210,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
-        } else if (isEditingMember) { // Používame robustnejšiu detekciu
+        } else if (isEditingMember || isNewEntry) { // Používame robustnejšiu detekciu
             // Inicializovať adresné polia, ak neexistujú, a nastaviť ich na prázdny reťazec
             // Toto je kľúčové pre správne zobrazenie input boxov pre členov realizačného tímu, hráčov a šoférov
             if (!initialData.address) initialData.address = {};
@@ -982,14 +1252,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         
         setLocalEditedData(initialData); 
         console.log("DataEditModal useEffect: localEditedData initialized to:", initialData); // Debug log
-    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes]); // Pridané availableTshirtSizes ako závislosť
+    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry]); // Pridané availableTshirtSizes a isNewEntry ako závislosť
 
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
+            // Check if dial code modal is open, if so, don't close this modal
             if (isDialCodeModalOpen) {
                 return;
             }
+            // Check if confirmation modal is open, if so, don't close this modal
+            if (isConfirmDeleteOpen) {
+                return;
+            }
+
             if (modalRef.current && !modalRef.current.contains(event.target)) {
                 onClose();
             }
@@ -1002,7 +1278,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose, isDialCodeModalOpen]); 
+    }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen]); // Add isConfirmDeleteOpen to dependencies
 
     if (!isOpen) return null;
 
@@ -1035,129 +1311,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         } else {
             setUserNotificationMessage("Všetky dostupné veľkosti tričiek sú už pridané.", 'info');
         }
-    };
-
-
-    // Helper to format keys for labels
-    const formatLabel = (key) => {
-        let label = key
-            .replace(/([A-Z])/g, ' $1')
-            .replace(/^./, str => str.toUpperCase())
-            .replace(/\./g, ' ')
-            .trim()
-            .replace(' (Fakturácia)', ''); 
-
-        if (key === 'billing.clubName') return 'Názov klubu';
-        if (key === 'billing.ico') return 'IČO';
-        if (key === 'billing.dic') return 'DIČ';
-        if (key === 'billing.icDph') return 'IČ DPH';
-        if (key === 'accommodation.type') return 'Typ ubytovania';
-        if (key === 'arrival.type') return 'Typ dopravy';
-        if (key === 'packageDetails.name') return 'Názov balíka';
-        if (key === 'packageDetails.meals') return 'Stravovanie';
-        if (key === 'teamName') return 'Názov tímu';
-        if (key === 'playerDetails') return 'Detaily hráčov';
-        if (key === 'menTeamMemberDetails') return 'Detaily členov R. tímu (muži)';
-        if (key === 'womenTeamMemberDetails') return 'Detaily členov R. tímu (ženy)';
-        if (key === 'driverDetailsMale') return 'Detaily šoféra (muž)'; 
-        if (key === 'driverDetailsFemale') return 'Detaily šoféra (žena)'; 
-        if (key === 'tshirts') return 'Tričká';
-        if (key === 'registrationDate') return 'Dátum registrácie';
-        if (key === 'dateOfBirth') return 'Dátum narodenia';
-        if (key === 'address.street') return 'Ulica';
-        if (key === 'address.houseNumber') return 'Popisné číslo';
-        if (key === 'address.postalCode') return 'PSČ';
-        if (key === 'address.city') return 'Mesto/Obec';
-        if (key === 'address.country') return 'Krajina';
-        if (key === 'street') return 'Ulica';
-        if (key === 'houseNumber') return 'Popisné číslo';
-        if (key === 'city') return 'Mesto/Obec';
-        if (key === 'postalCode') return 'PSČ';
-        if (key === 'country') return 'Krajina';
-        if (key === 'approved') return 'Schválený';
-        if (key === 'email') return 'E-mail';
-        if (key === 'contactPhoneNumber') return 'Telefónne číslo';
-        if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla';
-        if (key === 'password') return 'Heslo';
-        if (key === 'role') return 'Rola';
-        if (key === 'firstName') return 'Meno';
-        if (key === 'lastName') return 'Priezvisko';
-        if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
-        if (key === 'isMenuToggled') return 'Prepínač menu';
-        if (key === 'note') return 'Poznámka';
-        if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
-        if (key === 'jerseyNumber') return 'Číslo dresu';
-        if (key === 'registrationNumber') return 'Číslo registrácie';
-
-
-        return label;
-    };
-
-    // Helper to format values for display in input fields
-    const formatDisplayValue = (value, path) => { 
-        if (value === null || value === undefined) return '';
-        if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
-        
-        let date;
-        // Ak je to dátum narodenia (firstName, lastName, dateOfBirth atď. sú v core data), vráti YYYY-MM-DD formát
-        if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            return value; 
-        }
-        if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
-             if (typeof value.toDate === 'function') { 
-                date = value.toDate();
-            } else { 
-                date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
-            }
-            try {
-                const options = {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                };
-                return date.toLocaleString('sk-SK', options);
-            } catch (e) {
-                console.error("Chyba pri formátovaní Timestamp:", value, e);
-                return `[Chyba Timestamp: ${e.message}]`; 
-            }
-        }
-        
-        if (Array.isArray(value)) {
-            return value.map(item => {
-                if (typeof item === 'object' && item !== null) {
-                    try {
-                        // Special handling for t-shirt objects
-                        if (item.size && item.quantity !== undefined) {
-                            return `${item.size}: ${item.quantity}`;
-                        }
-                        // For other complex objects in arrays, provide a simplified representation
-                        if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
-                        return JSON.stringify(item);
-                    } catch (e) {
-                        console.error("Chyba pri prevode objektu poľa na reťazec:", item, e);
-                        return '[Chyba objektu]';
-                    }
-                }
-                return String(item);
-            }).join(', ');
-        }
-        
-        if (typeof value === 'object') {
-            if (value.name || value.type) { 
-                return value.name || value.type;
-            }
-            try {
-                return JSON.stringify(value);
-            } catch (e) {
-                console.error("Chyba pri prevode objektu na reťazec:", value, e);
-                return '[Chyba objektu]'; 
-            }
-        }
-        
-        return String(value); 
     };
 
     // Helper to handle input changes for nested data
@@ -1328,14 +1481,24 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
     const getNestedDataForInput = (obj, path) => {
-        const value = getNestedValue(obj, path);
-        if (path.includes('postalCode')) { // Upravené pre address.postalCode
+        const value = getNestedValue(obj, path); // Používame neznormalizovaný getNestedValue (bez true)
+        if (value === null) return ''; // Pre zobrazenie v inpute null vždy ako ''
+        if (value === undefined) return ''; // Undefined taktiež ako ''
+        if (path.includes('postalCode')) {
             return String(value || '').replace(/\s/g, '');
         }
-        if (path === 'contactPhoneNumber') {
-            return value;
-        }
         return value;
+    };
+
+    // Určiť, či sa upravuje člen tímu (hráč, RT člen, šofér)
+    const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
+                            title.toLowerCase().includes('upraviť člen realizačného tímu') || 
+                            title.toLowerCase().includes('upraviť šofér');
+
+    const handleDeleteMemberClick = () => {
+        const memberName = `${localEditedData.firstName || ''} ${localEditedData.lastName || ''}`.trim();
+        setDeleteConfirmMessage(`Naozaj chcete odstrániť ${memberName || 'tohto člena tímu'}? Túto akciu nie je možné vrátiť späť.`);
+        setIsConfirmDeleteOpen(true);
     };
 
     // Nová funkcia pre vykresľovanie polí člena tímu/hráča/šoféra
@@ -1348,7 +1511,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         ];
         
         memberFieldsOrder.forEach(path => {
+            // Používame getNestedValue s localEditedData pre aktuálny stav
             const value = getNestedValue(localEditedData, path);
+            const inputValue = value === undefined || value === null ? '' : value; // Pre input hodnoty
             // console.log(`DataEditModal:   renderMemberFields: For path: ${path}, raw value:`, value, `(type: ${typeof value})`); // Debug log)
 
             const labelText = formatLabel(path);
@@ -1356,7 +1521,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             let isCheckbox = false;
             let customProps = {}; 
 
-            if (typeof value === 'boolean') {
+            if (typeof inputValue === 'boolean') {
                 isCheckbox = true;
             } else if (path.includes('dateOfBirth')) {
                 inputType = 'date';
@@ -1403,7 +1568,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         ref: el => inputRefs.current[path] = el,
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path), // Používame formatDisplayValue
+                        value: formatDisplayValue(inputValue, path), // Používa formatDisplayValue
                         onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
                         readOnly: !isSavable,
                         ...customProps 
@@ -1417,9 +1582,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
 
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
-        const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
+        const isEditingMemberOrNewEntry = title.toLowerCase().includes('upraviť hráč') || 
                                 title.toLowerCase().includes('upraviť člen realizačného tímu') || 
-                                title.toLowerCase().includes('upraviť šofér');
+                                title.toLowerCase().includes('upraviť šofér') || isNewEntry;
 
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
 
@@ -1429,7 +1594,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
 
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
-            if (isEditingMember) {
+            if (isEditingMemberOrNewEntry) { // Použiť novú premennú
                 // console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
                 return renderMemberFields(); // Voláme novú dedikovanú funkciu
             } else if (title.includes('Upraviť používateľa')) { 
@@ -1899,47 +2064,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         }
     };
 
-    // Helper function to get changes for notification
-    const getChangesForNotification = (original, updated, pathPrefix = '') => {
-        const changes = [];
-        const allKeys = new Set([...Object.keys(original || {}), ...Object.keys(updated || {})]);
-
-        for (const key of allKeys) {
-            // Skip internal keys, password, etc.
-            if (key.startsWith('_') || ['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password'].includes(key)) {
-                continue;
-            }
-
-            const currentFullPath = pathPrefix ? `${pathPrefix}.${key}` : key;
-            const originalValue = getNestedValue(original, currentFullPath);
-            const updatedValue = getNestedValue(updated, currentFullPath);
-
-            // Treat null and undefined as equivalent for comparison if both are falsy
-            const safeOriginalValue = originalValue === undefined ? null : originalValue;
-            const safeUpdatedValue = updatedValue === undefined ? null : updatedValue;
-
-            // Recursive comparison for objects (not arrays or Timestamps)
-            if (
-                typeof safeOriginalValue === 'object' && safeOriginalValue !== null && !Array.isArray(safeOriginalValue) && typeof safeOriginalValue.toDate !== 'function' &&
-                typeof safeUpdatedValue === 'object' && safeUpdatedValue !== null && !Array.isArray(safeUpdatedValue) && typeof safeUpdatedValue.toDate !== 'function'
-            ) {
-                // If both are objects and not empty, recurse. Otherwise, compare as values.
-                if (Object.keys(safeOriginalValue).length > 0 || Object.keys(safeUpdatedValue).length > 0) {
-                    changes.push(...getChangesForNotification(safeOriginalValue, safeUpdatedValue, currentFullPath));
-                } else if (Object.keys(safeOriginalValue).length !== Object.keys(safeUpdatedValue).length) {
-                    // One is empty, the other is not (e.g., from {} to null, or vice versa)
-                    changes.push(`Zmena ${formatLabel(currentFullPath)}: z '${formatDisplayValue(safeOriginalValue, currentFullPath)}' na '${formatDisplayValue(safeUpdatedValue, currentFullPath)}'`);
-                }
-            }
-            // Compare values directly (primitives, arrays, Timestamps, or type changes)
-            else if (JSON.stringify(safeOriginalValue) !== JSON.stringify(safeUpdatedValue)) {
-                changes.push(`Zmena ${formatLabel(currentFullPath)}: z '${formatDisplayValue(safeOriginalValue, currentFullPath)}' na '${formatDisplayValue(safeUpdatedValue, currentFullPath)}'`);
-            }
-        }
-        return changes;
-    };
-
-
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4' },
@@ -1957,110 +2081,122 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             ),
             React.createElement(
                 'div',
-                { className: 'flex justify-end space-x-2 mt-4' },
-                React.createElement('button', {
-                    className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
-                    onClick: onClose
-                }, 'Zavrieť'),
-                isSavable && React.createElement('button', {
-                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
-                    onClick: async () => {
-                        try {
-                            window.showGlobalLoader();
+                { className: 'flex justify-between items-center mt-4' },
+                // Tlačidlo "Odstrániť" sa zobrazí len ak sa nepridáva nový záznam
+                !isNewEntry && isEditingMember && React.createElement('button', { // Podmienene renderovať tlačidlo "Odstrániť"
+                    className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
+                    onClick: handleDeleteMemberClick,
+                    disabled: !isSavable
+                }, 'Odstrániť'),
+                React.createElement(
+                    'div',
+                    { className: 'flex space-x-2' },
+                    React.createElement('button', {
+                        className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
+                        onClick: onClose
+                    }, 'Zavrieť'),
+                    isSavable && React.createElement('button', {
+                        className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
+                        onClick: async () => {
+                            try {
+                                window.showGlobalLoader();
 
-                            // console.log("DEBUG DataEditModal Save Button Click: originalDataPath:", originalDataPath); // Debug log
+                                // console.log("DEBUG DataEditModal Save Button Click: originalDataPath:", originalDataPath); // Debug log
 
-                            const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
-                            
-                            // 1. Zostaviť plné telefónne číslo (len ak sa neupravuje admin/hall používateľ)
-                            if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) {
-                                dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                            } else if (isTargetUserAdmin || isTargetUserHall) {
-                                // Ak sa upravuje admin/hall používateľ, zabezpečiť, že sa contactPhoneNumber vôbec neuloží
-                                delete dataToPrepareForSave.contactPhoneNumber;
-                            }
-
-
-                            // 2. Spracovať špecifické polia tímu, ak upravujeme tím
-                            if (title.includes('Upraviť tím')) {
-                                dataToPrepareForSave.category = selectedCategory;
-                                dataToPrepareForSave._category = selectedCategory; 
-                                dataToPrepareForSave.arrival = { type: selectedArrivalType };
-                                dataToPrepareForSave.accommodation = { type: selectedAccommodationType };
-                                dataToPrepareForSave.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
-                                dataToPrepareForSave.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
-                            }
-
-                            // 3. Filtrovanie interných kľúčov a prázdnych polí pre finálny objekt na uloženie
-                            const finalDataToSave = {};
-                            Object.keys(dataToPrepareForSave).forEach(key => {
-                                // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
-                                if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
-                                    const value = dataToPrepareForSave[key];
-                                    // Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
-                                    // aby sa zmeny na "" správne uložili.
-                                    if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
-                                        // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
-                                        // console.log(`DEBUG: Skipping 'billing' field for admin/hall user in DataEditModal.`);
-                                    } else {
-                                        finalDataToSave[key] = value;
-                                    }
+                                const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
+                                
+                                // 1. Zostaviť plné telefónne číslo (len ak sa neupravuje admin/hall používateľ)
+                                if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) { // Opravená premenná
+                                    dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
+                                } else if (isTargetUserAdmin || isTargetUserHall) { // Opravená premenná
+                                    // Ak sa upravuje admin/hall používateľ, zabezpečiť, že sa contactPhoneNumber vôbec neuloží
+                                    delete dataToPrepareForSave.contactPhoneNumber;
                                 }
-                            });
-                            
-                            // console.log("DEBUG DataEditModal: Final data prepared for saving:", finalDataToSave); // Debug log
-
-                            // 4. Porovnať s pôvodnými dátami pre notifikáciu
-                            const originalDataForCompare = JSON.parse(JSON.stringify(data)); // Original data passed as prop
-                            const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
-
-                            // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania fakturačné a adresné údaje
-                            if (isTargetUserAdmin || isTargetUserHall) {
-                                delete originalDataForCompare.billing;
-                                delete originalDataForCompare.street;
-                                delete originalDataForCompare.originalDataPath; // Tiež odstrániť originalDataPath
-                                delete originalDataForCompare.houseNumber;
-                                delete originalDataForCompare.city;
-                                delete originalDataForCompare.postalCode;
-                                delete originalDataForCompare.country;
-                                delete originalDataForCompare.note;
-                                delete originalDataForCompare.contactPhoneNumber;
-                            }
 
 
-                            const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
+                                // 2. Spracovať špecifické polia tímu, ak upravujeme tím
+                                if (title.includes('Upraviť tím')) {
+                                    dataToPrepareForSave.category = selectedCategory;
+                                    dataToPrepareForSave._category = selectedCategory; 
+                                    dataToPrepareForSave.arrival = { type: selectedArrivalType };
+                                    dataToPrepareForSave.accommodation = { type: selectedAccommodationType };
+                                    // Removed the problematic line: dataToPrepareForSave.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
+                                    dataToPrepareForSave.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
+                                }
 
-                            if (generatedChanges.length === 0) {
-                                setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
-                                onClose();
-                                return;
-                            }
-
-                            // --- Save Notification to Firestore ---
-                            const userEmail = window.auth.currentUser?.email;
-                            if (generatedChanges.length > 0 && userEmail) {
-                                const notificationsCollectionRef = collection(db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
-                                    userEmail,
-                                    changes: generatedChanges,
-                                    timestamp: serverTimestamp()
+                                // 3. Filtrovanie interných kľúčov a prázdnych polí pre finálny objekt na uloženie
+                                const finalDataToSave = {};
+                                Object.keys(dataToPrepareForSave).forEach(key => {
+                                    // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
+                                    if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
+                                        const value = dataToPrepareForSave[key];
+                                        // Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
+                                        // aby sa zmeny na "" správne uložili.
+                                        if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) { // Opravená premenná
+                                            // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
+                                            // console.log(`DEBUG: Skipping 'billing' field for admin/hall user in DataEditModal.`);
+                                        } else {
+                                            finalDataToSave[key] = value;
+                                        }
+                                    }
                                 });
-                                console.log("Notifikácia o zmene uložená do Firestore.");
+                                
+                                console.log("DEBUG: DataEditModal - onSave click. Final data prepared for saving:", finalDataToSave); // Debug log
+
+                                // 4. Porovnať s pôvodnými dátami pre notifikáciu
+                                const originalDataForCompare = JSON.parse(JSON.stringify(data)); // Original data passed as prop (empty for new)
+                                const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
+
+                                // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania fakturačné a adresné údaje
+                                if (localIsTargetUserAdmin || localIsTargetUserHall) { // Opravená premenná
+                                    delete originalDataForCompare.address;
+                                    delete originalDataForCompare.billingAddress;
+                                    delete modifiedDataForCompare.address;
+                                    delete modifiedDataForCompare.billingAddress;
+                                }
+
+                                console.log("DEBUG: DataEditModal - onSave click. originalDataForCompare for diff:", originalDataForCompare);
+                                console.log("DEBUG: DataEditModal - onSave click. modifiedDataForCompare for diff:", modifiedDataForCompare);
+
+                                const generatedChanges = getChangesForNotificationProp(originalDataForCompare, modifiedDataForCompare); // Použiť prop
+                                
+                                console.log("DEBUG: DataEditModal - onSave click. generatedChanges.length (before conditional):", generatedChanges.length);
+                                console.log("DEBUG: DataEditModal - onSave click. isNewEntry (modal state):", isNewEntry);
+
+                                // Zjednodušená podmienka: Ak nie sú žiadne detegované zmeny, notifikovať a vrátiť sa.
+                                // Pre nové záznamy sa očakáva,že generatedChanges.length > 0, ak sa zadali údaje.
+                                if (generatedChanges.length === 0 && !isNewEntry) { // Pridaná podmienka !isNewEntry
+                                    setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+                                    onClose();
+                                    return;
+                                }
+
+                                // --- Save Notification to Firestore ---
+                                const userEmail = window.auth.currentUser?.email;
+                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) { // Notify also for new entries (if changes or it's a new entry)
+                                    const notificationsCollectionRef = collection(db, 'notifications');
+                                    await addDoc(notificationsCollectionRef, {
+                                        userEmail,
+                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName || ''} ${finalDataToSave.lastName || ''}`.trim()] : generatedChanges,
+                                        timestamp: serverTimestamp()
+                                    });
+                                    console.log("Notifikácia o zmene uložená do Firestore.");
+                                }
+                                // --- End Notification ---
+
+                                // Teraz zavolať prop onSave z AllRegistrationsApp s kompletne pripravenými dátami
+                                onSave(finalDataToSave, targetDocRef, originalDataPath, isNewEntry); // Pass only what AllRegistrationsApp needs to perform the Firestore update
+
+                            } catch (e) {
+                                console.error("Chyba v DataEditModal pri príprave dát na uloženie:", e);
+                                setError(`Chyba pri ukladaní dát: ${e.message}`);
+                                setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
+                            } finally {
+                                window.hideGlobalLoader();
                             }
-                            // --- End Notification ---
-
-                            // Teraz zavolať prop onSave z AllRegistrationsApp s kompletne pripravenými dátami
-                            onSave(finalDataToSave, targetDocRef, originalDataPath); // Pass only what AllRegistrationsApp needs to perform the Firestore update
-
-                        } catch (e) {
-                            console.error("Chyba v DataEditModal pri príprave dát na uloženie:", e);
-                            setError(`Chyba pri ukladaní dát: ${e.message}`);
-                            setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
-                        } finally {
-                            window.hideGlobalLoader();
                         }
-                    }
-                }, 'Uložiť zmeny')
+                    }, 'Uložiť zmeny')
+                )
             )
         ),
         // DialCodeSelectionModal sa zobrazí iba vtedy, ak sa upravuje používateľ a NIE JE to admin/hall
@@ -2069,11 +2205,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
             onClose: () => setIsDialCodeModalOpen(false),
             onSelectDialCode: handleSelectDialCode,
             currentDialCode: displayDialCode
+        }),
+        React.createElement(ConfirmationModal, {
+            isOpen: isConfirmDeleteOpen,
+            onClose: () => setIsConfirmDeleteOpen(false),
+            onConfirm: () => onDeleteMember(targetDocRef, originalDataPath), // Zavolať prop onDeleteMember
+            title: "Potvrdenie odstránenia",
+            message: deleteConfirmMessage
         })
     );
 }
 
-// Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenie upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
+// Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenia upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
 const updateNestedObjectByPath = (obj, path, value) => {
     // console.log("DEBUG updateNestedObjectByPath: Path:", path); // LOGGING
     if (!path) {
@@ -2137,6 +2280,19 @@ const updateNestedObjectByPath = (obj, path, value) => {
     };
 };
 
+// Simplified recalculateTeamCounts function
+const recalculateTeamCounts = (teamToUpdate) => {
+    // Ensure all member arrays are defined, even if empty
+    teamToUpdate.playerDetails = teamToUpdate.playerDetails || [];
+    teamToUpdate.menTeamMemberDetails = teamToUpdate.menTeamMemberDetails || [];
+    teamToUpdate.womenTeamMemberDetails = teamToUpdate.womenTeamMemberDetails || [];
+    teamToUpdate.driverDetailsMale = teamToUpdate.driverDetailsMale || [];
+    teamToUpdate.driverDetailsFemale = teamToUpdate.driverDetailsFemale || [];
+    // No need to explicitly update `players`, `menTeamMembersCount` etc. here,
+    // as they are derived properties in `allTeamsFlattened` based on the array lengths.
+    return teamToUpdate;
+};
+
 
 // Hlavný React komponent pre stránku logged-in-all-registrations.html
 function AllRegistrationsApp() {
@@ -2196,8 +2352,13 @@ function AllRegistrationsApp() {
   const [editModalTitle, setEditModalTitle] = React.useState('');
   const [editingDocRef, setEditingDocRef] = React.useState(null); // Initialized to null
   const [editingDataPath, setEditingDataPath] = React.useState(''); // Cesta v dokumente pre uloženie
+  const [isNewEntry, setIsNewEntry] = React.useState(false); // Nový stav pre indikáciu, či ide o nový záznam
 
-  const openEditModal = (data, title, targetDocRef = null, originalDataPath = '') => {
+  // Nové stavy pre modálne okno na výber typu člena tímu
+  const [isAddMemberTypeSelectionModalOpen, setIsAddMemberTypeSelectionModalOpen] = React.useState(false);
+  const [currentTeamForNewMember, setCurrentTeamForNewMember] = React.useState(null); // Tím, do ktorého sa pridáva nový člen
+
+  const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
       // Odstrániť citlivé alebo irelevantné kľúče pred odovzdaním do modálneho okna
       const cleanedData = { ...data };
       delete cleanedData.password; // Príklad: odstránenie hesla
@@ -2208,8 +2369,9 @@ function AllRegistrationsApp() {
       setEditModalTitle(title);
       setEditingDocRef(targetDocRef);
       setEditingDataPath(originalDataPath);
+      setIsNewEntry(newEntryFlag); // Nastaviť príznak
       setIsEditModalOpen(true);
-      // console.log("openEditModal: Opening modal with title:", title, "data:", cleanedData, "path:", originalDataPath); // Debug log
+      // console.log("openEditModal: Opening modal with title:", title, "data:", cleanedData, "path:", originalDataPath, "isNewEntry:", newEntryFlag); // Debug log
   };
 
   const closeEditModal = () => {
@@ -2218,8 +2380,61 @@ function AllRegistrationsApp() {
       setEditModalTitle('');
       setEditingDocRef(null);
       setEditingDataPath('');
+      setIsNewEntry(false); // Resetovať príznak
       // console.log("closeEditModal: Closing modal."); // Debug log
   };
+
+  // Handler pre otvorenie modálneho okna na výber typu člena
+  const handleOpenAddMemberTypeModal = (team) => {
+      setCurrentTeamForNewMember(team);
+      setIsAddMemberTypeSelectionModalOpen(true);
+  };
+
+  // Handler po výbere typu člena a kliknutí na "Pridať"
+  const handleSelectedMemberTypeAndOpenEdit = React.useCallback((memberType) => {
+    if (!currentTeamForNewMember) {
+        setUserNotificationMessage("Chyba: Nebol vybraný žiadny tím pre pridanie člena.", 'error');
+        return;
+    }
+
+    const newMemberData = {}; // Prázdny objekt pre nového člena
+    let memberArrayPath = '';
+    let resolvedTitle = '';
+
+    switch (memberType) {
+        case 'Hráč':
+            memberArrayPath = 'playerDetails';
+            resolvedTitle = 'Pridať nového hráča';
+            break;
+        case 'Člen realizačného tímu (žena)':
+            memberArrayPath = 'womenTeamMemberDetails';
+            resolvedTitle = 'Pridať novú členku R. tímu (žena)';
+            break;
+        case 'Člen realizačného tímu (muž)':
+            memberArrayPath = 'menTeamMemberDetails';
+            resolvedTitle = 'Pridať nového člena R. tímu (muž)';
+            break;
+        case 'Šofér (žena)':
+            memberArrayPath = 'driverDetailsFemale';
+            resolvedTitle = 'Pridať novú šoférku (žena)';
+            break;
+        case 'Šofér (muž)':
+            memberArrayPath = 'driverDetailsMale';
+            resolvedTitle = 'Pridať nového šoféra (muž)';
+            break;
+        default:
+            setUserNotificationMessage("Neplatný typ člena tímu.", 'error');
+            return;
+    }
+
+    // Cesta pre uloženie nového člena: použijeme fiktívny index -1 na signalizáciu nového záznamu
+    const newMemberPath = `teams.${currentTeamForNewMember._category}[${currentTeamForNewMember._teamIndex}].${memberArrayPath}[-1]`;
+    const targetDocRefForNewMember = doc(db, 'users', currentTeamForNewMember._userId);
+
+    openEditModal(newMemberData, resolvedTitle, targetDocRefForNewMember, newMemberPath, true); // Nastaviť isNewEntry na true
+    setIsAddMemberTypeSelectionModalOpen(false); // Zatvoriť modal výberu typu
+    setCurrentTeamForNewMember(null); // Resetovať tím
+  }, [currentTeamForNewMember, db, openEditModal, setUserNotificationMessage]);
 
 
   const allTeamsFlattened = React.useMemo(() => {
@@ -2230,24 +2445,11 @@ function AllRegistrationsApp() {
                 Object.entries(u.teams).forEach(([category, teamListRaw]) => { // Renamed teamList to teamListRaw
                     const teamList = Array.isArray(teamListRaw) ? teamListRaw : []; // Defensive check
                     teamList.forEach((team, teamIndex) => {
-                        let menTeamMembersCount = 0;
-                        if (Array.isArray(team.menTeamMemberDetails)) {
-                            menTeamMembersCount = team.menTeamMemberDetails.length;
-                        }
-
-                        let womenTeamMembersCount = 0;
-                        if (Array.isArray(team.womenTeamMemberDetails)) {
-                            womenTeamMembersCount = team.womenTeamMemberDetails.length; 
-                        }
-                        
-                        let menDriversCount = 0; 
-                        if (Array.isArray(team.driverDetailsMale)) { // Skontroluj, či je to pole
-                            menDriversCount = team.driverDetailsMale.length; 
-                        }
-                        let womenDriversCount = 0; 
-                        if (Array.isArray(team.driverDetailsFemale)) { // Skontroluj, či je to pole
-                            womenDriversCount = team.driverDetailsFemale.length; 
-                        }
+                        let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                        let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                        let menDriversCount = team.driverDetailsMale?.length || 0; 
+                        let womenDriversCount = team.driverDetailsFemale?.length || 0; 
+                        let playersCount = team.playerDetails?.length || 0;
 
                         const teamTshirtsMap = new Map(
                           (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
@@ -2263,7 +2465,7 @@ function AllRegistrationsApp() {
                             _womenTeamMembersCount: womenTeamMembersCount,
                             _menDriversCount: menDriversCount, 
                             _womenDriversCount: womenDriversCount, 
-                            _players: team.playerDetails ? team.playerDetails.length : 0,
+                            _players: playersCount,
                             _teamTshirtsMap: teamTshirtsMap
                         });
                     });
@@ -2473,13 +2675,12 @@ function AllRegistrationsApp() {
         window.location.href = 'login.html';
         return;
     } else if (!isAuthReady || !db || user === undefined) {
-        // console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user);
+        // console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user ? user.uid : "N/A");
     }
 
     return () => {
       if (unsubscribeUserDoc) {
-        // console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument.");
-        unsubscribeUserDoc();
+          unsubscribeUserDoc();
       }
     };
   }, [isAuthReady, db, user, auth]);
@@ -2540,8 +2741,8 @@ function AllRegistrationsApp() {
     } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
         // console.log("AllRegistrationsApp: [Effect: AllUsers] Používateľ nie je schválený administrátor, nenačítavam dáta. Presmerovávam na my-data.html.");
         setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-        if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader();
+        if (typeof window.showGlobalLoader === 'function') {
+          window.showGlobalLoader();
         }
         setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
         window.location.href = 'logged-in-my-data.html';
@@ -2851,7 +3052,7 @@ function AllRegistrationsApp() {
 
   // Removed handleSaveColumnVisibility function as column visibility is no longer user-configurable.
 
-  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath) => {
+  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag) => {
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
         setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
@@ -2861,34 +3062,88 @@ function AllRegistrationsApp() {
     try {
         window.showGlobalLoader();
         
-        // Získame aktuálne hodnoty isTargetUserAdmin a isTargetUserHall priamo z `editingData`
-        // pre aktuálne otvorený modál (ak je to úprava používateľa)
         const isEditingUser = editModalTitle.includes('Upraviť používateľa');
         const currentEditingDataRole = editingData?.role;
+        // Corrected: Derive these variables locally instead of relying on non-existent state from AllRegistrationsApp's scope
         const localIsTargetUserAdmin = isEditingUser && currentEditingDataRole === 'admin';
         const localIsTargetUserHall = isEditingUser && currentEditingDataRole === 'hall';
 
-
-        // All data preparation, including phone number and team-specific fields,
-        // and change generation has been moved to DataEditModal.
-        // We now directly use the `updatedDataFromModal` provided by DataEditModal,
-        // which is already the final data to save after filtering empty strings/objects.
-        
-        // --- Save Notification to Firestore (Changes already generated and saved in DataEditModal) ---
-        // The DataEditModal is now responsible for generating and saving the notification.
-        // We only proceed with the Firestore update here.
-        // --- End Notification ---
-
         if (originalDataPath === '') {
             // Logika pre aktualizáciu používateľa na najvyššej úrovni
-            // console.log("DEBUG AllRegistrationsApp Top-Level User Save: Executing top-level user update. Data:", updatedDataFromModal); // Debug log
-            await updateDoc(targetDocRef, updatedDataFromModal);
-            setUserNotificationMessage("Zmeny boli uložené.", 'success');
+            // console.log("DEBUG: Aktualizácia top-level používateľa.");
+
+            // Deep merge pre aktualizáciu používateľa
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu.");
+            }
+            const currentDocData = docSnapshot.data();
+            
+            // Pripravíme finálne dáta na uloženie
+            let finalDataToSave = { ...currentDocData };
+
+            // Prejdeme všetky kľúče z updatedDataFromModal
+            for (const key in updatedDataFromModal) {
+                if (key === 'address' || key === 'billingAddress') {
+                    // Ak ide o adresný objekt, vykonáme hlboké zlúčenie
+                    finalDataToSave[key] = {
+                        ...(currentDocData[key] || {}), // Pôvodná adresa
+                        ...(updatedDataFromModal[key] || {}) // Aktualizovaná adresa
+                    };
+
+                    // Ak sa v updatedDataFromModal[key] vymaže pole (nastaví na ''), zabezpečíme, že sa to prejaví
+                    if (updatedDataFromModal[key]) {
+                        for (const subKey in currentDocData[key]) {
+                            if (updatedDataFromModal[key][subKey] === undefined && typeof currentDocData[key][subKey] === 'string') {
+                                finalDataToSave[key][subKey] = '';
+                            }
+                        }
+                    }
+                } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
+                    // Ak je to iný objekt (napr. packageDetails), urobíme deep merge
+                    finalDataToSave[key] = {
+                        ...(currentDocData[key] || {}),
+                        ...updatedDataFromModal[key]
+                    };
+                } else {
+                    // Pre ostatné polia priama aktualizácia
+                    finalDataToSave[key] = updatedDataFromModal[key];
+                }
+            }
+
+            // Špeciálne ošetrenie pre vymazanie top-level adresných polí, ak boli predtým explicitne prítomné a teraz sú prázdne
+            const addressFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'note'];
+            addressFields.forEach(field => {
+                if (updatedDataFromModal[field] === '' && (currentDocData[field] !== undefined && currentDocData[field] !== '')) {
+                    finalDataToSave[field] = '';
+                }
+            });
+
+            const originalDataForCompare = { ...currentDocData };
+            const modifiedDataForCompare = { ...finalDataToSave };
+
+            // Pre admin/hall používateľov odstránime adresné a fakturačné polia z porovnávania zmien, aby sa predišlo falošným detekciám
+            if (localIsTargetUserAdmin || localIsTargetUserHall) {
+                delete originalDataForCompare.address;
+                delete originalDataForCompare.billingAddress;
+                delete modifiedDataForCompare.address;
+                delete modifiedDataForCompare.billingAddress;
+            }
+
+            const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
+
+            if (generatedChanges.length === 0) {
+                setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+                closeEditModal();
+                return;
+            }
+
+            await updateDoc(targetDocRef, finalDataToSave);
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (editModalTitle.includes('Upraviť tím')) { 
             // Logika pre aktualizáciu tímu
-            // console.log("DEBUG AllRegistrationsApp Team Save: Original Data Path:", originalDataPath); // Debug log
             if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
                 throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
             }
@@ -2902,59 +3157,100 @@ function AllRegistrationsApp() {
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
             
-            // updatedDataFromModal už obsahuje spracované balíky, tričká, kategórie atď.
-            const updatedTeamSpecificData = updatedDataFromModal;
-
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
             }
             const currentDocData = docSnapshot.data();
             const currentCategoryTeams = currentDocData.teams?.[category] || [];
-            const newCategoryTeams = [...currentCategoryTeams];
+            
+            // Hlboká kópia aktuálneho tímu
+            const originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[teamIndex] || {}));
+            
+            // Vytvorenie aktualizovaného tímu s hlbokým zlúčením
+            let updatedTeam = { ...originalTeam };
+            for (const key in updatedDataFromModal) {
+                if (key === 'address' || key === 'billingAddress') {
+                    updatedTeam[key] = {
+                        ...(originalTeam[key] || {}),
+                        ...(updatedDataFromModal[key] || {})
+                    };
+                    // Ak sa v updatedDataFromModal[key] vymaže pole (nastaví na ''), zabezpečíme, že sa to prejaví
+                    if (updatedDataFromModal[key]) {
+                        for (const subKey in originalTeam[key]) {
+                            if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
+                                updatedTeam[key][subKey] = '';
+                            }
+                        }
+                    }
+                } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
+                    updatedTeam[key] = {
+                        ...(originalTeam[key] || {}),
+                        ...updatedDataFromModal[key]
+                    };
+                } else {
+                    updatedTeam[key] = updatedDataFromModal[key];
+                }
+            }
 
+            const generatedChanges = getChangesForNotification(originalTeam, updatedTeam);
+
+            if (generatedChanges.length === 0) {
+                setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+                closeEditModal();
+                return;
+            }
+
+            const newCategoryTeams = [...currentCategoryTeams];
             if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
-                newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...updatedTeamSpecificData };
+                newCategoryTeams[teamIndex] = updatedTeam;
             } else {
                 throw new Error(`Index tímu ${teamIndex} je mimo rozsahu pre aktualizáciu. Dĺžka tímov kategórie ${category}: ${newCategoryTeams.length}.`);
             }
 
             const updates = {};
             updates[`teams.${category}`] = newCategoryTeams;
-            // console.log("DEBUG AllRegistrationsApp Team Save: Updates object before updateDoc:", updates); // Debug log
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
                    originalDataPath.includes('womenTeamMemberDetails') || originalDataPath.includes('driverDetailsMale') || originalDataPath.includes('driverDetailsFemale')) {
-            // Logika pre aktualizáciu člena tímu/hráča/šoféra
-            // console.log("DEBUG AllRegistrationsApp Member Save: Original Data Path:", originalDataPath); // Debug log
-            // Cesta by mala vyzerať ako "teams.CATEGORY[TEAM_INDEX].MEMBER_ARRAY[MEMBER_INDEX]"
+            // Logika pre aktualizáciu alebo pridanie člena tímu/hráča/šoféra
+            // console.log("DEBUG: Aktualizácia člena tímu.");
             const pathParts = originalDataPath.split('.');
             if (pathParts.length !== 3) {
                 throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty (teams.category[index].memberArray[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
             }
 
-            const topLevelPath = pathParts[0]; 
             const categoryAndIndexPart = pathParts[1]; 
-            const memberArrayAndIndexPart = pathParts[2]; 
-            
             const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-            const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-
             if (!categoryMatch) {
                 throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
             }
-            if (!memberArrayMatch) {
-                throw new Error(`Neplatný formát poľa člena tímu a indexu: ${memberArrayAndIndexPart}.`);
+            
+            let memberArrayPath;
+            let memberArrayIndex;
+
+            if (isNewEntryFlag) {
+                const arrayNameMatch = pathParts[2].match(/^(.*?)\[-1\]$/);
+                if (!arrayNameMatch) {
+                    throw new Error(`Neplatný formát poľa člena tímu pre nový záznam (očakáva sa [-1]): ${pathParts[2]}.`);
+                }
+                memberArrayPath = arrayNameMatch[1]; 
+                memberArrayIndex = -1; 
+            } else {
+                const existingMemberMatch = pathParts[2].match(/^(.*?)\[(\d+)\]$/);
+                if (!existingMemberMatch) {
+                    throw new Error(`Neplatný formát poľa člena tímu a indexu: ${pathParts[2]}.`);
+                }
+                memberArrayPath = existingMemberMatch[1];
+                memberArrayIndex = parseInt(existingMemberMatch[2]);
             }
 
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
-            const memberArrayPath = memberArrayMatch[1]; 
-            const memberArrayIndex = parseInt(memberArrayMatch[2]); 
-            
+
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
@@ -2962,43 +3258,75 @@ function AllRegistrationsApp() {
             const currentDocData = docSnapshot.data();
 
             const teams = currentDocData.teams?.[category] || [];
-            const teamToUpdate = teams[teamIndex];
+            // Hlboká kópia tímu na úpravu (aby sme nemodifikovali pôvodné dáta priamo)
+            const teamToUpdate = JSON.parse(JSON.stringify(teams[teamIndex] || {})); 
 
-            if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
-                const memberToUpdate = { ...teamToUpdate[memberArrayPath][memberArrayIndex] };
-                
-                // updatedDataFromModal už obsahuje finalDataToSave pre člena tímu
-                Object.keys(updatedDataFromModal).forEach(key => {
-                    if (key.startsWith('address.')) {
-                        const addressKey = key.split('.')[1];
-                        if (!memberToUpdate.address) memberToUpdate.address = {};
-                        memberToUpdate.address[addressKey] = updatedDataFromModal[key];
-                    } else {
-                        memberToUpdate[key] = updatedDataFromModal[key];
+            let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
+            
+            if (isNewEntryFlag) {
+                const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} };
+                currentMemberArray.push(newMember);
+                setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
+            } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
+                const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
+                let updatedMember = { ...originalMember }; 
+
+                // Aplikovať zmeny z updatedDataFromModal
+                for (const key in updatedDataFromModal) {
+                    if (key !== 'address') {
+                        updatedMember[key] = updatedDataFromModal[key];
                     }
-                });
+                }
+                
+                // Špeciálne spracovanie pre vnorený objekt adresy
+                updatedMember.address = { ...(originalMember.address || {}) }; 
 
-                const updatedMemberArray = [...teamToUpdate[memberArrayPath]];
-                updatedMemberArray[memberArrayIndex] = memberToUpdate;
+                if (updatedDataFromModal.address) {
+                    for (const key in updatedDataFromModal.address) {
+                        updatedMember.address[key] = updatedDataFromModal.address[key];
+                    }
+                    // Explicitne nastaviť vymazané adresné polia na prázdny reťazec
+                    for (const key in originalMember.address) {
+                        if (updatedDataFromModal.address[key] === undefined && typeof originalMember.address[key] === 'string') {
+                            updatedMember.address[key] = "";
+                        }
+                    }
+                } else if (originalMember.address) {
+                    // Ak originalMember mal adresu, ale updatedDataFromModal ju už nemá,
+                    // znamená to, že celá adresa bola vymazaná, takže ju vynulujeme
+                    for (const key in originalMember.address) {
+                        updatedMember.address[key] = "";
+                    }
+                }
 
-                const updatedTeam = {
-                    ...teamToUpdate,
-                    [memberArrayPath]: updatedMemberArray
-                };
 
-                const updatedTeamsForCategory = [...teams];
-                updatedTeamsForCategory[teamIndex] = updatedTeam;
+                const generatedChanges = getChangesForNotification(originalMember, updatedMember);
+                // console.log("DEBUG: Člen tímu - Generované zmeny:", generatedChanges);
 
-                const updates = {};
-                updates[`teams.${category}`] = updatedTeamsForCategory;
-                // console.log("DEBUG AllRegistrationsApp Member Save: Updates object before updateDoc:", updates); // Debug log
-                await updateDoc(targetDocRef, updates);
-                setUserNotificationMessage("Zmeny boli uložené.", 'success');
-                closeEditModal(); 
-                return;
+                if (generatedChanges.length === 0) {
+                    setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+                    closeEditModal();
+                    return;
+                }
+
+                currentMemberArray[memberArrayIndex] = updatedMember;
+                setUserNotificationMessage("Zmeny člena boli úspešne uložené.", 'success');
             } else {
-                throw new Error(`Člen tímu pre aktualizáciu sa nenašiel na ceste: ${originalDataPath}.`);
+                throw new Error(`Člen tímu pre aktualizáciu/pridanie sa nenašiel na ceste: ${originalDataPath} a isNewEntryFlag: ${isNewEntryFlag}.`);
             }
+            
+            teamToUpdate[memberArrayPath] = currentMemberArray;
+            const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate); 
+
+            const updatedTeamsForCategory = [...teams];
+            updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
+
+            const updates = {};
+            updates[`teams.${category}`] = updatedTeamsForCategory;
+            await updateDoc(targetDocRef, updates);
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            closeEditModal(); 
+            return;
         } else {
             // Všeobecná vnorená aktualizácia
             if (!originalDataPath) {
@@ -3015,9 +3343,8 @@ function AllRegistrationsApp() {
             const updates = {};
             updates[topLevelField] = updatedObject[topLevelField];
             
-            // console.log("DEBUG AllRegistrationsApp Generic Nested Save: Updates object before updateDoc:", updates); // Debug log
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
             closeEditModal(); 
             return;
         }
@@ -3028,13 +3355,85 @@ function AllRegistrationsApp() {
     } finally {
         window.hideGlobalLoader();
     }
-  }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle, editingData]); // Pridané editingData ako závislosť
+  }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle, editingData, getChangesForNotification]); // REMOVED MODAL-SPECIFIC STATES FROM DEPENDENCY ARRAY
 
+  const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPath) => {
+    if (!targetDocRef || !originalDataPath) {
+        console.error("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie člena.");
+        setUserNotificationMessage("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie. Zmeny neboli uložené.", 'error');
+        return;
+    }
+
+    try {
+        window.showGlobalLoader();
+
+        const pathParts = originalDataPath.split('.');
+        if (pathParts.length !== 3) {
+            throw new Error(`Neplatný formát cesty člena pre odstránenie. Očakáva sa 3 segmenty (teams.category[index].memberArray[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
+        }
+
+        const categoryAndIndexPart = pathParts[1];
+        const memberArrayAndIndexPart = pathParts[2];
+
+        const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+        const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+
+        if (!categoryMatch) {
+            throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
+        }
+        if (!memberArrayMatch) {
+            throw new Error(`Neplatný formát poľa člena tímu a indexu: ${memberArrayAndIndexPart}.`);
+        }
+
+        const category = categoryMatch[1];
+        const teamIndex = parseInt(categoryMatch[2]);
+        const memberArrayPath = memberArrayMatch[1];
+        const memberArrayIndex = parseInt(memberArrayMatch[2]);
+
+        const docSnapshot = await getDoc(targetDocRef);
+        if (!docSnapshot.exists()) {
+            throw new Error("Dokument používateľa sa nenašiel pre odstránenie.");
+        }
+        const currentDocData = docSnapshot.data();
+
+        const teams = currentDocData.teams?.[category] || [];
+        const teamToUpdate = { ...teams[teamIndex] }; // Hlboká kópia tímu na úpravu
+
+        if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
+            const memberToRemove = teamToUpdate[memberArrayPath][memberArrayIndex];
+            const memberName = `${memberToRemove.firstName || ''} ${memberToRemove.lastName || ''}`.trim();
+
+            const updatedMemberArray = [...teamToUpdate[memberArrayPath]];
+            updatedMemberArray.splice(memberArrayIndex, 1); // Odstráni člena z poľa
+            
+            teamToUpdate[memberArrayPath] = updatedMemberArray; // Aktualizujeme pole
+            const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate); // Prepočítať počty
+
+            const updatedTeamsForCategory = [...teams];
+            updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
+
+            const updates = {};
+            updates[`teams.${category}`] = updatedTeamsForCategory;
+            await updateDoc(targetDocRef, updates);
+
+            setUserNotificationMessage(`${memberName} bol úspešne odstránený z tímu.`, 'success');
+            closeEditModal();
+        } else {
+            throw new Error(`Člen tímu na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
+        }
+    } catch (e) {
+        console.error("Chyba pri odstraňovaní člena tímu z Firestore:", e);
+        setError(`Chyba pri odstraňovaní člena tímu: ${e.message}`);
+        setUserNotificationMessage(`Chyba pri odstraňovaní člena tímu: ${e.message}`, 'error');
+    } finally {
+        window.hideGlobalLoader();
+    }
+  }, [db, closeEditModal, setUserNotificationMessage, setError]);
 
 
   if (!isAuthReady || user === undefined || !userProfileData) {
-    if (typeof window.hideGlobalLoader === 'function') {
-      window.hideGlobalLoader();
+    if (typeof window.showGlobalLoader === 'function') {
+      window.showGlobalLoader();
     }
     return null;
   }
@@ -3042,8 +3441,8 @@ function AllRegistrationsApp() {
   if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
       // console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
       setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-      if (typeof window.hideGlobalLoader === 'function') {
-        window.hideGlobalLoader();
+      if (typeof window.showGlobalLoader === 'function') {
+        window.showGlobalLoader();
       }
       setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
       window.location.href = 'logged-in-my-data.html';
@@ -3168,10 +3567,19 @@ function AllRegistrationsApp() {
         title: editModalTitle,
         data: editingData,
         onSave: handleSaveEditedData, // Odovzdať handler na uloženie
+        onDeleteMember: handleDeleteMember, // Odovzdať nový handler pre odstránenie
         targetDocRef: editingDocRef,    // Odovzdať referenciu na dokument
         originalDataPath: editingDataPath, // Odovzdať cestu v dokumente
         setUserNotificationMessage: setUserNotificationMessage, // Preposielame setter notifikácie
-        setError: setError // Preposielame setter chýb
+        setError: setError, // Preposielame setter chýb
+        isNewEntry: isNewEntry, // Odovzdať príznak
+        getChangesForNotification: getChangesForNotification // Pass the helper function as a prop
+    }),
+    // Modálne okno na výber typu člena
+    React.createElement(AddMemberTypeSelectionModal, {
+        isOpen: isAddMemberTypeSelectionModalOpen,
+        onClose: () => setIsAddMemberTypeSelectionModalOpen(false),
+        onSelectType: handleSelectedMemberTypeAndOpenEdit
     }),
     React.createElement(
       'div',
@@ -3310,12 +3718,12 @@ function AllRegistrationsApp() {
                                             React.createElement('td', {
                                                 className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center',
                                             },
-                                                React.createElement('button', {
+                                                React.createElement('span', {
                                                     onClick: (e) => {
                                                         e.stopPropagation();
                                                         toggleTeamRowExpansion(teamUniqueId);
                                                     },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
+                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1 cursor-pointer'
                                                 }, expandedTeamRows[teamUniqueId] ? '▲' : '▼'),
                                                 React.createElement('button', {
                                                     onClick: (e) => {
@@ -3360,7 +3768,8 @@ function AllRegistrationsApp() {
                                                     showTeamsChecked: showTeams,
                                                     openEditModal: openEditModal,
                                                     db: db,
-                                                    setUserNotificationMessage: setUserNotificationMessage
+                                                    setUserNotificationMessage: setUserNotificationMessage,
+                                                    onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
                                                 })
                                             )
                                         )
@@ -3372,8 +3781,8 @@ function AllRegistrationsApp() {
                                     { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
                                     React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 3 }, 'Súhrn:'),
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers),
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenTeamMembers),
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenTeamMembers),
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenTeamMembers),
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenDrivers), 
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenDrivers), 
                                     React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Tričká:'),
@@ -3429,24 +3838,11 @@ function AllRegistrationsApp() {
                                         React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
                                             Object.entries(u.teams || {}).map(([category, teamListRaw]) => // Renamed to teamListRaw
                                                 (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => { // Defensive check
-                                                    let menTeamMembersCount = 0;
-                                                    if (Array.isArray(team.menTeamMemberDetails)) {
-                                                        menTeamMembersCount = team.menTeamMemberDetails.length;
-                                                    }
-
-                                                    let womenTeamMembersCount = 0;
-                                                    if (Array.isArray(team.womenTeamMemberDetails)) {
-                                                        womenTeamMembersCount = team.womenTeamMemberDetails.length;
-                                                    }
-
-                                                    let menDriversCount = 0; 
-                                                    if (Array.isArray(team.driverDetailsMale)) {
-                                                        menDriversCount = team.driverDetailsMale.length;
-                                                    }
-                                                    let womenDriversCount = 0; 
-                                                    if (Array.isArray(team.driverDetailsFemale)) {
-                                                        womenDriversCount = team.driverDetailsFemale.length;
-                                                    }
+                                                    let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                                                    let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                                                    let menDriversCount = team.driverDetailsMale?.length || 0; 
+                                                    let womenDriversCount = team.driverDetailsFemale?.length || 0; 
+                                                    let playersCount = team.playerDetails?.length || 0;
 
 
                                                     const teamTshirtsMap = new Map(
@@ -3465,7 +3861,7 @@ function AllRegistrationsApp() {
                                                             _womenTeamMembersCount: womenTeamMembersCount,
                                                             _menDriversCount: menDriversCount, 
                                                             _womenDriversCount: womenDriversCount, 
-                                                            _players: team.playerDetails ? team.playerDetails.length : 0,
+                                                            _players: playersCount,
                                                             _teamTshirtsMap: teamTshirtsMap
                                                         },
                                                         tshirtSizeOrder: availableTshirtSizes,
@@ -3474,7 +3870,8 @@ function AllRegistrationsApp() {
                                                         showTeamsChecked: showTeams,
                                                         openEditModal: openEditModal,
                                                         db: db,
-                                                        setUserNotificationMessage: setUserNotificationMessage
+                                                        setUserNotificationMessage: setUserNotificationMessage,
+                                                        onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
                                                     })
                                                 })
                                             )
