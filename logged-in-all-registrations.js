@@ -276,7 +276,7 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
             ),
             React.createElement(
                 'div',
-                { className: 'flex justify-end space-x-2 mt-4' }, {/* Pridaný mt-4 pre lepšie odsadenie */}
+                { className: 'flex justify-end space-x-2 mt-4' },
                 React.createElement('button', {
                     className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
                     onClick: onClose
