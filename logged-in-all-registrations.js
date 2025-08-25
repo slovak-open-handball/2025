@@ -454,6 +454,80 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
 
+    // Moved definitions to the top of the component
+    const allConsolidatedMembers = [];
+
+    if (team.playerDetails && team.playerDetails.length > 0) {
+        team.playerDetails.forEach((player, index) => {
+            allConsolidatedMembers.push({
+                ...player,
+                type: 'Hráč',
+                originalArray: 'playerDetails',
+                originalIndex: index,
+                uniqueId: `${team.teamName}-player-${player.firstName || ''}-${player.lastName || ''}-${index}`
+            });
+        });
+    }
+    if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
+        team.menTeamMemberDetails.forEach((member, index) => {
+            allConsolidatedMembers.push({
+                ...member,
+                type: 'Člen realizačného tímu (muži)',
+                originalArray: 'menTeamMemberDetails',
+                originalIndex: index,
+                uniqueId: `${team.teamName}-menstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
+            });
+        });
+    };
+    if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
+        team.womenTeamMemberDetails.forEach((member, index) => {
+            allConsolidatedMembers.push({
+                ...member,
+                type: 'Člen realizačného tímu (ženy)',
+                originalArray: 'womenTeamMemberDetails',
+                originalIndex: index,
+                uniqueId: `${team.teamName}-womenstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
+            });
+        });
+    }
+    // Pridanie šoféra muža, ak existuje a je to pole
+    if (Array.isArray(team.driverDetailsMale) && team.driverDetailsMale.length > 0) {
+        team.driverDetailsMale.forEach((driver, index) => {
+            allConsolidatedMembers.push({
+                ...driver,
+                type: 'Šofér (muž)',
+                originalArray: 'driverDetailsMale',
+                originalIndex: index, // Použiť index, lebo je to pole
+                uniqueId: `${team.teamName}-driver-male-${driver.firstName || ''}-${driver.lastName || ''}-${index}`
+            });
+        });
+    }
+    // Pridanie šoféra ženy, ak existuje a je to pole
+    if (Array.isArray(team.driverDetailsFemale) && team.driverDetailsFemale.length > 0) {
+        team.driverDetailsFemale.forEach((driver, index) => {
+            allConsolidatedMembers.push({
+                ...driver,
+                type: 'Šofér (žena)',
+                originalArray: 'driverDetailsFemale',
+                originalIndex: index, // Použiť index, lebo je to pole
+                uniqueId: `${team.teamName}-driver-female-${driver.firstName || ''}-${driver.lastName || ''}-${index}`
+            });
+        });
+    }
+
+    // Filtrujeme kľúče, aby sme sa uistili, že sú to platné dátumy jedál
+    const mealDates = (team.packageDetails && team.packageDetails.meals ? Object.keys(team.packageDetails.meals).sort() : [])
+        .filter(key => isDateKey(key)); // Používame novú pomocnú funkciu
+    
+    const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
+    const mealTypeLabels = {
+        breakfast: 'Raňajky',
+        lunch: 'Obed',
+        dinner: 'Večera',
+        refreshment: 'Občerstvenie'
+    };
+
+
     const formatAddress = (member) => { // Zmenený názov z 'address' na 'member' pre väčšiu prehľadnosť
         if (!member) return '-';
 
@@ -479,6 +553,95 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         return parts.join(', ');
     };
                 
+    const handleMealChange = async (member, date, mealType, isChecked) => {
+        if (!db || !team._userId) {
+            setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
+            return;
+        }
+
+        window.showGlobalLoader();
+
+        try {
+            const userDocRef = doc(db, 'users', team._userId);
+            const docSnapshot = await getDoc(userDocRef); // Fetch the entire user document
+
+            if (!docSnapshot.exists()) {
+                throw new Error("Používateľský dokument sa nenašiel.");
+            }
+
+            const userData = docSnapshot.data();
+            const teamsData = { ...userData.teams }; // Create a mutable copy of the teams object
+
+            const teamCategory = team._category;
+            const teamIndex = team._teamIndex;
+            const memberArrayType = member.originalArray;
+            const memberIndex = member.originalIndex;
+
+            // Deep clone the relevant parts to ensure immutability until update
+            const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
+            const teamToUpdate = updatedCategoryTeams[teamIndex];
+
+            if (!teamToUpdate) {
+                throw new Error("Tím sa nenašiel pre aktualizáciu stravovania.");
+            }
+
+            const memberArrayToUpdate = teamToUpdate[memberArrayType];
+
+            if (!memberArrayToUpdate || memberArrayToUpdate[memberIndex] === undefined) {
+                throw new Error("Člen tímu sa nenašiel pre aktualizáciu stravovania.");
+            }
+
+            const memberToUpdate = memberArrayToUpdate[memberIndex];
+
+            // --- Notification Logic - Capture original value before modification ---
+            const userEmail = window.auth.currentUser?.email;
+            const changes = [];
+            const originalMealValue = memberToUpdate.packageDetails?.meals?.[date]?.[mealType] === 1 ? 'Áno' : 'Nie';
+            const newMealValue = isChecked ? 'Áno' : 'Nie';
+
+            if (originalMealValue !== newMealValue) {
+                changes.push(`Zmena Stravovanie (${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}): z '${originalMealValue}' na '${newMealValue}'`);
+            }
+            // --- End Notification Logic ---
+
+            // Ensure packageDetails.meals and packageDetails.meals[date] exist
+            if (!memberToUpdate.packageDetails) memberToUpdate.packageDetails = {};
+            if (!memberToUpdate.packageDetails.meals) memberToUpdate.packageDetails.meals = {};
+            if (!memberToUpdate.packageDetails.meals[date]) memberToUpdate.packageDetails.meals[date] = {};
+
+            // Update the specific meal type for the member
+            memberToUpdate.packageDetails.meals[date][mealType] = isChecked ? 1 : 0;
+
+            // Reconstruct the full path and update only the top-level array
+            // The path for updateDoc should be a valid top-level field or a nested map field, not an array element with index.
+            // We are updating the entire array for the specific category.
+            const updatePayload = {
+                [`teams.${teamCategory}`]: updatedCategoryTeams
+            };
+
+            await updateDoc(userDocRef, updatePayload);
+            setUserNotificationMessage(`Stravovanie pre ${member.firstName} ${member.lastName} bolo aktualizované.`, 'success');
+
+            // --- Save Notification to Firestore ---
+            if (changes.length > 0 && userEmail) {
+                const notificationsCollectionRef = collection(db, 'notifications');
+                await addDoc(notificationsCollectionRef, {
+                    userEmail,
+                    changes,
+                    timestamp: serverTimestamp()
+                });
+                console.log("Notifikácia o zmene stravovania uložená do Firestore.");
+            }
+            // --- End Save Notification ---
+
+        } catch (error) {
+            console.error("Chyba pri aktualizácii stravovania v Firestore:", error);
+            setUserNotificationMessage(`Chyba pri aktualizácii stravovania: ${error.message}`, 'error');
+        } finally {
+            window.hideGlobalLoader();
+        }
+    };
+
     const teamDetailsTable = React.createElement(
         'div',
         { className: 'overflow-x-auto' },
@@ -1145,7 +1308,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         if (availableSizesForNewEntry.length > 0) {
             setTeamTshirts(prev => [
                 ...prev,
-                { tempId: generateUniqueId(), size: availableSizesForNewEntry[0], quantity: 0 }
+                { tempId: generateUniqueId(), size: availableTshirtSizes[0], quantity: 0 } // Default to first available size
             ]);
         } else {
             setUserNotificationMessage("Všetky dostupné veľkosti tričiek sú už pridané.", 'info');
@@ -2680,7 +2843,7 @@ function AllRegistrationsApp() {
                   dateB = new Date(0); // Fallback to epoch if not a valid date format
               }
               
-              return direction === 'asc' ? dateA.getTime() - dateB.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+              return direction === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
           } else if (type === 'boolean') {
               const boolA = Boolean(valA);
               const boolB = Boolean(valB);
@@ -3130,14 +3293,14 @@ function AllRegistrationsApp() {
                         if (updatedDataFromModal.address[key] === undefined && typeof originalMember.address[key] === 'string') {
                             updatedMember.address[key] = "";
                         }
+                        }
+                    } else if (originalMember.address) {
+                        // Ak originalMember mal adresu, ale updatedDataFromModal ju už nemá,
+                        // znamená to, že celá adresa bola vymazaná, takže ju vynulujeme
+                        for (const key in originalMember.address) {
+                            updatedMember.address[key] = "";
+                        }
                     }
-                } else if (originalMember.address) {
-                    // Ak originalMember mal adresu, ale updatedDataFromModal ju už nemá,
-                    // znamená to, že celá adresa bola vymazaná, takže ju vynulujeme
-                    for (const key in originalMember.address) {
-                        updatedMember.address[key] = "";
-                    }
-                }
 
 
                 const generatedChanges = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
