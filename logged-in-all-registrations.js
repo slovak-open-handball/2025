@@ -1562,7 +1562,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             React.createElement(
                                 'div',
                                 { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                                // PÔVODNE TU BOL NADPIS: React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačné údaje'),
                                 billingFieldsInScope.map(billingPath => {
                                     const billingValue = getNestedDataForInput(localEditedData, billingPath);
                                     return renderUserField(billingPath, billingValue);
@@ -1580,7 +1579,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             React.createElement(
                                 'div',
                                 { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                                // PÔVODNE TU BOL NADPIS: React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Fakturačná adresa'),
                                 addressFieldsInScope.map(addressPath => {
                                     const addressValue = getNestedDataForInput(localEditedData, addressPath);
                                     return renderUserField(addressPath, addressValue);
@@ -3307,6 +3305,7 @@ function AllRegistrationsApp() {
                                             'tr',
                                             {
                                                 className: `bg-white border-b hover:bg-gray-50`,
+                                                // Removed onClick handler from here to prevent row click expansion
                                             },
                                             React.createElement('td', {
                                                 className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center',
