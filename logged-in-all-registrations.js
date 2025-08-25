@@ -860,1376 +860,635 @@ const combinePhoneNumber = (dialCode, numberWithoutDialCode) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry }) { // Pridané onDeleteMember
-    const modalRef = React.useRef(null);
-    const db = window.db; // Prístup k db z window objektu
-    const [localEditedData, setLocalEditedData] = React.useState(data); 
-    const [userRole, setUserRole] = React.useState('');
-    const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
-    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); 
-    const inputRefs = React.useRef({}); 
-
-    // Stavy pre Phone Input
-    const [displayDialCode, setDisplayDialCode] = React.useState('');
-    const [displayPhoneNumber, setDisplayPhoneNumber] = React.useState('');
-    const [isDialCodeModalOpen, setIsDialCodeModalOpen] = React.useState(false);
-
-    // Stavy pre kategórie tímov
-    const [categories, setCategories] = React.useState([]);
-    const [selectedCategory, setSelectedCategory] = React.useState('');
-
-    // Stavy pre typ dopravy
-    const [selectedArrivalType, setSelectedArrivalType] = React.useState('');
-    const arrivalOptions = [
-        'verejná doprava - vlak',
-        'verejná doprava - autobus',
-        'vlastná doprava',
-        'bez dopravy'
-    ];
-
-    // Stavy pre typ ubytovania
-    const [accommodationTypes, setAccommodationTypes] = React.useState([]);
-    const [selectedAccommodationType, setSelectedAccommodationType] = React.useState('');
-
-    // Stavy pre balíky
-    const [packages, setPackages] = React.useState([]);
-    const [selectedPackageName, setSelectedPackageName] = React.useState('');
-
-    // Stavy pre tričká
-    const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
-    // Zmenené teamTshirts na pole objektov, každý s tempId pre React kľúče
-    const [teamTshirts, setTeamTshirts] = React.useState([]); // [{ tempId: 'uuid', size: 'S', quantity: 5 }]
-
-    // Stavy pre potvrdenie odstránenia
-    const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = React.useState(false);
-    const [deleteConfirmMessage, setDeleteConfirmMessage] = React.useState('');
-
-    // Utility to generate a unique ID for new t-shirt entries
-    const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
+    // Pomocná funkcia pre nastavenie vnorenej hodnoty v objekte
+    // Používa sa v handleChange na aktualizáciu napr. 'address.street'
+    const setNestedValue = (obj, path, value) => {
+        const pathParts = path.split('.');
+        let current = obj;
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            const part = pathParts[i];
+            if (!current[part] || typeof current[part] !== 'object' || Array.isArray(current[part])) {
+                current[part] = {}; // Vytvorí objekt, ak neexistuje alebo je nesprávneho typu
+            }
+            current = current[part];
+        }
+        current[pathParts[pathParts.length - 1]] = value;
+    };
 
 
-    React.useEffect(() => {
-        const fetchTeamDataForSelects = async () => {
-            if (db && title.includes('Upraviť tím')) {
-                // Načítanie kategórií
-                try {
-                    const categoriesDocRef = doc(db, 'settings', 'categories');
-                    const docSnapshot = await getDoc(categoriesDocRef);
+    const DataEditModal = ({ isOpen, onClose, onSave, data, type, config, userSettings, title, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry }) => {
+        const initialEditedData = useMemo(() => {
+            // console.log('DEBUG DataEditModal - Initial data type:', type, 'Data:', data);
+            if (!data) return {};
 
-                    if (docSnapshot.exists()) {
-                        const categoriesData = docSnapshot.data();
-                        const fetchedCategories = Object.values(categoriesData)
-                            .filter(item => item && item.name)
-                            .map(item => String(item.name).trim())
-                            .sort();
-                        setCategories(fetchedCategories);
-                    } else {
-                        console.warn("Firestore dokument 'settings/categories' neexistuje. Žiadne kategórie neboli načítané.");
-                        setCategories([]);
-                    }
-                } catch (error) {
-                    console.error("Chyba pri načítaní kategórií z Firestore:", error);
-                }
-
-                // Načítanie typov ubytovania
-                try {
-                    const accommodationDocRef = doc(db, 'settings', 'accommodation');
-                    const docSnapshot = await getDoc(accommodationDocRef);
-
-                    if (docSnapshot.exists()) {
-                        const accommodationData = docSnapshot.data();
-                        if (accommodationData && Array.isArray(accommodationData.types)) {
-                            const fetchedAccommodationTypes = accommodationData.types
-                                .map(item => String(item.type).trim())
-                                .sort();
-                            setAccommodationTypes(fetchedAccommodationTypes);
-                        } else {
-                            console.warn("Firestore dokument 'settings/accommodation' neobsahuje pole 'types' alebo má neočakávaný formát.");
-                            setAccommodationTypes([]);
-                        }
-                    } else {
-                        console.warn("Firestore dokument 'settings/accommodation' neexistuje. Žiadne typy ubytovania neboli načítané.");
-                        setAccommodationTypes([]);
-                    }
-                } catch (error) {
-                    console.error("Chyba pri načítaní typov ubytovania z Firestore:", error);
-                }
-
-                // Načítanie balíkov
-                try {
-                    const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
-                    const querySnapshot = await getDocs(packagesCollectionRef);
-                    const fetchedPackages = querySnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
-                    setPackages(fetchedPackages);
-                } catch (error) {
-                    console.error("Chyba pri načítaní balíkov z Firestore:", error);
-                    setPackages([]);
-                }
-
-                // Načítanie veľkostí tričiek
-                try {
-                    const sizeTshirtsDocRef = doc(db, 'settings', 'sizeTshirts');
-                    const docSnapshot = await getDoc(sizeTshirtsDocRef);
-                    if (docSnapshot.exists()) {
-                        const data = docSnapshot.data();
-                        if (data && Array.isArray(data.sizes)) {
-                            setAvailableTshirtSizes(data.sizes.map(s => String(s).trim()));
-                        } else {
-                            console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes'.");
-                        }
-                    } else {
-                        console.warn("Firestore settings/sizeTshirts dokument neexistuje.");
-                    }
-                } catch (error) {
-                    console.error("Chyba pri načítaní veľkostí tričiek z Firestore:", error);
+            let cleanedData = { ...data };
+            // Convert Firestore Timestamp to Date objects for date inputs
+            for (const key in cleanedData) {
+                if (cleanedData[key] && typeof cleanedData[key].toDate === 'function') {
+                    cleanedData[key] = cleanedData[key].toDate();
                 }
             }
+
+            // Ensure address is an object, even if it's null or undefined
+            if (cleanedData.address === null || cleanedData.address === undefined) {
+                cleanedData.address = {};
+            }
+
+
+            // Special handling for new team members: pre-fill uniqueId if missing
+            if (type === 'teamMember' && !cleanedData.uniqueId) {
+                cleanedData.uniqueId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            }
+
+            // Ensure tShirts array exists for team type
+            if (type === 'team' && !cleanedData.tShirts) {
+                cleanedData.tShirts = [];
+            }
+
+
+            // Pre-fill phone number if it's an object from combined values
+            if (cleanedData.phoneNumber && typeof cleanedData.phoneNumber === 'object' && cleanedData.phoneNumber.code && cleanedData.phoneNumber.number) {
+                cleanedData.fullPhoneNumber = combinePhoneNumber(cleanedData.phoneNumber.code, cleanedData.phoneNumber.number);
+            } else if (cleanedData.phoneNumber && typeof cleanedData.phoneNumber === 'string') {
+                cleanedData.fullPhoneNumber = cleanedData.phoneNumber; // If it's already a string (old format)
+                cleanedData.phoneNumber = parsePhoneNumber(cleanedData.phoneNumber); // Parse for internal consistency
+            } else {
+                cleanedData.fullPhoneNumber = '';
+                cleanedData.phoneNumber = { code: '', number: '' };
+            }
+
+            // console.log('DEBUG DataEditModal - Cleaned initial edited data:', cleanedData);
+            return cleanedData;
+        }, [data, type]);
+
+
+        const [editedData, setEditedData] = useState(initialEditedData);
+        const [dialCodeModalOpen, setDialCodeModalOpen] = useState(false);
+        const [currentPhoneField, setCurrentPhoneField] = useState('');
+        const [notification, setNotification] = useState(null);
+        const [confirmationModal, setConfirmationModal] = useState(null);
+        const [loading, setLoading] = useState(false);
+        const [options, setOptions] = useState({}); // Stores dynamic options like team categories, packages, etc.
+
+
+        // console.log('DEBUG DataEditModal - Rendered with editedData:', editedData);
+
+        // Load dynamic options from Firestore
+        useEffect(() => {
+            if (!isOpen || !window.db) return;
+
+            const loadOptions = async () => {
+                const fetchedOptions = {};
+                // Example: Fetch team categories
+                if (type === 'team' || type === 'user') { // User might also need team categories if creating a team
+                    const categoriesSnap = await getDocs(collection(window.db, "teamCategories"));
+                    fetchedOptions.teamCategories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                }
+                // Fetch packages and accommodation types
+                if (type === 'team') {
+                    const packagesSnap = await getDocs(collection(window.db, "packages"));
+                    fetchedOptions.packages = packagesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    const accommodationSnap = await getDocs(collection(window.db, "accommodationTypes"));
+                    fetchedOptions.accommodationTypes = accommodationSnap.docs.map(doc => ({ id: acc.id, label: acc.name }));
+                }
+
+                // Fetch tShirt sizes
+                const tShirtSizesSnap = await getDocs(collection(window.db, "tshirtSizes"));
+                const tShirtSizes = tShirtSizesSnap.docs.map(doc => doc.data().size);
+                fetchedOptions.tShirtSizes = tShirtSizes.sort((a, b) => {
+                    const order = { 'XS': 0, 'S': 1, 'M': 2, 'L': 3, 'XL': 4, 'XXL': 5, 'XXXL': 6 };
+                    return order[a] - order[b];
+                });
+                setOptions(fetchedOptions);
+            };
+
+            loadOptions();
+        }, [isOpen, type]); // Reload options if modal opens or type changes
+
+        // Reset editedData when data prop changes (e.g., opening modal for new item)
+        useEffect(() => {
+            setEditedData(initialEditedData);
+        }, [initialEditedData]);
+
+
+        const handleNotification = (message, isError = false) => {
+            setNotification({ message, isError });
+            setTimeout(() => setNotification(null), 3000); // Clear after 3 seconds
         };
 
-        if (title.includes('Upraviť tím')) {
-            fetchTeamDataForSelects();
-        }
-    }, [db, title]);
+        const handleChange = (e) => {
+            const { name, value, type, checked } = e.target;
+            // console.log(`DEBUG handleChange - Name: ${name}, Value: ${value}, Type: ${type}, Checked: ${checked}`);
+
+            setEditedData(prevData => {
+                const newData = { ...prevData };
+                const newValue = type === 'checkbox' ? checked : value;
+
+                // Handle dot-notation for nested fields like 'address.street'
+                if (name.includes('.')) {
+                    const pathParts = name.split('.');
+                    // Use a temporary object to perform nested update
+                    const tempRoot = { ...newData }; // Make a shallow copy to start
+                    setNestedValue(tempRoot, name, newValue);
+                    return tempRoot;
+                }
+
+                // Specific handling for phone number
+                if (name === 'fullPhoneNumber') {
+                    const parsed = parsePhoneNumber(newValue);
+                    return {
+                        ...newData,
+                        phoneNumber: parsed,
+                        fullPhoneNumber: newValue // Keep raw input for display
+                    };
+                }
+
+                // Specific handling for date inputs
+                if (e.target.dataset.fieldtype === 'date') {
+                    return {
+                        ...newData,
+                        [name]: value ? new Date(value) : null
+                    };
+                }
+
+                return { ...newData, [name]: newValue };
+            });
+        };
 
 
-    React.useEffect(() => {
-        // Fetch user's role from window.globalUserProfileData safely
-        let currentUserRole = '';
-        if (window.globalUserProfileData && window.globalUserProfileData.role) {
-            currentUserRole = window.globalUserProfileData.role;
-        }
-        setUserRole(currentUserRole);
+        const handleDialCodeSelect = (code) => {
+            setEditedData(prevData => {
+                const newData = { ...prevData };
+                const currentPhoneNumber = newData.phoneNumber || { code: '', number: '' };
+                const newPhoneNumber = { ...currentPhoneNumber, code };
+                return {
+                    ...newData,
+                    phoneNumber: newPhoneNumber,
+                    fullPhoneNumber: combinePhoneNumber(newPhoneNumber.code, newPhoneNumber.number)
+                };
+            });
+            setDialCodeModalOpen(false);
+        };
 
-        const safeData = data || {}; 
-        const initialData = JSON.parse(JSON.stringify(safeData));
+        const handleAddTShirtRow = () => {
+            setEditedData(prevData => ({
+                ...prevData,
+                tShirts: [...(prevData.tShirts || []), { size: '', quantity: 1, _uniqueId: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` }]
+            }));
+        };
 
-        const isUserBeingEditedAdmin = initialData.role === 'admin';
-        const isUserBeingEditedHall = initialData.role === 'hall';
-        
-        setIsTargetUserAdmin(isUserBeingEditedAdmin);
-        setIsTargetUserHall(isUserBeingEditedHall);
+        const handleRemoveTShirtRow = (uniqueIdToRemove) => {
+            setEditedData(prevData => ({
+                ...prevData,
+                tShirts: (prevData.tShirts || []).filter(t => t._uniqueId !== uniqueIdToRemove)
+            }));
+        };
 
-        // Ak sa upravuje admin alebo hall používateľ, odstráňte tieto polia, aby sa nezobrazovali a neukladali
-        if (isUserBeingEditedAdmin || isUserBeingEditedHall) {
-            delete initialData.billing;
-            delete initialData.street;
-            delete initialData.houseNumber;
-            delete initialData.city;
-            delete initialData.postalCode;
-            delete initialData.country;
-            delete initialData.note;
-            delete initialData.contactPhoneNumber; // Tiež odstránime tel. číslo
-            setDisplayDialCode(''); // Vyčistiť stavy tel. čísla
-            setDisplayPhoneNumber('');
-        }
+        const handleTShirtChange = (uniqueId, fieldName, value) => {
+            setEditedData(prevData => ({
+                ...prevData,
+                tShirts: (prevData.tShirts || []).map(t =>
+                    t._uniqueId === uniqueId ? { ...t, [fieldName]: value } : t
+                )
+            }));
+        };
 
+        const handleSave = async () => {
+            // console.log('DEBUG handleSave - Original data:', data);
+            // console.log('DEBUG handleSave - Edited data:', editedData);
 
-        const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
-                                title.toLowerCase().includes('upraviť šofér');
-
-        if (title.includes('Upraviť používateľa') && !(isUserBeingEditedAdmin || isUserBeingEditedHall)) { // Len pre bežných používateľov
-            if (initialData.firstName === undefined) initialData.firstName = '';
-            if (initialData.lastName === undefined) initialData.lastName = '';
-            if (initialData.contactPhoneNumber === undefined) initialData.contactPhoneNumber = '';
-            if (!initialData.billing) initialData.billing = {};
-            if (initialData.billing.clubName === undefined) initialData.billing.clubName = '';
-            if (initialData.billing.ico === undefined) initialData.billing.ico = '';
-            if (initialData.billing.dic === undefined) initialData.billing.dic = '';
-            if (initialData.billing.icDph === undefined) initialData.billing.icDph = '';
-            if (initialData.street === undefined) initialData.street = '';
-            if (initialData.houseNumber === undefined) initialData.houseNumber = '';
-            if (initialData.city === undefined) initialData.city = '';
-            if (initialData.postalCode === undefined) initialData.postalCode = '';
-            if (initialData.country === undefined) initialData.country = '';
-            if (initialData.note === undefined) initialData.note = '';
-
-            const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
-            setDisplayDialCode(dialCode);
-            setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
-        } else if (isEditingMember || isNewEntry) { // Používame robustnejšiu detekciu
-            // Inicializovať adresné polia, ak neexistujú, a nastaviť ich na prázdny reťazec
-            // Toto je kľúčové pre správne zobrazenie input boxov pre členov realizačného tímu, hráčov a šoférov
-            if (!initialData.address) initialData.address = {};
-            if (initialData.address.street === undefined) initialData.address.street = '';
-            if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
-            if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
-            if (initialData.address.city === undefined) initialData.address.city = '';
-            if (initialData.address.country === undefined) initialData.address.country = '';
-            // Ďalšie polia pre členov tímu, ktoré by mohli chýbať
-            if (initialData.firstName === undefined) initialData.firstName = '';
-            if (initialData.lastName === undefined) initialData.lastName = '';
-            if (initialData.dateOfBirth === undefined) initialData.dateOfBirth = '';
-            if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
-            if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
-        } else if (title.includes('Upraviť tím')) {
-            // Inicializovať selectedCategory s existujúcou kategóriou tímu
-            setSelectedCategory(initialData._category || initialData.category || ''); // Použiť _category pre flattened tímy
-            if (initialData.teamName === undefined) initialData.teamName = '';
-            
-            // Inicializovať vybraný typ dopravy
-            setSelectedArrivalType(initialData.arrival?.type || '');
-            
-            // Inicializovať vybraný typ ubytovania
-            setSelectedAccommodationType(initialData.accommodation?.type || '');
-
-            // Inicializovať selectedPackageName s existujúcim názvom balíka tímu
-            setSelectedPackageName(initialData.packageDetails?.name || '');
-
-            // Inicializovať teamTshirts ako pole objektov { tempId, size, quantity }
-            const initialTshirts = (initialData.tshirts || [])
-                .filter(tshirt => tshirt.size && (tshirt.quantity || 0) > 0) // Only include with quantity > 0
-                .map(tshirt => ({
-                    tempId: generateUniqueId(), // Assign a temporary unique ID
-                    size: String(tshirt.size).trim(),
-                    quantity: tshirt.quantity || 0
-                }));
-            setTeamTshirts(initialTshirts);
-        }
-        
-        setLocalEditedData(initialData); 
-        console.log("DataEditModal useEffect: localEditedData initialized to:", initialData); // Debug log
-    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry]); // Pridané availableTshirtSizes a isNewEntry ako závislosť
-
-
-    React.useEffect(() => {
-        const handleClickOutside = (event) => {
-            // Check if dial code modal is open, if so, don't close this modal
-            if (isDialCodeModalOpen) {
-                return;
-            }
-            // Check if confirmation modal is open, if so, don't close this modal
-            if (isConfirmDeleteOpen) {
+            if (!window.db) {
+                handleNotification("Chyba: Firebase databáza nie je dostupná.", true);
                 return;
             }
 
-            if (modalRef.current && !modalRef.current.contains(event.target)) {
+            setLoading(true);
+            try {
+                let dataToSave = { ...editedData };
+
+                // Clean up temporary fields before saving
+                delete dataToSave.fullPhoneNumber; // Only phoneNumber object should be saved
+
+                // Filter out _uniqueId from tShirts before saving
+                if (dataToSave.tShirts) {
+                    dataToSave.tShirts = dataToSave.tShirts.map(({ _uniqueId, ...rest }) => rest);
+                }
+
+                // Handle dates: ensure they are Date objects for Firestore (if they were strings from input)
+                for (const key in dataToSave) {
+                    if (dataToSave[key] instanceof Date && isNaN(dataToSave[key].getTime())) {
+                        dataToSave[key] = null; // Set invalid dates to null
+                    }
+                }
+
+                // Convert address to null if all its fields are empty or it's an empty object
+                if (dataToSave.address && typeof dataToSave.address === 'object') {
+                    const isAddressEmpty = Object.values(dataToSave.address).every(val => val === null || val === undefined || val === '');
+                    if (isAddressEmpty) {
+                        dataToSave.address = null;
+                    }
+                }
+
+                const changes = getChangesForNotification(data, dataToSave);
+                // console.log('DEBUG handleSave - Detected changes:', changes);
+
+                if (changes.length === 0 && type !== 'new') { // Allow saving new items even if no initial changes detected
+                    handleNotification("Žiadne zmeny na uloženie.");
+                    setLoading(false);
+                    return;
+                }
+
+                // Special handling for phone number: combine code and number into a string for saving
+                if (dataToSave.phoneNumber && dataToSave.phoneNumber.code && dataToSave.phoneNumber.number) {
+                    dataToSave.phoneNumber = combinePhoneNumber(dataToSave.phoneNumber.code, dataToSave.phoneNumber.number);
+                } else {
+                    dataToSave.phoneNumber = null; // If incomplete, save as null
+                }
+
+
+                // Determine the Firestore path based on type
+                let docRef;
+                let collectionName;
+                let updateData = { ...dataToSave }; // Create a copy to modify for Firestore
+
+                if (type === 'user') {
+                    collectionName = 'users';
+                    docRef = doc(window.db, collectionName, dataToSave.id);
+                } else if (type === 'team') {
+                    collectionName = 'teams';
+                    docRef = doc(window.db, collectionName, dataToSave.id);
+
+                    // Add team category data to the team document
+                    const selectedCategory = options.teamCategories?.find(cat => cat.id === dataToSave.teamCategory);
+                    if (selectedCategory) {
+                        updateData.teamCategoryData = {
+                            id: selectedCategory.id,
+                            name: selectedCategory.name,
+                            type: selectedCategory.type,
+                            isPaymentRequired: selectedCategory.isPaymentRequired || false,
+                            packageSelectionRequired: selectedCategory.packageSelectionRequired || false,
+                            hasAccommodationSelection: selectedCategory.hasAccommodationSelection || false,
+                        };
+                    } else {
+                         updateData.teamCategoryData = null;
+                    }
+
+                } else if (type === 'teamMember') {
+                    // console.log('DEBUG handleSave - Saving team member with uniqueId:', dataToSave.uniqueId, 'original data ID:', data.id);
+                    const teamDocRef = doc(window.db, 'teams', data.teamId); // data.teamId is available for members
+
+                    await runTransaction(window.db, async (transaction) => {
+                        const teamDoc = await transaction.get(teamDocRef);
+                        if (!teamDoc.exists()) {
+                            throw "Team document does not exist!";
+                        }
+
+                        let currentMembers = teamDoc.data().members || [];
+                        const memberIndex = currentMembers.findIndex(m => m.uniqueId === dataToSave.uniqueId);
+
+                        let updatedMembers;
+                        if (memberIndex > -1) {
+                            // Update existing member
+                            updatedMembers = [...currentMembers];
+                            updatedMembers[memberIndex] = updateData;
+                        } else {
+                            // Add new member
+                            // Ensure teamMembers always has an ID when added.
+                            // The ID is generated by a cloud function upon initial registration.
+                            // For manual adds, we need to ensure uniqueId exists as temporary until DB ID is assigned
+                            updateData.createdAt = serverTimestamp(); // Add timestamp for new members
+                            updatedMembers = [...currentMembers, updateData];
+                        }
+                        transaction.update(teamDocRef, { members: updatedMembers });
+                    });
+                    handleNotification("Člen tímu bol úspešne uložený.");
+                    onClose();
+                    setLoading(false);
+                    return; // Exit as transaction handled the save
+                } else {
+                    handleNotification("Chyba: Neznámy typ dát pre uloženie.", true);
+                    setLoading(false);
+                    return;
+                }
+
+                // If existing document, update it
+                if (data.id) {
+                    await updateDoc(docRef, updateData);
+                    handleNotification("Údaje boli úspešne uložené.");
+                } else {
+                    // If new document (e.g., new user or team, not team member)
+                    // Currently, this modal is primarily for editing existing data.
+                    // For adding new, a different flow might be needed or data.id would be absent.
+                    // If adding a new user/team:
+                    updateData.createdAt = serverTimestamp();
+                    await addDoc(collection(window.db, collectionName), updateData);
+                    handleNotification("Nový záznam bol úspešne pridaný.");
+                }
+
+                onSave(); // Callback to refresh parent data
                 onClose();
+            } catch (error) {
+                console.error("Chyba pri ukladaní dát:", error);
+                handleNotification(`Chyba pri ukladaní dát: ${error.message || error}`, true);
+            } finally {
+                setLoading(false);
             }
         };
 
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
+        if (!isOpen) return null;
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen]); // Add isConfirmDeleteOpen to dependencies
+        const fieldsToRender = Object.keys(editedData || {}).filter(field =>
+            ![
+                'id', 'originalArray', 'originalIndex', 'uniqueId', 'createdAt', 'updatedAt',
+                'teamId', 'members', 'fullPhoneNumber', 'phoneNumber', 'teamCategoryData',
+                '_uniqueId', // Filter out temporary unique ID from rendering
+                // 'address' // No longer filtered out here, will be rendered dynamically
+            ].includes(field) &&
+            !field.startsWith('_') // Filter out any other internal fields starting with underscore
+        );
 
-    if (!isOpen) return null;
+        // Define specific order for address fields if they exist
+        const addressFieldsOrder = ['street', 'city', 'zipCode', 'countryCode'];
 
-    // Handler pre zmenu veľkosti alebo počtu tričiek
-    const handleTshirtEntryChange = (tempId, field, value) => {
-        setTeamTshirts(prev =>
-            prev.map(entry =>
-                entry.tempId === tempId
-                    ? { ...entry, [field]: field === 'quantity' ? Math.max(0, parseInt(value, 10) || 0) : value }
-                    : entry
-            )
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                    <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
+                        <h2 className="text-xl font-semibold text-gray-800">
+                            {type === 'user' && (data.id ? 'Upraviť používateľa' : 'Pridať používateľa')}
+                            {type === 'team' && (data.id ? 'Upraviť tím' : 'Pridať tím')}
+                            {type === 'teamMember' && (data.id ? 'Upraviť člena tímu' : 'Pridať člena tímu')}
+                        </h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold p-1">
+                            &times;
+                        </button>
+                    </div>
+
+                    <div className="p-4 overflow-y-auto flex-grow custom-scrollbar">
+                        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
+                            {fieldsToRender.map(field => {
+                                let fieldValue = getNestedValue(editedData, field);
+                                const fieldType = config.fieldTypes?.[field] || typeof fieldValue;
+
+                                // console.log(`DEBUG Rendering field: ${field}, Value:`, fieldValue, `Type: ${fieldType}`);
+
+                                // Handle nested objects dynamically (e.g., 'address')
+                                if (typeof fieldValue === 'object' && fieldValue !== null && !Array.isArray(fieldValue) && typeof fieldValue.toDate !== 'function') {
+                                    // Render a section for nested object fields
+                                    const nestedKeys = Object.keys(fieldValue || {}).sort((a, b) => {
+                                        const indexA = addressFieldsOrder.indexOf(a);
+                                        const indexB = addressFieldsOrder.indexOf(b);
+                                        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                                        if (indexA !== -1) return -1;
+                                        if (indexB !== -1) return 1;
+                                        return a.localeCompare(b);
+                                    });
+
+                                    if (nestedKeys.length === 0 && field === 'address') {
+                                        // If address is an empty object, provide initial fields for editing
+                                        nestedKeys.push('street', 'city', 'zipCode', 'countryCode');
+                                    }
+
+
+                                    return (
+                                        <div key={field} className="border p-3 rounded-md bg-gray-50">
+                                            <h4 className="font-semibold text-gray-700 mb-2">{formatLabel(field)}</h4>
+                                            <div className="space-y-3">
+                                                {nestedKeys.map(nestedField => {
+                                                    const fullFieldName = `${field}.${nestedField}`;
+                                                    const nestedFieldValue = getNestedValue(editedData, fullFieldName);
+                                                    const nestedFieldType = config.fieldTypes?.[fullFieldName] || typeof nestedFieldValue;
+
+                                                    return (
+                                                        <div key={fullFieldName} className="flex flex-col">
+                                                            <label htmlFor={fullFieldName} className="block text-sm font-medium text-gray-700">
+                                                                {formatLabel(nestedField)}:
+                                                            </label>
+                                                            <input
+                                                                type={nestedFieldType === 'number' ? 'number' : 'text'}
+                                                                id={fullFieldName}
+                                                                name={fullFieldName}
+                                                                value={nestedFieldValue === null || nestedFieldValue === undefined ? '' : nestedFieldValue}
+                                                                onChange={handleChange}
+                                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                                                                disabled={config.disabledFields?.includes(fullFieldName)}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // Handle specific field types for main level
+                                if (field === 'birthDate') {
+                                    return (
+                                        <div key={field} className="flex flex-col">
+                                            <label htmlFor={field} className="block text-sm font-medium text-gray-700">
+                                                {formatLabel(field)}:
+                                            </label>
+                                            <input
+                                                type="date"
+                                                id={field}
+                                                name={field}
+                                                data-fieldtype="date" // Custom attribute for date handling
+                                                value={fieldValue ? new Date(fieldValue).toISOString().split('T')[0] : ''}
+                                                onChange={handleChange}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                                                disabled={config.disabledFields?.includes(field)}
+                                            />
+                                        </div>
+                                    );
+                                }
+
+                                if (field === 'fullPhoneNumber') {
+                                    return (
+                                        <div key={field} className="flex flex-col">
+                                            <label htmlFor={field} className="block text-sm font-medium text-gray-700">
+                                                Telefónne číslo:
+                                            </label>
+                                            <div className="flex mt-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setDialCodeModalOpen(true); setCurrentPhoneField(field); }}
+                                                    className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm hover:bg-gray-100"
+                                                >
+                                                    {editedData.phoneNumber?.code || '+421'}
+                                                </button>
+                                                <input
+                                                    type="text"
+                                                    id={field}
+                                                    name={field}
+                                                    value={fieldValue || ''}
+                                                    onChange={handleChange}
+                                                    className="flex-1 block w-full rounded-none rounded-r-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                                                    placeholder="Zadajte číslo"
+                                                    disabled={config.disabledFields?.includes(field)}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // Handle select dropdowns for categories, packages, accommodation
+                                if (['teamCategory', 'selectedPackage', 'accommodationType', 'gender'].includes(field)) {
+                                    let selectOptions = [];
+                                    let placeholder = `Vyberte ${formatLabel(field)}`;
+
+                                    if (field === 'teamCategory' && options.teamCategories) {
+                                        selectOptions = options.teamCategories.map(cat => ({ value: cat.id, label: cat.name }));
+                                    } else if (field === 'selectedPackage' && options.packages) {
+                                        selectOptions = options.packages.map(pkg => ({ value: pkg.id, label: pkg.name }));
+                                    } else if (field === 'accommodationType' && options.accommodationTypes) {
+                                        selectOptions = options.accommodationTypes.map(acc => ({ value: acc.id, label: acc.name }));
+                                    } else if (field === 'gender') {
+                                        selectOptions = [{ value: 'male', label: 'Muž' }, { value: 'female', label: 'Žena' }];
+                                    }
+
+
+                                    return (
+                                        <div key={field} className="flex flex-col">
+                                            <label htmlFor={field} className="block text-sm font-medium text-gray-700">
+                                                {formatLabel(field)}:
+                                            </label>
+                                            <select
+                                                id={field}
+                                                name={field}
+                                                value={fieldValue || ''}
+                                                onChange={handleChange}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                                                disabled={config.disabledFields?.includes(field)}
+                                            >
+                                                <option value="">{placeholder}</option>
+                                                {selectOptions.map(option => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    );
+                                }
+
+
+                                // Default input for other fields
+                                return (
+                                    <div key={field} className="flex flex-col">
+                                        <label htmlFor={field} className="block text-sm font-medium text-gray-700">
+                                            {formatLabel(field)}:
+                                        </label>
+                                        <input
+                                            type={fieldType === 'number' ? 'number' : 'text'}
+                                            id={field}
+                                            name={field}
+                                            value={fieldValue === null || fieldValue === undefined ? '' : fieldValue}
+                                            onChange={handleChange}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                                            disabled={config.disabledFields?.includes(field)}
+                                            // Conditional styling/validation for specific fields
+                                            {...(field === 'companyId' && { placeholder: 'Napr. 12345678' })}
+                                            {...(field === 'vatId' && { placeholder: 'Napr. SK1234567890' })}
+                                            {...(field === 'zipCode' && { placeholder: 'Napr. 841 01' })}
+                                        />
+                                    </div>
+                                );
+                            })}
+
+                            {/* T-Shirt section for Teams */}
+                            {type === 'team' && (
+                                <div className="border p-3 rounded-md bg-gray-50">
+                                    <h4 className="font-semibold text-gray-700 mb-2">Tričká</h4>
+                                    {editedData.tShirts && editedData.tShirts.map((tshirt, index) => (
+                                        <div key={tshirt._uniqueId || index} className="flex items-end space-x-2 mb-2">
+                                            <div className="flex-1">
+                                                <label htmlFor={`tshirt-size-${tshirt._uniqueId}`} className="block text-sm font-medium text-gray-700">
+                                                    Veľkosť:
+                                                </label>
+                                                <select
+                                                    id={`tshirt-size-${tshirt._uniqueId}`}
+                                                    name="size"
+                                                    value={tshirt.size || ''}
+                                                    onChange={(e) => handleTShirtChange(tshirt._uniqueId, 'size', e.target.value)}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                                                >
+                                                    <option value="">Vyberte veľkosť</option>
+                                                    {options.tShirtSizes && options.tShirtSizes.map(size => (
+                                                        <option key={size} value={size}>{size}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="w-20">
+                                                <label htmlFor={`tshirt-qty-${tshirt._uniqueId}`} className="block text-sm font-medium text-gray-700">
+                                                    Množstvo:
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    id={`tshirt-qty-${tshirt._uniqueId}`}
+                                                    name="quantity"
+                                                    value={tshirt.quantity || 1}
+                                                    onChange={(e) => handleTShirtChange(tshirt._uniqueId, 'quantity', parseInt(e.target.value, 10))}
+                                                    min="1"
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveTShirtRow(tshirt._uniqueId)}
+                                                className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 self-end"
+                                                title="Odstrániť tričko"
+                                            >
+                                                &times;
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={handleAddTShirtRow}
+                                        className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                    >
+                                        Pridať riadok trička
+                                    </button>
+                                </div>
+                            )}
+
+                        </form>
+                    </div>
+
+                    <div className="p-4 border-t flex justify-end space-x-3 bg-gray-50 rounded-b-lg">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                            disabled={loading}
+                        >
+                            Zrušiť
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className={`px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${loading ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+                            disabled={loading}
+                        >
+                            {loading ? 'Ukladám...' : 'Uložiť zmeny'}
+                        </button>
+                    </div>
+
+                    {notification && (
+                        <NotificationModal
+                            message={notification.message}
+                            isError={notification.isError}
+                            onClose={() => setNotification(null)}
+                        />
+                    )}
+
+                    {dialCodeModalOpen && (
+                        <DialCodeSelectionModal
+                            onClose={() => setDialCodeModalOpen(false)}
+                            onSelect={handleDialCodeSelect}
+                        />
+                    )}
+                </div>
+            </div>
         );
     };
-
-    // Handler pre odstránenie riadku s tričkom
-    const removeTshirtEntry = (tempId) => {
-        setTeamTshirts(prev => prev.filter(entry => entry.tempId !== tempId));
-    };
-
-    // Handler pre pridanie nového riadku s tričkom
-    const addTshirtEntry = () => {
-        const currentlyUsedSizes = teamTshirts.map(entry => entry.size);
-        const availableSizesForNewEntry = availableTshirtSizes.filter(size => !currentlyUsedSizes.includes(size));
-
-        if (availableSizesForNewEntry.length > 0) {
-            setTeamTshirts(prev => [
-                ...prev,
-                { tempId: generateUniqueId(), size: availableSizesForNewEntry[0], quantity: 0 }
-            ]);
-        } else {
-            setUserNotificationMessage("Všetky dostupné veľkosti tričiek sú už pridané.", 'info');
-        }
-    };
-
-
-    // Helper to format keys for labels
-    const formatLabel = (key) => {
-        let label = key
-            .replace(/([A-Z])/g, ' $1')
-            .replace(/^./, str => str.toUpperCase())
-            .replace(/\./g, ' ')
-            .trim()
-            .replace(' (Fakturácia)', ''); 
-
-        if (key === 'billing.clubName') return 'Názov klubu';
-        if (key === 'billing.ico') return 'IČO';
-        if (key === 'billing.dic') return 'DIČ';
-        if (key === 'billing.icDph') return 'IČ DPH';
-        if (key === 'accommodation.type') return 'Typ ubytovania';
-        if (key === 'arrival.type') return 'Typ dopravy';
-        if (key === 'packageDetails.name') return 'Názov balíka';
-        if (key === 'packageDetails.meals') return 'Stravovanie';
-        if (key === 'teamName') return 'Názov tímu';
-        if (key === 'playerDetails') return 'Detaily hráčov';
-        if (key === 'menTeamMemberDetails') return 'Detaily členov R. tímu (muži)';
-        if (key === 'womenTeamMemberDetails') return 'Detaily členov R. tímu (ženy)';
-        if (key === 'driverDetailsMale') return 'Detaily šoféra (muž)'; 
-        if (key === 'driverDetailsFemale') return 'Detaily šoféra (žena)'; 
-        if (key === 'tshirts') return 'Tričká';
-        if (key === 'registrationDate') return 'Dátum registrácie';
-        if (key === 'dateOfBirth') return 'Dátum narodenia';
-        if (key === 'address.street') return 'Ulica';
-        if (key === 'address.houseNumber') return 'Popisné číslo';
-        if (key === 'address.postalCode') return 'PSČ';
-        if (key === 'address.city') return 'Mesto/Obec';
-        if (key === 'address.country') return 'Krajina';
-        if (key === 'street') return 'Ulica';
-        if (key === 'houseNumber') return 'Popisné číslo';
-        if (key === 'city') return 'Mesto/Obec';
-        if (key === 'postalCode') return 'PSČ';
-        if (key === 'country') return 'Krajina';
-        if (key === 'approved') return 'Schválený';
-        if (key === 'email') return 'E-mail';
-        if (key === 'contactPhoneNumber') return 'Telefónne číslo';
-        if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla';
-        if (key === 'password') return 'Heslo';
-        if (key === 'role') return 'Rola';
-        if (key === 'firstName') return 'Meno';
-        if (key === 'lastName') return 'Priezvisko';
-        if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
-        if (key === 'isMenuToggled') return 'Prepínač menu';
-        if (key === 'note') return 'Poznámka';
-        if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
-        if (key === 'jerseyNumber') return 'Číslo dresu';
-        if (key === 'registrationNumber') return 'Číslo registrácie';
-
-
-        return label;
-    };
-
-    // Helper to format values for display in input fields
-    const formatDisplayValue = (value, path) => { 
-        if (value === null || value === undefined) return '';
-        if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
-        
-        let date;
-        // Ak je to dátum narodenia (firstName, lastName, dateOfBirth atď. sú v core data), vráti YYYY-MM-DD formát
-        if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            return value; 
-        }
-        if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
-             if (typeof value.toDate === 'function') { 
-                date = value.toDate();
-            } else { 
-                date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
-            }
-            try {
-                const options = {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                };
-                return date.toLocaleString('sk-SK', options);
-            } catch (e) {
-                console.error("Chyba pri formátovaní Timestamp:", value, e);
-                return `[Chyba Timestamp: ${e.message}]`; 
-            }
-        }
-        
-        if (Array.isArray(value)) {
-            return value.map(item => {
-                if (typeof item === 'object' && item !== null) {
-                    try {
-                        // Special handling for t-shirt objects
-                        if (item.size && item.quantity !== undefined) {
-                            return `${item.size}: ${item.quantity}`;
-                        }
-                        // For other complex objects in arrays, provide a simplified representation
-                        if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
-                        return JSON.stringify(item);
-                    } catch (e) {
-                        console.error("Chyba pri prevode objektu poľa na reťazec:", item, e);
-                        return '[Chyba objektu]';
-                    }
-                }
-                return String(item);
-            }).join(', ');
-        }
-        
-        if (typeof value === 'object') {
-            if (value.name || value.type) { 
-                return value.name || value.type;
-            }
-            try {
-                return JSON.stringify(value);
-            } catch (e) {
-                console.error("Chyba pri prevode objektu na reťazec:", value, e);
-                return '[Chyba objektu]'; 
-            }
-        }
-        
-        return String(value); 
-    };
-
-    // Helper to handle input changes for nested data
-    const handleChange = (path, newValue) => {
-        setLocalEditedData(prevData => {
-            const newData = JSON.parse(JSON.stringify(prevData)); 
-            let current = newData;
-            const pathParts = path.split('.');
-
-            for (let i = 0; i < pathParts.length - 1; i++) {
-                const part = pathParts[i];
-                const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/); 
-                
-                if (arrayMatch) {
-                    const arrayKey = arrayMatch[1];
-                    const arrayIndex = parseInt(arrayMatch[2]);
-                    if (!current[arrayKey]) current[arrayKey] = [];
-                    if (!current[arrayKey][arrayIndex]) current[arrayKey][arrayIndex] = {};
-                    current = current[arrayKey][arrayIndex];
-                } else {
-                    if (!current[part]) current[part] = {};
-                    current = current[part];
-                }
-            }
-
-            const lastPart = pathParts[pathParts.length - 1];
-            const lastArrayMatch = lastPart.match(/^(.*?)\[(\d+)\]$/);
-            if (lastArrayMatch) {
-                const arrayKey = lastArrayMatch[1];
-                const arrayIndex = parseInt(lastArrayMatch[2]);
-                if (!current[arrayKey]) current[arrayKey] = [];
-                current[arrayKey][arrayIndex] = newValue;
-            } else {
-                if (typeof getNestedValue(data, path) === 'boolean') {
-                    current[lastPart] = (newValue.toLowerCase() === 'áno' || newValue.toLowerCase() === 'true');
-                } else if (typeof getNestedValue(data, path) === 'number') {
-                    current[lastPart] = parseFloat(newValue) || 0; 
-                } else {
-                    current[lastPart] = newValue;
-                }
-            }
-            return newData;
-        });
-    };
-
-    // Handler pre IČO a DIČ (iba čísla)
-    const handleNumericInput = (e, path) => {
-        const value = e.target.value.replace(/\D/g, ''); // Odstráni všetky nečíselné znaky
-        handleChange(path, value);
-    };
-
-    // Handler pre IČ DPH (prvé 2 veľké písmená, potom čísla)
-    const handleIcDphChange = (e, path) => {
-        let value = e.target.value;
-        let formattedValue = '';
-        let cursorPosition = e.target.selectionStart;
-
-        // Spracovanie prvých dvoch znakov (iba písmená, veľké)
-        if (value.length > 0) {
-            if (/[a-zA-Z]/.test(value[0])) {
-                formattedValue += value[0].toUpperCase();
-            } else {
-                // Ak prvý znak nie je písmeno, ignorujeme ho a posunieme kurzor
-                value = value.substring(1);
-                cursorPosition = Math.max(0, cursorPosition - 1);
-            }
-        }
-        if (value.length > 1) {
-            if (/[a-zA-Z]/.test(value[1])) {
-                formattedValue += value[1].toUpperCase();
-            } else {
-                // Ak druhý znak nie je písmeno, ignorujeme ho a posunieme kurzor
-                value = formattedValue + value.substring(2); // Len zvyšok bez druhého znaku
-                cursorPosition = Math.max(formattedValue.length, cursorPosition - 1);
-            }
-        }
-
-        // Spracovanie zvyšných znakov (iba čísla)
-        if (value.length > 2) {
-            formattedValue += value.substring(2).replace(/\D/g, '');
-        }
-        
-        // Obmedziť celkovú dĺžku (2 písmená + 10 číslic = 12 znakov)
-        formattedValue = formattedValue.substring(0, 12);
-
-        handleChange(path, formattedValue);
-
-        // Obnoviť pozíciu kurzora po formátovaní
-        setTimeout(() => {
-            if (inputRefs.current[path]) { // Používame plnú cestu pre ref
-                inputRefs.current[path].selectionStart = cursorPosition;
-                inputRefs.current[path].selectionEnd = cursorPosition;
-            }
-        }, 0);
-    };
-
-    // Handler pre PSČ (číslice, medzera po 3. číslici)
-    const handlePostalCodeChange = (e, path) => { // path pridaná
-        const input = e.target;
-        const originalInput = input.value;
-        let cursorPosition = input.selectionStart;
-
-        // Odstráni všetky nečíselné znaky
-        let cleanedValue = originalInput.replace(/\D/g, '');
-        cleanedValue = cleanedValue.substring(0, 5); // Maximálne 5 číslic
-
-        let formattedValue = cleanedValue;
-        if (cleanedValue.length > 3) {
-            formattedValue = cleanedValue.substring(0, 3) + ' ' + cleanedValue.substring(3);
-            if (cursorPosition === 4 && originalInput.charAt(3) !== ' ' && cleanedValue.length === 4) {
-                // Ak bola medzera práve vložená a kurzor je za ňou
-                cursorPosition++;
-            }
-        } else if (cursorPosition === 4 && originalInput.length === 5 && originalInput.charAt(3) === ' ' && e.nativeEvent.inputType === 'deleteContentBackward') {
-            // Edge case: "123| 4" -> backspace by user, remove "3 "
-            cursorPosition -= 2; // Move cursor back past the '3' and space
-        } else if (originalInput.length === 3 && formattedValue.length === 4 && e.nativeEvent.inputType === 'insertText') {
-            // Edge case: User typed 3 chars, then 4th char. Space was inserted. Cursor moves.
-            cursorPosition++;
-        }
-
-        handleChange(path, formattedValue); // Použijeme path
-
-        // React controlled components make setting cursor position directly problematic.
-        // Use setTimeout to allow state update to render, then set cursor.
-        // This is a common workaround for this scenario.
-        setTimeout(() => {
-            if (inputRefs.current[path]) { // Použijeme path
-                inputRefs.current[path].selectionStart = cursorPosition;
-                inputRefs.current[path].selectionEnd = cursorPosition;
-            }
-        }, 0);
-    };
-
-    const handlePostalCodeKeyDown = (e, path) => { // path pridaná
-        const input = e.target;
-        const value = input.value;
-        const selectionStart = input.selectionStart;
-
-        if (e.key === 'Backspace' && selectionStart === 4 && value.charAt(selectionStart - 1) === ' ') {
-            e.preventDefault(); // Zabrániť predvolenému Backspace
-            const newValue = value.substring(0, selectionStart - 2) + value.substring(selectionStart);
-            handleChange(path, newValue); // Použijeme path
-            setTimeout(() => {
-                if (inputRefs.current[path]) { // Použijeme path
-                    inputRefs.current[path].selectionStart = selectionStart - 2;
-                    if (inputRefs.current[path]) inputRefs.current[path].selectionEnd = selectionStart - 2;
-                }
-            }, 0);
-        }
-    };
-
-    // Handler pre ContactPhoneNumber
-    const handleContactPhoneNumberChange = (e) => {
-        const value = e.target.value;
-        const cleanedValue = value.replace(/\D/g, ''); // Iba číslice
-        setDisplayPhoneNumber(formatNumberGroups(cleanedValue)); // Formátovať pre zobrazenie
-        // Skutočná hodnota sa uloží pri volaní onSave
-    };
-
-    const handleSelectDialCode = (newDialCode) => {
-        setDisplayDialCode(newDialCode);
-        // Ak je potrebné okamžite aktualizovať localEditedData, môžete to urobiť tu
-        // Ale pre "contactPhoneNumber" to necháme na onSave, aby sme sa vyhli zbytočným re-renderom
-    };
-
-    const isSavable = targetDocRef !== null;
-
-    // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
-    const getNestedDataForInput = (obj, path) => {
-        const value = getNestedValue(obj, path);
-        if (path.includes('postalCode')) { // Upravené pre address.postalCode
-            return String(value || '').replace(/\s/g, '');
-        }
-        if (path === 'contactPhoneNumber') {
-            return value;
-        }
-        return value;
-    };
-
-    // Určiť, či sa upravuje člen tímu (hráč, RT člen, šofér)
-    const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                            title.toLowerCase().includes('upraviť člen realizačného tímu') || 
-                            title.toLowerCase().includes('upraviť šofér');
-
-    const handleDeleteMemberClick = () => {
-        const memberName = `${localEditedData.firstName || ''} ${localEditedData.lastName || ''}`.trim();
-        setDeleteConfirmMessage(`Naozaj chcete odstrániť ${memberName || 'tohto člena tímu'}? Túto akciu nie je možné vrátiť späť.`);
-        setIsConfirmDeleteOpen(true);
-    };
-
-    // Nová funkcia pre vykresľovanie polí člena tímu/hráča/šoféra
-    const renderMemberFields = () => {
-        // console.log('DataEditModal: renderMemberFields called. localEditedData:', localEditedData); // Debug log
-        const memberElements = [];
-        const memberFieldsOrder = [
-            'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
-            'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
-        ];
-        
-        memberFieldsOrder.forEach(path => {
-            const value = getNestedValue(localEditedData, path);
-            // console.log(`DataEditModal:   renderMemberFields: For path: ${path}, raw value:`, value, `(type: ${typeof value})`); // Debug log)
-
-            const labelText = formatLabel(path);
-            let inputType = 'text';
-            let isCheckbox = false;
-            let customProps = {}; 
-
-            if (typeof value === 'boolean') {
-                isCheckbox = true;
-            } else if (path.includes('dateOfBirth')) {
-                inputType = 'date';
-            } else if (path.includes('jerseyNumber')) { // Iba pre JerseyNumber
-                 customProps = {
-                    onChange: (e) => handleNumericInput(e, path),
-                    inputMode: 'numeric',
-                    pattern: '[0-9]*',
-                    maxLength: 3
-                };
-            } else if (path.includes('registrationNumber')) { // Teraz umožňuje všetky znaky pre RegistrationNumber
-                customProps = {
-                    onChange: (e) => handleChange(path, e.target.value), // Už nepoužíva handleNumericInput
-                    maxLength: 20
-                };
-            }
-             else if (path.includes('postalCode')) {
-                customProps = {
-                    onChange: (e) => handlePostalCodeChange(e, path),
-                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
-                    inputMode: 'numeric',
-                    pattern: '[0-9 ]*',
-                    maxLength: 6 
-                };
-            }
-            
-            // console.log(`DataEditModal:     renderMemberFields: Input value for path ${path}: "${inputValue}"`);
-
-            memberElements.push(React.createElement(
-                'div',
-                { key: path, className: 'mb-4' }, // Odstránené červené štýly
-                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                // Odstránený riadok s aktuálnou hodnotou
-                isCheckbox ? (
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        className: `form-checkbox h-5 w-5 text-blue-600`,
-                        checked: getNestedValue(localEditedData, path) === true,
-                        onChange: (e) => handleChange(path, e.target.checked),
-                        disabled: !isSavable
-                    })
-                ) : (
-                    React.createElement('input', {
-                        ref: el => inputRefs.current[path] = el,
-                        type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path), // Používame formatDisplayValue
-                        onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
-                        readOnly: !isSavable,
-                        ...customProps 
-                    })
-                )
-            ));
-        });
-
-        return memberElements.filter(Boolean);
-    };
-
-    const renderDataFields = (obj, currentPath = '') => {
-        // Zmenená podmienka pre robustnejšie porovnanie
-        const isEditingMemberOrNewEntry = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
-                                title.toLowerCase().includes('upraviť šofér') || isNewEntry;
-
-        // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
-
-        // Skryť isMenuToggled pre úpravu používateľa
-        if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
-            return null;
-        }
-
-        if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
-            if (isEditingMemberOrNewEntry) { // Použiť novú premennú
-                // console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
-                return renderMemberFields(); // Voláme novú dedikovanú funkciu
-            } else if (title.includes('Upraviť používateľa')) { 
-                const elements = [];
-                
-                const allUserFields = [
-                    'firstName', 'lastName', 'contactPhoneNumber',
-                    'billing.clubName', 'billing.ico', 'billing.dic', 'billing.icDph',
-                    'street', 'houseNumber', 'city', 'postalCode', 'country', 'note' 
-                ];
-                let fieldsToRenderForUser = allUserFields;
-                const isCurrentUserAdmin = userRole === 'admin';
-                const isUserBeingEditedAdminOrHall = isTargetUserAdmin || isTargetUserHall;
-
-                // Ak aktuálny používateľ je admin A používateľ, ktorého upravujeme, je admin ALEBO hall,
-                // zobrazíme len meno a priezvisko. Telefónne číslo, fakturačné údaje, adresa a poznámka sa skryjú.
-                if (isCurrentUserAdmin && isUserBeingEditedAdminOrHall) {
-                    fieldsToRenderForUser = ['firstName', 'lastName']; // Len meno a priezvisko
-                }
-
-                const renderedFields = new Set(); // Track rendered fields for the user form
-
-
-                const renderUserField = (path, value) => {
-                    if (renderedFields.has(path)) return null;
-                    renderedFields.add(path);
-
-                    const key = path.split('.').pop();
-                    if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
-                        return null;
-                    }
-                    
-                    const labelText = formatLabel(path);
-                    let inputType = 'text';
-                    let isCheckbox = false;
-                    let customProps = {}; 
-
-                    if (typeof value === 'boolean') {
-                        isCheckbox = true;
-                    } else if (path.toLowerCase().includes('password')) {
-                        inputType = 'password';
-                    } else if (path === 'billing.ico' || path === 'billing.dic') {
-                        customProps = {
-                            onChange: (e) => handleNumericInput(e, path),
-                            inputMode: 'numeric',
-                            pattern: '[0-9]*',
-                            maxLength: 10 
-                        };
-                    } else if (path === 'billing.icDph') {
-                        customProps = {
-                            onChange: (e) => handleIcDphChange(e, path),
-                            maxLength: 12 
-                        };
-                    } else if (path.includes('postalCode')) {
-                        customProps = {
-                            onChange: (e) => handlePostalCodeChange(e, path),
-                            onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
-                            inputMode: 'numeric',
-                            pattern: '[0-9 ]*',
-                            maxLength: 6 
-                        };
-                    } else if (path === 'contactPhoneNumber') {
-                        // Nezobrazovať tlačidlo a input pre admin/hall používateľov
-                        if (isUserBeingEditedAdminOrHall) return null;
-                        return React.createElement(
-                            'div',
-                            { key: path, className: 'mb-4' },
-                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                            React.createElement(
-                                'div',
-                                { className: 'flex' },
-                                React.createElement('button', {
-                                    type: 'button',
-                                    className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                                    onClick: () => setIsDialCodeModalOpen(true),
-                                    disabled: !isSavable
-                                }, displayDialCode || 'Vybrať predvoľbu'),
-                                React.createElement('input', {
-                                    ref: el => inputRefs.current[path] = el,
-                                    type: 'tel',
-                                    className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                    value: displayPhoneNumber,
-                                    onChange: handleContactPhoneNumberChange,
-                                    readOnly: !isSavable,
-                                    inputMode: 'tel',
-                                    placeholder: 'Zadajte telefónne číslo',
-                                    maxLength: 15 
-                                })
-                            )
-                        );
-                    }
-
-                    return React.createElement(
-                        'div',
-                        { key: path, className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                        isCheckbox ? (
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                className: `form-checkbox h-5 w-5 text-blue-600`,
-                                checked: getNestedValue(localEditedData, path) === true,
-                                onChange: (e) => handleChange(path, e.target.checked),
-                                disabled: !isSavable
-                            })
-                        ) : (
-                            React.createElement('input', {
-                                ref: el => inputRefs.current[path] = el,
-                                type: inputType,
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                                value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path),
-                                onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
-                                readOnly: !isSavable,
-                                ...customProps
-                            })
-                        )
-                    );
-                };
-
-                // Vykresliť len povolené polia pre používateľa
-                fieldsToRenderForUser.forEach(path => {
-                    elements.push(renderUserField(path, getNestedDataForInput(localEditedData, path)));
-                });
-
-                // Zabezpečiť, aby sa prázdne billing, adresa a poznámka NEVYKRESLOVALI
-                // ak je používateľ admin/hall
-                if (!isUserBeingEditedAdminOrHall) {
-                    const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
-                    if (billingFieldsInScope.length > 0) {
-                        elements.push(
-                            React.createElement(
-                                'div',
-                                { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                                billingFieldsInScope.map(billingPath => {
-                                    const billingValue = getNestedDataForInput(localEditedData, billingPath);
-                                    return renderUserField(billingPath, billingValue);
-                                })
-                            )
-                        );
-                    }
-
-                    const addressFieldsInScope = allUserFields.filter(p => 
-                        ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
-                    );
-                    
-                    if (addressFieldsInScope.length > 0) {
-                        elements.push(
-                            React.createElement(
-                                'div',
-                                { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                                addressFieldsInScope.map(addressPath => {
-                                    const addressValue = getNestedDataForInput(localEditedData, addressPath);
-                                    return renderUserField(addressPath, addressValue);
-                                })
-                            )
-                        );
-                    }
-
-                    if (fieldsToRenderForUser.includes('note')) {
-                        elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
-                    }
-                }
-
-                return elements.filter(Boolean); 
-            } else if (title.includes('Upraviť tím')) { // Ak upravujeme Tím
-                const teamElements = [];
-
-                // 1. Kategória tímu (Selectbox)
-                teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: '_category', className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedCategory,
-                                onChange: (e) => {
-                                    setSelectedCategory(e.target.value);
-                                    handleChange('_category', e.target.value);
-                                },
-                                disabled: !isSavable
-                            },
-                            selectedCategory && !categories.includes(selectedCategory) &&
-                                React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
-                            categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
-                        )
-                    )
-                );
-
-                // 2. Názov tímu (Inputbox)
-                teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'teamName', className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Názov tímu'),
-                        React.createElement('input', {
-                            type: 'text',
-                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                            value: localEditedData.teamName || '',
-                            onChange: (e) => handleChange('teamName', e.target.value),
-                            readOnly: !isSavable
-                        })
-                    )
-                );
-
-                // 3. Typ dopravy (Selectbox)
-                teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'arrival.type', className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ dopravy'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedArrivalType,
-                                onChange: (e) => {
-                                    setSelectedArrivalType(e.target.value);
-                                    handleChange('arrival.type', e.target.value); // Aktualizovať vnorené pole
-                                },
-                                disabled: !isSavable
-                            },
-                            React.createElement('option', { value: '', disabled: true }, 'Vyberte typ dopravy'),
-                            // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
-                            selectedArrivalType && !arrivalOptions.includes(selectedArrivalType) &&
-                                React.createElement('option', { key: selectedArrivalType, value: selectedArrivalType, disabled: true, hidden: true }, selectedArrivalType),
-                            arrivalOptions.map(option => React.createElement('option', { key: option, value: option }, option))
-                        )
-                    )
-                );
-
-                // 4. Typ ubytovania (Selectbox)
-                teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'accommodation.type', className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ ubytovania'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedAccommodationType,
-                                onChange: (e) => {
-                                    setSelectedAccommodationType(e.target.value);
-                                    handleChange('accommodation.type', e.target.value); // Aktualizovať vnorené pole
-                                },
-                                disabled: !isSavable
-                            },
-                            React.createElement('option', { value: '', disabled: true }, 'Vyberte typ ubytovania'),
-                            // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
-                            selectedAccommodationType && !accommodationTypes.includes(selectedAccommodationType) &&
-                                React.createElement('option', { key: selectedAccommodationType, value: selectedAccommodationType, disabled: true, hidden: true }, selectedAccommodationType),
-                            accommodationTypes.map(option => React.createElement('option', { key: option, value: option }, option))
-                        )
-                    )
-                );
-
-                // 5. Názov balíka (Selectbox)
-                teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'packageDetails.name', className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Balík'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedPackageName,
-                                onChange: (e) => {
-                                    setSelectedPackageName(e.target.value);
-                                    // Nájdite celý objekt balíka na základe vybraného názvu
-                                    const selectedPackage = packages.find(pkg => pkg.name === e.target.value);
-                                    if (selectedPackage) {
-                                        // Uložiť celý objekt do packageDetails, ale bez 'id' a iných interných kľúčov
-                                        const { id, ...packageDataToSave } = selectedPackage;
-                                        handleChange('packageDetails', packageDataToSave);
-                                    } else {
-                                        handleChange('packageDetails', null); // Ak balík nebol nájdený
-                                    }
-                                },
-                                disabled: !isSavable
-                            },
-                            React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
-                            selectedPackageName && !packages.some(pkg => pkg.name === selectedPackageName) &&
-                                React.createElement('option', { key: selectedPackageName, value: selectedPackageName, disabled: true, hidden: true }, selectedPackageName),
-                            packages.map(pkg => React.createElement('option', { key: pkg.id, value: pkg.name }, pkg.name))
-                        )
-                    )
-                );
-
-                // 6. Tričká
-                if (availableTshirtSizes.length > 0) {
-                    const usedSizes = teamTshirts.map(entry => entry.size); // Get all sizes currently selected across all rows
-                    teamElements.push(
-                        React.createElement(
-                            'div',
-                            { key: 'tshirts-section', className: 'mb-4' },
-                            React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Tričká'),
-                            // Render existing t-shirt entries
-                            teamTshirts.map(tshirtEntry =>
-                                React.createElement(
-                                    'div',
-                                    { key: tshirtEntry.tempId, className: 'flex items-center mb-2' },
-                                    React.createElement(
-                                        'select',
-                                        {
-                                            className: `mt-1 block w-32 rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                            value: tshirtEntry.size,
-                                            onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value),
-                                            disabled: !isSavable
-                                        },
-                                        // Option for the currently selected size, always show it
-                                        // Even if it might be considered 'used' by another entry in some edge case or if no longer available globally
-                                        availableTshirtSizes.includes(tshirtEntry.size) ? 
-                                            React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size }, tshirtEntry.size)
-                                        : (tshirtEntry.size && React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size, disabled: true, hidden: true }, `${tshirtEntry.size} (Neplatná)`)),
-
-                                        // Only show other available sizes that are not currently used by other entries
-                                        availableTshirtSizes
-                                            .filter(size => !usedSizes.includes(size) || size === tshirtEntry.size) // Filter out already used sizes, but keep the current entry's size
-                                            .map(size => (
-                                                size !== tshirtEntry.size ? // Avoid duplicating the already rendered current size option
-                                                React.createElement('option', {
-                                                    key: size,
-                                                    value: size,
-                                                }, size) : null
-                                            ))
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: '0',
-                                        className: `mt-1 block flex-grow rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                        value: tshirtEntry.quantity,
-                                        onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'quantity', e.target.value),
-                                        readOnly: !isSavable
-                                    }),
-                                    React.createElement('button', {
-                                        type: 'button',
-                                        onClick: () => removeTshirtEntry(tshirtEntry.tempId),
-                                        className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 focus:outline-none text-xl leading-none', // Circular delete button
-                                        style: { lineHeight: '10px' }, // Adjust line height to center the '-'
-                                    }, '-')
-                                )
-                            ),
-                            // Wrap the add button in a div for centering
-                            React.createElement('div', { className: 'flex justify-center mt-2' },
-                                React.createElement('button', {
-                                    type: 'button',
-                                    onClick: addTshirtEntry,
-                                    className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none text-xl leading-none', // Changed color to blue, made round, text-xl for larger +, line-height for centering
-                                    style: { lineHeight: '10px' }, // Adjust line height to center the '+'
-                                    disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
-                                }, '+')
-                            )
-                        )
-                    );
-                }
-
-                return teamElements;
-            }
-        } else { // Pre všetky ostatné prípady (vnorené objekty alebo iné, ako vyššie špecifikované typy úprav)
-            // Táto časť sa už nemala volať pre členov (hráčov/RT/šoférov)
-            return Object.entries(obj).map(([key, value]) => {
-                if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password', 'packageDetails', 'accommodation', 'arrival', 'tshirts'].includes(key)) {
-                    return null;
-                }
-                
-                const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
-
-                if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                    return React.createElement(
-                        CollapsibleSection,
-                        {
-                            key: fullKeyPath,
-                            title: formatLabel(fullKeyPath),
-                            defaultOpen: false,
-                            noOuterStyles: true
-                        },
-                        renderDataFields(value, fullKeyPath)
-                    );
-                } else if (Array.isArray(value)) {
-                    if (value.length === 0) {
-                        return React.createElement(
-                            'div',
-                            { key: fullKeyPath, className: 'mb-4' },
-                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, formatLabel(fullKeyPath)),
-                            React.createElement('input', {
-                                type: 'text',
-                                readOnly: true,
-                                className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-2',
-                                value: '(Prázdne)'
-                            })
-                        );
-                    }
-                    return React.createElement(
-                        'div',
-                        { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
-                        value.map((item, index) => React.createElement(
-                            CollapsibleSection,
-                            { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: false },
-                            renderDataFields(item, `${fullKeyPath}[${index}]`)
-                        ))
-                    );
-                } else {
-                    // Pre tento generický renderField potrebujeme, aby fungoval ako renderUserField,
-                    // len s cestou a hodnotou (bez špeciálnych podmienok pre telefónne číslo atď.)
-                    const labelText = formatLabel(fullKeyPath);
-                    let inputType = 'text';
-                    let isCheckbox = false;
-                    let customProps = {}; 
-
-                    if (typeof value === 'boolean') {
-                        isCheckbox = true;
-                    } else if (fullKeyPath.toLowerCase().includes('password')) {
-                        inputType = 'password';
-                    } else if (fullKeyPath.includes('dateOfBirth')) {
-                         inputType = 'date';
-                    } else if (fullKeyPath.includes('jerseyNumber')) { // Iba pre JerseyNumber
-                         customProps = {
-                            onChange: (e) => handleNumericInput(e, fullKeyPath),
-                            inputMode: 'numeric',
-                            pattern: '[0-9]*',
-                            maxLength: 3
-                        };
-                    } else if (fullKeyPath.includes('registrationNumber')) { // Teraz umožňuje všetky znaky pre RegistrationNumber
-                         customProps = {
-                            onChange: (e) => handleChange(fullKeyPath, e.target.value), // Už nepoužíva handleNumericInput
-                            maxLength: 20
-                        };
-                    } else if (fullKeyPath.includes('postalCode')) {
-                        customProps = {
-                            onChange: (e) => handlePostalCodeChange(e, fullKeyPath),
-                            onKeyDown: (e) => handlePostalCodeKeyDown(e, fullKeyPath),
-                            inputMode: 'numeric',
-                            pattern: '[0-9 ]*',
-                            maxLength: 6 
-                        };
-                    }
-                    
-                    return React.createElement(
-                        'div',
-                        { key: fullKeyPath, className: 'mb-4' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                        isCheckbox ? (
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                className: `form-checkbox h-5 w-5 text-blue-600`,
-                                checked: getNestedValue(localEditedData, fullKeyPath) === true,
-                                onChange: (e) => handleChange(fullKeyPath, e.target.checked),
-                                disabled: !isSavable
-                            })
-                        ) : (
-                            React.createElement('input', {
-                                ref: el => inputRefs.current[fullKeyPath] = el,
-                                type: inputType,
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                                value: formatDisplayValue(getNestedDataForInput(localEditedData, fullKeyPath), fullKeyPath),
-                                onChange: (e) => (customProps.onChange ? customProps.onChange(e, fullKeyPath) : handleChange(fullKeyPath, e.target.value)),
-                                readOnly: !isSavable,
-                                ...customProps
-                            })
-                        )
-                    );
-                }
-            }).filter(Boolean);
-        }
-    };
-
-    // Helper function to get changes for notification
-    const getChangesForNotification = (original, updated, pathPrefix = '') => {
-        const changes = [];
-        const allKeys = new Set([...Object.keys(original || {}), ...Object.keys(updated || {})]);
-
-        console.log(`DEBUG getChangesForNotification - pathPrefix: ${pathPrefix}`);
-        console.log('DEBUG getChangesForNotification - original:', original);
-        console.log('DEBUG getChangesForNotification - updated:', updated);
-        console.log('DEBUG getChangesForNotification - allKeys:', [...allKeys]);
-
-        for (const key of allKeys) {
-            // Skip internal keys, password, etc.
-            if (key.startsWith('_') || ['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password'].includes(key)) {
-                continue;
-            }
-
-            const currentFullPath = pathPrefix ? `${pathPrefix}.${key}` : key;
-            const originalValue = getNestedValue(original, currentFullPath);
-            const updatedValue = getNestedValue(updated, currentFullPath);
-
-            const safeOriginalValue = originalValue === undefined ? null : originalValue;
-            const safeUpdatedValue = updatedValue === undefined ? null : updatedValue;
-
-            console.log(`  DEBUG comparing ${currentFullPath}: original='${safeOriginalValue}' (type: ${typeof safeOriginalValue}) vs updated='${safeUpdatedValue}' (type: ${typeof safeUpdatedValue})`);
-
-            // Recursive comparison for objects (not arrays or Timestamps)
-            if (
-                typeof safeOriginalValue === 'object' && safeOriginalValue !== null && !Array.isArray(safeOriginalValue) && typeof safeOriginalValue.toDate !== 'function' &&
-                typeof safeUpdatedValue === 'object' && safeUpdatedValue !== null && !Array.isArray(safeUpdatedValue) && typeof safeUpdatedValue.toDate !== 'function'
-            ) {
-                // If both are objects and not empty, recurse. Otherwise, compare as values.
-                if (Object.keys(safeOriginalValue).length > 0 || Object.keys(safeUpdatedValue).length > 0) {
-                    changes.push(...getChangesForNotification(safeOriginalValue, safeUpdatedValue, currentFullPath));
-                } else if (Object.keys(safeOriginalValue).length !== Object.keys(safeUpdatedValue).length) {
-                    // One is empty, the other is not (e.g., from {} to null, or vice versa)
-                    changes.push(`Zmena ${formatLabel(currentFullPath)}: z '${formatDisplayValue(safeOriginalValue, currentFullPath)}' na '${formatDisplayValue(safeUpdatedValue, currentFullPath)}'`);
-                }
-            }
-            // Compare values directly (primitives, arrays, Timestamps, or type changes)
-            else if (JSON.stringify(safeOriginalValue) !== JSON.stringify(safeUpdatedValue)) {
-                changes.push(`Zmena ${formatLabel(currentFullPath)}: z '${formatDisplayValue(safeOriginalValue, currentFullPath)}' na '${formatDisplayValue(safeUpdatedValue, currentFullPath)}'`);
-            }
-        }
-        console.log(`DEBUG getChangesForNotification - Final changes for pathPrefix ${pathPrefix}:`, changes);
-        return changes;
-    };
-
-
-    return React.createElement(
-        'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4' },
-        React.createElement(
-            'div',
-            {
-                ref: modalRef,
-                className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto'
-            },
-            React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, title),
-            React.createElement(
-                'div',
-                { className: 'space-y-4' },
-                renderDataFields(localEditedData) // Tu odovzdávame localEditedData
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex justify-between items-center mt-4' },
-                // Tlačidlo "Odstrániť" sa zobrazí len ak sa nepridáva nový záznam
-                !isNewEntry && isEditingMember && React.createElement('button', { // Podmienene renderovať tlačidlo "Odstrániť"
-                    className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
-                    onClick: handleDeleteMemberClick,
-                    disabled: !isSavable
-                }, 'Odstrániť'),
-                React.createElement(
-                    'div',
-                    { className: 'flex space-x-2' },
-                    React.createElement('button', {
-                        className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
-                        onClick: onClose
-                    }, 'Zavrieť'),
-                    isSavable && React.createElement('button', {
-                        className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
-                        onClick: async () => {
-                            try {
-                                window.showGlobalLoader();
-
-                                // console.log("DEBUG DataEditModal Save Button Click: originalDataPath:", originalDataPath); // Debug log
-
-                                const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
-                                
-                                // 1. Zostaviť plné telefónne číslo (len ak sa neupravuje admin/hall používateľ)
-                                if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) {
-                                    dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                                } else if (isTargetUserAdmin || isTargetUserHall) { // <<<< OPRAVENÉ TU: isTargetUserAdmin || isTargetUserHall
-                                    // Ak sa upravuje admin/hall používateľ, zabezpečiť, že sa contactPhoneNumber vôbec neuloží
-                                    delete dataToPrepareForSave.contactPhoneNumber;
-                                }
-
-
-                                // 2. Spracovať špecifické polia tímu, ak upravujeme tím
-                                if (title.includes('Upraviť tím')) {
-                                    dataToPrepareForSave.category = selectedCategory;
-                                    dataToPrepareForSave._category = selectedCategory; 
-                                    dataToPrepareForSave.arrival = { type: selectedArrivalType };
-                                    dataToPrepareForSave.accommodation = { type: selectedAccommodationType };
-                                    dataToPrepareForSave.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
-                                    dataToPrepareForSave.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
-                                }
-
-                                // 3. Filtrovanie interných kľúčov a prázdnych polí pre finálny objekt na uloženie
-                                const finalDataToSave = {};
-                                Object.keys(dataToPrepareForSave).forEach(key => {
-                                    // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
-                                    if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
-                                        const value = dataToPrepareForSave[key];
-                                        // Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
-                                        // aby sa zmeny na "" správne uložili.
-                                        if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) { // <<<< OPRAVENÉ TU: isTargetUserAdmin || isTargetUserHall
-                                            // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
-                                            // console.log(`DEBUG: Skipping 'billing' field for admin/hall user in DataEditModal.`);
-                                        } else {
-                                            finalDataToSave[key] = value;
-                                        }
-                                    }
-                                });
-                                
-                                console.log("DEBUG: DataEditModal - onSave click. Final data prepared for saving:", finalDataToSave); // Debug log
-
-                                // 4. Porovnať s pôvodnými dátami pre notifikáciu
-                                const originalDataForCompare = JSON.parse(JSON.stringify(data)); // Original data passed as prop (empty for new)
-                                const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
-
-                                // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania fakturačné a adresné údaje
-                                if (isTargetUserAdmin || isTargetUserHall) { // <<<< OPRAVENÉ TU: isTargetUserAdmin || isTargetUserHall
-                                    delete originalDataForCompare.billing;
-                                    delete originalDataForCompare.street;
-                                    delete originalDataForCompare.originalDataPath; // Tiež odstrániť originalDataPath
-                                    delete originalDataForCompare.houseNumber;
-                                    delete originalDataForCompare.city;
-                                    delete originalDataForCompare.postalCode;
-                                    delete originalDataForCompare.country;
-                                    delete originalDataForCompare.note;
-                                    delete originalDataForCompare.contactPhoneNumber;
-                                }
-
-                                console.log("DEBUG: DataEditModal - onSave click. originalDataForCompare for diff:", originalDataForCompare);
-                                console.log("DEBUG: DataEditModal - onSave click. modifiedDataForCompare for diff:", modifiedDataForCompare);
-
-                                const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
-                                
-                                console.log("DEBUG: DataEditModal - onSave click. generatedChanges.length (before conditional):", generatedChanges.length);
-                                console.log("DEBUG: DataEditModal - onSave click. isNewEntry (modal state):", isNewEntry);
-
-                                // Zjednodušená podmienka: Ak nie sú žiadne detegované zmeny, notifikovať a vrátiť sa.
-                                // Pre nové záznamy sa očakáva, že generatedChanges.length > 0, ak sa zadali údaje.
-                                if (generatedChanges.length === 0) {
-                                    setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
-                                    onClose();
-                                    return;
-                                }
-
-                                // --- Save Notification to Firestore ---
-                                const userEmail = window.auth.currentUser?.email;
-                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) { // Notify also for new entries (if changes or it's a new entry)
-                                    const notificationsCollectionRef = collection(db, 'notifications');
-                                    await addDoc(notificationsCollectionRef, {
-                                        userEmail,
-                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName || ''} ${finalDataToSave.lastName || ''}`.trim()] : generatedChanges,
-                                        timestamp: serverTimestamp()
-                                    });
-                                    console.log("Notifikácia o zmene uložená do Firestore.");
-                                }
-                                // --- End Notification ---
-
-                                // Teraz zavolať prop onSave z AllRegistrationsApp s kompletne pripravenými dátami
-                                onSave(finalDataToSave, targetDocRef, originalDataPath, isNewEntry); // Pass only what AllRegistrationsApp needs to perform the Firestore update
-
-                            } catch (e) {
-                                console.error("Chyba v DataEditModal pri príprave dát na uloženie:", e);
-                                setError(`Chyba pri ukladaní dát: ${e.message}`);
-                                setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
-                            } finally {
-                                window.hideGlobalLoader();
-                            }
-                        }
-                    }, 'Uložiť zmeny')
-                )
-            )
-        ),
-        // DialCodeSelectionModal sa zobrazí iba vtedy, ak sa upravuje používateľ a NIE JE to admin/hall
-        !(isTargetUserAdmin || isTargetUserHall) && React.createElement(DialCodeSelectionModal, {
-            isOpen: isDialCodeModalOpen,
-            onClose: () => setIsDialCodeModalOpen(false),
-            onSelectDialCode: handleSelectDialCode,
-            currentDialCode: displayDialCode
-        }),
-        React.createElement(ConfirmationModal, {
-            isOpen: isConfirmDeleteOpen,
-            onClose: () => setIsConfirmDeleteOpen(false),
-            onConfirm: () => onDeleteMember(targetDocRef, originalDataPath), // Zavolať prop onDeleteMember
-            title: "Potvrdenie odstránenia",
-            message: deleteConfirmMessage
-        })
-    );
-}
 
 // Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenie upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
 const updateNestedObjectByPath = (obj, path, value) => {
