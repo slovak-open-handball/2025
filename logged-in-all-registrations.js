@@ -2106,9 +2106,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
                                 
                                 // 1. Zostaviť plné telefónne číslo (len ak sa neupravuje admin/hall používateľ)
-                                if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) { // Opravená premenná
+                                if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) { 
                                     dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                                } else if (isTargetUserAdmin || isTargetUserHall) { // Opravená premenná
+                                } else if (isTargetUserAdmin || isTargetUserHall) { 
                                     // Ak sa upravuje admin/hall používateľ, zabezpečiť, že sa contactPhoneNumber vôbec neuloží
                                     delete dataToPrepareForSave.contactPhoneNumber;
                                 }
@@ -2132,7 +2132,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                         const value = dataToPrepareForSave[key];
                                         // Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
                                         // aby sa zmeny na "" správne uložili.
-                                        if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) { // Opravená premenná
+                                        if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) { 
                                             // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
                                             // console.log(`DEBUG: Skipping 'billing' field for admin/hall user in DataEditModal.`);
                                         } else {
@@ -2148,7 +2148,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
 
                                 // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania fakturačné a adresné údaje
-                                if (localIsTargetUserAdmin || localIsTargetUserHall) { // Opravená premenná
+                                if (isTargetUserAdmin || isTargetUserHall) { 
                                     delete originalDataForCompare.address;
                                     delete originalDataForCompare.billingAddress;
                                     delete modifiedDataForCompare.address;
