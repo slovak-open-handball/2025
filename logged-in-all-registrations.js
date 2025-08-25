@@ -3182,16 +3182,35 @@ function AllRegistrationsApp() {
                 setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
             } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
                 // Aktualizácia existujúceho člena
-                // Skopírujeme pôvodné dáta člena a potom ich prepíšeme aktualizovanými dátami
                 const originalMember = currentMemberArray[memberArrayIndex];
-                const updatedMember = {
-                    ...originalMember,
-                    ...updatedDataFromModal,
-                    address: {
-                        ...(originalMember.address || {}),
-                        ...(updatedDataFromModal.address || {})
+                
+                const updatedMember = { ...originalMember };
+
+                // Skopírujeme top-level polia z updatedDataFromModal
+                for (const key in updatedDataFromModal) {
+                    if (key !== 'address') { 
+                        updatedMember[key] = updatedDataFromModal[key];
                     }
-                };
+                }
+
+                // Špeciálne spracovanie pre objekt adresy
+                updatedMember.address = { ...(originalMember.address || {}) }; 
+                
+                // Prejdeme polia adresy z updatedDataFromModal
+                for (const key in updatedDataFromModal.address) {
+                    updatedMember.address[key] = updatedDataFromModal.address[key];
+                }
+
+                // Ak nejaké pole existovalo v originalMember.address, ale nie je v updatedDataFromModal.address,
+                // znamená to, že bolo vymazané v UI, nastavíme ho na prázdny reťazec.
+                if (originalMember.address) {
+                    for (const key in originalMember.address) {
+                        if (updatedDataFromModal.address && updatedDataFromModal.address[key] === undefined && typeof originalMember.address[key] === 'string') {
+                            updatedMember.address[key] = ""; 
+                        }
+                    }
+                }
+
                 currentMemberArray[memberArrayIndex] = updatedMember;
                 setUserNotificationMessage("Zmeny člena boli úspešne uložené.", 'success');
             } else {
