@@ -83,7 +83,7 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }) {
                     className: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700',
                     onClick: () => {
                         onConfirm();
-                        onClose();
+                        onClose(); // Zatvoriť modálne okno po potvrdení
                     }
                 }, 'Potvrdiť')
             )
@@ -1026,9 +1026,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
+            // Check if dial code modal is open, if so, don't close this modal
             if (isDialCodeModalOpen) {
                 return;
             }
+            // Check if confirmation modal is open, if so, don't close this modal
+            if (isConfirmDeleteOpen) {
+                return;
+            }
+
             if (modalRef.current && !modalRef.current.contains(event.target)) {
                 onClose();
             }
@@ -1041,7 +1047,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose, isDialCodeModalOpen]); 
+    }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen]); // Add isConfirmDeleteOpen to dependencies
 
     if (!isOpen) return null;
 
@@ -2033,7 +2039,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 // 1. Zostaviť plné telefónne číslo (len ak sa neupravuje admin/hall používateľ)
                                 if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) {
                                     dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                                } else if (isTargetUserAdmin || isTargetUserAdmin) { // Zmenené z isTargetUserAdmin || isTargetUserAdmin na isTargetUserAdmin || isTargetUserHall
+                                } else if (isTargetUserAdmin || isTargetUserHall) { // <<<< OPRAVENÉ TU: isTargetUserAdmin || isTargetUserHall
                                     // Ak sa upravuje admin/hall používateľ, zabezpečiť, že sa contactPhoneNumber vôbec neuloží
                                     delete dataToPrepareForSave.contactPhoneNumber;
                                 }
@@ -2057,7 +2063,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                         const value = dataToPrepareForSave[key];
                                         // Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
                                         // aby sa zmeny na "" správne uložili.
-                                        if (key === 'billing' && (localIsTargetUserAdmin || localIsTargetUserHall)) { // Opravené premenné
+                                        if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) { // <<<< OPRAVENÉ TU: isTargetUserAdmin || isTargetUserHall
                                             // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
                                             // console.log(`DEBUG: Skipping 'billing' field for admin/hall user in DataEditModal.`);
                                         } else {
@@ -2073,7 +2079,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave)); // The data that will be saved
 
                                 // Ak sa upravuje admin/hall používateľ, odstráňte z porovnania fakturačné a adresné údaje
-                                if (localIsTargetUserAdmin || localIsTargetUserHall) { // Opravené premenné
+                                if (isTargetUserAdmin || isTargetUserHall) { // <<<< OPRAVENÉ TU: isTargetUserAdmin || isTargetUserHall
                                     delete originalDataForCompare.billing;
                                     delete originalDataForCompare.street;
                                     delete originalDataForCompare.originalDataPath; // Tiež odstrániť originalDataPath
