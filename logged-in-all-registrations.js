@@ -900,7 +900,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
         setIsTargetUserHall(initialData.role === 'hall'); 
 
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         if (title.includes('Upraviť používateľa')) {
@@ -1394,7 +1394,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
     const renderDataFields = (obj, currentPath = '') => {
         // Zmenená podmienka pre robustnejšie porovnanie
         const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér');
 
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
@@ -1968,8 +1968,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                             // Filtrovanie interných kľúčov a systémových kľúčov pre všetky operácie ukladania
                             const finalDataToSave = {};
                             Object.keys(dataWithPhoneNumber).forEach(key => {
+                                // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
                                 if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
-                                    finalDataToSave[key] = dataWithPhoneNumber[key];
+                                    const value = dataWithPhoneNumber[key];
+                                    // Exclude empty strings
+                                    if (typeof value === 'string' && value.trim() === '') {
+                                        // Skip empty strings
+                                        // console.log(`DEBUG: Skipping empty string field: ${key}`);
+                                    } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
+                                        // Skip empty objects (e.g., empty address object if all its sub-fields are empty)
+                                        // This is a shallow check, deep check might be needed for more complex scenarios
+                                        // console.log(`DEBUG: Skipping empty object field: ${key}`);
+                                    }
+                                    else {
+                                        finalDataToSave[key] = value;
+                                    }
                                 }
                             });
 
@@ -1991,7 +2004,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 // Logika pre aktualizáciu používateľa na najvyššej úrovni
                                 console.log("DEBUG Top-Level User Save: Executing top-level user update. Data:", finalDataToSave);
                                 await updateDoc(targetDocRef, finalDataToSave);
-                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                 onClose();
                                 return;
                             } else if (title.includes('Upraviť tím')) {
@@ -2042,7 +2055,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 updates[`teams.${category}`] = newCategoryTeams;
                                 console.log("DEBUG Team Save: Updates object before updateDoc:", updates);
                                 await updateDoc(targetDocRef, updates);
-                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                 onClose();
                                 return;
                             } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
@@ -2117,7 +2130,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                     updates[`teams.${category}`] = updatedTeamsForCategory;
                                     console.log("DEBUG Member Save: Updates object before updateDoc:", updates);
                                     await updateDoc(targetDocRef, updates);
-                                    setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                                    setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                     onClose();
                                     return;
                                 } else {
@@ -2141,7 +2154,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 
                                 console.log("DEBUG Generic Nested Save: Updates object before updateDoc:", updates);
                                 await updateDoc(targetDocRef, updates);
-                                setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
                                 onClose();
                                 return;
                             }
@@ -2953,109 +2966,244 @@ function AllRegistrationsApp() {
     try {
         window.showGlobalLoader();
 
-        const dataToSave = {};
-        Object.keys(updatedData).forEach(key => {
-            if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
-                dataToSave[key] = updatedData[key];
-            }
-        });
+        // Prepare originalData and modifiedData for comparison for notification
+        const originalDataForCompare = JSON.parse(JSON.stringify(data));
+        const modifiedDataForCompare = JSON.parse(JSON.stringify(updatedData)); 
 
-        if (Object.keys(dataToSave).length === 0) {
+        // Apply phone number update to modifiedDataForCompare for accurate notification
+        if (originalDataForCompare.contactPhoneNumber !== undefined) {
+             modifiedDataForCompare.contactPhoneNumber = combinePhoneNumber(localEditedData.contactPhoneNumber.dialCode || displayDialCode, localEditedData.contactPhoneNumber.numberWithoutDialCode || displayPhoneNumber.replace(/\s/g, ''));
+        }
+
+        // Special handling for team-specific select inputs and tshirts to ensure they are included in the comparison
+        if (title.includes('Upraviť tím')) {
+            // Update the modifiedDataForCompare with the current selected states from the form
+            modifiedDataForCompare.category = selectedCategory;
+            modifiedDataForCompare._category = selectedCategory; // Ensure _category is consistent if category is updated
+            modifiedDataForCompare.arrival = { type: selectedArrivalType };
+            modifiedDataForCompare.accommodation = { type: selectedAccommodationType };
+            modifiedDataForCompare.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
+            modifiedDataForCompare.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
+
+            // For original data, also ensure category and other fields are correctly represented for comparison
+            originalDataForCompare.category = data.category || data._category || '';
+            originalDataForCompare._category = data._category || '';
+            originalDataForCompare.arrival = data.arrival || { type: '' };
+            originalDataForCompare.accommodation = data.accommodation || { type: '' };
+            originalDataForCompare.packageDetails = data.packageDetails || null;
+            originalDataForCompare.tshirts = (data.tshirts || []).map(({ size, quantity }) => ({ size, quantity }));
+        }
+
+        const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare);
+
+        if (generatedChanges.length === 0) {
             setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+            onClose();
             return;
         }
 
-        if (originalDataPath === '') {
-            // Aktualizácia dokumentu používateľa najvyššej úrovne
-            console.log("DEBUG Top-Level Save: Data to save:", dataToSave);
-            await updateDoc(targetDocRef, dataToSave);
-        } else {
-            // Špeciálne ošetrenie pre 'teams' - uistite sa, že sa vždy aktualizuje celé pole
-            // originalDataPath pre tímy bude vyzerať ako 'teams.Juniors[0]'
-            if (originalDataPath.startsWith('teams.')) {
-                console.log("DEBUG Team Save (handleSaveEditedData): Original Data Path:", originalDataPath); 
-                if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
-                    throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
+        // Filtrovanie interných kľúčov a systémových kľúčov pre všetky operácie ukladania
+        const finalDataToSave = {};
+        Object.keys(updatedData).forEach(key => {
+            // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
+            if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
+                const value = updatedData[key];
+                // Exclude empty strings
+                if (typeof value === 'string' && value.trim() === '') {
+                    // Skip empty strings
+                    // console.log(`DEBUG: Skipping empty string field: ${key}`);
+                } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
+                    // Skip empty objects (e.g., empty address object if all its sub-fields are empty)
+                    // This is a shallow check, deep check might be needed for more complex scenarios
+                    // console.log(`DEBUG: Skipping empty object field: ${key}`);
                 }
-
-                const pathParts = originalDataPath.split('.');
-                if (pathParts.length < 2) {
-                    throw new Error("Neplatný formát cesty tímu. Chýbajú segmenty.");
+                else {
+                    finalDataToSave[key] = value;
                 }
-                const categoryAndIndexPart = pathParts[1];
-                console.log("DEBUG Team Save (handleSaveEditedData): Category And Index Part:", categoryAndIndexPart);
-                
-                if (typeof categoryAndIndexPart !== 'string') {
-                    throw new Error(`Chyba: 'categoryAndIndexPart' nie je reťazec, je to: ${categoryAndIndexPart}. Neočakávaný formát originalDataPath: ${originalDataPath}`);
-                }
-
-                const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-
-                let category;
-                let teamIndex;
-
-                if (categoryMatch) {
-                    category = categoryMatch[1]; // e.g., 'U10 D'
-                    teamIndex = parseInt(categoryMatch[2]); // e.g., 0
-                } else {
-                    throw new Error(`Neplatný formát cesty tímu. Očakáva sa 'category[index]', ale našiel sa: ${categoryAndIndexPart}.`);
-                }
-
-                // Načítať dokument, lokálne ho upraviť a potom odoslať aktualizované pole najvyššej úrovne
-                const docSnapshot = await getDoc(targetDocRef);
-                if (!docSnapshot.exists()) {
-                    throw new Error("Dokument sa nenašiel pre aktualizáciu.");
-                }
-                const currentDocData = docSnapshot.data();
-
-                // Safely get the current teams for the category
-                const currentCategoryTeams = currentDocData.teams?.[category] || [];
-                const newCategoryTeams = [...currentCategoryTeams]; // Create a new array for immutability
-
-                if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
-                    // Aktualizovať konkrétny tím na danom indexe
-                    newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...dataToSave };
-                } else {
-                    console.error("AllRegistrationsApp: Chyba: Index tímu mimo rozsahu pre aktualizáciu.", teamIndex, "Dĺžka tímov kategórie:", newCategoryTeams.length);
-                    throw new Error("Invalid team index for update.");
-                }
-
-                // Nastaviť aktualizované pole späť do objektu 'teams'
-                const updates = {};
-                updates[`teams.${category}`] = newCategoryTeams;
-                
-                console.log("DEBUG Team Save (handleSaveEditedData): Updates object before updateDoc:", updates); // LOGGING THE UPDATES OBJECT
-                await updateDoc(targetDocRef, updates);
-
-            } else {
-                // Pôvodná logika pre vnorené aktualizácie, ktoré nie sú tímy
-                const docSnapshot = await getDoc(targetDocRef);
-                if (!docSnapshot.exists()) {
-                    throw new Error("Dokument sa nenašiel pre aktualizáciu.");
-                }
-                const currentDocData = docSnapshot.data();
-
-                const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, dataToSave);
-
-                const updates = {};
-                updates[topLevelField] = updatedObject[topLevelField];
-                
-                console.log("DEBUG Generic Nested Save (handleSaveEditedData): Updates object before updateDoc:", updates); // LOGGING THE UPDATES OBJECT
-                await updateDoc(targetDocRef, updates);
             }
+        });
+
+
+        // --- Save Notification to Firestore ---
+        const userEmail = window.auth.currentUser?.email;
+        if (generatedChanges.length > 0 && userEmail) {
+            const notificationsCollectionRef = collection(db, 'notifications');
+            await addDoc(notificationsCollectionRef, {
+                userEmail,
+                changes: generatedChanges,
+                timestamp: serverTimestamp()
+            });
+            console.log("Notifikácia o zmene uložená do Firestore.");
         }
+        // --- End Save Notification ---
 
-        setUserNotificationMessage("Zmeny boli uložené.", 'success');
 
+        if (originalDataPath === '') {
+            // Logika pre aktualizáciu používateľa na najvyššej úrovni
+            console.log("DEBUG Top-Level User Save: Executing top-level user update. Data:", finalDataToSave);
+            await updateDoc(targetDocRef, finalDataToSave);
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            onClose();
+            return;
+        } else if (title.includes('Upraviť tím')) {
+            // Logika pre aktualizáciu tímu
+            console.log("DEBUG Team Save: Original Data Path:", originalDataPath);
+            if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
+                throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
+            }
+
+            const pathParts = originalDataPath.split('.');
+            const categoryAndIndexPart = pathParts[1];
+            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+            if (!categoryMatch) {
+                throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
+            }
+            const category = categoryMatch[1];
+            const teamIndex = parseInt(categoryMatch[2]);
+
+            const tshirtsToSave = teamTshirts
+                .filter(entry => entry.size && entry.quantity > 0)
+                .map(({ size, quantity }) => ({ size, quantity }));
+
+            const updatedTeamSpecificData = {
+                ...finalDataToSave,
+                category: selectedCategory,
+                _category: selectedCategory,
+                arrival: { type: selectedArrivalType },
+                accommodation: { type: selectedAccommodationType },
+                packageDetails: packages.find(pkg => pkg.name === selectedPackageName) || null,
+                tshirts: tshirtsToSave
+            };
+
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+            }
+            const currentDocData = docSnapshot.data();
+            const currentCategoryTeams = currentDocData.teams?.[category] || [];
+            const newCategoryTeams = [...currentCategoryTeams];
+
+            if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
+                newCategoryTeams[teamIndex] = { ...newCategoryTeams[teamIndex], ...updatedTeamSpecificData };
+            } else {
+                throw new Error(`Index tímu ${teamIndex} je mimo rozsahu pre aktualizáciu. Dĺžka tímov kategórie ${category}: ${newCategoryTeams.length}.`);
+            }
+
+            const updates = {};
+            updates[`teams.${category}`] = newCategoryTeams;
+            console.log("DEBUG Team Save: Updates object before updateDoc:", updates);
+            await updateDoc(targetDocRef, updates);
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            onClose();
+            return;
+        } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
+                   originalDataPath.includes('womenTeamMemberDetails') || originalDataPath.includes('driverDetailsMale') || originalDataPath.includes('driverDetailsFemale')) {
+            // Logika pre aktualizáciu člena tímu/hráča/šoféra
+            console.log("DEBUG Member Save: Original Data Path:", originalDataPath);
+            // Cesta by mala vyzerať ako "teams.CATEGORY[TEAM_INDEX].MEMBER_ARRAY[MEMBER_INDEX]"
+            // Rozdelením podľa '.' dostaneme ['teams', 'CATEGORY[TEAM_INDEX]', 'MEMBER_ARRAY[MEMBER_INDEX]']
+            const pathParts = originalDataPath.split('.');
+            if (pathParts.length !== 3) { // Očakávame 3 časti: teams, category[index], memberArray[index]
+                throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty (teams.category[index].memberArray[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
+            }
+
+            const topLevelPath = pathParts[0]; // 'teams' - pre validáciu, ak je potrebná
+            const categoryAndIndexPart = pathParts[1]; // napr. 'Juniors[0]'
+            const memberArrayAndIndexPart = pathParts[2]; // napr. 'playerDetails[0]'
+            
+            console.log("DEBUG Member Save: Path Parts:", pathParts);
+            console.log("DEBUG Member Save: Category And Index Part:", categoryAndIndexPart);
+            console.log("DEBUG Member Save: Member Array And Index Part:", memberArrayAndIndexPart);
+
+            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+            const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+
+            if (!categoryMatch) {
+                throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
+            }
+            if (!memberArrayMatch) {
+                throw new Error(`Neplatný formát poľa člena tímu a indexu: ${memberArrayAndIndexPart}.`);
+            }
+
+            const category = categoryMatch[1];
+            const teamIndex = parseInt(categoryMatch[2]);
+            const memberArrayPath = memberArrayMatch[1]; // napr. 'playerDetails'
+            const memberArrayIndex = parseInt(memberArrayMatch[2]); // napr. 0
+            
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+            }
+            const currentDocData = docSnapshot.data();
+
+            const teams = currentDocData.teams?.[category] || [];
+            const teamToUpdate = teams[teamIndex];
+
+            if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
+                const memberToUpdate = { ...teamToUpdate[memberArrayPath][memberArrayIndex] };
+                
+                // finalDataToSave už odfiltroval interné kľúče
+                Object.keys(finalDataToSave).forEach(key => {
+                    if (key.startsWith('address.')) {
+                        const addressKey = key.split('.')[1];
+                        if (!memberToUpdate.address) memberToUpdate.address = {};
+                        memberToUpdate.address[addressKey] = finalDataToSave[key];
+                    } else {
+                        memberToUpdate[key] = finalDataToSave[key];
+                    }
+                });
+
+                const updatedMemberArray = [...teamToUpdate[memberArrayPath]];
+                updatedMemberArray[memberArrayIndex] = memberToUpdate;
+
+                const updatedTeam = {
+                    ...teamToUpdate,
+                    [memberArrayPath]: updatedMemberArray
+                };
+
+                const updatedTeamsForCategory = [...teams];
+                updatedTeamsForCategory[teamIndex] = updatedTeam;
+
+                const updates = {};
+                updates[`teams.${category}`] = updatedTeamsForCategory;
+                console.log("DEBUG Member Save: Updates object before updateDoc:", updates);
+                await updateDoc(targetDocRef, updates);
+                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+                onClose();
+                return;
+            } else {
+                throw new Error(`Člen tímu pre aktualizáciu sa nenašiel na ceste: ${originalDataPath}.`);
+            }
+        } else {
+            // Všeobecná vnorená aktualizácia (napr. ak sa priamo upravuje nové komplexné pole)
+            if (!originalDataPath) {
+                throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu. Zmeny neboli uložené.");
+            }
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+            }
+            const currentDocData = docSnapshot.data();
+
+            const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, finalDataToSave);
+
+            const updates = {};
+            updates[topLevelField] = updatedObject[topLevelField];
+            
+            console.log("DEBUG Generic Nested Save: Updates object before updateDoc:", updates);
+            await updateDoc(targetDocRef, updates);
+            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            onClose();
+            return;
+        }
     } catch (e) {
         console.error("Chyba pri ukladaní dát do Firestore:", e);
         setError(`Chyba pri ukladaní dát: ${e.message}`);
         setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
     } finally {
         window.hideGlobalLoader();
-        closeEditModal();
     }
-}, [db, closeEditModal, setUserNotificationMessage, setError]);
+}, [db, closeEditModal, setUserNotificationMessage, setError, data, displayDialCode, displayPhoneNumber, localEditedData, selectedCategory, selectedArrivalType, selectedAccommodationType, selectedPackageName, packages, teamTshirts]); // Pridané závislosti
 
 
   if (!isAuthReady || user === undefined || !userProfileData) {
