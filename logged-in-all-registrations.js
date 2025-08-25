@@ -1360,14 +1360,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                 isCheckbox = true;
             } else if (path.includes('dateOfBirth')) {
                 inputType = 'date';
-            } else if (path.includes('jerseyNumber') || path.includes('registrationNumber')) {
+            } else if (path.includes('jerseyNumber')) { // Iba pre JerseyNumber
                  customProps = {
                     onChange: (e) => handleNumericInput(e, path),
                     inputMode: 'numeric',
                     pattern: '[0-9]*',
-                    maxLength: path.includes('jerseyNumber') ? 3 : 20
+                    maxLength: 3
                 };
-            } else if (path.includes('postalCode')) {
+            } else if (path.includes('registrationNumber')) { // Teraz umožňuje všetky znaky pre RegistrationNumber
+                customProps = {
+                    onChange: (e) => handleChange(path, e.target.value), // Už nepoužíva handleNumericInput
+                    maxLength: 20
+                };
+            }
+             else if (path.includes('postalCode')) {
                 customProps = {
                     onChange: (e) => handlePostalCodeChange(e, path),
                     onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
@@ -1844,12 +1850,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                         inputType = 'password';
                     } else if (fullKeyPath.includes('dateOfBirth')) {
                          inputType = 'date';
-                    } else if (fullKeyPath.includes('jerseyNumber') || fullKeyPath.includes('registrationNumber')) {
+                    } else if (fullKeyPath.includes('jerseyNumber')) { // Iba pre JerseyNumber
                          customProps = {
                             onChange: (e) => handleNumericInput(e, fullKeyPath),
                             inputMode: 'numeric',
                             pattern: '[0-9]*',
-                            maxLength: fullKeyPath.includes('jerseyNumber') ? 3 : 20
+                            maxLength: 3
+                        };
+                    } else if (fullKeyPath.includes('registrationNumber')) { // Teraz umožňuje všetky znaky pre RegistrationNumber
+                         customProps = {
+                            onChange: (e) => handleChange(fullKeyPath, e.target.value), // Už nepoužíva handleNumericInput
+                            maxLength: 20
                         };
                     } else if (fullKeyPath.includes('postalCode')) {
                         customProps = {
@@ -1988,18 +1999,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 // Exclude internal keys, id, uniqueId, type, originalArray, originalIndex, password
                                 if (!key.startsWith('_') && key !== 'id' && key !== 'uniqueId' && key !== 'type' && key !== 'originalArray' && key !== 'originalIndex' && key !== 'password') {
                                     const value = dataToPrepareForSave[key];
-                                    // PÔVODNÁ LOGIKA: Preskakovala prázdne reťazce a objekty, čo spôsobovalo problém.
-                                    // if (typeof value === 'string' && value.trim() === '') {
-                                    //     // Skip empty strings
-                                    // } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
-                                    //     // Skip empty objects
-                                    // } else if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
-                                    //     // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
-                                    // } else {
-                                    //     finalDataToSave[key] = value;
-                                    // }
-
-                                    // NOVÁ LOGIKA: Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
+                                    // Zahŕňa prázdne reťazce a prázdne objekty (okrem 'billing' pre admin/hall),
                                     // aby sa zmeny na "" správne uložili.
                                     if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
                                         // Úplne preskočiť pole "billing", ak je to admin/hall používateľ
@@ -2049,7 +2049,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, targetDocRef, ori
                                 });
                                 console.log("Notifikácia o zmene uložená do Firestore.");
                             }
-                            // --- End Save Notification ---
+                            // --- End Notification ---
 
                             // Teraz zavolať prop onSave z AllRegistrationsApp s kompletne pripravenými dátami
                             onSave(finalDataToSave, targetDocRef, originalDataPath); // Pass only what AllRegistrationsApp needs to perform the Firestore update
