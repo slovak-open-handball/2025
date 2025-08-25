@@ -2885,7 +2885,7 @@ function AllRegistrationsApp() {
             // Logika pre aktualizáciu používateľa na najvyššej úrovni
             // console.log("DEBUG AllRegistrationsApp Top-Level User Save: Executing top-level user update. Data:", updatedDataFromModal); // Debug log
             await updateDoc(targetDocRef, updatedDataFromModal);
-            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (editModalTitle.includes('Upraviť tím')) { 
@@ -2925,7 +2925,7 @@ function AllRegistrationsApp() {
             updates[`teams.${category}`] = newCategoryTeams;
             // console.log("DEBUG AllRegistrationsApp Team Save: Updates object before updateDoc:", updates); // Debug log
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
@@ -2995,7 +2995,7 @@ function AllRegistrationsApp() {
                 updates[`teams.${category}`] = updatedTeamsForCategory;
                 // console.log("DEBUG AllRegistrationsApp Member Save: Updates object before updateDoc:", updates); // Debug log
                 await updateDoc(targetDocRef, updates);
-                setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+                setUserNotificationMessage("Zmeny boli uložené.", 'success');
                 closeEditModal(); 
                 return;
             } else {
@@ -3019,7 +3019,7 @@ function AllRegistrationsApp() {
             
             // console.log("DEBUG AllRegistrationsApp Generic Nested Save: Updates object before updateDoc:", updates); // Debug log
             await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli úspešne uložené.", 'success');
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         }
