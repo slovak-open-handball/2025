@@ -161,6 +161,11 @@
                 return;
             }
 
+            // Pridáme malé oneskorenie pred vykreslením React aplikácie.
+            // Toto je dočasné riešenie pre problém s načítaním menu.
+            // Ideálne riešenie by vyžadovalo zmeny v logged-in-left-menu.js.
+            await new Promise(resolve => setTimeout(resolve, 100)); // Oneskorenie 100ms
+
             // Teraz, keď vieme, že React a Firebase sú pripravené, môžeme vykresliť aplikáciu.
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(MySettingsApp, null));
