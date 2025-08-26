@@ -98,7 +98,7 @@ const formatPhoneNumber = (phoneNumber) => {
     }
 };
 
-const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, canEdit, isPasswordChangeOnlyMode }) => {
+const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, canEdit }) => {
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin':
@@ -140,12 +140,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     const emailLabel = userProfileData?.role === 'user' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
     const phoneLabel = userProfileData?.role === 'user' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
 
-    // NOVINKA: Logika pre zobrazenie tlačidla Upraviť pre profil
-    // Tlačidlo je viditeľné, ak je canEdit true (všetky úpravy sú povolené)
-    // ALEBO ak je canEdit false, ale používateľ je typu 'user' a je povolený len režim zmeny hesla.
-    const showProfilePencil = canEdit || (userProfileData.role === 'user' && isPasswordChangeOnlyMode);
-    
-    // Tlačidlo pre fakturačné údaje je viditeľné len ak je canEdit true.
+    // Logika pre zobrazenie ceruzky na základe stavu canEdit (odovzdaného z MyDataApp)
+    const showProfilePencil = canEdit;
     const showBillingPencil = canEdit;
 
 
@@ -156,7 +152,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, profileCardTitle),
-            // Ceruzka sa zobrazí len ak je showProfilePencil true
+            // Ceruzka sa zobrazí len ak je canEdit true
             showProfilePencil && React.createElement(
                 'button',
                 {
@@ -324,7 +320,7 @@ const globalDataStore = (() => {
         };
     };
 
-    return { getSnapshot: getGlobalState, subscribe: subscribeForReact }; // Zmena na getGlobalState
+    return { getSnapshot: getSnapshotForReact, subscribe: subscribeForReact };
 })();
 // --- END globalDataStore implementation ---
 
@@ -335,9 +331,6 @@ const MyDataApp = ({ userProfileData }) => {
     const [canEdit, setCanEdit] = useState(false);
     // NOVINKA: Lokálny stav pre registrationDates
     const [localRegistrationDates, setLocalRegistrationDates] = useState(null);
-    // NOVINKA: Stav pre indikáciu režimu zmeny hesla (true, ak je po deadline a používateľ je 'user')
-    const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
-
 
     // Use useSyncExternalStore to synchronize with global data.
     const { 
@@ -393,11 +386,10 @@ const MyDataApp = ({ userProfileData }) => {
         let timer; 
         
         const updateCanEditStatus = () => {
-            // Predvolené nastavenia
+            // Default to false and then evaluate
             setCanEdit(false); 
-            setIsPasswordChangeOnlyMode(false); // Reset režimu zmeny hesla
 
-            // Zabezpečenie, že dáta používateľa a globálne dáta sú pripravené
+            // Ensure user data and all necessary global data are ready
             if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !localRegistrationDates) {
                 console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky/lokálne dáta registrácie nie sú pripravené. Úpravy nie sú povolené.");
                 return;
@@ -410,7 +402,7 @@ const MyDataApp = ({ userProfileData }) => {
                 return; 
             }
 
-            // Pre ne-admin používateľov skontroluj termín
+            // For non-admin users, check registration data and deadline
             if (deadlineMillis !== null) { 
                 const nowMillis = Date.now();
                 
@@ -428,30 +420,15 @@ const MyDataApp = ({ userProfileData }) => {
                     if (deadlineMillis - nowMillis > 0) {
                         timer = setTimeout(() => {
                             setCanEdit(false);
-                            // NOVINKA: Ak uplynie termín, ale používateľ je typu 'user', prepni na režim zmeny hesla
-                            if (userProfileData.role === 'user') {
-                                setIsPasswordChangeOnlyMode(true);
-                                console.log("logged-in-my-data.js: Termín úprav uplynul pre používateľa typu 'user', prepínam na režim zmeny hesla.");
-                            } else {
-                                setIsPasswordChangeOnlyMode(false); // Pre ostatné roly vypni všetko
-                            }
-                            console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy (okrem zmeny hesla pre 'user').");
+                            console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy.");
                         }, deadlineMillis - nowMillis + 100); // Pridáme malé oneskorenie pre istotu
                     }
                 } else {
                     setCanEdit(false);
-                    // NOVINKA: Ak je už po termíne, ale používateľ je typu 'user', povoľ režim zmeny hesla
-                    if (userProfileData.role === 'user') {
-                        setIsPasswordChangeOnlyMode(true);
-                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline, ALE povolená zmena hesla pre 'user'.");
-                    } else {
-                        setIsPasswordChangeOnlyMode(false); // Pre ostatné roly vypni všetko
-                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
-                    }
+                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
                 }
             } else {
                 setCanEdit(false);
-                setIsPasswordChangeOnlyMode(false);
                 console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta nie sú načítané/dostupné/platné (deadlineMillis je null).");
             }
         };
@@ -466,7 +443,7 @@ const MyDataApp = ({ userProfileData }) => {
             }
         };
     }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, localRegistrationDates, deadlineMillis]); 
-    // Dependencies now include localRegistrationDates, a isPasswordChangeOnlyMode je tiež ovplyvňované
+    // Dependencies now include localRegistrationDates
 
     const getRoleColor = (role) => {
         switch (role) {
@@ -491,8 +468,7 @@ const MyDataApp = ({ userProfileData }) => {
                 userProfileData: userProfileData,
                 onOpenProfileModal: () => setShowProfileModal(true),
                 onOpenBillingModal: () => setShowBillingModal(true),
-                canEdit: canEdit, // Pass general edit permission
-                isPasswordChangeOnlyMode: isPasswordChangeOnlyMode // Pass mode for profile modal
+                canEdit: canEdit // Pass state to sub-component
             }
         ),
         React.createElement(
@@ -501,8 +477,7 @@ const MyDataApp = ({ userProfileData }) => {
                 show: showProfileModal,
                 onClose: () => setShowProfileModal(false),
                 userProfileData: userProfileData,
-                roleColor: roleColor,
-                onlyAllowPasswordChange: isPasswordChangeOnlyMode // Pass mode to modal
+                roleColor: roleColor
             }
         ),
         React.createElement(
@@ -552,9 +527,9 @@ const handleDataUpdateAndRender = (event) => {
                                 // Vytvorenie notifikácie v databáze s novou štruktúrou
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email, // Používame userEmail namiesto userId a userName
+                                    userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(), // Používame timestamp namiesto createdAt
+                                    timestamp: new Date()
                                 });
                                 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
