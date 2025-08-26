@@ -15,11 +15,17 @@ function MySettingsApp() {
   const [user, setUser] = React.useState(null); // Bude aktualizované z globalDataUpdated
   const [userProfileData, setUserProfileData] = React.useState(null);
   const [loading, setLoading] = React.useState(true); // Loading pre data v MySettingsApp
-  const [error, setError] = React.useState(''); // Lokálny stav pre chybové správy
-  const [successMessage, setSuccessMessage] = React.useState(''); // Lokálny stav pre úspešné správy
+  const [notification, setNotification] = React.useState({ message: '', type: '' }); // Lokálny stav pre notifikácie
 
   // Stavy pre užívateľské dáta (nastavenia notifikácií)
   const [displayNotifications, setDisplayNotifications] = React.useState(true);
+
+  // Funkcia na zobrazenie lokálnej notifikácie
+  const showLocalNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    // Automatické skrytie správy po 5 sekundách
+    setTimeout(() => setNotification({ message: '', type: '' }), 5000);
+  };
 
   // Efekt pre počúvanie globálnych zmien autentifikácie a dát profilu
   React.useEffect(() => {
@@ -55,12 +61,10 @@ function MySettingsApp() {
         // Aktualizácia lokálnych stavov z userProfileData
         setDisplayNotifications(globalProfileData.displayNotifications !== undefined ? globalProfileData.displayNotifications : true);
         
-        setError(''); // Vyčistí chyby po úspešnom načítaní
-        setSuccessMessage(''); // Vyčistí úspešné správy po načítaní
+        setNotification({ message: '', type: '' }); // Vyčistí notifikácie po úspešnom načítaní
       } else {
         console.warn("MySettingsApp: Profilové dáta používateľa nie sú dostupné.");
-        setError("Chyba: Profil používateľa nebol nájdený alebo nemáte dostatočné povolenia.");
-        setSuccessMessage(''); // Vyčistí úspešné správy pri chybe načítania
+        showLocalNotification("Chyba: Profil používateľa nebol nájdený alebo nemáte dostatočné povolenia.", "error");
       }
     };
 
@@ -75,7 +79,7 @@ function MySettingsApp() {
       // Ak je authReady, ale profilové dáta chýbajú, a používateľ je prihlásený,
       // znamená to problém s načítaním profilu v authentication.js.
       console.warn("MySettingsApp: Initial check - Firebase Auth je pripravený, ale globalUserProfileData chýba pre prihláseného používateľa.");
-      setError("Chyba: Váš profil sa nepodarilo načítať. Skúste sa prosím odhlásiť a znova prihlásiť.");
+      showLocalNotification("Chyba: Váš profil sa nepodarilo načítať. Skúste sa prosím odhlásiť a znova prihlásiť.", "error");
       setLoading(false);
       window.hideGlobalLoader(); // Skryjeme globálny loader aj pri chybe
     } else if (window.isGlobalAuthReady && !auth.currentUser) {
@@ -95,28 +99,22 @@ function MySettingsApp() {
 
   const handleUpdateNotificationsSetting = async () => {
     if (!db || !user) {
-      setError("Databáza alebo používateľ nie je k dispozícii.");
-      setSuccessMessage(''); // Vyčistí úspešné správy
+      showLocalNotification("Databáza alebo používateľ nie je k dispozícii.", "error");
       return;
     }
     setLoading(true);
     window.showGlobalLoader(); // Zobrazíme loader počas ukladania
-    setError(''); // Vyčistí predchádzajúce chyby
-    setSuccessMessage(''); // Vyčistí predchádzajúce úspešné správy
+    setNotification({ message: '', type: '' }); // Vyčistí predchádzajúce notifikácie
 
     try {
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, {
         displayNotifications: displayNotifications
       });
-      setSuccessMessage("Nastavenie notifikácií úspešne aktualizované!");
-      // Automatické skrytie správy po 5 sekundách
-      setTimeout(() => setSuccessMessage(''), 5000); 
+      showLocalNotification("Nastavenie notifikácií úspešne aktualizované!", "success");
     } catch (e) {
       console.error("MySettingsApp: Chyba pri aktualizácii nastavenia notifikácií:", e);
-      setError(`Chyba pri aktualizácii nastavenia: ${e.message}`);
-      // Automatické skrytie správy po 5 sekundách
-      setTimeout(() => setError(''), 5000);
+      showLocalNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, "error");
     } finally {
       setLoading(false);
       window.hideGlobalLoader(); // Skryjeme loader po uložení (či už úspešnom alebo s chybou)
@@ -124,7 +122,7 @@ function MySettingsApp() {
   };
 
   // Zobrazovanie načítavacieho stavu alebo presmerovanie
-  if (loading || (auth.currentUser && !userProfileData && !error && !successMessage)) {
+  if (loading || (auth.currentUser && !userProfileData && !notification.message)) {
     if (!auth.currentUser && window.isGlobalAuthReady) {
         console.log("MySettingsApp: Používateľ je odhlásený po inicializácii.");
         return null; 
@@ -132,19 +130,40 @@ function MySettingsApp() {
     return null; 
   }
 
-  // Ak existuje chyba alebo úspešná správa, zobrazíme ju ako pop-up
-  const notificationElement = (error || successMessage) && React.createElement(
+  // Notifikačný prvok
+  const notificationElement = notification.message && React.createElement(
     'div',
-    { 
-      // Triedy pre pop-up okno v hornej strednej časti obrazovky
-      className: `fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-white text-center transition-all duration-300 transform 
-                  ${error ? 'bg-red-500' : 'bg-green-500'}`,
-      role: 'alert' 
+    {
+      className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform scale-95 opacity-0 
+                  ${notification.type === 'success' ? 'bg-green-500 text-white' : ''}
+                  ${notification.type === 'error' ? 'bg-red-500 text-white' : ''}
+                  ${notification.type === 'info' ? 'bg-blue-500 text-white' : ''}
+                  ${notification.type === '' && 'bg-gray-700 text-white'}
+                  `, // Default pre prípad, že type nie je definovaný
+      role: 'alert',
+      style: { transition: 'transform 0.5s ease-in-out, opacity 0.5s ease-in-out' } // Explicitné transition
     },
-    error && React.createElement('strong', { className: 'font-bold' }, 'Chyba! '),
-    successMessage && React.createElement('strong', { className: 'font-bold' }, 'Úspech! '),
-    React.createElement('span', { className: 'block sm:inline' }, error || successMessage)
+    React.createElement('strong', { className: 'font-bold' }, notification.type === 'error' ? 'Chyba! ' : (notification.type === 'success' ? 'Úspech! ' : '')),
+    React.createElement('span', { className: 'block sm:inline' }, notification.message)
   );
+
+  // Efekt pre animáciu notifikácie
+  React.useEffect(() => {
+    let timeoutId;
+    if (notification.message) {
+      const element = document.querySelector('.fixed.top-4.left-1\\/2');
+      if (element) {
+        // Force reflow for transition to work
+        void element.offsetWidth; 
+        element.style.opacity = '1';
+        element.style.transform = 'translate(-50%, 0) scale(1)';
+      }
+    }
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [notification]);
+
 
   // Hlavné vykreslenie komponentu
   return React.createElement(
