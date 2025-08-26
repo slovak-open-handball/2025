@@ -23,6 +23,9 @@ function MySettingsApp() {
 
   // Efekt pre počúvanie globálnych zmien autentifikácie a dát profilu
   React.useEffect(() => {
+    // Zobrazíme globálny loader pri štarte efektu
+    window.showGlobalLoader();
+
     const handleGlobalDataUpdated = (event) => {
       console.log("MySettingsApp: Prijatá udalosť 'globalDataUpdated'.");
       const globalUser = auth.currentUser; // Získame aktuálneho používateľa priamo z globálneho auth
@@ -84,7 +87,8 @@ function MySettingsApp() {
         window.hideGlobalLoader(); // Skryjeme globálny loader
         // Presmerovanie zabezpečuje authentication.js
     } else {
-        window.showGlobalLoader(); // Zobrazíme globálny loader, ak ešte nie sú dáta pripravené
+        // Ak dáta nie sú pripravené a ani nie je prihlásený používateľ, zobrazíme globálny loader
+        // už je volané na začiatku useEffectu
     }
 
     return () => {
@@ -123,13 +127,10 @@ function MySettingsApp() {
     }
   };
 
-  // Renderovanie loadera, ak je stav `loading` true
+  // Renderovanie obsahu, ak nie je stav `loading` true
+  // Ak je loading, automaticky sa zobrazí globálny loader volaný v useEffecte
   if (loading) {
-    return React.createElement(
-      'div',
-      { className: 'flex justify-center items-center h-screen pt-16' },
-      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-    );
+    return null; // Nič nevykresľujeme, necháme globálny loader, aby sa staral o zobrazenie
   }
 
   // Ak existuje chyba alebo úspešná správa, zobrazíme ju ako pop-up
