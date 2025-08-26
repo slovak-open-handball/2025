@@ -150,6 +150,7 @@ function MySettingsApp() {
     return null; 
   }
 
+  // If there's an error and loading is false, we render the error here
   // Ak existuje chyba a loading je false, zobrazíme chybu
   if (error && !loading) {
     return React.createElement(
@@ -157,6 +158,7 @@ function MySettingsApp() {
       { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter p-4' },
       React.createElement(
         'div',
+        // Dynamické triedy pre farbu pozadia na základe typu správy
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-lg w-full text-center', role: 'alert' },
         React.createElement('strong', { className: 'font-bold' }, 'Chyba! '),
         React.createElement('span', { className: 'block sm:inline whitespace-pre-wrap' }, error)
@@ -174,6 +176,7 @@ function MySettingsApp() {
       // Chyby sa už zobrazujú cez globálne notifikácie, ale pre perzistentné chyby zostane táto oblasť
       error && React.createElement(
         'div',
+        // Dynamické triedy pre farbu pozadia na základe typu správy
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         error
       ),
