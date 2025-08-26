@@ -247,7 +247,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'DIČ'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.dic || '-')
+                React.createElement('div', { className : 'font-normal' }, userProfileData.billing?.dic || '-')
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČ DPH'),
@@ -273,12 +273,6 @@ const MyDataApp = ({ userProfileData }) => {
     const [registrationDatesData, setRegistrationDatesData] = useState(null);
     const [isRegistrationDataLoading, setIsRegistrationDataLoading] = useState(true);
 
-    // Nové stavy pre Firebase inštancie
-    const [firebaseApp, setFirebaseApp] = useState(null);
-    const [firestoreDb, setFirestoreDb] = useState(null);
-    const [firebaseAuth, setFirebaseAuth] = useState(null);
-
-
     // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
     useEffect(() => {
         if (userProfileData) {
@@ -287,40 +281,17 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
 
-    // Firestore listener pre dáta o registrácii
-    useEffect(() => {
-        // Inicializácia Firebase a Auth, ak ešte nie sú globálne dostupné
-        if (typeof window.__firebase_config !== 'undefined' && typeof window.__app_id !== 'undefined') {
-            try {
-                const firebaseConfig = JSON.parse(window.__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                const db = getFirestore(app);
-                const auth = getAuth(app);
-                setFirebaseApp(app);
-                setFirestoreDb(db);
-                setFirebaseAuth(auth);
-                console.log("logged-in-my-data.js: Firebase inicializované a uložené do stavu.");
-            } catch (error) {
-                console.error("logged-in-my-data.js: Chyba pri inicializácii Firebase pre listener registračných dát:", error);
-                setIsRegistrationDataLoading(false);
-            }
-        } else {
-            console.warn("logged-in-my-data.js: __firebase_config alebo __app_id nie je definovaný. Firebase inicializácia sa odkladá.");
-            setIsRegistrationDataLoading(false);
-            return;
-        }
-    }, [typeof window.__firebase_config !== 'undefined' ? window.__firebase_config : null, typeof window.__app_id !== 'undefined' ? window.__app_id : null]);
-
-
     // Listener pre registračné dáta z Firestore
+    // Teraz závisí od globálneho window.db, ktoré je inicializované mimo tohto komponentu
     useEffect(() => {
-        if (!firestoreDb || !firebaseApp) {
-            console.log("logged-in-my-data.js: Firestore DB alebo Firebase App nie sú pripravené pre registračné dáta.");
+        if (!window.db || typeof window.__app_id === 'undefined') {
+            console.log("logged-in-my-data.js: window.db alebo __app_id nie sú pripravené pre registračné dáta.");
+            setIsRegistrationDataLoading(false); // Nastavíme loading na false, ak db nie je k dispozícii
             return;
         }
         
-        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
-        const registrationDatesRef = doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'registrationDates', 'current');
+        const appId = window.__app_id; // Používame priamo window.__app_id
+        const registrationDatesRef = doc(window.db, 'artifacts', appId, 'public', 'data', 'registrationDates', 'current');
         
         setIsRegistrationDataLoading(true);
         const unsubscribe = onSnapshot(registrationDatesRef, (docSnap) => {
@@ -340,7 +311,7 @@ const MyDataApp = ({ userProfileData }) => {
 
         // Funkcia na odhlásenie listenera pri odpojení komponentu
         return () => unsubscribe();
-    }, [firestoreDb, firebaseApp, typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id']); // Závisí od inštancií Firebase a appId
+    }, [typeof window.db !== 'undefined' ? window.db : null, typeof window.__app_id !== 'undefined' ? window.__app_id : null]); // Závisí od dostupnosti window.db a window.__app_id
 
 
     // Vypočítame deadlineMillis z registrationDatesData
@@ -371,10 +342,8 @@ const MyDataApp = ({ userProfileData }) => {
         }
 
         // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline.
-        // Používame nový stav registrationDatesData a isRegistrationDataLoading
         // Tlačidlo by sa malo zobrazovať, ak NIE JE isRegistrationDataLoading (dáta sú načítané)
-        // A ak deadlineMillis nie je null (deadline je definovaný)
-        // A ak aktuálny čas je pred alebo rovný deadline
+        // A ak registrationDatesData a deadlineMillis sú definované
         if (!isRegistrationDataLoading && registrationDatesData && deadlineMillis !== null) {
             const nowMillis = Date.now();
             
