@@ -266,43 +266,132 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
 // Definícia externého store pre globálne window premenné
 const globalDataStore = (() => {
-    let snapshot = {}; // Uchováva posledný známy stav
+    let internalSnapshot = {}; // Stores the last *raw* snapshot of global window variables
+    let listeners = new Set(); // Stores callback functions registered by React components
 
-    const getSnapshot = () => {
-        // Vytvoríme nový snapshot, aby React detegoval zmenu, aj keď sa zmenila vnútorná hodnota Timestamp.
+    // Function to get the current state of global variables from window object
+    const getGlobalState = () => {
         return {
             isGlobalAuthReady: window.isGlobalAuthReady || false,
             isRegistrationDataLoaded: window.isRegistrationDataLoaded || false,
             isCategoriesDataLoaded: window.isCategoriesDataLoaded || false,
-            registrationDates: window.registrationDates ? { ...window.registrationDates } : null,
-            // globalUserProfileData je už prop userProfileData
+            // Deep clone relevant parts of registrationDates if it contains complex objects like Timestamp
+            // Otherwise, a shallow copy might suffice if only the top-level object reference changes
+            registrationDates: window.registrationDates ? {
+                ...window.registrationDates,
+                // Ensure Timestamp objects are also cloned or their relevant values extracted
+                dataEditDeadline: window.registrationDates.dataEditDeadline ? { 
+                    seconds: window.registrationDates.dataEditDeadline.seconds,
+                    nanoseconds: window.registrationDates.dataEditDeadline.nanoseconds
+                } : null,
+                rosterEditDeadline: window.registrationDates.rosterEditDeadline ? { 
+                    seconds: window.registrationDates.rosterEditDeadline.seconds,
+                    nanoseconds: window.registrationDates.rosterEditDeadline.nanoseconds
+                } : null,
+                registrationEndDate: window.registrationDates.registrationEndDate ? { 
+                    seconds: window.registrationDates.registrationEndDate.seconds,
+                    nanoseconds: window.registrationDates.registrationEndDate.nanoseconds
+                } : null,
+                registrationStartDate: window.registrationDates.registrationStartDate ? { 
+                    seconds: window.registrationDates.registrationStartDate.seconds,
+                    nanoseconds: window.registrationDates.registrationStartDate.nanoseconds
+                } : null,
+                tournamentEnd: window.registrationDates.tournamentEnd ? { 
+                    seconds: window.registrationDates.tournamentEnd.seconds,
+                    nanoseconds: window.registrationDates.tournamentEnd.nanoseconds
+                } : null,
+                tournamentStart: window.registrationDates.tournamentStart ? { 
+                    seconds: window.registrationDates.tournamentStart.seconds,
+                    nanoseconds: window.registrationDates.tournamentStart.nanoseconds
+                } : null,
+            } : null,
         };
     };
 
-    const subscribe = (callback) => {
-        // Funkcia na spúšťanie Reactu, keď sa externé dáta zmenia
-        const handleChange = () => {
-            const newSnapshot = getSnapshot();
-            // Porovnajte, či sa snapshot skutočne zmenil, aby ste predišli zbytočným re-renderom
-            if (JSON.stringify(newSnapshot) !== JSON.stringify(snapshot)) {
-                snapshot = newSnapshot;
-                callback();
-            }
-        };
+    // Function to notify all subscribed components about a change
+    const emitChange = () => {
+        const newGlobalState = getGlobalState();
+        let changed = false;
 
-        window.addEventListener('globalDataUpdated', handleChange);
-        window.addEventListener('categoriesLoaded', handleChange);
-        window.addEventListener('registrationDatesUpdated', handleChange); // Uistite sa, že túto udalosť dispečujete z header.js
+        // Compare current internalSnapshot with newGlobalState for relevant changes
+        if (internalSnapshot.isGlobalAuthReady !== newGlobalState.isGlobalAuthReady ||
+            internalSnapshot.isRegistrationDataLoaded !== newGlobalState.isRegistrationDataLoaded ||
+            internalSnapshot.isCategoriesDataLoaded !== newGlobalState.isCategoriesDataLoaded) {
+            changed = true;
+        }
+
+        // Deep comparison for registrationDates, focusing on critical properties like dataEditDeadline
+        const oldRegDates = internalSnapshot.registrationDates;
+        const newRegDates = newGlobalState.registrationDates;
+
+        if (oldRegDates !== newRegDates) { // Check if the object reference itself changed
+             if (!oldRegDates || !newRegDates) { // One is null/undefined and the other isn't
+                 changed = true;
+             } else {
+                 // Compare specific properties of the Timestamp objects
+                 if (oldRegDates.dataEditDeadline?.seconds !== newRegDates.dataEditDeadline?.seconds ||
+                     oldRegDates.dataEditDeadline?.nanoseconds !== newRegDates.dataEditDeadline?.nanoseconds) {
+                     changed = true;
+                 }
+                 // Add other Timestamp comparisons if needed
+                 if (oldRegDates.rosterEditDeadline?.seconds !== newRegDates.rosterEditDeadline?.seconds ||
+                     oldRegDates.rosterEditDeadline?.nanoseconds !== newRegDates.rosterEditDeadline?.nanoseconds) {
+                     changed = true;
+                 }
+                 if (oldRegDates.registrationEndDate?.seconds !== newRegDates.registrationEndDate?.seconds ||
+                     oldRegDates.registrationEndDate?.nanoseconds !== newRegDates.registrationEndDate?.nanoseconds) {
+                     changed = true;
+                 }
+                 if (oldRegDates.registrationStartDate?.seconds !== newRegDates.registrationStartDate?.seconds ||
+                     oldRegDates.registrationStartDate?.nanoseconds !== newRegDates.registrationStartDate?.nanoseconds) {
+                     changed = true;
+                 }
+                 if (oldRegDates.tournamentEnd?.seconds !== newRegDates.tournamentEnd?.seconds ||
+                     oldRegDates.tournamentEnd?.nanoseconds !== newRegDates.tournamentEnd?.nanoseconds) {
+                     changed = true;
+                 }
+                 if (oldRegDates.tournamentStart?.seconds !== newRegDates.tournamentStart?.seconds ||
+                     oldRegDates.tournamentStart?.nanoseconds !== newRegDates.tournamentStart?.nanoseconds) {
+                     changed = true;
+                 }
+             }
+        }
         
+        if (changed) {
+            internalSnapshot = newGlobalState; // Update the stable internal snapshot
+            listeners.forEach(listener => listener()); // Notify React to re-render
+        }
+    };
+
+    // Initial setup of the internal snapshot
+    internalSnapshot = getGlobalState();
+
+    // The 'getSnapshot' function for useSyncExternalStore.
+    // It should return a stable reference to the latest data.
+    const getSnapshotForReact = () => internalSnapshot;
+
+    // The 'subscribe' function for useSyncExternalStore.
+    // It registers callbacks that should be called when the external store changes.
+    const subscribeForReact = (callback) => {
+        listeners.add(callback);
+
+        // Add event listeners to global window events that might trigger changes
+        window.addEventListener('globalDataUpdated', emitChange);
+        window.addEventListener('categoriesLoaded', emitChange);
+        window.addEventListener('registrationDatesUpdated', emitChange); 
+        
+        // Return a cleanup function
         return () => {
-            window.removeEventListener('globalDataUpdated', handleChange);
-            window.removeEventListener('categoriesLoaded', handleChange);
-            window.removeEventListener('registrationDatesUpdated', handleChange);
+            listeners.delete(callback);
+            window.removeEventListener('globalDataUpdated', emitChange);
+            window.removeEventListener('categoriesLoaded', emitChange);
+            window.removeEventListener('registrationDatesUpdated', emitChange);
         };
     };
 
-    return { getSnapshot, subscribe };
+    return { getSnapshot: getSnapshotForReact, subscribe: subscribeForReact };
 })();
+// --- END globalDataStore implementation ---
 
 
 const MyDataApp = ({ userProfileData }) => {
@@ -310,15 +399,16 @@ const MyDataApp = ({ userProfileData }) => {
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
 
-    // Použitie useSyncExternalStore na synchronizáciu s globálnymi dátami
+    // Use useSyncExternalStore to synchronize with global data.
+    // This will cause MyDataApp to re-render when globalDataStore.emitChange() is called
     const { 
         isGlobalAuthReady, 
         isRegistrationDataLoaded, 
         isCategoriesDataLoaded, 
-        registrationDates 
+        registrationDates // This is the shallow clone from getGlobalState
     } = useSyncExternalStore(globalDataStore.subscribe, globalDataStore.getSnapshot);
 
-    // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
+    // If user data changes, close modals
     useEffect(() => {
         if (userProfileData) {
             setShowProfileModal(false);
@@ -326,52 +416,45 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
 
-    // Vypočítame deadlineMillis z registrationDates
+    // Calculate deadlineMillis from registrationDates
+    // Ensure that registrationDates.dataEditDeadline is correctly accessed and converted
     const dataEditDeadline = registrationDates?.dataEditDeadline;
-    const deadlineMillis = dataEditDeadline ? dataEditDeadline.toMillis() : null;
+    const deadlineMillis = (dataEditDeadline && typeof dataEditDeadline.seconds === 'number') ? 
+                            new Date(dataEditDeadline.seconds * 1000 + dataEditDeadline.nanoseconds / 1000000).getTime() : 
+                            null;
 
-    // Časovač a logika pre určenie, či je možné dáta upravovať
+
+    // Timer and logic to determine if data can be edited
     useEffect(() => {
-        let timer; // Premenná pre časovač
+        let timer; 
+        setCanEdit(false); // Default to false
 
-        // Východiskovo nastavíme canEdit na false
-        setCanEdit(false);
-
-        // Uistíme sa, že sú dostupné dáta používateľa a všetky globálne dáta sú pripravené
+        // Ensure user data and all necessary global data are ready
         if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !registrationDates) {
             console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky nie sú pripravené. Úpravy nie sú povolené.");
             return;
         }
 
         const isAdmin = userProfileData.role === 'admin';
-        
-        // Ak je používateľ administrátor, vždy môže upravovať
         if (isAdmin) {
             setCanEdit(true);
             console.log("logged-in-my-data.js: Admin môže vždy upravovať. canEdit nastavené na TRUE.");
             return; 
         }
 
-        // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline.
-        // Tlačidlo by sa malo zobrazovať, ak registračné dáta sú načítané A sú platné
-        if (deadlineMillis !== null) { // Ak je deadlineMillis null, znamená to, že registrationDates nie je platný
+        // For non-admin users, check registration data and deadline
+        if (deadlineMillis !== null) { 
             const nowMillis = Date.now();
             
-            // Logging pre diagnostiku
             console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
             console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
             console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
 
             if (nowMillis <= deadlineMillis) { 
-                // Ak je aktuálny čas menší alebo rovný deadline, povoliť úpravy pre VŠETKY ne-admin roly
                 setCanEdit(true); 
                 console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
 
-                // Ak už existuje časovač, vyčistíme ho, aby sme predišli duplikáciám
                 if (timer) clearTimeout(timer);
-                
-                // Nastavíme časovač na automatické vypnutie úprav presne po uplynutí deadline
-                // Časovač sa nastaví len ak deadlineMillis je v budúcnosti
                 if (deadlineMillis - nowMillis > 0) {
                     timer = setTimeout(() => {
                         setCanEdit(false);
@@ -379,24 +462,22 @@ const MyDataApp = ({ userProfileData }) => {
                     }, deadlineMillis - nowMillis); 
                 }
             } else {
-                // Deadline už uplynul, zakázať úpravy pre všetky ne-admin roly
                 setCanEdit(false);
                 console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
             }
         } else {
-            // Ak registračné dáta ešte nie sú úplne načítané alebo platné, skryjeme tlačidlo
             setCanEdit(false);
             console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta nie sú načítané/dostupné/platné (deadlineMillis je null).");
         }
 
-        // Funkcia pre vyčistenie časovača pri odpojení komponentu
         return () => {
             if (timer) {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, registrationDates, deadlineMillis]); // Závisí od všetkých dát získaných z useSyncExternalStore a vypočítaného deadlineMillis
-
+    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, registrationDates, deadlineMillis]); 
+    // Dependencies are now the values directly from useSyncExternalStore,
+    // plus userProfileData and the derived deadlineMillis.
 
     const getRoleColor = (role) => {
         switch (role) {
@@ -421,7 +502,7 @@ const MyDataApp = ({ userProfileData }) => {
                 userProfileData: userProfileData,
                 onOpenProfileModal: () => setShowProfileModal(true),
                 onOpenBillingModal: () => setShowBillingModal(true),
-                canEdit: canEdit // Odovzdáme stav do podkomponentu
+                canEdit: canEdit // Pass state to sub-component
             }
         ),
         React.createElement(
