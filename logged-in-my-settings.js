@@ -132,11 +132,13 @@ function MySettingsApp() {
     return null; 
   }
 
-  // Ak existuje chyba a loading je false, zobrazíme chybu, inak úspešnú správu, ak je k dispozícii
+  // Ak existuje chyba alebo úspešná správa, zobrazíme ju ako pop-up
   const notificationElement = (error || successMessage) && React.createElement(
     'div',
     { 
-      className: `px-4 py-3 rounded relative mb-4 whitespace-pre-wrap ${error ? 'bg-red-100 border border-red-400 text-red-700' : 'bg-green-100 border border-green-400 text-green-700'}`,
+      // Triedy pre pop-up okno v hornej strednej časti obrazovky
+      className: `fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-white text-center transition-all duration-300 transform 
+                  ${error ? 'bg-red-500' : 'bg-green-500'}`,
       role: 'alert' 
     },
     error && React.createElement('strong', { className: 'font-bold' }, 'Chyba! '),
@@ -151,7 +153,7 @@ function MySettingsApp() {
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
-      // Zobrazenie lokálnej notifikačnej správy (chybovej alebo úspešnej)
+      // Zobrazenie lokálnej notifikačnej správy (chybovej alebo úspešnej) ako pop-up
       notificationElement,
       React.createElement(
         'div',
