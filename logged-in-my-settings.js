@@ -140,11 +140,13 @@ function MySettingsApp() {
         // Ak je authReady, ale currentUser je null, znamená to, že používateľ je odhlásený.
         // authentication.js by ho mal presmerovať na login.html.
         console.log("MySettingsApp: Používateľ je odhlásený po inicializácii.");
-        return null; // Nenecháme React komponent renderovať nič
+        // Už sa nespoliehame na to, že tento komponent zobrazí loading spinner.
+        // Globálny loader sa už postará o celostránkové načítavanie.
+        return null; 
     }
 
-    // Predtým tu bol text "Načítavam nastavenia...", teraz to rieši globálny loader
-    // Komponent tu môže vrátiť null, pretože loader je globálny.
+    // Ak je `loading` true, už sa spoliehame na `window.showGlobalLoader()`,
+    // takže tento komponent nemusí renderovať žiadne lokálne načítavacie UI.
     return null; 
   }
 
