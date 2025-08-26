@@ -3550,7 +3550,7 @@ function AllRegistrationsApp() {
 
 
     // Handler pre otvorenie modálneho okna na pridanie tímu
-    const handleOpenAddTeamModal = () => {
+    const handleOpenAddTeamModal = (userIdForNewTeam) => { // Prijíma userId pre nový tím
         if (!user || !db || !userProfileData || !userProfileData.role) {
             setUserNotificationMessage("Chyba: Nie ste prihlásený alebo nemáte dostatočné oprávnenia na pridanie tímu.", 'error');
             return;
@@ -3567,7 +3567,7 @@ function AllRegistrationsApp() {
             tshirts: [],
             playerDetails: [],
             menTeamMemberDetails: [],
-                        womenTeamMemberDetails: [],
+            womenTeamMemberDetails: [],
             driverDetailsMale: [],
             driverDetailsFemale: [],
         };
@@ -3576,7 +3576,8 @@ function AllRegistrationsApp() {
         // Predpokladajme, že sa pridáva do nejakej default kategórie (napr. 'NewCategory'),
         // ale skutočná kategória sa vyberie v modálnom okne a prepíše sa.
         const newTeamPath = `teams.NewCategory[-1]`; 
-        const targetDocRefForNewTeam = doc(db, 'users', user.uid);
+        // Použijeme userIdForNewTeam, ak je odovzdané, inak userId aktuálneho prihláseného admina
+        const targetDocRefForNewTeam = doc(db, 'users', userIdForNewTeam || user.uid);
 
         openEditModal(newTeamData, 'Pridať nový tím', targetDocRefForNewTeam, newTeamPath, true); // Nastaviť isNewEntry na true
     };
@@ -3992,7 +3993,8 @@ function AllRegistrationsApp() {
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
                                         React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
                                             // Tlačidlo na pridanie nového tímu pre používateľa, ak sú rozbalené riadky používateľov
-                                            React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
+                                            // TOTO JE TLAČIDLO, KTORÉ SA BUDE ZOBRAZOVAŤ LEN AK SÚ OBE MOŽNOSTI ZAPNUTÉ
+                                            showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
                                                 React.createElement('button', {
                                                     className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
                                                     onClick: (e) => {
@@ -4050,16 +4052,9 @@ function AllRegistrationsApp() {
                 )
             )
         ),
-        // Nové tlačidlo na pridanie tímu pod celou tabuľkou (zobrazí sa len v režime "Zobraziť tímy")
-        !showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4' },
-            React.createElement('button', {
-                className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
-                onClick: (e) => {
-                    e.stopPropagation();
-                    handleOpenAddTeamModal(); // Voláme handleOpenAddTeamModal bez parametra userId
-                }
-            }, '+')
-        )
+        // Predchádzajúce tlačidlo na pridanie tímu pod celou tabuľkou (ktoré bolo zobrazené v režime "iba tímy")
+        // bolo odstránené, pretože už nemá byť zobrazené v režime "iba tímy"
+        // Ako bolo požadované, zobrazí sa iba v režime "Zobraziť používateľov" a "Zobraziť tímy" a to v rozbalenom riadku používateľa.
       )
     )
   );
