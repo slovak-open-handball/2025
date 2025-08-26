@@ -176,21 +176,21 @@
             const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
             if (leftMenuPlaceholder) {
                 try {
-                    const response = await fetch('left-menu.html');
+                    const response = await fetch('logged-in-left-menu.html');
                     if (!response.ok) throw new Error('Network response was not ok.');
                     const menuHtml = await response.text();
                     leftMenuPlaceholder.innerHTML = menuHtml;
 
                     const menuScript = document.createElement('script');
                     menuScript.type = 'module'; // Dôležité pre ES module
-                    menuScript.src = 'left-menu.js';
+                    menuScript.src = 'logged-in-left-menu.js';
                     menuScript.onload = () => {
-                        console.log("left-menu.js načítaný a spustený.");
-                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
+                        console.log("logged-in-left-menu.js načítaný a spustený.");
+                        // window.updateMenuItemsVisibility je teraz definované v logged-in-left-menu.js
                         // a volá sa z globalDataUpdated listenera v header.js (ktorý sa volá z authentication.js)
                     };
                     menuScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní left-menu.js:", e);
+                        console.error("Chyba pri načítaní logged-in-left-menu.js:", e);
                     };
                     document.body.appendChild(menuScript);
                 } catch (error) {
