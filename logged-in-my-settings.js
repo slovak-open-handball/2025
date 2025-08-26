@@ -89,7 +89,8 @@ function MySettingsApp() {
 
     return () => {
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
-      window.hideGlobalLoader(); // Zabezpečíme skrytie loadera pri odpojení komponentu
+      // window.hideGlobalLoader(); // Zabezpečíme skrytie loadera pri odpojení komponentu
+      // Zakomentované, aby sa zabránilo predčasnému skrytiu, ak sa komponent znovu pripojí
     };
   }, [auth, db]); // Závisí od globálnych inštancií auth a db
 
@@ -127,8 +128,12 @@ function MySettingsApp() {
   if (loading || (auth.currentUser && !userProfileData && !error && !successMessage)) {
     if (!auth.currentUser && window.isGlobalAuthReady) {
         console.log("MySettingsApp: Používateľ je odhlásený po inicializácii.");
+        // Ak je používateľ odhlásený, React komponent by nemal nič renderovať,
+        // presmerovanie sa deje v useEffect alebo v authentication.js
         return null; 
     }
+    // Ak je loading true a nie sú dáta, vrátime null, aby React neprerenderoval prázdnu obrazovku.
+    // Loader je riadený globálne cez window.showGlobalLoader().
     return null; 
   }
 
@@ -150,10 +155,10 @@ function MySettingsApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
+    notificationElement,
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
-      notificationElement,
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
