@@ -123,13 +123,13 @@ function MySettingsApp() {
     }
   };
 
-  // Zobrazovanie načítavacieho stavu alebo presmerovanie
-  if (loading || (auth.currentUser && !userProfileData && !error && !successMessage)) {
-    if (!auth.currentUser && window.isGlobalAuthReady) {
-        console.log("MySettingsApp: Používateľ je odhlásený po inicializácii.");
-        return null; 
-    }
-    return null; 
+  // Renderovanie loadera, ak je stav `loading` true
+  if (loading) {
+    return React.createElement(
+      'div',
+      { className: 'flex justify-center items-center h-screen pt-16' },
+      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+    );
   }
 
   // Ak existuje chyba alebo úspešná správa, zobrazíme ju ako pop-up
