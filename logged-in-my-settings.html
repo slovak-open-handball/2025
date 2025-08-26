@@ -113,8 +113,8 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Načítanie globálnych skriptov PRVÉ -->
-    <script type="module" src="loader.js"></script>
+    <!-- Pôvodne tu bolo načítanie loader.js, ktoré teraz odstránime, aby sa nezobrazoval globálny loader -->
+    <!-- <script type="module" src="loader.js"></script> --> 
     <script type="module" src="authentication.js"></script>
     <!-- Načítanie skriptu pre hlavičku -->
     <script type="module" src="header.js"></script>
@@ -134,7 +134,7 @@
             <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
             <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <!-- Obsah aplikácie bude vykreslený tu, vrátane loadera -->
-                <!-- Loader bude teraz riadený z logged-in-my-settings.js -->
+                <!-- Loader bude riadený z logged-in-my-settings.js -->
             </div>
         </main>
     </div>
@@ -145,24 +145,15 @@
     <!-- Spustíme renderovanie React aplikácie po načítaní DOM -->
     <script type="module">
         window.onload = async () => {
-            // Loader sa už zobrazuje prostredníctvom MySettingsApp React komponentu
-            // window.showGlobalLoader(); // Túto funkciu voláme teraz v rámci React komponentu
-
-            // Hlavička a ľavé menu sa budú spravovať svojimi vlastnými skriptami (header.js a logged-in-left-menu.js)
-            // Tieto skripty sa už načítali v <head> ako moduly a spravujú svoje HTML prvky.
-
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+            // Overíme, či sú globálne Firebase inštancie dostupné
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                window.hideGlobalLoader();
                 return;
             }
-            // Overíme, či sú globálne Firebase inštancie dostupné
             if (!window.auth || !window.db) {
                 console.error("Chyba: Firebase Auth alebo Firestore nie sú inicializované. Skontrolujte authentication.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii Firebase. Skúste to prosím neskôr.</div>';
-                window.hideGlobalLoader();
                 return;
             }
 
@@ -170,9 +161,6 @@
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(MySettingsApp, null));
             console.log("logged-in-my-settings.html: React App vykreslená.");
-
-            // Skryjeme loader po vykreslení React aplikácie, ak už nebol skrytý MySettingsApp komponentom
-            // window.hideGlobalLoader(); // Túto funkciu voláme teraz v rámci React komponentu
         };
     </script>
 </body>
