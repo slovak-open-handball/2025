@@ -23,8 +23,8 @@ function MySettingsApp() {
 
   // Efekt pre počúvanie globálnych zmien autentifikácie a dát profilu
   React.useEffect(() => {
-    // Zobrazíme globálny loader pri štarte efektu
-    window.showGlobalLoader();
+    // Nezobrazujeme globálny loader, iba React loader
+    // window.showGlobalLoader(); // ODSTRÁNENÉ
 
     const handleGlobalDataUpdated = (event) => {
       console.log("MySettingsApp: Prijatá udalosť 'globalDataUpdated'.");
@@ -34,7 +34,7 @@ function MySettingsApp() {
       setUser(globalUser);
       setUserProfileData(globalProfileData);
       setLoading(false); // Ukončíme loading, keď sú dáta prijaté
-      window.hideGlobalLoader(); // Skryjeme globálny loader po načítaní dát
+      // window.hideGlobalLoader(); // ODSTRÁNENÉ
 
       if (!globalUser) {
         console.log("MySettingsApp: Používateľ je odhlásený. Presmerovávam.");
@@ -80,11 +80,11 @@ function MySettingsApp() {
       console.warn("MySettingsApp: Initial check - Firebase Auth je pripravený, ale globalUserProfileData chýba pre prihláseného používateľa.");
       setError("Chyba: Váš profil sa nepodarilo načítať. Skúste sa prosím odhlásiť a znova prihlásiť.");
       setLoading(false);
-      window.hideGlobalLoader(); // Skryjeme globálny loader aj pri chybe
+      // window.hideGlobalLoader(); // ODSTRÁNENÉ
     } else if (window.isGlobalAuthReady && !auth.currentUser) {
         console.log("MySettingsApp: Initial check - používateľ nie je prihlásený, ale globalAuthReady je true.");
         setLoading(false); // Ak nie je prihlásený, nie je čo načítavať
-        window.hideGlobalLoader(); // Skryjeme globálny loader
+        // window.hideGlobalLoader(); // ODSTRÁNENÉ
         // Presmerovanie zabezpečuje authentication.js
     } else {
         // Ak dáta nie sú pripravené a ani nie je prihlásený používateľ, zobrazíme globálny loader
@@ -93,7 +93,7 @@ function MySettingsApp() {
 
     return () => {
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
-      window.hideGlobalLoader(); // Zabezpečíme skrytie loadera pri odpojení komponentu
+      // window.hideGlobalLoader(); // ODSTRÁNENÉ
     };
   }, [auth, db]); // Závisí od globálnych inštancií auth a db
 
@@ -104,7 +104,7 @@ function MySettingsApp() {
       return;
     }
     setLoading(true);
-    window.showGlobalLoader(); // Zobrazíme loader počas ukladania
+    // window.showGlobalLoader(); // ODSTRÁNENÉ
     setError(''); // Vyčistí predchádzajúce chyby
     setSuccessMessage(''); 
 
@@ -123,14 +123,17 @@ function MySettingsApp() {
       setTimeout(() => setError(''), 5000);
     } finally {
       setLoading(false);
-      window.hideGlobalLoader(); // Skryjeme loader po uložení (či už úspešnom alebo s chybou)
+      // window.hideGlobalLoader(); // ODSTRÁNENÉ
     }
   };
 
-  // Renderovanie obsahu, ak nie je stav `loading` true
-  // Ak je loading, automaticky sa zobrazí globálny loader volaný v useEffecte
+  // Renderovanie loadera, ak je stav `loading` true
   if (loading) {
-    return null; // Nič nevykresľujeme, necháme globálny loader, aby sa staral o zobrazenie
+    return React.createElement(
+      'div',
+      { className: 'flex justify-center items-center h-screen pt-16' },
+      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+    );
   }
 
   // Ak existuje chyba alebo úspešná správa, zobrazíme ju ako pop-up
