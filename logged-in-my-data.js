@@ -203,7 +203,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall') ? null : React.createElement(
         'div',
-        { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]' },
+        { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]`' },
         React.createElement(
             'div',
             // OPRAVA: Zmenený backtick na jednoduchú úvodzovku pre správnu syntax
@@ -355,38 +355,39 @@ const MyDataApp = ({ userProfileData }) => {
 
         // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline.
         // Používame nový stav registrationDatesData a isRegistrationDataLoading
-        if (isRegistrationDataLoading || !registrationDatesData || deadlineMillis === null) {
-            // Skryjeme tlačidlo, ak sa dáta ešte načítavajú alebo nie sú dostupné
-            setCanEdit(false);
-            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta sa načítavajú alebo nie sú dostupné.");
-            return;
-        }
-
-        const nowMillis = Date.now();
+        // Tlačidlo by sa malo zobrazovať, ak NIE JE isRegistrationDataLoading (dáta sú načítané)
+        // A ak deadlineMillis nie je null (deadline je definovaný)
+        // A ak aktuálny čas je pred alebo rovný deadline
+        if (!isRegistrationDataLoading && registrationDatesData && deadlineMillis !== null) {
+            const nowMillis = Date.now();
             
-        // Logging pre diagnostiku
-        console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
-        console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
-        console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
+            // Logging pre diagnostiku
+            console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
+            console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
+            console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
 
-        // ZMENA: Zjednotená podmienka pre zobrazenie tlačidla pre NE-ADMIN používateľov
-        if (nowMillis <= deadlineMillis) { 
-            // Ak je aktuálny čas menší alebo rovný deadline, povoliť úpravy pre VŠETKY ne-admin roly
-            setCanEdit(true); // Toto zahŕňa 'user', 'referee', 'coach' atď. pred deadlinom
-            console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
+            if (nowMillis <= deadlineMillis) { 
+                // Ak je aktuálny čas menší alebo rovný deadline, povoliť úpravy pre VŠETKY ne-admin roly
+                setCanEdit(true); // Toto zahŕňa 'user', 'referee', 'coach' atď. pred deadlinom
+                console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
 
-            // Ak už existuje časovač, vyčistíme ho, aby sme predišli duplikáciám
-            if (timer) clearTimeout(timer);
-            
-            // Nastavíme časovač na automatické vypnutie úprav presne po uplynutí deadline
-            timer = setTimeout(() => {
+                // Ak už existuje časovač, vyčistíme ho, aby sme predišli duplikáciám
+                if (timer) clearTimeout(timer);
+                
+                // Nastavíme časovač na automatické vypnutie úprav presne po uplynutí deadline
+                timer = setTimeout(() => {
+                    setCanEdit(false);
+                    console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy.");
+                }, deadlineMillis - nowMillis); 
+            } else {
+                // Deadline už uplynul, zakázať úpravy pre všetky ne-admin roly
                 setCanEdit(false);
-                console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy.");
-            }, deadlineMillis - nowMillis); 
+                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
+            }
         } else {
-            // Deadline už uplynul, zakázať úpravy pre všetky ne-admin roly
+            // Ak sa dáta ešte načítavajú alebo nie sú dostupné/platné, skryjeme tlačidlo
             setCanEdit(false);
-            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
+            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta sa načítavajú alebo nie sú dostupné/platné.");
         }
 
         // Funkcia pre vyčistenie časovača pri odpojení komponentu
