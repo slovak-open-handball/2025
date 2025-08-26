@@ -277,6 +277,10 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
 
+    // Vypočítame deadlineMillis na úrovni komponentu, aby bol dostupný pre dependency array
+    const dataEditDeadline = window.registrationDates?.dataEditDeadline;
+    const deadlineMillis = dataEditDeadline ? dataEditDeadline.toMillis() : null;
+
     // Časovač a logika pre určenie, či je možné dáta upravovať
     useEffect(() => {
         let timer; // Premenná pre časovač
@@ -302,15 +306,13 @@ const MyDataApp = ({ userProfileData }) => {
 
         // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline.
         // Tieto globálne premenné musia byť k dispozícii, inak nemôžeme vyhodnotiť dátumové podmienky.
-        if (!window.isRegistrationDataLoaded || !window.registrationDates || !window.registrationDates.dataEditDeadline) {
+        // Teraz používame už vypočítané dataEditDeadline a deadlineMillis
+        if (!window.isRegistrationDataLoaded || !window.registrationDates || deadlineMillis === null) {
             setCanEdit(false);
             console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - deadline alebo dáta registrácie nie sú načítané.");
             return;
         }
 
-        // Extrahujeme a normalizujeme deadlineMillis pre použitie v závislostiach
-        const dataEditDeadline = window.registrationDates.dataEditDeadline;
-        const deadlineMillis = dataEditDeadline.toMillis();
         const nowMillis = Date.now();
             
         // Logging pre diagnostiku
@@ -344,7 +346,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, window.isRegistrationDataLoaded, deadlineMillis]); // Pridané 'deadlineMillis' do závislostí
+    }, [userProfileData, window.isRegistrationDataLoaded, deadlineMillis]); // Teraz je 'deadlineMillis' správne v závislostiach
 
     const getRoleColor = (role) => {
         switch (role) {
