@@ -268,6 +268,9 @@ const MyDataApp = ({ userProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
+    // Nový stav na sledovanie, či sú dáta z hlavičky (vrátane registračných dát) pripravené
+    const [headerDataReady, setHeaderDataReady] = useState(false);
+
 
     // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
     useEffect(() => {
@@ -276,6 +279,35 @@ const MyDataApp = ({ userProfileData }) => {
             setShowBillingModal(false);
         }
     }, [userProfileData]);
+
+    // Listener pre nastavenie headerDataReady, ak sú globálne dáta z hlavičky načítané
+    useEffect(() => {
+        const checkHeaderDataStatus = () => {
+            // Skontrolujeme, či sú globálne flagy a objekty nastavené
+            if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded && window.registrationDates) {
+                setHeaderDataReady(true);
+                console.log("logged-in-my-data.js: Všetky globálne dáta z hlavičky (auth, registrácia, kategórie) sú pripravené.");
+            } else {
+                setHeaderDataReady(false);
+                console.log("logged-in-my-data.js: Čakám na pripravenosť globálnych dát z hlavičky.");
+            }
+        };
+
+        // Skontrolujeme stav hneď pri mountnutí komponentu
+        checkHeaderDataStatus();
+
+        // Pridáme listenery na udalosti, ktoré indikujú zmeny globálneho stavu
+        // 'globalDataUpdated' dispečuje authentication.js a header.js
+        window.addEventListener('globalDataUpdated', checkHeaderDataStatus);
+        // 'categoriesLoaded' dispečuje header.js
+        window.addEventListener('categoriesLoaded', checkHeaderDataStatus);
+
+        // Návratová funkcia pre vyčistenie listenerov pri odpojení komponentu
+        return () => {
+            window.removeEventListener('globalDataUpdated', checkHeaderDataStatus);
+            window.removeEventListener('categoriesLoaded', checkHeaderDataStatus);
+        };
+    }, []); // Spustí sa iba raz pri pripojení komponentu
 
     // Vypočítame deadlineMillis z globálnych registrationDates z header.js
     // Táto premenná bude reaktívna na zmeny window.registrationDates
@@ -289,9 +321,9 @@ const MyDataApp = ({ userProfileData }) => {
         // Východiskovo nastavíme canEdit na false
         setCanEdit(false);
 
-        // Uistíme sa, že sú dostupné dáta používateľa
-        if (!userProfileData) {
-            console.log("logged-in-my-data.js: Chýbajú dáta používateľa. Úpravy nie sú povolené.");
+        // Uistíme sa, že sú dostupné dáta používateľa a hlavička je pripravená
+        if (!userProfileData || !headerDataReady) {
+            console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky nie sú pripravené. Úpravy nie sú povolené.");
             return;
         }
 
@@ -305,7 +337,6 @@ const MyDataApp = ({ userProfileData }) => {
         }
 
         // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline.
-        // Používame globálne window.isRegistrationDataLoaded a window.registrationDates
         // Tlačidlo by sa malo zobrazovať, ak registračné dáta sú načítané A sú platné
         if (window.isRegistrationDataLoaded && window.registrationDates && deadlineMillis !== null) {
             const nowMillis = Date.now();
@@ -345,7 +376,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, window.isRegistrationDataLoaded, window.registrationDates, deadlineMillis]); // Závisí od globálnych dát a vypočítaného deadlineMillis
+    }, [userProfileData, headerDataReady, window.isRegistrationDataLoaded, window.registrationDates, deadlineMillis]); // Závisí od globálnych dát a vypočítaného deadlineMillis
 
     const getRoleColor = (role) => {
         switch (role) {
