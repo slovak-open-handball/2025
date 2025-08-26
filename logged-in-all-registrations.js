@@ -235,7 +235,7 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
             } else {
                 return [...prev, lowerCaseValue];
             }
-        });
+        );
     };
 
     const handleApply = () => {
@@ -2292,9 +2292,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     const notificationsCollectionRef = collection(db, 'notifications');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isNewEntry ? [`Nový tím bol pridaný: '''${finalDataToSave.teamName || 'Bez názvu'}'`] : generatedChanges, // Updated for team addition below
+                                        changes: isNewEntry ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges, // Updated for team addition below
                                         timestamp: serverTimestamp()
-                                    });
+                                    );
                                     console.log("Notifikácia o zmene uložená do Firestore.");
                                 }
                                 // --- End Notification ---
@@ -2807,7 +2807,7 @@ function AllRegistrationsApp() {
         window.location.href = 'login.html';
         return;
     } else if (!isAuthReady || !db || user === undefined) {
-        // console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", userProfileData ? userProfileData.role : "N/A");
+        // console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", userProfileData ? userProfileData.role : "N/A", "isAuthReady:", isAuthReady);
     }
 
     return () => {
@@ -3674,7 +3674,7 @@ function AllRegistrationsApp() {
                 const notificationsCollectionRef = collection(db, 'notifications');
                 await addDoc(notificationsCollectionRef, {
                     userEmail,
-                    changes: [`Z kategórie ${category} bol odstránený tím '''${teamName}'.`],
+                    changes: [`Tím "${teamName}" bol odstránený z kategórie "${category}".`],
                     timestamp: serverTimestamp()
                 });
                 console.log("Notifikácia o odstránení tímu uložená do Firestore.");
@@ -4071,12 +4071,13 @@ function AllRegistrationsApp() {
                                                     openEditModal: openEditModal,
                                                     db: db,
                                                     setUserNotificationMessage: setUserNotificationMessage,
-                                                    onAddMember: handleOpenAddMemberTypeModal 
+                                                    onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
                                                 })
                                             )
                                         )
                                     );
                                 }),
+                                // Súhrnný riadok pre režim "iba tímy"
                                 (allTeamsFlattened.length > 0 && !showUsers && showTeams) && React.createElement(
                                     'tr',
                                     { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
@@ -4122,7 +4123,7 @@ function AllRegistrationsApp() {
                                                         `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
                                                         doc(db, 'users', u.id),
                                                         '',
-                                                        false
+                                                        false // not a new entry
                                                     );
                                                 },
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
@@ -4138,17 +4139,20 @@ function AllRegistrationsApp() {
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
                                         React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
+                                            // Tlačidlo na pridanie nového tímu pre používateľa, ak sú rozbalené riadky používateľov
+                                            // TOTO JE TLAČIDLO, KTORÉ SA BUDE ZOBRAZOVAŤ LEN AK SÚ OBE MOŽNOSTI ZAPNUTÉ
                                             showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
                                                 React.createElement('button', {
                                                     className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
                                                     onClick: (e) => {
                                                         e.stopPropagation();
+                                                        // Tu potrebujeme použiť ID aktuálneho používateľa, ku ktorému sa má tím pridať
                                                         handleOpenAddTeamModal(u.id); 
                                                     }
                                                 }, '+')
                                             ),
-                                            Object.entries(u.teams || {}).map(([category, teamListRaw]) =>
-                                                (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => {
+                                            Object.entries(u.teams || {}).map(([category, teamListRaw]) => // Renamed to teamListRaw
+                                                (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => { // Defensive check
                                                     let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
                                                     let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
                                                     let menDriversCount = team.driverDetailsMale?.length || 0; 
@@ -4182,7 +4186,7 @@ function AllRegistrationsApp() {
                                                         openEditModal: openEditModal,
                                                         db: db,
                                                         setUserNotificationMessage: setUserNotificationMessage,
-                                                        onAddMember: handleOpenAddMemberTypeModal
+                                                        onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
                                                     })
                                                 })
                                             )
@@ -4195,6 +4199,9 @@ function AllRegistrationsApp() {
                 )
             )
         ),
+        // Predchádzajúce tlačidlo na pridanie tímu pod celou tabuľkou (ktoré bolo zobrazené v režime "iba tímy")
+        // bolo odstránené, pretože už nemá byť zobrazené v režime "iba tímy"
+        // Ako bolo požadované, zobrazí sa iba v režime "Zobraziť používateľov" a "Zobraziť tímy" a to v rozbalenom riadku používateľa.
       )
     )
   );
