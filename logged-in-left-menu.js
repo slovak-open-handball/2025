@@ -68,19 +68,16 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     
     // Funkcia na podmienené zobrazenie odkazov pre admina
     const showAdminLinks = () => {
-        // Odkaz "Moje nastavenia" by mal byť viditeľný pre všetkých používateľov
-        if (mySettingsLink) {
-            mySettingsLink.classList.remove('hidden'); 
-        }
-
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
             tournamentSettingsLink.classList.remove('hidden'); 
             allRegistrationsLink.classList.remove('hidden');
+            mySettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na moje nastavenia
         } else {
             addCategoriesLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
             allRegistrationsLink.classList.add('hidden');
+            mySettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na moje nastavenia
         }
     };    
 
