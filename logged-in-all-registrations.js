@@ -2292,7 +2292,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     const notificationsCollectionRef = collection(db, 'notifications');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isNewEntry ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges, // Updated for team addition below
+                                        changes: isNewEntry ? [`Nový tím bol pridaný: '''${finalDataToSave.teamName || 'Bez názvu'}'`] : generatedChanges, // Updated for team addition below
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
@@ -3674,7 +3674,7 @@ function AllRegistrationsApp() {
                 const notificationsCollectionRef = collection(db, 'notifications');
                 await addDoc(notificationsCollectionRef, {
                     userEmail,
-                    changes: [`Tím "${teamName}" bol odstránený z kategórie "${category}".`],
+                    changes: [`Z kategórie ${category} bol odstránený tím '''${teamName}'.`],
                     timestamp: serverTimestamp()
                 });
                 console.log("Notifikácia o odstránení tímu uložená do Firestore.");
