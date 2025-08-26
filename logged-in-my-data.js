@@ -1,603 +1,584 @@
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// header.js
+// Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
+// a obsluhuje akcie ako odhlásenie používateľa.
+// Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase,
+// a zároveň aby pravidelne kontroloval aktuálny čas, aby sa odkaz zobrazil alebo skryl
+// presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
+// Nová funkcionalita: Pridáva listener pre zobrazovanie notifikácií z databázy pre administrátorov.
+// Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
+// Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
+// Nová úprava: Pridáva funkciu na formátovanie telefónnych čísiel v notifikáciách pre lepšiu čitateľnosť.
 
-
+// Importy pre potrebné Firebase funkcie
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
 
-// Import komponentu pre modálne okno, ktorý je teraz v samostatnom súbore
-import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
-import { ChangeBillingModal } from "./logged-in-my-data-change-billing-modal.js";
+// Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
+let registrationCheckIntervalId = null;
+let unsubscribeFromNotifications = null; // Nová globálna premenná pre listener notifikácií
+// Nové premenné na sledovanie stavu načítania dát
+window.isRegistrationDataLoaded = false;
+window.isCategoriesDataLoaded = false;
+let isFirestoreListenersSetup = false; // Nový flag pre sledovanie, či sú listenery Firestore nastavené
+// NOVINKA: Pridaná globálna premenná na indikáciu, že kategórie sú načítané
+window.areCategoriesLoaded = false;
 
-const { useState, useEffect, useRef, useSyncExternalStore } = React;
 
-/**
- * Globálna funkcia pre zobrazenie notifikácií
- */
+// Globálna funkcia pre zobrazenie notifikácií
+// Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
+    
+    // Ak element ešte neexistuje, vytvoríme ho a pridáme do tela dokumentu
     if (!notificationElement) {
         notificationElement = document.createElement('div');
         notificationElement.id = 'global-notification';
-        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
+        // Používame Tailwind CSS triedy pre štýlovanie a pozicovanie
+        notificationElement.className = `
+            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
+            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
+            flex items-center space-x-2
+            opacity-0 pointer-events-none
+        `;
         document.body.appendChild(notificationElement);
     }
 
-    const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
-    let typeClasses = '';
-    switch (type) {
-        case 'success':
-            typeClasses = 'bg-green-500 text-white';
-            break;
-        case 'error':
-            typeClasses = 'bg-red-500 text-white';
-            break;
-        case 'info':
-            typeClasses = 'bg-blue-500 text-white';
-            break;
-        default:
-            typeClasses = 'bg-gray-700 text-white';
-    }
-
-    notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
-    notificationElement.textContent = message;
+    // Nastavíme obsah a farbu na základe typu notifikácie
+    // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
+    const bgColor = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
+    notificationElement.className = notificationElement.className.replace(/bg-[\w-]+/, bgColor);
+    notificationElement.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            ${type === 'success' 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'}
+        </svg>
+        <span>${message}</span>
+    `;
 
     // Zobrazenie notifikácie
     setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
+        notificationElement.classList.add('opacity-100', 'pointer-events-auto');
     }, 10);
 
     // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
-    }, 5000);
+        notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
+    }, 7500);
 };
 
 /**
- * Funkcia na formátovanie telefónneho čísla
- * Nájdeme predvoľbu a zvyšné číslo rozdelíme na trojčíselné skupiny
+ * NOVÁ FUNKCIA: Formátuje telefónne číslo na základe predvolieb.
+ * @param {string} phoneNumber - Neformátované telefónne číslo.
+ * @returns {string} Naformátované telefónne číslo.
  */
 const formatPhoneNumber = (phoneNumber) => {
-    if (!phoneNumber) return '-';
+    // Odstránime všetky nečíslicové znaky, okrem '+' na začiatku
+    const cleaned = phoneNumber.replace(/[^+\d]/g, '');
+    let number = cleaned;
 
-    // Odstránime všetky medzery
-    const cleanNumber = phoneNumber.replace(/\s/g, '');
-
-    // Zoznam predvolieb je zoradený zostupne podľa dĺžky, aby sa najprv našli dlhšie zhody (napr. +1234 pred +1)
-    const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
-
+    // Nájdeme predvoľbu
+    // Zoznam predvolieb je zoradený zostupne podľa dĺžky, aby sa našla najpresnejšia zhoda
+    const sortedDialCodes = countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
     let dialCode = '';
-    let restOfNumber = '';
 
-    // Nájdeme zodpovedajúcu predvoľbu
-    for (const country of sortedDialCodes) {
-        if (cleanNumber.startsWith(country.dialCode)) {
-            dialCode = country.dialCode;
-            restOfNumber = cleanNumber.substring(country.dialCode.length);
+    for (const code of sortedDialCodes) {
+        if (number.startsWith(code.dialCode)) {
+            dialCode = code.dialCode;
+            number = number.substring(dialCode.length);
             break;
         }
     }
 
-    // Ak sa predvoľba nenašla, vrátime pôvodné číslo bez formátovania (ale s odstránenými medzerami)
+    // Ak sa nenašla žiadna predvoľba, vrátime pôvodné číslo
     if (!dialCode) {
-        return cleanNumber;
+        return phoneNumber;
     }
 
-    // Rozdelíme zvyšok čísla na trojčíselné skupiny
-    const parts = [];
-    for (let i = 0; i < restOfNumber.length; i += 3) {
-        parts.push(restOfNumber.substring(i, i + 3));
+    // Odstránime medzery, ktoré tam mohli zostať
+    number = number.replace(/\s/g, '');
+
+    // Rozdelíme zvyšok čísla do skupín po troch čísliciach
+    let formattedNumber = '';
+    while (number.length > 0) {
+        formattedNumber += number.substring(0, 3);
+        number = number.substring(3);
+        if (number.length > 0) {
+            formattedNumber += ' ';
+        }
     }
 
-    // Skontrolujeme, či máme nejaké časti na zobrazenie
-    if (parts.length > 0) {
-        return `${dialCode} ${parts.join(' ')}`;
-    } else {
-        return dialCode;
-    }
+    return `${dialCode} ${formattedNumber}`.trim();
 };
-
-const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, canEdit }) => {
-    const getRoleColor = (role) => {
-        switch (role) {
-            case 'admin':
-                return '#47b3ff';
-            case 'hall':
-                return '#b06835';
-            case 'user':
-                return '#9333EA';
-            default:
-                return '#1D4ED8';
-        }
-    };
-    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
-
-    const getFullRoleName = (role) => {
-        switch (role) {
-            case 'admin':
-                return 'Administrátor';
-            case 'super-admin':
-                return 'Super Administrátor';
-            case 'referee':
-                return 'Rozhodca';
-            case 'athlete':
-                return 'Športovec';
-            case 'coach':
-                return 'Tréner';
-            case 'hall':
-                return 'Správca haly';
-            default:
-                return 'Používateľ';
-        }
-    };
-
-    // Dynamicky nastavíme názov karty podľa roly
-    const profileCardTitle = userProfileData?.role === 'user' ? 'Kontaktná osoba' : 'Moje údaje';
-
-    // Dynamicky nastavíme popisky polí
-    const nameLabel = userProfileData?.role === 'user' ? 'Meno a priezvisko kontaktnej osoby' : 'Meno a priezvisko';
-    const emailLabel = userProfileData?.role === 'user' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
-    const phoneLabel = userProfileData?.role === 'user' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
-
-    // Logika pre zobrazenie ceruzky na základe stavu canEdit (odovzdaného z MyDataApp)
-    const showProfilePencil = canEdit;
-    const showBillingPencil = canEdit;
-
-
-    const profileContent = React.createElement(
-        'div',
-        { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
-        React.createElement(
-            'div',
-            { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
-            React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, profileCardTitle),
-            // Ceruzka sa zobrazí len ak je canEdit true
-            showProfilePencil && React.createElement(
-                'button',
-                {
-                    onClick: onOpenProfileModal,
-                    className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
-                    'aria-label': 'Upraviť profil',
-                    style: { color: roleColor }
-                },
-                React.createElement(
-                    'svg',
-                    { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
-                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                ),
-                React.createElement('span', { className: 'font-medium' }, 'Upraviť')
-            )
-        ),
-        // Zmena rozloženia údajov
-        React.createElement(
-            'div',
-            { className: 'space-y-6 text-lg' },
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, nameLabel),
-                React.createElement('div', { className: 'font-normal' }, `${userProfileData.firstName} ${userProfileData.lastName}`)
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, emailLabel),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.email)
-            ),
-            // Podmienka pre zobrazenie telefónneho čísla
-            userProfileData.role !== 'admin' && userProfileData.role !== 'hall' &&
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, phoneLabel),
-                React.createElement('div', { className: 'font-normal' }, formatPhoneNumber(userProfileData.contactPhoneNumber))
-            ),
-            userProfileData.role === 'referee' &&
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Licencia Rozhodcu'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.refereeLicense)
-            ),
-            userProfileData.club && userProfileData.club !== '' &&
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Klub'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.club)
-            )
-        )
-    );
-
-    const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall') ? null : React.createElement(
-        'div',
-        { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]`' },
-        React.createElement(
-            'div',
-            // OPRAVA: Zmenený backtick na jednoduchú úvodzovku pre správnu syntax
-            { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
-            React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
-            // Ceruzka sa zobrazí len ak je canEdit true
-            showBillingPencil && React.createElement(
-                'button',
-                {
-                    onClick: onOpenBillingModal,
-                    className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
-                    'aria-label': 'Upraviť fakturačné údaje',
-                    style: { color: roleColor }
-                },
-                React.createElement(
-                    'svg',
-                    { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
-                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                ),
-                React.createElement('span', { className: 'font-medium' }, 'Upraviť')
-            )
-        ),
-        // Zmena rozloženia údajov
-        React.createElement(
-            'div',
-            { className: 'space-y-6 text-gray-700 text-lg' },
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Oficiálny názov klubu'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.clubName || '-')
-            ),
-            // Zlúčená adresa do jedného riadku
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
-                React.createElement('div', { className: 'font-normal' },
-                    `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${userProfileData.postalCode ? userProfileData.postalCode.slice(0, 3) + ' ' + userProfileData.postalCode.slice(3) : '-'} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
-                )
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČO'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.ico || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'DIČ'),
-                React.createElement('div', { className : 'font-normal' }, userProfileData.billing?.dic || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČ DPH'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.icdph || '-')
-            )
-        )
-    );
-
-    return React.createElement(
-        'div',
-        { className: 'flex flex-col items-center gap-8' },
-        profileContent,
-        billingContent
-    );
-};
-
-
-// Definícia externého store pre globálne window premenné
-const globalDataStore = (() => {
-    let internalSnapshot = {}; // Stores the last *raw* snapshot of global window variables
-    let listeners = new Set(); // Stores callback functions registered by React components
-
-    // Function to get the current state of global variables from window object
-    const getGlobalState = () => {
-        return {
-            isGlobalAuthReady: window.isGlobalAuthReady || false,
-            isRegistrationDataLoaded: window.isRegistrationDataLoaded || false,
-            isCategoriesDataLoaded: window.isCategoriesDataLoaded || false,
-            // Create a deep copy of registrationDates to ensure React detects changes
-            registrationDates: window.registrationDates ? {
-                ...window.registrationDates,
-                // Ensure Timestamp objects are also deep copied or their relevant values extracted
-                dataEditDeadline: window.registrationDates.dataEditDeadline ? { 
-                    seconds: window.registrationDates.dataEditDeadline.seconds,
-                    nanoseconds: window.registrationDates.dataEditDeadline.nanoseconds
-                } : null,
-                rosterEditDeadline: window.registrationDates.rosterEditDeadline ? { 
-                    seconds: window.registrationDates.rosterEditDeadline.seconds,
-                    nanoseconds: window.registrationDates.rosterEditDeadline.nanoseconds
-                } : null,
-                registrationEndDate: window.registrationDates.registrationEndDate ? { 
-                    seconds: window.registrationDates.registrationEndDate.seconds,
-                    nanoseconds: window.registrationDates.registrationEndDate.nanoseconds
-                } : null,
-                registrationStartDate: window.registrationDates.registrationStartDate ? { 
-                    seconds: window.registrationDates.registrationStartDate.seconds,
-                    nanoseconds: window.registrationDates.registrationStartDate.nanoseconds
-                } : null,
-                tournamentEnd: window.registrationDates.tournamentEnd ? { 
-                    seconds: window.registrationDates.tournamentEnd.seconds,
-                    nanoseconds: window.registrationDates.tournamentEnd.nanoseconds
-                } : null,
-                tournamentStart: window.registrationDates.tournamentStart ? { 
-                    seconds: window.registrationDates.tournamentStart.seconds,
-                    nanoseconds: window.registrationDates.tournamentStart.nanoseconds
-                } : null,
-            } : null,
-        };
-    };
-
-    // Function to notify all subscribed components about a change
-    const emitChange = () => {
-        const newGlobalState = getGlobalState();
-        let changed = false;
-
-        // Simplified comparison: just compare the JSON string representation
-        // This is less performant for very large objects, but robust for these data structures.
-        if (JSON.stringify(newGlobalState) !== JSON.stringify(internalSnapshot)) {
-            changed = true;
-        }
-        
-        if (changed) {
-            internalSnapshot = newGlobalState; // Update the stable internal snapshot
-            listeners.forEach(listener => listener()); // Notify React to re-render
-        }
-    };
-
-    // Initial setup of the internal snapshot
-    internalSnapshot = getGlobalState();
-
-    // The 'getSnapshot' function for useSyncExternalStore.
-    // It should return a stable reference to the latest data.
-    const getSnapshotForReact = () => internalSnapshot;
-
-    // The 'subscribe' function for useSyncExternalStore.
-    // It registers callbacks that should be called when the external store changes.
-    const subscribeForReact = (callback) => {
-        listeners.add(callback);
-
-        // Add event listeners to global window events that might trigger changes
-        window.addEventListener('globalDataUpdated', emitChange);
-        window.addEventListener('categoriesLoaded', emitChange);
-        // Pridaný event listener pre zmeny v registrationDates
-        window.addEventListener('registrationDatesUpdated', emitChange); 
-        
-        // Return a cleanup function
-        return () => {
-            listeners.delete(callback);
-            window.removeEventListener('globalDataUpdated', emitChange);
-            window.removeEventListener('categoriesLoaded', emitChange);
-            window.removeEventListener('registrationDatesUpdated', emitChange);
-        };
-    };
-
-    return { getSnapshot: getSnapshotForReact, subscribe: subscribeForReact };
-})();
-// --- END globalDataStore implementation ---
-
-
-const MyDataApp = ({ userProfileData }) => {
-    const [showProfileModal, setShowProfileModal] = useState(false);
-    const [showBillingModal, setShowBillingModal] = useState(false);
-    const [canEdit, setCanEdit] = useState(false);
-
-    // Use useSyncExternalStore to synchronize with global data.
-    // This will cause MyDataApp to re-render when globalDataStore.emitChange() is called
-    const { 
-        isGlobalAuthReady, 
-        isRegistrationDataLoaded, 
-        isCategoriesDataLoaded, 
-        registrationDates // This is the deep clone from getGlobalState
-    } = useSyncExternalStore(globalDataStore.subscribe, globalDataStore.getSnapshot);
-
-    // If user data changes, close modals
-    useEffect(() => {
-        if (userProfileData) {
-            setShowProfileModal(false);
-            setShowBillingModal(false);
-        }
-    }, [userProfileData]);
-
-    // Calculate deadlineMillis from registrationDates
-    // Ensure that registrationDates.dataEditDeadline is correctly accessed and converted
-    const dataEditDeadline = registrationDates?.dataEditDeadline;
-    const deadlineMillis = (dataEditDeadline && typeof dataEditDeadline.seconds === 'number') ? 
-                            new Date(dataEditDeadline.seconds * 1000 + dataEditDeadline.nanoseconds / 1000000).getTime() : 
-                            null;
-
-
-    // Timer and logic to determine if data can be edited
-    useEffect(() => {
-        let timer; 
-        
-        const updateCanEditStatus = () => {
-            // Default to false and then evaluate
-            setCanEdit(false); 
-
-            // Ensure user data and all necessary global data are ready
-            if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !registrationDates) {
-                console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky nie sú pripravené. Úpravy nie sú povolené.");
-                return;
-            }
-
-            const isAdmin = userProfileData.role === 'admin';
-            if (isAdmin) {
-                setCanEdit(true);
-                console.log("logged-in-my-data.js: Admin môže vždy upravovať. canEdit nastavené na TRUE.");
-                return; 
-            }
-
-            // For non-admin users, check registration data and deadline
-            if (deadlineMillis !== null) { 
-                const nowMillis = Date.now();
-                
-                console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
-                console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
-                console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
-
-                if (nowMillis <= deadlineMillis) { 
-                    setCanEdit(true); 
-                    console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
-
-                    // Zrušíme predošlý časovač, ak existuje, aby sme predišli duplikátom alebo nesprávnym oneskoreniam
-                    if (timer) clearTimeout(timer);
-                    // Nastavíme nový časovač len ak je deadline v budúcnosti
-                    if (deadlineMillis - nowMillis > 0) {
-                        timer = setTimeout(() => {
-                            setCanEdit(false);
-                            console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy.");
-                        }, deadlineMillis - nowMillis + 100); // Pridáme malé oneskorenie pre istotu
-                    }
-                } else {
-                    setCanEdit(false);
-                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
-                }
-            } else {
-                setCanEdit(false);
-                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta nie sú načítané/dostupné/platné (deadlineMillis je null).");
-            }
-        };
-
-        // Zavolaj funkciu hneď pri prvom renderovaní a pri každej zmene závislostí
-        updateCanEditStatus();
-
-        // Čistiacia funkcia pre useEffect
-        return () => {
-            if (timer) {
-                clearTimeout(timer);
-            }
-        };
-    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, registrationDates, deadlineMillis]); 
-    // Dependencies are now the values directly from useSyncExternalStore,
-    // plus userProfileData and the derived deadlineMillis.
-
-    const getRoleColor = (role) => {
-        switch (role) {
-            case 'admin':
-                return '#47b3ff';
-            case 'hall':
-                return '#b06835';
-            case 'user':
-                return '#9333EA';
-            default:
-                return '#1D4ED8';
-        }
-    };
-    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
-
-    return React.createElement(
-        'div',
-        { className: 'flex-grow' },
-        React.createElement(
-            ProfileSection,
-            {
-                userProfileData: userProfileData,
-                onOpenProfileModal: () => setShowProfileModal(true),
-                onOpenBillingModal: () => setShowBillingModal(true),
-                canEdit: canEdit // Pass state to sub-component
-            }
-        ),
-        React.createElement(
-            ChangeProfileModal,
-            {
-                show: showProfileModal,
-                onClose: () => setShowProfileModal(false),
-                userProfileData: userProfileData,
-                roleColor: roleColor
-            }
-        ),
-        React.createElement(
-            ChangeBillingModal,
-            {
-                show: showBillingModal,
-                onClose: () => setShowBillingModal(false),
-                userProfileData: userProfileData,
-                roleColor: roleColor
-            }
-        )
-    );
-};
-
-// Premenná na sledovanie, či bol poslucháč už nastavený
-let isEmailSyncListenerSetup = false;
 
 /**
- * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
- * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
+ * Nová funkcia na formátovanie reťazca notifikácie s bold a italic textom.
+ * Hľadá štyri apostrofy a formátuje text medzi nimi.
+ * @param {string} text - Pôvodný reťazec.
+ * @returns {string} Naformátovaný reťazec.
  */
-const handleDataUpdateAndRender = (event) => {
-    const userProfileData = event.detail;
-    const rootElement = document.getElementById('root');
+const formatNotificationMessage = (text) => {
+    // Nájdeme indexy apostrofov
+    const firstApostrophe = text.indexOf("'");
+    const secondApostrophe = text.indexOf("'", firstApostrophe + 1);
+    const thirdApostrophe = text.indexOf("'", secondApostrophe + 1);
+    const fourthApostrophe = text.indexOf("'", thirdApostrophe + 1);
 
-    if (userProfileData) {
-        // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
-        // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
-        if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-my-data.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
-            
-            onAuthStateChanged(window.auth, async (user) => {
-                if (user) {
-                    try {
-                        const userProfileRef = doc(window.db, 'users', user.uid);
-                        const docSnap = await getDoc(userProfileRef);
-            
-                        if (docSnap.exists()) {
-                            const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-my-data.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-                                
-                                await updateDoc(userProfileRef, {
-                                    email: user.email
-                                });
-            
-                                // Vytvorenie notifikácie v databáze s novou štruktúrou
-                                const notificationsCollectionRef = collection(window.db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email,
-                                    changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date()
-                                });
-                                
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-my-data.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
-            
-                            } else {
-                                console.log("logged-in-my-data.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
-                            }
-                        }
-                    } catch (error) {
-                        console.error("logged-in-my-data.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
-                        window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
-                    }
-                }
-            });
-            isEmailSyncListenerSetup = true; // Označíme, že poslucháč je nastavený
+    // Ak nájdeme všetky štyri apostrofy, naformátujeme text
+    if (firstApostrophe !== -1 && secondApostrophe !== -1 && thirdApostrophe !== -1 && fourthApostrophe !== -1) {
+        let oldText = text.substring(firstApostrophe + 1, secondApostrophe);
+        let newText = text.substring(thirdApostrophe + 1, fourthApostrophe);
+
+        // Skontrolujeme, či ide o telefónne číslo a naformátujeme ho
+        if (oldText.startsWith('+') && newText.startsWith('+')) {
+            oldText = formatPhoneNumber(oldText);
+            newText = formatPhoneNumber(newText);
         }
 
-        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-            const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(MyDataApp, { userProfileData }));
-            console.log("logged-in-my-data.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
-        } else {
-            console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+        // Nahradíme pôvodné časti novými s HTML tagmi
+        let formattedText = text.substring(0, firstApostrophe);
+        formattedText += `<em>${oldText}</em>`;
+        formattedText += text.substring(secondApostrophe + 1, thirdApostrophe);
+        formattedText += `<strong>${newText}</strong>`;
+        formattedText += text.substring(fourthApostrophe + 1);
+        
+        return formattedText;
+    }
+    
+    // Ak sa formát nezhoduje, vrátime pôvodný text
+    return text;
+};
+
+/**
+ * Nová funkcia na zobrazenie notifikácie z databázy v pravom hornom rohu.
+ * Vytvorí a spravuje dočasný element, ktorý sa objaví a po čase zmizne.
+ * @param {string} message - Správa notifikácie.
+ * @param {string} type - Typ notifikácie ('success', 'error', 'info').
+ */
+const showDatabaseNotification = (message, type = 'info') => {
+    // Vytvoríme kontajner pre notifikácie, ak ešte neexistuje
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.className = `
+            fixed top-4 right-4 z-[100]
+            flex flex-col space-y-2
+        `;
+        document.body.appendChild(notificationContainer);
+    }
+    
+    const notificationId = `db-notification-${Date.now()}`;
+    const notificationElement = document.createElement('div');
+    
+    notificationElement.id = notificationId;
+    notificationElement.className = `
+        bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
+        transform translate-x-full transition-all duration-500 ease-out
+        flex items-center space-x-2
+    `;
+
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔'; // Použijeme zvonček pre info notifikácie
+    
+    const formattedMessage = message.replace(/\n/g, '<br>');
+
+    notificationElement.innerHTML = `
+        <span>${icon}</span>
+        <span>${formattedMessage}</span>
+        <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
+    `;
+
+    // Pridáme novú notifikáciu na koniec kontajnera
+    notificationContainer.appendChild(notificationElement);
+
+    // Animácia vstupu notifikácie
+    setTimeout(() => {
+        notificationElement.classList.remove('translate-x-full');
+    }, 10);
+
+    // Animácia zmiznutia po 7 sekundách
+    setTimeout(() => {
+        notificationElement.classList.add('translate-x-full');
+        setTimeout(() => notificationElement.remove(), 500);
+    }, 7000);
+};
+
+/**
+ * Funkcia na odhlásenie používateľa
+ */
+const handleLogout = async () => {
+    try {
+        const auth = getAuth();
+        await signOut(auth);
+        console.log("header.js: Používateľ bol úspešne odhlásený.");
+        window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
+        if (unsubscribeFromNotifications) {
+            unsubscribeFromNotifications();
+            unsubscribeFromNotifications = null;
+            console.log("header.js: Listener notifikácií zrušený.");
         }
-    } else {
-        // Ak dáta nie sú dostupné, zobrazíme loader
-        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-            const root = ReactDOM.createRoot(rootElement);
-            root.render(
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-center items-center h-full pt-16' },
-                    React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-                )
-            );
-        }
-        console.error("logged-in-my-data.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
+        window.location.href = 'login.html';
+    } catch (error) {
+        console.error("header.js: Chyba pri odhlásení:", error);
+        window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
     }
 };
 
-// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log("logged-in-my-data.js: Registrujem poslucháča pre 'globalDataUpdated'.");
-window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
-// skontrolujeme, či sú dáta už dostupné.
-console.log("logged-in-my-data.js: Kontrolujem, či existujú globálne dáta.");
-if (window.globalUserProfileData) {
-    console.log("logged-in-my-data.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
-    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
-} else {
-    // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(
-            React.createElement(
-                'div',
-                { className: 'flex justify-center items-center h-full pt-16' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-            )
-        );
+/**
+ * Funkcia, ktorá vráti farbu hlavičky na základe role používateľa.
+ * @param {string} role - Rola používateľa ('admin', 'hall', 'user').
+ * @returns {string} Hex kód farby.
+ */
+const getHeaderColorByRole = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#47b3ff';
+        case 'hall':
+            return '#b06835';
+        case 'user':
+            return '#9333EA';
+        default:
+            return '#1D4ED8';
     }
+}
+
+/**
+ * Funkcia na aktualizáciu viditeľnosti odkazov a farby hlavičky na základe stavu autentifikácie.
+ * Táto funkcia tiež kontroluje, či sú načítané všetky potrebné dáta, a až potom zruší triedu "invisible".
+ * @param {object} userProfileData - Dáta profilu používateľa.
+ */
+const updateHeaderLinks = (userProfileData) => {
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    const headerElement = document.querySelector('header');
+    
+    if (!authLink || !profileLink || !logoutButton || !headerElement) {
+        console.error("header.js: Niektoré elementy hlavičky neboli nájdené.");
+        return;
+    }
+
+    // NOVÁ PODMIENKA: Ak je stránka register.html, zachováme pôvodnú farbu hlavičky
+    if (window.location.pathname.includes('register.html')) {
+        headerElement.style.backgroundColor = '#1D4ED8'; // Nastavte pevnú farbu (napr. pôvodnú modrú)
+        headerElement.classList.remove('invisible'); // Zabezpečiť, že hlavička je viditeľná
+        // Zobrazenie/skrytie odkazov pre registračnú stránku
+        authLink.classList.remove('hidden');
+        profileLink.classList.add('hidden');
+        logoutButton.classList.add('hidden');
+        // Skryť odkaz "Registrácia na turnaj" na samotnej registračnej stránke, aby sa necyklovalo
+        const registerLink = document.getElementById('register-link');
+        if (registerLink) {
+            registerLink.classList.add('hidden');
+        }
+        return; // Ukončíme funkciu, aby sa nepoužila dynamická farba a logika pre ostatné stránky
+    }
+
+    // Podmienka pre zobrazenie hlavičky pre ostatné stránky
+    if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
+        if (userProfileData) {
+            authLink.classList.add('hidden');
+            profileLink.classList.remove('hidden');
+            logoutButton.classList.remove('hidden');
+            headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
+
+            if (userProfileData.role === 'admin' && userProfileData.displayNotifications) {
+                if (!unsubscribeFromNotifications) {
+                    setupNotificationListenerForAdmin();
+                }
+            } else {
+                if (unsubscribeFromNotifications) {
+                    unsubscribeFromNotifications();
+                    unsubscribeFromNotifications = null;
+                    console.log("header.js: Listener notifikácií zrušený, pretože používateľ nie je admin alebo ich nemá povolené.");
+                }
+            }
+        } else {
+            authLink.classList.remove('hidden');
+            profileLink.classList.add('hidden');
+            logoutButton.classList.add('hidden');
+            headerElement.style.backgroundColor = getHeaderColorByRole(null);
+            if (unsubscribeFromNotifications) {
+                unsubscribeFromNotifications();
+                unsubscribeFromNotifications = null;
+                console.log("header.js: Listener notifikácií zrušený pri odhlásení.");
+            }
+        }
+
+        updateRegistrationLinkVisibility(userProfileData);
+
+        headerElement.classList.remove('invisible');
+        // isAuthenticationDataLoaded = true; // Táto premenná už nie je potrebná, keďže máme presnejšie flagy
+    }
+};
+
+/**
+ * Funkcia na aktualizáciu viditeľnosti odkazu "Registrácia na turnaj" na základe
+ * aktuálneho dátumu a existencie kategórií.
+ * Odkaz sa zobrazí len vtedy, ak obe podmienky platia súčasne.
+ * @param {object} userProfileData - Dáta profilu používateľa.
+ */
+const updateRegistrationLinkVisibility = (userProfileData) => {
+    const registerLink = document.getElementById('register-link');
+    if (!registerLink) return;
+
+    // Ak je používateľ prihlásený (userProfileData existuje), skryjeme odkaz "Registrácia na turnaj"
+    if (userProfileData) {
+        registerLink.classList.add('hidden');
+        return; // Ukončíme funkciu, aby sa neriešili ďalšie podmienky
+    }
+
+    const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
+    const hasCategories = window.hasCategories;
+
+    if (isRegistrationOpen && hasCategories) {
+        registerLink.classList.remove('hidden');
+        if (userProfileData) { // Táto podmienka je teraz redundantná, ale ponechávam pre istotu
+            registerLink.href = 'logged-in-registration.html';
+        } else {
+            registerLink.href = 'register.html';
+        }
+    } else {
+        registerLink.classList.add('hidden');
+    }
+};
+
+/**
+ * NOVÁ FUNKCIA: Nastaví listener pre notifikácie admina.
+ * Počúva na zmeny v kolekcii /notifications a zobrazuje nové správy.
+ */
+const setupNotificationListenerForAdmin = () => {
+    if (!window.db) {
+        console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
+        return;
+    }
+
+    if (unsubscribeFromNotifications) {
+        unsubscribeFromNotifications();
+    }
+    
+    const notificationsCollectionRef = collection(window.db, "notifications");
+    
+    unsubscribeFromNotifications = onSnapshot(notificationsCollectionRef, (snapshot) => {
+        const auth = getAuth();
+        const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+        if (!userId) { // Ak nie je prihlásený používateľ, nemá zmysel spracovávať notifikácie
+            return;
+        }
+
+        let unreadCount = 0;
+        // Načítame všetky notifikácie pre správne spočítanie neprečítaných
+        const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+
+        // Spočítame neprečítané správy pre aktuálneho používateľa
+        allNotifications.forEach(notification => {
+            const seenBy = notification.data.seenBy || [];
+            if (!seenBy.includes(userId)) {
+                unreadCount++;
+            }
+        });
+
+        // Zobrazíme súhrnnú notifikáciu o neprečítaných správach, ak sú splnené podmienky
+        if (unreadCount >= 3) {
+            let message = '';
+            if (unreadCount >= 5) {
+                message = `Máte ${unreadCount} nových neprečítaných upozornení.`;
+            } else { // unreadCount je 3 alebo 4
+                message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
+            }
+            showDatabaseNotification(message, 'info');
+
+            // Ukončíme spracovanie, aby sa nezobrazovali individuálne notifikácie,
+            // a správy sa neoznačujú ako prečítané.
+            return; 
+        }
+
+        // Ak unreadCount je menší ako 3, spracujeme jednotlivé nové notifikácie
+        snapshot.docChanges().forEach(async (change) => {
+            if (change.type === "added") {
+                const newNotification = change.doc.data();
+                const notificationId = change.doc.id;
+                
+                const seenBy = newNotification.seenBy || [];
+                if (!seenBy.includes(userId)) { // Spracujeme len tie, ktoré používateľ ešte nevidel
+                    console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
+                    
+                    let changesMessage = '';
+                    if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
+                        const changeLabel = newNotification.changes.length > 1 ? " zmenil tieto údaje:" : "zmenil tento údaj:";
+                        changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
+                        
+                        const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
+                        
+                        changesMessage += formattedChanges.join('<br>'); // Používame <br> pre zalomenie riadkov
+                    } else if (typeof newNotification.changes === 'string') {
+                        changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
+                    } else {
+                        changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
+                    }
+                    
+                    showDatabaseNotification(changesMessage, newNotification.type || 'info');
+                    
+                    const notificationDocRef = doc(window.db, "notifications", notificationId);
+                    try {
+                        // Tieto individuálne notifikácie sa označia ako videné
+                        await updateDoc(notificationDocRef, {
+                            seenBy: arrayUnion(userId)
+                        });
+                    } catch (e) {
+                        console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
+                    }
+                }
+            }
+        });
+    }, (error) => {
+            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+    });
+
+    console.log("header.js: Listener pre notifikácie admina nastavený.");
+};
+
+
+// Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie
+const setupFirestoreListeners = () => {
+    // Kontrolujeme, či je window.db už inicializované
+    if (!window.db) {
+        console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
+        return; // Ak window.db nie je dostupné, ukončíme funkciu
+    }
+
+    // Ak už sú listenery nastavené, nebudeme ich nastavovať znova
+    if (isFirestoreListenersSetup) {
+        console.log("header.js: Listenery Firestore sú už nastavené.");
+        return;
+    }
+
+    try {
+        // Listener pre registračné dáta
+        const registrationDocRef = doc(window.db, "settings", "registration");
+        onSnapshot(registrationDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                window.registrationDates = docSnap.data();
+                console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
+                // NOVINKA: Odosielanie vlastnej udalosti po aktualizácii registrationDates
+                window.dispatchEvent(new CustomEvent('registrationDatesUpdated')); 
+            } else {
+                window.registrationDates = null;
+                console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
+                // NOVINKA: Odosielanie vlastnej udalosti aj v prípade, že dokument neexistuje
+                window.dispatchEvent(new CustomEvent('registrationDatesUpdated')); 
+            }
+            window.isRegistrationDataLoaded = true; // Dáta o registrácii sú načítané
+            updateHeaderLinks(window.globalUserProfileData);
+        }, (error) => {
+            console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
+            window.isRegistrationDataLoaded = true; // Označíme ako načítané aj pri chybe, aby sa hlavička mohla zobraziť
+            updateHeaderLinks(window.globalUserProfileData);
+        });
+
+        // Listener pre kategórie
+        const categoriesDocRef = doc(window.db, "settings", "categories");
+        onSnapshot(categoriesDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const categories = docSnap.data();
+                window.hasCategories = Object.keys(categories).length > 0;
+                console.log(`header.js: Dáta kategórií aktualizované (onSnapshot). Počet kategórií: ${Object.keys(categories).length}`);
+            } else {
+                window.hasCategories = false;
+                console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
+            }
+            window.isCategoriesDataLoaded = true; // Dáta o kategóriách sú načítané
+            // NOVINKA: Odoslanie udalosti, že kategórie boli načítané
+            window.areCategoriesLoaded = true;
+            window.dispatchEvent(new CustomEvent('categoriesLoaded'));
+            console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
+            updateHeaderLinks(window.globalUserProfileData);
+        }, (error) => {
+            console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
+            window.isCategoriesDataLoaded = true; // Označíme ako načítané aj pri chybe
+            window.areCategoriesLoaded = true;
+            window.dispatchEvent(new CustomEvent('categoriesLoaded'));
+            console.log("header.js: Odoslaná udalosť 'categoriesLoaded' (s chybou).");
+            updateHeaderLinks(window.globalUserProfileData);
+        });
+
+        // Spustíme časovač, ktorý každú sekundu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
+        if (registrationCheckIntervalId) {
+            clearInterval(registrationCheckIntervalId);
+        }
+        registrationCheckIntervalId = setInterval(() => {
+            // Kontrola beží každú sekundu, ale len ak máme potrebné dáta
+            if (window.registrationDates) {
+                updateRegistrationLinkVisibility(window.globalUserProfileData);
+            }
+        }, 1000); // 1000 ms = 1 sekunda
+        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
+        
+        // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
+        window.addEventListener('beforeunload', () => {
+            if (registrationCheckIntervalId) {
+                clearInterval(registrationCheckIntervalId);
+                console.log("header.js: Časovač pre kontrolu registrácie zrušený.");
+            }
+        });
+
+        isFirestoreListenersSetup = true; // Označíme, že listenery sú nastavené
+        console.log("header.js: Firestore listenery boli úspešne nastavené.");
+
+    } catch (error) {
+        console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
+    }
+};
+
+/**
+ * Hlavná funkcia na načítanie hlavičky a pripojenie skriptov.
+ * Načítava header.html a vkladá ho do placeholderu.
+ */
+window.loadHeaderAndScripts = async () => {
+    try {
+        const headerPlaceholder = document.getElementById('header-placeholder');
+        const response = await fetch('header.html');
+        
+        if (!response.ok) throw new Error('Chyba pri načítaní header.html');
+        const headerHtml = await response.text();
+        
+        if (headerPlaceholder) {
+            headerPlaceholder.innerHTML = headerHtml;
+        }
+
+        // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
+        const logoutButton = document.getElementById('logout-button');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', handleLogout);
+            console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
+        }
+
+        // Pridáme listener na udalosť, ktorú posiela 'authentication.js'
+        window.addEventListener('globalDataUpdated', (event) => {
+            console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
+            window.isGlobalAuthReady = true; 
+            setupFirestoreListeners();
+            updateHeaderLinks(event.detail);
+        });
+
+        // Ak už je autentifikácia pripravená pri načítaní tohto skriptu, spustíme listenery manuálne.
+        if (window.isGlobalAuthReady) {
+             console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
+             setupFirestoreListeners();
+             updateHeaderLinks(window.globalUserProfileData);
+        }
+
+    } catch (error) {
+        console.error("header.js: Chyba pri inicializácii hlavičky:", error);
+    }
+};
+
+// Spustenie načítania hlavičky, ak DOM už bol načítaný
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
+} else {
+    window.loadHeaderAndScripts();
 }
