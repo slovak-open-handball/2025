@@ -3242,93 +3242,128 @@ function AllRegistrationsApp() {
             return;
         } else if (editModalTitle.includes('Upraviť tím') || editModalTitle.includes('Pridať nový tím')) { 
             // Logika pre aktualizáciu tímu
-            // Poznámka: pre nový tím originalDataPath nebude obsahovať index [-1], takže sa spracuje ako "addDoc" do poľa
             
-            const pathParts = originalDataPath.split('.');
-            const categoryAndIndexPart = pathParts[1]; // napr. "Juniors[0]"
-            
-            let category;
-            let teamIndex = -1; // Predvolené pre nový tím
-
-            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-            if (categoryMatch) {
-                category = categoryMatch[1];
-                teamIndex = parseInt(categoryMatch[2]);
-            } else {
-                 // Ak sa jedná o pridanie tímu, originalDataPath bude napríklad 'teams.NewCategory[-1]'
-                 const newTeamCategoryMatch = categoryAndIndexPart.match(/^(.*?)\[-1\]$/);
-                 if (newTeamCategoryMatch) {
-                     category = newTeamCategoryMatch[1];
-                 } else {
-                     throw new Error(`Neplatný formát cesty pre tím: ${categoryAndIndexPart}. Očakáva sa 'category[index]' alebo 'category[-1]'.`);
-                 }
-            }
-
-
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
                 throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu tímu.");
             }
             const currentDocData = docSnapshot.data();
-            const currentCategoryTeams = currentDocData.teams?.[category] || [];
+            
+            let actualCategory = updatedDataFromModal._category || updatedDataFromModal.category; // Získať skutočnú kategóriu z modal_data
+            if (!actualCategory) {
+                throw new Error("Pre pridanie/úpravu tímu nebola zadaná kategória.");
+            }
+
+            const currentCategoryTeams = currentDocData.teams?.[actualCategory] || []; // Použiť SKUTOČNÚ kategóriu
             
             let originalTeam = {};
             let updatedTeam = {};
             let generatedChanges = [];
 
+            // Spracovanie pôvodnej cesty pre existujúce tímy, aby sme zistili, či sa zmenila kategória
+            let oldCategory = null;
+            let oldTeamIndex = -1;
+            const pathPartsFromOriginal = originalDataPath.split('.');
+            if (pathPartsFromOriginal.length > 1) {
+                const categoryAndIndexPartFromOriginal = pathPartsFromOriginal[1];
+                const categoryMatchFromOriginal = categoryAndIndexPartFromOriginal.match(/^(.*?)\[(\d+)\]$/);
+                if (categoryMatchFromOriginal) {
+                    oldCategory = categoryMatchFromOriginal[1];
+                    oldTeamIndex = parseInt(categoryMatchFromOriginal[2]);
+                }
+            }
+
+
             if (isNewEntryFlag) {
                 // Nový tím
                 updatedTeam = { ...updatedDataFromModal, registeredBy: currentDocData.firstName + " " + currentDocData.lastName };
-                generatedChanges.push(`Nový tím bol pridaný: ${updatedTeam.teamName || 'Bez názvu'}`);
+                generatedChanges.push(`Nový tím bol pridaný: ${updatedTeam.teamName || 'Bez názvu'} (Kategória: ${actualCategory})`);
+                
+                // Uistite sa, že kategória sa zhoduje s kľúčom
+                updatedTeam.category = actualCategory;
+                updatedTeam._category = actualCategory;
+
+                const newCategoryTeams = [...currentCategoryTeams];
+                newCategoryTeams.push(updatedTeam);
+
+                const updates = {};
+                updates[`teams.${actualCategory}`] = newCategoryTeams; // Použiť SKUTOČNÚ kategóriu
+                await updateDoc(targetDocRef, updates);
+
             } else {
                 // Existujúci tím
-                originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[teamIndex] || {}));
-                
-                updatedTeam = { ...originalTeam };
-                for (const key in updatedDataFromModal) {
-                    if (key === 'address' || key === 'billingAddress') {
-                        updatedTeam[key] = {
-                            ...(originalTeam[key] || {}),
-                            ...(updatedDataFromModal[key] || {})
-                        };
-                        if (updatedDataFromModal[key]) {
-                            for (const subKey in originalTeam[key]) {
-                                if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
-                                    updatedTeam[key][subKey] = '';
+                // AK sa ZMENILA kategória tímu
+                if (oldCategory && oldCategory !== actualCategory) {
+                    // 1. Odstrániť tím z pôvodnej kategórie
+                    const oldCategoryTeams = currentDocData.teams?.[oldCategory] || [];
+                    const updatedOldCategoryTeams = oldCategoryTeams.filter((_, idx) => idx !== oldTeamIndex);
+
+                    // 2. Pridať tím do novej kategórie
+                    const newCategoryTeams = currentDocData.teams?.[actualCategory] || [];
+                    // Ensure the updatedTeam has the correct _category and category
+                    updatedDataFromModal.category = actualCategory;
+                    updatedDataFromModal._category = actualCategory;
+
+                    updatedTeam = updatedDataFromModal; // Použiť priamo updatedDataFromModal, pretože už je spracovaný
+                    
+                    const updatedNewCategoryTeams = [...newCategoryTeams, updatedTeam];
+
+                    const updates = {};
+                    updates[`teams.${oldCategory}`] = updatedOldCategoryTeams; // Aktualizovať starú kategóriu
+                    updates[`teams.${actualCategory}`] = updatedNewCategoryTeams; // Aktualizovať novú kategóriu
+                    
+                    generatedChanges.push(`Zmena Kategórie tímu '${originalTeam.teamName || 'Bez názvu'}': z '${oldCategory}' na '${actualCategory}'`);
+                    
+                    // Získame aj ostatné zmeny
+                    originalTeam = JSON.parse(JSON.stringify(currentDocData.teams?.[oldCategory]?.[oldTeamIndex] || {}));
+                    generatedChanges.push(...getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY));
+
+                    await updateDoc(targetDocRef, updates);
+
+                } else {
+                    // AK sa kategória NEZMENILA, len aktualizovať existujúci tím v tej istej kategórii
+                    originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[oldTeamIndex] || {}));
+                    
+                    updatedTeam = { ...originalTeam };
+                    for (const key in updatedDataFromModal) {
+                        if (key === 'address' || key === 'billingAddress') {
+                            updatedTeam[key] = {
+                                ...(originalTeam[key] || {}),
+                                ...(updatedDataFromModal[key] || {})
+                            };
+                            if (updatedDataFromModal[key]) {
+                                for (const subKey in originalTeam[key]) {
+                                    if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
+                                        updatedTeam[key][subKey] = '';
+                                    }
                                 }
                             }
+                        } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
+                            updatedTeam[key] = {
+                                ...(originalTeam[key] || {}),
+                                ...updatedDataFromModal[key]
+                            };
+                        } else {
+                            updatedTeam[key] = updatedDataFromModal[key];
                         }
-                    } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
-                        updatedTeam[key] = {
-                            ...(originalTeam[key] || {}),
-                            ...updatedDataFromModal[key]
-                        };
-                    } else {
-                        updatedTeam[key] = updatedDataFromModal[key];
                     }
+                    generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY);
+
+                    if (generatedChanges.length === 0) {
+                        setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+                        closeEditModal();
+                        return;
+                    }
+
+                    const newCategoryTeams = [...currentCategoryTeams];
+                    newCategoryTeams[oldTeamIndex] = updatedTeam; // Používame oldTeamIndex
+                    
+                    const updates = {};
+                    updates[`teams.${actualCategory}`] = newCategoryTeams; // Použiť SKUTOČNÚ kategóriu
+                    await updateDoc(targetDocRef, updates);
                 }
-                generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY);
+                setUserNotificationMessage("Zmeny boli uložené.", 'success');
             }
-
-            if (generatedChanges.length === 0 && !isNewEntryFlag) {
-                setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
-                closeEditModal();
-                return;
-            }
-
-            const newCategoryTeams = [...currentCategoryTeams];
-            if (isNewEntryFlag) {
-                newCategoryTeams.push(updatedTeam);
-            } else if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
-                newCategoryTeams[teamIndex] = updatedTeam;
-            } else {
-                throw new Error(`Index tímu ${teamIndex} je mimo rozsahu pre aktualizáciu. Dĺžka tímov kategórie ${category}: ${newCategoryTeams.length}.`);
-            }
-
-            const updates = {};
-            updates[`teams.${category}`] = newCategoryTeams;
-            await updateDoc(targetDocRef, updates);
-            setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
         } else if (originalDataPath.includes('playerDetails') || originalDataPath.includes('menTeamMemberDetails') ||
