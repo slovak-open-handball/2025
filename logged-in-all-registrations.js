@@ -1097,15 +1097,14 @@ const formatDisplayValue = (value, path) => {
     return String(value); 
 };
 
-
-// Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
+// DataEditModal Component pre zobrazovanie/úpravu JSON dát
 function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp, formatDateToDMMYYYY: formatDateToDMMYYYYProp, currentUserId }) { // Pridané onDeleteMember a getChangesForNotificationProp a formatDateToDMMYYYYProp
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
-    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); 
+    const [isTargetUserHall, setIsTargetMuserHall] = React.useState(false); 
     const inputRefs = React.useRef({}); 
 
     // Stavy pre Phone Input
@@ -1129,6 +1128,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
     // Stavy pre typ ubytovania
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
     const [selectedAccommodationType, setSelectedAccommodationType] = React.useState('');
+    // Pridanie predvolenej možnosti "bez ubytovania" do lokálnych možností
+    const accommodationOptionsWithNone = React.useMemo(() => {
+        return ['bez ubytovania', ...accommodationTypes];
+    }, [accommodationTypes]);
+
 
     // Stavy pre balíky
     const [packages, setPackages] = React.useState([]);
@@ -1331,7 +1335,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         
         setLocalEditedData(initialData); 
         console.log("DataEditModal useEffect: localEditedData initialized to:", initialData); // Debug log
-    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry]); // Pridané availableTshirtSizes a isNewEntry ako závislosť
+    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry, accommodationTypes]); // Pridané availableTshirtSizes, isNewEntry a accommodationTypes ako závislosť
 
 
     React.useEffect(() => {
@@ -1928,9 +1932,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                             },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte typ ubytovania'),
                             // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
-                            selectedAccommodationType && !accommodationTypes.includes(selectedAccommodationType) &&
+                            selectedAccommodationType && !accommodationOptionsWithNone.includes(selectedAccommodationType) && // Používame accommodationOptionsWithNone
                                 React.createElement('option', { key: selectedAccommodationType, value: selectedAccommodationType, disabled: true, hidden: true }, selectedAccommodationType),
-                            accommodationTypes.map(option => React.createElement('option', { key: option, value: option }, option))
+                            accommodationOptionsWithNone.map(option => React.createElement('option', { key: option, value: option }, option)) // Používame accommodationOptionsWithNone
                         )
                     )
                 );
@@ -2293,7 +2297,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                 )
             )
         ),
-        // DialCodeSelectionModal sa zobrazí iba vtedy, ak sa upravuje používateľ a NIE JE to admin/hall
         !(isTargetUserAdmin || isTargetUserHall) && React.createElement(DialCodeSelectionModal, {
             isOpen: isDialCodeModalOpen,
             onClose: () => setIsDialCodeModalOpen(false),
@@ -2303,7 +2306,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         React.createElement(ConfirmationModal, {
             isOpen: isConfirmDeleteOpen,
             onClose: () => setIsConfirmDeleteOpen(false),
-            onConfirm: () => onDeleteMember(targetDocRef, originalDataPath), // Zavolať prop onDeleteMember
+            onConfirm: () => onDeleteMember(targetDocRef, originalDataPath),
             title: "Potvrdenie odstránenia",
             message: deleteConfirmMessage
         })
