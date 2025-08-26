@@ -1099,7 +1099,7 @@ const formatDisplayValue = (value, path) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp, formatDateToDMMYYYY: formatDateToDMMYYYYProp }) { // Pridané onDeleteMember a getChangesForNotificationProp a formatDateToDMMYYYYProp
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp, formatDateToDMMYYYY: formatDateToDMMYYYYProp, currentUserId }) { // Pridané onDeleteMember a getChangesForNotificationProp a formatDateToDMMYYYYProp
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
@@ -1149,7 +1149,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
     React.useEffect(() => {
         const fetchTeamDataForSelects = async () => {
-            if (db && title.includes('Upraviť tím')) {
+            if (db && (title.includes('Upraviť tím') || title.includes('Pridať nový tím'))) { // Changed for Add team modal
                 // Načítanie kategórií
                 try {
                     const categoriesDocRef = doc(db, 'settings', 'categories');
@@ -1228,7 +1228,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
             }
         };
 
-        if (title.includes('Upraviť tím')) {
+        if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) { // Changed for Add team modal
             fetchTeamDataForSelects();
         }
     }, [db, title]);
@@ -1304,7 +1304,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
             if (initialData.dateOfBirth === undefined) initialData.dateOfBirth = '';
             if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
             if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
-        } else if (title.includes('Upraviť tím')) {
+        } else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) { // Changed for Add team modal
             // Inicializovať selectedCategory s existujúcou kategóriou tímu
             setSelectedCategory(initialData._category || initialData.category || ''); // Použiť _category pre flattened tímy
             if (initialData.teamName === undefined) initialData.teamName = '';
@@ -1556,7 +1556,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         // Ale pre "contactPhoneNumber" to necháme na onSave, aby sme sa vyhli zbytočným re-renderom
     };
 
-    const isSavable = targetDocRef !== null;
+    const isSavable = targetDocRef !== null; // Savable len ak je targetDocRef (užívateľský dokument) definovaný
 
     // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
     const getNestedDataForInput = (obj, path) => {
@@ -1837,32 +1837,35 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                 }
 
                 return elements.filter(Boolean); 
-            } else if (title.includes('Upraviť tím')) { // Ak upravujeme Tím
+            } else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) { // Ak upravujeme Tím alebo pridávame nový tím
                 const teamElements = [];
 
-//                // 1. Kategória tímu (Selectbox)
-//                teamElements.push(
-//                    React.createElement(
-//                        'div',
-//                        { key: '_category', className: 'mb-4' },
-//                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
-//                        React.createElement(
-//                            'select',
-//                            {
-//                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-//                                value: selectedCategory,
-//                                onChange: (e) => {
-//                                    setSelectedCategory(e.target.value);
-//                                    handleChange('_category', e.target.value);
-//                                },
-//                                disabled: !isSavable
-//                            },
-//                            selectedCategory && !categories.includes(selectedCategory) &&
-//                                React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
-//                            categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
-//                        )
-//                    )
-//                );
+                // 1. Kategória tímu (Selectbox)
+                teamElements.push(
+                    React.createElement(
+                        'div',
+                        { key: '_category', className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
+                        React.createElement(
+                            'select',
+                            {
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                value: selectedCategory,
+                                onChange: (e) => {
+                                    setSelectedCategory(e.target.value);
+                                    // Pre nový tím alebo úpravu existujúceho tímu, aktualizujeme _category aj category
+                                    handleChange('_category', e.target.value);
+                                    handleChange('category', e.target.value);
+                                },
+                                disabled: !isSavable
+                            },
+                            React.createElement('option', { value: '', disabled: true }, 'Vyberte kategóriu'),
+                            selectedCategory && !categories.includes(selectedCategory) &&
+                                React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
+                            categories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
+                        )
+                    )
+                );
 
                 // 2. Názov tímu (Inputbox)
                 teamElements.push(
@@ -2194,7 +2197,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
 
                                 // 2. Spracovať špecifické polia tímu, ak upravujeme tím
-                                if (title.includes('Upraviť tím')) {
+                                if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
                                     dataToPrepareForSave.category = selectedCategory;
                                     dataToPrepareForSave._category = selectedCategory; 
                                     dataToPrepareForSave.arrival = { type: selectedArrivalType };
@@ -2267,7 +2270,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                     const notificationsCollectionRef = collection(db, 'notifications');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName || ''} ${finalDataToSave.lastName || ''}`.trim()] : generatedChanges,
+                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName || ''} ${finalDataToSave.lastName || ''}`.trim()] : generatedChanges, // Updated for team addition below
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
@@ -2448,6 +2451,10 @@ function AllRegistrationsApp() {
   // Nové stavy pre modálne okno na výber typu člena tímu
   const [isAddMemberTypeSelectionModalOpen, setIsAddMemberTypeSelectionModalOpen] = React.useState(false);
   const [currentTeamForNewMember, setCurrentTeamForNewMember] = React.useState(null); // Tím, do ktorého sa pridáva nový člen
+
+  // Nové stavy pre modálne okno na pridanie tímu
+  const [isAddTeamModalOpen, setIsAddTeamModalOpen] = React.useState(false);
+
 
   const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
       // Odstrániť citlivé alebo irelevantné kľúče pred odovzdaním do modálneho okna
@@ -3233,67 +3240,86 @@ function AllRegistrationsApp() {
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
-        } else if (editModalTitle.includes('Upraviť tím')) { 
+        } else if (editModalTitle.includes('Upraviť tím') || editModalTitle.includes('Pridať nový tím')) { 
             // Logika pre aktualizáciu tímu
-            if (!originalDataPath.includes('[') || !originalDataPath.includes(']')) {
-                throw new Error("Neplatný formát cesty tímu pre úpravu. Očakáva sa 'category[index]'.");
+            // Poznámka: pre nový tím originalDataPath nebude obsahovať index [-1], takže sa spracuje ako "addDoc" do poľa
+            
+            const pathParts = originalDataPath.split('.');
+            const categoryAndIndexPart = pathParts[1]; // napr. "Juniors[0]"
+            
+            let category;
+            let teamIndex = -1; // Predvolené pre nový tím
+
+            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+            if (categoryMatch) {
+                category = categoryMatch[1];
+                teamIndex = parseInt(categoryMatch[2]);
+            } else {
+                 // Ak sa jedná o pridanie tímu, originalDataPath bude napríklad 'teams.Juniors[-1]'
+                 const newTeamCategoryMatch = categoryAndIndexPart.match(/^(.*?)\[-1\]$/);
+                 if (newTeamCategoryMatch) {
+                     category = newTeamCategoryMatch[1];
+                 } else {
+                     throw new Error(`Neplatný formát cesty pre tím: ${categoryAndIndexPart}. Očakáva sa 'category[index]' alebo 'category[-1]'.`);
+                 }
             }
 
-            const pathParts = originalDataPath.split('.');
-            const categoryAndIndexPart = pathParts[1];
-            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-            if (!categoryMatch) {
-                throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
-            }
-            const category = categoryMatch[1];
-            const teamIndex = parseInt(categoryMatch[2]);
-            
+
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
-                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+                throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu tímu.");
             }
             const currentDocData = docSnapshot.data();
             const currentCategoryTeams = currentDocData.teams?.[category] || [];
             
-            // Hlboká kópia aktuálneho tímu
-            const originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[teamIndex] || {}));
-            
-            // Vytvorenie aktualizovaného tímu s hlbokým zlúčením
-            let updatedTeam = { ...originalTeam };
-            for (const key in updatedDataFromModal) {
-                if (key === 'address' || key === 'billingAddress') {
-                    updatedTeam[key] = {
-                        ...(originalTeam[key] || {}),
-                        ...(updatedDataFromModal[key] || {})
-                    };
-                    // Ak sa v updatedDataFromModal[key] vymaže pole (nastaví na ''), zabezpečíme, že sa to prejaví
-                    if (updatedDataFromModal[key]) {
-                        for (const subKey in originalTeam[key]) {
-                            if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
-                                updatedTeam[key][subKey] = '';
+            let originalTeam = {};
+            let updatedTeam = {};
+            let generatedChanges = [];
+
+            if (isNewEntryFlag) {
+                // Nový tím
+                updatedTeam = { ...updatedDataFromModal, registeredBy: currentDocData.firstName + " " + currentDocData.lastName };
+                generatedChanges.push(`Nový tím bol pridaný: ${updatedTeam.teamName || 'Bez názvu'}`);
+            } else {
+                // Existujúci tím
+                originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[teamIndex] || {}));
+                
+                updatedTeam = { ...originalTeam };
+                for (const key in updatedDataFromModal) {
+                    if (key === 'address' || key === 'billingAddress') {
+                        updatedTeam[key] = {
+                            ...(originalTeam[key] || {}),
+                            ...(updatedDataFromModal[key] || {})
+                        };
+                        if (updatedDataFromModal[key]) {
+                            for (const subKey in originalTeam[key]) {
+                                if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
+                                    updatedTeam[key][subKey] = '';
+                                }
                             }
                         }
+                    } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
+                        updatedTeam[key] = {
+                            ...(originalTeam[key] || {}),
+                            ...updatedDataFromModal[key]
+                        };
+                    } else {
+                        updatedTeam[key] = updatedDataFromModal[key];
                     }
-                } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
-                    updatedTeam[key] = {
-                        ...(originalTeam[key] || {}),
-                        ...updatedDataFromModal[key]
-                    };
-                } else {
-                    updatedTeam[key] = updatedDataFromModal[key];
                 }
+                generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY);
             }
 
-            const generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
-
-            if (generatedChanges.length === 0) {
+            if (generatedChanges.length === 0 && !isNewEntryFlag) {
                 setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
                 closeEditModal();
                 return;
             }
 
             const newCategoryTeams = [...currentCategoryTeams];
-            if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
+            if (isNewEntryFlag) {
+                newCategoryTeams.push(updatedTeam);
+            } else if (teamIndex >= 0 && teamIndex < newCategoryTeams.length) {
                 newCategoryTeams[teamIndex] = updatedTeam;
             } else {
                 throw new Error(`Index tímu ${teamIndex} je mimo rozsahu pre aktualizáciu. Dĺžka tímov kategórie ${category}: ${newCategoryTeams.length}.`);
@@ -3523,6 +3549,40 @@ function AllRegistrationsApp() {
   }, [db, closeEditModal, setUserNotificationMessage, setError]);
 
 
+    // Handler pre otvorenie modálneho okna na pridanie tímu
+    const handleOpenAddTeamModal = () => {
+        if (!user || !db || !userProfileData || !userProfileData.role) {
+            setUserNotificationMessage("Chyba: Nie ste prihlásený alebo nemáte dostatočné oprávnenia na pridanie tímu.", 'error');
+            return;
+        }
+
+        // Predvolené dáta pre nový tím (môžu byť prázdne alebo s predvolenými hodnotami)
+        const newTeamData = {
+            teamName: '',
+            category: '', // Kategória by mala byť vybraná v modálnom okne
+            _category: '',
+            arrival: { type: '' },
+            accommodation: { type: '' },
+            packageDetails: { name: '' },
+            tshirts: [],
+            playerDetails: [],
+            menTeamMemberDetails: [],
+            womenTeamMemberDetails: [],
+            driverDetailsMale: [],
+            driverDetailsFemale: [],
+        };
+        
+        // Cesta pre uloženie nového tímu: použijeme fiktívny index -1 na signalizáciu nového záznamu
+        // Predpokladajme, že sa pridáva do nejakej default kategórie, alebo sa kategória vyberie v modálnom okne.
+        // Pre zjednodušenie teraz použijeme fiktívnu kategóriu 'NewCategory' a skutočnú kategóriu vyberieme v DataEditModal
+        const newTeamPath = `teams.NewCategory[-1]`; // Bude pregenerované v DataEditModal podľa vybratej kategórie
+        const targetDocRefForNewTeam = doc(db, 'users', user.uid);
+
+        openEditModal(newTeamData, 'Pridať nový tím', targetDocRefForNewTeam, newTeamPath, true); // Nastaviť isNewEntry na true
+        setIsAddTeamModalOpen(false); // Zavrieť modal (ak bol otvorený)
+    };
+
+
   if (!isAuthReady || user === undefined || !userProfileData) {
     if (typeof window.showGlobalLoader === 'function') {
       window.showGlobalLoader();
@@ -3667,7 +3727,8 @@ function AllRegistrationsApp() {
         setError: setError, // Preposielame setter chýb
         isNewEntry: isNewEntry, // Odovzdať príznak
         getChangesForNotification: getChangesForNotification, // Pass the helper function as a prop
-        formatDateToDMMYYYY: formatDateToDMMYYYY // Pass formatDateToDMMYYYY as a prop
+        formatDateToDMMYYYY: formatDateToDMMYYYY, // Pass formatDateToDMMYYYY as a prop
+        currentUserId: user?.uid // Pass the current user ID to the modal
     }),
     // Modálne okno na výber typu člena
     React.createElement(AddMemberTypeSelectionModal, {
