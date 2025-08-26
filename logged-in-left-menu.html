@@ -24,32 +24,31 @@
 <a id="my-settings-link" href="logged-in-my-settings.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
     <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <defs>
-            <!-- Definuje orezávaciu cestu pre ľavú polovicu ikony (pre osobu)
-                 Šírka je zväčšená na 11.75, čím sa vytvorí menšia medzera 0.25 jednotky od stredu. -->
+            <!-- Definuje orezávaciu cestu pre ľavú polovicu ikony (pre osobu).
+                 Zväčšená šírka na 14 jednotiek, aby bolo vidieť viac z ikony osoby.
+                 Výška zostáva 16 jednotiek (2/3) a posunutá o 4 jednotky nadol pre centrovanie. -->
             <clipPath id="clipLeftHalf">
-                <rect x="0" y="0" width="11.75" height="24" />
+                <rect x="0" y="4" width="14" height="16" />
             </clipPath>
-            <!-- Definuje orezávaciu cestu pre pravú polovicu ikony (pre ozubené koliesko)
-                 X pozícia sa posunie na 12.25 a šírka sa zmenší na 11.75, čím sa vytvorí menšia medzera 0.25 jednotky od stredu. -->
+            <!-- Definuje orezávaciu cestu pre pravú polovicu ikony (pre ozubené koliesko).
+                 Začína na X=15 (po 1-jednotkovej medzere od osoby) s šírkou 9 jednotiek.
+                 Výška zostáva 16 jednotiek (2/3) a posunutá o 4 jednotky nadol pre centrovanie. -->
             <clipPath id="clipRightHalf">
-                <rect x="12.25" y="0" width="11.75" height="24" />
+                <rect x="15" y="4" width="9" height="16" />
             </clipPath>
         </defs>
 
-        <!-- Skupina pre ľavú polovicu ikony osoby -->
-        <g clip-path="url(#clipLeftHalf)" transform="translate(-0.25, 0)">
-            <!-- Vytvorenie vnútornej skupiny pre transformáciu obsahu ikony osoby.
-                 Celá ľavá časť sa posunie o 0.25 jednotky doľava, aby sa vytvorila menšia medzera.
-                 Zväčšený 'scale' a upravený 'translateY' na lepšie vizuálne zladenie výšky s ozubeným kolieskom. -->
-            <g transform="scale(1.15) translate(0, -1.433)">
+        <!-- Skupina pre ľavú polovicu ikony osoby s orezávacou cestou -->
+        <g clip-path="url(#clipLeftHalf)">
+            <!-- Vnútorná skupina pre skalovanie a vertikálne posunutie obsahu ikony osoby. -->
+            <g transform="scale(1.18) translate(0, -1.5)">
                 <!-- Hlavná časť ikony osoby (hlava a ramená) -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 7.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM12 12.5a6 6 0 00-6 6h12a6 6 0 00-6-6z" />
             </g>
         </g>
 
-        <!-- Skupina pre pravú polovicu ikony ozubeného kolieska -->
-        <g clip-path="url(#clipRightHalf)" transform="translate(0.25, 0)">
-            <!-- Celá pravá časť sa posunie o 0.25 jednotky doprava, aby sa vytvorila menšia medzera. -->
+        <!-- Skupina pre pravú polovicu ikony ozubeného kolieska s orezávacou cestou -->
+        <g clip-path="url(#clipRightHalf)">
             <!-- Ozubené koliesko - vonkajší tvar -->
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <!-- Ozubené koliesko - vnútorný kruh -->
