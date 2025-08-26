@@ -20,7 +20,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
-    const mySettingsLink = document.getElementById('my-settings-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -68,19 +67,14 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     
     // Funkcia na podmienené zobrazenie odkazov pre admina
     const showAdminLinks = () => {
-        // Odkaz "Moje nastavenia" by mal byť viditeľný pre všetkých používateľov
-        if (mySettingsLink) {
-            mySettingsLink.classList.remove('hidden'); 
-        }
-
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
-            tournamentSettingsLink.classList.remove('hidden'); 
-            allRegistrationsLink.classList.remove('hidden');
+            tournamentSettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na nastavenia turnaja
+            allRegistrationsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na všetky registrácie
         } else {
             addCategoriesLink.classList.add('hidden');
-            tournamentSettingsLink.classList.add('hidden');
-            allRegistrationsLink.classList.add('hidden');
+            tournamentSettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na nastavenia turnaja
+            allRegistrationsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na všetky registrácie
         }
     };    
 
