@@ -269,12 +269,11 @@ const MyDataApp = ({ userProfileData }) => {
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
     
-    // Lokálne stavy, ktoré zrkadlia globálne premenné z header.js a authentication.js
+    // Nové lokálne stavy, ktoré zrkadlia globálne premenné z window objektu
     const [isGlobalAuthReadyLocal, setIsGlobalAuthReadyLocal] = useState(window.isGlobalAuthReady || false);
     const [isRegistrationDataLoadedLocal, setIsRegistrationDataLoadedLocal] = useState(window.isRegistrationDataLoaded || false);
     const [isCategoriesDataLoadedLocal, setIsCategoriesDataLoadedLocal] = useState(window.isCategoriesDataLoaded || false);
     const [registrationDatesLocal, setRegistrationDatesLocal] = useState(window.registrationDates || null);
-    // userProfileData je už prop, takže ho nepotrebujeme ako lokálny stav, ale headerDataReady bude závisieť na jeho prítomnosti
 
     // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
     useEffect(() => {
@@ -324,7 +323,7 @@ const MyDataApp = ({ userProfileData }) => {
         // Východiskovo nastavíme canEdit na false
         setCanEdit(false);
 
-        // Uistíme sa, že sú dostupné dáta používateľa a všetky lokálne dáta z hlavičky sú pripravené
+        // Uistíme sa, že sú dostupné dáta používateľa a všetky lokálne dáta sú pripravené
         if (!userProfileData || !isGlobalAuthReadyLocal || !isRegistrationDataLoadedLocal || !isCategoriesDataLoadedLocal || !registrationDatesLocal) {
             console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky nie sú pripravené (lokálny stav). Úpravy nie sú povolené.");
             return;
