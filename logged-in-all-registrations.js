@@ -83,7 +83,8 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }) {
                     className: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700',
                     onClick: () => {
                         onConfirm();
-                        onClose(); // Zatvoriť modálne okno po potvrdení
+                        // Po potvrdení sa modal zatvorí v callbacku onConfirm, ak je to potrebné,
+                        // alebo tu po dokončení operácie. Pre jednoduchosť to môže zatvoriť DataEditModal.
                     }
                 }, 'Potvrdiť')
             )
@@ -1097,14 +1098,15 @@ const formatDisplayValue = (value, path) => {
     return String(value); 
 };
 
-// DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp, formatDateToDMMYYYY: formatDateToDMMYYYYProp, currentUserId }) { // Pridané onDeleteMember a getChangesForNotificationProp a formatDateToDMMYYYYProp
+
+// Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp, formatDateToDMMYYYY: formatDateToDMMYYYYProp, currentUserId }) { // Pridané onDeleteMember a getChangesForNotificationProp a formatDateToDMMYYYYProp
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
-    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false);
+    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); // Opravený preklep z setIsTargetMuserHall na setIsTargetUserHall
     const inputRefs = React.useRef({}); 
 
     // Stavy pre Phone Input
@@ -1143,9 +1145,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
     // Zmenené teamTshirts na pole objektov, každý s tempId pre React kľúče
     const [teamTshirts, setTeamTshirts] = React.useState([]); // [{ tempId: 'uuid', size: 'S', quantity: 5 }]
 
-    // Stavy pre potvrdenie odstránenia
+    // Stavy pre potvrdenie odstránenia člena
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = React.useState(false);
     const [deleteConfirmMessage, setDeleteConfirmMessage] = React.useState('');
+
+    // Nové stavy pre potvrdenie odstránenia tímu
+    const [isConfirmDeleteTeamOpen, setIsConfirmDeleteTeamOpen] = React.useState(false);
+    const [deleteTeamConfirmMessage, setDeleteTeamConfirmMessage] = React.useState('');
+
 
     // Utility to generate a unique ID for new t-shirt entries
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
@@ -1345,7 +1352,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                 return;
             }
             // Check if confirmation modal is open, if so, don't close this modal
-            if (isConfirmDeleteOpen) {
+            if (isConfirmDeleteOpen || isConfirmDeleteTeamOpen) { // Zahrnúť aj potvrdenie pre tím
                 return;
             }
 
@@ -1361,7 +1368,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen]); // Add isConfirmDeleteOpen to dependencies
+    }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen, isConfirmDeleteTeamOpen]); // Pridané isConfirmDeleteTeamOpen do závislostí
 
     if (!isOpen) return null;
 
@@ -1952,7 +1959,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                 value: selectedPackageName,
                                 onChange: (e) => {
                                     setSelectedPackageName(e.target.value);
-                                    // Nájdite celý objekt balíka na základe vybraného názvu
+                                    // Nájdite celý objekt balíka na základe vybranej hodnoty
                                     const selectedPackage = packages.find(pkg => pkg.name === e.target.value);
                                     if (selectedPackage) {
                                         // Uložiť celý objekt do packageDetails, ale bez 'id' a iných interných kľúčov
@@ -2168,12 +2175,23 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mt-4' },
-                // Tlačidlo "Odstrániť" sa zobrazí len ak sa nepridáva nový záznam
-                !isNewEntry && isEditingMember && React.createElement('button', { // Podmienene renderovať tlačidlo "Odstrániť"
+                // Tlačidlo "Odstrániť" pre členov
+                (!isNewEntry && isEditingMember) && React.createElement('button', { 
                     className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
                     onClick: handleDeleteMemberClick,
                     disabled: !isSavable
-                }, 'Odstrániť'),
+                }, 'Odstrániť člena'),
+
+                // Tlačidlo "Odstrániť" pre tím (zobrazí sa, ak sa upravuje tím a nie je to nový záznam)
+                (!isNewEntry && (title.includes('Upraviť tím'))) && React.createElement('button', {
+                    className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
+                    onClick: () => {
+                        setDeleteTeamConfirmMessage(`Naozaj chcete odstrániť tím "${localEditedData.teamName || 'Bez názvu'}" z kategórie "${localEditedData._category || 'Neznámá'}"? Túto akciu nie je možné vrátiť späť.`);
+                        setIsConfirmDeleteTeamOpen(true);
+                    },
+                    disabled: !isSavable
+                }, 'Odstrániť tím'),
+
                 React.createElement(
                     'div',
                     { className: 'flex space-x-2' },
@@ -2297,6 +2315,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                 )
             )
         ),
+        // DialCodeSelectionModal sa zobrazí iba vtedy, ak sa upravuje používateľ a NIE JE to admin/hall
         !(isTargetUserAdmin || isTargetUserHall) && React.createElement(DialCodeSelectionModal, {
             isOpen: isDialCodeModalOpen,
             onClose: () => setIsDialCodeModalOpen(false),
@@ -2306,9 +2325,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         React.createElement(ConfirmationModal, {
             isOpen: isConfirmDeleteOpen,
             onClose: () => setIsConfirmDeleteOpen(false),
-            onConfirm: () => onDeleteMember(targetDocRef, originalDataPath),
-            title: "Potvrdenie odstránenia",
+            onConfirm: () => onDeleteMember(targetDocRef, originalDataPath), // Zavolať prop onDeleteMember
+            title: "Potvrdenie odstránenia člena",
             message: deleteConfirmMessage
+        }),
+        // Nový ConfirmationModal pre tím
+        React.createElement(ConfirmationModal, {
+            isOpen: isConfirmDeleteTeamOpen,
+            onClose: () => setIsConfirmDeleteTeamOpen(false),
+            onConfirm: () => {
+                onDeleteTeam(targetDocRef, originalDataPath); // Zavolať prop onDeleteTeam
+                setIsConfirmDeleteTeamOpen(false); // Zatvoriť aj potvrdzovací modal
+                onClose(); // Zatvoriť hlavný DataEditModal
+            },
+            title: "Potvrdenie odstránenia tímu",
+            message: deleteTeamConfirmMessage
         })
     );
 }
@@ -2776,7 +2807,7 @@ function AllRegistrationsApp() {
         window.location.href = 'login.html';
         return;
     } else if (!isAuthReady || !db || user === undefined) {
-        // console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user ? user.uid : "N/A");
+        // console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", userProfileData ? userProfileData.role : "N/A");
     }
 
     return () => {
@@ -3235,7 +3266,7 @@ function AllRegistrationsApp() {
             
             if (generatedChanges.length === 0) {
                 setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
-                closeEditModal();
+                closeEditModal(); 
                 return;
             }
 
@@ -3586,6 +3617,83 @@ function AllRegistrationsApp() {
     }
   }, [db, closeEditModal, setUserNotificationMessage, setError]);
 
+  // Nová funkcia na odstránenie tímu
+  const handleDeleteTeam = React.useCallback(async (targetDocRef, originalDataPath) => {
+    if (!targetDocRef || !originalDataPath) {
+        console.error("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu.");
+        setUserNotificationMessage("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu. Zmeny neboli uložené.", 'error');
+        return;
+    }
+
+    try {
+        window.showGlobalLoader();
+
+        const pathParts = originalDataPath.split('.');
+        if (pathParts.length !== 2) { // Očakávame formát 'teams.Category[index]'
+            throw new Error(`Neplatný formát cesty tímu pre odstránenie. Očakáva sa 2 segmenty (teams.category[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
+        }
+
+        const categoryAndIndexPart = pathParts[1];
+        const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+
+        if (!categoryMatch) {
+            throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
+        }
+
+        const category = categoryMatch[1];
+        const teamIndex = parseInt(categoryMatch[2]);
+
+        const docSnapshot = await getDoc(targetDocRef);
+        if (!docSnapshot.exists()) {
+            throw new Error("Dokument používateľa sa nenašiel pre odstránenie tímu.");
+        }
+        const currentDocData = docSnapshot.data();
+
+        const teamsInCategory = currentDocData.teams?.[category] || [];
+        
+        if (teamIndex >= 0 && teamIndex < teamsInCategory.length) {
+            const teamToRemove = teamsInCategory[teamIndex];
+            const teamName = teamToRemove.teamName || 'Bez názvu';
+
+            const updatedTeamsInCategory = [...teamsInCategory];
+            updatedTeamsInCategory.splice(teamIndex, 1); // Odstráni tím z poľa
+
+            const updates = {};
+            // Ak je kategória po odstránení tímu prázdna, môžeme ju odstrániť úplne.
+            if (updatedTeamsInCategory.length === 0) {
+                updates[`teams.${category}`] = deleteField(); // Použiť deleteField pre odstránenie poľa
+            } else {
+                updates[`teams.${category}`] = updatedTeamsInCategory;
+            }
+            
+            await updateDoc(targetDocRef, updates);
+
+            // Zaznamenať notifikáciu
+            const userEmail = window.auth.currentUser?.email;
+            if (userEmail) {
+                const notificationsCollectionRef = collection(db, 'notifications');
+                await addDoc(notificationsCollectionRef, {
+                    userEmail,
+                    changes: [`Tím "${teamName}" bol odstránený z kategórie "${category}".`],
+                    timestamp: serverTimestamp()
+                });
+                console.log("Notifikácia o odstránení tímu uložená do Firestore.");
+            }
+
+            setUserNotificationMessage(`Tím "${teamName}" bol úspešne odstránený.`, 'success');
+            closeEditModal(); // Zatvoriť modálne okno po odstránení
+        } else {
+            throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
+        }
+    } catch (e) {
+        console.error("Chyba pri odstraňovaní tímu z Firestore:", e);
+        setError(`Chyba pri odstraňovaní tímu: ${e.message}`);
+        setUserNotificationMessage(`Chyba pri odstraňovaní tímu: ${e.message}`, 'error');
+    } finally {
+        window.hideGlobalLoader();
+    }
+  }, [db, closeEditModal, setUserNotificationMessage, setError]);
+
 
     // Handler pre otvorenie modálneho okna na pridanie tímu
     const handleOpenAddTeamModal = (userIdForNewTeam) => { // Prijíma userId pre nový tím
@@ -3758,7 +3866,8 @@ function AllRegistrationsApp() {
         title: editModalTitle,
         data: editingData,
         onSave: handleSaveEditedData, // Odovzdať handler na uloženie
-        onDeleteMember: handleDeleteMember, // Odovzdať nový handler pre odstránenie
+        onDeleteMember: handleDeleteMember, // Odovzdať handler pre odstránenie člena
+        onDeleteTeam: handleDeleteTeam, // ODVOZDAŤ NOVÝ HANDLER PRE ODSTRÁNENIE TÍMU
         targetDocRef: editingDocRef,    // Odovzdať referenciu na dokument
         originalDataPath: editingDataPath, // Odovzdať cestu v dokumente
         setUserNotificationMessage: setUserNotificationMessage, // Preposielame setter notifikácie
@@ -3962,13 +4071,12 @@ function AllRegistrationsApp() {
                                                     openEditModal: openEditModal,
                                                     db: db,
                                                     setUserNotificationMessage: setUserNotificationMessage,
-                                                    onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
+                                                    onAddMember: handleOpenAddMemberTypeModal 
                                                 })
                                             )
                                         )
                                     );
                                 }),
-                                // Súhrnný riadok pre režim "iba tímy"
                                 (allTeamsFlattened.length > 0 && !showUsers && showTeams) && React.createElement(
                                     'tr',
                                     { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
@@ -4014,7 +4122,7 @@ function AllRegistrationsApp() {
                                                         `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
                                                         doc(db, 'users', u.id),
                                                         '',
-                                                        false // not a new entry
+                                                        false
                                                     );
                                                 },
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
@@ -4030,20 +4138,17 @@ function AllRegistrationsApp() {
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
                                         React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
-                                            // Tlačidlo na pridanie nového tímu pre používateľa, ak sú rozbalené riadky používateľov
-                                            // TOTO JE TLAČIDLO, KTORÉ SA BUDE ZOBRAZOVAŤ LEN AK SÚ OBE MOŽNOSTI ZAPNUTÉ
                                             showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
                                                 React.createElement('button', {
                                                     className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        // Tu potrebujeme použiť ID aktuálneho používateľa, ku ktorému sa má tím pridať
                                                         handleOpenAddTeamModal(u.id); 
                                                     }
                                                 }, '+')
                                             ),
-                                            Object.entries(u.teams || {}).map(([category, teamListRaw]) => // Renamed to teamListRaw
-                                                (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => { // Defensive check
+                                            Object.entries(u.teams || {}).map(([category, teamListRaw]) =>
+                                                (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => {
                                                     let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
                                                     let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
                                                     let menDriversCount = team.driverDetailsMale?.length || 0; 
@@ -4077,7 +4182,7 @@ function AllRegistrationsApp() {
                                                         openEditModal: openEditModal,
                                                         db: db,
                                                         setUserNotificationMessage: setUserNotificationMessage,
-                                                        onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
+                                                        onAddMember: handleOpenAddMemberTypeModal
                                                     })
                                                 })
                                             )
@@ -4090,9 +4195,6 @@ function AllRegistrationsApp() {
                 )
             )
         ),
-        // Predchádzajúce tlačidlo na pridanie tímu pod celou tabuľkou (ktoré bolo zobrazené v režime "iba tímy")
-        // bolo odstránené, pretože už nemá byť zobrazené v režime "iba tímy"
-        // Ako bolo požadované, zobrazí sa iba v režime "Zobraziť používateľov" a "Zobraziť tímy" a to v rozbalenom riadku používateľa.
       )
     )
   );
