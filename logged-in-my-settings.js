@@ -131,39 +131,22 @@ function MySettingsApp() {
   }
 
   // Notifikačný prvok
-  const notificationElement = notification.message && React.createElement(
+  const notificationElement = React.createElement(
     'div',
     {
-      className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform scale-95 opacity-0 
+      // Vždy vykreslíme div, ale jeho viditeľnosť a animáciu riadime triedami
+      className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform 
                   ${notification.type === 'success' ? 'bg-green-500 text-white' : ''}
                   ${notification.type === 'error' ? 'bg-red-500 text-white' : ''}
                   ${notification.type === 'info' ? 'bg-blue-500 text-white' : ''}
                   ${notification.type === '' && 'bg-gray-700 text-white'}
-                  `, // Default pre prípad, že type nie je definovaný
+                  ${notification.message ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}
+                  `,
       role: 'alert',
-      style: { transition: 'transform 0.5s ease-in-out, opacity 0.5s ease-in-out' } // Explicitné transition
     },
     React.createElement('strong', { className: 'font-bold' }, notification.type === 'error' ? 'Chyba! ' : (notification.type === 'success' ? 'Úspech! ' : '')),
     React.createElement('span', { className: 'block sm:inline' }, notification.message)
   );
-
-  // Efekt pre animáciu notifikácie
-  React.useEffect(() => {
-    let timeoutId;
-    if (notification.message) {
-      const element = document.querySelector('.fixed.top-4.left-1\\/2');
-      if (element) {
-        // Force reflow for transition to work
-        void element.offsetWidth; 
-        element.style.opacity = '1';
-        element.style.transform = 'translate(-50%, 0) scale(1)';
-      }
-    }
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [notification]);
-
 
   // Hlavné vykreslenie komponentu
   return React.createElement(
