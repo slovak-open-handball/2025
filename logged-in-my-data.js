@@ -1,6 +1,8 @@
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// Importy pre Firebase funkcie
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged, getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
 
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -266,8 +268,10 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 const MyDataApp = ({ userProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
-    // Nový stav na sledovanie, či je možné dáta upravovať
     const [canEdit, setCanEdit] = useState(false);
+    // Nový stav pre uloženie dát o registrácii z Firestore
+    const [registrationDatesData, setRegistrationDatesData] = useState(null);
+    const [isRegistrationDataLoading, setIsRegistrationDataLoading] = useState(true);
 
     // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
     useEffect(() => {
@@ -277,8 +281,52 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
 
-    // Vypočítame deadlineMillis na úrovni komponentu, aby bol dostupný pre dependency array
-    const dataEditDeadline = window.registrationDates?.dataEditDeadline;
+    // Firestore listener pre dáta o registrácii
+    useEffect(() => {
+        // Inicializácia Firebase a Auth, ak ešte nie sú globálne dostupné
+        let app, db, auth;
+        try {
+            if (typeof window.__firebase_config !== 'undefined') {
+                const firebaseConfig = JSON.parse(window.__firebase_config);
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } else {
+                console.warn("logged-in-my-data.js: __firebase_config nie je definovaný. Firestore listener nebude nastavený.");
+                setIsRegistrationDataLoading(false);
+                return;
+            }
+        } catch (error) {
+            console.error("logged-in-my-data.js: Chyba pri inicializácii Firebase pre listener registračných dát:", error);
+            setIsRegistrationDataLoading(false);
+            return;
+        }
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const registrationDatesRef = doc(db, 'artifacts', appId, 'public', 'data', 'registrationDates', 'current');
+        
+        setIsRegistrationDataLoading(true);
+        const unsubscribe = onSnapshot(registrationDatesRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setRegistrationDatesData(docSnap.data());
+                console.log("logged-in-my-data.js: Registračné dáta načítané z Firestore.", docSnap.data());
+            } else {
+                console.log("logged-in-my-data.js: Dokument 'registrationDates' neexistuje.");
+                setRegistrationDatesData(null);
+            }
+            setIsRegistrationDataLoading(false);
+        }, (error) => {
+            console.error("logged-in-my-data.js: Chyba pri načítavaní registračných dát z Firestore:", error);
+            setRegistrationDatesData(null);
+            setIsRegistrationDataLoading(false);
+        });
+
+        // Funkcia na odhlásenie listenera pri odpojení komponentu
+        return () => unsubscribe();
+    }, [__app_id]); // Spustí sa iba raz pri pripojení komponentu alebo ak sa zmení appId
+
+    // Vypočítame deadlineMillis z registrationDatesData
+    const dataEditDeadline = registrationDatesData?.dataEditDeadline;
     const deadlineMillis = dataEditDeadline ? dataEditDeadline.toMillis() : null;
 
     // Časovač a logika pre určenie, či je možné dáta upravovať
@@ -305,11 +353,11 @@ const MyDataApp = ({ userProfileData }) => {
         }
 
         // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline.
-        // Tieto globálne premenné musia byť k dispozícii, inak nemôžeme vyhodnotiť dátumové podmienky.
-        // Teraz používame už vypočítané dataEditDeadline a deadlineMillis
-        if (!window.isRegistrationDataLoaded || !window.registrationDates || deadlineMillis === null) {
+        // Používame nový stav registrationDatesData a isRegistrationDataLoading
+        if (isRegistrationDataLoading || !registrationDatesData || deadlineMillis === null) {
+            // Skryjeme tlačidlo, ak sa dáta ešte načítavajú alebo nie sú dostupné
             setCanEdit(false);
-            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - deadline alebo dáta registrácie nie sú načítané.");
+            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta sa načítavajú alebo nie sú dostupné.");
             return;
         }
 
@@ -346,7 +394,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, window.isRegistrationDataLoaded, deadlineMillis, window.registrationDates]); // Pridané 'window.registrationDates' do závislostí
+    }, [userProfileData, registrationDatesData, isRegistrationDataLoading]); // Závisí od nového stavu registračných dát a ich načítavania
 
     const getRoleColor = (role) => {
         switch (role) {
