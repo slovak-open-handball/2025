@@ -19,23 +19,46 @@
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Moje údaje</span>
         </a>
 
+        
         <!-- NOVÁ Položka "Moje nastavenia" - bude podmienene zobrazená pomocou JS pre admina -->
-        <a id="my-settings-link" href="logged-in-my-settings.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <!-- Hlavná časť ikony osoby (hlava a ramená), zmenšená -->
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 7.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM12 12.5a6 6 0 00-6 6h12a6 6 0 00-6-6z" />
+<a id="my-settings-link" href="logged-in-my-settings.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
+    <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <defs>
+            <!-- Definuje orezávaciu cestu pre ľavú polovicu ikony (pre osobu)
+                 Šírka je zväčšená na 11.75, čím sa vytvorí menšia medzera 0.25 jednotky od stredu. -->
+            <clipPath id="clipLeftHalf">
+                <rect x="0" y="0" width="11.75" height="24" />
+            </clipPath>
+            <!-- Definuje orezávaciu cestu pre pravú polovicu ikony (pre ozubené koliesko)
+                 X pozícia sa posunie na 12.25 a šírka sa zmenší na 11.75, čím sa vytvorí menšia medzera 0.25 jednotky od stredu. -->
+            <clipPath id="clipRightHalf">
+                <rect x="12.25" y="0" width="11.75" height="24" />
+            </clipPath>
+        </defs>
 
-              <!-- Skupina pre zmenšené a posunuté ozubené koliesko -->
-              <!-- Ozubené koliesko je zmenšené (scale 0.3) a posunuté tak, aby bolo ako spodný index vpravo dole, úplne bez prekrývania. -->
-              <g transform="translate(16 16) scale(0.3)">
-                <!-- Ozubené koliesko - vonkajší tvar (prevzatý z ikony nastavení turnaja) -->
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <!-- Ozubené koliesko - vnútorný kruh (prevzatý z ikony nastavení turnaja) -->
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </g>
-            </svg>
-            <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Moje nastavenia</span>
-        </a>
+        <!-- Skupina pre ľavú polovicu ikony osoby -->
+        <g clip-path="url(#clipLeftHalf)" transform="translate(-0.25, 0)">
+            <!-- Vytvorenie vnútornej skupiny pre transformáciu obsahu ikony osoby.
+                 Celá ľavá časť sa posunie o 0.25 jednotky doľava, aby sa vytvorila menšia medzera.
+                 Zväčšený 'scale' a upravený 'translateY' na lepšie vizuálne zladenie výšky s ozubeným kolieskom. -->
+            <g transform="scale(1.15) translate(0, -1.433)">
+                <!-- Hlavná časť ikony osoby (hlava a ramená) -->
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 7.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM12 12.5a6 6 0 00-6 6h12a6 6 0 00-6-6z" />
+            </g>
+        </g>
+
+        <!-- Skupina pre pravú polovicu ikony ozubeného kolieska -->
+        <g clip-path="url(#clipRightHalf)" transform="translate(0.25, 0)">
+            <!-- Celá pravá časť sa posunie o 0.25 jednotky doprava, aby sa vytvorila menšia medzera. -->
+            <!-- Ozubené koliesko - vonkajší tvar -->
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <!-- Ozubené koliesko - vnútorný kruh -->
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </g>
+    </svg>
+    <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Moje nastavenia</span>
+</a>
+        
         
         <!-- Položka "Vytvorenie kategórií" - bude podmienene zobrazená pomocou JS -->
         <a id="add-categories-link" href="logged-in-add-categories.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
