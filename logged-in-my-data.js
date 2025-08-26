@@ -284,9 +284,10 @@ const MyDataApp = ({ userProfileData }) => {
     useEffect(() => {
         const checkHeaderDataStatus = () => {
             // Skontrolujeme, či sú globálne flagy a objekty nastavené
-            if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded && window.registrationDates) {
+            // Pridávame aj kontrolu window.globalUserProfileData
+            if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded && window.registrationDates && window.globalUserProfileData) {
                 setHeaderDataReady(true);
-                console.log("logged-in-my-data.js: Všetky globálne dáta z hlavičky (auth, registrácia, kategórie) sú pripravené.");
+                console.log("logged-in-my-data.js: Všetky globálne dáta z hlavičky (auth, registrácia, kategórie, profil) sú pripravené.");
             } else {
                 setHeaderDataReady(false);
                 console.log("logged-in-my-data.js: Čakám na pripravenosť globálnych dát z hlavičky.");
@@ -355,10 +356,13 @@ const MyDataApp = ({ userProfileData }) => {
                 if (timer) clearTimeout(timer);
                 
                 // Nastavíme časovač na automatické vypnutie úprav presne po uplynutí deadline
-                timer = setTimeout(() => {
-                    setCanEdit(false);
-                    console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy.");
-                }, deadlineMillis - nowMillis); 
+                // Časovač sa nastaví len ak deadlineMillis je v budúcnosti
+                if (deadlineMillis - nowMillis > 0) {
+                    timer = setTimeout(() => {
+                        setCanEdit(false);
+                        console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy.");
+                    }, deadlineMillis - nowMillis); 
+                }
             } else {
                 // Deadline už uplynul, zakázať úpravy pre všetky ne-admin roly
                 setCanEdit(false);
@@ -376,7 +380,8 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, headerDataReady, window.isRegistrationDataLoaded, window.registrationDates, deadlineMillis]); // Závisí od globálnych dát a vypočítaného deadlineMillis
+    }, [userProfileData, headerDataReady, window.isRegistrationDataLoaded, window.registrationDates, dataEditDeadline]); // Závisí od globálnych dát a vypočítaného dataEditDeadline, aby reagovalo na zmeny
+
 
     const getRoleColor = (role) => {
         switch (role) {
