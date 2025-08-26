@@ -290,7 +290,8 @@ const MyDataApp = ({ userProfileData }) => {
             setIsGlobalAuthReadyLocal(window.isGlobalAuthReady || false);
             setIsRegistrationDataLoadedLocal(window.isRegistrationDataLoaded || false);
             setIsCategoriesDataLoadedLocal(window.isCategoriesDataLoaded || false);
-            setRegistrationDatesLocal(window.registrationDates || null);
+            // Vytvoríme hlbokú kópiu, aby React detegoval zmenu objektu
+            setRegistrationDatesLocal(window.registrationDates ? { ...window.registrationDates } : null);
             console.log("logged-in-my-data.js: Lokálne stavy aktualizované z globálnych premenných.");
         };
 
@@ -300,11 +301,15 @@ const MyDataApp = ({ userProfileData }) => {
         // Pridáme listenery na udalosti, ktoré indikujú zmeny globálneho stavu
         window.addEventListener('globalDataUpdated', updateLocalStates);
         window.addEventListener('categoriesLoaded', updateLocalStates);
+        // Pridáme event listener pre sledovanie zmien v registračných dátach z header.js
+        window.addEventListener('registrationDatesUpdated', updateLocalStates);
+
 
         // Návratová funkcia pre vyčistenie listenerov pri odpojení komponentu
         return () => {
             window.removeEventListener('globalDataUpdated', updateLocalStates);
             window.removeEventListener('categoriesLoaded', updateLocalStates);
+            window.removeEventListener('registrationDatesUpdated', updateLocalStates);
         };
     }, []); // Spustí sa iba raz pri pripojení komponentu
 
