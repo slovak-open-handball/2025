@@ -10,7 +10,7 @@ import { countryDialCodes } from "./countryDialCodes.js";
 import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
 import { ChangeBillingModal } from "./logged-in-my-data-change-billing-modal.js";
 
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useSyncExternalStore } = React;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -264,16 +264,59 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 };
 
 
+// Definícia externého store pre globálne window premenné
+const globalDataStore = (() => {
+    let snapshot = {}; // Uchováva posledný známy stav
+
+    const getSnapshot = () => {
+        // Vytvoríme nový snapshot, aby React detegoval zmenu, aj keď sa zmenila vnútorná hodnota Timestamp.
+        return {
+            isGlobalAuthReady: window.isGlobalAuthReady || false,
+            isRegistrationDataLoaded: window.isRegistrationDataLoaded || false,
+            isCategoriesDataLoaded: window.isCategoriesDataLoaded || false,
+            registrationDates: window.registrationDates ? { ...window.registrationDates } : null,
+            // globalUserProfileData je už prop userProfileData
+        };
+    };
+
+    const subscribe = (callback) => {
+        // Funkcia na spúšťanie Reactu, keď sa externé dáta zmenia
+        const handleChange = () => {
+            const newSnapshot = getSnapshot();
+            // Porovnajte, či sa snapshot skutočne zmenil, aby ste predišli zbytočným re-renderom
+            if (JSON.stringify(newSnapshot) !== JSON.stringify(snapshot)) {
+                snapshot = newSnapshot;
+                callback();
+            }
+        };
+
+        window.addEventListener('globalDataUpdated', handleChange);
+        window.addEventListener('categoriesLoaded', handleChange);
+        window.addEventListener('registrationDatesUpdated', handleChange); // Uistite sa, že túto udalosť dispečujete z header.js
+        
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleChange);
+            window.removeEventListener('categoriesLoaded', handleChange);
+            window.removeEventListener('registrationDatesUpdated', handleChange);
+        };
+    };
+
+    return { getSnapshot, subscribe };
+})();
+
+
 const MyDataApp = ({ userProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
-    
-    // Nové lokálne stavy, ktoré zrkadlia globálne premenné z window objektu
-    const [isGlobalAuthReadyLocal, setIsGlobalAuthReadyLocal] = useState(window.isGlobalAuthReady || false);
-    const [isRegistrationDataLoadedLocal, setIsRegistrationDataLoadedLocal] = useState(window.isRegistrationDataLoaded || false);
-    const [isCategoriesDataLoadedLocal, setIsCategoriesDataLoadedLocal] = useState(window.isCategoriesDataLoaded || false);
-    const [registrationDatesLocal, setRegistrationDatesLocal] = useState(window.registrationDates || null);
+
+    // Použitie useSyncExternalStore na synchronizáciu s globálnymi dátami
+    const { 
+        isGlobalAuthReady, 
+        isRegistrationDataLoaded, 
+        isCategoriesDataLoaded, 
+        registrationDates 
+    } = useSyncExternalStore(globalDataStore.subscribe, globalDataStore.getSnapshot);
 
     // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
     useEffect(() => {
@@ -283,37 +326,8 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
 
-    // Listener pre aktualizáciu lokálnych stavov na základe globálnych zmien
-    useEffect(() => {
-        const updateLocalStates = () => {
-            setIsGlobalAuthReadyLocal(window.isGlobalAuthReady || false);
-            setIsRegistrationDataLoadedLocal(window.isRegistrationDataLoaded || false);
-            setIsCategoriesDataLoadedLocal(window.isCategoriesDataLoaded || false);
-            // Vytvoríme hlbokú kópiu, aby React detegoval zmenu objektu
-            setRegistrationDatesLocal(window.registrationDates ? { ...window.registrationDates } : null);
-            console.log("logged-in-my-data.js: Lokálne stavy aktualizované z globálnych premenných.");
-        };
-
-        // Aktualizujeme stavy pri prvotnom vykreslení
-        updateLocalStates();
-
-        // Pridáme listenery na udalosti, ktoré indikujú zmeny globálneho stavu
-        window.addEventListener('globalDataUpdated', updateLocalStates);
-        window.addEventListener('categoriesLoaded', updateLocalStates);
-        // Pridáme event listener pre sledovanie zmien v registračných dátach z header.js
-        window.addEventListener('registrationDatesUpdated', updateLocalStates);
-
-
-        // Návratová funkcia pre vyčistenie listenerov pri odpojení komponentu
-        return () => {
-            window.removeEventListener('globalDataUpdated', updateLocalStates);
-            window.removeEventListener('categoriesLoaded', updateLocalStates);
-            window.removeEventListener('registrationDatesUpdated', updateLocalStates);
-        };
-    }, []); // Spustí sa iba raz pri pripojení komponentu
-
-    // Vypočítame deadlineMillis z lokálneho stavu registrationDatesLocal
-    const dataEditDeadline = registrationDatesLocal?.dataEditDeadline;
+    // Vypočítame deadlineMillis z registrationDates
+    const dataEditDeadline = registrationDates?.dataEditDeadline;
     const deadlineMillis = dataEditDeadline ? dataEditDeadline.toMillis() : null;
 
     // Časovač a logika pre určenie, či je možné dáta upravovať
@@ -323,9 +337,9 @@ const MyDataApp = ({ userProfileData }) => {
         // Východiskovo nastavíme canEdit na false
         setCanEdit(false);
 
-        // Uistíme sa, že sú dostupné dáta používateľa a všetky lokálne dáta sú pripravené
-        if (!userProfileData || !isGlobalAuthReadyLocal || !isRegistrationDataLoadedLocal || !isCategoriesDataLoadedLocal || !registrationDatesLocal) {
-            console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky nie sú pripravené (lokálny stav). Úpravy nie sú povolené.");
+        // Uistíme sa, že sú dostupné dáta používateľa a všetky globálne dáta sú pripravené
+        if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !registrationDates) {
+            console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky nie sú pripravené. Úpravy nie sú povolené.");
             return;
         }
 
@@ -340,7 +354,7 @@ const MyDataApp = ({ userProfileData }) => {
 
         // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline.
         // Tlačidlo by sa malo zobrazovať, ak registračné dáta sú načítané A sú platné
-        if (deadlineMillis !== null) { // Ak je deadlineMillis null, znamená to, že registrationDatesLocal nie je platný
+        if (deadlineMillis !== null) { // Ak je deadlineMillis null, znamená to, že registrationDates nie je platný
             const nowMillis = Date.now();
             
             // Logging pre diagnostiku
@@ -381,7 +395,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, isGlobalAuthReadyLocal, isRegistrationDataLoadedLocal, isCategoriesDataLoadedLocal, registrationDatesLocal, deadlineMillis]); // Závisí od všetkých lokálnych stavov a vypočítaného deadlineMillis
+    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, registrationDates, deadlineMillis]); // Závisí od všetkých dát získaných z useSyncExternalStore a vypočítaného deadlineMillis
 
 
     const getRoleColor = (role) => {
