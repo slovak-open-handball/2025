@@ -302,7 +302,8 @@ const MyDataApp = ({ userProfileData }) => {
             return;
         }
         
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Používame window.__app_id na prístup ku globálnej premennej
+        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
         const registrationDatesRef = doc(db, 'artifacts', appId, 'public', 'data', 'registrationDates', 'current');
         
         setIsRegistrationDataLoading(true);
@@ -323,7 +324,7 @@ const MyDataApp = ({ userProfileData }) => {
 
         // Funkcia na odhlásenie listenera pri odpojení komponentu
         return () => unsubscribe();
-    }, [__app_id]); // Spustí sa iba raz pri pripojení komponentu alebo ak sa zmení appId
+    }, [typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id']); // Tiež aktualizované v závislostiach
 
     // Vypočítame deadlineMillis z registrationDatesData
     const dataEditDeadline = registrationDatesData?.dataEditDeadline;
