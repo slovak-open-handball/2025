@@ -3975,7 +3975,8 @@ function AllRegistrationsApp() {
                                                         u,
                                                         `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
                                                         doc(db, 'users', u.id),
-                                                        ''
+                                                        '',
+                                                        false // not a new entry
                                                     );
                                                 },
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
@@ -3991,6 +3992,17 @@ function AllRegistrationsApp() {
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
                                         React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
+                                            // Tlačidlo na pridanie nového tímu pre používateľa, ak sú rozbalené riadky používateľov
+                                            React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
+                                                React.createElement('button', {
+                                                    className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        // Tu potrebujeme použiť ID aktuálneho používateľa, ku ktorému sa má tím pridať
+                                                        handleOpenAddTeamModal(u.id); 
+                                                    }
+                                                }, '+')
+                                            ),
                                             Object.entries(u.teams || {}).map(([category, teamListRaw]) => // Renamed to teamListRaw
                                                 (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => { // Defensive check
                                                     let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
