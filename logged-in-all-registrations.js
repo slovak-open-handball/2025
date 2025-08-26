@@ -235,7 +235,7 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
             } else {
                 return [...prev, lowerCaseValue];
             }
-        );
+        });
     };
 
     const handleApply = () => {
@@ -919,115 +919,136 @@ const formatLabel = (key) => {
 // Pomocná funkcia na porovnávanie zmien pre notifikácie
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
-    const keys = new Set([...Object.keys(original), ...Object.keys(updated)]);
 
-    // Tieto kľúče sú ignorované a nebudú generovať notifikácie
-    const ignoredAndInternalKeys = new Set([
+    // Keys that should NEVER trigger a notification (internal, derived, or sensitive)
+    const universallyIgnoredKeys = new Set([
         '_userId', '_teamIndex', '_registeredBy', '_menTeamMembersCount',
         '_womenTeamMembersCount', '_menDriversCount', '_womenDriversCount', '_players',
         '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
         'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
         'registrationDate', 'passwordLastChanged',
-        'teams', 'categories'
+        'teams', 'categories', 'timestamp',
+        'note' // Note is meant for internal use, not user-facing notification
     ]);
 
-    // Tieto sú JEDINÉ kľúče, pre ktoré sa budú generovať notifikácie pri úprave údajov tímu
-    const allowedTeamNotificationKeys = new Set([
-        '_category',          // Kategória
-        'teamName',           // Názov tímu
-        'arrival',            // Typ dopravy
-        'accommodation',      // Typ ubytovania
-        'packageDetails',     // Balík
-        'tshirts'             // Tričká
-    ]);
-
-    for (const key of keys) {
-        // Ignorovať interné kľúče, ktoré nie sú explicitne povolené pre notifikácie
-        if (ignoredAndInternalKeys.has(key) || (key.startsWith('_') && !allowedTeamNotificationKeys.has(key))) {
-            continue;
+    const normalizeValueForComparison = (value, path) => {
+        if (value === null || value === undefined) {
+            return '';
         }
-
-        // Ak kľúč nie je v zozname povolených notifikácií pre tímy, preskočiť ho
-        if (!allowedTeamNotificationKeys.has(key)) {
-            continue;
-        }
-
-        const originalValue = original[key];
-        const updatedValue = updated[key];
-
-        // --- Špecifické notifikácie pre tímové detaily ---
-
-        // Kategória
-        if (key === '_category') {
-            const originalCategory = originalValue || '-';
-            const updatedCategory = updatedValue || '-';
-            
-            // Generovať notifikáciu, len ak sú hodnoty skutočne odlišné.
-            // Ponecháme to jednoduché: ak sa líšia, je to zmena.
-            if (originalCategory !== updatedCategory) {
-                 changes.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
+        // Specific handling for Firebase Timestamps
+        if (value && typeof value.toDate === 'function') {
+            const date = value.toDate();
+            // For date fields like 'dateOfBirth', use YYYY-MM-DD string
+            if (path.toLowerCase().includes('dateofbirth')) {
+                return date.toISOString().split('T')[0];
             }
-            continue;
+            // For other timestamps, use full ISO string or specific format if needed
+            return date.toISOString();
+        }
+        // For simple date strings (e.g., YYYY-MM-DD for dateOfBirth)
+        if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return value;
         }
 
-        // Názov tímu
-        if (key === 'teamName') {
-            const originalTeamName = originalValue || '-';
-            const updatedTeamName = updatedValue || '-';
-            if (originalTeamName !== updatedTeamName) {
-                changes.push(`Zmena Názov tímu: z '${originalTeamName}' na '${updatedTeamName}'`);
+        // For objects like arrival, accommodation, packageDetails, use specific properties if available
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            if (value.type) return value.type;
+            if (value.name) return value.name;
+            // Handle other generic objects by stringifying
+            try {
+                return JSON.stringify(value);
+            } catch (e) {
+                console.error("Error stringifying object for comparison:", value, e);
+                return '[OBJECT_ERROR]';
             }
-            continue;
         }
+        return String(value);
+    };
 
-        // Typ dopravy
-        if (key === 'arrival' && originalValue?.type !== updatedValue?.type) {
-            const originalArrival = originalValue?.type || '-';
-            const updatedArrival = updatedValue?.type || '-';
-            changes.push(`Zmena Typ dopravy: z '${originalArrival}' na '${updatedArrival}'`);
-            continue;
-        }
 
-        // Typ ubytovania
-        if (key === 'accommodation' && originalValue?.type !== updatedValue?.type) {
-            const originalAccommodation = originalValue?.type || '-';
-            const updatedAccommodation = updatedValue?.type || '-';
-            changes.push(`Zmena Typ ubytovania: z '${originalAccommodation}' na '${updatedAccommodation}'`);
-            continue;
-        }
+    // Helper for deep comparison of objects
+    const compareObjects = (origObj, updObj, pathPrefix = '') => {
+        const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]); // Handle null/undefined objects
 
-        // Balík
-        if (key === 'packageDetails' && originalValue?.name !== updatedValue?.name) {
-            const originalPackageName = originalValue?.name || '-';
-            const updatedPackageName = updatedValue?.name || '-';
-            changes.push(`Zmena Balík: z '${originalPackageName}' na '${updatedPackageName}'`);
-            continue;
-        }
+        for (const key of nestedKeys) {
+            const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
 
-        // Tričká
-        if (key === 'tshirts') {
-            const originalTshirtsMap = new Map((originalValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
-            const updatedTshirtsMap = new Map((updatedValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
+            // Skip universally ignored keys at any level
+            if (universallyIgnoredKeys.has(key)) {
+                continue;
+            }
 
-            const allSizes = new Set([...Array.from(originalTshirtsMap.keys()), ...Array.from(updatedTshirtsMap.keys())]);
+            const origValue = origObj ? origObj[key] : undefined;
+            const updValue = updObj ? updObj[key] : undefined;
 
-            for (const size of allSizes) {
-                const oldQuantity = originalTshirtsMap.get(size) || 0;
-                const newQuantity = updatedTshirtsMap.get(size) || 0;
+            // Handle nested objects recursively (excluding arrays and Firebase Timestamps)
+            const isOrigObject = typeof origValue === 'object' && origValue !== null && !Array.isArray(origValue) && !(origValue.toDate && typeof origValue.toDate === 'function');
+            const isUpdObject = typeof updValue === 'object' && updValue !== null && !Array.isArray(updValue) && !(updValue.toDate && typeof updValue.toDate === 'function');
 
-                if (oldQuantity !== newQuantity) {
-                    if (oldQuantity === 0 && newQuantity > 0) {
-                        changes.push(`Pridané tričko (${size}): ${newQuantity}`);
-                    } else if (newQuantity === 0 && oldQuantity > 0) {
-                        changes.push(`Odstránené tričko (${size}): ${oldQuantity}`);
-                    } else {
-                        changes.push(`Zmena Veľkosť trička a ich počet: z '${size} - ${oldQuantity}' na '${size} - ${newQuantity}'`);
+            if (isOrigObject && isUpdObject) {
+                compareObjects(origValue, updValue, currentPath);
+                continue; // Done with this key, move to next
+            }
+
+            // Special handling for tshirts array (must be here, as it's an array and not handled by recursive object comparison)
+            if (currentPath === 'tshirts') {
+                const originalTshirtsMap = new Map((origValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
+                const updatedTshirtsMap = new Map((updValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
+
+                const allSizes = new Set([...Array.from(originalTshirtsMap.keys()), ...Array.from(updatedTshirtsMap.keys())]);
+
+                for (const size of allSizes) {
+                    const oldQuantity = originalTshirtsMap.get(size) || 0;
+                    const newQuantity = updatedTshirtsMap.get(size) || 0;
+
+                    if (oldQuantity !== newQuantity) {
+                        if (oldQuantity === 0 && newQuantity > 0) {
+                            changes.push(`Pridané tričko (${size}): ${newQuantity}`);
+                        } else if (newQuantity === 0 && oldQuantity > 0) {
+                            changes.push(`Odstránené tričko (${size}): ${oldQuantity}`);
+                        } else {
+                            changes.push(`Zmena Veľkosť trička a ich počet: z '${size} - ${oldQuantity}' na '${size} - ${newQuantity}'`);
+                        }
                     }
                 }
+                continue; // Done with tshirts array
             }
-            continue;
+
+
+            // Compare values after normalization
+            const valueA = normalizeValueForComparison(origValue, currentPath);
+            const valueB = normalizeValueForComparison(updValue, currentPath);
+
+            if (valueA !== valueB) {
+                let changeDescription = '';
+                const label = formatLabel(currentPath); // Use formatLabel for user-friendly names
+
+                // More specific descriptions for known paths
+                if (currentPath === '_category' || currentPath === 'category') {
+                    changeDescription = `Zmena Kategórie: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                } else if (currentPath === 'teamName') {
+                    changeDescription = `Zmena Názov tímu: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                } else if (currentPath === 'arrival.type') { // Use normalized values here
+                    changeDescription = `Zmena Typ dopravy: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                } else if (currentPath === 'accommodation.type') { // Use normalized values here
+                    changeDescription = `Zmena Typ ubytovania: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                } else if (currentPath === 'packageDetails.name') { // Use normalized values here
+                    changeDescription = `Zmena Balík: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                } else {
+                    // General case for other fields (including firstName, lastName, billing.*, address.*, jerseyNumber, registrationNumber etc.)
+                    changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                }
+
+                if (changeDescription && !changes.includes(changeDescription)) {
+                    changes.push(changeDescription);
+                }
+            }
         }
-    }
+    };
+
+    // Start comparison from the top-level
+    compareObjects(original, updated);
+
     return changes;
 };
 
@@ -2294,7 +2315,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         userEmail,
                                         changes: isNewEntry ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges, // Updated for team addition below
                                         timestamp: serverTimestamp()
-                                    );
+                                    });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
                                 }
                                 // --- End Notification ---
@@ -3216,8 +3237,7 @@ function AllRegistrationsApp() {
 
             // Prejdeme všetky kľúče z updatedDataFromModal
             for (const key in updatedDataFromModal) {
-                if (key === 'address' || key === 'billingAddress') {
-                    // Ak ide o adresný objekt, vykonáme hlboké zlúčenie
+                if (key === 'address' || key === 'billing') { // This should be 'billing' (not 'billingAddress')
                     finalDataToSave[key] = {
                         ...(currentDocData[key] || {}), // Pôvodná adresa
                         ...(updatedDataFromModal[key] || {}) // Aktualizovaná adresa
@@ -3230,19 +3250,33 @@ function AllRegistrationsApp() {
                                 finalDataToSave[key][subKey] = '';
                             }
                         }
+                    } else if (currentDocData[key]) { // If updatedDataFromModal[key] is null/undefined but currentDocData[key] exists
+                         // This means the entire nested object was conceptually cleared. Set all its sub-fields to empty string.
+                        for (const subKey in currentDocData[key]) {
+                            finalDataToSave[key][subKey] = '';
+                        }
                     }
                 } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
-                    // Ak je to iný objekt (napr. packageDetails), urobíme deep merge
+                    // Pre iné vnorené objekty vykonajte hlbšie zlúčenie, aby sa zachovali existujúce vlastnosti
+                    // a aktualizovali sa alebo pridali nové z updatedDataFromModal.
                     finalDataToSave[key] = {
-                        ...(currentDocData[key] || {}),
-                        ...updatedDataFromModal[key]
+                        ...(currentDocData[key] || {}), // Existujúce dáta
+                        ...updatedDataFromModal[key] // Nové/aktualizované dáta
                     };
+                    // Ak má `updatedDataFromModal[key]` prázdne polia, zabezpečte, aby sa aj pôvodné polia vymazali
+                    if (updatedDataFromModal[key]) {
+                        for (const subKey in currentDocData[key]) {
+                            if (updatedDataFromModal[key][subKey] === undefined && typeof currentDocData[key][subKey] === 'string') {
+                                finalDataToSave[key][subKey] = '';
+                            }
+                        }
+                    }
                 } else {
                     // Pre ostatné polia priama aktualizácia
                     finalDataToSave[key] = updatedDataFromModal[key];
                 }
             }
-
+            
             // Špeciálne ošetrenie pre vymazanie top-level adresných polí, ak boli predtým explicitne prítomné a teraz sú prázdne
             const addressFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'note'];
             addressFields.forEach(field => {
@@ -3360,7 +3394,7 @@ function AllRegistrationsApp() {
                     
                     updatedTeam = { ...originalTeam };
                     for (const key in updatedDataFromModal) {
-                        if (key === 'address' || key === 'billingAddress') {
+                        if (key === 'address' || key === 'billing') { // Opravené na 'billing'
                             updatedTeam[key] = {
                                 ...(originalTeam[key] || {}),
                                 ...(updatedDataFromModal[key] || {})
@@ -3371,12 +3405,23 @@ function AllRegistrationsApp() {
                                         updatedTeam[key][subKey] = '';
                                     }
                                 }
+                            } else if (originalTeam[key]) { // If updatedDataFromModal[key] is null/undefined but originalTeam[key] exists
+                                for (const subKey in originalTeam[key]) {
+                                    updatedTeam[key][subKey] = "";
+                                }
                             }
                         } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
                             updatedTeam[key] = {
                                 ...(originalTeam[key] || {}),
                                 ...updatedDataFromModal[key]
                             };
+                             if (updatedDataFromModal[key]) {
+                                for (const subKey in originalTeam[key]) {
+                                    if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
+                                        updatedTeam[key][subKey] = '';
+                                    }
+                                }
+                            }
                         } else {
                             updatedTeam[key] = updatedDataFromModal[key];
                         }
