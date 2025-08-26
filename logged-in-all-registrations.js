@@ -1673,7 +1673,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
         }
 
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
-            if (isEditingMemberOrNewEntry) { // Použiť novú premennú
+            if (isEditingMemberOrNewEntry && !title.includes('Pridať nový tím')) { // Použiť novú premennú, ale NIE pre "Pridať nový tím"
                 // console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
                 return renderMemberFields(); // Voláme novú dedikovanú funkciu
             } else if (title.includes('Upraviť používateľa')) { 
@@ -2244,9 +2244,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
 
                                 // --- Explicitná kontrola pre zmenu kategórie ---
                                 // Zistite pôvodnú kategóriu (ak existuje)
-                                const originalCategory = originalDataForCompare?._category || '-';
+                                const originalCategory = originalDataForCompare?._category || originalDataForCompare?.category || '-';
                                 // Zistite novú kategóriu (ak existuje)
-                                const updatedCategory = modifiedDataForCompare?._category || '-';
+                                const updatedCategory = modifiedDataForCompare?._category || modifiedDataForCompare?.category || '-';
 
                                 // Ak sa kategórie líšia a notifikácia ešte nebola pridaná
                                 if (originalCategory !== updatedCategory && !generatedChanges.some(change => change.includes('Zmena Kategórie:'))) {
@@ -2270,7 +2270,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
                                     const notificationsCollectionRef = collection(db, 'notifications');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isNewEntry ? [`Nový člen bol pridaný: ${finalDataToSave.firstName || ''} ${finalDataToSave.lastName || ''}`.trim()] : generatedChanges, // Updated for team addition below
+                                        changes: isNewEntry ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges, // Updated for team addition below
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
@@ -2453,7 +2453,7 @@ function AllRegistrationsApp() {
   const [currentTeamForNewMember, setCurrentTeamForNewMember] = React.useState(null); // Tím, do ktorého sa pridáva nový člen
 
   // Nové stavy pre modálne okno na pridanie tímu
-  const [isAddTeamModalOpen, setIsAddTeamModalOpen] = React.useState(false);
+  // const [isAddTeamModalOpen, setIsAddTeamModalOpen] = React.useState(false); // Už nepotrebujeme samostatný stav, použijeme isEditModalOpen
 
 
   const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
@@ -3255,7 +3255,7 @@ function AllRegistrationsApp() {
                 category = categoryMatch[1];
                 teamIndex = parseInt(categoryMatch[2]);
             } else {
-                 // Ak sa jedná o pridanie tímu, originalDataPath bude napríklad 'teams.Juniors[-1]'
+                 // Ak sa jedná o pridanie tímu, originalDataPath bude napríklad 'teams.NewCategory[-1]'
                  const newTeamCategoryMatch = categoryAndIndexPart.match(/^(.*?)\[-1\]$/);
                  if (newTeamCategoryMatch) {
                      category = newTeamCategoryMatch[1];
@@ -3560,26 +3560,25 @@ function AllRegistrationsApp() {
         const newTeamData = {
             teamName: '',
             category: '', // Kategória by mala byť vybraná v modálnom okne
-            _category: '',
+            _category: '', // Taktiež pre konzistentnosť
             arrival: { type: '' },
             accommodation: { type: '' },
             packageDetails: { name: '' },
             tshirts: [],
             playerDetails: [],
             menTeamMemberDetails: [],
-            womenTeamMemberDetails: [],
+                        womenTeamMemberDetails: [],
             driverDetailsMale: [],
             driverDetailsFemale: [],
         };
         
         // Cesta pre uloženie nového tímu: použijeme fiktívny index -1 na signalizáciu nového záznamu
-        // Predpokladajme, že sa pridáva do nejakej default kategórie, alebo sa kategória vyberie v modálnom okne.
-        // Pre zjednodušenie teraz použijeme fiktívnu kategóriu 'NewCategory' a skutočnú kategóriu vyberieme v DataEditModal
-        const newTeamPath = `teams.NewCategory[-1]`; // Bude pregenerované v DataEditModal podľa vybratej kategórie
+        // Predpokladajme, že sa pridáva do nejakej default kategórie (napr. 'NewCategory'),
+        // ale skutočná kategória sa vyberie v modálnom okne a prepíše sa.
+        const newTeamPath = `teams.NewCategory[-1]`; 
         const targetDocRefForNewTeam = doc(db, 'users', user.uid);
 
         openEditModal(newTeamData, 'Pridať nový tím', targetDocRefForNewTeam, newTeamPath, true); // Nastaviť isNewEntry na true
-        setIsAddTeamModalOpen(false); // Zavrieť modal (ak bol otvorený)
     };
 
 
@@ -4050,6 +4049,16 @@ function AllRegistrationsApp() {
                     )
                 )
             )
+        ),
+        // Nové tlačidlo na pridanie tímu pod celou tabuľkou (zobrazí sa len v režime "Zobraziť tímy")
+        !showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4' },
+            React.createElement('button', {
+                className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                onClick: (e) => {
+                    e.stopPropagation();
+                    handleOpenAddTeamModal(); // Voláme handleOpenAddTeamModal bez parametra userId
+                }
+            }, '+')
         )
       )
     )
