@@ -30,6 +30,7 @@ function MySettingsApp() {
       setUser(globalUser);
       setUserProfileData(globalProfileData);
       setLoading(false); // Ukončíme loading, keď sú dáta prijaté
+      window.hideGlobalLoader(); // Skryjeme globálny loader po načítaní dát
 
       if (!globalUser) {
         console.log("MySettingsApp: Používateľ je odhlásený. Presmerovávam.");
@@ -52,11 +53,6 @@ function MySettingsApp() {
 
         // Aktualizácia lokálnych stavov z userProfileData
         setDisplayNotifications(globalProfileData.displayNotifications !== undefined ? globalProfileData.displayNotifications : true);
-
-        // ODSTRÁNENÉ: Volanie window.updateMenuItemsVisibility, pretože táto funkcia je spravovaná v logged-in-left-menu.js
-        // a MySettingsApp nemá priamy vplyv na jej vykonanie ani ju priamo nevolá.
-        // Logika pre zobrazenie/skrytie položiek menu je riadená v logged-in-left-menu.js
-        // prostredníctvom jeho listenera na globalDataUpdated.
         
         setError(''); // Vyčistí chyby po úspešnom načítaní
       } else {
@@ -78,15 +74,20 @@ function MySettingsApp() {
       console.warn("MySettingsApp: Initial check - Firebase Auth je pripravený, ale globalUserProfileData chýba pre prihláseného používateľa.");
       setError("Chyba: Váš profil sa nepodarilo načítať. Skúste sa prosím odhlásiť a znova prihlásiť.");
       setLoading(false);
+      window.hideGlobalLoader(); // Skryjeme globálny loader aj pri chybe
     } else if (window.isGlobalAuthReady && !auth.currentUser) {
         console.log("MySettingsApp: Initial check - používateľ nie je prihlásený, ale globalAuthReady je true.");
         setLoading(false); // Ak nie je prihlásený, nie je čo načítavať
+        window.hideGlobalLoader(); // Skryjeme globálny loader
         // Presmerovanie zabezpečuje authentication.js
+    } else {
+        window.showGlobalLoader(); // Zobrazíme globálny loader, ak ešte nie sú dáta pripravené
     }
 
     return () => {
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
       // Odstránený unsubscribeUserDoc, pretože onSnapshot je spravovaný v authentication.js
+      window.hideGlobalLoader(); // Zabezpečíme skrytie loadera pri odpojení komponentu
     };
   }, [auth, db]); // Závisí od globálnych inštancií auth a db
 
@@ -100,6 +101,7 @@ function MySettingsApp() {
       return;
     }
     setLoading(true);
+    window.showGlobalLoader(); // Zobrazíme loader počas ukladania
     setError('');
 
     try {
@@ -120,6 +122,7 @@ function MySettingsApp() {
       }
     } finally {
       setLoading(false);
+      window.hideGlobalLoader(); // Skryjeme loader po uložení (či už úspešnom alebo s chybou)
     }
   };
 
@@ -135,11 +138,9 @@ function MySettingsApp() {
         return null; // Nenecháme React komponent renderovať nič
     }
 
-    return React.createElement(
-      'div',
-      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam nastavenia...')
-    );
+    // Predtým tu bol text "Načítavam nastavenia...", teraz to rieši globálny loader
+    // Komponent tu môže vrátiť null, pretože loader je globálny.
+    return null; 
   }
 
   // Ak existuje chyba a loading je false, zobrazíme chybu
