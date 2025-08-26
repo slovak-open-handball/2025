@@ -1,7 +1,6 @@
-// Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { onAuthStateChanged, getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
 // Import zoznamu predvolieb
@@ -269,9 +268,12 @@ const MyDataApp = ({ userProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
-    // Nový stav pre uloženie dát o registrácii z Firestore
-    const [registrationDatesData, setRegistrationDatesData] = useState(null);
-    const [isRegistrationDataLoading, setIsRegistrationDataLoading] = useState(true);
+    // Už sa nespoliehame na vlastné načítavanie, ale na globálne premenné z header.js
+    // const [registrationDatesData, setRegistrationDatesData] = useState(null);
+    // const [isRegistrationDataLoading, setIsRegistrationDataLoading] = useState(true);
+
+    // Nový stav na sledovanie, či sú dáta z hlavičky (vrátane registračných dát) pripravené
+    const [isHeaderDataReady, setIsHeaderDataReady] = useState(false);
 
     // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
     useEffect(() => {
@@ -281,43 +283,35 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
 
-    // Listener pre registračné dáta z Firestore
-    // Teraz závisí od globálneho window.db, ktoré je inicializované mimo tohto komponentu
+    // Listener pre nastavenie isHeaderDataReady, ak sú globálne dáta o registrácii a kategóriách načítané
     useEffect(() => {
-        // Skontrolujeme, či je window.db a window.__app_id dostupné.
-        // Tieto by mali byť nastavené cez 'authentication.js'.
-        if (!window.db || typeof window.__app_id === 'undefined') {
-            console.log("logged-in-my-data.js: window.db alebo __app_id nie sú pripravené pre registračné dáta.");
-            setIsRegistrationDataLoading(false); // Nastavíme loading na false, ak db nie je k dispozícii
-            return;
-        }
-        
-        const appId = window.__app_id; // Používame priamo window.__app_id
-        const registrationDatesRef = doc(window.db, 'artifacts', appId, 'public', 'data', 'registrationDates', 'current');
-        
-        setIsRegistrationDataLoading(true);
-        const unsubscribe = onSnapshot(registrationDatesRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setRegistrationDatesData(docSnap.data());
-                console.log("logged-in-my-data.js: Registračné dáta načítané z Firestore.", docSnap.data());
+        const checkHeaderData = () => {
+            if (window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
+                setIsHeaderDataReady(true);
+                console.log("logged-in-my-data.js: Globálne dáta z hlavičky (registrácia a kategórie) sú pripravené.");
             } else {
-                console.log("logged-in-my-data.js: Dokument 'registrationDates' neexistuje.");
-                setRegistrationDatesData(null);
+                setIsHeaderDataReady(false);
+                console.log("logged-in-my-data.js: Čakám na globálne dáta z hlavičky (registrácia a kategórie).");
             }
-            setIsRegistrationDataLoading(false);
-        }, (error) => {
-            console.error("logged-in-my-data.js: Chyba pri načítavaní registračných dát z Firestore:", error);
-            setRegistrationDatesData(null);
-            setIsRegistrationDataLoading(false);
-        });
+        };
 
-        // Funkcia na odhlásenie listenera pri odpojení komponentu
-        return () => unsubscribe();
-    }, [window.db, typeof window.__app_id !== 'undefined' ? window.__app_id : null]); // Závisí od dostupnosti window.db a window.__app_id
+        // Skontrolujeme stav hneď pri mountnutí
+        checkHeaderData();
+
+        // Pridáme listenery na udalosti, ktoré indikujú, že dáta sú načítané
+        window.addEventListener('globalDataUpdated', checkHeaderData); // authentication.js dispečuje túto udalosť, keď sú dáta používateľa hotové
+        window.addEventListener('categoriesLoaded', checkHeaderData); // header.js dispečuje túto udalosť, keď sú kategórie hotové
+        // Poznámka: header.js už aktualizuje window.isRegistrationDataLoaded priamo v onSnapshot, takže na to netreba špecifickú udalosť
+
+        return () => {
+            window.removeEventListener('globalDataUpdated', checkHeaderData);
+            window.removeEventListener('categoriesLoaded', checkHeaderData);
+        };
+    }, []); // Spustí sa iba raz pri pripojení komponentu
 
 
-    // Vypočítame deadlineMillis z registrationDatesData
-    const dataEditDeadline = registrationDatesData?.dataEditDeadline;
+    // Vypočítame deadlineMillis z globálnych registrationDates z header.js
+    const dataEditDeadline = window.registrationDates?.dataEditDeadline;
     const deadlineMillis = dataEditDeadline ? dataEditDeadline.toMillis() : null;
 
     // Časovač a logika pre určenie, či je možné dáta upravovať
@@ -327,16 +321,15 @@ const MyDataApp = ({ userProfileData }) => {
         // Východiskovo nastavíme canEdit na false
         setCanEdit(false);
 
-        // Uistíme sa, že sú dostupné dáta používateľa
-        if (!userProfileData) {
-            console.log("logged-in-my-data.js: Chýbajú dáta používateľa. Úpravy nie sú povolené.");
+        // Uistíme sa, že sú dostupné dáta používateľa a hlavička je pripravená
+        if (!userProfileData || !isHeaderDataReady) {
+            console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo hlavička nie je pripravená. Úpravy nie sú povolené.");
             return;
         }
 
         const isAdmin = userProfileData.role === 'admin';
         
         // Ak je používateľ administrátor, vždy môže upravovať
-        // Táto podmienka má najvyššiu prioritu a ak je splnená, ukončí vykonávanie useEffect.
         if (isAdmin) {
             setCanEdit(true);
             console.log("logged-in-my-data.js: Admin môže vždy upravovať. canEdit nastavené na TRUE.");
@@ -344,9 +337,8 @@ const MyDataApp = ({ userProfileData }) => {
         }
 
         // Pre ne-admin používateľov skontrolujeme dáta registrácie a deadline.
-        // Tlačidlo by sa malo zobrazovať, ak NIE JE isRegistrationDataLoading (dáta sú načítané)
-        // A ak registrationDatesData a deadlineMillis sú definované
-        if (!isRegistrationDataLoading && registrationDatesData && deadlineMillis !== null) {
+        // Používame globálne window.isRegistrationDataLoaded a window.registrationDates
+        if (window.isRegistrationDataLoaded && window.registrationDates && deadlineMillis !== null) {
             const nowMillis = Date.now();
             
             // Logging pre diagnostiku
@@ -356,7 +348,7 @@ const MyDataApp = ({ userProfileData }) => {
 
             if (nowMillis <= deadlineMillis) { 
                 // Ak je aktuálny čas menší alebo rovný deadline, povoliť úpravy pre VŠETKY ne-admin roly
-                setCanEdit(true); // Toto zahŕňa 'user', 'referee', 'coach' atď. pred deadlinom
+                setCanEdit(true); 
                 console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
 
                 // Ak už existuje časovač, vyčistíme ho, aby sme predišli duplikáciám
@@ -373,9 +365,9 @@ const MyDataApp = ({ userProfileData }) => {
                 console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
             }
         } else {
-            // Ak sa dáta ešte načítavajú alebo nie sú dostupné/platné, skryjeme tlačidlo
+            // Ak registračné dáta ešte nie sú úplne načítané alebo platné, skryjeme tlačidlo
             setCanEdit(false);
-            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta sa načítavajú alebo nie sú dostupné/platné.");
+            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta nie sú načítané/dostupné/platné.");
         }
 
         // Funkcia pre vyčistenie časovača pri odpojení komponentu
@@ -384,7 +376,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, registrationDatesData, isRegistrationDataLoading]); // Závisí od nového stavu registračných dát a ich načítavania
+    }, [userProfileData, isHeaderDataReady, window.isRegistrationDataLoaded, window.registrationDates]); // Závisí od globálnych dát a stavu pripravenosti hlavičky
 
     const getRoleColor = (role) => {
         switch (role) {
