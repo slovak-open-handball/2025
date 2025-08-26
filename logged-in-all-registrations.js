@@ -1104,7 +1104,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, t
     const [localEditedData, setLocalEditedData] = React.useState(data); 
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
-    const [isTargetUserHall, setIsTargetMuserHall] = React.useState(false); 
+    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false);
     const inputRefs = React.useRef({}); 
 
     // Stavy pre Phone Input
