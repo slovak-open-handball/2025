@@ -2,6 +2,9 @@
 // Tento súbor obsahuje React komponent pre správu nastavení prihláseného používateľa.
 // Predpokladá, že Firebase SDK je inicializovaný v authentication.js a globálne sprístupnený.
 
+// Importy pre modulárny Firestore
+import { doc, updateDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
 // Main React component for the logged-in-my-settings.html page
 function MySettingsApp() {
   // Prístup k globálnym inštanciám Firebase z window objektu
@@ -105,8 +108,10 @@ function MySettingsApp() {
     setError('');
 
     try {
-      const userDocRef = db.collection('users').doc(user.uid);
-      await userDocRef.update({
+      // Použitie modulárnej funkcie doc() pre získanie referencie na dokument
+      const userDocRef = doc(db, 'users', user.uid);
+      // Použitie modulárnej funkcie updateDoc() pre aktualizáciu dokumentu
+      await updateDoc(userDocRef, {
         displayNotifications: displayNotifications
       });
       // Používame globálnu funkciu pre notifikácie
