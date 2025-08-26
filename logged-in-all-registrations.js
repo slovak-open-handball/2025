@@ -1,19 +1,11 @@
-// logged-in-all-registrations.js
-// Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-all-registrations.html
-// a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
-
-// Importy pre Firebase Firestore funkcie (Firebase v9 modulárna syntax)
-// Tento súbor je načítaný ako modul, preto môže používať importy.
 import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs, serverTimestamp, addDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { countryDialCodes } from './countryDialCodes.js'; // Import zoznamu predvolieb
+import { countryDialCodes } from './countryDialCodes.js'; 
 
-// NotificationModal Component pre zobrazovanie dočasných správ
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
-    // Zobrazí notifikáciu len ak je správa A notifikácie sú povolené
     if (message && displayNotificationsEnabled) {
       setShow(true);
       if (timerRef.current) {
@@ -36,9 +28,8 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
+  }, [message, onClose, displayNotificationsEnabled]);
 
-  // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak ak sú notifikácie zakázané
   if ((!show && !message) || !displayNotificationsEnabled) return null;
 
   return React.createElement(
