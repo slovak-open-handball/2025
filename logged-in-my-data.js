@@ -308,7 +308,7 @@ const MyDataApp = ({ userProfileData }) => {
             return;
         }
 
-        const isUser = userProfileData.role === 'user';
+        // Extrahujeme a normalizujeme deadlineMillis pre použitie v závislostiach
         const dataEditDeadline = window.registrationDates.dataEditDeadline;
         const deadlineMillis = dataEditDeadline.toMillis();
         const nowMillis = Date.now();
@@ -344,7 +344,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, window.isRegistrationDataLoaded, window.registrationDates]); // Závislosť na userProfileData a window.isRegistrationDataLoaded a window.registrationDates
+    }, [userProfileData, window.isRegistrationDataLoaded, deadlineMillis]); // Pridané 'deadlineMillis' do závislostí
 
     const getRoleColor = (role) => {
         switch (role) {
