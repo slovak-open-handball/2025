@@ -2,9 +2,6 @@
 // Tento súbor obsahuje React komponent pre správu nastavení prihláseného používateľa.
 // Predpokladá, že Firebase SDK je inicializovaný v authentication.js a globálne sprístupnený.
 
-// Komponent NotificationModal pre zobrazovanie dočasných správ (nahradený globálnou funkciou)
-// Tento komponent už nebude potrebný, nakoľko budeme používať window.showGlobalNotification.
-
 // Main React component for the logged-in-my-settings.html page
 function MySettingsApp() {
   // Prístup k globálnym inštanciám Firebase z window objektu
@@ -22,7 +19,8 @@ function MySettingsApp() {
 
   // Efekt pre počúvanie globálnych zmien autentifikácie a dát profilu
   React.useEffect(() => {
-    let unsubscribeUserDoc;
+    // Unsubscribe funkcia z onSnapshot v authentication.js, nie v tomto komponente
+    // let unsubscribeUserDoc; // Túto premennú už nebudeme používať lokálne
 
     const handleGlobalDataUpdated = (event) => {
       console.log("MySettingsApp: Prijatá udalosť 'globalDataUpdated'.");
@@ -55,12 +53,11 @@ function MySettingsApp() {
         // Aktualizácia lokálnych stavov z userProfileData
         setDisplayNotifications(globalProfileData.displayNotifications !== undefined ? globalProfileData.displayNotifications : true);
 
-        // Aktualizácia viditeľnosti menu (ak je funkcia dostupná z left-menu.js)
-        if (typeof window.updateMenuItemsVisibility === 'function') {
-            window.updateMenuItemsVisibility(globalProfileData.role);
-        } else {
-            console.warn("MySettingsApp: Funkcia window.updateMenuItemsVisibility nie je definovaná.");
-        }
+        // ODSTRÁNENÉ: Volanie window.updateMenuItemsVisibility, pretože táto funkcia je spravovaná v logged-in-left-menu.js
+        // a MySettingsApp nemá priamy vplyv na jej vykonanie ani ju priamo nevolá.
+        // Logika pre zobrazenie/skrytie položiek menu je riadená v logged-in-left-menu.js
+        // prostredníctvom jeho listenera na globalDataUpdated.
+        
         setError(''); // Vyčistí chyby po úspešnom načítaní
       } else {
         console.warn("MySettingsApp: Profilové dáta používateľa nie sú dostupné.");
@@ -89,16 +86,17 @@ function MySettingsApp() {
 
     return () => {
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
-      if (unsubscribeUserDoc) {
-        unsubscribeUserDoc();
-      }
+      // Odstránený unsubscribeUserDoc, pretože onSnapshot je spravovaný v authentication.js
     };
   }, [auth, db]); // Závisí od globálnych inštancií auth a db
 
   const handleUpdateNotificationsSetting = async () => {
     if (!db || !user) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
-      window.showGlobalNotification("Databáza alebo používateľ nie je k dispozícii.", "error");
+      // Používame globálnu funkciu pre notifikácie
+      if (window.showGlobalNotification) {
+          window.showGlobalNotification("Databáza alebo používateľ nie je k dispozícii.", "error");
+      }
       return;
     }
     setLoading(true);
@@ -110,12 +108,16 @@ function MySettingsApp() {
         displayNotifications: displayNotifications
       });
       // Používame globálnu funkciu pre notifikácie
-      window.showGlobalNotification("Nastavenie notifikácií úspešne aktualizované!", "success");
+      if (window.showGlobalNotification) {
+          window.showGlobalNotification("Nastavenie notifikácií úspešne aktualizované!", "success");
+      }
     } catch (e) {
       console.error("MySettingsApp: Chyba pri aktualizácii nastavenia notifikácií:", e);
       setError(`Chyba pri aktualizácii nastavenia: ${e.message}`);
       // Používame globálnu funkciu pre notifikácie
-      window.showGlobalNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, "error");
+      if (window.showGlobalNotification) {
+          window.showGlobalNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -158,7 +160,6 @@ function MySettingsApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // NotificationModal je odstránený, nakoľko používame window.showGlobalNotification
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
