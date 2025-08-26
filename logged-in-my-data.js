@@ -346,7 +346,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, window.isRegistrationDataLoaded, deadlineMillis]); // Teraz je 'deadlineMillis' správne v závislostiach
+    }, [userProfileData, window.isRegistrationDataLoaded, deadlineMillis, window.registrationDates]); // Pridané 'window.registrationDates' do závislostí
 
     const getRoleColor = (role) => {
         switch (role) {
