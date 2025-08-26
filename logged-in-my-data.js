@@ -275,11 +275,10 @@ const globalDataStore = (() => {
             isGlobalAuthReady: window.isGlobalAuthReady || false,
             isRegistrationDataLoaded: window.isRegistrationDataLoaded || false,
             isCategoriesDataLoaded: window.isCategoriesDataLoaded || false,
-            // Deep clone relevant parts of registrationDates if it contains complex objects like Timestamp
-            // Otherwise, a shallow copy might suffice if only the top-level object reference changes
+            // Create a deep copy of registrationDates to ensure React detects changes
             registrationDates: window.registrationDates ? {
                 ...window.registrationDates,
-                // Ensure Timestamp objects are also cloned or their relevant values extracted
+                // Ensure Timestamp objects are also deep copied or their relevant values extracted
                 dataEditDeadline: window.registrationDates.dataEditDeadline ? { 
                     seconds: window.registrationDates.dataEditDeadline.seconds,
                     nanoseconds: window.registrationDates.dataEditDeadline.nanoseconds
@@ -313,48 +312,10 @@ const globalDataStore = (() => {
         const newGlobalState = getGlobalState();
         let changed = false;
 
-        // Compare current internalSnapshot with newGlobalState for relevant changes
-        if (internalSnapshot.isGlobalAuthReady !== newGlobalState.isGlobalAuthReady ||
-            internalSnapshot.isRegistrationDataLoaded !== newGlobalState.isRegistrationDataLoaded ||
-            internalSnapshot.isCategoriesDataLoaded !== newGlobalState.isCategoriesDataLoaded) {
+        // Simplified comparison: just compare the JSON string representation
+        // This is less performant for very large objects, but robust for these data structures.
+        if (JSON.stringify(newGlobalState) !== JSON.stringify(internalSnapshot)) {
             changed = true;
-        }
-
-        // Deep comparison for registrationDates, focusing on critical properties like dataEditDeadline
-        const oldRegDates = internalSnapshot.registrationDates;
-        const newRegDates = newGlobalState.registrationDates;
-
-        if (oldRegDates !== newRegDates) { // Check if the object reference itself changed
-             if (!oldRegDates || !newRegDates) { // One is null/undefined and the other isn't
-                 changed = true;
-             } else {
-                 // Compare specific properties of the Timestamp objects
-                 if (oldRegDates.dataEditDeadline?.seconds !== newRegDates.dataEditDeadline?.seconds ||
-                     oldRegDates.dataEditDeadline?.nanoseconds !== newRegDates.dataEditDeadline?.nanoseconds) {
-                     changed = true;
-                 }
-                 // Add other Timestamp comparisons if needed
-                 if (oldRegDates.rosterEditDeadline?.seconds !== newRegDates.rosterEditDeadline?.seconds ||
-                     oldRegDates.rosterEditDeadline?.nanoseconds !== newRegDates.rosterEditDeadline?.nanoseconds) {
-                     changed = true;
-                 }
-                 if (oldRegDates.registrationEndDate?.seconds !== newRegDates.registrationEndDate?.seconds ||
-                     oldRegDates.registrationEndDate?.nanoseconds !== newRegDates.registrationEndDate?.nanoseconds) {
-                     changed = true;
-                 }
-                 if (oldRegDates.registrationStartDate?.seconds !== newRegDates.registrationStartDate?.seconds ||
-                     oldRegDates.registrationStartDate?.nanoseconds !== newRegDates.registrationStartDate?.nanoseconds) {
-                     changed = true;
-                 }
-                 if (oldRegDates.tournamentEnd?.seconds !== newRegDates.tournamentEnd?.seconds ||
-                     oldRegDates.tournamentEnd?.nanoseconds !== newRegDates.tournamentEnd?.nanoseconds) {
-                     changed = true;
-                 }
-                 if (oldRegDates.tournamentStart?.seconds !== newRegDates.tournamentStart?.seconds ||
-                     oldRegDates.tournamentStart?.nanoseconds !== newRegDates.tournamentStart?.nanoseconds) {
-                     changed = true;
-                 }
-             }
         }
         
         if (changed) {
@@ -405,7 +366,7 @@ const MyDataApp = ({ userProfileData }) => {
         isGlobalAuthReady, 
         isRegistrationDataLoaded, 
         isCategoriesDataLoaded, 
-        registrationDates // This is the shallow clone from getGlobalState
+        registrationDates // This is the deep clone from getGlobalState
     } = useSyncExternalStore(globalDataStore.subscribe, globalDataStore.getSnapshot);
 
     // If user data changes, close modals
