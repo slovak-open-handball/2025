@@ -284,6 +284,8 @@ const MyDataApp = ({ userProfileData }) => {
     // Listener pre registračné dáta z Firestore
     // Teraz závisí od globálneho window.db, ktoré je inicializované mimo tohto komponentu
     useEffect(() => {
+        // Skontrolujeme, či je window.db a window.__app_id dostupné.
+        // Tieto by mali byť nastavené cez 'authentication.js'.
         if (!window.db || typeof window.__app_id === 'undefined') {
             console.log("logged-in-my-data.js: window.db alebo __app_id nie sú pripravené pre registračné dáta.");
             setIsRegistrationDataLoading(false); // Nastavíme loading na false, ak db nie je k dispozícii
@@ -311,7 +313,7 @@ const MyDataApp = ({ userProfileData }) => {
 
         // Funkcia na odhlásenie listenera pri odpojení komponentu
         return () => unsubscribe();
-    }, [typeof window.db !== 'undefined' ? window.db : null, typeof window.__app_id !== 'undefined' ? window.__app_id : null]); // Závisí od dostupnosti window.db a window.__app_id
+    }, [window.db, typeof window.__app_id !== 'undefined' ? window.__app_id : null]); // Závisí od dostupnosti window.db a window.__app_id
 
 
     // Vypočítame deadlineMillis z registrationDatesData
