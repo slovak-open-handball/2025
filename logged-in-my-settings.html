@@ -13,6 +13,10 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            box-sizing: border-box; /* Zabezpečí, že padding neovplyvní celkovú šírku */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -181,8 +185,8 @@
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
     
     <!-- React a ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <!-- Načítanie globálnych skriptov PRVÉ -->
     <script type="module" src="loader.js"></script>
@@ -194,12 +198,8 @@
     
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Globálny loader -->
-    <div id="global-loader"> <!-- Odstránená trieda 'show' z HTML -->
-        <div class="flex justify-center pt-16">
-            <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
-        </div>
-    </div>
+    <!-- Globálny loader - teraz spravovaný len JS cez loader.js -->
+    <!-- Odstránený #global-loader div z HTML, bude pridaný dynamicky cez loader.js -->
 
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
@@ -211,47 +211,21 @@
         <!-- Tlačidlo na prepínanie menu bude pridané skriptom logged-in-left-menu.js -->
 
         <main id="main-content-area" class="flex-grow flex">
+            <!-- Sem sme pridali triedu pre plynulú animáciu -->
+            <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
             <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <!-- Obsah aplikácie bude vykreslený tu -->
+                <!-- Záložný spinner, kým sa nenačíta React -->
+                <div class="flex justify-center pt-16">
+                    <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+                </div>
             </div>
         </main>
     </div>
 
     <!-- Načítanie hlavného skriptu pre túto stránku (MySettingsApp) - Typ module pre React -->
     <script type="module" src="logged-in-my-settings.js"></script>
+    
+    <!-- Skript na spustenie React app bol presunutý do logged-in-my-settings.js -->
 
-    <!-- Spustíme renderovanie React aplikácie po načítaní DOM -->
-    <script type="module">
-        window.onload = async () => {
-            // Zobrazíme loader, kým sa všetko nenačíta
-            window.showGlobalLoader();
-
-            // Hlavička a ľavé menu sa budú spravovať svojimi vlastnými skriptami (header.js a logged-in-left-menu.js)
-            // Tieto skripty sa už načítali v <head> ako moduly a spravujú svoje HTML prvky.
-
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                window.hideGlobalLoader();
-                return;
-            }
-            // Overíme, či sú globálne Firebase inštancie dostupné
-            if (!window.auth || !window.db) {
-                console.error("Chyba: Firebase Auth alebo Firestore nie sú inicializované. Skontrolujte authentication.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii Firebase. Skúste to prosím neskôr.</div>';
-                window.hideGlobalLoader();
-                return;
-            }
-
-            // Teraz, keď vieme, že React a Firebase sú pripravené, môžeme vykresliť aplikáciu.
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(MySettingsApp, null));
-            console.log("logged-in-my-settings.html: React App vykreslená.");
-
-            // Skryjeme loader po vykreslení React aplikácie (a po prvom načítaní dát v MySettingsApp, ktoré tiež volá hideGlobalLoader)
-            // window.hideGlobalLoader(); // Toto by už malo byť redundantné, ale ponechávam pre istotu.
-        };
-    </script>
 </body>
 </html>
