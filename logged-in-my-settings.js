@@ -1,312 +1,168 @@
 // logged-in-my-settings.js
 // Tento súbor obsahuje React komponent pre správu nastavení prihláseného používateľa.
-// Predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-my-settings.html.
+// Predpokladá, že Firebase SDK je inicializovaný v authentication.js a globálne sprístupnený.
 
-// Komponent NotificationModal pre zobrazovanie dočasných správ
-function NotificationModal({ message, onClose, type = 'info' }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (message) {
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
-    } else {
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose]);
-
-  if (!show && !message) return null;
-
-  let bgColorClass;
-  if (type === 'success') {
-    bgColorClass = 'bg-[#3A8D41]'; // Green
-  } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // Red
-  } else {
-    bgColorClass = 'bg-blue-500'; // Default blue for info
-  }
-
-  return React.createElement(
-    'div',
-    {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: { pointerEvents: 'none' }
-    },
-    React.createElement(
-      'div',
-      {
-        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
-        style: { pointerEvents: 'auto' }
-      },
-      React.createElement('p', { className: 'font-semibold' }, message)
-    )
-  );
-}
+// Komponent NotificationModal pre zobrazovanie dočasných správ (nahradený globálnou funkciou)
+// Tento komponent už nebude potrebný, nakoľko budeme používať window.showGlobalNotification.
 
 // Main React component for the logged-in-my-settings.html page
 function MySettingsApp() {
-  // NEW: Get references to Firebase services directly
-  const app = firebase.app();
-  const auth = firebase.auth(app);
-  const db = firebase.firestore(app);
+  // Prístup k globálnym inštanciám Firebase z window objektu
+  const auth = window.auth;
+  const db = window.db;
 
-  // NEW: Local state for the current user and their profile data
-  // These states will be updated by the local onAuthStateChanged and onSnapshot
-  const [user, setUser] = React.useState(auth.currentUser); // Initialize with current user
-  const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [loading, setLoading] = React.useState(true); // Loading for data in MySettingsApp
+  // Lokálne stavy pre data používateľa a načítanie
+  const [user, setUser] = React.useState(null); // Bude aktualizované z globalDataUpdated
+  const [userProfileData, setUserProfileData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true); // Loading pre data v MySettingsApp
   const [error, setError] = React.useState('');
-  // Retained: userNotificationMessage for local notifications
-  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
-  // User Data States - These states will be updated from userProfileData
+  // Stavy pre užívateľské dáta (nastavenia notifikácií)
   const [displayNotifications, setDisplayNotifications] = React.useState(true);
 
-  // NEW: Local Auth Listener for MySettingsApp
-  // This listener ensures that MySettingsApp reacts to authentication changes,
-  // but primary logout/redirection is handled by GlobalNotificationHandler.
-  React.useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
-      console.log("MySettingsApp: Local onAuthStateChanged - User:", currentUser ? currentUser.uid : "null");
-      setUser(currentUser);
-      // If user is not logged in, redirect (even if GNH should handle it)
-      if (!currentUser) {
-        console.log("MySettingsApp: User is not logged in, redirecting to login.html.");
-        window.location.href = 'login.html';
-      }
-    });
-    return () => unsubscribeAuth();
-  }, [auth]); // Depends on auth instance
-
-  // NEW: Local Effect for loading user data from Firestore
-  // This effect will run when the user is logged in and db is available.
-  // It assumes that passwordLastChanged and approved status are already verified in header.js.
+  // Efekt pre počúvanie globálnych zmien autentifikácie a dát profilu
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    if (user && db) { // Only runs if user is logged in and db is available
-      console.log(`MySettingsApp: Attempting to load user document for UID: ${user.uid}`);
-      setLoading(true); // Set loading to true while profile data is being loaded
+    const handleGlobalDataUpdated = (event) => {
+      console.log("MySettingsApp: Prijatá udalosť 'globalDataUpdated'.");
+      const globalUser = auth.currentUser; // Získame aktuálneho používateľa priamo z globálneho auth
+      const globalProfileData = event.detail;
 
-      try {
-        const userDocRef = db.collection('users').doc(user.uid);
-        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-          console.log("MySettingsApp: onSnapshot for user document triggered.");
-          if (docSnapshot.exists) {
-            const userData = docSnapshot.data();
-            console.log("MySettingsApp: User document exists, data:", userData);
+      setUser(globalUser);
+      setUserProfileData(globalProfileData);
+      setLoading(false); // Ukončíme loading, keď sú dáta prijaté
 
-            // *** NEW LOGIC FOR RESTRICTING ACCESS FOR 'user' ROLE ***
-            if (userData.role === 'user') {
-                console.log("MySettingsApp: User has 'user' role. Redirecting to logged-in-my-data.html.");
-                window.location.href = 'logged-in-my-data.html';
-                return; // Stop further processing
-            }
-            // *** END OF NEW LOGIC ***
-
-            // --- IMMEDIATE LOGOUT IF passwordLastChanged IS NOT A VALID TIMESTAMP ---
-            // This is added logic that runs immediately after data is loaded.
-            // If passwordLastChanged is invalid or missing, log out.
-            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                console.error("MySettingsApp: passwordLastChanged IS NOT a valid Timestamp object! Type:", typeof userData.passwordLastChanged, "Value:", userData.passwordLastChanged);
-                console.log("MySettingsApp: Immediately logging out user due to invalid password change timestamp.");
-                auth.signOut(); // Use auth from React state
-                window.location.href = 'login.html';
-                localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Clear localStorage
-                setUser(null); // Explicitly set user to null
-                setUserProfileData(null); // Explicitly set userProfileData to null
-                return; // Stop further processing
-            }
-
-            // Normal processing if passwordLastChanged is valid
-            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-            const localStorageKey = `passwordLastChanged_${user.uid}`;
-            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-            console.log(`MySettingsApp: Firestore passwordLastChanged (converted): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                // First load for this user/browser, initialize localStorage and DO NOT LOG OUT
-                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                console.log("MySettingsApp: Initializing passwordLastChanged in localStorage (first load).");
-                // Do not continue here, continue with normal data processing for first load
-            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                // Password was changed on another device/session
-                console.log("MySettingsApp: Password change detected on another device/session. Logging out user.");
-                auth.signOut(); // Use auth from React state
-                window.location.href = 'login.html';
-                localStorage.removeItem(localStorageKey); // Clear localStorage after logout
-                setUser(null); // Explicitly set user to null
-                setUserProfileData(null); // Explicitly set userProfileData to null
-                return;
-            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                // This ideally should not happen if Firestore is the source of truth
-                console.warn("MySettingsApp: Detected older timestamp from Firestore than stored. Logging out user (potential mismatch).");
-                auth.signOut(); // Use auth from React state
-                window.location.href = 'login.html';
-                localStorage.removeItem(localStorageKey);
-                setUser(null); // Explicitly set user to null
-                setUserProfileData(null); // Explicitly set userProfileData to null
-                return;
-            } else {
-                // Times are the same, ensure localStorage is up-to-date
-                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                console.log("MySettingsApp: Timestamps are the same, updating localStorage.");
-            }
-
-            // NEW LOGIC: Logout if user is admin and not approved
-            if (userData.role === 'admin' && userData.approved === false) {
-                console.log("MySettingsApp: User is admin and not approved. Logging out.");
-                auth.signOut();
-                window.location.href = 'login.html';
-                setUser(null); // Explicitly set user to null
-                setUserProfileData(null); // Explicitly set userProfileData to null
-                return; // Stop further processing
-            }
-
-            setUserProfileData(userData); // Update userProfileData state
-            
-            // Update local states from userProfileData
-            // If displayNotifications is not explicitly set, default to true
-            setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
-            
-            setLoading(false); // Stop loading after user data is loaded
-            setError(''); // Clear errors after successful load
-
-            // Update menu visibility after role is loaded (call global function from left-menu.js)
-            if (typeof window.updateMenuItemsVisibility === 'function') {
-                window.updateMenuItemsVisibility(userData.role);
-            } else {
-                console.warn("MySettingsApp: Function updateMenuItemsVisibility is not defined.");
-            }
-
-            console.log("MySettingsApp: User data loading complete, loading: false");
-          } else {
-            console.warn("MySettingsApp: User document not found for UID:", user.uid);
-            setError("Error: User profile not found or you do not have sufficient permissions. Please try logging in again.");
-            setLoading(false); // Stop loading so error can be displayed
-            setUser(null); // Explicitly set user to null
-            setUserProfileData(null); // Explicitly set userProfileData to null
-          }
-        }, error => {
-          console.error("MySettingsApp: Error loading user data from Firestore (onSnapshot error):", error);
-          if (error.code === 'permission-denied') {
-              setError(`Permission error: You do not have access to your profile. Please try logging in again or contact support.`);
-          } else if (error.code === 'unavailable') {
-              setError(`Connection error: Firestore service is unavailable. Please try again later.`);
-          } else if (error.code === 'unauthenticated') {
-               setError(`Authentication error: You are not logged in. Please try logging in again.`);
-               if (auth) {
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitly set user to null
-                  setUserProfileData(null); // Explicitly set userProfileData to null
-               }
-          } else {
-              setError(`Error loading user data: ${error.message}`);
-          }
-          setLoading(false); // Stop loading even on error
-          console.log("MySettingsApp: User data loading failed, loading: false");
-          setUser(null); // Explicitly set user to null
-          setUserProfileData(null); // Explicitly set userProfileData to null
-        });
-      } catch (e) {
-        console.error("MySettingsApp: Error setting up onSnapshot for user data (try-catch):", e);
-        setError(`Error setting up listener for user data: ${e.message}`);
-        setLoading(false); // Stop loading even on error
-        setUser(null); // Explicitly set user to null
-        setUserProfileData(null); // Explicitly set userProfileData to null
+      if (!globalUser) {
+        console.log("MySettingsApp: Používateľ je odhlásený. Presmerovávam.");
+        // Presmerovanie by mal primárne riadiť authentication.js, ale pre istotu
+        if (window.location.pathname.includes('/logged-in-')) {
+            window.location.href = 'login.html';
+        }
+        return;
       }
-    } else if (user === null) {
-        // If user is null (and not undefined), it means they have been logged out.
-        // Redirection should already be handled by GlobalNotificationHandler.
-        // Here, we just ensure loading is false and data is cleared.
-        setLoading(false);
-        setUserProfileData(null);
+
+      if (globalProfileData) {
+        console.log(`MySettingsApp: Spracovávam profilové dáta pre UID: ${globalUser.uid}`);
+        
+        // Logika pre presmerovanie 'user' role
+        if (globalProfileData.role === 'user') {
+            console.log("MySettingsApp: Používateľ má rolu 'user'. Presmerovávam na logged-in-my-data.html.");
+            window.location.href = 'logged-in-my-data.html';
+            return;
+        }
+
+        // Aktualizácia lokálnych stavov z userProfileData
+        setDisplayNotifications(globalProfileData.displayNotifications !== undefined ? globalProfileData.displayNotifications : true);
+
+        // Aktualizácia viditeľnosti menu (ak je funkcia dostupná z left-menu.js)
+        if (typeof window.updateMenuItemsVisibility === 'function') {
+            window.updateMenuItemsVisibility(globalProfileData.role);
+        } else {
+            console.warn("MySettingsApp: Funkcia window.updateMenuItemsVisibility nie je definovaná.");
+        }
+        setError(''); // Vyčistí chyby po úspešnom načítaní
+      } else {
+        console.warn("MySettingsApp: Profilové dáta používateľa nie sú dostupné.");
+        setError("Chyba: Profil používateľa nebol nájdený alebo nemáte dostatočné povolenia.");
+      }
+    };
+
+    // Pridanie listenera pre globálne aktualizácie dát
+    window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
+
+    // Initial check if data is already available (e.g., after a page refresh)
+    if (window.isGlobalAuthReady && window.globalUserProfileData) {
+      console.log("MySettingsApp: Initial check - globálne dáta sú už pripravené.");
+      handleGlobalDataUpdated({ detail: window.globalUserProfileData });
+    } else if (window.isGlobalAuthReady && !window.globalUserProfileData && auth.currentUser) {
+      // Ak je authReady, ale profilové dáta chýbajú, a používateľ je prihlásený,
+      // znamená to problém s načítaním profilu v authentication.js.
+      console.warn("MySettingsApp: Initial check - Firebase Auth je pripravený, ale globalUserProfileData chýba pre prihláseného používateľa.");
+      setError("Chyba: Váš profil sa nepodarilo načítať. Skúste sa prosím odhlásiť a znova prihlásiť.");
+      setLoading(false);
+    } else if (window.isGlobalAuthReady && !auth.currentUser) {
+        console.log("MySettingsApp: Initial check - používateľ nie je prihlásený, ale globalAuthReady je true.");
+        setLoading(false); // Ak nie je prihlásený, nie je čo načítavať
+        // Presmerovanie zabezpečuje authentication.js
     }
 
     return () => {
-      // Unsubscribe from onSnapshot on unmount
+      window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
       if (unsubscribeUserDoc) {
-        console.log("MySettingsApp: Unsubscribing onSnapshot for user document.");
         unsubscribeUserDoc();
       }
     };
-  }, [user, db, auth]); // Depends on user and db (and auth for signOut)
+  }, [auth, db]); // Závisí od globálnych inštancií auth a db
 
   const handleUpdateNotificationsSetting = async () => {
     if (!db || !user) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
+      window.showGlobalNotification("Databáza alebo používateľ nie je k dispozícii.", "error");
       return;
     }
     setLoading(true);
     setError('');
-    setUserNotificationMessage('');
 
     try {
       const userDocRef = db.collection('users').doc(user.uid);
       await userDocRef.update({
         displayNotifications: displayNotifications
       });
-      setUserNotificationMessage("Nastavenie notifikácií úspešne aktualizované!");
+      // Používame globálnu funkciu pre notifikácie
+      window.showGlobalNotification("Nastavenie notifikácií úspešne aktualizované!", "success");
     } catch (e) {
       console.error("MySettingsApp: Chyba pri aktualizácii nastavenia notifikácií:", e);
       setError(`Chyba pri aktualizácii nastavenia: ${e.message}`);
+      // Používame globálnu funkciu pre notifikácie
+      window.showGlobalNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Display loading state
-  if (!user || (user && !userProfileData) || loading) {
-    if (user === null) {
-        console.log("MySettingsApp: User is null, redirecting to login.html");
-        window.location.href = 'login.html';
-        return null;
-    }
-    let loadingMessage = 'Načítavam...';
-    if (user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
-    } else if (loading) {
-        loadingMessage = 'Načítavam...';
+  // Zobrazovanie načítavacieho stavu alebo presmerovanie
+  if (loading || (auth.currentUser && !userProfileData && !error)) {
+    // Ak user nie je null, ale userProfileData ešte nie je načítané, zobrazíme loader
+    // Ak error nie je prázdny, znamená to, že nastala chyba a môžeme ju zobraziť.
+    // Ak auth.currentUser je null, authentication.js by mal presmerovať.
+    if (!auth.currentUser && window.isGlobalAuthReady) {
+        // Ak je authReady, ale currentUser je null, znamená to, že používateľ je odhlásený.
+        // authentication.js by ho mal presmerovať na login.html.
+        console.log("MySettingsApp: Používateľ je odhlásený po inicializácii.");
+        return null; // Nenecháme React komponent renderovať nič
     }
 
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, loadingMessage)
+      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam nastavenia...')
     );
   }
 
+  // Ak existuje chyba a loading je false, zobrazíme chybu
+  if (error && !loading) {
+    return React.createElement(
+      'div',
+      { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter p-4' },
+      React.createElement(
+        'div',
+        { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-lg w-full text-center', role: 'alert' },
+        React.createElement('strong', { className: 'font-bold' }, 'Chyba! '),
+        React.createElement('span', { className: 'block sm:inline whitespace-pre-wrap' }, error)
+      )
+    );
+  }
+
+  // Hlavné vykreslenie komponentu
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    React.createElement(NotificationModal, {
-        message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage('')
-    }),
+    // NotificationModal je odstránený, nakoľko používame window.showGlobalNotification
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
+      // Chyby sa už zobrazujú cez globálne notifikácie, ale pre perzistentné chyby zostane táto oblasť
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -354,5 +210,5 @@ function MySettingsApp() {
   );
 }
 
-// Explicitly expose the component globally
+// Explicitne sprístupníme komponent globálne
 window.MySettingsApp = MySettingsApp;
