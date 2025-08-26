@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Moje nastavenia</title>
+    <title>SOH 2025 - Moje Nastavenia</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -41,7 +41,6 @@
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
             /* Pôvodné margin-left odstránime a použijeme flexbox pre centrovanie */
-            /* margin-left: 256px; */
             padding: 1rem;
             flex-grow: 1;
             display: flex; /* Použijeme flexbox */
@@ -133,9 +132,8 @@
     <div class="flex flex-1">
         <!-- Ľavé menu sa načíta dynamicky do tohto placeholderu -->
         <div id="menu-placeholder"></div>
-        <main id="main-content-area" class="flex-grow"> <!-- Odstránil som triedu flex z main-content-area a spravím to cez style -->
-            <!-- Sem sme pridali triedu pre plynulú animáciu -->
-            <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
+        <main id="main-content-area" class="flex-grow">
+            <!-- Odstránili sme pomocný div, ktorý vytváral priestor pre zbalené menu -->
             <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <!-- Obsah aplikácie bude vykreslený tu, vrátane loadera -->
                 <!-- Loader bude riadený z logged-in-my-settings.js -->
