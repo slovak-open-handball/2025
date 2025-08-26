@@ -105,7 +105,6 @@
         }
     </style>
     <!-- Firebase SDKs - Aktualizované na verziu 11.6.1 pre kompatibilitu s authentication.js -->
-    <!-- Odstránená lokálna inicializácia Firebase, nakoľko sa inicializuje v authentication.js -->
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
@@ -114,20 +113,21 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Načítanie globálneho loadera a autentifikačného skriptu PRVÉ -->
+    <!-- Načítanie globálnych skriptov PRVÉ -->
     <script type="module" src="loader.js"></script>
     <script type="module" src="authentication.js"></script>
+    <!-- Načítanie skriptu pre hlavičku -->
+    <script type="module" src="header.js"></script>
+    <!-- Načítanie skriptu pre ľavé menu, ktoré si načíta svoje HTML samé -->
+    <script type="module" src="logged-in-left-menu.js"></script>
     
-    <!-- Globálne premenné (ak sú potrebné pre iné skripty pred React appkou) -->
-    <!-- appId a firebaseConfig sú už definované v authentication.js a sprístupnené globálne ak je potreba -->
-    <!-- initialAuthToken je tiež spracované v authentication.js -->
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
     <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky -->
+        <!-- Ľavé menu sa načíta dynamicky do tohto placeholderu -->
         <div id="menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
@@ -140,72 +140,14 @@
     <!-- Načítanie hlavného skriptu pre túto stránku (MySettingsApp) - Typ module pre React -->
     <script type="module" src="logged-in-my-settings.js"></script>
 
-    <!-- Načítanie hlavičky a logiky menu -->
+    <!-- Spustíme renderovanie React aplikácie po načítaní DOM -->
     <script type="module">
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
-            const headerPlaceholder = document.getElementById('header-placeholder');
-            if (headerPlaceholder) {
-                try {
-                    const response = await fetch('header.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const headerHtml = await response.text();
-                    headerPlaceholder.innerHTML = headerHtml;
-
-                    // Header.js je už typu module, takže ho načítať pomocou importu
-                    // Priamy import tu nie je možný, pretože sme v inline skripte.
-                    // header.js už má vlastný DOMContentLoaded listener pre spustenie window.loadHeaderAndScripts
-                    // takže stačí zabezpečiť, aby bol script tag prítomný v head.
-                    // Ale pre dynamické načítanie HTML a následné spustenie JS to je iné.
-                    // Najlepšie bude spoliehať sa na to, že header.js sa načíta sám a inicializuje svoju logiku.
-                    // Ak header.js obsahuje `window.loadHeaderAndScripts`, túto funkciu zavoláme.
-                    if (window.loadHeaderAndScripts) {
-                        await window.loadHeaderAndScripts();
-                        console.log("header.js logické funkcie spustené cez window.loadHeaderAndScripts.");
-                    } else {
-                        console.warn("window.loadHeaderAndScripts nie je definovaná. Uistite sa, že header.js je správne načítaný.");
-                    }
-                } catch (error) {
-                    console.error("Chyba pri načítaní hlavičky:", error);
-                }
-            }
-        }
-
-        // Funkcia na načítanie ľavého menu
-        async function loadLeftMenu() {
-            const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
-            if (leftMenuPlaceholder) {
-                try {
-                    const response = await fetch('logged-in-left-menu.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const menuHtml = await response.text();
-                    leftMenuPlaceholder.innerHTML = menuHtml;
-
-                    const menuScript = document.createElement('script');
-                    menuScript.type = 'module'; // Dôležité pre ES module
-                    menuScript.src = 'logged-in-left-menu.js';
-                    menuScript.onload = () => {
-                        console.log("logged-in-left-menu.js načítaný a spustený.");
-                        // window.updateMenuItemsVisibility je teraz definované v logged-in-left-menu.js
-                        // a volá sa z globalDataUpdated listenera v header.js (ktorý sa volá z authentication.js)
-                    };
-                    menuScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní logged-in-left-menu.js:", e);
-                    };
-                    document.body.appendChild(menuScript);
-                } catch (error) {
-                    console.error("Chyba pri načítaní ľavého menu:", error);
-                }
-            }
-        }
-
-        // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
             // Zobrazíme loader, kým sa všetko nenačíta
             window.showGlobalLoader();
 
-            await loadHeader();
-            await loadLeftMenu();
+            // Hlavička a ľavé menu sa budú spravovať svojimi vlastnými skriptami (header.js a logged-in-left-menu.js)
+            // Tieto skripty sa už načítali v <head> ako moduly a spravujú svoje HTML prvky.
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
@@ -214,13 +156,6 @@
                 window.hideGlobalLoader();
                 return;
             }
-            // Zabezpečíme, že MySettingsApp je definovaná
-            // Keďže logged-in-my-settings.js je type="module" a exportuje MySettingsApp ako window.MySettingsApp,
-            // je dôležité počkať, kým sa modul načíta a spustí.
-            // Spoliehame sa na to, že po načítaní scriptu type="module" MySettingsApp bude dostupné.
-            // V prípade race condition, môžeme použiť setTimeout alebo observer.
-            // Zjednodušene predpokladáme, že po `await` už bude dostupné.
-
             // Overíme, či sú globálne Firebase inštancie dostupné
             if (!window.auth || !window.db) {
                 console.error("Chyba: Firebase Auth alebo Firestore nie sú inicializované. Skontrolujte authentication.js.");
