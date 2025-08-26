@@ -40,10 +40,15 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu + nejaký padding */
+            /* Znovu zavádzame margin-left na posunutie obsahu za ľavé menu */
+            margin-left: 256px; /* Predpokladaná šírka ľavého menu (w-64) */
             padding: 1rem;
             flex-grow: 1;
+            display: flex; /* Pridáme display:flex pre main-content-area */
+            /* Odstránili sme justify-content a align-items z main-content-area */
+            min-width: 0;
         }
+        /* Media query pre menšie obrazovky */
         @media (max-width: 768px) {
             #main-content-area {
                 margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
@@ -129,10 +134,9 @@
     <div class="flex flex-1">
         <!-- Ľavé menu sa načíta dynamicky do tohto placeholderu -->
         <div id="menu-placeholder"></div>
-        <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
-            <!-- Sem sme pridali triedu pre plynulú animáciu -->
-            <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
-            <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main id="main-content-area" class="flex-grow flex justify-center items-start">
+            <!-- Obsah React aplikácie bude vycentrovaný v #root -->
+            <div id="root" class="flex-grow max-w-4xl w-full px-4 sm:px-6 lg:px-8 py-8">
                 <!-- Obsah aplikácie bude vykreslený tu, vrátane loadera -->
                 <!-- Loader bude riadený z logged-in-my-settings.js -->
             </div>
