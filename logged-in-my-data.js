@@ -273,6 +273,12 @@ const MyDataApp = ({ userProfileData }) => {
     const [registrationDatesData, setRegistrationDatesData] = useState(null);
     const [isRegistrationDataLoading, setIsRegistrationDataLoading] = useState(true);
 
+    // Nové stavy pre Firebase inštancie
+    const [firebaseApp, setFirebaseApp] = useState(null);
+    const [firestoreDb, setFirestoreDb] = useState(null);
+    const [firebaseAuth, setFirebaseAuth] = useState(null);
+
+
     // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
     useEffect(() => {
         if (userProfileData) {
@@ -284,27 +290,37 @@ const MyDataApp = ({ userProfileData }) => {
     // Firestore listener pre dáta o registrácii
     useEffect(() => {
         // Inicializácia Firebase a Auth, ak ešte nie sú globálne dostupné
-        let app, db, auth;
-        try {
-            if (typeof window.__firebase_config !== 'undefined') {
+        if (typeof window.__firebase_config !== 'undefined' && typeof window.__app_id !== 'undefined') {
+            try {
                 const firebaseConfig = JSON.parse(window.__firebase_config);
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-            } else {
-                console.warn("logged-in-my-data.js: __firebase_config nie je definovaný. Firestore listener nebude nastavený.");
+                const app = initializeApp(firebaseConfig);
+                const db = getFirestore(app);
+                const auth = getAuth(app);
+                setFirebaseApp(app);
+                setFirestoreDb(db);
+                setFirebaseAuth(auth);
+                console.log("logged-in-my-data.js: Firebase inicializované a uložené do stavu.");
+            } catch (error) {
+                console.error("logged-in-my-data.js: Chyba pri inicializácii Firebase pre listener registračných dát:", error);
                 setIsRegistrationDataLoading(false);
-                return;
             }
-        } catch (error) {
-            console.error("logged-in-my-data.js: Chyba pri inicializácii Firebase pre listener registračných dát:", error);
+        } else {
+            console.warn("logged-in-my-data.js: __firebase_config alebo __app_id nie je definovaný. Firebase inicializácia sa odkladá.");
             setIsRegistrationDataLoading(false);
             return;
         }
+    }, [typeof window.__firebase_config !== 'undefined' ? window.__firebase_config : null, typeof window.__app_id !== 'undefined' ? window.__app_id : null]);
+
+
+    // Listener pre registračné dáta z Firestore
+    useEffect(() => {
+        if (!firestoreDb || !firebaseApp) {
+            console.log("logged-in-my-data.js: Firestore DB alebo Firebase App nie sú pripravené pre registračné dáta.");
+            return;
+        }
         
-        // Používame window.__app_id na prístup ku globálnej premennej
         const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
-        const registrationDatesRef = doc(db, 'artifacts', appId, 'public', 'data', 'registrationDates', 'current');
+        const registrationDatesRef = doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'registrationDates', 'current');
         
         setIsRegistrationDataLoading(true);
         const unsubscribe = onSnapshot(registrationDatesRef, (docSnap) => {
@@ -324,7 +340,8 @@ const MyDataApp = ({ userProfileData }) => {
 
         // Funkcia na odhlásenie listenera pri odpojení komponentu
         return () => unsubscribe();
-    }, [typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id']); // Tiež aktualizované v závislostiach
+    }, [firestoreDb, firebaseApp, typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id']); // Závisí od inštancií Firebase a appId
+
 
     // Vypočítame deadlineMillis z registrationDatesData
     const dataEditDeadline = registrationDatesData?.dataEditDeadline;
@@ -458,6 +475,7 @@ const handleDataUpdateAndRender = (event) => {
 
     if (userProfileData) {
         // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
+        // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
             console.log("logged-in-my-data.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
             
