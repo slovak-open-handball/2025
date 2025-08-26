@@ -16,7 +16,7 @@ function MySettingsApp() {
   const [userProfileData, setUserProfileData] = React.useState(null);
   const [loading, setLoading] = React.useState(true); // Loading pre data v MySettingsApp
   const [error, setError] = React.useState(''); // Lokálny stav pre chybové správy
-  const [successMessage, setSuccessMessage] = React.useState(''); // Lokálny stav pre úspešné správy
+  const [successMessage, setSuccessMessage] = React.useState('');
 
   // Stavy pre užívateľské dáta (nastavenia notifikácií)
   const [displayNotifications, setDisplayNotifications] = React.useState(true);
@@ -56,11 +56,11 @@ function MySettingsApp() {
         setDisplayNotifications(globalProfileData.displayNotifications !== undefined ? globalProfileData.displayNotifications : true);
         
         setError(''); // Vyčistí chyby po úspešnom načítaní
-        setSuccessMessage(''); // Vyčistí úspešné správy po načítaní
+        setSuccessMessage('');
       } else {
         console.warn("MySettingsApp: Profilové dáta používateľa nie sú dostupné.");
         setError("Chyba: Profil používateľa nebol nájdený alebo nemáte dostatočné povolenia.");
-        setSuccessMessage(''); // Vyčistí úspešné správy pri chybe načítania
+        setSuccessMessage(''); 
       }
     };
 
@@ -96,20 +96,20 @@ function MySettingsApp() {
   const handleUpdateNotificationsSetting = async () => {
     if (!db || !user) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
-      setSuccessMessage(''); // Vyčistí úspešné správy
+      setSuccessMessage(''); 
       return;
     }
     setLoading(true);
     window.showGlobalLoader(); // Zobrazíme loader počas ukladania
     setError(''); // Vyčistí predchádzajúce chyby
-    setSuccessMessage(''); // Vyčistí predchádzajúce úspešné správy
+    setSuccessMessage(''); 
 
     try {
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, {
         displayNotifications: displayNotifications
       });
-      setSuccessMessage("Nastavenie notifikácií úspešne aktualizované!");
+      setSuccessMessage("Nastavenie notifikácií aktualizované!");
       // Automatické skrytie správy po 5 sekundách
       setTimeout(() => setSuccessMessage(''), 5000); 
     } catch (e) {
@@ -142,7 +142,7 @@ function MySettingsApp() {
       role: 'alert' 
     },
     error && React.createElement('strong', { className: 'font-bold' }, 'Chyba! '),
-    successMessage && React.createElement('strong', { className: 'font-bold' }, 'Úspech! '),
+    successMessage && React.createElement('strong', { className: 'font-bold' }, ''),
     React.createElement('span', { className: 'block sm:inline' }, error || successMessage)
   );
 
@@ -153,7 +153,6 @@ function MySettingsApp() {
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
-      // Zobrazenie lokálnej notifikačnej správy (chybovej alebo úspešnej) ako pop-up
       notificationElement,
       React.createElement(
         'div',
