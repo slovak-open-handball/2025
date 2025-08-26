@@ -339,6 +339,7 @@ const globalDataStore = (() => {
         // Add event listeners to global window events that might trigger changes
         window.addEventListener('globalDataUpdated', emitChange);
         window.addEventListener('categoriesLoaded', emitChange);
+        // Pridaný event listener pre zmeny v registrationDates
         window.addEventListener('registrationDatesUpdated', emitChange); 
         
         // Return a cleanup function
@@ -388,49 +389,59 @@ const MyDataApp = ({ userProfileData }) => {
     // Timer and logic to determine if data can be edited
     useEffect(() => {
         let timer; 
-        setCanEdit(false); // Default to false
+        
+        const updateCanEditStatus = () => {
+            // Default to false and then evaluate
+            setCanEdit(false); 
 
-        // Ensure user data and all necessary global data are ready
-        if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !registrationDates) {
-            console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky nie sú pripravené. Úpravy nie sú povolené.");
-            return;
-        }
+            // Ensure user data and all necessary global data are ready
+            if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !registrationDates) {
+                console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky nie sú pripravené. Úpravy nie sú povolené.");
+                return;
+            }
 
-        const isAdmin = userProfileData.role === 'admin';
-        if (isAdmin) {
-            setCanEdit(true);
-            console.log("logged-in-my-data.js: Admin môže vždy upravovať. canEdit nastavené na TRUE.");
-            return; 
-        }
+            const isAdmin = userProfileData.role === 'admin';
+            if (isAdmin) {
+                setCanEdit(true);
+                console.log("logged-in-my-data.js: Admin môže vždy upravovať. canEdit nastavené na TRUE.");
+                return; 
+            }
 
-        // For non-admin users, check registration data and deadline
-        if (deadlineMillis !== null) { 
-            const nowMillis = Date.now();
-            
-            console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
-            console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
-            console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
+            // For non-admin users, check registration data and deadline
+            if (deadlineMillis !== null) { 
+                const nowMillis = Date.now();
+                
+                console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
+                console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
+                console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
 
-            if (nowMillis <= deadlineMillis) { 
-                setCanEdit(true); 
-                console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
+                if (nowMillis <= deadlineMillis) { 
+                    setCanEdit(true); 
+                    console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
 
-                if (timer) clearTimeout(timer);
-                if (deadlineMillis - nowMillis > 0) {
-                    timer = setTimeout(() => {
-                        setCanEdit(false);
-                        console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy.");
-                    }, deadlineMillis - nowMillis); 
+                    // Zrušíme predošlý časovač, ak existuje, aby sme predišli duplikátom alebo nesprávnym oneskoreniam
+                    if (timer) clearTimeout(timer);
+                    // Nastavíme nový časovač len ak je deadline v budúcnosti
+                    if (deadlineMillis - nowMillis > 0) {
+                        timer = setTimeout(() => {
+                            setCanEdit(false);
+                            console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy.");
+                        }, deadlineMillis - nowMillis + 100); // Pridáme malé oneskorenie pre istotu
+                    }
+                } else {
+                    setCanEdit(false);
+                    console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
                 }
             } else {
                 setCanEdit(false);
-                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
+                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta nie sú načítané/dostupné/platné (deadlineMillis je null).");
             }
-        } else {
-            setCanEdit(false);
-            console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta nie sú načítané/dostupné/platné (deadlineMillis je null).");
-        }
+        };
 
+        // Zavolaj funkciu hneď pri prvom renderovaní a pri každej zmene závislostí
+        updateCanEditStatus();
+
+        // Čistiacia funkcia pre useEffect
         return () => {
             if (timer) {
                 clearTimeout(timer);
