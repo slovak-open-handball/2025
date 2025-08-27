@@ -347,17 +347,21 @@ function App() {
       console.log("Attempting to save user to Firestore with initial data:", userDataToSave);
 
       try {
-        // --- Transakcia pre atómovú operáciu (zápis admina + inkrementácia počítadla) ---
+        // --- Opravená Transakcia pre atómovú operáciu (zápis admina + inkrementácia počítadla) ---
+        // Správne poradie: Všetky čítania pred všetkými zápismi
         await runTransaction(db, async (transaction) => {
           const userDocRef = doc(db, 'users', userCredential.user.uid);
           const settingsDocRef = doc(db, 'settings', 'adminCount');
           
-          // Zápis nového používateľa
+          // Najprv si prečítame dokument, ak existuje. Toto je READ operácia.
+          const settingsDoc = await transaction.get(settingsDocRef);
+          
+          // Teraz vykonáme všetky ZÁPISY.
+          // 1. Zápis nového používateľa
           transaction.set(userDocRef, userDataToSave);
 
-          // Ak bol používateľ schválený, inkrementujte počítadlo
+          // 2. Podmienený zápis pre počítadlo
           if (approvedStatus) {
-            const settingsDoc = await transaction.get(settingsDocRef);
             if (settingsDoc.exists()) {
               transaction.update(settingsDocRef, { count: increment(1) });
             } else {
@@ -366,7 +370,7 @@ function App() {
             }
           }
         });
-        // --- Koniec transakcie ---
+        // --- Koniec opravenej transakcie ---
 
         console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením '${approvedStatus}' bol uložený. Počítadlo adminCount bolo aktualizované.`);
 
