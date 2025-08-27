@@ -4,12 +4,11 @@
 
 // Importy pre Firebase Auth a Firestore (modulárny prístup, SDK v11)
 import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanty pre reCAPTCHA a Apps Script URL
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-const GOOGLE_APPS_SCRIPT_EMAIL_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
-const GOOGLE_APPS_SCRIPT_DB_URL = "https://script.google.com/macros/s/AKfycby6wUq81pxqT-Uf_8BtN-cKHjhMDtB1V-cDBdcJElZP4VDmfa53lNfPgudsxnmQ0Y3T/exec";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 /**
  * Komponent pre zadávanie hesla s prepínačom viditeľnosti.
@@ -27,7 +26,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     const EyeOffIcon = React.createElement(
         'svg',
         { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-        React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
         React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
         React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
     );
@@ -37,7 +36,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     return React.createElement(
         'div',
         { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, 'Heslo'),
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
         React.createElement(
             'div',
             { className: 'relative' },
@@ -52,7 +51,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
                 onCut: (e) => e.preventDefault(),
                 required: true,
                 placeholder: placeholder,
-                autoComplete: 'new-password',
+                autoComplete: autoComplete,
                 disabled: disabled,
                 onFocus: onFocus
             }),
@@ -65,6 +64,40 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
                     disabled: disabled,
                 },
                 showPassword ? EyeIcon : EyeOffIcon
+            )
+        ),
+        // Zobrazenie zoznamu požiadaviek na heslo, ak je stav validácie definovaný
+        validationStatus && React.createElement(
+            'div',
+            { className: `text-xs italic mt-1 text-gray-600` },
+            'Heslo musí obsahovať:',
+            React.createElement(
+                'ul',
+                { className: 'list-none pl-4' },
+                React.createElement(
+                    'li',
+                    { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
+                    React.createElement('span', { className: 'mr-2' }, validationStatus.minLength ? '✔' : '•'),
+                    'aspoň 10 znakov,'
+                ),
+                React.createElement(
+                    'li',
+                    { className: `flex items-center ${validationStatus.hasUpperCase ? 'text-green-600' : 'text-gray-600'}` },
+                    React.createElement('span', { className: 'mr-2' }, validationStatus.hasUpperCase ? '✔' : '•'),
+                    'aspoň jedno veľké písmeno,'
+                ),
+                React.createElement(
+                    'li',
+                    { className: `flex items-center ${validationStatus.hasLowerCase ? 'text-green-600' : 'text-gray-600'}` },
+                    React.createElement('span', { className: 'mr-2' }, validationStatus.hasLowerCase ? '✔' : '•'),
+                    'aspoň jedno malé písmeno,'
+                ),
+                React.createElement(
+                    'li',
+                    { className: `flex items-center ${validationStatus.hasNumber ? 'text-green-600' : 'text-gray-600'}` },
+                    React.createElement('span', { className: 'mr-2' }, validationStatus.hasNumber ? '✔' : '•'),
+                    'aspoň jednu číslicu.'
+                )
             )
         )
     );
@@ -141,7 +174,6 @@ function App() {
     const [lastName, setLastName] = React.useState('');
     const [showPasswordReg, setShowPasswordReg] = React.useState(false);
     const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
-    const [adminCount, setAdminCount] = React.useState(null);
     
     // Stavy pre sledovanie validácie hesla a e-mailu
     const [passwordValidationStatus, setPasswordValidationStatus] = React.useState({
@@ -164,42 +196,6 @@ function App() {
             console.log("AdminRegisterApp: Waiting for Auth and DB initialization from authentication.js.");
         }
     }, [auth, db, isAuthReady]);
-
-    // NOVÝ Efekt: Sledovanie počítadla administrátorov v reálnom čase
-    // Využíva onSnapshot na načítanie a vypísanie hodnoty count do konzoly.
-    React.useEffect(() => {
-        if (!db || !isAuthReady) {
-            return;
-        }
-
-        const adminCountDocRef = doc(db, 'settings', 'adminCount');
-        const unsubscribe = onSnapshot(adminCountDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data && data.count !== undefined) {
-                    console.log("Údaj z databázy z /settings/adminCount: ", data.count);
-                    // Aktualizácia stavu, ak je to potrebné pre budúce použitie v UI
-                    setAdminCount(data.count);
-                } else {
-                    console.log("Dokument adminCount existuje, ale neobsahuje pole 'count'.");
-                    setAdminCount(null);
-                }
-            } else {
-                console.log("Dokument /settings/adminCount neexistuje.");
-                setAdminCount(null);
-            }
-        }, (error) => {
-            console.error("Chyba pri sledovaní dokumentu adminCount:", error);
-            setErrorMessage(`Chyba pri získavaní počítadla adminov: ${error.message}`);
-        });
-
-        // Cleanup funkcia pre odhlásenie z onSnapshot listenera pri unmount komponentu
-        return () => {
-            unsubscribe();
-            console.log("onSnapshot listener pre adminCount bol odhlásený.");
-        };
-    }, [db, isAuthReady]);
-
 
     // Efekt pre validáciu hesla pri každej zmene
     React.useEffect(() => {
@@ -249,17 +245,10 @@ function App() {
         setFormSubmitting(true);
         setErrorMessage('');
         setSuccessMessage('');
-        
-        // Kľúčový krok: Signalizujeme, že prebieha proces registrácie.
-        if (typeof window !== 'undefined') {
-            window.isRegisteringAdmin = true;
-            console.log("Global flag 'isRegisteringAdmin' set to true to prevent premature logout.");
-        }
 
         try {
             // Krok 1: Vytvorenie používateľa vo Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const userId = userCredential.user.uid;
 
             // Krok 2: Uloženie počiatočných údajov používateľa do Firestore
             const userDataToSave = {
@@ -278,6 +267,7 @@ function App() {
 
             try {
                 // Nový používateľ sa ukladá na rovnaké miesto ako v register.js
+                const userId = userCredential.user.uid;
                 const userDocRef = doc(db, 'users', userId);
                 await setDoc(userDocRef, userDataToSave);
                 console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved to the 'users' collection.`);
@@ -289,67 +279,56 @@ function App() {
                 return;
             }
             
-            // Krok 3: Poslanie notifikácie a aktualizácia počítadla na Google Apps Script (e-mail a DB akcie)
-            // Tieto akcie vyžadujú vyššie oprávnenia, a preto ich presúvame na server.
-            
-            // Poslanie e-mailovej notifikácie
+            // Krok 3: Poslanie notifikácie na Google Apps Script (e-mail)
             try {
-                const emailPayload = {
-                    action: 'registerAdmin',
-                    userId: userId,
+                const payload = {
+                    action: 'sendRegistrationEmail',
                     email: email,
+                    isAdmin: true,
                     firstName: firstName,
                     lastName: lastName,
                 };
-                console.log("Sending data to Apps Script for email notification:", emailPayload);
+                console.log("Sending data to Apps Script (admin registration email):", payload);
                 
-                await fetch(GOOGLE_APPS_SCRIPT_EMAIL_URL, {
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     mode: 'no-cors',
-                    body: JSON.stringify(emailPayload)
+                    body: JSON.stringify(payload)
                 });
-                console.log("Response from Apps Script (email notification) with no-cors: OK");
+
+                console.log("Response from Apps Script (admin registration email) with no-cors: OK");
+
             } catch (emailError) {
-                console.error("Error sending admin registration email via Apps Script:", emailError);
-                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa poslať e-mailovú notifikáciu. Chyba: ${emailError.message}.`);
-            }
-
-            // Aktualizácia počítadla adminov v databáze
-            try {
-                const dbPayload = {
-                    action: 'incrementAdminCount'
-                };
-                console.log("Sending data to Apps Script for DB update:", dbPayload);
-
-                await fetch(GOOGLE_APPS_SCRIPT_DB_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    mode: 'no-cors',
-                    body: JSON.stringify(dbPayload)
-                });
-                console.log("Response from Apps Script (DB update) with no-cors: OK");
-            } catch (dbError) {
-                console.error("Error updating admin count via Apps Script:", dbError);
-                // Nastavenie chyby bez prerušenia procesu, pretože hlavná registrácia bola úspešná
-                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa aktualizovať počítadlo administrátorov. Chyba: ${dbError.message}.`);
+                console.error("Error sending admin registration email via Apps Script (fetch error):", emailError);
+                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa odoslať potvrdzovací e-mail: ${emailError.message}.`);
             }
             
-            // Krok 4: oneskorené odhlásenie používateľa
-            console.log("Všetky dáta boli úspešne zapísané. Odhlásenie prebehne o 5 sekúnd.");
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            console.log("Čas odpočítavania uplynul. Odhlasujem používateľa...");
-            // Odhlásenie, aby nový admin nebol automaticky prihlásený.
-            await signOut(auth);
-            console.log("Používateľ bol úspešne odhlásený.");
+            // Krok 4: Uloženie notifikácie do Firestore pre ostatných administrátorov
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
+                const adminNotificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
+                
+                await addDoc(adminNotificationsCollectionRef, {
+                    message: notificationMessage,
+                    timestamp: serverTimestamp(),
+                    recipientId: 'all_admins',
+                    read: false
+                });
+                console.log("Notification about new administrator registration successfully saved to Firestore.");
+            } catch (e) {
+                console.error("App: Error saving notification about administrator registration:", e);
+            }
 
             // Nastavenie správy o úspešnej registrácii a zastavenie spinnera
-            setSuccessMessage(`Administrátorský účet pre ${email} sa úspešne zaregistroval. Na vašu e-mailovú adresu sme poslali potvrdenie. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
+            setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
 
+            // Odhlásenie, aby nový admin nebol automaticky prihlásený.
+            // Toto sa vykoná až po úspešnom zápise do databázy a odoslaní e-mailu.
+            await signOut(auth);
 
         } catch (e) {
             console.error("Error during registration (Auth or other):", e);
@@ -364,13 +343,8 @@ function App() {
                 setErrorMessage(`Chyba pri registrácii: ${e.message}`);
             }
         } finally {
-            // Vždy zastaviť načítavanie po pokuse o registráciu
+             // Vždy zastaviť načítavanie po pokuse o registráciu
             setFormSubmitting(false);
-            // Kľúčový krok: Po dokončení procesu (úspech/neúspech) resetujeme globálnu premennú.
-            if (typeof window !== 'undefined') {
-                window.isRegisteringAdmin = false;
-                console.log("Global flag 'isRegisteringAdmin' set to false.");
-            }
         }
     };
 
@@ -427,25 +401,12 @@ function App() {
         passwordValidationStatus.isValid &&
         isConfirmPasswordMatching;
 
-    // Dynamické triedy pre tlačidlo
-    const buttonClasses = `
-        font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
-        ${formSubmitting || !isFormValid
-            ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
-            : 'bg-green-500 hover:bg-green-700 text-white'
-        }
-    `;
-
     // Zobrazenie načítavacej obrazovky pri inicializácii
     if (pageLoading) {
         return React.createElement(
             'div',
             { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-            React.createElement(
-                'div',
-                { className: 'flex justify-center pt-16' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-            )
+            React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
         );
     }
 
@@ -478,6 +439,15 @@ function App() {
             )
         );
     }
+
+    // Dynamické triedy pre tlačidlo
+    const buttonClasses = `
+        font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+        ${formSubmitting || !isFormValid
+            ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
+            : 'bg-green-500 hover:bg-green-700 text-white'
+        }
+    `;
 
     // Zobrazenie registračného formulára
     return React.createElement(
