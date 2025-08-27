@@ -3,7 +3,7 @@
 // Využíva globálne inštancie Firebase (auth, db) poskytnuté z modulu authentication.js.
 
 // Importy pre Firebase Auth a Firestore (modulárny prístup, SDK v11)
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanty pre reCAPTCHA a Apps Script URL
@@ -266,12 +266,16 @@ function App() {
             console.log("Attempting to save user to Firestore with initial data:", userDataToSave);
 
             try {
-                const userDocRef = doc(db, 'users', userCredential.user.uid);
+                // Nový používateľ sa ukladá na rovnaké miesto ako v register.js
+                const userId = userCredential.user.uid;
+                const userDocRef = doc(db, 'users', userId);
                 await setDoc(userDocRef, userDataToSave);
-                console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved.`);
+                console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved to the 'users' collection.`);
             } catch (firestoreError) {
                 console.error("Error saving/updating Firestore:", firestoreError);
                 setErrorMessage(`Chyba pri ukladaní používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
+                // Odhlásenie pri chybe, aby sa zabránilo nekonečnej slučke
+                await signOut(auth);
                 return;
             }
             
@@ -322,7 +326,8 @@ function App() {
             // Nastavenie správy o úspešnej registrácii a zastavenie spinnera
             setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
 
-            // Odhlásenie, aby nový admin nebol automaticky prihlásený
+            // Odhlásenie, aby nový admin nebol automaticky prihlásený.
+            // Toto sa vykoná až po úspešnom zápise do databázy a odoslaní e-mailu.
             await signOut(auth);
 
         } catch (e) {
