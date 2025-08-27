@@ -8,7 +8,7 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 // Added 'validationStatus' prop for detailed visual indication of password validity
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Added onFocus prop
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Removed preDescription from prop list
   // SVG icons for eye (show password) and crossed-out eye (hide password)
   const EyeIcon = React.createElement(
     'svg',
@@ -31,11 +31,6 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       'label',
       { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id },
       label
-    ),
-    preDescription && React.createElement(
-      'p',
-      { className: 'text-gray-500 text-xs italic mb-2' },
-      preDescription
     ),
     React.createElement(
       'input',
@@ -415,4 +410,6 @@ export function App() {
     })
   );
 }
+
+// Ensure the App component is globally available for the inline script in admin-register.html
 window.App = App;
