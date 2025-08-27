@@ -100,13 +100,14 @@ function UsersManagementApp() {
         setLoading(false);
         return;
       }
+      
+      // UPRAVENÉ: Zmeníme kontrolu na základe tvojich pravidiel Firebase
+      const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
+      window.isCurrentUserAdmin = isUserAdmin;
 
-      const isAdmin = globalUserProfileData?.isAdmin;
-      window.isCurrentUserAdmin = isAdmin;
-
-      if (isAdmin) {
+      if (isUserAdmin) {
         // Ak je používateľ admin, začneme načítavať zoznam používateľov
-        const usersCollectionPath = `users`; // <--- UISTENIE SA, ŽE CESTA JE ROVNAKÁ AKO V authentication.js
+        const usersCollectionPath = `users`; 
         const usersCol = collection(db, usersCollectionPath);
         const q = query(usersCol);
 
@@ -134,11 +135,13 @@ function UsersManagementApp() {
 
   const handleToggleAdmin = async (user) => {
     try {
-      const userDocRef = doc(db, `users`, user.id); // <--- UISTENIE SA, ŽE CESTA JE ROVNAKÁ AKO V authentication.js
+      const userDocRef = doc(db, `users`, user.id); 
+      // UPRAVENÉ: Zmeníme isAdmin na rolu a nastavíme na 'admin' alebo 'user'
+      const newRole = user.role === 'admin' ? 'user' : 'admin';
       await updateDoc(userDocRef, {
-        isAdmin: !user.isAdmin
+        role: newRole
       });
-      setNotification({ message: `Status administrátora pre ${user.displayName} bol úspešne zmenený.`, type: 'success' });
+      setNotification({ message: `Status administrátora pre ${user.displayName} bol úspešne zmenený na ${newRole}.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri zmene statusu administrátora:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť status administrátora.', type: 'error' });
@@ -147,7 +150,7 @@ function UsersManagementApp() {
 
   const handleDeleteUser = async (userIdToDelete) => {
     try {
-      const userDocRef = doc(db, `users`, userIdToDelete); // <--- UISTENIE SA, ŽE CESTA JE ROVNAKÁ AKO V authentication.js
+      const userDocRef = doc(db, `users`, userIdToDelete); 
       await deleteDoc(userDocRef);
       setNotification({ message: 'Používateľ bol úspešne odstránený.', type: 'success' });
     } catch (error) {
@@ -189,7 +192,7 @@ function UsersManagementApp() {
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'ID používateľa'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'E-mail'),
-            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Admin'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Rola'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Akcie')
           )
         ),
@@ -208,8 +211,8 @@ function UsersManagementApp() {
                 { className: 'px-6 py-4 whitespace-nowrap text-sm' },
                 React.createElement(
                   'span',
-                  { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isAdmin ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}` },
-                  user.isAdmin ? 'Áno' : 'Nie'
+                  { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}` },
+                  user.role
                 )
               ),
               React.createElement(
@@ -221,7 +224,7 @@ function UsersManagementApp() {
                     onClick: () => handleToggleAdmin(user),
                     className: 'text-indigo-600 hover:text-indigo-900 mr-4',
                   },
-                  'Zmeniť status'
+                  'Zmeniť rolu'
                 ),
                 React.createElement(
                   'button',
