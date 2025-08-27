@@ -86,6 +86,7 @@ function UsersManagementApp() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('info');
+  const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
 
   const db = window.db;
   const isAuthReady = window.isGlobalAuthReady;
@@ -99,6 +100,21 @@ function UsersManagementApp() {
       console.log("UsersManagementApp: Čakám na inicializáciu DB a autentifikácie.");
       return;
     }
+
+    // overíme, či je aktuálny používateľ admin
+    const fetchUserRole = async () => {
+      const userDocRef = doc(db, 'users', auth.currentUser.uid);
+      const docSnap = await getDoc(userDocRef);
+      if (docSnap.exists() && docSnap.data().role === 'admin') {
+        setIsCurrentUserAdmin(true);
+      } else {
+        setIsCurrentUserAdmin(false);
+      }
+      setLoading(false);
+    };
+
+    fetchUserRole();
+
 
     console.log("UsersManagementApp: Autentifikácia a DB sú pripravené, začínam načítavať používateľov.");
 
@@ -222,7 +238,6 @@ function UsersManagementApp() {
     }
   };
 
-
   if (loading) {
     return React.createElement(
       'div', {
@@ -231,6 +246,26 @@ function UsersManagementApp() {
       React.createElement('div', {
         className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500'
       })
+    );
+  }
+
+  // Ak nie je admin, zobrazíme chybovú správu
+  if (!isCurrentUserAdmin) {
+    return React.createElement(
+      'div', {
+        className: 'flex justify-center items-center h-screen bg-gray-100 p-4'
+      },
+      React.createElement(
+        'div', {
+          className: 'text-center p-8 bg-white rounded-lg shadow-md'
+        },
+        React.createElement('h1', {
+          className: 'text-2xl font-bold text-gray-800'
+        }, 'Prístup odmietnutý'),
+        React.createElement('p', {
+          className: 'mt-4 text-gray-600'
+        }, 'Nemáte oprávnenie na zobrazenie tejto stránky. Len administrátori majú prístup k správe používateľov.')
+      )
     );
   }
 
