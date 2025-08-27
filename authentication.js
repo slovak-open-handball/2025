@@ -12,6 +12,7 @@ window.reauthenticateWithCredential = null; // Funkcia pre re-autentifikáciu
 window.as = null; // Funkcia na zmenu emailu
 window.EmailAuthProvider = null; // Poskytovateľ autentifikácie pre email
 window.verifyBeforeUpdateEmail = null; // Funkcia na overenie emailu pred zmenu
+window.isRegisteringAdmin = false; // NOVÁ GLOBÁLNA PREMENNÁ: Signalizuje, že prebieha registrácia admina
 
 // Import necessary Firebase functions
 import {
@@ -59,7 +60,6 @@ const getAppBasePath = () => {
 };
 
 const appBasePath = getAppBasePath(); // Získanie dynamickej základnej cesty
-
 
 // Inicializácia Firebase aplikácie
 let app;
@@ -112,9 +112,6 @@ const handleAuthState = async () => {
                             console.error("AuthManager: Dokument profilu používateľa nebol nájdený ani po opakovaných pokusoch. Pravdepodobne nastal problém pri zápise.");
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                            // V tomto bode už môžeme odhlásiť, ak po viacerých pokusoch dokument stále neexistuje
-                            // alebo presmerovať na stránku s chybou.
-                            // Pre teraz sa len vynuluje globalUserProfileData.
                             return;
                         }
                     }
@@ -127,6 +124,14 @@ const handleAuthState = async () => {
                     window.unsubscribeUserDoc = onSnapshot(userDocRef, (snapshot) => {
                         if (snapshot.exists()) {
                             const userProfileData = { id: snapshot.id, ...snapshot.data() };
+                            
+                            // NOVÁ KONTROLA: Ak prebieha registrácia, neodhlasujeme
+                            if (window.isRegisteringAdmin) {
+                                console.log("AuthManager: Prebieha registrácia administrátora. Automatické odhlásenie je potlačené.");
+                                window.globalUserProfileData = userProfileData;
+                                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                return;
+                            }
                             
                             // Logika pre neschváleného administrátora
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
