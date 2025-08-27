@@ -86,19 +86,23 @@ function UsersManagementApp() {
   const [notificationType, setNotificationType] = useState("info");
   const notificationTimeoutRef = useRef(null);
 
-  // V Reactu je najlepšie získavať globálne dáta vo vnútri komponentu
-  // a zahrnúť ich do dependency array
+  // Získame globálne premenné z window
   const db = window.db;
   const appId = window.appId;
-  const userId = window.auth?.currentUser?.uid || 'anonymous';
+  const auth = window.auth;
 
   useEffect(() => {
-    // Čakáme, kým nebudú dostupné všetky globálne dáta z authentication.js a loader.js
-    if (!window.isGlobalAuthReady || !db || !appId) {
+    // Pred spustením Firebase operácií skontrolujeme, či sú všetky potrebné premenné definované
+    if (!db || !appId || !auth) {
         console.log("UsersManagementApp: Čakám na inicializáciu Firebase a ID aplikácie.");
+        setLoading(true);
+        // Neukončujeme, necháme useEffect spustiť znova, keď sa zmenia závislosti
         return;
     }
 
+    console.log("UsersManagementApp: Firebase a ID aplikácie sú dostupné. Načítavam dáta používateľov.");
+
+    const userId = auth.currentUser?.uid || 'anonymous';
     // Cesta ku kolekcii je teraz špecifická pre danú aplikáciu
     const usersCollectionPath = `artifacts/${appId}/public/users`;
     const usersCol = collection(db, usersCollectionPath);
@@ -118,7 +122,7 @@ function UsersManagementApp() {
     });
 
     return () => unsubscribe();
-  }, [db, appId, window.isGlobalAuthReady]); // Pridaná závislosť na appId a isGlobalAuthReady
+  }, [db, appId, auth]); // Pridaná závislosť na auth
 
   const showNotificationMessage = (message, type = 'success') => {
     setNotificationMessage(message);
@@ -157,7 +161,7 @@ function UsersManagementApp() {
     }
   };
 
-  const userRole = users.find(u => u.id === userId)?.isAdmin ? 'admin' : 'user';
+  const userRole = users.find(u => u.id === auth.currentUser?.uid)?.isAdmin ? 'admin' : 'user';
 
   if (loading) {
     return React.createElement(
