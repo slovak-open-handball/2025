@@ -3,15 +3,17 @@
 // sú globálne definované v <head> logged-in-users.html.
 // Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
 
-// Imports for necessary Firebase functions
+// Správne modulárne importy pre Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
+  getFirestore,
   collection,
   query,
   onSnapshot,
   doc,
   updateDoc,
-  deleteDoc,
-  getDoc
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanta pre Apps Script URL, ktorá je rovnaká ako v admin-register.js
@@ -217,43 +219,6 @@ async function sendApprovalEmail(email, firstName, lastName, userTeams, userCate
   }
 }
 
-// Funkcia na spracovanie schválenia používateľa (volaná z komponentu UserCard)
-async function handleApproveUser(user, showConfirmationModal, showNotification) {
-  // Zobrazí potvrdzovacie modálne okno
-  showConfirmationModal({
-    message: `Ste si istý, že chcete schváliť používateľa ${user.firstName} ${user.lastName} a poslať mu e-mail?`,
-    onConfirm: async () => {
-      try {
-        const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
-        
-        await updateDoc(userDocRef, {
-          role: 'admin',
-          pendingApproval: false,
-          approvedBy: auth.currentUser.uid,
-          approvedAt: new Date()
-        });
-
-        // Odoslanie e-mailu
-        const result = await sendApprovalEmail(user.email, user.firstName, user.lastName, user.teams, user.categories);
-        
-        if (result.success) {
-          showNotification('Používateľ bol schválený a e-mail bol úspešne odoslaný.', 'success');
-        } else {
-          showNotification(result.message || 'Chyba pri odosielaní e-mailu s potvrdením.', 'error');
-        }
-
-      } catch (e) {
-        console.error("Chyba pri schvaľovaní používateľa alebo posielaní e-mailu: ", e);
-        showNotification('Chyba pri schvaľovaní používateľa.', 'error');
-      }
-    },
-    onCancel: () => {
-      showNotification('Schválenie bolo zrušené.', 'info');
-    }
-  });
-}
-
-
 // Komponent pre správu jednotlivých používateľov
 function UserCard({ user, onApprove, onRoleChange, onDelete }) {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -286,7 +251,6 @@ function UserCard({ user, onApprove, onRoleChange, onDelete }) {
       onConfirm: async () => {
         setIsDeleting(true);
         try {
-          // Tu je logika premazania z Firestore
           const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
           await deleteDoc(userDocRef);
           showGlobalNotification('Používateľ bol úspešne vymazaný.', 'success');
@@ -323,7 +287,7 @@ function UserCard({ user, onApprove, onRoleChange, onDelete }) {
         React.createElement(
           'button',
           {
-            onClick: () => handleApproveUser(user, showConfirmationModal, showGlobalNotification), // Prepojenie na novú funkciu
+            onClick: () => onApprove(user), // Volá onApprove z nadradeného komponentu
             className: 'bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors'
           },
           'Schváliť'
@@ -358,57 +322,58 @@ function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [db, setDb] = useState(null);
+  const [auth, setAuth] = useState(null);
+  const [appId, setAppId] = useState(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   // Inicializácia Firebase a prihlásenie
   useEffect(() => {
-    // Vytvorenie a inicializácia Firebase App a Firestore/Auth inštancií
     try {
-      if (typeof window.firebaseApp === 'undefined') {
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        window.firebaseApp = firebase.initializeApp(firebaseConfig);
-        window.db = firebase.firestore(window.firebaseApp);
-        window.auth = firebase.auth(window.firebaseApp);
-      }
+      // Globálne premenné by mali byť dostupné v runtime
+      const localAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+      const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
       
-      const auth = window.auth;
-      
-      // Spracovanie prihlasovacieho tokenu
-      const handleAuth = async (token) => {
+      const app = initializeApp(firebaseConfig);
+      const authInstance = getAuth(app);
+      const dbInstance = getFirestore(app);
+
+      // Prihlásenie
+      const signIn = async () => {
         try {
-          if (token) {
-            await firebase.signInWithCustomToken(auth, token);
+          if (initialAuthToken) {
+            await signInWithCustomToken(authInstance, initialAuthToken);
             console.log("Prihlásenie s vlastným tokenom úspešné.");
           } else {
-            await firebase.signInAnonymously(auth);
+            await signInAnonymously(authInstance);
             console.log("Prihlásenie anonymne úspešné.");
           }
         } catch (authError) {
           console.error("Chyba pri prihlasovaní:", authError);
           setError("Chyba pri prihlasovaní. Skúste to prosím neskôr.");
         } finally {
-          setIsAuthReady(true);
+          // Uloženie inštancií do stavu
+          setDb(dbInstance);
+          setAuth(authInstance);
+          setAppId(localAppId);
+          setIsLoading(false);
         }
       };
 
-      if (typeof __initial_auth_token !== 'undefined') {
-        handleAuth(__initial_auth_token);
-      } else {
-        handleAuth(null);
-      }
+      signIn();
 
     } catch (e) {
       console.error("Inicializácia Firebase zlyhala:", e);
       setError("Inicializácia aplikácie zlyhala. Skúste to prosím neskôr.");
-      setIsAuthReady(true); // Umožní zobraziť chybovú správu
+      setIsLoading(false);
     }
   }, []);
 
-  // Načítanie používateľov z Firestore
+  // Načítanie používateľov z Firestore až po inicializácii
   useEffect(() => {
-    if (!isAuthReady || error) return;
+    if (!db || !auth || error) return;
 
     try {
       const q = query(collection(db, 'artifacts', appId, 'users'));
@@ -422,21 +387,71 @@ function UsersManagementApp() {
           });
         });
         setUsers(usersArray);
-        setIsLoading(false);
       }, (e) => {
         console.error("Chyba pri načítavaní používateľov: ", e);
         setError("Nepodarilo sa načítať údaje o používateľoch.");
-        setIsLoading(false);
       });
 
       return () => unsubscribe();
     } catch (e) {
       console.error("Nastavenie poslucháča Firestore zlyhalo: ", e);
       setError("Nepodarilo sa načítať údaje o používateľoch.");
-      setIsLoading(false);
     }
-  }, [isAuthReady, error]);
+  }, [db, auth, appId, error]);
 
+  const handleApproveUser = async (user) => {
+    // Zobrazí potvrdzovacie modálne okno
+    showConfirmationModal({
+      message: `Ste si istý, že chcete schváliť používateľa ${user.firstName} ${user.lastName} a poslať mu e-mail?`,
+      onConfirm: async () => {
+        try {
+          const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
+          
+          await updateDoc(userDocRef, {
+            role: 'admin',
+            pendingApproval: false,
+            approvedBy: auth.currentUser.uid,
+            approvedAt: new Date()
+          });
+
+          // Odoslanie e-mailu
+          const result = await sendApprovalEmail(user.email, user.firstName, user.lastName, user.teams, user.categories);
+          
+          if (result.success) {
+            window.showGlobalNotification('Používateľ bol schválený a e-mail bol úspešne odoslaný.', 'success');
+          } else {
+            window.showGlobalNotification(result.message || 'Chyba pri odosielaní e-mailu s potvrdením.', 'error');
+          }
+
+        } catch (e) {
+          console.error("Chyba pri schvaľovaní používateľa alebo posielaní e-mailu: ", e);
+          window.showGlobalNotification('Chyba pri schvaľovaní používateľa.', 'error');
+        }
+      },
+      onCancel: () => {
+        window.showGlobalNotification('Schválenie bolo zrušené.', 'info');
+      }
+    });
+  };
+
+  const handleDeleteUser = async (user, showConfirmationModal) => {
+    showConfirmationModal({
+      message: `Ste si istý, že chcete vymazať používateľa ${user.firstName} ${user.lastName}? Táto akcia je nezvratná.`,
+      onConfirm: async () => {
+        try {
+          const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
+          await deleteDoc(userDocRef);
+          window.showGlobalNotification('Používateľ bol úspešne vymazaný.', 'success');
+        } catch (e) {
+          console.error("Chyba pri mazaní používateľa: ", e);
+          window.showGlobalNotification('Chyba pri mazaní používateľa.', 'error');
+        }
+      },
+      onCancel: () => {
+        window.showGlobalNotification('Mazanie používateľa bolo zrušené.', 'info');
+      }
+    });
+  };
 
   const handleRoleChange = async (userId, newRole) => {
     try {
@@ -480,9 +495,9 @@ function UsersManagementApp() {
           React.createElement(UserCard, {
             key: user.id,
             user: user,
-            onApprove: (approvedUser) => handleApproveUser(approvedUser, showConfirmationModal),
+            onApprove: handleApproveUser,
             onRoleChange: handleOpenRoleModal,
-            onDelete: (deletedUser) => handleDeleteUser(deletedUser, showConfirmationModal)
+            onDelete: handleDeleteUser
           })
         )
       )
@@ -501,16 +516,30 @@ function UsersManagementApp() {
   );
 }
 
+// Funkcia na zobrazenie potvrdzovacieho modálneho okna (mimo komponentu)
+function showConfirmationModal(config) {
+  let modalRoot = document.getElementById('confirmation-modal-root');
+  if (!modalRoot) {
+    modalRoot = document.createElement('div');
+    modalRoot.id = 'confirmation-modal-root';
+    document.body.appendChild(modalRoot);
+  }
+  const root = ReactDOM.createRoot(modalRoot);
+  root.render(React.createElement(ConfirmationModal, {
+    ...config,
+    onCancel: () => {
+      config.onCancel();
+      root.unmount();
+    },
+    onConfirm: async () => {
+      await config.onConfirm();
+      root.unmount();
+    }
+  }));
+}
+
 // Vykreslíme loader a zaregistrujeme poslucháča udalostí
 const rootElement = document.getElementById('users-management-root');
-if (rootElement) {
-    rootElement.innerHTML = `
-        <div class="flex justify-center pt-16">
-            <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
-        </div>
-    `;
-}
-// Vykreslíme hlavnú aplikáciu
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(React.createElement(UsersManagementApp, null));
