@@ -279,8 +279,8 @@ function UsersManagementApp() {
     try {
       const userDocRef = doc(db, `users`, userToDelete.id);
       
-      // Check if the user being deleted is an admin
-      if (userToDelete.role === 'admin') {
+      // Check if the user being deleted is an approved admin
+      if (userToDelete.role === 'admin' && userToDelete.approved === true) {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
         
