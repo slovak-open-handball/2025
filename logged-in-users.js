@@ -80,7 +80,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 const { useState, useEffect, useRef } = React;
 
-// NOVINKA: Komponent pre potvrdzovacie modálne okno
+// Komponent pre potvrdzovacie modálne okno
 function ConfirmationModal({ message, onConfirm, onCancel }) {
   return React.createElement(
     'div',
@@ -427,7 +427,10 @@ function UsersManagementApp() {
   }
   
   const isCurrentUserOldestAdmin = window.currentUserId === oldestAdminId;
-  const isMoreThanOneApprovedAdmin = users.filter(u => u.role === 'admin' && u.approved).length > 1;
+  
+  // Zjednodu\u0161en\u00e1 podmienka pre odstra\u0148ovanie. Superadministr\u00e1tor m\u00f4\u017Ee odstr\u00e1ni\u0165 kohoko\u013Evek okrem seba.
+  const canDeleteUser = isCurrentUserOldestAdmin && (user => user.id !== window.currentUserId);
+
 
   // Funkcia na triedenie pou\u017E\u00EDvate\u013Eov
   const sortUsers = (usersList) => {
@@ -486,7 +489,7 @@ function UsersManagementApp() {
             const isNotCurrentUser = user.id !== window.currentUserId;
             const isUserOldestAdmin = user.id === oldestAdminId;
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
-            const canDeleteUser = isCurrentUserOldestAdmin && isNotCurrentUser && (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin));
+            const canDelete = isCurrentUserOldestAdmin && isNotCurrentUser;
             
             // Logika na skrytie riadku pre ostatn\u00fdch pou\u017E\u00EDvate\u013Eov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
@@ -528,7 +531,7 @@ function UsersManagementApp() {
                       },
                       'Zmeni\u0165 rolu'
                     ),
-                    (canDeleteUser) &&
+                    (canDelete) &&
                     React.createElement(
                       'button',
                       {
