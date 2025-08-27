@@ -172,14 +172,11 @@ function UsersManagementApp() {
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
-  // ZMENA: Stav pre ID prvého admina (najstaršieho podľa registrationDate)
   const [oldestAdminId, setOldestAdminId] = useState(null);
   
-  // NOVINKA: Stav pre ukladanie URL adresy Google Apps Script
   const googleScriptUrl = 'https://script.google.com/macros/s/AKfycby6wUq81pxqT-Uf_8BtN-cKHjhMDtB1V-cDBdcJElZP4VDmfa53lNfPgudsxnmQ0Y3T/exec';
   const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
 
-  // Získame globálne premenné z window
   const db = window.db;
   const appId = window.appId;
   const auth = window.auth;
@@ -197,7 +194,7 @@ function UsersManagementApp() {
       
       const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
       window.isCurrentUserAdmin = isUserAdmin;
-      window.currentUserId = auth.currentUser?.uid; // Uloženie ID aktuálneho používateľa
+      window.currentUserId = auth.currentUser?.uid;
       
       if (isUserAdmin) {
         const usersCollectionPath = `users`; 
@@ -210,16 +207,14 @@ function UsersManagementApp() {
             ...doc.data()
           }));
           
-          // OPRAVA CHYBY: Logika na nájdenie najstaršieho admina pomocou sort()
+          // OPRAVA CHYBY: Logika na nájdenie najstaršieho admina s použitím null-safe operátora
           const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
           if (adminUsers.length > 0) {
-            // Správne zoradenie adminov podľa dátumu registrácie
             adminUsers.sort((a, b) => {
               const dateA = a.registrationDate?.toDate ? a.registrationDate.toDate() : new Date(0);
               const dateB = b.registrationDate?.toDate ? b.registrationDate.toDate() : new Date(0);
               return dateA - dateB;
             });
-            // Nastavenie ID najstaršieho admina
             setOldestAdminId(adminUsers[0].id);
           } else {
             setOldestAdminId(null);
@@ -243,13 +238,11 @@ function UsersManagementApp() {
 
   const handleChangeRole = async (userId, newRole) => {
     try {
-      // NOVINKA: Určenie, či by mal byť používateľ schválený na základe novej roly
       const isApproved = newRole !== 'admin';
-
       const userDocRef = doc(db, `users`, userId);
       await updateDoc(userDocRef, {
         role: newRole,
-        approved: isApproved // NOVINKA: Nastavenie approved na základe roly
+        approved: isApproved
       });
       setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
     } catch (error) {
@@ -258,16 +251,13 @@ function UsersManagementApp() {
     }
   };
   
-  // ZMENA: Upravená funkcia handleDeleteUser, ktorá teraz volá Google Apps Script
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
     try {
-      // Krok 1: Odstránenie dokumentu z Firestore
       const userDocRef = doc(db, `users`, userToDelete.id);
       await deleteDoc(userDocRef);
 
-      // Krok 2: Volanie Google Apps Script na odstránenie z Authentication
       const payload = {
         action: 'deleteUser',
         uid: userToDelete.id,
@@ -275,7 +265,7 @@ function UsersManagementApp() {
 
       const response = await fetch(googleScriptUrl, {
         method: 'POST',
-        mode: 'no-cors', // Dôležité pre správne fungovanie
+        mode: 'no-cors',
         cache: 'no-cache',
         headers: {
           'Content-Type': 'application/json',
@@ -293,7 +283,6 @@ function UsersManagementApp() {
     }
   };
 
-  // NOVINKA: funkcia pre odoslanie e-mailu o schválení admina
   const sendApprovalEmail = async (userEmail) => {
     if (!googleScriptUrl_for_email) {
       console.error("Google Apps Script URL nie je definovaná.");
@@ -311,7 +300,7 @@ function UsersManagementApp() {
   
       const response = await fetch(googleScriptUrl_for_email, {
         method: 'POST',
-        mode: 'no-cors', // Dôležité pre správne fungovanie
+        mode: 'no-cors',
         cache: 'no-cache',
         headers: {
           'Content-Type': 'application/json',
@@ -319,8 +308,6 @@ function UsersManagementApp() {
         body: JSON.stringify(payload),
       });
   
-      // Pre no-cors režim nemôžeme priamo skontrolovať odpoveď,
-      // ale môžeme predpokladať, že požiadavka bola odoslaná.
       console.log('Požiadavka na odoslanie e-mailu odoslaná.');
       setNotification({ message: `E-mail o schválení bol odoslaný na ${userEmail}.`, type: 'success' });
     } catch (error) {
@@ -336,7 +323,6 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         approved: true
       });
-      // NOVINKA: Po úspešnom schválení vo Firestore odošleme e-mail
       await sendApprovalEmail(userEmail);
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
     } catch (error) {
@@ -428,8 +414,6 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
-                // NOVINKA: Kontrola, či je používateľ aktuálne prihlásený, a skrytie tlačidiel
-                // NOVINKA: Zobrazenie tlačidla na schválenie, ak je rola 'admin' a 'approved' je false
                 user.id !== window.currentUserId ?
                 React.createElement(React.Fragment, null,
                   (user.role === 'admin' && user.approved === false) && React.createElement(
