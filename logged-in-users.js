@@ -106,7 +106,9 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               onChange: (e) => setSelectedRole(e.target.value),
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
-            React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' }, role)
+            React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' }, 
+              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Používateľ'
+            )
           )
         )
       ),
@@ -195,7 +197,7 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         role: newRole
       });
-      setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
+      setNotification({ message: `Rola používateľa bola zmenená na ${newRole}.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
@@ -233,6 +235,19 @@ function UsersManagementApp() {
       }
   };
 
+  // NOVINKA: Funkcia na preklad názvov rolí
+  const getTranslatedRole = (role) => {
+      switch (role) {
+          case 'admin':
+              return 'Administrátor';
+          case 'hall':
+              return 'Športová hala';
+          case 'user':
+              return 'Používateľ';
+          default:
+              return role;
+      }
+  };
 
   return React.createElement(
     'div',
@@ -272,7 +287,7 @@ function UsersManagementApp() {
                 React.createElement(
                   'span',
                   { style: { color: getRoleColor(user.role) }, className: 'font-semibold' },
-                  user.role
+                  getTranslatedRole(user.role)
                 )
               ),
               React.createElement(
