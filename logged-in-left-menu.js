@@ -21,6 +21,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
     const mySettingsLink = document.getElementById('my-settings-link'); // NOVINKA: Získanie odkazu na moje nastavenia
+    const allUsersLink = document.getElementById('all-users-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -73,6 +74,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             tournamentSettingsLink.classList.remove('hidden'); 
             allRegistrationsLink.classList.remove('hidden');
             mySettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na moje nastavenia
+            allUsersLink.classList.remove('hidden');
         } else {
             addCategoriesLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
