@@ -415,3 +415,4 @@ export function App() {
     })
   );
 }
+window.App = App;
