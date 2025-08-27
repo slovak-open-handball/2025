@@ -83,21 +83,21 @@ function UsersManagementApp() {
   const [loading, setLoading] = useState(true);
   const notificationTimeoutRef = useRef(null);
 
-  // Získame globálne premenné z window
   const db = window.db;
   const appId = window.appId;
   const auth = window.auth;
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      // Pred spustením akejkoľvek operácie skontrolujeme, či sú globálne premenné dostupné
+      if (!db || !appId || !auth || !auth.currentUser) {
+        console.log("UsersManagementApp: Čakám na inicializáciu Firebase a ID aplikácie.");
+        setLoading(true);
+        return;
+      }
+      
       try {
-        if (!db || !appId || !auth || !auth.currentUser) {
-            console.log("UsersManagementApp: Čakám na inicializáciu Firebase a ID aplikácie.");
-            return;
-        }
-
-        // Načítanie role používateľa
+        // Načítanie roly používateľa
         const userDocRef = doc(db, `artifacts/${appId}/public/users`, auth.currentUser.uid);
         const docSnapshot = await getDoc(userDocRef);
         const userRoleData = docSnapshot.data();
@@ -136,6 +136,7 @@ function UsersManagementApp() {
 
     fetchData();
   }, [db, appId, auth]);
+
 
   const showNotificationMessage = (message, type = 'success') => {
     window.showGlobalNotification(message, type);
