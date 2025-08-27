@@ -174,7 +174,8 @@ function UsersManagementApp() {
   const [userToDelete, setUserToDelete] = useState(null);
   
   // NOVINKA: Stav pre ukladanie URL adresy Google Apps Script
-  const googleScriptUrl = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
+  const googleScriptUrl = 'https://script.google.com/macros/s/AKfycby6wUq81pxqT-Uf_8BtN-cKHjhMDtB1V-cDBdcJElZP4VDmfa53lNfPgudsxnmQ0Y3T/exec';
+  const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
 
   // Získame globálne premenné z window
   const db = window.db;
@@ -239,12 +240,32 @@ function UsersManagementApp() {
     }
   };
   
+  // ZMENA: Upravená funkcia handleDeleteUser, ktorá teraz volá Google Apps Script
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
     try {
+      // Krok 1: Odstránenie dokumentu z Firestore
       const userDocRef = doc(db, `users`, userToDelete.id);
       await deleteDoc(userDocRef);
+
+      // Krok 2: Volanie Google Apps Script na odstránenie z Authentication
+      const payload = {
+        action: 'deleteUser',
+        uid: userToDelete.id,
+      };
+
+      const response = await fetch(googleScriptUrl, {
+        method: 'POST',
+        mode: 'no-cors', // Dôležité pre správne fungovanie
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log('Požiadavka na odstránenie používateľa odoslaná.');
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
@@ -256,7 +277,7 @@ function UsersManagementApp() {
 
   // NOVINKA: funkcia pre odoslanie e-mailu o schválení admina
   const sendApprovalEmail = async (userEmail) => {
-    if (!googleScriptUrl) {
+    if (!googleScriptUrl_for_email) {
       console.error("Google Apps Script URL nie je definovaná.");
       setNotification({ message: 'Chyba: URL skriptu nebola nájdená.', type: 'error' });
       return;
@@ -270,7 +291,7 @@ function UsersManagementApp() {
         lastName: users.find(u => u.email === userEmail)?.lastName,
       };
   
-      const response = await fetch(googleScriptUrl, {
+      const response = await fetch(googleScriptUrl_for_email, {
         method: 'POST',
         mode: 'no-cors', // Dôležité pre správne fungovanie
         cache: 'no-cache',
