@@ -301,6 +301,7 @@ function App() {
             const approvedStatus = isFirstAdmin ? true : false;
             
             // Krok 2: Vytvorenie používateľa vo Firebase Authentication
+            // POZNÁMKA: Tu vznikne prihlásený používateľ, na čo okamžite zareaguje onAuthStateChanged v authentication.js
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const userUid = userCredential.user.uid;
 
@@ -321,6 +322,7 @@ function App() {
 
             try {
                 const userDocRef = doc(db, 'users', userUid);
+                // VÝZNAMNÁ ZMENA: Čakáme na dokončenie tejto operácie (await)
                 await setDoc(userDocRef, userDataToSave);
                 console.log(`Firestore: User ${email} with role 'admin' and approved status '${approvedStatus}' was saved.`);
             } catch (firestoreError) {
@@ -376,37 +378,22 @@ function App() {
                 console.error("App: Error saving notification about administrator registration:", e);
             }
 
-            // NOVÁ LOGIKA: Načítanie údajov z databázy a ich vypísanie do konzoly
-            try {
-                const userDocRef = doc(db, 'users', userUid);
-                const docSnap = await getDoc(userDocRef);
-                if (docSnap.exists()) {
-                    const savedData = docSnap.data();
-                    console.log("------------------------------------------");
-                    console.log("Údaje úspešne načítané z databázy:");
-                    console.log(JSON.stringify(savedData, null, 2));
-                    console.log("------------------------------------------");
-                } else {
-                    console.warn("Dokument používateľa nebol nájdený po zápise. Môže to byť chyba v synchronizácii.");
-                }
-            } catch (readError) {
-                console.error("Chyba pri čítaní údajov z databázy po zápise:", readError);
-            }
-
-            // Krok 6: Ak všetko prebehlo úspešne, nastavenie správy a odhlásenie po 10 sekundách
+            // Krok 6: Zobrazenie správy o úspechu
             const statusMessage = approvedStatus
-                ? `Váš účet bol úspešne vytvorený a automaticky schválený. O 10 sekúnd budete presmerovaný na prihlasovaciu stránku.`
-                : `Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora. Odhlásenie prebehne o 10 sekúnd.`;
-
+                ? `Váš účet bol úspešne vytvorený a automaticky schválený. Pre plné využitie sa prosím znova prihláste.`
+                : `Administrátorský účet pre ${email} sa registruje. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora a potom sa prihláste.`;
             setSuccessMessage(statusMessage);
-            setFormSubmitting(false);
 
-            setTimeout(async () => {
-                await auth.signOut();
-                console.log("Používateľ úspešne odhlásený po 10 sekundách.");
-                window.location.href = 'login.html';
-            }, 10000); // 10 sekúnd
+            // Krok 7: Až po dokončení VŠETKÝCH databázových operácií
+            // a po zobrazení správy o úspechu voláme signOut()
+            await auth.signOut();
+            console.log("Používateľ úspešne odhlásený.");
             
+            // Až teraz presmerujeme používateľa, aby mal dostatok času si prečítať správu
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 5000); // 5 sekúnd
+
 
         } catch (e) {
             console.error("Error during registration (Auth or other):", e);
@@ -452,7 +439,7 @@ function App() {
                 React.createElement(
                     'div',
                     { className: 'bg-green-700 text-white p-8 rounded-lg shadow-xl w-full text-center' },
-                    React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' }, 'Registrácia úspešná!'),
+                    React.createElement('h1', { className: 'text-3xl font-bold text-center text-white mb-6' }, 'Registrácia úspešná!'),
                     React.createElement(
                         'p',
                         { className: 'text-white' },
