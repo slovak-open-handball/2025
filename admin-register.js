@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Auth a Firestore (modulárny prístup, SDK v11)
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, addDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanty pre reCAPTCHA a Apps Script URL
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -294,6 +294,7 @@ function App() {
         try {
             // Krok 1: Vytvorenie používateľa vo Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const userUid = userCredential.user.uid;
 
             // Krok 2: Uloženie počiatočných údajov používateľa do Firestore
             const userDataToSave = {
@@ -311,7 +312,7 @@ function App() {
             console.log("Attempting to save user to Firestore with initial data:", userDataToSave);
 
             try {
-                const userDocRef = doc(db, 'users', userCredential.user.uid);
+                const userDocRef = doc(db, 'users', userUid);
                 await setDoc(userDocRef, userDataToSave);
                 console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved.`);
             } catch (firestoreError) {
@@ -365,16 +366,33 @@ function App() {
                 console.error("App: Error saving notification about administrator registration:", e);
             }
 
-            // Krok 5: Ak všetko prebehlo úspešne, odhlásenie používateľa a nastavenie správy
-            await auth.signOut();
+            // NOVÁ LOGIKA: Načítanie údajov z databázy a ich vypísanie do konzoly
+            try {
+                const userDocRef = doc(db, 'users', userUid);
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                    const savedData = docSnap.data();
+                    console.log("------------------------------------------");
+                    console.log("Údaje úspešne načítané z databázy:");
+                    console.log(JSON.stringify(savedData, null, 2));
+                    console.log("------------------------------------------");
+                } else {
+                    console.warn("Dokument používateľa nebol nájdený po zápise. Môže to byť chyba v synchronizácii.");
+                }
+            } catch (readError) {
+                console.error("Chyba pri čítaní údajov z databázy po zápise:", readError);
+            }
 
-            setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
+            // Krok 5: Ak všetko prebehlo úspešne, nastavenie správy a odhlásenie po 10 sekundách
+            setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora. Odhlásenie prebehne o 10 sekúnd.`);
             setFormSubmitting(false);
-            
-            // Presmerovanie
-            setTimeout(() => {
+
+            setTimeout(async () => {
+                await auth.signOut();
+                console.log("Používateľ úspešne odhlásený po 10 sekundách.");
                 window.location.href = 'login.html';
-            }, 5000);
+            }, 10000); // 10 sekúnd
+            
 
         } catch (e) {
             console.error("Error during registration (Auth or other):", e);
