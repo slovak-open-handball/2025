@@ -1,11 +1,10 @@
 // logged-in-users.js
-// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> hlavného HTML súboru, ktorý ho načíta.
-// Taktiež predpokladá, že `window.db`, `window.auth`, `window.globalUserProfileData` a
-// `window.showGlobalNotification` sú dostupné z `authentication.js` a `header.js`.
+// This file assumes that firebaseConfig, initialAuthToken, and appId
+// are globally defined in the <head> of the main HTML file that loads it.
+// It also assumes that `window.db`, `window.auth`, `window.globalUserProfileData`, and
+// `window.showGlobalNotification` are available from `authentication.js` and `header.js`.
 
-// Importy pre potrebné Firebase funkcie
-// Zmeníme importy na dynamické, aby sme ich mohli používať, až keď sú globálne premenné nastavené.
+// Imports for necessary Firebase functions
 import {
   collection,
   query,
@@ -18,36 +17,21 @@ import {
 
 // NotificationModal Component
 function NotificationModal({ message, onClose, type = 'info' }) {
+  // The state to control the visibility of the modal
   const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
 
+  // Effect to show the notification when a message is provided
   React.useEffect(() => {
     if (message) {
       setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
     } else {
       setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
     }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose]);
+  }, [message]);
 
   if (!show && !message) return null;
 
+  // Dynamic classes for background color based on message type
   let bgColorClass;
   if (type === 'success') {
     bgColorClass = 'bg-[#3A8D41]';
@@ -68,14 +52,34 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     },
     React.createElement(
       'div', {
-        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
+        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center relative`,
         style: {
           pointerEvents: 'auto'
         }
       },
       React.createElement('p', {
         className: 'font-semibold'
-      }, message)
+      }, message),
+      React.createElement(
+        'button', {
+          onClick: onClose,
+          className: 'absolute top-1 right-2 text-white hover:text-gray-200 transition-colors duration-200',
+        },
+        React.createElement(
+          'svg', {
+            className: 'h-5 w-5',
+            fill: 'none',
+            viewBox: '0 0 24 24',
+            stroke: 'currentColor'
+          },
+          React.createElement('path', {
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            strokeWidth: '2',
+            d: 'M6 18L18 6M6 6l12 12'
+          })
+        )
+      )
     )
   );
 }
@@ -236,16 +240,16 @@ function UsersManagementApp() {
   const [currentUserRole, setCurrentUserRole] = React.useState('user');
   const [isAuthReady, setIsAuthReady] = React.useState(false);
 
-  // Funkcia na zobrazenie notifikácie
+  // Function to display a notification
   const showNotification = (message, type = 'info') => {
     setNotificationMessage(message);
     setNotificationType(type);
   };
 
   React.useEffect(() => {
-    // Čakáme, kým bude autentifikácia pripravená z authentication.js
+    // Wait until authentication is ready from authentication.js
     const handleAuthReady = () => {
-      console.log("UsersManagementApp: Autentifikácia pripravená.");
+      console.log("UsersManagementApp: Authentication ready.");
       setIsAuthReady(true);
       if (window.globalUserProfileData) {
         setCurrentUserRole(window.globalUserProfileData.role);
@@ -264,18 +268,19 @@ function UsersManagementApp() {
   }, []);
 
   React.useEffect(() => {
-    if (!isAuthReady || !window.db || !window.globalUserProfileData) {
-      console.log("UsersManagementApp: Čakám na inicializáciu autentifikácie a databázy...");
+    // New check to ensure __app_id is available
+    if (!isAuthReady || !window.db || !window.globalUserProfileData || typeof window.__app_id === 'undefined') {
+      console.log("UsersManagementApp: Waiting for authentication and database initialization...");
       return;
     }
 
     const userId = window.globalUserProfileData.id;
     const userRole = window.globalUserProfileData.role;
     
-    // Ak používateľ nie je admin ani super admin, presmerujeme ho
+    // If the user is not an admin or super admin, redirect them
     if (userRole !== 'admin' && userRole !== 'super_admin') {
       window.showGlobalNotification('Nemáte oprávnenie na zobrazenie tejto stránky.', 'error');
-      // Prípadne môžeme presmerovať
+      // Optionally redirect
       // window.location.href = 'index.html'; 
       setLoading(false);
       return;
@@ -284,7 +289,7 @@ function UsersManagementApp() {
     setLoading(true);
     setError('');
 
-    // Vytvoríme referenciu na kolekciu používateľov
+    // Create a reference to the users collection
     const usersCollectionRef = collection(window.db, 'artifacts', window.__app_id, 'public', 'data', 'users');
     const q = query(usersCollectionRef);
 
@@ -298,13 +303,13 @@ function UsersManagementApp() {
               ...doc.data()
           };
           usersList.push(userData);
-          // Pre super admina načítať aj privátne dáta, ak existujú
+          // For a super admin, also fetch private data if it exists
           if (userRole === 'super_admin') {
               userDocPromises.push(getDoc(doc(window.db, 'artifacts', window.__app_id, 'users', userData.id, 'data', 'profile')));
           }
       });
 
-      // Ak je super admin, počká na načítanie privátnych dát
+      // If a super admin, wait for private data to be loaded
       if (userRole === 'super_admin') {
           const userDocs = await Promise.all(userDocPromises);
           userDocs.forEach((userDoc, index) => {
@@ -323,9 +328,9 @@ function UsersManagementApp() {
     });
 
     return () => unsubscribe();
-  }, [isAuthReady]);
+  }, [isAuthReady, typeof window.__app_id !== 'undefined' ? window.__app_id : '']); // Added window.__app_id to dependencies
 
-  // Funkcie pre akcie s používateľmi
+  // Functions for user actions
   const handleRoleSave = async (userId, newRole, isApproved) => {
     if (!window.db) {
       showNotification('Databáza nie je inicializovaná.', 'error');
@@ -359,7 +364,7 @@ function UsersManagementApp() {
     }
     setLoading(true);
     try {
-      // Získanie referencie na používateľa na základe jeho ID
+      // Get a reference to the user based on their ID
       const userRef = doc(window.db, 'artifacts', window.__app_id, 'public', 'data', 'users', deleteUser.id);
       await deleteDoc(userRef);
       showNotification('Používateľ bol úspešne odstránený.', 'success');
@@ -403,7 +408,7 @@ function UsersManagementApp() {
     );
   }
 
-  // Zabezpečenie zobrazenia len pre adminov a super adminov
+  // Ensure visibility only for admins and super admins
   if (currentUserRole !== 'admin' && currentUserRole !== 'super_admin') {
     return React.createElement(
       'div', {
@@ -580,12 +585,12 @@ function UsersManagementApp() {
   );
 }
 
-// Explicitne sprístupniť komponent globálne
+// Explicitly expose the component globally
 window.UsersManagementApp = UsersManagementApp;
 
-// Funkcia na spustenie React aplikácie, keď je DOM načítaný
+// Function to start the React application when the DOM is loaded
 async function initializeApp() {
-  // Čakáme na globálne dáta z authentication.js
+  // Wait for global data from authentication.js
   await new Promise(resolve => {
     if (window.isGlobalAuthReady) {
       resolve();
@@ -596,25 +601,25 @@ async function initializeApp() {
     }
   });
 
-  // Uistíme sa, že React a ReactDOM sú načítané
+  // Make sure React and ReactDOM are loaded
   if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+    console.error("Error: React or ReactDOM are not loaded. Check the script order.");
+    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading the application. Please try again later.</div>';
     return;
   }
-  // Zabezpečíme, že UsersManagementApp je definovaná
+  // Ensure UsersManagementApp component is defined
   if (typeof UsersManagementApp === 'undefined') {
-    console.error("Chyba: Komponent UsersManagementApp nie je definovaný.");
-    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+    console.error("Error: The UsersManagementApp component is not defined.");
+    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading the application component.</div>';
     return;
   }
 
   const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
   root.render(React.createElement(UsersManagementApp, null));
-  console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
+  console.log("logged-in-users.js: React App (UsersManagementApp) rendered.");
 }
 
-// Spustíme inicializačnú funkciu, keď je DOM plne načítaný
+// Run the initialization function when the DOM is fully loaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
