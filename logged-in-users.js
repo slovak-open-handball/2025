@@ -221,9 +221,13 @@ function UsersManagementApp() {
 
   const handleChangeRole = async (userId, newRole) => {
     try {
+      // NOVINKA: Určenie, či by mal byť používateľ schválený na základe novej roly
+      const isApproved = newRole !== 'admin';
+
       const userDocRef = doc(db, `users`, userId);
       await updateDoc(userDocRef, {
-        role: newRole
+        role: newRole,
+        approved: isApproved // NOVINKA: Nastavenie approved na základe roly
       });
       setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
     } catch (error) {
