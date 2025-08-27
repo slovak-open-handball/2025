@@ -141,7 +141,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
             React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' }, 
-              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Používateľ'
+              role === 'admin' ? 'Administr\u00e1tor' : role === 'hall' ? '\u0160portov\u00e1 hala' : 'Pou\u017E\u00edvate\u013E'
             )
           )
         )
@@ -187,7 +187,7 @@ function UsersManagementApp() {
       setLoading(true);
 
       if (!globalUserProfileData) {
-        console.log("UsersManagementApp: Dáta používateľa nie sú dostupné.");
+        console.log("UsersManagementApp: D\u00e1ta pou\u017E\u00edvate\u013Ea nie s\u00fa dostupn\u00e9.");
         setLoading(false);
         return;
       }
@@ -222,9 +222,9 @@ function UsersManagementApp() {
           setUsers(usersList);
           setLoading(false);
         }, (error) => {
-          console.error("Chyba pri na\u010D\u00EDtan\u00ed pou\u017E\u00EDvate\u013Eov:", error);
+          console.error("Chyba pri na\u010D\u00edtan\u00ed pou\u017E\u00EDvate\u013Eov:", error);
           setLoading(false);
-          setNotification({ message: 'Chyba pri na\u010D\u00EDtan\u00ed pou\u017E\u00EDvate\u013Eov.', type: 'error' });
+          setNotification({ message: 'Chyba pri na\u010D\u00edtan\u00ed pou\u017E\u00EDvate\u013Eov.', type: 'error' });
         });
         return () => unsubscribeUsers();
       } else {
@@ -302,11 +302,11 @@ function UsersManagementApp() {
         body: JSON.stringify(payload),
       });
 
-      console.log('Po\u017Eiadavka na odstr\u00e1nenie pou\u017E\u00EDvate\u013Ea odoslan\u00e1.');
-      setNotification({ message: `Pou\u017E\u00EDvate\u013E ${userToDelete.firstName} bol \u00faspe\u0161ne odstr\u00e1nen\u00fd.`, type: 'success' });
+      console.log('Po\u017Eiadavka na odstr\u00e1nenie pou\u017E\u00edvate\u013Ea odoslan\u00e1.');
+      setNotification({ message: `Pou\u017E\u00edvate\u013E ${userToDelete.firstName} bol \u00faspe\u0161ne odstr\u00e1nen\u00fd.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri odstra\u0148ovan\u00ed pou\u017E\u00EDvate\u013Ea:", error);
-      setNotification({ message: 'Nepodarilo sa odstr\u00e1ni\u0165 pou\u017E\u00EDvate\u013Ea.', type: 'error' });
+      setNotification({ message: 'Nepodarilo sa odstr\u00e1ni\u0165 pou\u017E\u00edvate\u013Ea.', type: 'error' });
     } finally {
       setUserToDelete(null);
     }
@@ -352,7 +352,7 @@ function UsersManagementApp() {
       const userDocRef = doc(db, `users`, userId);
       const adminCountRef = doc(db, `settings`, `adminCount`);
       
-      // 2. Schv\u00e1lime pou\u017E\u00EDvate\u013Ea
+      // 2. Schv\u00e1lime pou\u017E\u00edvate\u013Ea
       await updateDoc(userDocRef, {
         approved: true
       });
@@ -406,7 +406,7 @@ function UsersManagementApp() {
           case 'hall':
               return '\u0160portov\u00e1 hala';
               case 'user':
-              return 'Pou\u017E\u00EDvate\u013E';
+              return 'Pou\u017E\u00edvate\u013E';
           default:
               return role;
       }
@@ -432,13 +432,13 @@ function UsersManagementApp() {
   const canDeleteUser = isCurrentUserOldestAdmin && (user => user.id !== window.currentUserId);
 
 
-  // Funkcia na triedenie pou\u017E\u00EDvate\u013Eov
+  // Funkcia na triedenie pou\u017E\u00edvate\u013Eov
   const sortUsers = (usersList) => {
       const oldestAdmin = usersList.find(u => u.id === oldestAdminId);
       const currentUser = usersList.find(u => u.id === window.currentUserId);
       const otherUsers = usersList.filter(u => u.id !== oldestAdminId && u.id !== window.currentUserId);
 
-      // Triedenie ostatn\u00fdch pou\u017E\u00EDvate\u013Eov pod\u013Ea slovenskej abecedy
+      // Triedenie ostatn\u00fdch pou\u017E\u00edvate\u013Eov pod\u013Ea slovenskej abecedy
       otherUsers.sort((a, b) => {
           const lastNameComparison = a.lastName.localeCompare(b.lastName, 'sk');
           if (lastNameComparison !== 0) {
@@ -463,7 +463,7 @@ function UsersManagementApp() {
   return React.createElement(
     'div',
     { className: 'flex-grow p-4 md:p-8 bg-gray-100 rounded-lg shadow-inner' },
-    React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-6' }, 'Spr\u00e1va pou\u017E\u00EDvate\u013Eov'),
+    React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-6' }, 'Spr\u00e1va pou\u017E\u00edvate\u013Eov'),
     React.createElement(
       'div',
       { className: 'overflow-x-auto bg-white rounded-lg shadow' },
@@ -491,7 +491,7 @@ function UsersManagementApp() {
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
             const canDelete = isCurrentUserOldestAdmin && isNotCurrentUser;
             
-            // Logika na skrytie riadku pre ostatn\u00fdch pou\u017E\u00EDvate\u013Eov
+            // Logika na skrytie riadku pre ostatn\u00fdch pou\u017E\u00edvate\u013Eov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
               return null;
             }
@@ -554,7 +554,7 @@ function UsersManagementApp() {
       onRoleChange: handleChangeRole
     }),
     userToDelete && React.createElement(ConfirmationModal, {
-      message: `Naozaj chcete odstr\u00e1ni\u0165 pou\u017E\u00EDvate\u013Ea ${userToDelete.firstName} ${userToDelete.lastName}? T\u00e1to akcia je nezvratn\u00e1.`,
+      message: `Naozaj chcete odstr\u00e1ni\u0165 pou\u017E\u00edvate\u013Ea ${userToDelete.firstName} ${userToDelete.lastName}? T\u00e1to akcia je nezvratn\u00e1.`,
       onConfirm: handleDeleteUser,
       onCancel: () => setUserToDelete(null)
     })
@@ -566,7 +566,7 @@ const initializeAndRenderApp = () => {
   const rootElement = document.getElementById('users-management-root');
 
   if (!window.isGlobalAuthReady || !window.globalUserProfileData) {
-    console.log("logged-in-users.js: \u010cak\u00e1m na inicializ\u00e1ciu autentifik\u00e1cie a na\u010D\u00edtanie d\u00e1t pou\u017E\u00EDvate\u013Ea...");
+    console.log("logged-in-users.js: \u010cak\u00e1m na inicializ\u00e1ciu autentifik\u00e1cie a na\u010D\u00edtanie d\u00e1t pou\u017E\u00edvate\u013Ea...");
     return;
   }
 
