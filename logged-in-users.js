@@ -86,14 +86,16 @@ function UsersManagementApp() {
   const [notificationType, setNotificationType] = useState("info");
   const notificationTimeoutRef = useRef(null);
 
+  // V Reactu je najlepšie získavať globálne dáta vo vnútri komponentu
+  // a zahrnúť ich do dependency array
   const db = window.db;
   const appId = window.appId;
   const userId = window.auth?.currentUser?.uid || 'anonymous';
 
   useEffect(() => {
-    // Čakáme, kým nebudú dostupné globálne dáta z authentication.js
-    if (!window.isGlobalAuthReady || !window.db || !window.auth) {
-        console.log("UsersManagementApp: Čakám na inicializáciu Firebase.");
+    // Čakáme, kým nebudú dostupné všetky globálne dáta z authentication.js a loader.js
+    if (!window.isGlobalAuthReady || !db || !appId) {
+        console.log("UsersManagementApp: Čakám na inicializáciu Firebase a ID aplikácie.");
         return;
     }
 
@@ -116,7 +118,7 @@ function UsersManagementApp() {
     });
 
     return () => unsubscribe();
-  }, [db, appId]);
+  }, [db, appId, window.isGlobalAuthReady]); // Pridaná závislosť na appId a isGlobalAuthReady
 
   const showNotificationMessage = (message, type = 'success') => {
     setNotificationMessage(message);
