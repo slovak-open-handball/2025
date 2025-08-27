@@ -81,66 +81,56 @@ const { useState, useEffect, useRef } = React;
 function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const notificationTimeoutRef = useRef(null);
+  const [notification, setNotification] = useState({ message: '', type: 'info' });
 
+  // Získame globálne premenné z window
   const db = window.db;
   const appId = window.appId;
   const auth = window.auth;
+  const globalUserProfileData = window.globalUserProfileData;
 
   useEffect(() => {
     const fetchData = async () => {
-      // Pred spustením akejkoľvek operácie skontrolujeme, či sú globálne premenné dostupné
-      if (!db || !appId || !auth || !auth.currentUser) {
-        console.log("UsersManagementApp: Čakám na inicializáciu Firebase a ID aplikácie.");
-        setLoading(true);
+      setLoading(true);
+
+      if (!globalUserProfileData) {
+        // Toto by sa nemalo stať, ak sa komponent spúšťa po udalosti,
+        // ale pre istotu to ponecháme.
+        console.log("UsersManagementApp: Dáta používateľa nie sú dostupné.");
+        setLoading(false);
         return;
       }
-      
-      try {
-        // Načítanie roly používateľa
-        const userDocRef = doc(db, `artifacts/${appId}/public/users`, auth.currentUser.uid);
-        const docSnapshot = await getDoc(userDocRef);
-        const userRoleData = docSnapshot.data();
-        const isAdmin = userRoleData?.isAdmin;
-        window.isCurrentUserAdmin = isAdmin;
 
-        if (isAdmin) {
-          // Ak je používateľ admin, začneme načítavať zoznam používateľov
-          const usersCollectionPath = `artifacts/${appId}/public/users`;
-          const usersCol = collection(db, usersCollectionPath);
-          const q = query(usersCol);
+      const isAdmin = globalUserProfileData?.isAdmin;
+      window.isCurrentUserAdmin = isAdmin;
 
-          const unsubscribeUsers = onSnapshot(q, (snapshot) => {
-            const usersList = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            setUsers(usersList);
-            setLoading(false); // Skryjeme loader po načítaní dát
-          }, (error) => {
-            console.error("Chyba pri načítaní používateľov:", error);
-            setLoading(false);
-            window.showGlobalNotification('Chyba pri načítaní používateľov.', 'error');
-          });
-          return () => unsubscribeUsers();
-        } else {
-          // Ak nie je admin, skryjeme loader a zobrazíme "nemáte oprávnenie"
+      if (isAdmin) {
+        // Ak je používateľ admin, začneme načítavať zoznam používateľov
+        const usersCollectionPath = `artifacts/${appId}/public/users`;
+        const usersCol = collection(db, usersCollectionPath);
+        const q = query(usersCol);
+
+        const unsubscribeUsers = onSnapshot(q, (snapshot) => {
+          const usersList = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setUsers(usersList);
+          setLoading(false); // Skryjeme loader po načítaní dát
+        }, (error) => {
+          console.error("Chyba pri načítaní používateľov:", error);
           setLoading(false);
-        }
-      } catch (error) {
-        console.error("Chyba pri načítaní dát v UsersManagementApp:", error);
+          setNotification({ message: 'Chyba pri načítaní používateľov.', type: 'error' });
+        });
+        return () => unsubscribeUsers();
+      } else {
+        // Ak nie je admin, skryjeme loader a zobrazíme "nemáte oprávnenie"
         setLoading(false);
-        window.showGlobalNotification('Chyba pri overení oprávnení alebo načítaní dát.', 'error');
       }
     };
 
     fetchData();
-  }, [db, appId, auth]);
-
-
-  const showNotificationMessage = (message, type = 'success') => {
-    window.showGlobalNotification(message, type);
-  };
+  }, [globalUserProfileData]);
 
   const handleToggleAdmin = async (user) => {
     try {
@@ -148,10 +138,10 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         isAdmin: !user.isAdmin
       });
-      showNotificationMessage(`Status administrátora pre ${user.displayName} bol úspešne zmenený.`);
+      setNotification({ message: `Status administrátora pre ${user.displayName} bol úspešne zmenený.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri zmene statusu administrátora:", error);
-      showNotificationMessage('Nepodarilo sa zmeniť status administrátora.', 'error');
+      setNotification({ message: 'Nepodarilo sa zmeniť status administrátora.', type: 'error' });
     }
   };
 
@@ -159,10 +149,10 @@ function UsersManagementApp() {
     try {
       const userDocRef = doc(db, `artifacts/${appId}/public/users`, userIdToDelete);
       await deleteDoc(userDocRef);
-      showNotificationMessage('Používateľ bol úspešne odstránený.');
+      setNotification({ message: 'Používateľ bol úspešne odstránený.', type: 'success' });
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
-      showNotificationMessage('Nepodarilo sa odstrániť používateľa.', 'error');
+      setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
     }
   };
 
@@ -247,43 +237,50 @@ function UsersManagementApp() {
         )
       )
     ),
-    React.createElement(NotificationModal, { message: notificationMessage, onClose: () => setShowNotification(false), type: notificationType })
+    React.createElement(NotificationModal, { message: notification.message, onClose: () => setNotification({ message: '', type: 'info' }), type: notification.type })
   );
 }
 
 // Funkcia na inicializáciu a vykreslenie React aplikácie
 const initializeAndRenderApp = () => {
-    const rootElement = document.getElementById('users-management-root');
-    // Ak dáta nie sú k dispozícii, zobrazíme loader a nastavíme poslucháča
-    if (!window.isGlobalAuthReady || !window.db || !window.auth) {
-        console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie...");
-        if (rootElement) {
-            rootElement.innerHTML = `
-                <div class="flex justify-center pt-16">
-                    <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
-                </div>
-            `;
-        }
-        window.addEventListener('globalDataUpdated', initializeAndRenderApp);
-        return;
-    }
-    
-    // Ak už bol poslucháč nastavený, odstránime ho, aby sme sa vyhli opakovanému volaniu
-    window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
+  const rootElement = document.getElementById('users-management-root');
 
-    // Uistíme sa, že React a ReactDOM sú načítané
-    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-        if (rootElement) {
-            rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-        }
-        return;
-    }
+  // Počkáme, kým sa globálne dáta používateľa nenahrajú
+  if (!window.isGlobalAuthReady || !window.globalUserProfileData) {
+    console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie a načítanie dát používateľa...");
+    return; // Zastavíme sa a počkáme na udalosť
+  }
 
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(React.createElement(UsersManagementApp, null));
-    console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
+  // Ak už bol poslucháč nastavený, odstránime ho, aby sme sa vyhli opakovanému volaniu
+  window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
+
+  // Uistíme sa, že React a ReactDOM sú načítané
+  if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+    if (rootElement) {
+      rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+    }
+    return;
+  }
+
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(React.createElement(UsersManagementApp, null));
+  console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
 };
 
-// Spustíme inicializáciu pri načítaní skriptu
-initializeAndRenderApp();
+// Vykreslíme loader a zaregistrujeme poslucháča udalostí
+const rootElement = document.getElementById('users-management-root');
+if (rootElement) {
+    rootElement.innerHTML = `
+        <div class="flex justify-center pt-16">
+            <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+        </div>
+    `;
+}
+window.addEventListener('globalDataUpdated', initializeAndRenderApp);
+
+// Pre prípad, že udalosť už prebehla
+if (window.isGlobalAuthReady && window.globalUserProfileData) {
+    console.log('logged-in-users.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.');
+    initializeAndRenderApp();
+}
