@@ -106,7 +106,7 @@ function UsersManagementApp() {
 
       if (isAdmin) {
         // Ak je používateľ admin, začneme načítavať zoznam používateľov
-        const usersCollectionPath = `users`; // <--- OPRAVENÁ CESTA
+        const usersCollectionPath = `users`; // <--- UISTENIE SA, ŽE CESTA JE ROVNAKÁ AKO V authentication.js
         const usersCol = collection(db, usersCollectionPath);
         const q = query(usersCol);
 
@@ -134,7 +134,7 @@ function UsersManagementApp() {
 
   const handleToggleAdmin = async (user) => {
     try {
-      const userDocRef = doc(db, `users`, user.id); // <--- OPRAVENÁ CESTA
+      const userDocRef = doc(db, `users`, user.id); // <--- UISTENIE SA, ŽE CESTA JE ROVNAKÁ AKO V authentication.js
       await updateDoc(userDocRef, {
         isAdmin: !user.isAdmin
       });
@@ -147,7 +147,7 @@ function UsersManagementApp() {
 
   const handleDeleteUser = async (userIdToDelete) => {
     try {
-      const userDocRef = doc(db, `users`, userIdToDelete); // <--- OPRAVENÁ CESTA
+      const userDocRef = doc(db, `users`, userIdToDelete); // <--- UISTENIE SA, ŽE CESTA JE ROVNAKÁ AKO V authentication.js
       await deleteDoc(userDocRef);
       setNotification({ message: 'Používateľ bol úspešne odstránený.', type: 'success' });
     } catch (error) {
