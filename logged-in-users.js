@@ -306,7 +306,7 @@ function UsersManagementApp() {
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
-      setNotification({ message: 'Nepodarilo sa odstráňiť použvateľa.', type: 'error' });
+      setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
     } finally {
       setUserToDelete(null);
     }
@@ -528,17 +528,17 @@ function UsersManagementApp() {
                         className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
                       },
                       'Upraviť rolu'
-                    ),
-                    // Tlacidlo "Odstranit" je viditelne pre Superadministratora a pre inych pouzivatelov (okrem neho samotneho)
-                    (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
-                      'button',
-                      {
-                        onClick: () => setUserToDelete(user),
-                        className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
-                      },
-                      'Odstrániť'
                     )
-                  ) : null
+                  ) : null,
+                // Tlačidlo "Odstrániť" sa zobrazí len pre superadministrátora, a to pre všetkých ostatných používateľov okrem neho samotného
+                (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
+                  'button',
+                  {
+                    onClick: () => setUserToDelete(user),
+                    className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out ml-2'
+                  },
+                  'Odstrániť'
+                )
               )
             )
           })
