@@ -207,7 +207,7 @@ function App() {
         if (docSnap.exists()) {
           const count = docSnap.data().count;
           setAdminCount(count); // NEW: Update the adminCount state
-          console.log(`Hodnota adminCount: ${count}`); // Vypíše sa aj pri prvom načítaní aj pri zmene
+//          console.log(`Hodnota adminCount: ${count}`); // Vypíše sa aj pri prvom načítaní aj pri zmene
         } else {
           setAdminCount(0); // NEW: Set to 0 if the document doesn't exist
           console.log("Dokument 'settings/adminCount' neexistuje.");
@@ -353,9 +353,9 @@ function App() {
           await updateDoc(settingsDocRef, {
             count: increment(1)
           });
-          console.log('Hodnota adminCount bola úspešne zvýšená o 1 v Firestore.');
+//          console.log('Hodnota adminCount bola úspešne zvýšená o 1 v Firestore.');
         } else {
-          console.log('Používateľ nebol schválený, hodnota adminCount nebola zvýšená.');
+//          console.log('Používateľ nebol schválený, hodnota adminCount nebola zvýšená.');
         }
 
         // --------------------------------------------------------------------------
