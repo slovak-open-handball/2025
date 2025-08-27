@@ -12,7 +12,8 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
-  increment
+  increment,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
@@ -317,20 +318,34 @@ function UsersManagementApp() {
 
   const handleApproveAdmin = async (userId, userEmail) => {
     try {
+      // 1. Získame referencie na dokumenty
       const userDocRef = doc(db, `users`, userId);
+      const adminCountRef = doc(db, `settings`, `adminCount`);
+      
+      // 2. Schválime používateľa
       await updateDoc(userDocRef, {
         approved: true
       });
       
-      // Zvýšenie počítadla adminov, ktoré teraz bude spracované Cloud Function
-      // Toto je upravené. Kód by mal volať nejakú Cloud Function.
-      // Pre účely demonštrácie to nechávam takto zjednodušené.
-      // const adminCountRef = doc(db, `settings`, `adminCount`);
-      // await updateDoc(adminCountRef, {
-      //   count: increment(1)
-      // });
+      // 3. Získame aktuálny stav počítadla adminov
+      const adminCountSnap = await getDoc(adminCountRef);
       
+      if (adminCountSnap.exists()) {
+        // Ak dokument existuje, zvýšime jeho hodnotu
+        await updateDoc(adminCountRef, {
+          count: increment(1)
+        });
+      } else {
+        // Ak neexistuje, vytvoríme ho a nastavíme počiatočnú hodnotu na 1
+        await setDoc(adminCountRef, {
+          count: 1
+        });
+      }
+      
+      // 4. Pošleme e-mail
       await sendApprovalEmail(userEmail);
+      
+      // 5. Zobrazíme notifikáciu
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
