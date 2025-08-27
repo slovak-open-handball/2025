@@ -46,583 +46,231 @@ function NotificationModal({ message, onClose, type = 'info' }) {
 
   if (!show && !message) return null;
 
-  // Dynamic classes for background color based on message type
-  let bgColorClass;
-  if (type === 'success') {
-    bgColorClass = 'bg-[#3A8D41]';
-  } else if (type === 'error') {
-    bgColorClass = 'bg-red-600';
-  } else {
-    bgColorClass = 'bg-blue-500';
+  const baseClasses = "fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-opacity duration-300";
+  const typeClasses = {
+    'info': 'bg-blue-500 text-white',
+    'success': 'bg-green-500 text-white',
+    'warning': 'bg-yellow-500 text-black',
+    'error': 'bg-red-500 text-white',
+  };
+
+  const notificationClass = `${baseClasses} ${typeClasses[type]} ${show ? 'opacity-100' : 'opacity-0'}`;
+
+  return React.createElement(
+    'div',
+    { className: notificationClass },
+    React.createElement('span', null, message)
+  );
+}
+
+// Global notification function
+window.showGlobalNotification = (message, type = 'success') => {
+  let notificationElement = document.getElementById('global-notification-root');
+  if (!notificationElement) {
+    notificationElement = document.createElement('div');
+    notificationElement.id = 'global-notification-root';
+    document.body.appendChild(notificationElement);
   }
 
-  return React.createElement(
-    'div', {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: {
-        pointerEvents: 'none'
-      }
-    },
-    React.createElement(
-      'div', {
-        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center relative`,
-        style: {
-          pointerEvents: 'auto'
-        }
-      },
-      React.createElement('p', {
-        className: 'font-semibold'
-      }, message)
-    )
-  );
-}
+  const root = ReactDOM.createRoot(notificationElement);
+  root.render(React.createElement(NotificationModal, { message, type, onClose: () => root.render(null) }));
+};
 
-// RoleEditModal Component
-function RoleEditModal({ show, user, onClose, onSave, loading }) {
-  const [selectedRole, setSelectedRole] = React.useState(user ? user.role : 'user');
-  const [isApproved, setIsApproved] = React.useState(user ? user.approved : false);
+const { useState, useEffect, useRef } = React;
 
-  React.useEffect(() => {
-    if (user) {
-      setSelectedRole(user.role);
-      setIsApproved(user.approved);
-    }
-  }, [user]);
-
-  if (!show || !user) return null;
-
-  const handleSave = () => {
-    onSave(user.id, selectedRole, isApproved);
-  };
-
-  return React.createElement(
-    'div', {
-      className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50'
-    },
-    React.createElement(
-      'div', {
-        className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full'
-      },
-      React.createElement('h3', {
-        className: 'text-xl font-semibold text-gray-800 mb-4'
-      }, `Upraviť rolu pre: ${user.email}`),
-      React.createElement(
-        'div', {
-          className: 'mb-4'
-        },
-        React.createElement('label', {
-          className: 'block text-gray-700 text-sm font-bold mb-2',
-          htmlFor: 'role-select'
-        }, 'Rola'),
-        React.createElement(
-          'select', {
-            id: 'role-select',
-            className: 'shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-            value: selectedRole,
-            onChange: (e) => setSelectedRole(e.target.value)
-          },
-          React.createElement('option', {
-            value: 'user'
-          }, 'Používateľ'),
-          React.createElement('option', {
-            value: 'admin'
-          }, 'Admin'),
-          React.createElement('option', {
-            value: 'super_admin'
-          }, 'Super Admin')
-        )
-      ),
-      React.createElement(
-        'div', {
-          className: 'mb-4'
-        },
-        React.createElement('label', {
-          className: 'block text-gray-700 text-sm font-bold mb-2'
-        }, 'Stav overenia'),
-        React.createElement(
-          'div', {
-            className: 'flex items-center'
-          },
-          React.createElement('input', {
-            type: 'checkbox',
-            id: 'isApproved',
-            checked: isApproved,
-            onChange: (e) => setIsApproved(e.target.checked),
-            className: 'mr-2 leading-tight'
-          }),
-          React.createElement('label', {
-            htmlFor: 'isApproved',
-            className: 'text-sm'
-          }, 'Overený účet')
-        )
-      ),
-      React.createElement(
-        'div', {
-          className: 'flex justify-end space-x-2'
-        },
-        React.createElement(
-          'button', {
-            onClick: onClose,
-            className: `bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`,
-            disabled: loading
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button', {
-            onClick: handleSave,
-            className: `bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`,
-            disabled: loading
-          },
-          loading ? 'Ukladám...' : 'Uložiť zmeny'
-        )
-      )
-    )
-  );
-}
-
-// ConfirmationModal Component
-function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
-  if (!show) return null;
-
-  return React.createElement(
-    'div', {
-      className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50'
-    },
-    React.createElement(
-      'div', {
-        className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full'
-      },
-      React.createElement('p', {
-        className: 'text-gray-800 text-lg font-semibold mb-4'
-      }, message),
-      React.createElement(
-        'div', {
-          className: 'flex justify-end space-x-2'
-        },
-        React.createElement(
-          'button', {
-            onClick: onCancel,
-            className: `bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`,
-            disabled: loading
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button', {
-            onClick: onConfirm,
-            className: `bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`,
-            disabled: loading
-          },
-          loading ? 'Odstraňujem...' : 'Odstrániť'
-        )
-      )
-    )
-  );
-}
-
-// UsersManagementApp Component
 function UsersManagementApp() {
-  const [users, setUsers] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
-  const [roleEditUser, setRoleEditUser] = React.useState(null);
-  const [deleteUser, setDeleteUser] = React.useState(null);
-  const [notificationMessage, setNotificationMessage] = React.useState('');
-  const [notificationType, setNotificationType] = React.useState('info');
-  const [currentUserRole, setCurrentUserRole] = React.useState('user');
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationType, setNotificationType] = useState("info");
+  const notificationTimeoutRef = useRef(null);
 
-  // Function to display a notification
-  const showNotification = (message, type = 'info') => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-  };
+  const db = window.db;
+  const appId = window.appId;
+  const userId = window.auth?.currentUser?.uid || 'anonymous';
 
-  React.useEffect(() => {
-    // Wait until authentication is ready from authentication.js
-    const handleAuthReady = () => {
-      console.log("UsersManagementApp: Authentication ready.");
-      setIsAuthReady(true);
-      if (window.globalUserProfileData) {
-        setCurrentUserRole(window.globalUserProfileData.role);
-      }
-    };
-
-    // Listen for the globalDataUpdated event, which is fired by authentication.js
-    window.addEventListener('globalDataUpdated', handleAuthReady);
-
-    // Check if auth is already ready on first load
-    if (window.isGlobalAuthReady) {
-      handleAuthReady();
-    }
-
-    return () => {
-      window.removeEventListener('globalDataUpdated', handleAuthReady);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    // New check to ensure all dependencies are available before fetching
-    if (!isAuthReady || !window.db || !window.globalUserProfileData || typeof window.__app_id === 'undefined') {
-      console.log("UsersManagementApp: Waiting for authentication and database initialization...");
-      return;
-    }
-
-    const userId = window.globalUserProfileData.id;
-    const userRole = window.globalUserProfileData.role;
-    
-    // If the user is not an admin or super admin, prevent access
-    if (userRole !== 'admin' && userRole !== 'super_admin') {
-      // Use the global notification function if available
-      if (window.showGlobalNotification) {
-          window.showGlobalNotification('Nemáte oprávnenie na zobrazenie tejto stránky.', 'error');
-      } else {
-          showNotification('Nemáte oprávnenie na zobrazenie tejto stránky.', 'error');
-      }
+  useEffect(() => {
+    if (!db || !appId) {
+      console.error("Firebase nebol inicializovaný.");
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError('');
+    // Cesta ku kolekcii je teraz špecifická pre danú aplikáciu
+    const usersCollectionPath = `artifacts/${appId}/public/users`;
+    const usersCol = collection(db, usersCollectionPath);
+    const q = query(usersCol);
 
-    // Create a reference to the users collection
-    const usersCollectionRef = collection(window.db, 'artifacts', window.__app_id, 'public', 'data', 'users');
-    const q = query(usersCollectionRef);
-
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-      const usersList = [];
-      const userDocPromises = [];
-
-      querySnapshot.forEach(doc => {
-          const userData = {
-              id: doc.id,
-              ...doc.data()
-          };
-          usersList.push(userData);
-          // For a super admin, also fetch private data if it exists
-          if (userRole === 'super_admin') {
-              userDocPromises.push(getDoc(doc(window.db, 'artifacts', window.__app_id, 'users', userData.id, 'data', 'profile')));
-          }
-      });
-
-      // If a super admin, wait for private data to be loaded
-      if (userRole === 'super_admin') {
-          const userDocs = await Promise.all(userDocPromises);
-          userDocs.forEach((userDoc, index) => {
-              if (userDoc.exists()) {
-                  usersList[index].privateProfile = userDoc.data();
-              }
-          });
-      }
-
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const usersList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
       setUsers(usersList);
       setLoading(false);
-    }, (err) => {
-      console.error("Chyba pri načítaní používateľov:", err);
-      setError('Chyba pri načítaní používateľov.');
+    }, (error) => {
+      console.error("Chyba pri načítaní používateľov:", error);
       setLoading(false);
+      showNotification('Chyba pri načítaní používateľov.', 'error');
     });
 
     return () => unsubscribe();
-  }, [isAuthReady]); // Depend on isAuthReady to trigger data fetch
+  }, [db, appId]);
 
-  // Functions for user actions
-  const handleRoleSave = async (userId, newRole, isApproved) => {
-    if (!window.db) {
-      showNotification('Databáza nie je inicializovaná.', 'error');
-      return;
+  const showNotificationMessage = (message, type = 'success') => {
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setShowNotification(true);
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
     }
-    setLoading(true);
+    notificationTimeoutRef.current = setTimeout(() => {
+      setShowNotification(false);
+      setNotificationMessage("");
+    }, 5000);
+  };
+
+  const handleToggleAdmin = async (user) => {
     try {
-      const userRef = doc(window.db, 'artifacts', window.__app_id, 'public', 'data', 'users', userId);
-      await updateDoc(userRef, {
-        role: newRole,
-        approved: isApproved
+      const userDocRef = doc(db, `artifacts/${appId}/public/users`, user.id);
+      await updateDoc(userDocRef, {
+        isAdmin: !user.isAdmin
       });
-      showNotification('Rola používateľa bola úspešne aktualizovaná.', 'success');
-      setRoleEditUser(null);
-    } catch (e) {
-      console.error("Chyba pri aktualizácii roly: ", e);
-      showNotification('Chyba pri aktualizácii roly.', 'error');
-    } finally {
-      setLoading(false);
+      showNotificationMessage(`Status administrátora pre ${user.displayName} bol úspešne zmenený.`);
+    } catch (error) {
+      console.error("Chyba pri zmene statusu administrátora:", error);
+      showNotificationMessage('Nepodarilo sa zmeniť status administrátora.', 'error');
     }
   };
 
-  const confirmDeleteUser = (user) => {
-    setDeleteUser(user);
-  };
-
-  const handleDeleteUser = async () => {
-    if (!deleteUser || !window.db) {
-      showNotification('Databáza nie je inicializovaná.', 'error');
-      return;
-    }
-    setLoading(true);
+  const handleDeleteUser = async (userIdToDelete) => {
     try {
-      // Get a reference to the user based on their ID
-      const userRef = doc(window.db, 'artifacts', window.__app_id, 'public', 'data', 'users', deleteUser.id);
-      await deleteDoc(userRef);
-      showNotification('Používateľ bol úspešne odstránený.', 'success');
-      setDeleteUser(null);
-    } catch (e) {
-      console.error("Chyba pri odstraňovaní používateľa: ", e);
-      showNotification('Chyba pri odstraňovaní používateľa.', 'error');
-    } finally {
-      setLoading(false);
+      const userDocRef = doc(db, `artifacts/${appId}/public/users`, userIdToDelete);
+      await deleteDoc(userDocRef);
+      showNotificationMessage('Používateľ bol úspešne odstránený.');
+    } catch (error) {
+      console.error("Chyba pri odstraňovaní používateľa:", error);
+      showNotificationMessage('Nepodarilo sa odstrániť používateľa.', 'error');
     }
   };
 
-  const openRoleEditModal = (user) => {
-    setRoleEditUser(user);
-  };
+  const userRole = users.find(u => u.id === userId)?.isAdmin ? 'admin' : 'user';
 
-  const closeRoleEditModal = () => {
-    setRoleEditUser(null);
-  };
-
-  const closeDeleteConfirmation = () => {
-    setDeleteUser(null);
-  };
-
-  if (!isAuthReady) {
+  if (loading) {
     return React.createElement(
-      'div', {
-        className: 'flex items-center justify-center min-h-screen'
-      },
-      React.createElement(
-        'div', {
-          className: 'text-center'
-        },
-        React.createElement('div', {
-          className: 'animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto'
-        }),
-        React.createElement('p', {
-          className: 'mt-4 text-gray-500'
-        }, 'Načítavam aplikáciu...')
-      )
+      'div', { className: 'flex justify-center pt-16' },
+      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
     );
   }
 
-  // Ensure visibility only for admins and super admins
-  if (currentUserRole !== 'admin' && currentUserRole !== 'super_admin') {
+  if (userRole !== 'admin') {
     return React.createElement(
-      'div', {
-        className: 'flex items-center justify-center min-h-screen'
-      },
-      React.createElement('p', {
-        className: 'text-gray-600 text-lg font-semibold'
-      }, 'Nemáte oprávnenie na zobrazenie tejto stránky.')
+      'div', { className: 'flex items-center justify-center h-full' },
+      React.createElement('h1', { className: 'text-3xl font-bold text-gray-700' }, 'Nemáte oprávnenie na zobrazenie tejto stránky.')
     );
   }
 
   return React.createElement(
-    'div', {
-      className: 'container mx-auto p-4'
-    },
-    React.createElement('h1', {
-      className: 'text-3xl font-bold text-gray-800 mb-6'
-    }, 'Správa používateľov'),
-    loading && users.length === 0 ?
+    'div',
+    { className: 'flex-grow p-4 md:p-8 bg-gray-100 rounded-lg shadow-inner' },
+    React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-6' }, 'Správa používateľov'),
     React.createElement(
-      'div', {
-        className: 'text-center p-8'
-      },
-      React.createElement('div', {
-        className: 'animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto'
-      }),
-      React.createElement('p', {
-        className: 'mt-4 text-gray-500'
-      }, 'Načítavam zoznam používateľov...')
-    ) :
-    error ?
-    React.createElement('div', {
-      className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative',
-      role: 'alert'
-    }, error) :
-    users.length > 0 ?
-    React.createElement(
-      'div', {
-        className: 'overflow-x-auto bg-white shadow-md rounded-lg'
-      },
+      'div',
+      { className: 'overflow-x-auto bg-white rounded-lg shadow' },
       React.createElement(
-        'table', {
-          className: 'min-w-full divide-y divide-gray-200'
-        },
+        'table',
+        { className: 'min-w-full divide-y divide-gray-200' },
         React.createElement(
-          'thead', {
-            className: 'bg-gray-50'
-          },
+          'thead',
+          { className: 'bg-gray-50' },
           React.createElement(
             'tr',
             null,
-            React.createElement(
-              'th', {
-                className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
-              },
-              'Email'
-            ),
-            React.createElement(
-              'th', {
-                className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
-              },
-              'Rola'
-            ),
-            React.createElement(
-              'th', {
-                className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
-              },
-              'Overený'
-            ),
-            React.createElement(
-              'th', {
-                className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
-              },
-              'Akcie'
-            )
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'ID používateľa'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'E-mail'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Admin'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Akcie')
           )
         ),
         React.createElement(
-          'tbody', {
-            className: 'bg-white divide-y divide-gray-200'
-          },
-          users.map(u =>
+          'tbody',
+          { className: 'bg-white divide-y divide-gray-200' },
+          users.map(user =>
             React.createElement(
-              'tr', {
-                key: u.id
-              },
+              'tr',
+              { key: user.id },
+              React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900' }, user.displayName),
+              React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, user.id),
+              React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, user.email),
               React.createElement(
-                'td', {
-                  className: 'px-6 py-4 whitespace-nowrap'
-                },
-                React.createElement('div', {
-                  className: 'text-sm text-gray-900'
-                }, u.email)
-              ),
-              React.createElement(
-                'td', {
-                  className: 'px-6 py-4 whitespace-nowrap'
-                },
+                'td',
+                { className: 'px-6 py-4 whitespace-nowrap text-sm' },
                 React.createElement(
-                  'span', {
-                    className: 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full'
-                  },
-                  u.role
+                  'span',
+                  { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isAdmin ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}` },
+                  user.isAdmin ? 'Áno' : 'Nie'
                 )
               ),
               React.createElement(
-                'td', {
-                  className: 'px-6 py-4 whitespace-nowrap'
-                },
-                u.approved ?
-                React.createElement('span', {
-                  className: 'text-green-500'
-                }, 'Áno') :
-                React.createElement('span', {
-                  className: 'text-red-500'
-                }, 'Nie')
-              ),
-              React.createElement(
-                'td', {
-                  className: 'px-6 py-4 whitespace-nowrap text-right text-sm font-medium'
-                },
+                'td',
+                { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
                 React.createElement(
-                  'div', {
-                    className: 'flex items-center space-x-2'
+                  'button',
+                  {
+                    onClick: () => handleToggleAdmin(user),
+                    className: 'text-indigo-600 hover:text-indigo-900 mr-4',
                   },
-                  React.createElement(
-                    'button', {
-                      onClick: () => openRoleEditModal(u),
-                      className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                      disabled: loading,
-                    },
-                    'Upraviť rolu'
-                  ),
-                  React.createElement(
-                    'button', {
-                      onClick: () => confirmDeleteUser(u),
-                      className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                      disabled: loading,
-                    },
-                    'Zmazať'
-                  )
+                  'Zmeniť status'
+                ),
+                React.createElement(
+                  'button',
+                  {
+                    onClick: () => handleDeleteUser(user.id),
+                    className: 'text-red-600 hover:text-red-900',
+                  },
+                  'Odstrániť'
                 )
               )
             )
           )
         )
       )
-    ) :
-    React.createElement('div', {
-      className: 'text-center p-8 text-gray-500'
-    }, 'Nenašli sa žiadni používatelia.'),
-
-    React.createElement(RoleEditModal, {
-      show: !!roleEditUser,
-      user: roleEditUser,
-      onClose: closeRoleEditModal,
-      onSave: handleRoleSave,
-      loading: loading
-    }),
-
-    React.createElement(ConfirmationModal, {
-      show: !!deleteUser,
-      message: `Naozaj chcete odstrániť používateľa ${deleteUser?.email}?`,
-      onConfirm: handleDeleteUser,
-      onCancel: closeDeleteConfirmation,
-      loading: loading
-    }),
-
-    React.createElement(NotificationModal, {
-      message: notificationMessage,
-      onClose: () => setNotificationMessage(''),
-      type: notificationType
-    })
+    ),
+    React.createElement(NotificationModal, { message: notificationMessage, onClose: () => setShowNotification(false), type: notificationType })
   );
 }
 
-// Explicitne sprístupniť komponent globálne
-window.UsersManagementApp = UsersManagementApp;
+// Funkcia na inicializáciu a vykreslenie React aplikácie
+const initializeAndRenderApp = () => {
+    // Čakáme, kým nebudú dostupné globálne dáta z authentication.js
+    if (window.isGlobalAuthReady && window.db && window.auth) {
+        // Uistíme sa, že React a ReactDOM sú načítané
+        if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+            console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+            document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+            return;
+        }
 
-// Funkcia na spustenie React aplikácie po načítaní DOM
-async function initializeApp() {
-  // Čakáme, kým budú dostupné globálne dáta z authentication.js
-  await new Promise(resolve => {
-    const checkAuth = () => {
-      if (window.isGlobalAuthReady && window.db && window.auth) {
-        resolve();
-      } else {
-        setTimeout(checkAuth, 100);
-      }
-    };
-    checkAuth();
-  });
+        const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
+        root.render(React.createElement(UsersManagementApp, null));
+        console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
+    } else {
+        // Ak dáta nie sú k dispozícii, nastavíme poslucháča a vrátime sa
+        console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie...");
+        window.addEventListener('globalDataUpdated', initializeAndRenderApp, { once: true });
+        // Zobrazíme loader, kým čakáme
+        const rootElement = document.getElementById('users-management-root');
+        if (rootElement) {
+            rootElement.innerHTML = `
+                <div class="flex justify-center pt-16">
+                    <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+                </div>
+            `;
+        }
+    }
+};
 
-  // Uistíme sa, že React a ReactDOM sú načítané
-  if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-    return;
-  }
-  // Zabezpečíme, že UsersManagementApp komponent je definovaný
-  if (typeof UsersManagementApp === 'undefined') {
-    console.error("Chyba: Komponent UsersManagementApp nie je definovaný.");
-    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-    return;
-  }
-
-  const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
-  root.render(React.createElement(UsersManagementApp, null));
-  console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
-}
-
-// Spustíme inicializačnú funkciu, keď je DOM plne načítaný
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-  initializeApp();
-}
+// Spustíme inicializáciu pri načítaní skriptu
+initializeAndRenderApp();
