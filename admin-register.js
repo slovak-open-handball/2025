@@ -1,7 +1,7 @@
 // admin-register.js (now uses global Firebase instances from authentication.js)
 // Explicitly import functions for Firebase Auth and Firestore for modular access (SDK v11)
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -201,6 +201,13 @@ export function App() {
         return;
       }
 
+      // Krok 1: Skontrolujte, či existujú nejakí používatelia
+      const usersCollectionRef = collection(db, "users");
+      const usersSnapshot = await getDocs(usersCollectionRef);
+      const isFirstUser = usersSnapshot.empty;
+      
+      const approvedStatus = isFirstUser; // approved bude true, ak je to prvý používateľ, inak false
+
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
 
@@ -216,7 +223,7 @@ export function App() {
         registrationDate: serverTimestamp(),
         // Pridaj ďalšie potrebné polia pre administrátora, napr. role: 'admin'
         role: 'admin',
-        approved: false, // NOVINKA: Nastavenie approved na false
+        approved: approvedStatus, // Dynamické nastavenie approved na základe kontroly
         recaptchaToken: recaptchaToken,
         ipAddress: '', // IP adresa sa získa na serveri
         isDeleted: false,
