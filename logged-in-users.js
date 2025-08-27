@@ -258,10 +258,15 @@ function UsersManagementApp() {
       // 3. Ak sa rola zmenila z admina na inú A BOL schválený, dekrementujeme počítadlo
       if (oldRole === 'admin' && newRole !== 'admin' && wasApproved) {
         const adminCountRef = doc(db, `settings`, `adminCount`);
-        const adminCountSnap = await getDoc(adminCountRef);
-        if (adminCountSnap.exists()) {
+        await updateDoc(adminCountRef, {
+          count: increment(-1)
+        });
+        
+        // Nová kontrola: Získame aktuálnu hodnotu a ak je záporná, nastavíme ju na 0
+        const updatedAdminCountSnap = await getDoc(adminCountRef);
+        if (updatedAdminCountSnap.exists() && updatedAdminCountSnap.data().count < 0) {
           await updateDoc(adminCountRef, {
-            count: increment(-1)
+            count: 0
           });
         }
       }
@@ -289,6 +294,14 @@ function UsersManagementApp() {
           await updateDoc(adminCountRef, {
             count: increment(-1)
           });
+
+          // Nová kontrola: Získame aktuálnu hodnotu a ak je záporná, nastavíme ju na 0
+          const updatedAdminCountSnap = await getDoc(adminCountRef);
+          if (updatedAdminCountSnap.exists() && updatedAdminCountSnap.data().count < 0) {
+            await updateDoc(adminCountRef, {
+              count: 0
+            });
+          }
         }
       }
       
