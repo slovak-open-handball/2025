@@ -135,6 +135,8 @@
         <!-- The left menu will be loaded dynamically into this placeholder -->
         <div id="menu-placeholder"></div>
         <main id="main-content-area" class="flex-grow flex justify-center items-start">
+            <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu, rovnako ako v logged-in-my-data.html -->
+            <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
             <!-- The content of the React application will be centered in #root -->
             <div id="root" class="flex-grow max-w-4xl w-full px-4 sm:px-6 lg:px-8 py-8">
                 <!-- The application content will be rendered here, including the loader -->
@@ -160,16 +162,19 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error initializing Firebase. Please try again later.</div>';
                 return;
             }
-
-            // Add a small delay before rendering the React application.
-            // This is a temporary solution for the menu loading issue.
-            // The ideal solution would require changes in logged-in-left-menu.js.
-            await new Promise(resolve => setTimeout(resolve, 100)); // Delay 100ms
-
-            // Now that we know React and Firebase are ready, we can render the application.
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(MySettingsApp, null));
-            console.log("logged-in-my-settings.html: React App rendered.");
+            // Zabezpečíme, že sa React vykreslí až po tom, čo je menu pripravené.
+            // Čakanie na event je robustnejšie riešenie ako pevný timeout.
+            document.addEventListener('menuLoaded', () => {
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(MySettingsApp, null));
+                console.log("logged-in-my-settings.html: React App vykreslená.");
+            });
+            // Ak už bola udalosť odoslaná predtým, vykreslíme aplikáciu okamžite
+            if (document.getElementById('left-menu')) {
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(MySettingsApp, null));
+                console.log("logged-in-my-settings.html: React App vykreslená okamžite, menu už je v DOM.");
+            }
         };
     </script>
 </body>
