@@ -375,8 +375,34 @@ function UsersManagementApp() {
   
   const isCurrentUserOldestAdmin = window.currentUserId === oldestAdminId;
   const isMoreThanOneApprovedAdmin = users.filter(u => u.role === 'admin' && u.approved).length > 1;
-  const oldestAdmin = users.find(u => u.id === oldestAdminId);
 
+  // Funkcia na triedenie používateľov
+  const sortUsers = (usersList) => {
+      const oldestAdmin = usersList.find(u => u.id === oldestAdminId);
+      const currentUser = usersList.find(u => u.id === window.currentUserId);
+      const otherUsers = usersList.filter(u => u.id !== oldestAdminId && u.id !== window.currentUserId);
+
+      // Triedenie ostatných používateľov
+      otherUsers.sort((a, b) => {
+          if (a.lastName < b.lastName) return -1;
+          if (a.lastName > b.lastName) return 1;
+          if (a.firstName < b.firstName) return -1;
+          if (a.firstName > b.firstName) return 1;
+          return 0;
+      });
+
+      // Zostavenie finálneho poľa
+      const sortedList = [];
+      if (oldestAdmin) {
+          sortedList.push(oldestAdmin);
+      }
+      if (currentUser && currentUser.id !== oldestAdminId) {
+          sortedList.push(currentUser);
+      }
+      return [...sortedList, ...otherUsers];
+  };
+
+  const sortedUsers = sortUsers(users);
 
   return React.createElement(
     'div',
@@ -403,7 +429,7 @@ function UsersManagementApp() {
         React.createElement(
           'tbody',
           { className: 'bg-white divide-y divide-gray-200' },
-          users.map(user => {
+          sortedUsers.map(user => {
             const isNotCurrentUser = user.id !== window.currentUserId;
             const isUserOldestAdmin = user.id === oldestAdminId;
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
