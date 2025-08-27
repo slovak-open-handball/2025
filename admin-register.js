@@ -216,6 +216,7 @@ export function App() {
         registrationDate: serverTimestamp(),
         // Pridaj ďalšie potrebné polia pre administrátora, napr. role: 'admin'
         role: 'admin',
+        approved: false, // NOVINKA: Nastavenie approved na false
         recaptchaToken: recaptchaToken,
         ipAddress: '', // IP adresa sa získa na serveri
         isDeleted: false,
