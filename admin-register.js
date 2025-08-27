@@ -1,7 +1,7 @@
 // admin-register.js (now uses global Firebase instances from authentication.js)
 // Explicitly import functions for Firebase Auth and Firestore for modular access (SDK v11)
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Pridaný onSnapshot pre sledovanie zmien
+import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { collection, doc, setDoc, addDoc, serverTimestamp, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -10,20 +10,19 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 // Added 'validationStatus' prop for detailed visual indication of password validity
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Added onFocus prop
   // Corrected SVG icons for eye (show password) and crossed-out eye (hide password)
-  const EyeIcon = React.createElement(
-    'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
-  );
+  const EyeIcon = React.createElement(
+    'svg',
+    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
+  );
 
-  const EyeOffIcon = React.createElement(
-    'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-    React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
-    React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
-  );
+  const EyeOffIcon = React.createElement(
+    'svg',
+    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+    React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.954 9.954 0 012.336.314m-1.127 1.127l-.809.809m-2.883 2.883l-.809.809m3.69-3.69L12 12m1.125-1.125a3 3 0 11-2.25 2.25l2.25-2.25z' }),
+    React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
+  );
 
   // Input border will always be default (border-gray-300)
   const borderClass = 'border-gray-300';
@@ -314,6 +313,9 @@ function App() {
     setFormSubmitting(true); // Show loading indicator for form submission
     setErrorMessage(''); // Clear previous errors
     setSuccessMessage(''); // Clear any previous success message
+    
+    // NEW: Nastavte globálnu premennú, aby sa predišlo predčasnému odhláseniu
+    window.isRegisteringAdmin = true;
 
     // --- ZMENA: Ak je adminCount 0, nastav schválenie na true. Inak na false. ---
     const approvedStatus = adminCount === 0;
@@ -344,6 +346,16 @@ function App() {
         const userDocRef = doc(db, 'users', userCredential.user.uid);
         await setDoc(userDocRef, userDataToSave);
         console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením '${approvedStatus}' bol uložený.`);
+
+        // NEW LOGIC: Načítajte údaje z databázy, vypíšte ich do konzoly a až potom odhláste používateľa
+        console.log("Načítavam údaje z databázy pre overenie...");
+        const docSnapshot = await getDoc(userDocRef);
+        if (docSnapshot.exists()) {
+          const verifiedData = docSnapshot.data();
+          console.log("Údaje úspešne načítané z databázy:", verifiedData);
+        } else {
+          console.error("Chyba: Dokument používateľa nebol nájdený po zápise.");
+        }
 
         // Attempt to send email via Apps Script immediately after saving initial data
         try {
@@ -413,11 +425,12 @@ function App() {
       setFormSubmitting(false); // Stop loading so the message is visible on the form
 
       // Now sign out and redirect after a delay
-      await auth.signOut();
-      // user will be null after signOut, no need to set explicitly
-
-      // Redirect after 5 seconds
-      setTimeout(() => {
+      console.log("Automatické odhlasovanie používateľa po 5 sekundách...");
+      setTimeout(async () => {
+        // Explicitne odhlasíme používateľa po dokončení všetkých úloh a uplynutí času
+        await signOut(auth);
+        // NEW: Nastavte globálnu premennú späť na false po úspešnom odhlásení
+        window.isRegisteringAdmin = false;
         window.location.href = 'login.html';
       }, 5000);
 
@@ -433,6 +446,7 @@ function App() {
         setErrorMessage(`Chyba pri registrácii: ${e.message}`);
       }
       setFormSubmitting(false); // Reset formSubmitting on error
+      window.isRegisteringAdmin = false; // Reset the flag on error
     }
   };
 
@@ -619,7 +633,7 @@ function App() {
               React.createElement(
                 'div',
                 { className: 'flex items-center justify-center' },
-                React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-green-500', xmlns: 'http://www.w3.org/2020/svg', fill: 'none', viewBox: '0 0 24 24' }, // Spinner color changed to green
+                React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-green-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' }, // Spinner color changed to green
                   React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
                   React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                 ),
