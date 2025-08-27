@@ -13,10 +13,8 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, ak by tu bolo, aby sa obsah neposúval celý doprava */
         }
         /* Štýly pre modálne okná */
-        /* Tieto štýly sú všeobecné, ale ConfirmationModal už nie je vykresľovaný */
         .modal {
             position: fixed;
             z-index: 100;
@@ -90,7 +88,7 @@
             cursor: pointer;
             color: inherit;
         }
-
+        
         /* Pridané štýly pre NotificationToast */
         .notification-toast-container {
             position: fixed;
@@ -159,7 +157,6 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <!-- Naše lokálne skripty, načítané ako moduly. Tu nastáva problém s načasovaním. -->
-    <!-- Opravíme to tak, že načasovanie budeme riadiť z hlavného skriptu. -->
     <script type="module" src="./authentication.js"></script>
     <script type="module" src="./header.js"></script>
     <script type="module" src="./logged-in-left-menu.js"></script>
@@ -193,37 +190,17 @@
         }
         
         /**
-         * Inicializuje celú aplikáciu po načítaní všetkých potrebných dát a DOM štruktúry.
-         * Tento proces zahŕňa načítanie a zobrazenie menu a hlavičky,
-         * a nakoniec vykreslenie React aplikácie pre správu používateľov.
+         * Funkcia na vykreslenie hlavného React komponentu pre túto stránku.
          */
-        async function initializeApp() {
-             // 1. Overenie existencie globálnych premenných, ktoré poskytuje prostredie.
-            if (typeof __firebase_config === 'undefined' || typeof __initial_auth_token === 'undefined' || typeof __app_id === 'undefined') {
-                console.error("Chyba: Niektorá z globálnych premenných (firebaseConfig, initialAuthToken, appId) nie je definovaná.");
-                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Konfigurácia aplikácie nie je dostupná. Skúste to prosím neskôr.</div>';
-                return;
-            }
-
-            // 2. Deklarujeme globálne premenné, ktoré skripty potrebujú.
-            window.firebaseConfig = JSON.parse(__firebase_config);
-            window.initialAuthToken = __initial_auth_token;
-            window.appId = __app_id;
-
-            // 3. Načítanie a vykreslenie HTML komponentov.
-            // Používame `await` na zabezpečenie, že HTML sa načíta pred spustením ďalších skriptov.
-            await loadHtmlContent('header-placeholder', 'header.html');
-            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
-
-            // 4. Renderujeme React aplikáciu.
-            // Je dôležité, aby bol DOM pripravený a externé skripty načítané.
+        async function renderApp() {
+            // Zabezpečíme, že React a ReactDOM sú načítané.
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
 
-            // 5. Dynamicky importujeme modul s React aplikáciou až po načítaní všetkého ostatného.
+            // Načítame React komponent z príslušného modulu
             try {
                 const usersModule = await import('./logged-in-users.js');
                 if (typeof usersModule.UsersManagementApp === 'undefined') {
@@ -239,10 +216,30 @@
             }
         }
 
-        // 6. Pomocné listenery na jednorazové spustenie inicializácie.
+        // Pomocné premenné na sledovanie stavu
         let isAuthReady = false;
         let isDomReady = false;
 
+        /**
+         * Hlavná inicializačná funkcia, ktorá sa spustí, až keď sú splnené všetky podmienky.
+         */
+        async function initializeApp() {
+             // 1. Deklarujeme globálne premenné, ktoré skripty potrebujú.
+            // Bezpečné načítanie premenných
+            window.firebaseConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : null;
+            window.initialAuthToken = (typeof __initial_auth_token !== 'undefined') ? __initial_auth_token : null;
+            window.appId = (typeof __app_id !== 'undefined') ? __app_id : 'default-app-id';
+
+            // 2. Načítanie a vykreslenie HTML komponentov.
+            // Používame `await` na zabezpečenie, že HTML sa načíta pred spustením ďalších skriptov.
+            await loadHtmlContent('header-placeholder', 'header.html');
+            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
+
+            // 3. Spustíme renderovanie hlavnej React aplikácie.
+            renderApp();
+        }
+
+        // Listener, ktorý čaká, kým je DOM plne načítaný.
         document.addEventListener('DOMContentLoaded', () => {
             isDomReady = true;
             if (isAuthReady) {
@@ -251,6 +248,7 @@
             }
         });
 
+        // Listener pre globálnu udalosť, ktorá signalizuje pripravenosť autentifikácie.
         window.addEventListener('globalDataUpdated', (event) => {
             isAuthReady = true;
             if (isDomReady) {
@@ -259,7 +257,8 @@
             }
         });
 
-        // 7. Kontrola pre prípad, že udalosti už prebehli pred nastavením listenerov.
+        // Kontrola pri prvom načítaní pre prípad, že udalosti už prebehli pred nastavením listenerov.
+        // Toto rieši situáciu, kedy sa DOM načíta tak rýchlo, že by sme premeškali udalosti.
         if (window.isGlobalAuthReady && document.readyState !== 'loading') {
             console.log('Autentifikačné dáta a DOM sú už načítané pri načítaní stránky, spúšťam inicializáciu.');
             initializeApp();
