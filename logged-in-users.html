@@ -194,7 +194,8 @@
             }
         }
 
-        window.onload = async () => {
+        window.addEventListener('globalDataUpdated', (event) => {
+            console.log("logged-in-users.html: Prijatá udalosť 'globalDataUpdated'. Inicializujem aplikáciu.");
             // Predbežné overenie existencie globálnych premenných
             if (typeof __firebase_config === 'undefined' || typeof __initial_auth_token === 'undefined' || typeof __app_id === 'undefined') {
                 console.error("Chyba: Niektorá z globálnych premenných (firebaseConfig, initialAuthToken, appId) nie je definovaná.");
@@ -208,9 +209,9 @@
             window.appId = __app_id;
 
             // Načítanie a vykreslenie HTML komponentov
-            await loadHtmlContent('header-placeholder', 'header.html');
+            loadHtmlContent('header-placeholder', 'header.html');
             // Zmenený ID placeholderu pre menu a pridaný parameter `isMenu`
-            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html', true);
+            loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html', true);
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
@@ -228,7 +229,16 @@
             const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
             root.render(React.createElement(UsersManagementApp, null));
             console.log("logged-in-users.html: React App (UsersManagementApp) vykreslená.");
-        };
+        });
+
+        // Kontrola pri prvom načítaní pre prípad, že event už prebehol
+        if (window.isGlobalAuthReady) {
+            console.log('logged-in-users.html: Autentifikačné dáta sú už načítané pri načítaní stránky, spúšťam inicializáciu.');
+            const event = new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData });
+            window.dispatchEvent(event);
+        }
+
+        // Starý `window.onload` kód bol odstránený, aby sa predišlo dvojitému spusteniu.
     </script>
 </body>
 </html>
