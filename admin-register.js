@@ -6,6 +6,11 @@ import { collection, doc, setDoc, addDoc, serverTimestamp, onSnapshot, getDoc } 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
+// NEW: Konfigurovateľná premenná
+// Počet administrátorov, ktorí budú automaticky schválení pri registrácii.
+// Zmeňte túto hodnotu pre kontrolu nad automatickým schvaľovaním.
+const MAX_AUTO_APPROVED_ADMINS = 2;
+
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 // Added 'validationStatus' prop for detailed visual indication of password validity
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Added onFocus prop
@@ -240,7 +245,7 @@ function App() {
   const validatePassword = (pwd) => {
     const status = {
       minLength: pwd.length >= 10,
-      maxLength: pwd.length <= 4096, // This condition is still checked, but not displayed in the list
+      maxLength: pwd.length <= 4096, // maxLength is still checked, but not displayed in the list
       hasUpperCase: /[A-Z]/.test(pwd),
       hasLowerCase: /[a-z]/.test(pwd),
       hasNumber: /[0-9]/.test(pwd),
@@ -317,9 +322,9 @@ function App() {
     // NEW: Nastavte globálnu premennú, aby sa predišlo predčasnému odhláseniu
     window.isRegisteringAdmin = true;
 
-    // --- ZMENA: Ak je adminCount 0, nastav schválenie na true. Inak na false. ---
-    const approvedStatus = adminCount === 0;
-    console.log(`Počet adminov je ${adminCount}, preto bude status schválenia: ${approvedStatus}`);
+    // NEW LOGIC: Skontrolujte, či je aktuálny počet adminov menší ako MAX_AUTO_APPROVED_ADMINS
+    const approvedStatus = adminCount <= MAX_AUTO_APPROVED_ADMINS;
+    console.log(`Počet adminov je ${adminCount}, nastavený limit je ${MAX_AUTO_APPROVED_ADMINS}. Status schválenia bude: ${approvedStatus}`);
     // --------------------------------------------------------------------------
 
     try {
