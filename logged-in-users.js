@@ -140,7 +140,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               onChange: (e) => setSelectedRole(e.target.value),
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
-            React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' }, 
+            React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' },
               role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Používateľ'
             )
           )
@@ -168,6 +168,84 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
   );
 }
 
+// Nový komponent pre modálne okno na filtrovanie rolí
+function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
+    const [selectedRoles, setSelectedRoles] = useState(initialRoles);
+
+    const handleRoleChange = (role) => {
+        setSelectedRoles(prevRoles =>
+            prevRoles.includes(role)
+                ? prevRoles.filter(r => r !== role)
+                : [...prevRoles, role]
+        );
+    };
+
+    const handleApply = () => {
+        onApplyFilter(selectedRoles);
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
+            React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, 'Filtrovať podľa roly'),
+            React.createElement('div', { className: 'mb-4' },
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-admin',
+                        checked: selectedRoles.includes('admin'),
+                        onChange: () => handleRoleChange('admin'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-admin', className: 'ml-2 text-gray-700' }, 'Administrátor')
+                ),
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-hall',
+                        checked: selectedRoles.includes('hall'),
+                        onChange: () => handleRoleChange('hall'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-hall', className: 'ml-2 text-gray-700' }, 'Športová hala')
+                ),
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-user',
+                        checked: selectedRoles.includes('user'),
+                        onChange: () => handleRoleChange('user'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-user', className: 'ml-2 text-gray-700' }, 'Používateľ')
+                )
+            ),
+            React.createElement('div', { className: 'flex justify-end' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleApply,
+                        className: 'bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700'
+                    },
+                    'Potvrdiť'
+                )
+            )
+        )
+    );
+}
+
 function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -175,6 +253,8 @@ function UsersManagementApp() {
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
   const [oldestAdminId, setOldestAdminId] = useState(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState([]);
   
   const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
   const db = window.db;
@@ -446,6 +526,8 @@ function UsersManagementApp() {
   };
 
   const sortedUsers = sortUsers(users);
+  
+  const filteredUsers = selectedRoles.length > 0 ? sortedUsers.filter(user => selectedRoles.includes(user.role)) : sortedUsers;
 
   return React.createElement(
     'div',
@@ -465,14 +547,14 @@ function UsersManagementApp() {
             null,
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'E-mail'),
-            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Rola'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer', onClick: () => setShowFilterModal(true) }, 'Rola'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Akcie')
           )
         ),
         React.createElement(
           'tbody',
           { className: 'bg-white divide-y divide-gray-200' },
-          sortedUsers.map(user => {
+          filteredUsers.map(user => {
             const isNotCurrentUser = user.id !== window.currentUserId;
             const isUserOldestAdmin = user.id === oldestAdminId;
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
@@ -546,6 +628,14 @@ function UsersManagementApp() {
       message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
       onConfirm: handleDeleteUser,
       onCancel: () => setUserToDelete(null)
+    }),
+    showFilterModal && React.createElement(FilterRolesModal, {
+        onClose: () => setShowFilterModal(false),
+        onApplyFilter: (roles) => {
+            setSelectedRoles(roles);
+            setShowFilterModal(false);
+        },
+        initialRoles: selectedRoles
     })
   );
 }
