@@ -5,10 +5,11 @@ import {
   onSnapshot,
   doc,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// NotificationModal Component
+// Komponenta pre notifikácie
 function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = useState(false);
   const timerRef = useRef(null);
@@ -57,7 +58,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   );
 }
 
-// Global notification function
+// Funkcia pre globálne notifikácie
 window.showGlobalNotification = (message, type = 'success') => {
   let notificationElement = document.getElementById('global-notification-root');
   if (!notificationElement) {
@@ -70,7 +71,7 @@ window.showGlobalNotification = (message, type = 'success') => {
   root.render(React.createElement(NotificationModal, { message, type, onClose: () => root.render(null) }));
 };
 
-// ConfirmationModal Component
+// Komponenta pre potvrdzovací modal
 function ConfirmationModal({ message, onConfirm, onCancel }) {
   return React.createElement(
     'div',
@@ -102,12 +103,14 @@ function ConfirmationModal({ message, onConfirm, onCancel }) {
   );
 }
 
-// ChangeRoleModal Component
+// Komponenta pre modal zmeny roly
 function ChangeRoleModal({ user, onClose, onRoleChange }) {
   const [selectedRole, setSelectedRole] = useState(user.role);
 
   const handleSave = () => {
-    onRoleChange(user.id, selectedRole);
+    // Ak sa rola mení na admina, pošleme informáciu o tom do nadradenej funkcie
+    const willBeAdmin = selectedRole === 'admin' && user.role !== 'admin';
+    onRoleChange(user.id, selectedRole, willBeAdmin);
     onClose();
   };
 
@@ -158,6 +161,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
   );
 }
 
+// Hlavná komponenta aplikácie
 function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -243,18 +247,32 @@ function UsersManagementApp() {
     }
   };
 
+  // UPRAVENÁ FUNKCIA: Teraz kontroluje zmenu roly na 'admin'
   const handleChangeRole = async (userId, newRole) => {
     try {
       const userDocRef = doc(db, `users`, userId);
-      await updateDoc(userDocRef, {
+      const userDoc = await getDoc(userDocRef);
+      const oldRole = userDoc.exists() ? userDoc.data().role : null;
+
+      const updateData = {
         role: newRole
-      });
-      setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
+      };
+
+      // Ak sa mení rola na 'admin' z akejkoľvek inej roly, nastaví sa approved na false
+      if (newRole === 'admin' && oldRole !== 'admin') {
+        updateData.approved = false;
+        setNotification({ message: `Používateľovi bola zmenená rola na 'admin'. Musí byť schválený iným administrátorom.`, type: 'warning' });
+      } else {
+        setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
+      }
+
+      await updateDoc(userDocRef, updateData);
     } catch (error) {
       console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
     }
   };
+
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
@@ -463,3 +481,4 @@ if (window.isGlobalAuthReady && window.globalUserProfileData) {
     console.log('logged-in-users.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.');
     initializeAndRenderApp();
 }
+export default UsersManagementApp;
