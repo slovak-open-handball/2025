@@ -370,6 +370,9 @@ function UsersManagementApp() {
     );
   }
   
+  const isCurrentUserOldestAdmin = window.currentUserId === oldestAdminId;
+  const isMoreThanOneApprovedAdmin = users.filter(u => u.role === 'admin' && u.approved).length > 1;
+
   return React.createElement(
     'div',
     { className: 'flex-grow p-4 md:p-8 bg-gray-100 rounded-lg shadow-inner' },
@@ -395,8 +398,11 @@ function UsersManagementApp() {
         React.createElement(
           'tbody',
           { className: 'bg-white divide-y divide-gray-200' },
-          users.map(user =>
-            React.createElement(
+          users.map(user => {
+            // Určenie, či zobraziť akčné tlačidlá
+            const shouldShowActions = isCurrentUserOldestAdmin && user.id !== window.currentUserId;
+
+            return React.createElement(
               'tr',
               { key: user.id },
               React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900' }, `${user.firstName} ${user.lastName}`),
@@ -413,41 +419,40 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
-                // Logika pre zobrazenie všetkých akčných tlačidiel, ktoré vidí len najstarší admin,
-                // a to len pre ostatných používateľov, nie pre seba.
-                window.currentUserId === oldestAdminId && user.id !== window.currentUserId ?
-                React.createElement(React.Fragment, null,
-                  (user.role === 'admin' && user.approved === false) && React.createElement(
-                    'button',
-                    {
-                      onClick: () => handleApproveAdmin(user.id, user.email),
-                      className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
-                    },
-                    'Schváliť'
-                  ),
-                  React.createElement(
-                    'button',
-                    {
-                      onClick: () => setUserToEdit(user),
-                      className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
-                    },
-                    'Zmeniť rolu'
-                  ),
-                  // Tlačidlo Odstrániť sa zobrazí pre každého, kto nie je najstarší admin
-                  // a zároveň nie je jediným schváleným adminom v systéme.
-                  user.role === 'admin' && users.filter(u => u.role === 'admin' && u.approved).length > 1 &&
-                  React.createElement(
-                    'button',
-                    {
-                      onClick: () => setUserToDelete(user),
-                      className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
-                    },
-                    'Odstrániť'
-                  )
-                ) : null
+                shouldShowActions ?
+                  React.createElement(React.Fragment, null,
+                    // Tlačidlo Schváliť sa zobrazí iba pre neschválených administrátorov
+                    (user.role === 'admin' && user.approved === false) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => handleApproveAdmin(user.id, user.email),
+                        className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Schváliť'
+                    ),
+                    // Tlačidlo Zmeniť rolu
+                    React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToEdit(user),
+                        className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Zmeniť rolu'
+                    ),
+                    // Tlačidlo Odstrániť sa zobrazí pre všetkých, okrem najstaršieho admina, a adminov iba ak je ich viac ako jeden
+                    (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin)) &&
+                    React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToDelete(user),
+                        className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
+                      },
+                      'Odstrániť'
+                    )
+                  ) : null
               )
             )
-          )
+          })
         )
       )
     ),
