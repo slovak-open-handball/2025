@@ -294,6 +294,15 @@ function UsersManagementApp() {
         const usersCol = collection(db, usersCollectionPath);
         const q = query(usersCol);
 
+        // Počiatočné načítanie a logovanie adminCount
+        const adminCountRef = doc(db, `settings`, `adminCount`);
+        const adminCountSnap = await getDoc(adminCountRef);
+        if (adminCountSnap.exists()) {
+            console.log(`Počiatočná hodnota adminCount pri načítaní: ${adminCountSnap.data().count}`);
+        } else {
+            console.log('Dokument adminCount pri načítaní neexistuje.');
+        }
+
         const unsubscribeUsers = onSnapshot(q, (snapshot) => {
           const usersList = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -350,11 +359,9 @@ function UsersManagementApp() {
 
         if (adminCountSnap.exists()) {
           const currentAdminCount = adminCountSnap.data().count;
-
-          // Vypísanie aktuálnej hodnoty do konzoly
+          
           console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
           
-          // Ak je aktuálny počet adminov 1, nedovolíme zníženie
           if (currentAdminCount === 1) {
             setNotification({ message: 'Počet administrátorov nemôže klesnúť pod 1.', type: 'warning' });
             return;
@@ -384,7 +391,6 @@ function UsersManagementApp() {
     try {
       const userDocRef = doc(db, `users`, userToDelete.id);
       
-      // Check if the user being deleted is an approved admin
       if (userToDelete.role === 'admin' && userToDelete.approved === true) {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
@@ -392,16 +398,13 @@ function UsersManagementApp() {
         if (adminCountSnap.exists()) {
           const currentAdminCount = adminCountSnap.data().count;
 
-          // Vypísanie aktuálnej hodnoty do konzoly
           console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
 
-          // Ak je aktuálny počet adminov 1, nedovolíme odstránenie
           if (currentAdminCount === 1) {
             setNotification({ message: 'Počet administrátorov nemôže klesnúť pod 1.', type: 'warning' });
             return;
           }
 
-          // Decrement the admin count
           await updateDoc(adminCountRef, {
             count: increment(-1)
           });
@@ -455,38 +458,31 @@ function UsersManagementApp() {
 
   const handleApproveAdmin = async (userId, userEmail) => {
     try {
-      // 1. Získame referencie na dokumenty
       const userDocRef = doc(db, `users`, userId);
       const adminCountRef = doc(db, `settings`, `adminCount`);
       
-      // 2. Schválime používateľa
       await updateDoc(userDocRef, {
         approved: true
       });
       
-      // 3. Získame aktuálny stav počítadla adminov
       const adminCountSnap = await getDoc(adminCountRef);
       
       if (adminCountSnap.exists()) {
         const currentAdminCount = adminCountSnap.data().count;
         console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
         
-        // Ak dokument existuje, zvýšime jeho hodnotu
         await updateDoc(adminCountRef, {
           count: increment(1)
         });
       } else {
-        // Ak neexistuje, vytvoríme ho a nastavíme počiatočnú hodnotu na 1
         console.log('Dokument adminCount neexistuje, vytvárame ho s hodnotou 1.');
         await setDoc(adminCountRef, {
           count: 1
         });
       }
       
-      // 4. Pošleme e-mail
       await sendApprovalEmail(userEmail);
       
-      // 5. Zobrazíme notifikáciu
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
