@@ -132,7 +132,7 @@
 <body class="bg-gray-100 flex flex-col min-h-screen">
     <div id="header-placeholder"></div>
     <div class="flex-grow flex">
-        <div id="left-menu-placeholder"></div>
+        <div id="menu-placeholder"></div>
         <div id="main-content-area" class="flex-grow p-6 transition-all duration-300">
              <!-- Kontajner pre správu používateľov -->
             <div id="users-management-root" class="bg-white p-8 rounded-lg shadow-md w-full max-w-4xl mx-auto">
@@ -202,7 +202,7 @@
 
             // Načítanie a vykreslenie HTML komponentov
             await loadHtmlContent('header-placeholder', 'header.html');
-            await loadHtmlContent('left-menu-placeholder', 'logged-in-left-menu.html');
+            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
