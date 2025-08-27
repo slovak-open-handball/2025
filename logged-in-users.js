@@ -222,7 +222,7 @@ function UsersManagementApp() {
           setUsers(usersList);
           setLoading(false);
         }, (error) => {
-          console.error("Chyba pri na\u010D\u00edtan\u00ed pou\u017E\u00EDvate\u013Eov:", error);
+          console.error("Chyba pri na\u010D\u00edtan\u00ed pou\u017E\u00edvate\u013Eov:", error);
           setLoading(false);
           setNotification({ message: 'Chyba pri na\u010D\u00edtan\u00ed pou\u017E\u00EDvate\u013Eov.', type: 'error' });
         });
@@ -259,10 +259,10 @@ function UsersManagementApp() {
         }
       }
       
-      setNotification({ message: `Rola pou\u017E\u00EDvate\u013Ea bola \u00faspe\u0161ne zmenen\u00e1 na ${newRole}.`, type: 'success' });
+      setNotification({ message: `Rola pou\u017E\u00edvate\u013Ea bola \u00faspe\u0161ne zmenen\u00e1 na ${newRole}.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri zmene roly pou\u017E\u00EDvate\u013Ea:", error);
-      setNotification({ message: 'Nepodarilo sa zmeni\u0165 rolu pou\u017E\u00EDvate\u013Ea.', type: 'error' });
+      console.error("Chyba pri zmene roly pou\u017E\u00edvate\u013Ea:", error);
+      setNotification({ message: 'Nepodarilo sa zmeni\u0165 rolu pou\u017E\u00edvate\u013Ea.', type: 'error' });
     }
   };
   
@@ -305,7 +305,7 @@ function UsersManagementApp() {
       console.log('Po\u017Eiadavka na odstr\u00e1nenie pou\u017E\u00edvate\u013Ea odoslan\u00e1.');
       setNotification({ message: `Pou\u017E\u00edvate\u013E ${userToDelete.firstName} bol \u00faspe\u0161ne odstr\u00e1nen\u00fd.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri odstra\u0148ovan\u00ed pou\u017E\u00EDvate\u013Ea:", error);
+      console.error("Chyba pri odstra\u0148ovan\u00ed pou\u017E\u00edvate\u013Ea:", error);
       setNotification({ message: 'Nepodarilo sa odstr\u00e1ni\u0165 pou\u017E\u00edvate\u013Ea.', type: 'error' });
     } finally {
       setUserToDelete(null);
@@ -429,8 +429,7 @@ function UsersManagementApp() {
   const isCurrentUserOldestAdmin = window.currentUserId === oldestAdminId;
   
   // Zjednodu\u0161en\u00e1 podmienka pre odstra\u0148ovanie. Superadministr\u00e1tor m\u00f4\u017Ee odstr\u00e1ni\u0165 kohoko\u013Evek okrem seba.
-  const canDeleteUser = isCurrentUserOldestAdmin && (user => user.id !== window.currentUserId);
-
+  const canDelete = isCurrentUserOldestAdmin && (user => user.id !== window.currentUserId);
 
   // Funkcia na triedenie pou\u017E\u00edvate\u013Eov
   const sortUsers = (usersList) => {
@@ -489,7 +488,6 @@ function UsersManagementApp() {
             const isNotCurrentUser = user.id !== window.currentUserId;
             const isUserOldestAdmin = user.id === oldestAdminId;
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
-            const canDelete = isCurrentUserOldestAdmin && isNotCurrentUser;
             
             // Logika na skrytie riadku pre ostatn\u00fdch pou\u017E\u00edvate\u013Eov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
@@ -515,30 +513,46 @@ function UsersManagementApp() {
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
                 isNotCurrentUser ?
                   React.createElement(React.Fragment, null,
-                    (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false) && React.createElement(
-                      'button',
-                      {
-                        onClick: () => handleApproveAdmin(user.id, user.email),
-                        className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
-                      },
-                      'Schv\u00e1li\u0165'
-                    ),
-                    (canChangeRole) && React.createElement(
-                      'button',
-                      {
-                        onClick: () => setUserToEdit(user),
-                        className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
-                      },
-                      'Zmeni\u0165 rolu'
-                    ),
-                    (canDelete) &&
-                    React.createElement(
-                      'button',
-                      {
-                        onClick: () => setUserToDelete(user),
-                        className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
-                      },
-                      'Odstr\u00e1ni\u0165'
+                    // Pre nov\u00fdch, neschv\u00e1len\u00fdch adminov zobrazujeme Schv\u00e1li\u0165 aj Odstr\u00e1ni\u0165
+                    (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false) ? (
+                      React.createElement(React.Fragment, null,
+                        React.createElement(
+                          'button',
+                          {
+                            onClick: () => handleApproveAdmin(user.id, user.email),
+                            className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
+                          },
+                          'Schv\u00e1li\u0165'
+                        ),
+                        React.createElement(
+                          'button',
+                          {
+                            onClick: () => setUserToDelete(user),
+                            className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
+                          },
+                          'Odstr\u00e1ni\u0165'
+                        )
+                      )
+                    ) : (
+                      // Pre ostatn\u00fdch pou\u017E\u00edvate\u013Eov, kde je potrebn\u00e1 zmena roly alebo odstr\u00e1nenie
+                      React.createElement(React.Fragment, null,
+                        (canChangeRole) && React.createElement(
+                          'button',
+                          {
+                            onClick: () => setUserToEdit(user),
+                            className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
+                          },
+                          'Zmeni\u0165 rolu'
+                        ),
+                        (isCurrentUserOldestAdmin) && React.createElement(
+                          'button',
+                          {
+                            onClick: () => setUserToDelete(user),
+                            className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
+                          },
+                          'Odstr\u00e1ni\u0165'
+                        )
+                      )
                     )
                   ) : null
               )
