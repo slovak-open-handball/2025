@@ -218,6 +218,21 @@ function UsersManagementApp() {
       React.createElement('h1', { className: 'text-3xl font-bold text-gray-700' }, 'Nemáte oprávnenie na zobrazenie tejto stránky.')
     );
   }
+  
+  // NOVINKA: Funkcia na získanie farby roly
+  const getRoleColor = (role) => {
+      switch (role) {
+          case 'admin':
+              return '#47b3ff';
+          case 'hall':
+              return '#b06835';
+          case 'user':
+              return '#9333EA';
+          default:
+              return '#1D4ED8';
+      }
+  };
+
 
   return React.createElement(
     'div',
@@ -253,9 +268,10 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm' },
+                // UPRAVENÉ: Zmena štýlu pre rolu
                 React.createElement(
                   'span',
-                  { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}` },
+                  { style: { color: getRoleColor(user.role) }, className: 'font-semibold' },
                   user.role
                 )
               ),
