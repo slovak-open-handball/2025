@@ -343,7 +343,10 @@ function UsersManagementApp() {
       }
   };
 
-  const getTranslatedRole = (role) => {
+  const getTranslatedRole = (role, isOldestAdmin) => {
+      if (isOldestAdmin) {
+          return 'Superadministrátor';
+      }
       switch (role) {
           case 'admin':
               return 'Administrátor';
@@ -401,11 +404,9 @@ function UsersManagementApp() {
           'tbody',
           { className: 'bg-white divide-y divide-gray-200' },
           users.map(user => {
-            // Logika na určenie, či sa majú zobraziť tlačidlá
             const isNotCurrentUser = user.id !== window.currentUserId;
-            // NOVÁ LOGIKA: Uistiť sa, že nemeníme rolu najstaršieho admina
-            const canChangeRole = window.isCurrentUserAdmin && user.id !== oldestAdminId;
-            // NOVÁ LOGIKA: Uistiť sa, že prihlásený admin nemaže sám seba a ani najstaršieho admina, pokiaľ je on sám najstarší
+            const isUserOldestAdmin = user.id === oldestAdminId;
+            const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
             const canDeleteUser = isCurrentUserOldestAdmin && isNotCurrentUser && (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin));
             
             return React.createElement(
@@ -419,7 +420,7 @@ function UsersManagementApp() {
                 React.createElement(
                   'span',
                   { style: { color: getRoleColor(user.role) }, className: 'font-semibold' },
-                  getTranslatedRole(user.role)
+                  getTranslatedRole(user.role, isUserOldestAdmin)
                 )
               ),
               React.createElement(
@@ -427,8 +428,6 @@ function UsersManagementApp() {
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
                 isNotCurrentUser ?
                   React.createElement(React.Fragment, null,
-                    // Tlačidlo Schváliť
-                    // Zobrazí sa všetkým adminom pre neschválených adminov
                     (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false) && React.createElement(
                       'button',
                       {
@@ -437,8 +436,6 @@ function UsersManagementApp() {
                       },
                       'Schváliť'
                     ),
-                    // Tlačidlo Zmeniť rolu
-                    // Zobrazí sa všetkým adminom pre ostatných používateľov, ale nie pre najstaršieho admina
                     (canChangeRole) && React.createElement(
                       'button',
                       {
@@ -447,9 +444,6 @@ function UsersManagementApp() {
                       },
                       'Zmeniť rolu'
                     ),
-                    // Tlačidlo Odstrániť
-                    // Zobrazí sa iba najstaršiemu adminovi pre všetkých ostatných používateľov (okrem seba),
-                    // a pre adminov iba ak existuje viac ako jeden schválený admin
                     (canDeleteUser) &&
                     React.createElement(
                       'button',
