@@ -276,24 +276,10 @@ function UsersManagementApp() {
 
 // Funkcia na inicializáciu a vykreslenie React aplikácie
 const initializeAndRenderApp = () => {
-    // Čakáme, kým nebudú dostupné globálne dáta z authentication.js
-    if (window.isGlobalAuthReady && window.db && window.auth) {
-        // Uistíme sa, že React a ReactDOM sú načítané
-        if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-            console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-            document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-            return;
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
-        root.render(React.createElement(UsersManagementApp, null));
-        console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
-    } else {
-        // Ak dáta nie sú k dispozícii, nastavíme poslucháča a vrátime sa
+    const rootElement = document.getElementById('users-management-root');
+    // Ak dáta nie sú k dispozícii, zobrazíme loader a nastavíme poslucháča
+    if (!window.isGlobalAuthReady || !window.db || !window.auth) {
         console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie...");
-        window.addEventListener('globalDataUpdated', initializeAndRenderApp);
-        // Zobrazíme loader, kým čakáme
-        const rootElement = document.getElementById('users-management-root');
         if (rootElement) {
             rootElement.innerHTML = `
                 <div class="flex justify-center pt-16">
@@ -301,7 +287,25 @@ const initializeAndRenderApp = () => {
                 </div>
             `;
         }
+        window.addEventListener('globalDataUpdated', initializeAndRenderApp);
+        return;
     }
+    
+    // Ak už bol poslucháč nastavený, odstránime ho, aby sme sa vyhli opakovanému volaniu
+    window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
+
+    // Uistíme sa, že React a ReactDOM sú načítané
+    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+        if (rootElement) {
+            rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+        }
+        return;
+    }
+
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(React.createElement(UsersManagementApp, null));
+    console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
 };
 
 // Spustíme inicializáciu pri načítaní skriptu
