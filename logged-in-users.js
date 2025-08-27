@@ -399,8 +399,8 @@ function UsersManagementApp() {
           'tbody',
           { className: 'bg-white divide-y divide-gray-200' },
           users.map(user => {
-            // Určenie, či zobraziť akčné tlačidlá
-            const shouldShowActions = isCurrentUserOldestAdmin && user.id !== window.currentUserId;
+            // Logika na určenie, či sa majú zobraziť tlačidlá
+            const isNotCurrentUser = user.id !== window.currentUserId;
 
             return React.createElement(
               'tr',
@@ -419,10 +419,11 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
-                shouldShowActions ?
+                isNotCurrentUser ?
                   React.createElement(React.Fragment, null,
-                    // Tlačidlo Schváliť sa zobrazí iba pre neschválených administrátorov
-                    (user.role === 'admin' && user.approved === false) && React.createElement(
+                    // Tlačidlo Schváliť
+                    // Zobrazí sa iba najstaršiemu adminovi pre neschválených adminov
+                    (isCurrentUserOldestAdmin && user.role === 'admin' && user.approved === false) && React.createElement(
                       'button',
                       {
                         onClick: () => handleApproveAdmin(user.id, user.email),
@@ -431,7 +432,8 @@ function UsersManagementApp() {
                       'Schváliť'
                     ),
                     // Tlačidlo Zmeniť rolu
-                    React.createElement(
+                    // Zobrazí sa všetkým adminom pre ostatných používateľov
+                    window.isCurrentUserAdmin && React.createElement(
                       'button',
                       {
                         onClick: () => setUserToEdit(user),
@@ -439,8 +441,9 @@ function UsersManagementApp() {
                       },
                       'Zmeniť rolu'
                     ),
-                    // Tlačidlo Odstrániť sa zobrazí pre všetkých, okrem najstaršieho admina, a adminov iba ak je ich viac ako jeden
-                    (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin)) &&
+                    // Tlačidlo Odstrániť
+                    // Zobrazí sa iba najstaršiemu adminovi pre všetkých ostatných používateľov
+                    (isCurrentUserOldestAdmin && (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin))) &&
                     React.createElement(
                       'button',
                       {
