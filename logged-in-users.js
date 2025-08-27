@@ -413,12 +413,13 @@ function UsersManagementApp() {
       await deleteDoc(userDocRef);
 
       // Pridaná funkčnosť: Po úspešnom odstránení používateľa otvoríme novú kartu s Firebase Console
+      // Spoliehame sa na globálne definovaný window.firebaseConfig
       if (window.firebaseConfig && window.firebaseConfig.projectId) {
         const projectId = window.firebaseConfig.projectId;
         const firebaseConsoleUrl = `https://console.firebase.google.com/project/${projectId}/authentication/users`;
         window.open(firebaseConsoleUrl, '_blank');
       } else {
-        console.error("Firebase projectId nie je k dispozícii.");
+        console.error("Firebase projectId nie je k dispozícii. Uistite sa, že 'firebaseConfig' je globálne definovaný.");
       }
 
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
