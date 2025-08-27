@@ -12,7 +12,7 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
-  increment,
+  increment, // Pridaný import pre funkciu increment
   setDoc,
   getDocs,
   where,
@@ -261,19 +261,13 @@ function UsersManagementApp() {
             // Update the user document
             transaction.update(userDocRef, { role: newRole, approved: isApproved });
 
-            // Only update admin count if there's a change in approved admin status
+            // Zjednodušená logika pre aktualizáciu adminCount
             if (oldRole === 'admin' && wasApproved && !isApproved) {
-                // Changing from approved admin to non-admin
-                const adminCountSnap = await transaction.get(adminCountRef);
-                const currentCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
-                const newCount = Math.max(0, currentCount - 1);
-                transaction.set(adminCountRef, { count: newCount });
+                // Zmena z schváleného admina na inú rolu, dekrementujeme
+                transaction.update(adminCountRef, { count: increment(-1) });
             } else if (oldRole !== 'admin' && isApproved) {
-                // Changing from non-admin to approved admin
-                const adminCountSnap = await transaction.get(adminCountRef);
-                const currentCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
-                const newCount = currentCount < 0 ? 1 : currentCount + 1;
-                transaction.set(adminCountRef, { count: newCount });
+                // Zmena na schváleného admina, inkrementujeme
+                transaction.update(adminCountRef, { count: increment(1) });
             }
         });
 
@@ -300,12 +294,10 @@ function UsersManagementApp() {
             if (!userSnap.exists()) {
                 throw new Error("User not found");
             }
-
+            
+            // Ak bol používateľ schválený admin, dekrementujeme count
             if (userSnap.data().role === 'admin' && userSnap.data().approved === true) {
-                const adminCountSnap = await transaction.get(adminCountRef);
-                const currentCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
-                const newCount = Math.max(0, currentCount - 1);
-                transaction.set(adminCountRef, { count: newCount });
+                transaction.update(adminCountRef, { count: increment(-1) });
             }
             // Delete the user document
             transaction.delete(userDocRef);
@@ -378,12 +370,8 @@ function UsersManagementApp() {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         
         await runTransaction(db, async (transaction) => {
-            const adminCountSnap = await transaction.get(adminCountRef);
-            const currentCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
-            const newCount = currentCount < 0 ? 1 : currentCount + 1;
-            
             transaction.update(userDocRef, { approved: true });
-            transaction.set(adminCountRef, { count: newCount });
+            transaction.update(adminCountRef, { count: increment(1) });
         });
       
       // Send email and notification after the transaction
