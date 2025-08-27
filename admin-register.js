@@ -231,6 +231,12 @@ function App() {
         setFormSubmitting(true);
         setErrorMessage('');
         setSuccessMessage('');
+        
+        // Kľúčový krok: Signalizujeme, že prebieha proces registrácie.
+        if (typeof window !== 'undefined') {
+            window.isRegisteringAdmin = true;
+            console.log("Global flag 'isRegisteringAdmin' set to true to prevent premature logout.");
+        }
 
         try {
             // Krok 1: Vytvorenie používateľa vo Firebase Authentication
@@ -324,7 +330,7 @@ function App() {
             } catch (e) {
                 console.error("App: Error saving notification about administrator registration:", e);
             }
-
+            
             // Krok 6: oneskorené odhlásenie používateľa
             console.log("Všetky dáta boli úspešne zapísané do databázy. Odhlásenie prebehne o 5 sekúnd.");
             await new Promise(resolve => setTimeout(resolve, 5000));
@@ -352,6 +358,11 @@ function App() {
         } finally {
              // Vždy zastaviť načítavanie po pokuse o registráciu
             setFormSubmitting(false);
+            // Kľúčový krok: Po dokončení procesu (úspech/neúspech) resetujeme globálnu premennú.
+            if (typeof window !== 'undefined') {
+                window.isRegisteringAdmin = false;
+                console.log("Global flag 'isRegisteringAdmin' set to false.");
+            }
         }
     };
 
