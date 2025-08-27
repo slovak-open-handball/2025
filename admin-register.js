@@ -165,6 +165,9 @@ function App() {
   // CHANGE: Using 'errorMessage' for errors and 'successMessage' for the success page message
   const [errorMessage, setErrorMessage] = React.useState(''); // For errors (red box and modal)
   const [successMessage, setSuccessMessage] = React.useState(''); // For the green success page
+  
+  // NEW: State for storing admin count from Firestore
+  const [adminCount, setAdminCount] = React.useState(0);
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -201,9 +204,11 @@ function App() {
       const settingsDocRef = doc(db, 'settings', 'adminCount');
       const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
         if (docSnap.exists()) {
-          const adminCount = docSnap.data().count;
-          console.log(`Hodnota adminCount: ${adminCount}`); // Vypíše sa aj pri prvom načítaní aj pri zmene
+          const count = docSnap.data().count;
+          setAdminCount(count); // NEW: Update the adminCount state
+          console.log(`Hodnota adminCount: ${count}`); // Vypíše sa aj pri prvom načítaní aj pri zmene
         } else {
+          setAdminCount(0); // NEW: Set to 0 if the document doesn't exist
           console.log("Dokument 'settings/adminCount' neexistuje.");
         }
       });
@@ -310,6 +315,7 @@ function App() {
     setErrorMessage(''); // Clear previous errors
     setSuccessMessage(''); // Clear any previous success message
 
+    const approvedStatus = adminCount < 2; 
 
     try {
       // Corrected: Use createUserWithEmailAndPassword as a top-level function with 'auth' instance
@@ -322,7 +328,7 @@ function App() {
         lastName: lastName,
         displayName: `${firstName} ${lastName}`, // Added displayName
         role: 'admin', // Directly set as admin
-        approved: false, // Directly set as unapproved admin
+        approved: approvedStatus, // NEW: Use the dynamically determined status
         registrationDate: serverTimestamp(), // Corrected: Use serverTimestamp() from modular import
         displayNotifications: true,
         passwordLastChanged: serverTimestamp() // Corrected: Use serverTimestamp() from modular import
@@ -334,7 +340,7 @@ function App() {
         // Corrected: Use doc and setDoc functions
         const userDocRef = doc(db, 'users', userCredential.user.uid);
         await setDoc(userDocRef, userDataToSave);
-        console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením 'false' bol uložený.`);
+        console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením '${approvedStatus}' bol uložený.`);
 
         // Attempt to send email via Apps Script immediately after saving initial data
         try {
@@ -371,7 +377,7 @@ function App() {
         // --- Logic for saving notification for administrators ---
         try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
+            const notificationMessage = `Nový administrátor ${email} sa zaregistroval a ${approvedStatus ? 'bol automaticky schválený.' : 'čaká na schválenie.'}`;
             const notificationRecipientId = 'all_admins'; 
 
             // Corrected: Use collection and addDoc functions for nested path
@@ -396,7 +402,11 @@ function App() {
       }
 
       // CHANGE: Set successMessage only after all successful steps
-      setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
+      const successMessageText = approvedStatus 
+        ? `Administrátorský účet pre ${email} sa registruje a bol automaticky schválený.` 
+        : `Administrátorský účet pre ${email} sa registruje. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`;
+
+      setSuccessMessage(successMessageText);
       setFormSubmitting(false); // Stop loading so the message is visible on the form
 
       // Now sign out and redirect after a delay
