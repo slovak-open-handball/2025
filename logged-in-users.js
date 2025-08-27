@@ -393,14 +393,6 @@ function UsersManagementApp() {
                 // NOVINKA: Zobrazenie tlačidla na schválenie, ak je rola 'admin' a 'approved' je false
                 user.id !== window.currentUserId ?
                 React.createElement(React.Fragment, null,
-                  (user.role === 'admin' && user.approved === false) && React.createElement(
-                    'button',
-                    {
-                      onClick: () => handleApproveAdmin(user.id, user.email),
-                      className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
-                    },
-                    'Schváliť'
-                  ),
                   React.createElement(
                     'button',
                     {
@@ -416,6 +408,14 @@ function UsersManagementApp() {
                       className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
                     },
                     'Odstrániť'
+                  ),
+                  (user.role === 'admin' && user.approved === false) && React.createElement(
+                    'button',
+                    {
+                      onClick: () => handleApproveAdmin(user.id, user.email),
+                      className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out ml-2'
+                    },
+                    'Schváliť'
                   )
                 ) : null
               )
