@@ -6,139 +6,50 @@
     <title>SOH 2025 - Správa používateľov</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
             margin: 0;
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, ak by tu bolo, aby sa obsah neposúval celý doprava */
+            padding: 0;
         }
-        /* Štýly pre modálne okná */
-        /* Tieto štýly sú všeobecné, ale ConfirmationModal už nie je vykresľovaný */
-        .modal {
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            position: relative;
-        }
-        .close-button {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-        }
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
+        .main-content {
+            margin-left: 256px; /* Pre ľavé menu */
+            padding-top: 64px; /* Pre pevnú hlavičku */
+            transition: margin-left 0.3s ease-in-out;
         }
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-    <!-- Global application ID and Firebase configuration -->
-    <script>
-        const appId = '1:572988314768:web:781e27eb035179fe34b415';
-        const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
-        };
-        const initialAuthToken = null; // Global authentication token
-    </script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Hlavička -->
+<body class="bg-gray-100">
+
+    <!-- Kontajnery pre hlavičku a menu -->
     <div id="header-placeholder"></div>
+    <div id="left-menu-placeholder"></div>
 
-    <div class="flex flex-1">
-        <!-- Ľavé menu -->
-        <div id="left-menu-placeholder"></div>
-
-        <!-- Hlavný obsah -->
-        <main id="users-management-root" class="flex-1 p-8 pt-4 md:ml-64">
-            <!-- Tu sa bude vykresľovať React aplikácia UsersManagementApp -->
-            <div class="flex items-center justify-center min-h-screen bg-gray-100">
-                <div class="text-xl font-semibold text-gray-700">Načítavam...</div>
+    <!-- Hlavný obsah stránky -->
+    <div id="main-content-area" class="flex flex-col">
+        <div id="users-management-root" class="main-content p-6 flex-grow">
+            <!-- React aplikácia sa vykreslí tu -->
+            <div class="flex items-center justify-center h-full">
+                <div class="text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+                    <p class="mt-4 text-gray-500">Načítavam aplikáciu...</p>
+                </div>
             </div>
-        </main>
+        </div>
     </div>
 
-    <!-- Načítanie globálnych skriptov a React aplikácie -->
-    <script src="header.js"></script>
-    <script src="left-menu.js"></script>
-    <script src="logged-in-users.js"></script>
-
-    <script type="module">
-        // Funkcia na dynamické načítanie HTML obsahu
-        async function loadHtmlContent(placeholderId, url) {
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const html = await response.text();
-                document.getElementById(placeholderId).innerHTML = html;
-                console.log(`${url} načítaný do ${placeholderId}`);
-            } catch (error) {
-                console.error(`Chyba pri načítaní ${url}:`, error);
-                document.getElementById(placeholderId).innerHTML = `<div style="color: red; text-align: center;">Chyba pri načítaní obsahu: ${url}</div>`;
-            }
-        }
-
-        // Spustíme načítanie hlavičky a menu po načítaní DOM
-        window.onload = async () => {
-            await loadHtmlContent('header-placeholder', 'header.html');
-            await loadHtmlContent('left-menu-placeholder', 'left-menu.html');
-
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-            // Zabezpečíme, že UsersManagementApp je definovaná (je v logged-in-users.js)
-            if (typeof UsersManagementApp === 'undefined') {
-                console.error("Chyba: Komponent UsersManagementApp nie je definovaný. Skontrolujte logged-in-users.js.");
-                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
-
-            const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
-            root.render(React.createElement(UsersManagementApp, null));
-            console.log("logged-in-users.html: React App (UsersManagementApp) vykreslená.");
-        };
-    </script>
+    <!-- Skripty -->
+    <!-- Súbory authentication, header a left-menu musia byť načítané prvé, lebo definujú globálne funkcie a premenné -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="logged-in-left-menu.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Váš hlavný aplikačný skript -->
+    <script type="module" src="logged-in-users.js"></script>
 </body>
 </html>
