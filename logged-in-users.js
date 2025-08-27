@@ -81,10 +81,6 @@ const { useState, useEffect, useRef } = React;
 function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userRoleLoading, setUserRoleLoading] = useState(true);
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState("info");
   const notificationTimeoutRef = useRef(null);
 
   // Získame globálne premenné z window
@@ -93,67 +89,56 @@ function UsersManagementApp() {
   const auth = window.auth;
 
   useEffect(() => {
-    // Pred spustením Firebase operácií skontrolujeme, či sú všetky potrebné premenné definované
-    if (!db || !appId || !auth || !auth.currentUser) {
-        console.log("UsersManagementApp: Čakám na inicializáciu Firebase a ID aplikácie.");
-        setLoading(true);
-        // Neukončujeme, necháme useEffect spustiť znova, keď sa zmenia závislosti
-        return;
-    }
-    
-    // Načítanie role používateľa
-    const userDocRef = doc(db, `artifacts/${appId}/public/users`, auth.currentUser.uid);
-    const unsubscribeUserRole = onSnapshot(userDocRef, (docSnapshot) => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        if (!db || !appId || !auth || !auth.currentUser) {
+            console.log("UsersManagementApp: Čakám na inicializáciu Firebase a ID aplikácie.");
+            return;
+        }
+
+        // Načítanie role používateľa
+        const userDocRef = doc(db, `artifacts/${appId}/public/users`, auth.currentUser.uid);
+        const docSnapshot = await getDoc(userDocRef);
         const userRoleData = docSnapshot.data();
         const isAdmin = userRoleData?.isAdmin;
         window.isCurrentUserAdmin = isAdmin;
-        setUserRoleLoading(false);
 
         if (isAdmin) {
-            // Ak je používateľ admin, začneme načítavať zoznam používateľov
-            const usersCollectionPath = `artifacts/${appId}/public/users`;
-            const usersCol = collection(db, usersCollectionPath);
-            const q = query(usersCol);
+          // Ak je používateľ admin, začneme načítavať zoznam používateľov
+          const usersCollectionPath = `artifacts/${appId}/public/users`;
+          const usersCol = collection(db, usersCollectionPath);
+          const q = query(usersCol);
 
-            const unsubscribeUsers = onSnapshot(q, (snapshot) => {
-              const usersList = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-              setUsers(usersList);
-              setLoading(false); // Až po načítaní dát používateľov skryjeme loader
-            }, (error) => {
-              console.error("Chyba pri načítaní používateľov:", error);
-              setLoading(false);
-              window.showGlobalNotification('Chyba pri načítaní používateľov.', 'error');
-            });
-            return () => unsubscribeUsers();
-        } else {
-            // Ak nie je admin, skryjeme loader a zobrazíme "nemáte oprávnenie"
+          const unsubscribeUsers = onSnapshot(q, (snapshot) => {
+            const usersList = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            setUsers(usersList);
+            setLoading(false); // Skryjeme loader po načítaní dát
+          }, (error) => {
+            console.error("Chyba pri načítaní používateľov:", error);
             setLoading(false);
+            window.showGlobalNotification('Chyba pri načítaní používateľov.', 'error');
+          });
+          return () => unsubscribeUsers();
+        } else {
+          // Ak nie je admin, skryjeme loader a zobrazíme "nemáte oprávnenie"
+          setLoading(false);
         }
-    }, (error) => {
-        console.error("Chyba pri načítaní role používateľa:", error);
-        setUserRoleLoading(false);
+      } catch (error) {
+        console.error("Chyba pri načítaní dát v UsersManagementApp:", error);
         setLoading(false);
-        window.showGlobalNotification('Chyba pri overení oprávnení.', 'error');
-    });
+        window.showGlobalNotification('Chyba pri overení oprávnení alebo načítaní dát.', 'error');
+      }
+    };
 
-    return () => unsubscribeUserRole();
+    fetchData();
   }, [db, appId, auth]);
 
-
   const showNotificationMessage = (message, type = 'success') => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setShowNotification(true);
-    if (notificationTimeoutRef.current) {
-      clearTimeout(notificationTimeoutRef.current);
-    }
-    notificationTimeoutRef.current = setTimeout(() => {
-      setShowNotification(false);
-      setNotificationMessage("");
-    }, 5000);
+    window.showGlobalNotification(message, type);
   };
 
   const handleToggleAdmin = async (user) => {
@@ -162,10 +147,10 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         isAdmin: !user.isAdmin
       });
-      window.showGlobalNotification(`Status administrátora pre ${user.displayName} bol úspešne zmenený.`);
+      showNotificationMessage(`Status administrátora pre ${user.displayName} bol úspešne zmenený.`);
     } catch (error) {
       console.error("Chyba pri zmene statusu administrátora:", error);
-      window.showGlobalNotification('Nepodarilo sa zmeniť status administrátora.', 'error');
+      showNotificationMessage('Nepodarilo sa zmeniť status administrátora.', 'error');
     }
   };
 
@@ -173,10 +158,10 @@ function UsersManagementApp() {
     try {
       const userDocRef = doc(db, `artifacts/${appId}/public/users`, userIdToDelete);
       await deleteDoc(userDocRef);
-      window.showGlobalNotification('Používateľ bol úspešne odstránený.');
+      showNotificationMessage('Používateľ bol úspešne odstránený.');
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
-      window.showGlobalNotification('Nepodarilo sa odstrániť používateľa.', 'error');
+      showNotificationMessage('Nepodarilo sa odstrániť používateľa.', 'error');
     }
   };
 
