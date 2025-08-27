@@ -426,7 +426,7 @@ function UsersManagementApp() {
     );
   }
   
-  const isCurrentUserOldestAdmin = window.currentUserId === oldestAdminId;
+  const isCurrentUserOldestAdmin = globalUserProfileData?.id === oldestAdminId;
   
   // Funkcia na triedenie pou\u017E\u00edvate\u013Eov
   const sortUsers = (usersList) => {
