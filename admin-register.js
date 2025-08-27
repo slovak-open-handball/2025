@@ -166,7 +166,7 @@ function App() {
                 if (docSnap.exists()) {
                     setAdminCount(docSnap.data().count);
                 } else {
-                    // Ak dokument neexistuje, vytvoríme ho s hodnotou 0
+                    console.log("V systéme zatiaľ neexistujú žiadni administrátori. Registrácia vášho účtu ho automaticky označí ako prvého administrátora.");
                     setDoc(adminCountDocRef, { count: 0 }, { merge: true }).then(() => {
                         setAdminCount(0);
                     }).catch(e => {
@@ -473,12 +473,6 @@ function App() {
                     errorMessage
                 ),
                 React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' }, 'Registrácia administrátora'),
-                // Zobrazenie notifikácie, ak ešte neexistujú žiadni administrátori
-                adminCount === 0 && React.createElement(
-                    'div',
-                    { className: 'bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
-                    React.createElement('span', { className: 'block sm:inline' }, 'V systéme zatiaľ neexistujú žiadni administrátori. Registrácia vášho účtu ho automaticky označí ako prvého administrátora.')
-                ),
                 React.createElement(
                     'form',
                     { onSubmit: handleRegisterAdmin, className: 'space-y-4' },
