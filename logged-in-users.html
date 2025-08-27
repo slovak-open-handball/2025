@@ -28,7 +28,6 @@
             align-items: center;
             justify-content: center;
         }
-
         .modal-content {
             background-color: #fefefe;
             padding: 20px;
@@ -39,7 +38,6 @@
             text-align: center;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-
         .modal-buttons {
             display: flex;
             justify-content: center;
@@ -99,7 +97,6 @@
             flex-direction: column-reverse; /* Nové notifikácie sa zobrazujú navrchu */
             gap: 10px;
         }
-
         .notification-toast {
             display: flex;
             align-items: center;
@@ -115,12 +112,10 @@
         .notification-toast.info { background-color: #2196F3; }
         .notification-toast.success { background-color: #4CAF50; }
         .notification-toast.error { background-color: #F44336; }
-
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes fadeOut {
             from { opacity: 1; }
             to { opacity: 0; }
@@ -153,20 +148,19 @@
     <!-- Načítanie globálnych JS knižníc -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
 
-    <!-- Načítanie lokálnych skriptov, ktoré sú navrhnuté ako moduly -->
+    <!-- Načítanie lokálnych skriptov ako modulov. Authentication.js musí ísť prvý,
+         pretože inicializuje Firebase. Ostatné skripty sa spoliehajú na jeho prácu. -->
     <script type="module" src="./authentication.js"></script>
     <script type="module" src="./header.js"></script>
     <script type="module" src="./logged-in-left-menu.js"></script>
     <script type="module" src="./logged-in-users.js"></script>
     
-
     <script>
         /**
-         * Pomocná funkcia na načítanie HTML obsahu z externého súboru.
-         * @param {string} placeholderId ID HTML elementu, do ktorého sa vloží obsah.
-         * @param {string} filePath Cesta k HTML súboru.
+         * Helper function to load HTML content from an external file.
+         * @param {string} placeholderId ID of the HTML element to insert the content into.
+         * @param {string} filePath Path to the HTML file.
          */
         async function loadHtmlContent(placeholderId, filePath) {
             const placeholder = document.getElementById(placeholderId);
@@ -178,84 +172,82 @@
                     }
                     const html = await response.text();
                     placeholder.innerHTML = html;
-                    console.log(`Obsah súboru '${filePath}' bol úspešne načítaný.`);
+                    console.log(`Content of '${filePath}' loaded successfully.`);
                 } catch (error) {
-                    console.error(`Chyba pri načítaní súboru '${filePath}':`, error);
+                    console.error(`Error loading file '${filePath}':`, error);
                     placeholder.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Nepodarilo sa načítať ${filePath}. Skúste to prosím neskôr.</div>`;
                 }
             } else {
-                console.error(`Placeholder s ID '${placeholderId}' nebol nájdený.`);
+                console.error(`Placeholder with ID '${placeholderId}' not found.`);
             }
         }
         
         /**
-         * Funkcia na vykreslenie hlavného React komponentu pre túto stránku.
+         * Function to render the main React component for this page.
          */
         function renderApp() {
-            // Zabezpečíme, že React a ReactDOM sú načítané.
+            // Ensure React and ReactDOM are loaded.
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                console.error("Error: React or ReactDOM are not loaded. Check the script order.");
                 document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
 
-            // Hľadáme komponent UsersManagementApp priamo na globálnom window objekte.
-            // Toto rešpektuje spôsob, akým je komponent definovaný vo vašom `logged-in-users.js`.
+            // Find the UsersManagementApp component on the global window object.
             const UsersManagementApp = window.UsersManagementApp;
             if (typeof UsersManagementApp === 'undefined') {
-                console.error("Chyba: Komponent UsersManagementApp nie je definovaný v module.");
+                console.error("Error: The UsersManagementApp component is not defined on the window object.");
                 document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
             const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
             root.render(React.createElement(UsersManagementApp, null));
-            console.log("React App (UsersManagementApp) vykreslená.");
+            console.log("React App (UsersManagementApp) rendered.");
         }
 
-        // Pomocné premenné na sledovanie stavu
+        // Global variables to track the state
         let isAuthReady = false;
         let isDomReady = false;
 
         /**
-         * Hlavná inicializačná funkcia, ktorá sa spustí, až keď sú splnené všetky podmienky.
+         * Main initialization function that runs only when all conditions are met.
          */
         async function initializeApp() {
-            // 1. Zabezpečíme načítanie globálnych premenných, ktoré skripty potrebujú.
-            // Bezpečné načítanie premenných
+            // Only proceed if both the DOM is ready and the auth data is available
+            if (!isDomReady || !isAuthReady) {
+                return;
+            }
+            
+            console.log("DOM and authentication data are ready. Initializing application...");
+            
+            // 1. Ensure the necessary global variables are set.
             window.firebaseConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : null;
             window.initialAuthToken = (typeof __initial_auth_token !== 'undefined') ? __initial_auth_token : null;
             window.appId = (typeof __app_id !== 'undefined') ? __app_id : 'default-app-id';
-            
-            // 2. Načítanie a vykreslenie HTML komponentov.
+
+            // 2. Load and render HTML components.
             await loadHtmlContent('header-placeholder', 'header.html');
             await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
             
-            // 3. Spustíme renderovanie hlavnej React aplikácie.
+            // 3. Start rendering the main React application.
             renderApp();
         }
 
-        // Listener, ktorý čaká, kým je DOM plne načítaný.
+        // Listener that waits for the DOM to be fully loaded.
         document.addEventListener('DOMContentLoaded', () => {
             isDomReady = true;
-            if (isAuthReady) {
-                console.log("DOM aj autentifikácia sú pripravené, spúšťam inicializáciu aplikácie.");
-                initializeApp();
-            }
+            initializeApp();
         });
 
-        // Listener pre globálnu udalosť, ktorá signalizuje pripravenosť autentifikácie.
+        // Listener for the global event that signals authentication readiness.
         window.addEventListener('globalDataUpdated', (event) => {
             isAuthReady = true;
-            // Ak DOM už bol načítaný, môžeme spustiť inicializáciu
-            if (isDomReady) {
-                console.log("Dáta z Firebase aj DOM sú pripravené, spúšťam inicializáciu aplikácie.");
-                initializeApp();
-            }
+            initializeApp();
         });
 
-        // Kontrola pri prvom načítaní pre prípad, že udalosti už prebehli pred nastavením listenerov.
+        // Check the initial state in case the events fired before the listeners were set up.
         if (window.isGlobalAuthReady && document.readyState !== 'loading') {
-            console.log('Autentifikačné dáta a DOM sú už načítané pri načítaní stránky, spúšťam inicializáciu.');
+            console.log('Authentication data and DOM are already ready at page load, starting initialization.');
             isDomReady = true;
             isAuthReady = true;
             initializeApp();
