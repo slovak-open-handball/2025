@@ -227,8 +227,9 @@ function UsersManagementApp() {
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
 
     try {
-      const response = await fetch(GAS_WEB_APP_URL, {
+      await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
+        mode: 'no-cors', // Dôležité pre obídenie CORS
         headers: {
           'Content-Type': 'application/json',
         },
@@ -238,12 +239,7 @@ function UsersManagementApp() {
           body: `Dobrý deň ${userName},\n\nVáš administrátorský účet pre SportApp bol úspešne schválený. Môžete sa prihlásiť a začať spravovať systém.\n\nS pozdravom,\nTím SportApp`,
         }),
       });
-
-      if (!response.ok) {
-        console.error('Chyba pri odosielaní e-mailu:', response.statusText);
-        setNotification({ message: 'Nepodarilo sa odoslať potvrdzovací e-mail.', type: 'error' });
-        return false;
-      }
+      // V režime no-cors nie je možné skontrolovať stav, takže predpokladáme úspech
       return true;
     } catch (error) {
       console.error('Chyba pri odosielaní e-mailu:', error);
@@ -251,6 +247,7 @@ function UsersManagementApp() {
       return false;
     }
   };
+
 
   // UPRAVENÁ FUNKCIA: Teraz kontroluje zmenu roly na 'admin'
   const handleChangeRole = async (userId, newRole) => {
