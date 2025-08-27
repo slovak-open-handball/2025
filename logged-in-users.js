@@ -237,11 +237,16 @@ function UsersManagementApp() {
 
   const handleChangeRole = async (userId, newRole) => {
     try {
-      // Logic to decrement adminCount if the role is changed from admin to something else
+      // 1. Získame referencie na dokumenty a ich dáta
       const userDocRef = doc(db, `users`, userId);
       const userSnap = await getDoc(userDocRef);
+      if (!userSnap.exists()) {
+        setNotification({ message: 'Používateľ nebol nájdený.', type: 'error' });
+        return;
+      }
       const oldRole = userSnap.data().role;
       
+      // 2. Skontrolujeme, či došlo k zmene roly z 'admin'
       const isApproved = newRole !== 'admin';
       
       await updateDoc(userDocRef, {
@@ -249,6 +254,7 @@ function UsersManagementApp() {
         approved: isApproved
       });
       
+      // 3. Ak sa rola zmenila z admina na inú, dekrementujeme počítadlo
       if (oldRole === 'admin' && newRole !== 'admin') {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
