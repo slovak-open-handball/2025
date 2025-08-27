@@ -207,11 +207,9 @@ function UsersManagementApp() {
             ...doc.data()
           }));
           
-          // OPRAVA CHYBY: Používame seconds a nanoseconds pre správne zoradenie
           const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
           if (adminUsers.length > 0) {
             adminUsers.sort((a, b) => {
-              // Porovnávame pomocou objektu Date vytvoreného zo seconds a nanoseconds
               const dateA = a.registrationDate?.seconds ? new Date(a.registrationDate.seconds * 1000 + (a.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
               const dateB = b.registrationDate?.seconds ? new Date(b.registrationDate.seconds * 1000 + (b.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
               return dateA - dateB;
@@ -415,7 +413,9 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
-                user.id !== window.currentUserId ?
+                // Logika pre zobrazenie všetkých akčných tlačidiel, ktoré vidí len najstarší admin,
+                // a to len pre ostatných používateľov, nie pre seba.
+                window.currentUserId === oldestAdminId && user.id !== window.currentUserId ?
                 React.createElement(React.Fragment, null,
                   (user.role === 'admin' && user.approved === false) && React.createElement(
                     'button',
@@ -433,15 +433,16 @@ function UsersManagementApp() {
                     },
                     'Zmeniť rolu'
                   ),
-                  user.role === 'admin' && user.id === oldestAdminId && (
-                    React.createElement(
-                      'button',
-                      {
-                        onClick: () => setUserToDelete(user),
-                        className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
-                      },
-                      'Odstrániť'
-                    )
+                  // Tlačidlo Odstrániť sa zobrazí pre každého, kto nie je najstarší admin
+                  // a zároveň nie je jediným schváleným adminom v systéme.
+                  user.role === 'admin' && users.filter(u => u.role === 'admin' && u.approved).length > 1 &&
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => setUserToDelete(user),
+                      className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
+                    },
+                    'Odstrániť'
                   )
                 ) : null
               )
