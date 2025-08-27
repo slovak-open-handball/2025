@@ -302,7 +302,7 @@ function App() {
                 lastName: lastName,
                 displayName: `${firstName} ${lastName}`,
                 role: 'admin',
-                approved: false, // Nový administrátor čaká na schválenie
+                approved: false,
                 registrationDate: serverTimestamp(),
                 displayNotifications: true,
                 passwordLastChanged: serverTimestamp()
@@ -365,12 +365,13 @@ function App() {
                 console.error("App: Error saving notification about administrator registration:", e);
             }
 
-            // Nastavenie správy o úspešnej registrácii a zastavenie spinnera
+            // Krok 5: Ak všetko prebehlo úspešne, odhlásenie používateľa a nastavenie správy
+            await auth.signOut();
+
             setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
             setFormSubmitting(false);
             
-            // Odhlásenie a presmerovanie
-            await auth.signOut();
+            // Presmerovanie
             setTimeout(() => {
                 window.location.href = 'login.html';
             }, 5000);
