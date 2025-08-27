@@ -222,9 +222,9 @@ function UsersManagementApp() {
           setUsers(usersList);
           setLoading(false);
         }, (error) => {
-          console.error("Chyba pri na\u010D\u00EDtan\u00ED pou\u017E\u00EDvate\u013Eov:", error);
+          console.error("Chyba pri na\u010D\u00EDtan\u00ed pou\u017E\u00EDvate\u013Eov:", error);
           setLoading(false);
-          setNotification({ message: 'Chyba pri na\u010D\u00EDtan\u00ED pou\u017E\u00EDvate\u013Eov.', type: 'error' });
+          setNotification({ message: 'Chyba pri na\u010D\u00EDtan\u00ed pou\u017E\u00EDvate\u013Eov.', type: 'error' });
         });
         return () => unsubscribeUsers();
       } else {
