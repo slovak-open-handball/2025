@@ -222,9 +222,9 @@ function UsersManagementApp() {
           setUsers(usersList);
           setLoading(false);
         }, (error) => {
-          console.error("Chyba pri načítaní používateľov:", error);
+          console.error("Chyba pri na\u010D\u00EDtan\u00ED pou\u017E\u00EDvate\u013Eov:", error);
           setLoading(false);
-          setNotification({ message: 'Chyba pri načítaní používateľov.', type: 'error' });
+          setNotification({ message: 'Chyba pri na\u010D\u00EDtan\u00ED pou\u017E\u00EDvate\u013Eov.', type: 'error' });
         });
         return () => unsubscribeUsers();
       } else {
@@ -237,16 +237,32 @@ function UsersManagementApp() {
 
   const handleChangeRole = async (userId, newRole) => {
     try {
-      const isApproved = newRole !== 'admin';
+      // Logic to decrement adminCount if the role is changed from admin to something else
       const userDocRef = doc(db, `users`, userId);
+      const userSnap = await getDoc(userDocRef);
+      const oldRole = userSnap.data().role;
+      
+      const isApproved = newRole !== 'admin';
+      
       await updateDoc(userDocRef, {
         role: newRole,
         approved: isApproved
       });
-      setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
+      
+      if (oldRole === 'admin' && newRole !== 'admin') {
+        const adminCountRef = doc(db, `settings`, `adminCount`);
+        const adminCountSnap = await getDoc(adminCountRef);
+        if (adminCountSnap.exists()) {
+          await updateDoc(adminCountRef, {
+            count: increment(-1)
+          });
+        }
+      }
+      
+      setNotification({ message: `Rola pou\u017E\u00EDvate\u013Ea bola \u00faspe\u0161ne zmenen\u00e1 na ${newRole}.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri zmene roly používateľa:", error);
-      setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
+      console.error("Chyba pri zmene roly pou\u017E\u00EDvate\u013Ea:", error);
+      setNotification({ message: 'Nepodarilo sa zmeni\u0165 rolu pou\u017E\u00EDvate\u013Ea.', type: 'error' });
     }
   };
   
@@ -255,6 +271,20 @@ function UsersManagementApp() {
 
     try {
       const userDocRef = doc(db, `users`, userToDelete.id);
+      
+      // Check if the user being deleted is an admin
+      if (userToDelete.role === 'admin') {
+        const adminCountRef = doc(db, `settings`, `adminCount`);
+        const adminCountSnap = await getDoc(adminCountRef);
+        
+        if (adminCountSnap.exists()) {
+          // Decrement the admin count
+          await updateDoc(adminCountRef, {
+            count: increment(-1)
+          });
+        }
+      }
+      
       await deleteDoc(userDocRef);
 
       const payload = {
@@ -272,11 +302,11 @@ function UsersManagementApp() {
         body: JSON.stringify(payload),
       });
 
-      console.log('Požiadavka na odstránenie používateľa odoslaná.');
-      setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
+      console.log('Po\u017Eiadavka na odstr\u00e1nenie pou\u017E\u00EDvate\u013Ea odoslan\u00e1.');
+      setNotification({ message: `Pou\u017E\u00EDvate\u013E ${userToDelete.firstName} bol \u00faspe\u0161ne odstr\u00e1nen\u00fd.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri odstraňovaní používateľa:", error);
-      setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
+      console.error("Chyba pri odstra\u0148ovan\u00ed pou\u017E\u00EDvate\u013Ea:", error);
+      setNotification({ message: 'Nepodarilo sa odstr\u00e1ni\u0165 pou\u017E\u00EDvate\u013Ea.', type: 'error' });
     } finally {
       setUserToDelete(null);
     }
@@ -284,8 +314,8 @@ function UsersManagementApp() {
 
   const sendApprovalEmail = async (userEmail) => {
     if (!googleScriptUrl_for_email) {
-      console.error("Google Apps Script URL nie je definovaná.");
-      setNotification({ message: 'Chyba: URL skriptu nebola nájdená.', type: 'error' });
+      console.error("Google Apps Script URL nie je definovan\u00e1.");
+      setNotification({ message: 'Chyba: URL skriptu nebola n\u00e1jden\u00e1.', type: 'error' });
       return;
     }
   
@@ -307,49 +337,49 @@ function UsersManagementApp() {
         body: JSON.stringify(payload),
       });
   
-      console.log('Požiadavka na odoslanie e-mailu odoslaná.');
-      setNotification({ message: `E-mail o schválení bol odoslaný na ${userEmail}.`, type: 'success' });
+      console.log('Po\u017Eiadavka na odoslanie e-mailu odoslan\u00e1.');
+      setNotification({ message: `E-mail o schv\u00e1len\u00ed bol odoslan\u00fd na ${userEmail}.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri odosielaní e-mailu o schválení:", error);
-      setNotification({ message: 'Nepodarilo sa odoslať e-mail o schválení.', type: 'error' });
+      console.error("Chyba pri odosielan\u00ed e-mailu o schv\u00e1len\u00ed:", error);
+      setNotification({ message: 'Nepodarilo sa odosla\u0165 e-mail o schv\u00e1len\u00ed.', type: 'error' });
     }
   };
   
 
   const handleApproveAdmin = async (userId, userEmail) => {
     try {
-      // 1. Získame referencie na dokumenty
+      // 1. Z\u00edskame referencie na dokumenty
       const userDocRef = doc(db, `users`, userId);
       const adminCountRef = doc(db, `settings`, `adminCount`);
       
-      // 2. Schválime používateľa
+      // 2. Schv\u00e1lime pou\u017E\u00EDvate\u013Ea
       await updateDoc(userDocRef, {
         approved: true
       });
       
-      // 3. Získame aktuálny stav počítadla adminov
+      // 3. Z\u00edskame aktu\u00e1lny stav po\u010D\u00edtadla adminov
       const adminCountSnap = await getDoc(adminCountRef);
       
       if (adminCountSnap.exists()) {
-        // Ak dokument existuje, zvýšime jeho hodnotu
+        // Ak dokument existuje, zv\u00fd\u0161ime jeho hodnotu
         await updateDoc(adminCountRef, {
           count: increment(1)
         });
       } else {
-        // Ak neexistuje, vytvoríme ho a nastavíme počiatočnú hodnotu na 1
+        // Ak neexistuje, vytvor\u00edme ho a nastav\u00edme po\u010Diato\u010Dn\u00fa hodnotu na 1
         await setDoc(adminCountRef, {
           count: 1
         });
       }
       
-      // 4. Pošleme e-mail
+      // 4. Po\u0161leme e-mail
       await sendApprovalEmail(userEmail);
       
-      // 5. Zobrazíme notifikáciu
-      setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
+      // 5. Zobraz\u00edme notifik\u00e1ciu
+      setNotification({ message: `Admin bol \u00faspe\u0161ne schv\u00e1len\u00fd a e-mail bol odoslan\u00fd.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri schvaľovaní admina:", error);
-      setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
+      console.error("Chyba pri schva\u013Eovan\u00ed admina:", error);
+      setNotification({ message: 'Nepodarilo sa schv\u00e1li\u0165 admina.', type: 'error' });
     }
   };
 
@@ -368,15 +398,15 @@ function UsersManagementApp() {
 
   const getTranslatedRole = (role, isUserOldestAdmin, isCurrentUserOldestAdmin) => {
       if (isUserOldestAdmin && isCurrentUserOldestAdmin) {
-          return 'Superadministrátor';
+          return 'Superadministr\u00e1tor';
       }
       switch (role) {
           case 'admin':
-              return 'Administrátor';
+              return 'Administr\u00e1tor';
           case 'hall':
-              return 'Športová hala';
+              return '\u0160portov\u00e1 hala';
               case 'user':
-              return 'Používateľ';
+              return 'Pou\u017E\u00EDvate\u013E';
           default:
               return role;
       }
@@ -392,20 +422,20 @@ function UsersManagementApp() {
   if (window.isCurrentUserAdmin === false) {
     return React.createElement(
       'div', { className: 'flex items-center justify-center h-full' },
-      React.createElement('h1', { className: 'text-3xl font-bold text-gray-700' }, 'Nemáte oprávnenie na zobrazenie tejto stránky.')
+      React.createElement('h1', { className: 'text-3xl font-bold text-gray-700' }, 'Nem\u00e1te opr\u00e1vnenie na zobrazenie tejto str\u00e1nky.')
     );
   }
   
   const isCurrentUserOldestAdmin = window.currentUserId === oldestAdminId;
   const isMoreThanOneApprovedAdmin = users.filter(u => u.role === 'admin' && u.approved).length > 1;
 
-  // Funkcia na triedenie používateľov
+  // Funkcia na triedenie pou\u017E\u00EDvate\u013Eov
   const sortUsers = (usersList) => {
       const oldestAdmin = usersList.find(u => u.id === oldestAdminId);
       const currentUser = usersList.find(u => u.id === window.currentUserId);
       const otherUsers = usersList.filter(u => u.id !== oldestAdminId && u.id !== window.currentUserId);
 
-      // Triedenie ostatných používateľov podľa slovenskej abecedy
+      // Triedenie ostatn\u00fdch pou\u017E\u00EDvate\u013Eov pod\u013Ea slovenskej abecedy
       otherUsers.sort((a, b) => {
           const lastNameComparison = a.lastName.localeCompare(b.lastName, 'sk');
           if (lastNameComparison !== 0) {
@@ -414,7 +444,7 @@ function UsersManagementApp() {
           return a.firstName.localeCompare(b.firstName, 'sk');
       });
 
-      // Zostavenie finálneho poľa
+      // Zostavenie fin\u00e1lneho po\u013Ea
       const sortedList = [];
       if (oldestAdmin) {
           sortedList.push(oldestAdmin);
@@ -430,7 +460,7 @@ function UsersManagementApp() {
   return React.createElement(
     'div',
     { className: 'flex-grow p-4 md:p-8 bg-gray-100 rounded-lg shadow-inner' },
-    React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-6' }, 'Správa používateľov'),
+    React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-6' }, 'Spr\u00e1va pou\u017E\u00EDvate\u013Eov'),
     React.createElement(
       'div',
       { className: 'overflow-x-auto bg-white rounded-lg shadow' },
@@ -458,7 +488,7 @@ function UsersManagementApp() {
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
             const canDeleteUser = isCurrentUserOldestAdmin && isNotCurrentUser && (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin));
             
-            // Logika na skrytie riadku pre ostatných používateľov
+            // Logika na skrytie riadku pre ostatn\u00fdch pou\u017E\u00EDvate\u013Eov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
               return null;
             }
@@ -488,7 +518,7 @@ function UsersManagementApp() {
                         onClick: () => handleApproveAdmin(user.id, user.email),
                         className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
                       },
-                      'Schváliť'
+                      'Schv\u00e1li\u0165'
                     ),
                     (canChangeRole) && React.createElement(
                       'button',
@@ -496,7 +526,7 @@ function UsersManagementApp() {
                         onClick: () => setUserToEdit(user),
                         className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
                       },
-                      'Zmeniť rolu'
+                      'Zmeni\u0165 rolu'
                     ),
                     (canDeleteUser) &&
                     React.createElement(
@@ -505,7 +535,7 @@ function UsersManagementApp() {
                         onClick: () => setUserToDelete(user),
                         className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
                       },
-                      'Odstrániť'
+                      'Odstr\u00e1ni\u0165'
                     )
                   ) : null
               )
@@ -521,38 +551,38 @@ function UsersManagementApp() {
       onRoleChange: handleChangeRole
     }),
     userToDelete && React.createElement(ConfirmationModal, {
-      message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
+      message: `Naozaj chcete odstr\u00e1ni\u0165 pou\u017E\u00EDvate\u013Ea ${userToDelete.firstName} ${userToDelete.lastName}? T\u00e1to akcia je nezvratn\u00e1.`,
       onConfirm: handleDeleteUser,
       onCancel: () => setUserToDelete(null)
     })
   );
 }
 
-// Funkcia na inicializáciu a vykreslenie React aplikácie
+// Funkcia na inicializ\u00e1ciu a vykreslenie React aplik\u00e1cie
 const initializeAndRenderApp = () => {
   const rootElement = document.getElementById('users-management-root');
 
   if (!window.isGlobalAuthReady || !window.globalUserProfileData) {
-    console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie a načítanie dát používateľa...");
+    console.log("logged-in-users.js: \u010cak\u00e1m na inicializ\u00e1ciu autentifik\u00e1cie a na\u010D\u00edtanie d\u00e1t pou\u017E\u00EDvate\u013Ea...");
     return;
   }
 
   window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
 
   if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+    console.error("Chyba: React alebo ReactDOM nie s\u00fa na\u010D\u00edtan\u00e9. Skontrolujte poradie skriptov.");
     if (rootElement) {
-      rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+      rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri na\u010D\u00edtan\u00ed aplik\u00e1cie. Sk\u00faste to pros\u00edm nesk\u00f4r.</div>';
     }
     return;
   }
 
   const root = ReactDOM.createRoot(rootElement);
   root.render(React.createElement(UsersManagementApp, null));
-  console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
+  console.log("logged-in-users.js: React App (UsersManagementApp) vykreslen\u00e1.");
 };
 
-// Vykreslíme loader a zaregistrujeme poslucháča udalostí
+// Vykresl\u00edme loader a zaregistrujeme posluch\u00e1\u010Da udalost\u00ed
 const rootElement = document.getElementById('users-management-root');
 if (rootElement) {
     rootElement.innerHTML = `
@@ -563,8 +593,8 @@ if (rootElement) {
 }
 window.addEventListener('globalDataUpdated', initializeAndRenderApp);
 
-// Pre prípad, že udalosť už prebehla
+// Pre pr\u00edpad, \u017Ee udalos\u0165 u\u017E prebehla
 if (window.isGlobalAuthReady && window.globalUserProfileData) {
-    console.log('logged-in-users.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.');
+    console.log('logged-in-users.js: Glob\u00e1lne d\u00e1ta u\u017E existuj\u00fa. Vykres\u013Eujem aplik\u00e1ciu okam\u017Eite.');
     initializeAndRenderApp();
 }
