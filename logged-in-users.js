@@ -1,4 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+// logged-in-users.js (teraz obsahuje UsersManagementApp pre správu používateľov)
+// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
+// sú globálne definované v <head> logged-in-users.html.
+// Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
+
+// Imports pre potrebné Firebase funkcie
 import {
   collection,
   query,
@@ -8,6 +13,9 @@ import {
   deleteDoc,
   getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Získanie React hookov z globálneho objektu React
+const { useState, useEffect, useRef } = React;
 
 // Komponenta pre notifikácie
 function NotificationModal({ message, onClose, type = 'info' }) {
@@ -71,6 +79,7 @@ window.showGlobalNotification = (message, type = 'success') => {
   root.render(React.createElement(NotificationModal, { message, type, onClose: () => root.render(null) }));
 };
 
+
 // Komponenta pre potvrdzovací modal
 function ConfirmationModal({ message, onConfirm, onCancel }) {
   return React.createElement(
@@ -108,9 +117,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
   const [selectedRole, setSelectedRole] = useState(user.role);
 
   const handleSave = () => {
-    // Ak sa rola mení na admina, pošleme informáciu o tom do nadradenej funkcie
-    const willBeAdmin = selectedRole === 'admin' && user.role !== 'admin';
-    onRoleChange(user.id, selectedRole, willBeAdmin);
+    onRoleChange(user.id, selectedRole);
     onClose();
   };
 
@@ -171,7 +178,6 @@ function UsersManagementApp() {
 
   // Získame globálne premenné z window
   const db = window.db;
-  const appId = window.appId;
   const auth = window.auth;
   const globalUserProfileData = window.globalUserProfileData;
 
@@ -187,10 +193,9 @@ function UsersManagementApp() {
 
       const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
       window.isCurrentUserAdmin = isUserAdmin;
-      window.currentUserId = auth.currentUser?.uid; // Uloženie ID aktuálneho používateľa
+      window.currentUserId = auth.currentUser?.uid;
 
       if (isUserAdmin) {
-        // Používame priamu cestu k používateľom, bez appId, aby sme spravovali všetkých používateľov v databáze.
         const usersCollectionPath = `users`;
         const usersCol = collection(db, usersCollectionPath);
         const q = query(usersCol);
@@ -220,7 +225,7 @@ function UsersManagementApp() {
   const sendApprovalEmail = async (userEmail, userName) => {
     // POZNÁMKA: Nahraďte túto URL vašou nasadenou URL Google Apps Script!
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
-    
+
     try {
       const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
@@ -481,4 +486,5 @@ if (window.isGlobalAuthReady && window.globalUserProfileData) {
     console.log('logged-in-users.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.');
     initializeAndRenderApp();
 }
+
 export default UsersManagementApp;
