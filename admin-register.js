@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Auth a Firestore (modulárny prístup, SDK v11)
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, addDoc, getDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanty pre reCAPTCHA a Apps Script URL
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -292,18 +292,26 @@ function App() {
         setSuccessMessage('');
 
         try {
-            // Krok 1: Vytvorenie používateľa vo Firebase Authentication
+            // Krok 1: Kontrola existujúcich administrátorov
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('role', '==', 'admin'));
+            const querySnapshot = await getDocs(q);
+
+            const isFirstAdmin = querySnapshot.empty;
+            const approvedStatus = isFirstAdmin ? true : false;
+            
+            // Krok 2: Vytvorenie používateľa vo Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const userUid = userCredential.user.uid;
 
-            // Krok 2: Uloženie počiatočných údajov používateľa do Firestore
+            // Krok 3: Uloženie počiatočných údajov používateľa do Firestore s dynamickým schválením
             const userDataToSave = {
                 email: email,
                 firstName: firstName,
                 lastName: lastName,
                 displayName: `${firstName} ${lastName}`,
                 role: 'admin',
-                approved: false,
+                approved: approvedStatus,
                 registrationDate: serverTimestamp(),
                 displayNotifications: true,
                 passwordLastChanged: serverTimestamp()
@@ -314,7 +322,7 @@ function App() {
             try {
                 const userDocRef = doc(db, 'users', userUid);
                 await setDoc(userDocRef, userDataToSave);
-                console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved.`);
+                console.log(`Firestore: User ${email} with role 'admin' and approved status '${approvedStatus}' was saved.`);
             } catch (firestoreError) {
                 console.error("Error saving/updating Firestore:", firestoreError);
                 setErrorMessage(`Chyba pri ukladaní používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
@@ -322,7 +330,7 @@ function App() {
                 return;
             }
             
-            // Krok 3: Poslanie notifikácie na Google Apps Script (e-mail)
+            // Krok 4: Poslanie notifikácie na Google Apps Script (e-mail)
             try {
                 const payload = {
                     action: 'sendRegistrationEmail',
@@ -349,10 +357,12 @@ function App() {
                 setErrorMessage(`Registrácia úspešná, ale nepodarilo sa odoslať potvrdzovací e-mail: ${emailError.message}.`);
             }
             
-            // Krok 4: Uloženie notifikácie do Firestore pre ostatných administrátorov
+            // Krok 5: Uloženie notifikácie do Firestore pre ostatných administrátorov
             try {
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
+                const notificationMessage = approvedStatus
+                    ? `Nový administrátor ${email} sa úspešne zaregistroval a je schválený.`
+                    : `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
                 const adminNotificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
                 
                 await addDoc(adminNotificationsCollectionRef, {
@@ -383,8 +393,12 @@ function App() {
                 console.error("Chyba pri čítaní údajov z databázy po zápise:", readError);
             }
 
-            // Krok 5: Ak všetko prebehlo úspešne, nastavenie správy a odhlásenie po 10 sekundách
-            setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora. Odhlásenie prebehne o 10 sekúnd.`);
+            // Krok 6: Ak všetko prebehlo úspešne, nastavenie správy a odhlásenie po 10 sekundách
+            const statusMessage = approvedStatus
+                ? `Váš účet bol úspešne vytvorený a automaticky schválený. O 10 sekúnd budete presmerovaný na prihlasovaciu stránku.`
+                : `Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora. Odhlásenie prebehne o 10 sekúnd.`;
+
+            setSuccessMessage(statusMessage);
             setFormSubmitting(false);
 
             setTimeout(async () => {
