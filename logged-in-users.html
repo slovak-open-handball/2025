@@ -154,13 +154,12 @@
     </div>
 
     <!-- Firebase a React CDN skripty -->
-    <!-- Firestore a Auth knižnice sa už importujú v lokálnych skriptoch -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Naše lokálne skripty, načítané ako moduly -->
-    <!-- Pridaný atribút type="module" pre správne spracovanie importov -->
+    <!-- Naše lokálne skripty, načítané ako moduly. Tu nastáva problém s načasovaním. -->
+    <!-- Opravíme to tak, že načasovanie budeme riadiť z hlavného skriptu. -->
     <script type="module" src="./authentication.js"></script>
     <script type="module" src="./header.js"></script>
     <script type="module" src="./logged-in-left-menu.js"></script>
@@ -168,7 +167,7 @@
 
     <script>
         // pomocná funkcia na načítanie HTML obsahu
-        async function loadHtmlContent(placeholderId, filePath, isMenu = false) {
+        async function loadHtmlContent(placeholderId, filePath) {
             const placeholder = document.getElementById(placeholderId);
             if (placeholder) {
                 try {
@@ -178,67 +177,88 @@
                     }
                     const html = await response.text();
                     placeholder.innerHTML = html;
-                    console.log(`logged-in-users.html: Obsah súboru '${filePath}' bol úspešne načítaný.`);
-
-                    // Ak je to menu, vyvoláme udalosť
-                    if (isMenu) {
-                        const event = new CustomEvent('leftMenuLoaded', { detail: { placeholderId } });
-                        window.dispatchEvent(event);
-                    }
+                    console.log(`Obsah súboru '${filePath}' bol úspešne načítaný.`);
                 } catch (error) {
-                    console.error(`logged-in-users.html: Chyba pri načítaní súboru '${filePath}':`, error);
+                    console.error(`Chyba pri načítaní súboru '${filePath}':`, error);
                     placeholder.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Nepodarilo sa načítať ${filePath}. Skúste to prosím neskôr.</div>`;
                 }
             } else {
-                console.error(`logged-in-users.html: Placeholder s ID '${placeholderId}' nebol nájdený.`);
+                console.error(`Placeholder s ID '${placeholderId}' nebol nájdený.`);
             }
         }
-
-        window.addEventListener('globalDataUpdated', (event) => {
-            console.log("logged-in-users.html: Prijatá udalosť 'globalDataUpdated'. Inicializujem aplikáciu.");
-            // Predbežné overenie existencie globálnych premenných
+        
+        /**
+         * Inicializuje aplikáciu po načítaní autentifikačných dát.
+         * Tento proces zahŕňa načítanie a zobrazenie menu a hlavičky,
+         * a nakoniec vykreslenie React aplikácie pre správu používateľov.
+         */
+        async function initializeApp() {
+             // Overenie existencie globálnych premenných, ktoré poskytuje prostredie.
             if (typeof __firebase_config === 'undefined' || typeof __initial_auth_token === 'undefined' || typeof __app_id === 'undefined') {
                 console.error("Chyba: Niektorá z globálnych premenných (firebaseConfig, initialAuthToken, appId) nie je definovaná.");
                 document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Konfigurácia aplikácie nie je dostupná. Skúste to prosím neskôr.</div>';
                 return;
             }
 
-            // Deklarujeme globálne premenné, ktoré skripty potrebujú
+            // Deklarujeme globálne premenné, ktoré skripty potrebujú.
             window.firebaseConfig = JSON.parse(__firebase_config);
             window.initialAuthToken = __initial_auth_token;
             window.appId = __app_id;
 
-            // Načítanie a vykreslenie HTML komponentov
-            loadHtmlContent('header-placeholder', 'header.html');
-            // Zmenený ID placeholderu pre menu a pridaný parameter `isMenu`
-            loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html', true);
+            // Načítanie a vykreslenie HTML komponentov.
+            // Používame await na zabezpečenie, že HTML sa načíta pred spustením ďalších skriptov.
+            await loadHtmlContent('header-placeholder', 'header.html');
+            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
 
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+            // Renderujeme React aplikáciu.
+            // Je dôležité, aby bol DOM pripravený a externé skripty načítané.
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            // Zabezpečíme, že UsersManagementApp je definovaná (je v logged-in-users.js)
-            if (typeof UsersManagementApp === 'undefined') {
-                console.error("Chyba: Komponent UsersManagementApp nie je definovaný. Skontrolujte logged-in-users.js.");
-                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
+
+            // Dynamicky importujeme modul s React aplikáciou až po načítaní všetkého ostatného.
+            try {
+                const usersModule = await import('./logged-in-users.js');
+                if (typeof usersModule.UsersManagementApp === 'undefined') {
+                    console.error("Chyba: Komponent UsersManagementApp nie je definovaný v module.");
+                    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+                const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
+                root.render(React.createElement(usersModule.UsersManagementApp, null));
+                console.log("React App (UsersManagementApp) vykreslená.");
+            } catch (error) {
+                console.error("Chyba pri dynamickom importovaní logged-in-users.js:", error);
             }
-
-            const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
-            root.render(React.createElement(UsersManagementApp, null));
-            console.log("logged-in-users.html: React App (UsersManagementApp) vykreslená.");
-        });
-
-        // Kontrola pri prvom načítaní pre prípad, že event už prebehol
-        if (window.isGlobalAuthReady) {
-            console.log('logged-in-users.html: Autentifikačné dáta sú už načítané pri načítaní stránky, spúšťam inicializáciu.');
-            const event = new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData });
-            window.dispatchEvent(event);
         }
 
-        // Starý `window.onload` kód bol odstránený, aby sa predišlo dvojitému spusteniu.
+        // Pomocný listener na jednorazové spustenie inicializácie.
+        let isAuthReady = false;
+        let isDomReady = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            isDomReady = true;
+            if (isAuthReady) {
+                console.log("DOM aj autentifikácia sú pripravené, spúšťam inicializáciu aplikácie.");
+                initializeApp();
+            }
+        });
+
+        window.addEventListener('globalDataUpdated', (event) => {
+            isAuthReady = true;
+            if (isDomReady) {
+                console.log("DOM aj autentifikácia sú pripravené, spúšťam inicializáciu aplikácie.");
+                initializeApp();
+            }
+        });
+
+        // Kontrola pre prípad, že udalosti už prebehli pred nastavením listenerov.
+        if (window.isGlobalAuthReady && document.readyState !== 'loading') {
+            console.log('Autentifikačné dáta a DOM sú už načítané pri načítaní stránky, spúšťam inicializáciu.');
+            initializeApp();
+        }
     </script>
 </body>
 </html>
