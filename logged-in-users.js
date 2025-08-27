@@ -185,6 +185,11 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
         onClose();
     };
 
+    const handleClear = () => {
+        onApplyFilter([]);
+        onClose();
+    };
+
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
@@ -225,6 +230,14 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
                 )
             ),
             React.createElement('div', { className: 'flex justify-end' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleClear,
+                        className: 'bg-red-500 text-white px-4 py-2 rounded-md mr-2'
+                    },
+                    'Vymazať filter'
+                ),
                 React.createElement(
                     'button',
                     {
