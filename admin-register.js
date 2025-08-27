@@ -565,6 +565,8 @@ function App() {
                         showPassword: showConfirmPasswordReg,
                         toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
                         disabled: formSubmitting,
+                        // Tu zámerne chýba 'validationStatus' pre potvrdenie hesla
+                        // aby sa požiadavky na heslo zobrazovali len raz.
                     }),
                     // Zobrazenie chybového hlásenia, ak sa heslá nezhodujú
                     !isConfirmPasswordMatching && confirmPassword.length > 0 && confirmPasswordTouched &&
