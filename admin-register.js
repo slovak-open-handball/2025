@@ -8,7 +8,8 @@ import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs
 
 // Konštanty pre reCAPTCHA a Apps Script URL
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+const GOOGLE_APPS_SCRIPT_EMAIL_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+const GOOGLE_APPS_SCRIPT_DB_URL = "https://script.google.com/macros/s/AKfycby6wUq81pxqT-Uf_8BtN-cKHjhMDtB1V-cDBdcJElZP4VDmfa53lNfPgudsxnmQ0Y3T/exec";
 
 /**
  * Komponent pre zadávanie hesla s prepínačom viditeľnosti.
@@ -26,7 +27,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     const EyeOffIcon = React.createElement(
         'svg',
         { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-        React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
         React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
         React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
     );
@@ -255,31 +256,52 @@ function App() {
             
             // Krok 3: Poslanie notifikácie a aktualizácia počítadla na Google Apps Script (e-mail a DB akcie)
             // Tieto akcie vyžadujú vyššie oprávnenia, a preto ich presúvame na server.
+            
+            // Poslanie e-mailovej notifikácie
             try {
-                const payload = {
+                const emailPayload = {
                     action: 'registerAdmin',
-                    userId: userId, // Dôležité: posielame userId, aby Apps Script mohol pracovať s dokumentom.
+                    userId: userId,
                     email: email,
                     firstName: firstName,
                     lastName: lastName,
-                    // Apps Script si už sám zistí, či ide o prvého admina a aktualizuje count.
                 };
-                console.log("Sending data to Apps Script (admin registration email & DB update):", payload);
+                console.log("Sending data to Apps Script for email notification:", emailPayload);
                 
-                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                await fetch(GOOGLE_APPS_SCRIPT_EMAIL_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     mode: 'no-cors',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(emailPayload)
                 });
-
-                console.log("Response from Apps Script (admin registration email) with no-cors: OK");
-
+                console.log("Response from Apps Script (email notification) with no-cors: OK");
             } catch (emailError) {
-                console.error("Error sending admin registration email via Apps Script (fetch error):", emailError);
-                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa dokončiť podporné akcie (e-mail, notifikácia). ${emailError.message}.`);
+                console.error("Error sending admin registration email via Apps Script:", emailError);
+                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa poslať e-mailovú notifikáciu. Chyba: ${emailError.message}.`);
+            }
+
+            // Aktualizácia počítadla adminov v databáze
+            try {
+                const dbPayload = {
+                    action: 'incrementAdminCount'
+                };
+                console.log("Sending data to Apps Script for DB update:", dbPayload);
+
+                await fetch(GOOGLE_APPS_SCRIPT_DB_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    mode: 'no-cors',
+                    body: JSON.stringify(dbPayload)
+                });
+                console.log("Response from Apps Script (DB update) with no-cors: OK");
+            } catch (dbError) {
+                console.error("Error updating admin count via Apps Script:", dbError);
+                // Nastavenie chyby bez prerušenia procesu, pretože hlavná registrácia bola úspešná
+                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa aktualizovať počítadlo administrátorov. Chyba: ${dbError.message}.`);
             }
             
             // Krok 4: oneskorené odhlásenie používateľa
@@ -307,7 +329,7 @@ function App() {
                 setErrorMessage(`Chyba pri registrácii: ${e.message}`);
             }
         } finally {
-             // Vždy zastaviť načítavanie po pokuse o registráciu
+            // Vždy zastaviť načítavanie po pokuse o registráciu
             setFormSubmitting(false);
             // Kľúčový krok: Po dokončení procesu (úspech/neúspech) resetujeme globálnu premennú.
             if (typeof window !== 'undefined') {
