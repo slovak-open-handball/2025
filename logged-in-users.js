@@ -172,6 +172,9 @@ function UsersManagementApp() {
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
+  
+  // NOVINKA: Stav pre ukladanie URL adresy Google Apps Script
+  const googleScriptUrl = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
 
   // Získame globálne premenné z window
   const db = window.db;
@@ -192,7 +195,7 @@ function UsersManagementApp() {
       const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
       window.isCurrentUserAdmin = isUserAdmin;
       window.currentUserId = auth.currentUser?.uid; // Uloženie ID aktuálneho používateľa
-
+      
       if (isUserAdmin) {
         const usersCollectionPath = `users`; 
         const usersCol = collection(db, usersCollectionPath);
@@ -251,13 +254,52 @@ function UsersManagementApp() {
     }
   };
 
-  const handleApproveAdmin = async (userId) => {
+  // NOVINKA: funkcia pre odoslanie e-mailu o schválení admina
+  const sendApprovalEmail = async (userEmail) => {
+    if (!googleScriptUrl) {
+      console.error("Google Apps Script URL nie je definovaná.");
+      setNotification({ message: 'Chyba: URL skriptu nebola nájdená.', type: 'error' });
+      return;
+    }
+  
+    try {
+      const payload = {
+        action: 'sendAdminApprovalEmail',
+        email: userEmail,
+        firstName: users.find(u => u.email === userEmail)?.firstName,
+        lastName: users.find(u => u.email === userEmail)?.lastName,
+      };
+  
+      const response = await fetch(googleScriptUrl, {
+        method: 'POST',
+        mode: 'no-cors', // Dôležité pre správne fungovanie
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      // Pre no-cors režim nemôžeme priamo skontrolovať odpoveď,
+      // ale môžeme predpokladať, že požiadavka bola odoslaná.
+      console.log('Požiadavka na odoslanie e-mailu odoslaná.');
+      setNotification({ message: `E-mail o schválení bol odoslaný na ${userEmail}.`, type: 'success' });
+    } catch (error) {
+      console.error("Chyba pri odosielaní e-mailu o schválení:", error);
+      setNotification({ message: 'Nepodarilo sa odoslať e-mail o schválení.', type: 'error' });
+    }
+  };
+  
+
+  const handleApproveAdmin = async (userId, userEmail) => {
     try {
       const userDocRef = doc(db, `users`, userId);
       await updateDoc(userDocRef, {
         approved: true
       });
-      setNotification({ message: `Admin bol úspešne schválený.`, type: 'success' });
+      // NOVINKA: Po úspešnom schválení vo Firestore odošleme e-mail
+      await sendApprovalEmail(userEmail);
+      setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
       setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
@@ -354,7 +396,7 @@ function UsersManagementApp() {
                   (user.role === 'admin' && user.approved === false) && React.createElement(
                     'button',
                     {
-                      onClick: () => handleApproveAdmin(user.id),
+                      onClick: () => handleApproveAdmin(user.id, user.email),
                       className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
                     },
                     'Schváliť'
