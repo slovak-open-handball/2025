@@ -132,6 +132,7 @@
 <body class="bg-gray-100 flex flex-col min-h-screen">
     <div id="header-placeholder"></div>
     <div class="flex-grow flex">
+        <!-- Zmenené z left-menu-placeholder na menu-placeholder -->
         <div id="menu-placeholder"></div>
         <div id="main-content-area" class="flex-grow p-6 transition-all duration-300">
              <!-- Kontajner pre správu používateľov -->
@@ -167,7 +168,7 @@
 
     <script>
         // pomocná funkcia na načítanie HTML obsahu
-        async function loadHtmlContent(placeholderId, filePath) {
+        async function loadHtmlContent(placeholderId, filePath, isMenu = false) {
             const placeholder = document.getElementById(placeholderId);
             if (placeholder) {
                 try {
@@ -178,6 +179,12 @@
                     const html = await response.text();
                     placeholder.innerHTML = html;
                     console.log(`logged-in-users.html: Obsah súboru '${filePath}' bol úspešne načítaný.`);
+
+                    // Ak je to menu, vyvoláme udalosť
+                    if (isMenu) {
+                        const event = new CustomEvent('leftMenuLoaded', { detail: { placeholderId } });
+                        window.dispatchEvent(event);
+                    }
                 } catch (error) {
                     console.error(`logged-in-users.html: Chyba pri načítaní súboru '${filePath}':`, error);
                     placeholder.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Nepodarilo sa načítať ${filePath}. Skúste to prosím neskôr.</div>`;
@@ -202,7 +209,8 @@
 
             // Načítanie a vykreslenie HTML komponentov
             await loadHtmlContent('header-placeholder', 'header.html');
-            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
+            // Zmenený ID placeholderu pre menu a pridaný parameter `isMenu`
+            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html', true);
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
