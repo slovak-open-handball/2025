@@ -210,12 +210,13 @@ function UsersManagementApp() {
             ...doc.data()
           }));
           
-          // ZMENA: Logika na nájdenie najstaršieho admina podľa registrationDate
+          // OPRAVA CHYBY: Logika na nájdenie najstaršieho admina podľa registrationDate
           const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
           if (adminUsers.length > 0) {
             adminUsers.sort((a, b) => {
-              const dateA = a.registrationDate ? a.registrationDate.toDate() : new Date();
-              const dateB = b.registrationDate ? b.registrationDate.toDate() : new Date();
+              // Zabezpečenie, že .toDate() je volané len na platný Timestamp objekt
+              const dateA = a.registrationDate?.toDate ? a.registrationDate.toDate() : new Date(0);
+              const dateB = b.registrationDate?.toDate ? b.registrationDate.toDate() : new Date(0);
               return dateA - dateB;
             });
             setOldestAdminId(adminUsers[0].id);
