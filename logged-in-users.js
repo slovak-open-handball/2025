@@ -3,12 +3,8 @@
 // sú globálne definované v <head> logged-in-users.html.
 // Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
 
-// Importy pre Firebase už nie sú potrebné, ak sa používajú globálne premenné z authentication.js
-// Správne modulárne importy pre Firebase
-// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-// import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// Importy pre potrebné Firebase funkcie
 import {
-  // getFirestore,
   collection,
   query,
   onSnapshot,
@@ -323,59 +319,47 @@ function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // Načítanie používateľov z Firestore až po inicializácii
   useEffect(() => {
-    // Čakáme, kým bude Firebase inicializované a globálne premenné dostupné
+    // Táto funkcia sa spustí len vtedy, keď je komponent namountovaný.
+    // Pretože sa komponent renderuje až po 'globalDataUpdated' evente,
+    // môžeme bezpečne predpokladať, že window.db a window.auth sú definované.
     if (!window.db || !window.auth || !window.__app_id) {
-      console.log("Čakám na globálne premenné z authentication.js...");
-      // Toto je dočasné, aby sa neopakoval kód.
-      // V reálnej aplikácii by sa mal použiť listener na zmeny v globálnom stave.
-      // Keďže v "authentication.js" je definovaný "globalDataUpdated", mohli by sme naň počúvať.
-      // Pre jednoduchosť a rýchlu funkčnosť to však zatiaľ necháme takto a spoliehame sa, že
-      // authentication.js sa načíta prvý.
-      const timer = setTimeout(() => {
-         if (window.db && window.auth && window.__app_id) {
-            fetchData();
-         } else {
-            console.error("Globálne premenné nie sú dostupné.");
-            setError("Chyba: Inicializácia aplikácie zlyhala.");
-            setIsLoading(false);
-         }
-      }, 500); // malá pauza pre istotu
-
-      return () => clearTimeout(timer);
+        // Toto by sa už nemalo stať, ale pre istotu
+        console.error("Globálne premenné nie sú dostupné. Aplikácia sa nenačítala správne.");
+        setError("Chyba: Inicializácia aplikácie zlyhala.");
+        setIsLoading(false);
+        return;
     }
-    
-    const fetchData = () => {
-      try {
-        const q = query(collection(window.db, 'artifacts', window.__app_id, 'users'));
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-          const usersArray = [];
-          querySnapshot.forEach((doc) => {
-            usersArray.push({
-              id: doc.id,
-              ...doc.data()
-            });
+    try {
+      const q = query(collection(window.db, 'artifacts', window.__app_id, 'users'));
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const usersArray = [];
+        querySnapshot.forEach((doc) => {
+          usersArray.push({
+            id: doc.id,
+            ...doc.data()
           });
-          setUsers(usersArray);
-          setIsLoading(false);
-        }, (e) => {
-          console.error("Chyba pri načítavaní používateľov: ", e);
-          setError("Nepodarilo sa načítať údaje o používateľoch.");
-          setIsLoading(false);
         });
-  
-        return () => unsubscribe();
-      } catch (e) {
-        console.error("Nastavenie poslucháča Firestore zlyhalo: ", e);
+        setUsers(usersArray);
+        setIsLoading(false);
+      }, (e) => {
+        console.error("Chyba pri načítavaní používateľov: ", e);
         setError("Nepodarilo sa načítať údaje o používateľoch.");
         setIsLoading(false);
-      }
-    };
-
-    fetchData();
+      });
+  
+      return () => unsubscribe();
+    } catch (e) {
+      console.error("Nastavenie poslucháča Firestore zlyhalo: ", e);
+      setError("Nepodarilo sa načítať údaje o používateľoch.");
+      setIsLoading(false);
+    }
 
   }, []);
 
@@ -518,10 +502,36 @@ function showConfirmationModal(config) {
   }));
 }
 
-// Vykreslíme loader a zaregistrujeme poslucháča udalostí
-const rootElement = document.getElementById('users-management-root');
-if (rootElement) {
+// Funkcia, ktorá vykreslí React komponent
+const initializeAndRenderApp = () => {
+  const rootElement = document.getElementById('users-management-root');
+  if (!rootElement) {
+    console.error("logged-in-users.js: Root element '#users-management-root' nebol nájdený.");
+    return;
+  }
+  
+  // Uistíme sa, že React a ReactDOM sú dostupné
+  if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+    rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+    return;
+  }
+  
   const root = ReactDOM.createRoot(rootElement);
   root.render(React.createElement(UsersManagementApp, null));
   console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
+};
+
+// Vykreslíme loader a zaregistrujeme poslucháča udalostí
+const rootElement = document.getElementById('users-management-root');
+if (rootElement) {
+    rootElement.innerHTML = `
+        <div class="flex justify-center pt-16">
+            <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+        </div>
+    `;
 }
+
+// Odstránime predchádzajúci listener a pridáme nový, aby sa zabránilo viacnásobnému volaniu
+window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
+window.addEventListener('globalDataUpdated', initializeAndRenderApp);
