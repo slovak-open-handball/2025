@@ -372,6 +372,8 @@ function UsersManagementApp() {
   
   const isCurrentUserOldestAdmin = window.currentUserId === oldestAdminId;
   const isMoreThanOneApprovedAdmin = users.filter(u => u.role === 'admin' && u.approved).length > 1;
+  const oldestAdmin = users.find(u => u.id === oldestAdminId);
+
 
   return React.createElement(
     'div',
@@ -401,7 +403,11 @@ function UsersManagementApp() {
           users.map(user => {
             // Logika na určenie, či sa majú zobraziť tlačidlá
             const isNotCurrentUser = user.id !== window.currentUserId;
-
+            // NOVÁ LOGIKA: Uistiť sa, že nemeníme rolu najstaršieho admina
+            const canChangeRole = window.isCurrentUserAdmin && user.id !== oldestAdminId;
+            // NOVÁ LOGIKA: Uistiť sa, že prihlásený admin nemaže sám seba a ani najstaršieho admina, pokiaľ je on sám najstarší
+            const canDeleteUser = isCurrentUserOldestAdmin && isNotCurrentUser && (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin));
+            
             return React.createElement(
               'tr',
               { key: user.id },
@@ -432,8 +438,8 @@ function UsersManagementApp() {
                       'Schváliť'
                     ),
                     // Tlačidlo Zmeniť rolu
-                    // Zobrazí sa všetkým adminom pre ostatných používateľov
-                    window.isCurrentUserAdmin && React.createElement(
+                    // Zobrazí sa všetkým adminom pre ostatných používateľov, ale nie pre najstaršieho admina
+                    (canChangeRole) && React.createElement(
                       'button',
                       {
                         onClick: () => setUserToEdit(user),
@@ -442,8 +448,9 @@ function UsersManagementApp() {
                       'Zmeniť rolu'
                     ),
                     // Tlačidlo Odstrániť
-                    // Zobrazí sa iba najstaršiemu adminovi pre všetkých ostatných používateľov
-                    (isCurrentUserOldestAdmin && (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin))) &&
+                    // Zobrazí sa iba najstaršiemu adminovi pre všetkých ostatných používateľov (okrem seba),
+                    // a pre adminov iba ak existuje viac ako jeden schválený admin
+                    (canDeleteUser) &&
                     React.createElement(
                       'button',
                       {
