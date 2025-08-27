@@ -150,32 +150,49 @@
 
     <!-- Start rendering the React application after the DOM is loaded -->
     <script type="module">
-        window.onload = async () => {
-            // Check if global Firebase instances are available
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Error: React or ReactDOM are not loaded. Check the script order.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading application. Please try again later.</div>';
-                return;
-            }
-            if (!window.auth || !window.db) {
-                console.error("Error: Firebase Auth or Firestore are not initialized. Check authentication.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error initializing Firebase. Please try again later.</div>';
-                return;
-            }
-            // Zabezpečíme, že sa React vykreslí až po tom, čo je menu pripravené.
-            // Čakanie na event je robustnejšie riešenie ako pevný timeout.
-            document.addEventListener('menuLoaded', () => {
-                const root = ReactDOM.createRoot(document.getElementById('root'));
+        // Funkcia, ktorá sa stará o vykreslenie React aplikácie
+        const handleRender = () => {
+            const rootElement = document.getElementById('root');
+            if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+                const root = ReactDOM.createRoot(rootElement);
                 root.render(React.createElement(MySettingsApp, null));
                 console.log("logged-in-my-settings.html: React App vykreslená.");
-            });
-            // Ak už bola udalosť odoslaná predtým, vykreslíme aplikáciu okamžite
-            if (document.getElementById('left-menu')) {
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(MySettingsApp, null));
-                console.log("logged-in-my-settings.html: React App vykreslená okamžite, menu už je v DOM.");
+            } else {
+                console.error("logged-in-my-settings.html: Nemôžem nájsť root element alebo nie sú načítané React/ReactDOM.");
             }
         };
+
+        // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'
+        window.addEventListener('globalDataUpdated', (event) => {
+            console.log("logged-in-my-settings.html: Prijatá udalosť 'globalDataUpdated'. Kontrolujem dáta.");
+            if (event.detail) {
+                // Dáta sú dostupné, môžeme vykresliť aplikáciu
+                handleRender();
+            } else {
+                console.error("logged-in-my-settings.html: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'.");
+            }
+        });
+
+        // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
+        // skontrolujeme, či sú dáta už dostupné.
+        console.log("logged-in-my-settings.html: Kontrolujem, či existujú globálne dáta.");
+        if (window.globalUserProfileData) {
+            console.log("logged-in-my-settings.html: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
+            handleRender();
+        } else {
+            // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
+            const rootElement = document.getElementById('root');
+            if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+                const root = ReactDOM.createRoot(rootElement);
+                root.render(
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-center items-center h-screen' },
+                        React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+                    )
+                );
+            }
+        }
     </script>
 </body>
 </html>
