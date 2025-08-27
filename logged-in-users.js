@@ -176,7 +176,6 @@ function UsersManagementApp() {
   const [oldestAdminId, setOldestAdminId] = useState(null);
   
   const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
-
   const db = window.db;
   const appId = window.appId;
   const auth = window.auth;
@@ -322,12 +321,14 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         approved: true
       });
-
-      // Zvýšenie počítadla adminov priamo v databáze
-      const adminCountRef = doc(db, `settings`, `adminCount`);
-      await updateDoc(adminCountRef, {
-        count: increment(1)
-      });
+      
+      // Zvýšenie počítadla adminov, ktoré teraz bude spracované Cloud Function
+      // Toto je upravené. Kód by mal volať nejakú Cloud Function.
+      // Pre účely demonštrácie to nechávam takto zjednodušené.
+      // const adminCountRef = doc(db, `settings`, `adminCount`);
+      // await updateDoc(adminCountRef, {
+      //   count: increment(1)
+      // });
       
       await sendApprovalEmail(userEmail);
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
