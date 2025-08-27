@@ -428,14 +428,14 @@ function App() {
       setSuccessMessage(successMessageText);
       setFormSubmitting(false); // Stop loading so the message is visible on the form
 
-      // Now sign out and redirect after a delay
-      await auth.signOut();
       // user will be null after signOut, no need to set explicitly
 
       // Redirect after 5 seconds
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 5000);
+      setTimeout(async () => {
+        console.log("Presmerovanie. Odhlasujem používateľa.");
+        await auth.signOut();
+        window.location.href = 'login.html';
+      }, 5000);
 
     } catch (e) {
       console.error("Chyba počas registrácie (Auth alebo iné):", e);
