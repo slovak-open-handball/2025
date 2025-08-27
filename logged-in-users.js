@@ -350,6 +350,9 @@ function UsersManagementApp() {
 
         if (adminCountSnap.exists()) {
           const currentAdminCount = adminCountSnap.data().count;
+
+          // Vypísanie aktuálnej hodnoty do konzoly
+          console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
           
           // Ak je aktuálny počet adminov 1, nedovolíme zníženie
           if (currentAdminCount === 1) {
@@ -388,6 +391,9 @@ function UsersManagementApp() {
         
         if (adminCountSnap.exists()) {
           const currentAdminCount = adminCountSnap.data().count;
+
+          // Vypísanie aktuálnej hodnoty do konzoly
+          console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
 
           // Ak je aktuálny počet adminov 1, nedovolíme odstránenie
           if (currentAdminCount === 1) {
@@ -462,12 +468,16 @@ function UsersManagementApp() {
       const adminCountSnap = await getDoc(adminCountRef);
       
       if (adminCountSnap.exists()) {
+        const currentAdminCount = adminCountSnap.data().count;
+        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
+        
         // Ak dokument existuje, zvýšime jeho hodnotu
         await updateDoc(adminCountRef, {
           count: increment(1)
         });
       } else {
         // Ak neexistuje, vytvoríme ho a nastavíme počiatočnú hodnotu na 1
+        console.log('Dokument adminCount neexistuje, vytvárame ho s hodnotou 1.');
         await setDoc(adminCountRef, {
           count: 1
         });
