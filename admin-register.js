@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Auth a Firestore (modulárny prístup, SDK v11)
 import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp, getDoc, onSnapshot, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanty pre reCAPTCHA a Apps Script URL
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -155,29 +155,11 @@ function App() {
     const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
     const [emailTouched, setEmailTouched] = React.useState(false);
 
-    // Efekt pre overenie pripravenosti Firebase inštancií a načítanie počtu adminov
+    // Efekt pre overenie pripravenosti Firebase inštancií
+    // Už nenačítame adminCount, pretože ho nepotrebujeme na strane klienta pre logiku.
     React.useEffect(() => {
         if (auth && db && isAuthReady) {
             setPageLoading(false);
-            
-            // Načítanie počtu administrátorov z verejného dokumentu
-            const adminCountDocRef = doc(db, 'settings', 'adminCount');
-            const unsubscribe = onSnapshot(adminCountDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    setAdminCount(docSnap.data().count);
-                    console.log(`Počet existujúcich administrátorov: ${docSnap.data().count}`);
-                } else {
-                    console.log("V systéme zatiaľ neexistujú žiadni administrátori. Registrácia vášho účtu ho automaticky označí ako prvého administrátora.");
-                    setDoc(adminCountDocRef, { count: 0 }, { merge: true }).then(() => {
-                        setAdminCount(0);
-                    }).catch(e => {
-                        console.error("Chyba pri vytváraní počiatočného počítadla adminov:", e);
-                        setErrorMessage("Chyba pri inicializácii databázy. Skúste obnoviť stránku.");
-                    });
-                }
-            });
-
-            return () => unsubscribe();
         } else {
             console.log("AdminRegisterApp: Waiting for Auth and DB initialization from authentication.js.");
         }
@@ -271,45 +253,18 @@ function App() {
                 return;
             }
             
-            // Krok 3: Aktualizácia počítadla administrátorov a pridanie notifikácie až po úspešnom vytvorení používateľa
-            // V tomto kroku už má používateľ oprávnenia, pretože existuje a môže zapisovať.
-            try {
-                // Aktualizácia počítadla administrátorov
-                const adminCountDocRef = doc(db, 'settings', 'adminCount');
-                await updateDoc(adminCountDocRef, { count: increment(1) });
-                console.log("Firestore: Admin count was successfully updated.");
-
-                // Uloženie notifikácie do Firestore pre ostatných administrátorov
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
-                const adminNotificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
-                
-                await addDoc(adminNotificationsCollectionRef, {
-                    message: notificationMessage,
-                    timestamp: serverTimestamp(),
-                    recipientId: 'all_admins',
-                    read: false
-                });
-                console.log("Notification about new administrator registration successfully saved to Firestore.");
-
-            } catch (e) {
-                console.error("Chyba pri aktualizácii počítadla administrátorov alebo ukladaní notifikácie:", e);
-                // Nastavenie chyby, ale nebránime pokračovaniu, pretože registrácia prebehla úspešne
-                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa dokončiť podporné akcie (počítadlo, notifikácia). ${e.message}`);
-            }
-
-            // Krok 4: Poslanie notifikácie na Google Apps Script (e-mail)
+            // Krok 3: Poslanie notifikácie a aktualizácia počítadla na Google Apps Script (e-mail a DB akcie)
+            // Tieto akcie vyžadujú vyššie oprávnenia, a preto ich presúvame na server.
             try {
                 const payload = {
-                    action: 'sendRegistrationEmail',
+                    action: 'registerAdmin',
+                    userId: userId, // Dôležité: posielame userId, aby Apps Script mohol pracovať s dokumentom.
                     email: email,
-                    isAdmin: true,
                     firstName: firstName,
                     lastName: lastName,
-                    // Pridanie informácie, či je to prvý admin
-                    isFirstAdmin: adminCount === 0
+                    // Apps Script si už sám zistí, či ide o prvého admina a aktualizuje count.
                 };
-                console.log("Sending data to Apps Script (admin registration email):", payload);
+                console.log("Sending data to Apps Script (admin registration email & DB update):", payload);
                 
                 await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
@@ -324,11 +279,11 @@ function App() {
 
             } catch (emailError) {
                 console.error("Error sending admin registration email via Apps Script (fetch error):", emailError);
-                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa odoslať potvrdzovací e-mail: ${emailError.message}.`);
+                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa dokončiť podporné akcie (e-mail, notifikácia). ${emailError.message}.`);
             }
             
-            // Krok 5: oneskorené odhlásenie používateľa
-            console.log("Všetky dáta boli úspešne zapísané do databázy. Odhlásenie prebehne o 5 sekúnd.");
+            // Krok 4: oneskorené odhlásenie používateľa
+            console.log("Všetky dáta boli úspešne zapísané. Odhlásenie prebehne o 5 sekúnd.");
             await new Promise(resolve => setTimeout(resolve, 5000));
             console.log("Čas odpočítavania uplynul. Odhlasujem používateľa...");
             // Odhlásenie, aby nový admin nebol automaticky prihlásený.
@@ -336,7 +291,7 @@ function App() {
             console.log("Používateľ bol úspešne odhlásený.");
 
             // Nastavenie správy o úspešnej registrácii a zastavenie spinnera
-            setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
+            setSuccessMessage(`Administrátorský účet pre ${email} sa úspešne zaregistroval. Na vašu e-mailovú adresu sme poslali potvrdenie. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
 
 
         } catch (e) {
@@ -416,7 +371,7 @@ function App() {
         isConfirmPasswordMatching;
 
     // Zobrazenie načítavacej obrazovky pri inicializácii
-    if (pageLoading || adminCount === null) {
+    if (pageLoading) {
         return React.createElement(
             'div',
             { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
