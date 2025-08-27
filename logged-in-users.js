@@ -519,7 +519,7 @@ function UsersManagementApp() {
                 isNotCurrentUser ?
                   React.createElement(React.Fragment, null,
                     // Tlacidlo "Schvalit" je viditelne pre schvalenych adminov a len pre Neschvalenych adminov
-                    (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false) && React.createElement(
+                    (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved) && React.createElement(
                       'button',
                       {
                         onClick: () => handleApproveAdmin(user.id, user.email),
@@ -528,7 +528,7 @@ function UsersManagementApp() {
                       'Schváliť'
                     ),
                     // Tlacidlo "Upravit rolu" je viditelne pre schvalenych adminov (okrem najstarsiho) a pre neschvalenych adminov
-                    ((canChangeRole) || (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false)) && React.createElement(
+                    ((canChangeRole) || (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved)) && React.createElement(
                       'button',
                       {
                         onClick: () => setUserToEdit(user),
