@@ -237,7 +237,7 @@ function UsersManagementApp() {
 
   const handleChangeRole = async (userId, newRole) => {
     try {
-      // 1. Získame referencie na dokumenty a ich dáta
+      // 1. Get document references and data
       const userDocRef = doc(db, `users`, userId);
       const userSnap = await getDoc(userDocRef);
       if (!userSnap.exists()) {
@@ -245,28 +245,26 @@ function UsersManagementApp() {
         return;
       }
       const oldRole = userSnap.data().role;
-      const wasApproved = userSnap.data().approved; // Získame pôvodný stav schválenia
+      const wasApproved = userSnap.data().approved;
       
-      // 2. Skontrolujeme, či došlo k zmene roly z 'admin'
-      const isApproved = newRole !== 'admin';
+      // 2. Determine if the user should be approved based on the new role
+      const isApproved = newRole === 'admin';
       
       await updateDoc(userDocRef, {
         role: newRole,
         approved: isApproved
       });
       
-      // 3. Ak sa rola zmenila z admina na inú A BOL schválený, dekrementujeme počítadlo
+      // 3. If the role changed from 'admin' to something else and the user was approved, decrement the counter
       if (oldRole === 'admin' && newRole !== 'admin' && wasApproved) {
         const adminCountRef = doc(db, `settings`, `adminCount`);
-        await updateDoc(adminCountRef, {
-          count: increment(-1)
-        });
+        const adminCountSnap = await getDoc(adminCountRef);
         
-        // Nová kontrola: Získame aktuálnu hodnotu a ak je záporná, nastavíme ju na 0
-        const updatedAdminCountSnap = await getDoc(adminCountRef);
-        if (updatedAdminCountSnap.exists() && updatedAdminCountSnap.data().count < 0) {
+        if (adminCountSnap.exists()) {
+          const currentCount = adminCountSnap.data().count || 0;
+          const newCount = Math.max(0, currentCount - 1);
           await updateDoc(adminCountRef, {
-            count: 0
+            count: newCount
           });
         }
       }
@@ -290,18 +288,11 @@ function UsersManagementApp() {
         const adminCountSnap = await getDoc(adminCountRef);
         
         if (adminCountSnap.exists()) {
-          // Decrement the admin count
+          const currentCount = adminCountSnap.data().count || 0;
+          const newCount = Math.max(0, currentCount - 1);
           await updateDoc(adminCountRef, {
-            count: increment(-1)
+            count: newCount
           });
-
-          // Nová kontrola: Získame aktuálnu hodnotu a ak je záporná, nastavíme ju na 0
-          const updatedAdminCountSnap = await getDoc(adminCountRef);
-          if (updatedAdminCountSnap.exists() && updatedAdminCountSnap.data().count < 0) {
-            await updateDoc(adminCountRef, {
-              count: 0
-            });
-          }
         }
       }
       
@@ -368,34 +359,34 @@ function UsersManagementApp() {
 
   const handleApproveAdmin = async (userId, userEmail) => {
     try {
-      // 1. Získame referencie na dokumenty
+      // 1. Get document references
       const userDocRef = doc(db, `users`, userId);
       const adminCountRef = doc(db, `settings`, `adminCount`);
       
-      // 2. Schválime používateľa
+      // 2. Approve the user
       await updateDoc(userDocRef, {
         approved: true
       });
-      
-      // 3. Získame aktuálny stav počítadla adminov
+
+      // 3. Get the current admin count and update it
       const adminCountSnap = await getDoc(adminCountRef);
-      
       if (adminCountSnap.exists()) {
-        // Ak dokument existuje, zvýšime jeho hodnotu
+        const currentCount = adminCountSnap.data().count;
+        const newCount = currentCount < 0 ? 1 : currentCount + 1;
         await updateDoc(adminCountRef, {
-          count: increment(1)
+          count: newCount
         });
       } else {
-        // Ak neexistuje, vytvoríme ho a nastavíme počiatočnú hodnotu na 1
+        // If document doesn't exist, create it and set initial value to 1
         await setDoc(adminCountRef, {
           count: 1
         });
       }
       
-      // 4. Pošleme e-mail
+      // 4. Send email
       await sendApprovalEmail(userEmail);
       
-      // 5. Zobrazíme notifikáciu
+      // 5. Show notification
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
