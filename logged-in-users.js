@@ -207,12 +207,13 @@ function UsersManagementApp() {
             ...doc.data()
           }));
           
-          // OPRAVA CHYBY: Logika na nájdenie najstaršieho admina s použitím null-safe operátora
+          // OPRAVA CHYBY: Používame seconds a nanoseconds pre správne zoradenie
           const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
           if (adminUsers.length > 0) {
             adminUsers.sort((a, b) => {
-              const dateA = a.registrationDate?.toDate ? a.registrationDate.toDate() : new Date(0);
-              const dateB = b.registrationDate?.toDate ? b.registrationDate.toDate() : new Date(0);
+              // Porovnávame pomocou objektu Date vytvoreného zo seconds a nanoseconds
+              const dateA = a.registrationDate?.seconds ? new Date(a.registrationDate.seconds * 1000 + (a.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
+              const dateB = b.registrationDate?.seconds ? new Date(b.registrationDate.seconds * 1000 + (b.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
               return dateA - dateB;
             });
             setOldestAdminId(adminUsers[0].id);
@@ -432,7 +433,6 @@ function UsersManagementApp() {
                     },
                     'Zmeniť rolu'
                   ),
-                  // ZMENA: podmienka pre zobrazenie tlačidla "Odstrániť"
                   user.role === 'admin' && user.id === oldestAdminId && (
                     React.createElement(
                       'button',
