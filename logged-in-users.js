@@ -178,7 +178,6 @@ function UsersManagementApp() {
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
   const [oldestAdminId, setOldestAdminId] = useState(null);
-  const hasRecountedRef = useRef(false);
   
   const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
   const db = window.db;
@@ -186,29 +185,9 @@ function UsersManagementApp() {
   const auth = window.auth;
   const globalUserProfileData = window.globalUserProfileData;
 
-  // Efekt pre synchronizáciu počtu adminov pri načítaní stránky
-  useEffect(() => {
-    const recountApprovedAdmins = async () => {
-      try {
-        const usersColRef = collection(db, 'users');
-        const q = query(usersColRef, where('role', '==', 'admin'), where('approved', '==', true));
-        const querySnapshot = await getDocs(q);
-        const approvedAdminCount = querySnapshot.size;
-
-        const adminCountRef = doc(db, 'settings', 'adminCount');
-        await setDoc(adminCountRef, { count: approvedAdminCount });
-        console.log(`adminCount synchronized. New count: ${approvedAdminCount}`);
-        hasRecountedRef.current = true;
-      } catch (error) {
-        console.error("Chyba pri synchronizácii počtu adminov:", error);
-      }
-    };
-
-    if (window.isCurrentUserAdmin && !hasRecountedRef.current && db) {
-      recountApprovedAdmins();
-    }
-  }, [window.isCurrentUserAdmin, db, hasRecountedRef]);
-
+  // Efekt pre synchronizáciu počtu adminov pri načítaní stránky - TOTO SME ODSTRÁNILI
+  // aby sme sa vyhli zbytočným volaniam a predišli chybe "Too Many Requests"
+  
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
