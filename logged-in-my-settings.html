@@ -12,9 +12,9 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            padding-top: 64px; /* Padding for fixed header */
         }
-        /* Štýly pre modálne okná */
+        /* Modal window styles */
         .modal {
             position: fixed;
             z-index: 100;
@@ -38,20 +38,20 @@
             width: 90%;
             position: relative;
         }
-        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
+        /* Main content area styles to accommodate the left menu */
         #main-content-area {
-            /* Znovu zavádzame margin-left na posunutie obsahu za ľavé menu */
-            margin-left: 256px; /* Predpokladaná šírka ľavého menu (w-64) */
+            /* Restore margin-left to shift content after the left menu */
+            margin-left: 256px; /* Assumed width of the left menu (w-64) */
             padding: 1rem;
             flex-grow: 1;
-            display: flex; /* Pridáme display:flex pre main-content-area */
-            /* Odstránili sme justify-content a align-items z main-content-area */
+            display: flex; /* Add display:flex for main-content-area */
+            /* Removed justify-content and align-items from main-content-area */
             min-width: 0;
         }
-        /* Media query pre menšie obrazovky */
+        /* Media query for smaller screens */
         @media (max-width: 768px) {
             #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                margin-left: 0; /* Menu is not fixed on the left on mobile */
             }
         }
 
@@ -109,67 +109,67 @@
             transform: translateX(26px);
         }
     </style>
-    <!-- Firebase SDKs - Aktualizované na verziu 11.6.1 pre kompatibilitu s authentication.js -->
+    <!-- Firebase SDKs - Updated to version 11.6.1 for compatibility with authentication.js -->
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
     
-    <!-- React a ReactDOM -->
+    <!-- React and ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Pôvodne tu bolo načítanie loader.js, ktoré teraz odstránime, aby sa nezobrazoval globálny loader -->
+    <!-- Originally here was loader.js, which we now remove so the global loader does not show up -->
     <!-- <script type="module" src="loader.js"></script> --> 
     <script type="module" src="authentication.js"></script>
-    <!-- Načítanie skriptu pre hlavičku -->
+    <!-- Script for the header -->
     <script type="module" src="header.js"></script>
-    <!-- Načítanie skriptu pre ľavé menu, ktoré si načíta svoje HTML samé -->
+    <!-- Script for the left menu, which loads its own HTML -->
     <script type="module" src="logged-in-left-menu.js"></script>
     
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Hlavička sa načíta dynamicky -->
+    <!-- The header will be loaded dynamically -->
     <div id="header-placeholder"></div>
 
     <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky do tohto placeholderu -->
+        <!-- The left menu will be loaded dynamically into this placeholder -->
         <div id="menu-placeholder"></div>
         <main id="main-content-area" class="flex-grow flex justify-center items-start">
-            <!-- Obsah React aplikácie bude vycentrovaný v #root -->
+            <!-- The content of the React application will be centered in #root -->
             <div id="root" class="flex-grow max-w-4xl w-full px-4 sm:px-6 lg:px-8 py-8">
-                <!-- Obsah aplikácie bude vykreslený tu, vrátane loadera -->
-                <!-- Loader bude riadený z logged-in-my-settings.js -->
+                <!-- The application content will be rendered here, including the loader -->
+                <!-- The loader will be controlled by logged-in-my-settings.js -->
             </div>
         </main>
     </div>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (MySettingsApp) - Typ module pre React -->
+    <!-- Load the main script for this page (MySettingsApp) - React module type -->
     <script type="module" src="logged-in-my-settings.js"></script>
 
-    <!-- Spustíme renderovanie React aplikácie po načítaní DOM -->
+    <!-- Start rendering the React application after the DOM is loaded -->
     <script type="module">
         window.onload = async () => {
-            // Overíme, či sú globálne Firebase inštancie dostupné
+            // Check if global Firebase instances are available
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                console.error("Error: React or ReactDOM are not loaded. Check the script order.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading application. Please try again later.</div>';
                 return;
             }
             if (!window.auth || !window.db) {
-                console.error("Chyba: Firebase Auth alebo Firestore nie sú inicializované. Skontrolujte authentication.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii Firebase. Skúste to prosím neskôr.</div>';
+                console.error("Error: Firebase Auth or Firestore are not initialized. Check authentication.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error initializing Firebase. Please try again later.</div>';
                 return;
             }
 
-            // Pridáme malé oneskorenie pred vykreslením React aplikácie.
-            // Toto je dočasné riešenie pre problém s načítaním menu.
-            // Ideálne riešenie by vyžadovalo zmeny v logged-in-left-menu.js.
-            await new Promise(resolve => setTimeout(resolve, 100)); // Oneskorenie 100ms
+            // Add a small delay before rendering the React application.
+            // This is a temporary solution for the menu loading issue.
+            // The ideal solution would require changes in logged-in-left-menu.js.
+            await new Promise(resolve => setTimeout(resolve, 100)); // Delay 100ms
 
-            // Teraz, keď vieme, že React a Firebase sú pripravené, môžeme vykresliť aplikáciu.
+            // Now that we know React and Firebase are ready, we can render the application.
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(MySettingsApp, null));
-            console.log("logged-in-my-settings.html: React App vykreslená.");
+            console.log("logged-in-my-settings.html: React App rendered.");
         };
     </script>
 </body>
