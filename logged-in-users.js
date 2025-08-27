@@ -1,25 +1,19 @@
-// logged-in-users.js (teraz obsahuje UsersManagementApp pre správu používateľov)
-// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> logged-in-users.html.
-// Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
-
-// Imports for necessary Firebase functions
+import { useState, useEffect, useRef } from 'react';
 import {
   collection,
   query,
   onSnapshot,
   doc,
   updateDoc,
-  deleteDoc,
-  getDoc
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
 function NotificationModal({ message, onClose, type = 'info' }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
+  const [show, setShow] = useState(false);
+  const timerRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (message) {
       setShow(true);
       if (timerRef.current) {
@@ -76,9 +70,7 @@ window.showGlobalNotification = (message, type = 'success') => {
   root.render(React.createElement(NotificationModal, { message, type, onClose: () => root.render(null) }));
 };
 
-const { useState, useEffect, useRef } = React;
-
-// NOVINKA: Komponent pre potvrdzovacie modálne okno
+// ConfirmationModal Component
 function ConfirmationModal({ message, onConfirm, onCancel }) {
   return React.createElement(
     'div',
@@ -110,7 +102,7 @@ function ConfirmationModal({ message, onConfirm, onCancel }) {
   );
 }
 
-// Komponent pre modálne okno na zmenu roly
+// ChangeRoleModal Component
 function ChangeRoleModal({ user, onClose, onRoleChange }) {
   const [selectedRole, setSelectedRole] = useState(user.role);
 
@@ -138,7 +130,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               onChange: (e) => setSelectedRole(e.target.value),
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
-            React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' }, 
+            React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' },
               role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Používateľ'
             )
           )
@@ -188,13 +180,14 @@ function UsersManagementApp() {
         setLoading(false);
         return;
       }
-      
+
       const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
       window.isCurrentUserAdmin = isUserAdmin;
       window.currentUserId = auth.currentUser?.uid; // Uloženie ID aktuálneho používateľa
 
       if (isUserAdmin) {
-        const usersCollectionPath = `users`; 
+        // Používame priamu cestu k používateľom, bez appId, aby sme spravovali všetkých používateľov v databáze.
+        const usersCollectionPath = `users`;
         const usersCol = collection(db, usersCollectionPath);
         const q = query(usersCol);
 
@@ -219,6 +212,37 @@ function UsersManagementApp() {
     fetchData();
   }, [globalUserProfileData]);
 
+  // NOVÁ FUNKCIA: Odošle e-mail prostredníctvom Google Apps Script webovej aplikácie
+  const sendApprovalEmail = async (userEmail, userName) => {
+    // POZNÁMKA: Nahraďte túto URL vašou nasadenou URL Google Apps Script!
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
+    
+    try {
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: userEmail,
+          subject: `Schválenie administrátorského účtu pre SportApp`,
+          body: `Dobrý deň ${userName},\n\nVáš administrátorský účet pre SportApp bol úspešne schválený. Môžete sa prihlásiť a začať spravovať systém.\n\nS pozdravom,\nTím SportApp`,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Chyba pri odosielaní e-mailu:', response.statusText);
+        setNotification({ message: 'Nepodarilo sa odoslať potvrdzovací e-mail.', type: 'error' });
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Chyba pri odosielaní e-mailu:', error);
+      setNotification({ message: 'Nepodarilo sa odoslať potvrdzovací e-mail. Skontrolujte URL a pripojenie.', type: 'error' });
+      return false;
+    }
+  };
+
   const handleChangeRole = async (userId, newRole) => {
     try {
       const userDocRef = doc(db, `users`, userId);
@@ -231,7 +255,7 @@ function UsersManagementApp() {
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
     }
   };
-  
+
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
@@ -247,13 +271,22 @@ function UsersManagementApp() {
     }
   };
 
-  const handleApproveAdmin = async (userId) => {
+  // UPRAVENÁ FUNKCIA: Teraz najprv odošle e-mail a potom aktualizuje databázu
+  const handleApproveAdmin = async (user) => {
+    const userName = `${user.firstName} ${user.lastName}`;
+    const emailSent = await sendApprovalEmail(user.email, userName);
+
+    if (!emailSent) {
+      console.log('Odosielanie e-mailu zlyhalo, operácia schválenia zrušená.');
+      return;
+    }
+
     try {
-      const userDocRef = doc(db, `users`, userId);
+      const userDocRef = doc(db, `users`, user.id);
       await updateDoc(userDocRef, {
         approved: true
       });
-      setNotification({ message: `Admin bol úspešne schválený.`, type: 'success' });
+      setNotification({ message: `Admin bol úspešne schválený. E-mail s potvrdením bol odoslaný.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
       setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
@@ -261,29 +294,29 @@ function UsersManagementApp() {
   };
 
   const getRoleColor = (role) => {
-      switch (role) {
-          case 'admin':
-              return '#47b3ff';
-          case 'hall':
-              return '#b06835';
-          case 'user':
-              return '#9333EA';
-          default:
-              return '#1D4ED8';
-      }
+    switch (role) {
+      case 'admin':
+        return '#47b3ff';
+      case 'hall':
+        return '#b06835';
+      case 'user':
+        return '#9333EA';
+      default:
+        return '#1D4ED8';
+    }
   };
 
   const getTranslatedRole = (role) => {
-      switch (role) {
-          case 'admin':
-              return 'Administrátor';
-          case 'hall':
-              return 'Športová hala';
-          case 'user':
-              return 'Používateľ';
-          default:
-              return role;
-      }
+    switch (role) {
+      case 'admin':
+        return 'Administrátor';
+      case 'hall':
+        return 'Športová hala';
+      case 'user':
+        return 'Používateľ';
+      default:
+        return role;
+    }
   };
 
   if (loading) {
@@ -299,7 +332,7 @@ function UsersManagementApp() {
       React.createElement('h1', { className: 'text-3xl font-bold text-gray-700' }, 'Nemáte oprávnenie na zobrazenie tejto stránky.')
     );
   }
-  
+
   return React.createElement(
     'div',
     { className: 'flex-grow p-4 md:p-8 bg-gray-100 rounded-lg shadow-inner' },
@@ -343,14 +376,12 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
-                // NOVINKA: Kontrola, či je používateľ aktuálne prihlásený, a skrytie tlačidiel
-                // NOVINKA: Zobrazenie tlačidla na schválenie, ak je rola 'admin' a 'approved' je false
                 user.id !== window.currentUserId ?
                 React.createElement(React.Fragment, null,
                   (user.role === 'admin' && user.approved === false) && React.createElement(
                     'button',
                     {
-                      onClick: () => handleApproveAdmin(user.id),
+                      onClick: () => handleApproveAdmin(user),
                       className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
                     },
                     'Schváliť'
