@@ -3,11 +3,12 @@
 // sú globálne definované v <head> logged-in-users.html.
 // Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
 
+// Importy pre Firebase už nie sú potrebné, ak sa používajú globálne premenné z authentication.js
 // Správne modulárne importy pre Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+// import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
-  getFirestore,
+  // getFirestore,
   collection,
   query,
   onSnapshot,
@@ -251,18 +252,18 @@ function UserCard({ user, onApprove, onRoleChange, onDelete }) {
       onConfirm: async () => {
         setIsDeleting(true);
         try {
-          const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
+          const userDocRef = doc(window.db, 'artifacts', window.__app_id, 'users', user.id);
           await deleteDoc(userDocRef);
-          showGlobalNotification('Používateľ bol úspešne vymazaný.', 'success');
+          window.showGlobalNotification('Používateľ bol úspešne vymazaný.', 'success');
         } catch (e) {
           console.error("Chyba pri mazaní používateľa: ", e);
-          showGlobalNotification('Chyba pri mazaní používateľa.', 'error');
+          window.showGlobalNotification('Chyba pri mazaní používateľa.', 'error');
         } finally {
           setIsDeleting(false);
         }
       },
       onCancel: () => {
-        showGlobalNotification('Mazanie používateľa bolo zrušené.', 'info');
+        window.showGlobalNotification('Mazanie používateľa bolo zrušené.', 'info');
       }
     });
   };
@@ -322,95 +323,74 @@ function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [db, setDb] = useState(null);
-  const [auth, setAuth] = useState(null);
-  const [appId, setAppId] = useState(null);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-
-  // Inicializácia Firebase a prihlásenie
-  useEffect(() => {
-    try {
-      // Globálne premenné by mali byť dostupné v runtime
-      const localAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-      const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-      
-      const app = initializeApp(firebaseConfig);
-      const authInstance = getAuth(app);
-      const dbInstance = getFirestore(app);
-
-      // Prihlásenie
-      const signIn = async () => {
-        try {
-          if (initialAuthToken) {
-            await signInWithCustomToken(authInstance, initialAuthToken);
-            console.log("Prihlásenie s vlastným tokenom úspešné.");
-          } else {
-            await signInAnonymously(authInstance);
-            console.log("Prihlásenie anonymne úspešné.");
-          }
-        } catch (authError) {
-          console.error("Chyba pri prihlasovaní:", authError);
-          setError("Chyba pri prihlasovaní. Skúste to prosím neskôr.");
-        } finally {
-          // Uloženie inštancií do stavu
-          setDb(dbInstance);
-          setAuth(authInstance);
-          setAppId(localAppId);
-          setIsLoading(false);
-        }
-      };
-
-      signIn();
-
-    } catch (e) {
-      console.error("Inicializácia Firebase zlyhala:", e);
-      setError("Inicializácia aplikácie zlyhala. Skúste to prosím neskôr.");
-      setIsLoading(false);
-    }
-  }, []);
 
   // Načítanie používateľov z Firestore až po inicializácii
   useEffect(() => {
-    if (!db || !auth || error) return;
+    // Čakáme, kým bude Firebase inicializované a globálne premenné dostupné
+    if (!window.db || !window.auth || !window.__app_id) {
+      console.log("Čakám na globálne premenné z authentication.js...");
+      // Toto je dočasné, aby sa neopakoval kód.
+      // V reálnej aplikácii by sa mal použiť listener na zmeny v globálnom stave.
+      // Keďže v "authentication.js" je definovaný "globalDataUpdated", mohli by sme naň počúvať.
+      // Pre jednoduchosť a rýchlu funkčnosť to však zatiaľ necháme takto a spoliehame sa, že
+      // authentication.js sa načíta prvý.
+      const timer = setTimeout(() => {
+         if (window.db && window.auth && window.__app_id) {
+            fetchData();
+         } else {
+            console.error("Globálne premenné nie sú dostupné.");
+            setError("Chyba: Inicializácia aplikácie zlyhala.");
+            setIsLoading(false);
+         }
+      }, 500); // malá pauza pre istotu
 
-    try {
-      const q = query(collection(db, 'artifacts', appId, 'users'));
-
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const usersArray = [];
-        querySnapshot.forEach((doc) => {
-          usersArray.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-        setUsers(usersArray);
-      }, (e) => {
-        console.error("Chyba pri načítavaní používateľov: ", e);
-        setError("Nepodarilo sa načítať údaje o používateľoch.");
-      });
-
-      return () => unsubscribe();
-    } catch (e) {
-      console.error("Nastavenie poslucháča Firestore zlyhalo: ", e);
-      setError("Nepodarilo sa načítať údaje o používateľoch.");
+      return () => clearTimeout(timer);
     }
-  }, [db, auth, appId, error]);
+    
+    const fetchData = () => {
+      try {
+        const q = query(collection(window.db, 'artifacts', window.__app_id, 'users'));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const usersArray = [];
+          querySnapshot.forEach((doc) => {
+            usersArray.push({
+              id: doc.id,
+              ...doc.data()
+            });
+          });
+          setUsers(usersArray);
+          setIsLoading(false);
+        }, (e) => {
+          console.error("Chyba pri načítavaní používateľov: ", e);
+          setError("Nepodarilo sa načítať údaje o používateľoch.");
+          setIsLoading(false);
+        });
+  
+        return () => unsubscribe();
+      } catch (e) {
+        console.error("Nastavenie poslucháča Firestore zlyhalo: ", e);
+        setError("Nepodarilo sa načítať údaje o používateľoch.");
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+
+  }, []);
 
   const handleApproveUser = async (user) => {
     // Zobrazí potvrdzovacie modálne okno
-    showConfirmationModal({
+    window.showConfirmationModal({
       message: `Ste si istý, že chcete schváliť používateľa ${user.firstName} ${user.lastName} a poslať mu e-mail?`,
       onConfirm: async () => {
         try {
-          const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
+          const userDocRef = doc(window.db, 'artifacts', window.__app_id, 'users', user.id);
           
           await updateDoc(userDocRef, {
             role: 'admin',
             pendingApproval: false,
-            approvedBy: auth.currentUser.uid,
+            approvedBy: window.auth.currentUser.uid,
             approvedAt: new Date()
           });
 
@@ -435,11 +415,11 @@ function UsersManagementApp() {
   };
 
   const handleDeleteUser = async (user, showConfirmationModal) => {
-    showConfirmationModal({
+    window.showConfirmationModal({
       message: `Ste si istý, že chcete vymazať používateľa ${user.firstName} ${user.lastName}? Táto akcia je nezvratná.`,
       onConfirm: async () => {
         try {
-          const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
+          const userDocRef = doc(window.db, 'artifacts', window.__app_id, 'users', user.id);
           await deleteDoc(userDocRef);
           window.showGlobalNotification('Používateľ bol úspešne vymazaný.', 'success');
         } catch (e) {
@@ -455,7 +435,7 @@ function UsersManagementApp() {
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-      const userDocRef = doc(db, 'artifacts', appId, 'users', userId);
+      const userDocRef = doc(window.db, 'artifacts', window.__app_id, 'users', userId);
       await updateDoc(userDocRef, { role: newRole });
       window.showGlobalNotification('Rola bola úspešne zmenená.', 'success');
     } catch (e) {
