@@ -1,17 +1,8 @@
 // header.js
 // Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
 // a obsluhuje akcie ako odhlásenie používateľa.
-// Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase,
-// a zároveň aby pravidelne kontroloval aktuálny čas, aby sa odkaz zobrazil alebo skryl
-// presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
-// Nová funkcionalita: Pridáva listener pre zobrazovanie notifikácií z databázy pre administrátorov.
-// Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
-// Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
-// Nová úprava: Pridáva funkciu na formátovanie telefónnych čísiel v notifikáciách pre lepšiu čitateľnosť.
-
-if (window.top !== window.self) {
-    window.top.location.replace(window.self.location.href);
-}
+// Tento súbor už neobsahuje frame buster kód, ktorý bol presunutý do samostatného skriptu,
+// aby sa zabezpečilo, že sa stránka nikdy nezobrazí v iframe.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
