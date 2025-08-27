@@ -81,6 +81,7 @@ const { useState, useEffect, useRef } = React;
 function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userRoleLoading, setUserRoleLoading] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState("info");
@@ -99,11 +100,36 @@ function UsersManagementApp() {
         // Neukončujeme, necháme useEffect spustiť znova, keď sa zmenia závislosti
         return;
     }
+    
+    // Načítanie role používateľa
+    const userDocRef = doc(db, `artifacts/${appId}/public/users`, auth.currentUser.uid);
+    const unsubscribeUserRole = onSnapshot(userDocRef, (doc) => {
+        const userRoleData = doc.data();
+        const isAdmin = userRoleData?.isAdmin;
+        window.isCurrentUserAdmin = isAdmin;
+        setUserRoleLoading(false);
+    }, (error) => {
+        console.error("Chyba pri načítaní role používateľa:", error);
+        setUserRoleLoading(false);
+    });
+
+    return () => unsubscribeUserRole();
+  }, [db, appId, auth]);
+
+
+  useEffect(() => {
+    // Načítanie používateľov len ak je používateľ admin
+    if (!window.isCurrentUserAdmin || userRoleLoading) {
+      // Ak nie je admin alebo ešte čakáme na načítanie role, nič nenačítame
+      // a zobrazíme len loader alebo chybové hlásenie
+      if (!userRoleLoading) {
+        setLoading(false);
+      }
+      return;
+    }
 
     console.log("UsersManagementApp: Firebase a ID aplikácie sú dostupné. Načítavam dáta používateľov.");
 
-    const userId = auth.currentUser?.uid || 'anonymous';
-    // Cesta ku kolekcii je teraz špecifická pre danú aplikáciu
     const usersCollectionPath = `artifacts/${appId}/public/users`;
     const usersCol = collection(db, usersCollectionPath);
     const q = query(usersCol);
@@ -122,7 +148,7 @@ function UsersManagementApp() {
     });
 
     return () => unsubscribe();
-  }, [db, appId, auth]); // Pridaná závislosť na auth
+  }, [db, appId, auth, window.isCurrentUserAdmin, userRoleLoading]);
 
   const showNotificationMessage = (message, type = 'success') => {
     setNotificationMessage(message);
@@ -163,14 +189,14 @@ function UsersManagementApp() {
 
   const userRole = users.find(u => u.id === auth.currentUser?.uid)?.isAdmin ? 'admin' : 'user';
 
-  if (loading) {
+  if (loading || userRoleLoading) {
     return React.createElement(
       'div', { className: 'flex justify-center pt-16' },
       React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
     );
   }
 
-  if (userRole !== 'admin') {
+  if (window.isCurrentUserAdmin === false) {
     return React.createElement(
       'div', { className: 'flex items-center justify-center h-full' },
       React.createElement('h1', { className: 'text-3xl font-bold text-gray-700' }, 'Nemáte oprávnenie na zobrazenie tejto stránky.')
@@ -265,7 +291,7 @@ const initializeAndRenderApp = () => {
     } else {
         // Ak dáta nie sú k dispozícii, nastavíme poslucháča a vrátime sa
         console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie...");
-        window.addEventListener('globalDataUpdated', initializeAndRenderApp, { once: true });
+        window.addEventListener('globalDataUpdated', initializeAndRenderApp);
         // Zobrazíme loader, kým čakáme
         const rootElement = document.getElementById('users-management-root');
         if (rootElement) {
