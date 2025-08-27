@@ -1,8 +1,7 @@
 // admin-register.js (now uses global Firebase instances from authentication.js)
 // Explicitly import functions for Firebase Auth and Firestore for modular access (SDK v11)
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+import { collection, doc, setDoc, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Pridaný onSnapshot pre sledovanie zmien
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -196,24 +195,39 @@ function App() {
   React.useEffect(() => {
     // Wait until auth and db instances are available from authentication.js
     if (auth && db && isAuthReady) { // Also wait for isAuthReady
-      setPageLoading(false); // Page is now fully loaded (auth and db are ready)
+      setPageLoading(false); // Page je teraz plne načítaná (auth a db sú pripravené)
+
+      // Pridanie sledovania hodnoty adminCount z Firestore
+      const settingsDocRef = doc(db, 'settings', 'adminCount');
+      const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const adminCount = docSnap.data().count;
+          console.log(`Hodnota adminCount sa zmenila na: ${adminCount}`);
+        } else {
+          console.log("Dokument 'settings/adminCount' neexistuje.");
+        }
+      });
+
+      // Vráťte funkciu na odhlásenie odberu, aby sa predišlo úniku pamäte
+      return () => unsubscribe();
+
     } else {
-        console.log("AdminRegisterApp: Waiting for Auth and DB initialization in authentication.js.");
+        console.log("AdminRegisterApp: Čakám na inicializáciu Auth a DB v authentication.js.");
     }
-  }, [auth, db, isAuthReady]); // Depends on auth, db, and isAuthReady (global instances)
+  }, [auth, db, isAuthReady]); // Závisí od auth, db a isAuthReady (globálne inštancie)
 
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
-      setErrorMessage("reCAPTCHA API is not loaded or ready.");
+      setErrorMessage("reCAPTCHA API nie je načítané alebo pripravené.");
       return null;
     }
     try {
       const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
       return token;
     } catch (e) {
-      console.error("Error getting reCAPTCHA token:", e);
-      setErrorMessage(`reCAPTCHA Error: ${e.message}`);
+      console.error("Chyba pri získavaní reCAPTCHA tokenu:", e);
+      setErrorMessage(`reCAPTCHA Chyba: ${e.message}`);
       return null;
     }
   };
@@ -222,7 +236,7 @@ function App() {
   const validatePassword = (pwd) => {
     const status = {
       minLength: pwd.length >= 10,
-      maxLength: pwd.length <= 4096, // This condition is still checked
+      maxLength: pwd.length <= 4096, // This condition is still checked, but not displayed in the list
       hasUpperCase: /[A-Z]/.test(pwd),
       hasLowerCase: /[a-z]/.test(pwd),
       hasNumber: /[0-9]/.test(pwd),
@@ -320,7 +334,7 @@ function App() {
         // Corrected: Use doc and setDoc functions
         const userDocRef = doc(db, 'users', userCredential.user.uid);
         await setDoc(userDocRef, userDataToSave);
-        console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved.`);
+        console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením 'false' bol uložený.`);
 
         // Attempt to send email via Apps Script immediately after saving initial data
         try {
@@ -331,7 +345,7 @@ function App() {
             firstName: firstName,
             lastName: lastName,
           };
-          console.log("Sending data to Apps Script (admin registration email):", payload);
+          console.log("Odosielam údaje do Apps Script (e-mail o registrácii admina):", payload);
           
           // CHANGE: Add mode: 'no-cors'
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -346,12 +360,12 @@ function App() {
           // With mode: 'no-cors', response.ok will always be false and response.status will be 0.
           // Therefore, we must assume success if there is no network error.
           // If you need success verification, it is better to use CORS and configure Apps Script correctly.
-          console.log("Response from Apps Script (admin registration email) with no-cors:", response);
+          console.log("Odpoveď z Apps Script (e-mail o registrácii admina) s no-cors:", response);
 
         } catch (emailError) {
-          console.error("Error sending admin registration email via Apps Script (fetch error):", emailError);
+          console.error("Chyba pri odosielaní e-mailu o registrácii admina cez Apps Script (fetch error):", emailError);
           // CHANGE: Set errorMessage for this secondary error
-          setErrorMessage(`Registration successful, but failed to send confirmation email: ${emailError.message}. Check connection and Apps Script.`);
+          setErrorMessage(`Registrácia prebehla úspešne, ale nepodarilo sa odoslať potvrdzovací e-mail: ${emailError.message}. Skontrolujte pripojenie a Apps Script.`);
         }
 
         // --- Logic for saving notification for administrators ---
@@ -368,15 +382,15 @@ function App() {
                 recipientId: notificationRecipientId,
                 read: false
             });
-            console.log("Notification about new administrator registration successfully saved to Firestore.");
+            console.log("Oznámenie o novej registrácii administrátora bolo úspešne uložené do Firestore.");
         } catch (e) {
-            console.error("App: Error saving notification about administrator registration:", e);
+            console.error("App: Chyba pri ukladaní oznámenia o registrácii administrátora:", e);
         }
         // --- End logic for saving notification ---
 
       } catch (firestoreError) {
-        console.error("Error saving/updating Firestore:", firestoreError);
-        setErrorMessage(`Error saving/updating user to database: ${firestoreError.message}. Check Firebase security rules.`);
+        console.error("Chyba pri ukladaní/aktualizácii Firestore:", firestoreError);
+        setErrorMessage(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
         setFormSubmitting(false); // Reset formSubmitting on error
         return;
       }
@@ -395,7 +409,7 @@ function App() {
       }, 5000);
 
     } catch (e) {
-      console.error("Error during registration (Auth or other):", e);
+      console.error("Chyba počas registrácie (Auth alebo iné):", e);
       if (e.code === 'auth/email-already-in-use') {
         setErrorMessage("E-mailová adresa už existuje. Vyberte prosím inú.");
       } else if (e.code === 'auth/weak-password') {
