@@ -2,6 +2,7 @@
 // Explicitly import functions for Firebase Auth and Firestore for modular access (SDK v11)
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, doc, setDoc, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Pridaný onSnapshot pre sledovanie zmien
+import { updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // NEW: Pridané updateDoc a increment
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -315,12 +316,24 @@ function App() {
     setErrorMessage(''); // Clear previous errors
     setSuccessMessage(''); // Clear any previous success message
 
-    // --- ZMENA: Upravená podmienka. Ak je počet adminov menší ako 2, nastav schválenie na true. Inak na false. ---
-    const approvedStatus = adminCount < 2; // CHANGE: Changed condition to < 2
-    console.log(`Počet adminov je ${adminCount}, preto bude status schválenia: ${approvedStatus}`);
-    // --------------------------------------------------------------------------
-
     try {
+      // NEW: Zväčšenie hodnoty adminCount o 1
+      const settingsDocRef = doc(db, 'settings', 'adminCount');
+      await updateDoc(settingsDocRef, {
+        count: increment(1)
+      });
+      console.log('Hodnota adminCount bola úspešne zvýšená o 1 v Firestore.');
+
+      // NEW: Zobrazenie novej hodnoty adminCount v konzole
+      const newAdminCount = adminCount + 1;
+      console.log(`Nová hodnota adminCount je: ${newAdminCount}`);
+      // --------------------------------------------------------------------------
+
+      // --- ZMENA: Upravená podmienka. Ak je počet adminov menší ako 2, nastav schválenie na true. Inak na false. ---
+      const approvedStatus = adminCount < 2; // CHANGE: Changed condition to < 2
+      console.log(`Počet adminov je ${adminCount}, preto bude status schválenia: ${approvedStatus}`);
+      // --------------------------------------------------------------------------
+
       // Corrected: Use createUserWithEmailAndPassword as a top-level function with 'auth' instance
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
