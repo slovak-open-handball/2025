@@ -357,20 +357,15 @@ function UsersManagementApp() {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
 
-        if (adminCountSnap.exists()) {
-          const currentAdminCount = adminCountSnap.data().count;
+        const currentAdminCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+        const newCount = Math.max(1, currentAdminCount - 1);
+        
+        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
+        console.log(`Nová hodnota adminCount: ${newCount}`);
           
-          console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
-          
-          if (currentAdminCount === 1) {
-            setNotification({ message: 'Počet administrátorov nemôže klesnúť pod 1.', type: 'warning' });
-            return;
-          }
-          
-          await updateDoc(adminCountRef, {
-            count: increment(-1)
-          });
-        }
+        await updateDoc(adminCountRef, {
+            count: newCount
+        });
       }
 
       await updateDoc(userDocRef, {
@@ -395,20 +390,15 @@ function UsersManagementApp() {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
         
-        if (adminCountSnap.exists()) {
-          const currentAdminCount = adminCountSnap.data().count;
+        const currentAdminCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+        const newCount = Math.max(1, currentAdminCount - 1);
 
-          console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
-
-          if (currentAdminCount === 1) {
-            setNotification({ message: 'Počet administrátorov nemôže klesnúť pod 1.', type: 'warning' });
-            return;
-          }
-
-          await updateDoc(adminCountRef, {
-            count: increment(-1)
-          });
-        }
+        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
+        console.log(`Nová hodnota adminCount: ${newCount}`);
+        
+        await updateDoc(adminCountRef, {
+            count: newCount
+        });
       }
       
       await deleteDoc(userDocRef);
