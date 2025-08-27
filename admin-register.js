@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Auth a Firestore (modulárny prístup, SDK v11)
 import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanty pre reCAPTCHA a Apps Script URL
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -157,7 +157,6 @@ function App() {
     const [emailTouched, setEmailTouched] = React.useState(false);
 
     // Efekt pre overenie pripravenosti Firebase inštancií
-    // Už nenačítame adminCount, pretože ho nepotrebujeme na strane klienta pre logiku.
     React.useEffect(() => {
         if (auth && db && isAuthReady) {
             setPageLoading(false);
@@ -165,6 +164,42 @@ function App() {
             console.log("AdminRegisterApp: Waiting for Auth and DB initialization from authentication.js.");
         }
     }, [auth, db, isAuthReady]);
+
+    // NOVÝ Efekt: Sledovanie počítadla administrátorov v reálnom čase
+    // Využíva onSnapshot na načítanie a vypísanie hodnoty count do konzoly.
+    React.useEffect(() => {
+        if (!db || !isAuthReady) {
+            return;
+        }
+
+        const adminCountDocRef = doc(db, 'settings', 'adminCount');
+        const unsubscribe = onSnapshot(adminCountDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data && data.count !== undefined) {
+                    console.log("Údaj z databázy z /settings/adminCount: ", data.count);
+                    // Aktualizácia stavu, ak je to potrebné pre budúce použitie v UI
+                    setAdminCount(data.count);
+                } else {
+                    console.log("Dokument adminCount existuje, ale neobsahuje pole 'count'.");
+                    setAdminCount(null);
+                }
+            } else {
+                console.log("Dokument /settings/adminCount neexistuje.");
+                setAdminCount(null);
+            }
+        }, (error) => {
+            console.error("Chyba pri sledovaní dokumentu adminCount:", error);
+            setErrorMessage(`Chyba pri získavaní počítadla adminov: ${error.message}`);
+        });
+
+        // Cleanup funkcia pre odhlásenie z onSnapshot listenera pri unmount komponentu
+        return () => {
+            unsubscribe();
+            console.log("onSnapshot listener pre adminCount bol odhlásený.");
+        };
+    }, [db, isAuthReady]);
+
 
     // Efekt pre validáciu hesla pri každej zmene
     React.useEffect(() => {
@@ -392,6 +427,15 @@ function App() {
         passwordValidationStatus.isValid &&
         isConfirmPasswordMatching;
 
+    // Dynamické triedy pre tlačidlo
+    const buttonClasses = `
+        font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+        ${formSubmitting || !isFormValid
+            ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
+            : 'bg-green-500 hover:bg-green-700 text-white'
+        }
+    `;
+
     // Zobrazenie načítavacej obrazovky pri inicializácii
     if (pageLoading) {
         return React.createElement(
@@ -434,15 +478,6 @@ function App() {
             )
         );
     }
-
-    // Dynamické triedy pre tlačidlo
-    const buttonClasses = `
-        font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
-        ${formSubmitting || !isFormValid
-            ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
-            : 'bg-green-500 hover:bg-green-700 text-white'
-        }
-    `;
 
     // Zobrazenie registračného formulára
     return React.createElement(
