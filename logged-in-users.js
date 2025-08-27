@@ -78,10 +78,65 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 const { useState, useEffect, useRef } = React;
 
+// NOVINKA: Komponent pre modálne okno na zmenu roly
+function ChangeRoleModal({ user, onClose, onRoleChange }) {
+  const [selectedRole, setSelectedRole] = useState(user.role);
+
+  const handleSave = () => {
+    onRoleChange(user.id, selectedRole);
+    onClose();
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
+      React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, `Zmeniť rolu pre ${user.firstName} ${user.lastName}`),
+      React.createElement('div', { className: 'mb-4' },
+        ['admin', 'user', 'hall'].map(role =>
+          React.createElement('div', { key: role, className: 'flex items-center mb-2' },
+            React.createElement('input', {
+              type: 'radio',
+              id: role,
+              name: 'role',
+              value: role,
+              checked: selectedRole === role,
+              onChange: (e) => setSelectedRole(e.target.value),
+              className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
+            }),
+            React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' }, role)
+          )
+        )
+      ),
+      React.createElement('div', { className: 'flex justify-end' },
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2'
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: handleSave,
+            className: 'bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700'
+          },
+          'Uložiť'
+        )
+      )
+    )
+  );
+}
+
 function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({ message: '', type: 'info' });
+  const [userToEdit, setUserToEdit] = useState(null); // NOVINKA: Stav pre modálne okno
 
   // Získame globálne premenné z window
   const db = window.db;
@@ -133,31 +188,22 @@ function UsersManagementApp() {
     fetchData();
   }, [globalUserProfileData]);
 
-  const handleToggleAdmin = async (user) => {
+  // UPRAVENÉ: Funkcia na zmenu roly cez modálne okno
+  const handleChangeRole = async (userId, newRole) => {
     try {
-      const userDocRef = doc(db, `users`, user.id); 
-      // UPRAVENÉ: Zmeníme isAdmin na rolu a nastavíme na 'admin' alebo 'user'
-      const newRole = user.role === 'admin' ? 'user' : 'admin';
+      const userDocRef = doc(db, `users`, userId);
       await updateDoc(userDocRef, {
         role: newRole
       });
-      setNotification({ message: `Status administrátora pre ${user.displayName} bol úspešne zmenený na ${newRole}.`, type: 'success' });
+      setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri zmene statusu administrátora:", error);
-      setNotification({ message: 'Nepodarilo sa zmeniť status administrátora.', type: 'error' });
+      console.error("Chyba pri zmene roly používateľa:", error);
+      setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
     }
   };
 
-  const handleDeleteUser = async (userIdToDelete) => {
-    try {
-      const userDocRef = doc(db, `users`, userIdToDelete); 
-      await deleteDoc(userDocRef);
-      setNotification({ message: 'Používateľ bol úspešne odstránený.', type: 'success' });
-    } catch (error) {
-      console.error("Chyba pri odstraňovaní používateľa:", error);
-      setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
-    }
-  };
+  // PÔVODNÉ: handleToggleAdmin a handleDeleteUser sú odstránené, namiesto nich je nový handleChangeRole
+  // A je odstránené tlačidlo "Odstrániť"
 
   if (loading) {
     return React.createElement(
@@ -219,18 +265,10 @@ function UsersManagementApp() {
                 React.createElement(
                   'button',
                   {
-                    onClick: () => handleToggleAdmin(user),
-                    className: 'text-indigo-600 hover:text-indigo-900 mr-4',
+                    onClick: () => setUserToEdit(user),
+                    className: 'text-indigo-600 hover:text-indigo-900',
                   },
                   'Zmeniť rolu'
-                ),
-                React.createElement(
-                  'button',
-                  {
-                    onClick: () => handleDeleteUser(user.id),
-                    className: 'text-red-600 hover:text-red-900',
-                  },
-                  'Odstrániť'
                 )
               )
             )
@@ -238,7 +276,12 @@ function UsersManagementApp() {
         )
       )
     ),
-    React.createElement(NotificationModal, { message: notification.message, onClose: () => setNotification({ message: '', type: 'info' }), type: notification.type })
+    React.createElement(NotificationModal, { message: notification.message, onClose: () => setNotification({ message: '', type: 'info' }), type: notification.type }),
+    userToEdit && React.createElement(ChangeRoleModal, {
+      user: userToEdit,
+      onClose: () => setUserToEdit(null),
+      onRoleChange: handleChangeRole
+    })
   );
 }
 
