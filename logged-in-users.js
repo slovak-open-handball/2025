@@ -244,32 +244,33 @@ function UsersManagementApp() {
   }, [globalUserProfileData]);
 
   const handleChangeRole = async (userId, newRole) => {
+    if (isSaving) return; // Zabráni opätovnému spusteniu operácie, ak už prebieha
     setIsSaving(true); // Začiatok ukladania
+    
     try {
         const userDocRef = doc(db, `users`, userId);
         const adminCountRef = doc(db, `settings`, `adminCount`);
         
-        await runTransaction(db, async (transaction) => {
-            const userSnap = await transaction.get(userDocRef);
-            if (!userSnap.exists()) {
-                throw new Error("Používateľ nebol nájdený.");
-            }
-            const oldRole = userSnap.data().role;
-            const wasApproved = userSnap.data().approved;
-            const isApproved = newRole === 'admin';
-            
-            // Update the user document
-            transaction.update(userDocRef, { role: newRole, approved: isApproved });
-
-            // Zjednodušená logika pre aktualizáciu adminCount
-            if (oldRole === 'admin' && wasApproved && !isApproved) {
-                // Zmena z schváleného admina na inú rolu, dekrementujeme
-                transaction.update(adminCountRef, { count: increment(-1) });
-            } else if (oldRole !== 'admin' && isApproved) {
-                // Zmena na schváleného admina, inkrementujeme
-                transaction.update(adminCountRef, { count: increment(1) });
-            }
-        });
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+            throw new Error("Používateľ nebol nájdený.");
+        }
+        
+        const oldRole = userDoc.data().role;
+        const wasApproved = userDoc.data().approved;
+        const isApproved = newRole === 'admin';
+        
+        // Zjednodušená logika pre aktualizáciu adminCount
+        if (oldRole === 'admin' && wasApproved && !isApproved) {
+            // Zmena z schváleného admina na inú rolu, dekrementujeme
+            await updateDoc(adminCountRef, { count: increment(-1) });
+        } else if (oldRole !== 'admin' && isApproved) {
+            // Zmena na schváleného admina, inkrementujeme
+            await updateDoc(adminCountRef, { count: increment(1) });
+        }
+        
+        // Update the user document
+        await updateDoc(userDocRef, { role: newRole, approved: isApproved });
 
         setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
         setUserToEdit(null); // Zavrie modálne okno po úspešnom uložení
@@ -282,26 +283,25 @@ function UsersManagementApp() {
   };
   
   const handleDeleteUser = async () => {
-    if (!userToDelete) return;
-
+    if (!userToDelete || isSaving) return; // Zabráni opätovnému spusteniu operácie, ak už prebieha
     setIsSaving(true); // Začiatok ukladania
+    
     try {
         const userDocRef = doc(db, `users`, userToDelete.id);
         const adminCountRef = doc(db, `settings`, `adminCount`);
-
-        await runTransaction(db, async (transaction) => {
-            const userSnap = await transaction.get(userDocRef);
-            if (!userSnap.exists()) {
-                throw new Error("User not found");
-            }
-            
-            // Ak bol používateľ schválený admin, dekrementujeme count
-            if (userSnap.data().role === 'admin' && userSnap.data().approved === true) {
-                transaction.update(adminCountRef, { count: increment(-1) });
-            }
-            // Delete the user document
-            transaction.delete(userDocRef);
-        });
+        
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+            throw new Error("User not found");
+        }
+        
+        // Ak bol používateľ schválený admin, dekrementujeme count
+        if (userDoc.data().role === 'admin' && userDoc.data().approved === true) {
+            await updateDoc(adminCountRef, { count: increment(-1) });
+        }
+        
+        // Delete the user document
+        await deleteDoc(userDocRef);
       
       const payload = {
         action: 'deleteUser',
@@ -364,15 +364,15 @@ function UsersManagementApp() {
   
 
   const handleApproveAdmin = async (userId, userEmail) => {
+    if (isSaving) return; // Zabráni opätovnému spusteniu operácie, ak už prebieha
     setIsSaving(true); // Začiatok ukladania
     try {
         const userDocRef = doc(db, `users`, userId);
         const adminCountRef = doc(db, `settings`, `adminCount`);
         
-        await runTransaction(db, async (transaction) => {
-            transaction.update(userDocRef, { approved: true });
-            transaction.update(adminCountRef, { count: increment(1) });
-        });
+        // Zvýšime počet adminov a aktualizujeme stav používateľa v dvoch samostatných operáciách.
+        await updateDoc(adminCountRef, { count: increment(1) });
+        await updateDoc(userDocRef, { approved: true });
       
       // Send email and notification after the transaction
       await sendApprovalEmail(userEmail);
