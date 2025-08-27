@@ -11,7 +11,8 @@ import {
   doc,
   updateDoc,
   deleteDoc,
-  getDoc
+  getDoc,
+  increment
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
@@ -174,7 +175,6 @@ function UsersManagementApp() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [oldestAdminId, setOldestAdminId] = useState(null);
   
-  const googleScriptUrl = 'https://script.google.com/macros/s/AKfycby6wUq81pxqT-Uf_8BtN-cKHjhMDtB1V-cDBdcJElZP4VDmfa53lNfPgudsxnmQ0Y3T/exec';
   const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
 
   const db = window.db;
@@ -262,7 +262,7 @@ function UsersManagementApp() {
         uid: userToDelete.id,
       };
 
-      const response = await fetch(googleScriptUrl, {
+      const response = await fetch('https://script.google.com/macros/s/AKfycby6wUq81pxqT-Uf_8BtN-cKHjhMDtB1V-cDBdcJElZP4VDmfa53lNfPgudsxnmQ0Y3T/exec', {
         method: 'POST',
         mode: 'no-cors',
         cache: 'no-cache',
@@ -322,6 +322,13 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         approved: true
       });
+
+      // Zvýšenie počítadla adminov priamo v databáze
+      const adminCountRef = doc(db, `settings`, `adminCount`);
+      await updateDoc(adminCountRef, {
+        count: increment(1)
+      });
+      
       await sendApprovalEmail(userEmail);
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
     } catch (error) {
