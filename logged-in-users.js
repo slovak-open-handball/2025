@@ -382,13 +382,13 @@ function UsersManagementApp() {
       const currentUser = usersList.find(u => u.id === window.currentUserId);
       const otherUsers = usersList.filter(u => u.id !== oldestAdminId && u.id !== window.currentUserId);
 
-      // Triedenie ostatných používateľov
+      // Triedenie ostatných používateľov podľa slovenskej abecedy
       otherUsers.sort((a, b) => {
-          if (a.lastName < b.lastName) return -1;
-          if (a.lastName > b.lastName) return 1;
-          if (a.firstName < b.firstName) return -1;
-          if (a.firstName > b.firstName) return 1;
-          return 0;
+          const lastNameComparison = a.lastName.localeCompare(b.lastName, 'sk');
+          if (lastNameComparison !== 0) {
+              return lastNameComparison;
+          }
+          return a.firstName.localeCompare(b.firstName, 'sk');
       });
 
       // Zostavenie finálneho poľa
