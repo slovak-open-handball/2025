@@ -424,7 +424,11 @@ function App() {
         return React.createElement(
             'div',
             { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-            React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
+            React.createElement(
+                'div',
+                { className: 'flex justify-center pt-16' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+            )
         );
     }
 
