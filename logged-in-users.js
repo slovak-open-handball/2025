@@ -245,6 +245,7 @@ function UsersManagementApp() {
         return;
       }
       const oldRole = userSnap.data().role;
+      const wasApproved = userSnap.data().approved; // Získame pôvodný stav schválenia
       
       // 2. Skontrolujeme, či došlo k zmene roly z 'admin'
       const isApproved = newRole !== 'admin';
@@ -254,8 +255,8 @@ function UsersManagementApp() {
         approved: isApproved
       });
       
-      // 3. Ak sa rola zmenila z admina na inú, dekrementujeme počítadlo
-      if (oldRole === 'admin' && newRole !== 'admin') {
+      // 3. Ak sa rola zmenila z admina na inú A BOL schválený, dekrementujeme počítadlo
+      if (oldRole === 'admin' && newRole !== 'admin' && wasApproved) {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
         if (adminCountSnap.exists()) {
