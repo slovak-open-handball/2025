@@ -13,7 +13,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 0 11-6 0 3 3 0 016 0z' }),
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
   );
 
@@ -197,12 +197,12 @@ function App() {
     if (auth && db && isAuthReady) { // Also wait for isAuthReady
       setPageLoading(false); // Page je teraz plne načítaná (auth a db sú pripravené)
 
-      // Pridanie sledovania hodnoty adminCount z Firestore
+      // Pridanie sledovania hodnoty adminCount z Firestore, aby sa načítala hneď a potom pri každej zmene
       const settingsDocRef = doc(db, 'settings', 'adminCount');
       const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
         if (docSnap.exists()) {
           const adminCount = docSnap.data().count;
-          console.log(`Hodnota adminCount sa zmenila na: ${adminCount}`);
+          console.log(`Hodnota adminCount: ${adminCount}`); // Vypíše sa aj pri prvom načítaní aj pri zmene
         } else {
           console.log("Dokument 'settings/adminCount' neexistuje.");
         }
@@ -259,7 +259,7 @@ function App() {
 
     // Check for at least two characters after the last dot in the domain
     const lastDotIndex = email.lastIndexOf('.');
-    if (lastDotIndex === -1 || lastDotIndex < atIndex) return false; // Dot must be after @
+    if (lastDotIndex === -1 || lastDotIndex < atIndex) return false;
     
     const charsAfterLastDot = email.substring(lastDotIndex + 1);
     return charsAfterLastDot.length >= 2;
