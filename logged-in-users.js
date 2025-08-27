@@ -306,7 +306,7 @@ function UsersManagementApp() {
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
-      setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
+      setNotification({ message: 'Nepodarilo sa odstráňiť použvateľa.', type: 'error' });
     } finally {
       setUserToDelete(null);
     }
@@ -357,6 +357,7 @@ function UsersManagementApp() {
         approved: true
       });
       
+      // 3. Získame aktuálny stav počítadla adminov
       const adminCountSnap = await getDoc(adminCountRef);
       
       if (adminCountSnap.exists()) {
@@ -365,6 +366,7 @@ function UsersManagementApp() {
           count: increment(1)
         });
       } else {
+        // Ak neexistuje, vytvoríme ho a nastavíme počiatočnú hodnotu na 1
         await setDoc(adminCountRef, {
           count: 1
         });
@@ -562,6 +564,7 @@ const initializeAndRenderApp = () => {
   const rootElement = document.getElementById('users-management-root');
 
   if (!window.isGlobalAuthReady || !window.globalUserProfileData) {
+    console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie a načítanie dát používateľa...");
     return;
   }
 
