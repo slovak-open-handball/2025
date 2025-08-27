@@ -51,7 +51,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
                 onCut: (e) => e.preventDefault(),
                 required: true,
                 placeholder: placeholder,
-                autoComplete: autoComplete,
+                autoComplete: 'new-password',
                 disabled: disabled,
                 onFocus: onFocus
             }),
@@ -165,6 +165,7 @@ function App() {
             const unsubscribe = onSnapshot(adminCountDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     setAdminCount(docSnap.data().count);
+                    console.log(`Počet existujúcich administrátorov: ${docSnap.data().count}`);
                 } else {
                     console.log("V systéme zatiaľ neexistujú žiadni administrátori. Registrácia vášho účtu ho automaticky označí ako prvého administrátora.");
                     setDoc(adminCountDocRef, { count: 0 }, { merge: true }).then(() => {
