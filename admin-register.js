@@ -241,6 +241,7 @@ function App() {
         try {
             // Krok 1: Vytvorenie používateľa vo Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const userId = userCredential.user.uid;
 
             // Krok 2: Uloženie počiatočných údajov používateľa do Firestore
             const userDataToSave = {
@@ -259,7 +260,6 @@ function App() {
 
             try {
                 // Nový používateľ sa ukladá na rovnaké miesto ako v register.js
-                const userId = userCredential.user.uid;
                 const userDocRef = doc(db, 'users', userId);
                 await setDoc(userDocRef, userDataToSave);
                 console.log(`Firestore: User ${email} with role 'admin' and approval 'false' was saved to the 'users' collection.`);
@@ -271,18 +271,31 @@ function App() {
                 return;
             }
             
-            // Krok 3: Aktualizácia počítadla administrátorov v databáze.
-            // Používame increment(), aby sa predišlo problémom so súbežnými zápismi.
+            // Krok 3: Aktualizácia počítadla administrátorov a pridanie notifikácie až po úspešnom vytvorení používateľa
+            // V tomto kroku už má používateľ oprávnenia, pretože existuje a môže zapisovať.
             try {
+                // Aktualizácia počítadla administrátorov
                 const adminCountDocRef = doc(db, 'settings', 'adminCount');
-                await updateDoc(adminCountDocRef, {
-                    count: increment(1)
-                });
+                await updateDoc(adminCountDocRef, { count: increment(1) });
                 console.log("Firestore: Admin count was successfully updated.");
+
+                // Uloženie notifikácie do Firestore pre ostatných administrátorov
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
+                const adminNotificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
+                
+                await addDoc(adminNotificationsCollectionRef, {
+                    message: notificationMessage,
+                    timestamp: serverTimestamp(),
+                    recipientId: 'all_admins',
+                    read: false
+                });
+                console.log("Notification about new administrator registration successfully saved to Firestore.");
+
             } catch (e) {
-                console.error("Chyba pri aktualizácii počítadla administrátorov:", e);
+                console.error("Chyba pri aktualizácii počítadla administrátorov alebo ukladaní notifikácie:", e);
                 // Nastavenie chyby, ale nebránime pokračovaniu, pretože registrácia prebehla úspešne
-                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa aktualizovať počítadlo administrátorov. ${e.message}`);
+                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa dokončiť podporné akcie (počítadlo, notifikácia). ${e.message}`);
             }
 
             // Krok 4: Poslanie notifikácie na Google Apps Script (e-mail)
@@ -314,24 +327,7 @@ function App() {
                 setErrorMessage(`Registrácia úspešná, ale nepodarilo sa odoslať potvrdzovací e-mail: ${emailError.message}.`);
             }
             
-            // Krok 5: Uloženie notifikácie do Firestore pre ostatných administrátorov
-            try {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
-                const adminNotificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
-                
-                await addDoc(adminNotificationsCollectionRef, {
-                    message: notificationMessage,
-                    timestamp: serverTimestamp(),
-                    recipientId: 'all_admins',
-                    read: false
-                });
-                console.log("Notification about new administrator registration successfully saved to Firestore.");
-            } catch (e) {
-                console.error("App: Error saving notification about administrator registration:", e);
-            }
-            
-            // Krok 6: oneskorené odhlásenie používateľa
+            // Krok 5: oneskorené odhlásenie používateľa
             console.log("Všetky dáta boli úspešne zapísané do databázy. Odhlásenie prebehne o 5 sekúnd.");
             await new Promise(resolve => setTimeout(resolve, 5000));
             console.log("Čas odpočítavania uplynul. Odhlasujem používateľa...");
