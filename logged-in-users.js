@@ -266,7 +266,7 @@ function UsersManagementApp() {
                   'button',
                   {
                     onClick: () => setUserToEdit(user),
-                    className: 'text-indigo-600 hover:text-indigo-900',
+                    className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out'
                   },
                   'Zmeniť rolu'
                 )
