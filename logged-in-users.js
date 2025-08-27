@@ -84,7 +84,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 const { useState, useEffect, useRef } = React;
 
 // Komponent pre potvrdzovacie modálne okno
-function ConfirmationModal({ message, onConfirm, onCancel }) {
+function ConfirmationModal({ message, onConfirm, onCancel, isSaving }) {
   return React.createElement(
     'div',
     { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
@@ -98,7 +98,8 @@ function ConfirmationModal({ message, onConfirm, onCancel }) {
           'button',
           {
             onClick: onCancel,
-            className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2 hover:bg-gray-400 transition-colors'
+            disabled: isSaving,
+            className: `bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2 transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`
           },
           'Zrušiť'
         ),
@@ -106,9 +107,10 @@ function ConfirmationModal({ message, onConfirm, onCancel }) {
           'button',
           {
             onClick: onConfirm,
-            className: 'bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors'
+            disabled: isSaving,
+            className: `bg-red-500 text-white px-4 py-2 rounded-md transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'}`
           },
-          'Potvrdiť'
+          isSaving ? 'Odstraňujem...' : 'Potvrdiť'
         )
       )
     )
@@ -116,12 +118,11 @@ function ConfirmationModal({ message, onConfirm, onCancel }) {
 }
 
 // Komponent pre modálne okno na zmenu roly
-function ChangeRoleModal({ user, onClose, onRoleChange }) {
+function ChangeRoleModal({ user, onClose, onRoleChange, isSaving }) {
   const [selectedRole, setSelectedRole] = useState(user.role);
 
   const handleSave = () => {
     onRoleChange(user.id, selectedRole);
-    onClose();
   };
 
   return React.createElement(
@@ -141,6 +142,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               value: role,
               checked: selectedRole === role,
               onChange: (e) => setSelectedRole(e.target.value),
+              disabled: isSaving,
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
             React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' }, 
@@ -154,7 +156,8 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
           'button',
           {
             onClick: onClose,
-            className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2'
+            disabled: isSaving,
+            className: `bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`
           },
           'Zrušiť'
         ),
@@ -162,9 +165,10 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
           'button',
           {
             onClick: handleSave,
-            className: 'bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700'
+            disabled: isSaving,
+            className: `bg-indigo-600 text-white px-4 py-2 rounded-md ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-700'}`
           },
-          'Uložiť'
+          isSaving ? 'Ukladám...' : 'Uložiť'
         )
       )
     )
@@ -178,6 +182,7 @@ function UsersManagementApp() {
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
   const [oldestAdminId, setOldestAdminId] = useState(null);
+  const [isSaving, setIsSaving] = useState(false); // Nový stav na sledovanie prebiehajúcich operácií
   
   const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
   const db = window.db;
@@ -185,9 +190,6 @@ function UsersManagementApp() {
   const auth = window.auth;
   const globalUserProfileData = window.globalUserProfileData;
 
-  // Efekt pre synchronizáciu počtu adminov pri načítaní stránky - TOTO SME ODSTRÁNILI
-  // aby sme sa vyhli zbytočným volaniam a predišli chybe "Too Many Requests"
-  
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -242,6 +244,7 @@ function UsersManagementApp() {
   }, [globalUserProfileData]);
 
   const handleChangeRole = async (userId, newRole) => {
+    setIsSaving(true); // Začiatok ukladania
     try {
         const userDocRef = doc(db, `users`, userId);
         const adminCountRef = doc(db, `settings`, `adminCount`);
@@ -275,15 +278,19 @@ function UsersManagementApp() {
         });
 
         setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
+        setUserToEdit(null); // Zavrie modálne okno po úspešnom uložení
     } catch (error) {
         console.error("Chyba pri zmene roly používateľa:", error);
         setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
+    } finally {
+        setIsSaving(false); // Ukončenie ukladania
     }
   };
   
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
+    setIsSaving(true); // Začiatok ukladania
     try {
         const userDocRef = doc(db, `users`, userToDelete.id);
         const adminCountRef = doc(db, `settings`, `adminCount`);
@@ -325,7 +332,8 @@ function UsersManagementApp() {
       console.error("Chyba pri odstraňovaní používateľa:", error);
       setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
     } finally {
-      setUserToDelete(null);
+      setUserToDelete(null); // Zavrie modálne okno po dokončení
+      setIsSaving(false); // Ukončenie ukladania
     }
   };
 
@@ -364,6 +372,7 @@ function UsersManagementApp() {
   
 
   const handleApproveAdmin = async (userId, userEmail) => {
+    setIsSaving(true); // Začiatok ukladania
     try {
         const userDocRef = doc(db, `users`, userId);
         const adminCountRef = doc(db, `settings`, `adminCount`);
@@ -383,6 +392,8 @@ function UsersManagementApp() {
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
       setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
+    } finally {
+        setIsSaving(false); // Ukončenie ukladania
     }
   };
 
@@ -519,18 +530,20 @@ function UsersManagementApp() {
                       'button',
                       {
                         onClick: () => handleApproveAdmin(user.id, user.email),
-                        className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
+                        disabled: isSaving, // Deaktivuje tlačidlo počas ukladania
+                        className: `bg-green-500 text-white px-4 py-2 rounded-full shadow-md transition-colors duration-200 ease-in-out mr-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`
                       },
-                      'Schváliť'
+                      isSaving ? 'Schvaľujem...' : 'Schváliť'
                     ),
                     // Tlacidlo "Upravit rolu" je viditelne pre schvalenych adminov (okrem najstarsiho) a pre neschvalenych adminov
                     ((canChangeRole) || (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved)) && React.createElement(
                       'button',
                       {
                         onClick: () => setUserToEdit(user),
-                        className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
+                        disabled: isSaving, // Deaktivuje tlačidlo počas ukladania
+                        className: `bg-blue-500 text-white px-4 py-2 rounded-full shadow-md transition-colors duration-200 ease-in-out mr-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`
                       },
-                      'Upraviť rolu'
+                      isSaving ? 'Prebieha úprava...' : 'Upraviť rolu'
                     )
                   ) : null,
                 // Tlačidlo "Odstrániť" sa zobrazí len pre superadministrátora, a to pre všetkých ostatných používateľov okrem neho samotného
@@ -538,9 +551,10 @@ function UsersManagementApp() {
                   'button',
                   {
                     onClick: () => setUserToDelete(user),
-                    className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out ml-2'
+                    disabled: isSaving, // Deaktivuje tlačidlo počas ukladania
+                    className: `bg-red-500 text-white px-4 py-2 rounded-full shadow-md transition-colors duration-200 ease-in-out ml-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'}`
                   },
-                  'Odstrániť'
+                  isSaving ? 'Odstraňujem...' : 'Odstrániť'
                 )
               )
             )
@@ -552,12 +566,14 @@ function UsersManagementApp() {
     userToEdit && React.createElement(ChangeRoleModal, {
       user: userToEdit,
       onClose: () => setUserToEdit(null),
-      onRoleChange: handleChangeRole
+      onRoleChange: handleChangeRole,
+      isSaving: isSaving
     }),
     userToDelete && React.createElement(ConfirmationModal, {
       message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
       onConfirm: handleDeleteUser,
-      onCancel: () => setUserToDelete(null)
+      onCancel: () => setUserToDelete(null),
+      isSaving: isSaving
     })
   );
 }
