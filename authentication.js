@@ -76,6 +76,7 @@ const setupFirebase = () => {
         // Pridáme globálne sprístupnené funkcie
         window.auth = auth;
         window.db = db;
+        window.firebaseConfig = firebaseConfig;
         window.reauthenticateWithCredential = reauthenticateWithCredential;
         window.updateEmail = updateEmail;
         window.EmailAuthProvider = EmailAuthProvider;
