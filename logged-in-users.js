@@ -306,7 +306,7 @@ function UsersManagementApp() {
       setNotification({ message: `Pou\u017E\u00edvate\u013E ${userToDelete.firstName} bol \u00faspe\u0161ne odstr\u00e1nen\u00fd.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri odstra\u0148ovan\u00ed pou\u017E\u00edvate\u013Ea:", error);
-      setNotification({ message: 'Nepodarilo sa odstr\u00e1ni\u0165 pou\u017E\u00edvate\u013Ea.', type: 'error' });
+      setNotification({ message: 'Nepodarilo sa odstr\u00e1ni\u0165 pou\u017E\u0165vate\u013Ea.', type: 'error' });
     } finally {
       setUserToDelete(null);
     }
@@ -428,9 +428,6 @@ function UsersManagementApp() {
   
   const isCurrentUserOldestAdmin = window.currentUserId === oldestAdminId;
   
-  // Zjednodu\u0161en\u00e1 podmienka pre odstra\u0148ovanie. Superadministr\u00e1tor m\u00f4\u017Ee odstr\u00e1ni\u0165 kohoko\u013Evek okrem seba.
-  const canDelete = isCurrentUserOldestAdmin && (user => user.id !== window.currentUserId);
-
   // Funkcia na triedenie pou\u017E\u00edvate\u013Eov
   const sortUsers = (usersList) => {
       const oldestAdmin = usersList.find(u => u.id === oldestAdminId);
@@ -511,56 +508,35 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
+                // Akcie s tlacitkami su podmienene na zaklade roly a schvalenia
                 isNotCurrentUser ?
                   React.createElement(React.Fragment, null,
-                    // Pre nov\u00fdch, neschv\u00e1len\u00fdch adminov zobrazujeme Schv\u00e1li\u0165 aj Upravi\u0165 aj Odstr\u00e1ni\u0165
-                    (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false) ? (
-                      React.createElement(React.Fragment, null,
-                        React.createElement(
-                          'button',
-                          {
-                            onClick: () => handleApproveAdmin(user.id, user.email),
-                            className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
-                          },
-                          'Schv\u00e1li\u0165'
-                        ),
-                        React.createElement(
-                          'button',
-                          {
-                            onClick: () => setUserToEdit(user),
-                            className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
-                          },
-                          'Upravi\u0165 rolu'
-                        ),
-                        React.createElement(
-                          'button',
-                          {
-                            onClick: () => setUserToDelete(user),
-                            className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
-                          },
-                          'Odstr\u00e1ni\u0165'
-                        )
-                      )
-                    ) : (
-                      // Pre ostatn\u00fdch pou\u017E\u00edvate\u013Eov, kde je potrebn\u00e1 zmena roly alebo odstr\u00e1nenie
-                      React.createElement(React.Fragment, null,
-                        (canChangeRole) && React.createElement(
-                          'button',
-                          {
-                            onClick: () => setUserToEdit(user),
-                            className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
-                          },
-                          'Upravi\u0165 rolu'
-                        ),
-                        (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
-                          'button',
-                          {
-                            onClick: () => setUserToDelete(user),
-                            className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
-                          },
-                          'Odstr\u00e1ni\u0165'
-                        )
-                      )
+                    // Tlacidlo "Schvalit" je viditelne pre schvalenych adminov a len pre Neschvalenych adminov
+                    (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => handleApproveAdmin(user.id, user.email),
+                        className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Schv\u00e1li\u0165'
+                    ),
+                    // Tlacidlo "Upravit rolu" je viditelne pre schvalenych adminov (okrem najstarsiho) a pre neschvalenych adminov
+                    ((canChangeRole) || (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false)) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToEdit(user),
+                        className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Upravi\u0165 rolu'
+                    ),
+                    // Tlacidlo "Odstranit" je viditelne LEN pre Superadministratora a len pre inych pouzivatelov
+                    (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToDelete(user),
+                        className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
+                      },
+                      'Odstr\u00e1ni\u0165'
                     )
                   ) : null
               )
