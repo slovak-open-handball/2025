@@ -353,9 +353,9 @@ function App() {
           await updateDoc(settingsDocRef, {
             count: increment(1)
           });
-//          console.log('Hodnota adminCount bola úspešne zvýšená o 1 v Firestore.');
+          console.log('Hodnota adminCount bola úspešne zvýšená o 1 v Firestore.');
         } else {
-//          console.log('Používateľ nebol schválený, hodnota adminCount nebola zvýšená.');
+          console.log('Používateľ nebol schválený, hodnota adminCount nebola zvýšená.');
         }
 
         // --------------------------------------------------------------------------
