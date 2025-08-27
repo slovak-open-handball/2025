@@ -325,12 +325,17 @@ function App() {
                 console.error("App: Error saving notification about administrator registration:", e);
             }
 
+            // Krok 6: oneskorené odhlásenie používateľa
+            console.log("Všetky dáta boli úspešne zapísané do databázy. Odhlásenie prebehne o 5 sekúnd.");
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            console.log("Čas odpočítavania uplynul. Odhlasujem používateľa...");
+            // Odhlásenie, aby nový admin nebol automaticky prihlásený.
+            await signOut(auth);
+            console.log("Používateľ bol úspešne odhlásený.");
+
             // Nastavenie správy o úspešnej registrácii a zastavenie spinnera
             setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
 
-            // Odhlásenie, aby nový admin nebol automaticky prihlásený.
-            // Toto sa vykoná až po úspešnom zápise do databázy a odoslaní e-mailu.
-            await signOut(auth);
 
         } catch (e) {
             console.error("Error during registration (Auth or other):", e);
