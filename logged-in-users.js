@@ -110,7 +110,7 @@ function ConfirmationModal({ message, onConfirm, onCancel, isSaving }) {
             disabled: isSaving,
             className: `bg-red-500 text-white px-4 py-2 rounded-md transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'}`
           },
-          isSaving ? 'Odstraňujem...' : 'Potvrdiť'
+          'Potvrdiť'
         )
       )
     )
@@ -168,7 +168,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange, isSaving }) {
             disabled: isSaving,
             className: `bg-indigo-600 text-white px-4 py-2 rounded-md ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-700'}`
           },
-          isSaving ? 'Ukladám...' : 'Uložiť'
+          'Uložiť'
         )
       )
     )
@@ -521,7 +521,7 @@ function UsersManagementApp() {
                         disabled: isSaving, // Deaktivuje tlačidlo počas ukladania
                         className: `bg-green-500 text-white px-4 py-2 rounded-full shadow-md transition-colors duration-200 ease-in-out mr-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`
                       },
-                      isSaving ? 'Schvaľujem...' : 'Schváliť'
+                      'Schváliť'
                     ),
                     // Tlacidlo "Upravit rolu" je viditelne pre schvalenych adminov (okrem najstarsiho) a pre neschvalenych adminov
                     ((canChangeRole) || (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved)) && React.createElement(
@@ -531,7 +531,7 @@ function UsersManagementApp() {
                         disabled: isSaving, // Deaktivuje tlačidlo počas ukladania
                         className: `bg-blue-500 text-white px-4 py-2 rounded-full shadow-md transition-colors duration-200 ease-in-out mr-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`
                       },
-                      isSaving ? 'Prebieha úprava...' : 'Upraviť rolu'
+                      'Upraviť rolu'
                     )
                   ) : null,
                 // Tlačidlo "Odstrániť" sa zobrazí len pre superadministrátora, a to pre všetkých ostatných používateľov okrem neho samotného
@@ -542,7 +542,7 @@ function UsersManagementApp() {
                     disabled: isSaving, // Deaktivuje tlačidlo počas ukladania
                     className: `bg-red-500 text-white px-4 py-2 rounded-full shadow-md transition-colors duration-200 ease-in-out ml-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'}`
                   },
-                  isSaving ? 'Odstraňujem...' : 'Odstrániť'
+                  'Odstrániť'
                 )
               )
             )
