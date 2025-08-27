@@ -251,10 +251,12 @@ function UsersManagementApp() {
       }
     };
 
+    // Listen for the globalDataUpdated event, which is fired by authentication.js
+    window.addEventListener('globalDataUpdated', handleAuthReady);
+
+    // Check if auth is already ready on first load
     if (window.isGlobalAuthReady) {
       handleAuthReady();
-    } else {
-      window.addEventListener('globalDataUpdated', handleAuthReady);
     }
 
     return () => {
@@ -263,7 +265,7 @@ function UsersManagementApp() {
   }, []);
 
   React.useEffect(() => {
-    // New check to ensure __app_id is available
+    // New check to ensure all dependencies are available before fetching
     if (!isAuthReady || !window.db || !window.globalUserProfileData || typeof window.__app_id === 'undefined') {
       console.log("UsersManagementApp: Waiting for authentication and database initialization...");
       return;
@@ -272,11 +274,14 @@ function UsersManagementApp() {
     const userId = window.globalUserProfileData.id;
     const userRole = window.globalUserProfileData.role;
     
-    // If the user is not an admin or super admin, redirect them
+    // If the user is not an admin or super admin, prevent access
     if (userRole !== 'admin' && userRole !== 'super_admin') {
-      window.showGlobalNotification('Nemáte oprávnenie na zobrazenie tejto stránky.', 'error');
-      // Optionally redirect
-      // window.location.href = 'index.html'; 
+      // Use the global notification function if available
+      if (window.showGlobalNotification) {
+          window.showGlobalNotification('Nemáte oprávnenie na zobrazenie tejto stránky.', 'error');
+      } else {
+          showNotification('Nemáte oprávnenie na zobrazenie tejto stránky.', 'error');
+      }
       setLoading(false);
       return;
     }
@@ -323,7 +328,7 @@ function UsersManagementApp() {
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, typeof window.__app_id !== 'undefined' ? window.__app_id : '']);
+  }, [isAuthReady]); // Depend on isAuthReady to trigger data fetch
 
   // Functions for user actions
   const handleRoleSave = async (userId, newRole, isApproved) => {
@@ -587,13 +592,14 @@ window.UsersManagementApp = UsersManagementApp;
 async function initializeApp() {
   // Čakáme, kým budú dostupné globálne dáta z authentication.js
   await new Promise(resolve => {
-    if (window.isGlobalAuthReady) {
-      resolve();
-    } else {
-      window.addEventListener('globalDataUpdated', resolve, {
-        once: true
-      });
-    }
+    const checkAuth = () => {
+      if (window.isGlobalAuthReady && window.db && window.auth) {
+        resolve();
+      } else {
+        setTimeout(checkAuth, 100);
+      }
+    };
+    checkAuth();
   });
 
   // Uistíme sa, že React a ReactDOM sú načítané
