@@ -242,7 +242,7 @@ function App() {
   const validatePassword = (pwd) => {
     const status = {
       minLength: pwd.length >= 10,
-      maxLength: pwd.length <= 4096, // This condition is still checked, but not displayed in the list
+      maxLength: pwd.length <= 4096, // maxLength is still checked, but not displayed in the list
       hasUpperCase: /[A-Z]/.test(pwd),
       hasLowerCase: /[a-z]/.test(pwd),
       hasNumber: /[0-9]/.test(pwd),
@@ -317,18 +317,6 @@ function App() {
     setSuccessMessage(''); // Clear any previous success message
 
     try {
-      // NEW: Zväčšenie hodnoty adminCount o 1
-      const settingsDocRef = doc(db, 'settings', 'adminCount');
-      await updateDoc(settingsDocRef, {
-        count: increment(1)
-      });
-      console.log('Hodnota adminCount bola úspešne zvýšená o 1 v Firestore.');
-
-      // NEW: Zobrazenie novej hodnoty adminCount v konzole
-      const newAdminCount = adminCount + 1;
-      console.log(`Nová hodnota adminCount je: ${newAdminCount}`);
-      // --------------------------------------------------------------------------
-
       // --- ZMENA: Upravená podmienka. Ak je počet adminov menší ako 2, nastav schválenie na true. Inak na false. ---
       const approvedStatus = adminCount < 2; // CHANGE: Changed condition to < 2
       console.log(`Počet adminov je ${adminCount}, preto bude status schválenia: ${approvedStatus}`);
@@ -337,7 +325,7 @@ function App() {
       // Corrected: Use createUserWithEmailAndPassword as a top-level function with 'auth' instance
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-      // CHANGE: Set role to 'admin' and approved to 'false' directly on first write
+      // CHANGE: Set role to 'admin' and approved to 'true' directly on first write
       const userDataToSave = {
         email: email,
         firstName: firstName,
@@ -357,6 +345,20 @@ function App() {
         const userDocRef = doc(db, 'users', userCredential.user.uid);
         await setDoc(userDocRef, userDataToSave);
         console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením '${approvedStatus}' bol uložený.`);
+
+        // NEW: Zväčšenie hodnoty adminCount o 1 po uložení používateľa
+        // Ak je schválený, zvýšime počet. Inak nie.
+        if (approvedStatus) {
+          const settingsDocRef = doc(db, 'settings', 'adminCount');
+          await updateDoc(settingsDocRef, {
+            count: increment(1)
+          });
+          console.log('Hodnota adminCount bola úspešne zvýšená o 1 v Firestore.');
+        } else {
+          console.log('Používateľ nebol schválený, hodnota adminCount nebola zvýšená.');
+        }
+
+        // --------------------------------------------------------------------------
 
         // Attempt to send email via Apps Script immediately after saving initial data
         try {
@@ -393,7 +395,9 @@ function App() {
         // --- Logic for saving notification for administrators ---
         try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const notificationMessage = `Nový administrátor ${email} sa zaregistroval a ${approvedStatus ? 'bol automaticky schválený.' : 'čaká na schválenie.'}`;
+            const notificationMessage = approvedStatus
+              ? `Nový administrátor ${email} sa zaregistroval a bol automaticky schválený.`
+              : `Nový používateľ ${email} sa zaregistroval ako administrátor. Jeho schválenie čaká na kontrolu.`;
             const notificationRecipientId = 'all_admins'; 
 
             // Corrected: Use collection and addDoc functions for nested path
@@ -418,10 +422,9 @@ function App() {
       }
 
       // CHANGE: Set successMessage only after all successful steps
-      const successMessageText = approvedStatus 
-        ? `Administrátorský účet pre ${email} sa registruje a bol automaticky schválený.` 
-        : `Administrátorský účet pre ${email} sa registruje. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`;
-
+      const successMessageText = approvedStatus
+        ? `Administrátorský účet pre ${email} bol vytvorený a automaticky schválený.`
+        : `Administrátorský účet pre ${email} bol vytvorený. Čaká sa na schválenie iným administrátorom.`;
       setSuccessMessage(successMessageText);
       setFormSubmitting(false); // Stop loading so the message is visible on the form
 
