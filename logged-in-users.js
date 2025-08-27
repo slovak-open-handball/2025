@@ -94,7 +94,7 @@ function UsersManagementApp() {
 
   useEffect(() => {
     // Pred spustením Firebase operácií skontrolujeme, či sú všetky potrebné premenné definované
-    if (!db || !appId || !auth) {
+    if (!db || !appId || !auth || !auth.currentUser) {
         console.log("UsersManagementApp: Čakám na inicializáciu Firebase a ID aplikácie.");
         setLoading(true);
         // Neukončujeme, necháme useEffect spustiť znova, keď sa zmenia závislosti
@@ -103,52 +103,45 @@ function UsersManagementApp() {
     
     // Načítanie role používateľa
     const userDocRef = doc(db, `artifacts/${appId}/public/users`, auth.currentUser.uid);
-    const unsubscribeUserRole = onSnapshot(userDocRef, (doc) => {
-        const userRoleData = doc.data();
+    const unsubscribeUserRole = onSnapshot(userDocRef, (docSnapshot) => {
+        const userRoleData = docSnapshot.data();
         const isAdmin = userRoleData?.isAdmin;
         window.isCurrentUserAdmin = isAdmin;
         setUserRoleLoading(false);
+
+        if (isAdmin) {
+            // Ak je používateľ admin, začneme načítavať zoznam používateľov
+            const usersCollectionPath = `artifacts/${appId}/public/users`;
+            const usersCol = collection(db, usersCollectionPath);
+            const q = query(usersCol);
+
+            const unsubscribeUsers = onSnapshot(q, (snapshot) => {
+              const usersList = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }));
+              setUsers(usersList);
+              setLoading(false); // Až po načítaní dát používateľov skryjeme loader
+            }, (error) => {
+              console.error("Chyba pri načítaní používateľov:", error);
+              setLoading(false);
+              window.showGlobalNotification('Chyba pri načítaní používateľov.', 'error');
+            });
+            return () => unsubscribeUsers();
+        } else {
+            // Ak nie je admin, skryjeme loader a zobrazíme "nemáte oprávnenie"
+            setLoading(false);
+        }
     }, (error) => {
         console.error("Chyba pri načítaní role používateľa:", error);
         setUserRoleLoading(false);
+        setLoading(false);
+        window.showGlobalNotification('Chyba pri overení oprávnení.', 'error');
     });
 
     return () => unsubscribeUserRole();
   }, [db, appId, auth]);
 
-
-  useEffect(() => {
-    // Načítanie používateľov len ak je používateľ admin
-    if (!window.isCurrentUserAdmin || userRoleLoading) {
-      // Ak nie je admin alebo ešte čakáme na načítanie role, nič nenačítame
-      // a zobrazíme len loader alebo chybové hlásenie
-      if (!userRoleLoading) {
-        setLoading(false);
-      }
-      return;
-    }
-
-    console.log("UsersManagementApp: Firebase a ID aplikácie sú dostupné. Načítavam dáta používateľov.");
-
-    const usersCollectionPath = `artifacts/${appId}/public/users`;
-    const usersCol = collection(db, usersCollectionPath);
-    const q = query(usersCol);
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const usersList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setUsers(usersList);
-      setLoading(false);
-    }, (error) => {
-      console.error("Chyba pri načítaní používateľov:", error);
-      setLoading(false);
-      showNotificationMessage('Chyba pri načítaní používateľov.', 'error');
-    });
-
-    return () => unsubscribe();
-  }, [db, appId, auth, window.isCurrentUserAdmin, userRoleLoading]);
 
   const showNotificationMessage = (message, type = 'success') => {
     setNotificationMessage(message);
@@ -169,10 +162,10 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         isAdmin: !user.isAdmin
       });
-      showNotificationMessage(`Status administrátora pre ${user.displayName} bol úspešne zmenený.`);
+      window.showGlobalNotification(`Status administrátora pre ${user.displayName} bol úspešne zmenený.`);
     } catch (error) {
       console.error("Chyba pri zmene statusu administrátora:", error);
-      showNotificationMessage('Nepodarilo sa zmeniť status administrátora.', 'error');
+      window.showGlobalNotification('Nepodarilo sa zmeniť status administrátora.', 'error');
     }
   };
 
@@ -180,16 +173,14 @@ function UsersManagementApp() {
     try {
       const userDocRef = doc(db, `artifacts/${appId}/public/users`, userIdToDelete);
       await deleteDoc(userDocRef);
-      showNotificationMessage('Používateľ bol úspešne odstránený.');
+      window.showGlobalNotification('Používateľ bol úspešne odstránený.');
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
-      showNotificationMessage('Nepodarilo sa odstrániť používateľa.', 'error');
+      window.showGlobalNotification('Nepodarilo sa odstrániť používateľa.', 'error');
     }
   };
 
-  const userRole = users.find(u => u.id === auth.currentUser?.uid)?.isAdmin ? 'admin' : 'user';
-
-  if (loading || userRoleLoading) {
+  if (loading) {
     return React.createElement(
       'div', { className: 'flex justify-center pt-16' },
       React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
