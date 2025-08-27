@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Auth a Firestore (modulárny prístup, SDK v11)
 import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, addDoc, serverTimestamp, getDoc, onSnapshot, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanty pre reCAPTCHA a Apps Script URL
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -64,40 +64,6 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
                     disabled: disabled,
                 },
                 showPassword ? EyeIcon : EyeOffIcon
-            )
-        ),
-        // Zobrazenie zoznamu požiadaviek na heslo, ak je stav validácie definovaný
-        validationStatus && React.createElement(
-            'div',
-            { className: `text-xs italic mt-1 text-gray-600` },
-            'Heslo musí obsahovať:',
-            React.createElement(
-                'ul',
-                { className: 'list-none pl-4' },
-                React.createElement(
-                    'li',
-                    { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
-                    React.createElement('span', { className: 'mr-2' }, validationStatus.minLength ? '✔' : '•'),
-                    'aspoň 10 znakov,'
-                ),
-                React.createElement(
-                    'li',
-                    { className: `flex items-center ${validationStatus.hasUpperCase ? 'text-green-600' : 'text-gray-600'}` },
-                    React.createElement('span', { className: 'mr-2' }, validationStatus.hasUpperCase ? '✔' : '•'),
-                    'aspoň jedno veľké písmeno,'
-                ),
-                React.createElement(
-                    'li',
-                    { className: `flex items-center ${validationStatus.hasLowerCase ? 'text-green-600' : 'text-gray-600'}` },
-                    React.createElement('span', { className: 'mr-2' }, validationStatus.hasLowerCase ? '✔' : '•'),
-                    'aspoň jedno malé písmeno,'
-                ),
-                React.createElement(
-                    'li',
-                    { className: `flex items-center ${validationStatus.hasNumber ? 'text-green-600' : 'text-gray-600'}` },
-                    React.createElement('span', { className: 'mr-2' }, validationStatus.hasNumber ? '✔' : '•'),
-                    'aspoň jednu číslicu.'
-                )
             )
         )
     );
@@ -174,6 +140,7 @@ function App() {
     const [lastName, setLastName] = React.useState('');
     const [showPasswordReg, setShowPasswordReg] = React.useState(false);
     const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
+    const [adminCount, setAdminCount] = React.useState(null);
     
     // Stavy pre sledovanie validácie hesla a e-mailu
     const [passwordValidationStatus, setPasswordValidationStatus] = React.useState({
@@ -188,36 +155,26 @@ function App() {
     const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
     const [emailTouched, setEmailTouched] = React.useState(false);
 
-    // Efekt pre overenie pripravenosti Firebase inštancií
+    // Efekt pre overenie pripravenosti Firebase inštancií a načítanie počtu adminov
     React.useEffect(() => {
         if (auth && db && isAuthReady) {
             setPageLoading(false);
+            
+            // Načítanie počtu administrátorov z verejného dokumentu
+            const adminCountDocRef = doc(db, 'settings', 'adminCount');
+            const unsubscribe = onSnapshot(adminCountDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    setAdminCount(docSnap.data().count);
+                } else {
+                    setAdminCount(0);
+                }
+            });
+
+            return () => unsubscribe();
         } else {
             console.log("AdminRegisterApp: Waiting for Auth and DB initialization from authentication.js.");
         }
     }, [auth, db, isAuthReady]);
-
-    // NOVY KOD: Efekt na počítanie adminov po načítaní a inicializácii Firebase
-    React.useEffect(() => {
-        const fetchAdminCount = async () => {
-            if (db && !pageLoading) {
-                try {
-                    console.log("Počítam počet administrátorov...");
-                    // Vytvorenie dotazu na kolekciu 'users' s podmienkou pre rolu 'admin'
-                    const adminsQuery = query(collection(db, 'users'), where('role', '==', 'admin'));
-                    const querySnapshot = await getDocs(adminsQuery);
-                    
-                    // Počítanie dokumentov v výsledku
-                    const adminCount = querySnapshot.size;
-                    console.log(`Počet administrátorov v databáze: ${adminCount}`);
-                } catch (e) {
-                    console.error("Chyba pri získavaní počtu administrátorov:", e);
-                }
-            }
-        };
-
-        fetchAdminCount();
-    }, [db, pageLoading]);
 
     // Efekt pre validáciu hesla pri každej zmene
     React.useEffect(() => {
@@ -301,7 +258,22 @@ function App() {
                 return;
             }
             
-            // Krok 3: Poslanie notifikácie na Google Apps Script (e-mail)
+            // Krok 3: Aktualizácia počítadla administrátorov v databáze.
+            // Používame increment(), aby sa predišlo problémom so súbežnými zápismi.
+            try {
+                const adminCountDocRef = doc(db, 'settings', 'adminCount');
+                await updateDoc(adminCountDocRef, {
+                    count: increment(1)
+                });
+                console.log("Firestore: Admin count was incremented successfully.");
+            } catch (e) {
+                console.error("Chyba pri aktualizácii počítadla administrátorov:", e);
+                // Nastavenie chyby, ale nebránime pokračovaniu, pretože registrácia prebehla úspešne
+                setErrorMessage(`Registrácia úspešná, ale nepodarilo sa aktualizovať počítadlo administrátorov. ${e.message}`);
+            }
+
+            // Krok 4: Poslanie notifikácie na Google Apps Script (e-mail)
+            // Táto časť by mala taktiež aktualizovať počítadlo adminov
             try {
                 const payload = {
                     action: 'sendRegistrationEmail',
@@ -309,6 +281,8 @@ function App() {
                     isAdmin: true,
                     firstName: firstName,
                     lastName: lastName,
+                    // Pridanie informácie, či je to prvý admin
+                    isFirstAdmin: adminCount === 0
                 };
                 console.log("Sending data to Apps Script (admin registration email):", payload);
                 
@@ -328,7 +302,7 @@ function App() {
                 setErrorMessage(`Registrácia úspešná, ale nepodarilo sa odoslať potvrdzovací e-mail: ${emailError.message}.`);
             }
             
-            // Krok 4: Uloženie notifikácie do Firestore pre ostatných administrátorov
+            // Krok 5: Uloženie notifikácie do Firestore pre ostatných administrátorov
             try {
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
@@ -424,7 +398,7 @@ function App() {
         isConfirmPasswordMatching;
 
     // Zobrazenie načítavacej obrazovky pri inicializácii
-    if (pageLoading) {
+    if (pageLoading || adminCount === null) {
         return React.createElement(
             'div',
             { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -494,6 +468,12 @@ function App() {
                     errorMessage
                 ),
                 React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' }, 'Registrácia administrátora'),
+                // Zobrazenie notifikácie, ak ešte neexistujú žiadni administrátori
+                adminCount === 0 && React.createElement(
+                    'div',
+                    { className: 'bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
+                    React.createElement('span', { className: 'block sm:inline' }, 'V systéme zatiaľ neexistujú žiadni administrátori. Registrácia vášho účtu ho automaticky označí ako prvého administrátora.')
+                ),
                 React.createElement(
                     'form',
                     { onSubmit: handleRegisterAdmin, className: 'space-y-4' },
