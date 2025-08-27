@@ -13,8 +13,10 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, ak by tu bolo, aby sa obsah neposúval celý doprava */
         }
         /* Štýly pre modálne okná */
+        /* Tieto štýly sú všeobecné, ale ConfirmationModal už nie je vykresľovaný */
         .modal {
             position: fixed;
             z-index: 100;
@@ -28,59 +30,197 @@
             align-items: center;
             justify-content: center;
         }
+
         .modal-content {
             background-color: #fefefe;
             padding: 20px;
-            border-radius: 10px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 12px;
+            text-align: center;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 90%;
-            max-height: 90%;
-            overflow-y: auto;
         }
-        .modal-close-btn {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
         }
-        .modal-close-btn:hover,
-        .modal-close-btn:focus {
-            color: black;
-            text-decoration: none;
+
+        /* Notifikačný modal - pridané nové štýly */
+        #notificationModal.modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 20vh;
+        }
+        #notificationModal.modal.show {
+            display: flex;
+        }
+        .notification-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        .notification-content.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .notification-content.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .notification-content.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        /* Tlačidlo na zatvorenie notifikácie */
+        .notification-close-btn {
+            background-color: transparent;
+            border: none;
+            font-size: 1.5rem;
             cursor: pointer;
+            color: inherit;
+        }
+
+        /* Pridané štýly pre NotificationToast */
+        .notification-toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column-reverse; /* Nové notifikácie sa zobrazujú navrchu */
+            gap: 10px;
+        }
+
+        .notification-toast {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            color: white;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 9.5s;
+        }
+        .notification-toast.info { background-color: #2196F3; }
+        .notification-toast.success { background-color: #4CAF50; }
+        .notification-toast.error { background-color: #F44336; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
         }
     </style>
 </head>
-<body class="bg-gray-100">
-    <!-- Placeholder pre hlavičku (header.html) -->
+<body class="bg-gray-100 flex flex-col min-h-screen">
     <div id="header-placeholder"></div>
-    
-    <!-- Placeholder pre ľavé menu (logged-in-left-menu.html) -->
-    <div id="menu-placeholder"></div>
-
-    <!-- Hlavný obsah stránky -->
-    <div class="flex" id="main-content-area">
-        <div class="flex-shrink-0 w-16 group-hover:w-64 transition-all duration-300"></div>
-        <main class="flex-grow p-4 md:p-8">
-            <div id="users-management-root">
-                <!-- React aplikácia pre správu používateľov sa vykreslí sem -->
+    <div class="flex-grow flex">
+        <div id="left-menu-placeholder"></div>
+        <div id="main-content-area" class="flex-grow p-6 transition-all duration-300">
+             <!-- Kontajner pre správu používateľov -->
+            <div id="users-management-root" class="bg-white p-8 rounded-lg shadow-md w-full max-w-4xl mx-auto">
+                <div class="animate-pulse flex space-x-4">
+                    <div class="flex-1 space-y-6 py-1">
+                        <div class="h-2 bg-slate-200 rounded"></div>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="h-2 bg-slate-200 rounded col-span-2"></div>
+                                <div class="h-2 bg-slate-200 rounded col-span-1"></div>
+                            </div>
+                            <div class="h-2 bg-slate-200 rounded"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </main>
+        </div>
     </div>
 
-    <!-- Firebase a React knižnice -->
+    <!-- Firebase a React CDN skripty -->
+    <!-- Firestore a Auth knižnice sa už importujú v lokálnych skriptoch -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Naše lokálne skripty, načítané ako moduly -->
+    <!-- Pridaný atribút type="module" pre správne spracovanie importov -->
+    <script type="module" src="./authentication.js"></script>
+    <script type="module" src="./header.js"></script>
+    <script type="module" src="./logged-in-left-menu.js"></script>
+    <script type="module" src="./logged-in-users.js"></script>
 
-    <!-- Vaše skripty -->
-    <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script>
-    <script type="module" src="logged-in-left-menu.js"></script>
-    <script type="module" src="logged-in-users.js"></script>
+    <script>
+        // pomocná funkcia na načítanie HTML obsahu
+        async function loadHtmlContent(placeholderId, filePath) {
+            const placeholder = document.getElementById(placeholderId);
+            if (placeholder) {
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const html = await response.text();
+                    placeholder.innerHTML = html;
+                    console.log(`logged-in-users.html: Obsah súboru '${filePath}' bol úspešne načítaný.`);
+                } catch (error) {
+                    console.error(`logged-in-users.html: Chyba pri načítaní súboru '${filePath}':`, error);
+                    placeholder.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Nepodarilo sa načítať ${filePath}. Skúste to prosím neskôr.</div>`;
+                }
+            } else {
+                console.error(`logged-in-users.html: Placeholder s ID '${placeholderId}' nebol nájdený.`);
+            }
+        }
 
+        window.onload = async () => {
+            // Predbežné overenie existencie globálnych premenných
+            if (typeof __firebase_config === 'undefined' || typeof __initial_auth_token === 'undefined' || typeof __app_id === 'undefined') {
+                console.error("Chyba: Niektorá z globálnych premenných (firebaseConfig, initialAuthToken, appId) nie je definovaná.");
+                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Konfigurácia aplikácie nie je dostupná. Skúste to prosím neskôr.</div>';
+                return;
+            }
+
+            // Deklarujeme globálne premenné, ktoré skripty potrebujú
+            window.firebaseConfig = JSON.parse(__firebase_config);
+            window.initialAuthToken = __initial_auth_token;
+            window.appId = __app_id;
+
+            // Načítanie a vykreslenie HTML komponentov
+            await loadHtmlContent('header-placeholder', 'header.html');
+            await loadHtmlContent('left-menu-placeholder', 'logged-in-left-menu.html');
+
+            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            // Zabezpečíme, že UsersManagementApp je definovaná (je v logged-in-users.js)
+            if (typeof UsersManagementApp === 'undefined') {
+                console.error("Chyba: Komponent UsersManagementApp nie je definovaný. Skontrolujte logged-in-users.js.");
+                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+
+            const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
+            root.render(React.createElement(UsersManagementApp, null));
+            console.log("logged-in-users.html: React App (UsersManagementApp) vykreslená.");
+        };
+    </script>
 </body>
 </html>
