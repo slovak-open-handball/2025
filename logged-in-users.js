@@ -91,10 +91,10 @@ function UsersManagementApp() {
   const userId = window.auth?.currentUser?.uid || 'anonymous';
 
   useEffect(() => {
-    if (!db || !appId) {
-      console.error("Firebase nebol inicializovaný.");
-      setLoading(false);
-      return;
+    // Čakáme, kým nebudú dostupné globálne dáta z authentication.js
+    if (!window.isGlobalAuthReady || !window.db || !window.auth) {
+        console.log("UsersManagementApp: Čakám na inicializáciu Firebase.");
+        return;
     }
 
     // Cesta ku kolekcii je teraz špecifická pre danú aplikáciu
@@ -112,7 +112,7 @@ function UsersManagementApp() {
     }, (error) => {
       console.error("Chyba pri načítaní používateľov:", error);
       setLoading(false);
-      showNotification('Chyba pri načítaní používateľov.', 'error');
+      showNotificationMessage('Chyba pri načítaní používateľov.', 'error');
     });
 
     return () => unsubscribe();
