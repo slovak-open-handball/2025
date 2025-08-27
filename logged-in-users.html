@@ -8,11 +8,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React a ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -35,224 +42,30 @@
             width: 80%;
             max-width: 500px;
             border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .modal-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        /* Notifikačný modal - pridané nové štýly */
-        #notificationModal.modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: flex-start;
-            padding-top: 20vh;
-        }
-        #notificationModal.modal.show {
-            display: flex;
-        }
-        .notification-content {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            width: 90%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-        }
-        .notification-content.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .notification-content.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .notification-content.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-        /* Tlačidlo na zatvorenie notifikácie */
-        .notification-close-btn {
-            background-color: transparent;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: inherit;
-        }
-        
-        /* Pridané štýly pre NotificationToast */
-        .notification-toast-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column-reverse; /* Nové notifikácie sa zobrazujú navrchu */
-            gap: 10px;
-        }
-        .notification-toast {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            color: white;
-            opacity: 0;
-            transform: translateY(20px);
-            animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 9.5s;
-        }
-        .notification-toast.info { background-color: #2196F3; }
-        .notification-toast.success { background-color: #4CAF50; }
-        .notification-toast.error { background-color: #F44336; }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col min-h-screen">
+<body>
     <div id="header-placeholder"></div>
-    <div class="flex-grow flex">
-        <div id="menu-placeholder"></div>
-        <div id="main-content-area" class="flex-grow p-6 transition-all duration-300">
-             <!-- Kontajner pre správu používateľov -->
-            <div id="users-management-root" class="bg-white p-8 rounded-lg shadow-md w-full max-w-4xl mx-auto">
-                <div class="animate-pulse flex space-x-4">
-                    <div class="flex-1 space-y-6 py-1">
-                        <div class="h-2 bg-slate-200 rounded"></div>
-                        <div class="space-y-3">
-                            <div class="grid grid-cols-3 gap-4">
-                                <div class="h-2 bg-slate-200 rounded col-span-2"></div>
-                                <div class="h-2 bg-slate-200 rounded col-span-1"></div>
-                            </div>
-                            <div class="h-2 bg-slate-200 rounded"></div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
+    <div id="menu-placeholder"></div>
+    <main id="main-content-area" class="flex-grow flex">
+        <!-- Sem sme pridali triedu pre plynulú animáciu -->
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+        <div id="users-management-root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Loader a obsah aplikácie sa vykreslí sem -->
+            <div class="flex justify-center pt-16">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- Načítanie globálnych JS knižníc -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-    <!-- Načítanie lokálnych skriptov ako modulov. Authentication.js musí ísť prvý,
-         pretože inicializuje Firebase. Ostatné skripty sa spoliehajú na jeho prácu. -->
-    <script type="module" src="./authentication.js"></script>
-    <script type="module" src="./header.js"></script>
-    <script type="module" src="./logged-in-left-menu.js"></script>
-    <script type="module" src="./logged-in-users.js"></script>
-    
-    <script>
-        /**
-         * Helper function to load HTML content from an external file.
-         * @param {string} placeholderId ID of the HTML element to insert the content into.
-         * @param {string} filePath Path to the HTML file.
-         */
-        async function loadHtmlContent(placeholderId, filePath) {
-            const placeholder = document.getElementById(placeholderId);
-            if (placeholder) {
-                try {
-                    const response = await fetch(filePath);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const html = await response.text();
-                    placeholder.innerHTML = html;
-                    console.log(`Content of '${filePath}' loaded successfully.`);
-                } catch (error) {
-                    console.error(`Error loading file '${filePath}':`, error);
-                    placeholder.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Nepodarilo sa načítať ${filePath}. Skúste to prosím neskôr.</div>`;
-                }
-            } else {
-                console.error(`Placeholder with ID '${placeholderId}' not found.`);
-            }
-        }
-        
-        /**
-         * Function to render the main React component for this page.
-         */
-        function renderApp() {
-            // Ensure React and ReactDOM are loaded.
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Error: React or ReactDOM are not loaded. Check the script order.");
-                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-
-            // Find the UsersManagementApp component on the global window object.
-            const UsersManagementApp = window.UsersManagementApp;
-            if (typeof UsersManagementApp === 'undefined') {
-                console.error("Error: The UsersManagementApp component is not defined on the window object.");
-                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
-            const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
-            root.render(React.createElement(UsersManagementApp, null));
-            console.log("React App (UsersManagementApp) rendered.");
-        }
-
-        // Global variables to track the state
-        let isAuthReady = false;
-        let isDomReady = false;
-
-        /**
-         * Main initialization function that runs only when all conditions are met.
-         */
-        async function initializeApp() {
-            // Only proceed if both the DOM is ready and the auth data is available
-            if (!isDomReady || !isAuthReady) {
-                return;
-            }
-            
-            console.log("DOM and authentication data are ready. Initializing application...");
-            
-            // 1. Ensure the necessary global variables are set.
-            window.firebaseConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : null;
-            window.initialAuthToken = (typeof __initial_auth_token !== 'undefined') ? __initial_auth_token : null;
-            window.appId = (typeof __app_id !== 'undefined') ? __app_id : 'default-app-id';
-
-            // 2. Load and render HTML components.
-            await loadHtmlContent('header-placeholder', 'header.html');
-            // The left menu will now load itself
-            // await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
-            
-            // 3. Start rendering the main React application.
-            renderApp();
-        }
-
-        // Listener that waits for the DOM to be fully loaded.
-        document.addEventListener('DOMContentLoaded', () => {
-            isDomReady = true;
-            initializeApp();
-        });
-
-        // Listener for the global event that signals authentication readiness.
-        window.addEventListener('globalDataUpdated', (event) => {
-            isAuthReady = true;
-            initializeApp();
-        });
-
-        // Check the initial state in case the events fired before the listeners were set up.
-        if (window.isGlobalAuthReady && document.readyState !== 'loading') {
-            console.log('Authentication data and DOM are already ready at page load, starting initialization.');
-            isDomReady = true;
-            isAuthReady = true;
-            initializeApp();
-        }
-    </script>
+    <!-- Načítanie súborov pre autentifikáciu, hlavičku a React komponent -->
+    <script type="module" src="loader.js"></script>
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="logged-in-left-menu.js"></script>
+    <script type="module" src="logged-in-users.js"></script>
 </body>
 </html>
