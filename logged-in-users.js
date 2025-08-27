@@ -530,7 +530,7 @@ function UsersManagementApp() {
                       'Upravi\u0165 rolu'
                     ),
                     // Tlacidlo "Odstranit" je viditelne LEN pre Superadministratora a len pre inych pouzivatelov
-                    (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
+                    (isCurrentUserOldestAdmin && isNotCurrentUser) && React.createElement(
                       'button',
                       {
                         onClick: () => setUserToDelete(user),
