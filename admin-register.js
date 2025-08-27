@@ -36,7 +36,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     return React.createElement(
         'div',
         { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, 'Heslo'),
         React.createElement(
             'div',
             { className: 'relative' },
@@ -166,7 +166,13 @@ function App() {
                 if (docSnap.exists()) {
                     setAdminCount(docSnap.data().count);
                 } else {
-                    setAdminCount(0);
+                    // Ak dokument neexistuje, vytvoríme ho s hodnotou 0
+                    setDoc(adminCountDocRef, { count: 0 }, { merge: true }).then(() => {
+                        setAdminCount(0);
+                    }).catch(e => {
+                        console.error("Chyba pri vytváraní počiatočného počítadla adminov:", e);
+                        setErrorMessage("Chyba pri inicializácii databázy. Skúste obnoviť stránku.");
+                    });
                 }
             });
 
@@ -258,22 +264,14 @@ function App() {
                 return;
             }
             
-            // Krok 3: Aktualizácia alebo vytvorenie počítadla administrátorov v databáze.
+            // Krok 3: Aktualizácia počítadla administrátorov v databáze.
             // Používame increment(), aby sa predišlo problémom so súbežnými zápismi.
             try {
                 const adminCountDocRef = doc(db, 'settings', 'adminCount');
-                const docSnap = await getDoc(adminCountDocRef);
-
-                if (docSnap.exists()) {
-                    await updateDoc(adminCountDocRef, {
-                        count: increment(1)
-                    });
-                } else {
-                    await setDoc(adminCountDocRef, {
-                        count: 1
-                    });
-                }
-                console.log("Firestore: Admin count was successfully updated or created.");
+                await updateDoc(adminCountDocRef, {
+                    count: increment(1)
+                });
+                console.log("Firestore: Admin count was successfully updated.");
             } catch (e) {
                 console.error("Chyba pri aktualizácii počítadla administrátorov:", e);
                 // Nastavenie chyby, ale nebránime pokračovaniu, pretože registrácia prebehla úspešne
@@ -281,7 +279,6 @@ function App() {
             }
 
             // Krok 4: Poslanie notifikácie na Google Apps Script (e-mail)
-            // Táto časť by mala taktiež aktualizovať počítadlo adminov
             try {
                 const payload = {
                     action: 'sendRegistrationEmail',
