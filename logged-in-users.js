@@ -64,39 +64,47 @@ function NotificationModal({ message, onClose, type = "info" }) {
   };
   const bgColor = colorClasses[type] || colorClasses.info;
 
-  return (
-    <div
-      className={`fixed top-4 right-4 z-50 transform transition-transform duration-500 ease-in-out ${
+  return React.createElement(
+    "div",
+    {
+      className: `fixed top-4 right-4 z-50 transform transition-transform duration-500 ease-in-out ${
         show ? "translate-y-0" : "-translate-y-20"
-      }`}
-    >
-      <div
-        className={`shadow-lg rounded-lg max-w-sm w-full pointer-events-auto overflow-hidden`}
-      >
-        <div className={`p-4 text-white ${bgColor}`}>
-          <div className="flex items-center">
-            <div className="text-sm font-medium flex-1 pr-4">{message}</div>
-            <button
-              onClick={() => setShow(false)}
-              className="ml-auto -mx-1.5 -my-1.5 bg-transparent text-white rounded-lg p-1.5 inline-flex h-8 w-8"
-            >
-              <svg
-                className="h-5 w-5"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                ></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      }`,
+    },
+    React.createElement(
+      "div",
+      { className: `shadow-lg rounded-lg max-w-sm w-full pointer-events-auto overflow-hidden` },
+      React.createElement(
+        "div",
+        { className: `p-4 text-white ${bgColor}` },
+        React.createElement(
+          "div",
+          { className: "flex items-center" },
+          React.createElement("div", { className: "text-sm font-medium flex-1 pr-4" }, message),
+          React.createElement(
+            "button",
+            {
+              onClick: () => setShow(false),
+              className: "ml-auto -mx-1.5 -my-1.5 bg-transparent text-white rounded-lg p-1.5 inline-flex h-8 w-8",
+            },
+            React.createElement(
+              "svg",
+              {
+                className: "h-5 w-5",
+                fill: "currentColor",
+                viewBox: "0 0 20 20",
+                xmlns: "http://www.w3.org/2000/svg",
+              },
+              React.createElement("path", {
+                fillRule: "evenodd",
+                d: "M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z",
+                clipRule: "evenodd",
+              })
+            )
+          )
+        )
+      )
+    )
   );
 }
 
@@ -104,59 +112,73 @@ function NotificationModal({ message, onClose, type = "info" }) {
 function UserRow({ user, onEdit, onSave, onCancel, editedUser }) {
   const isEditing = editedUser && editedUser.uid === user.uid;
 
-  return (
-    <tr className="border-b transition duration-300 ease-in-out hover:bg-neutral-100">
-      <td className="whitespace-nowrap px-6 py-4 font-medium">{user.uid}</td>
-      <td className="whitespace-nowrap px-6 py-4">{user.lastLogin || "N/A"}</td>
-      <td className="whitespace-nowrap px-6 py-4">
-        {isEditing ? (
-          <input
-            type="text"
-            value={editedUser.role}
-            onChange={(e) => onEdit({ ...editedUser, role: e.target.value })}
-            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-          />
-        ) : (
-          user.role
-        )}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4">
-        {isEditing ? (
-          <textarea
-            value={editedUser.notes || ""}
-            onChange={(e) => onEdit({ ...editedUser, notes: e.target.value })}
-            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-          />
-        ) : (
-          user.notes
-        )}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4 text-center">
-        {isEditing ? (
-          <>
-            <button
-              onClick={() => onSave(editedUser)}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105"
-            >
-              Uložiť
-            </button>
-            <button
-              onClick={onCancel}
-              className="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105"
-            >
-              Zrušiť
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => onEdit(user)}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105"
-          >
-            Upraviť
-          </button>
-        )}
-      </td>
-    </tr>
+  return React.createElement(
+    "tr",
+    { className: "border-b transition duration-300 ease-in-out hover:bg-neutral-100" },
+    React.createElement("td", { className: "whitespace-nowrap px-6 py-4 font-medium" }, user.uid),
+    React.createElement("td", { className: "whitespace-nowrap px-6 py-4" }, user.lastLogin || "N/A"),
+    React.createElement(
+      "td",
+      { className: "whitespace-nowrap px-6 py-4" },
+      isEditing
+        ? React.createElement(
+            "input",
+            {
+              type: "text",
+              value: editedUser.role,
+              onChange: (e) => onEdit({ ...editedUser, role: e.target.value }),
+              className: "rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50",
+            }
+          )
+        : user.role
+    ),
+    React.createElement(
+      "td",
+      { className: "whitespace-nowrap px-6 py-4" },
+      isEditing
+        ? React.createElement(
+            "textarea",
+            {
+              value: editedUser.notes || "",
+              onChange: (e) => onEdit({ ...editedUser, notes: e.target.value }),
+              className: "rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50",
+            }
+          )
+        : user.notes
+    ),
+    React.createElement(
+      "td",
+      { className: "whitespace-nowrap px-6 py-4 text-center" },
+      isEditing
+        ? React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(
+              "button",
+              {
+                onClick: () => onSave(editedUser),
+                className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105",
+              },
+              "Uložiť"
+            ),
+            React.createElement(
+              "button",
+              {
+                onClick: onCancel,
+                className: "ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105",
+              },
+              "Zrušiť"
+            )
+          )
+        : React.createElement(
+            "button",
+            {
+              onClick: () => onEdit(user),
+              className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105",
+            },
+            "Upraviť"
+          )
+    )
   );
 }
 
@@ -295,89 +317,125 @@ function UsersManagementApp() {
     setEditedUser(null);
   };
 
-  return (
-    <div className="bg-gray-100 min-h-screen py-8 font-sans">
-      <NotificationModal
-        message={notification.message}
-        onClose={() => setNotification({ message: "", type: "info" })}
-        type={notification.type}
-      />
-      <div className="container mx-auto px-4">
-        <div className="bg-white shadow-xl rounded-2xl overflow-hidden p-6 lg:p-10">
-          <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-800 mb-2 text-center">
-            Správa používateľov
-          </h1>
-          <p className="text-center text-gray-500 mb-8">
-            Tu môžete upraviť roly a poznámky pre každého používateľa.
-          </p>
-
-          <div className="overflow-x-auto rounded-lg shadow-md border border-gray-200">
-            <table className="min-w-full table-auto">
-              <thead className="bg-gray-800 text-white">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-lg"
-                  >
-                    Používateľ (UID)
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                  >
-                    Posledné prihlásenie
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                  >
-                    Rola
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                  >
-                    Poznámky
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg"
-                  >
-                    Akcie
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {loading ? (
-                  <tr>
-                    <td colSpan="5" className="text-center py-8 text-gray-500">
-                      Načítavanie dát...
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="text-center py-8 text-gray-500">
-                      Žiadni používatelia na zobrazenie.
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => (
-                    <UserRow
-                      key={user.id}
-                      user={user}
-                      onEdit={handleEdit}
-                      onSave={handleSave}
-                      onCancel={handleCancel}
-                      editedUser={editedUser}
-                    />
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
+  return React.createElement(
+    "div",
+    { className: "bg-gray-100 min-h-screen py-8 font-sans" },
+    React.createElement(
+      NotificationModal,
+      {
+        message: notification.message,
+        onClose: () => setNotification({ message: "", type: "info" }),
+        type: notification.type,
+      }
+    ),
+    React.createElement(
+      "div",
+      { className: "container mx-auto px-4" },
+      React.createElement(
+        "div",
+        { className: "bg-white shadow-xl rounded-2xl overflow-hidden p-6 lg:p-10" },
+        React.createElement(
+          "h1",
+          { className: "text-3xl lg:text-4xl font-extrabold text-gray-800 mb-2 text-center" },
+          "Správa používateľov"
+        ),
+        React.createElement(
+          "p",
+          { className: "text-center text-gray-500 mb-8" },
+          "Tu môžete upraviť roly a poznámky pre každého používateľa."
+        ),
+        React.createElement(
+          "div",
+          { className: "overflow-x-auto rounded-lg shadow-md border border-gray-200" },
+          React.createElement(
+            "table",
+            { className: "min-w-full table-auto" },
+            React.createElement(
+              "thead",
+              { className: "bg-gray-800 text-white" },
+              React.createElement(
+                "tr",
+                null,
+                React.createElement(
+                  "th",
+                  {
+                    scope: "col",
+                    className: "px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-lg",
+                  },
+                  "Používateľ (UID)"
+                ),
+                React.createElement(
+                  "th",
+                  {
+                    scope: "col",
+                    className: "px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider",
+                  },
+                  "Posledné prihlásenie"
+                ),
+                React.createElement(
+                  "th",
+                  {
+                    scope: "col",
+                    className: "px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider",
+                  },
+                  "Rola"
+                ),
+                React.createElement(
+                  "th",
+                  {
+                    scope: "col",
+                    className: "px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider",
+                  },
+                  "Poznámky"
+                ),
+                React.createElement(
+                  "th",
+                  {
+                    scope: "col",
+                    className: "px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg",
+                  },
+                  "Akcie"
+                )
+              )
+            ),
+            React.createElement(
+              "tbody",
+              { className: "divide-y divide-gray-200 bg-white" },
+              loading
+                ? React.createElement(
+                    "tr",
+                    null,
+                    React.createElement(
+                      "td",
+                      { colSpan: "5", className: "text-center py-8 text-gray-500" },
+                      "Načítavanie dát..."
+                    )
+                  )
+                : users.length === 0
+                  ? React.createElement(
+                      "tr",
+                      null,
+                      React.createElement(
+                        "td",
+                        { colSpan: "5", className: "text-center py-8 text-gray-500" },
+                        "Žiadni používatelia na zobrazenie."
+                      )
+                    )
+                  : users.map((user) =>
+                      React.createElement(UserRow, {
+                        key: user.id,
+                        user: user,
+                        onEdit: handleEdit,
+                        onSave: handleSave,
+                        onCancel: handleCancel,
+                        editedUser: editedUser,
+                      })
+                    )
+            )
+          )
+        )
+      )
+    )
   );
 }
 
