@@ -1,8 +1,7 @@
-// logged-in-users.js
-// This file assumes that firebaseConfig, initialAuthToken, and appId
-// are globally defined in the <head> of the main HTML file that loads it.
-// It also assumes that `window.db`, `window.auth`, `window.globalUserProfileData`, and
-// `window.showGlobalNotification` are available from `authentication.js` and `header.js`.
+// logged-in-users.js (teraz obsahuje UsersManagementApp pre správu používateľov)
+// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
+// sú globálne definované v <head> logged-in-users.html.
+// Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
 
 // Imports for necessary Firebase functions
 import {
@@ -17,17 +16,33 @@ import {
 
 // NotificationModal Component
 function NotificationModal({ message, onClose, type = 'info' }) {
-  // The state to control the visibility of the modal
   const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null);
 
-  // Effect to show the notification when a message is provided
   React.useEffect(() => {
     if (message) {
       setShow(true);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        setShow(false);
+        setTimeout(onClose, 500);
+      }, 10000);
     } else {
       setShow(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     }
-  }, [message]);
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [message, onClose]);
 
   if (!show && !message) return null;
 
@@ -59,27 +74,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
       },
       React.createElement('p', {
         className: 'font-semibold'
-      }, message),
-      React.createElement(
-        'button', {
-          onClick: onClose,
-          className: 'absolute top-1 right-2 text-white hover:text-gray-200 transition-colors duration-200',
-        },
-        React.createElement(
-          'svg', {
-            className: 'h-5 w-5',
-            fill: 'none',
-            viewBox: '0 0 24 24',
-            stroke: 'currentColor'
-          },
-          React.createElement('path', {
-            strokeLinecap: 'round',
-            strokeLinejoin: 'round',
-            strokeWidth: '2',
-            d: 'M6 18L18 6M6 6l12 12'
-          })
-        )
-      )
+      }, message)
     )
   );
 }
@@ -328,7 +323,7 @@ function UsersManagementApp() {
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, typeof window.__app_id !== 'undefined' ? window.__app_id : '']); // Added window.__app_id to dependencies
+  }, [isAuthReady, typeof window.__app_id !== 'undefined' ? window.__app_id : '']);
 
   // Functions for user actions
   const handleRoleSave = async (userId, newRole, isApproved) => {
@@ -585,12 +580,12 @@ function UsersManagementApp() {
   );
 }
 
-// Explicitly expose the component globally
+// Explicitne sprístupniť komponent globálne
 window.UsersManagementApp = UsersManagementApp;
 
-// Function to start the React application when the DOM is loaded
+// Funkcia na spustenie React aplikácie po načítaní DOM
 async function initializeApp() {
-  // Wait for global data from authentication.js
+  // Čakáme, kým budú dostupné globálne dáta z authentication.js
   await new Promise(resolve => {
     if (window.isGlobalAuthReady) {
       resolve();
@@ -601,25 +596,25 @@ async function initializeApp() {
     }
   });
 
-  // Make sure React and ReactDOM are loaded
+  // Uistíme sa, že React a ReactDOM sú načítané
   if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-    console.error("Error: React or ReactDOM are not loaded. Check the script order.");
-    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading the application. Please try again later.</div>';
+    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
     return;
   }
-  // Ensure UsersManagementApp component is defined
+  // Zabezpečíme, že UsersManagementApp komponent je definovaný
   if (typeof UsersManagementApp === 'undefined') {
-    console.error("Error: The UsersManagementApp component is not defined.");
-    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading the application component.</div>';
+    console.error("Chyba: Komponent UsersManagementApp nie je definovaný.");
+    document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
     return;
   }
 
   const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
   root.render(React.createElement(UsersManagementApp, null));
-  console.log("logged-in-users.js: React App (UsersManagementApp) rendered.");
+  console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
 }
 
-// Run the initialization function when the DOM is fully loaded
+// Spustíme inicializačnú funkciu, keď je DOM plne načítaný
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
