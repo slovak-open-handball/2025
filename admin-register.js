@@ -258,14 +258,22 @@ function App() {
                 return;
             }
             
-            // Krok 3: Aktualizácia počítadla administrátorov v databáze.
+            // Krok 3: Aktualizácia alebo vytvorenie počítadla administrátorov v databáze.
             // Používame increment(), aby sa predišlo problémom so súbežnými zápismi.
             try {
                 const adminCountDocRef = doc(db, 'settings', 'adminCount');
-                await updateDoc(adminCountDocRef, {
-                    count: increment(1)
-                });
-                console.log("Firestore: Admin count was incremented successfully.");
+                const docSnap = await getDoc(adminCountDocRef);
+
+                if (docSnap.exists()) {
+                    await updateDoc(adminCountDocRef, {
+                        count: increment(1)
+                    });
+                } else {
+                    await setDoc(adminCountDocRef, {
+                        count: 1
+                    });
+                }
+                console.log("Firestore: Admin count was successfully updated or created.");
             } catch (e) {
                 console.error("Chyba pri aktualizácii počítadla administrátorov:", e);
                 // Nastavenie chyby, ale nebránime pokračovaniu, pretože registrácia prebehla úspešne
