@@ -294,22 +294,6 @@ function UsersManagementApp() {
       
       await deleteDoc(userDocRef);
 
-      const payload = {
-        action: 'deleteUser',
-        uid: userToDelete.id,
-      };
-
-      const response = await fetch('https://script.google.com/macros/s/AKfycby6wUq81pxqT-Uf_8BtN-cKHjhMDtB1V-cDBdcJElZP4VDmfa53lNfPgudsxnmQ0Y3T/exec', {
-        method: 'POST',
-        mode: 'no-cors',
-        cache: 'no-cache',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log('Požiadavka na odstránenie používateľa odoslaná.');
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
