@@ -343,21 +343,30 @@ function UsersManagementApp() {
       // 2. Skontrolujeme, či došlo k zmene roly z 'admin'
       const isApproved = newRole !== 'admin';
       
-      await updateDoc(userDocRef, {
-        role: newRole,
-        approved: isApproved
-      });
-      
-      // 3. Ak sa rola zmenila z admina na inú A BOL schválený, dekrementujeme počítadlo
+      // Ak meníme rolu z 'admin' na inú a používateľ bol schválený, znížime počítadlo adminov
       if (oldRole === 'admin' && newRole !== 'admin' && wasApproved) {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
+
         if (adminCountSnap.exists()) {
+          const currentAdminCount = adminCountSnap.data().count;
+          
+          // Ak je aktuálny počet adminov 1, nedovolíme zníženie
+          if (currentAdminCount === 1) {
+            setNotification({ message: 'Počet administrátorov nemôže klesnúť pod 1.', type: 'warning' });
+            return;
+          }
+          
           await updateDoc(adminCountRef, {
             count: increment(-1)
           });
         }
       }
+
+      await updateDoc(userDocRef, {
+        role: newRole,
+        approved: isApproved
+      });
       
       setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
     } catch (error) {
@@ -378,6 +387,14 @@ function UsersManagementApp() {
         const adminCountSnap = await getDoc(adminCountRef);
         
         if (adminCountSnap.exists()) {
+          const currentAdminCount = adminCountSnap.data().count;
+
+          // Ak je aktuálny počet adminov 1, nedovolíme odstránenie
+          if (currentAdminCount === 1) {
+            setNotification({ message: 'Počet administrátorov nemôže klesnúť pod 1.', type: 'warning' });
+            return;
+          }
+
           // Decrement the admin count
           await updateDoc(adminCountRef, {
             count: increment(-1)
