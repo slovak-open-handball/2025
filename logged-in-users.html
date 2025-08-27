@@ -227,7 +227,8 @@
 
             // 2. Load and render HTML components.
             await loadHtmlContent('header-placeholder', 'header.html');
-            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
+            // The left menu will now load itself
+            // await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
             
             // 3. Start rendering the main React application.
             renderApp();
