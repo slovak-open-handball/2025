@@ -529,7 +529,7 @@ function UsersManagementApp() {
                       },
                       'Upravi\u0165 rolu'
                     ),
-                    // Tlacidlo "Odstranit" je viditelne LEN pre Superadministratora a pre inych pouzivatelov
+                    // Tlacidlo "Odstranit" je viditelne pre Superadministratora a pre inych pouzivatelov (okrem neho samotneho)
                     (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
                       'button',
                       {
