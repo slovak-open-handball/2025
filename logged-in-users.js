@@ -224,7 +224,7 @@ function UsersManagementApp() {
         }, (error) => {
           console.error("Chyba pri na\u010D\u00edtan\u00ed pou\u017E\u00edvate\u013Eov:", error);
           setLoading(false);
-          setNotification({ message: 'Chyba pri na\u010D\u00edtan\u00ed pou\u017E\u00EDvate\u013Eov.', type: 'error' });
+          setNotification({ message: 'Chyba pri na\u010D\u00edtan\u00ed pou\u017E\u00edvate\u013Eov.', type: 'error' });
         });
         return () => unsubscribeUsers();
       } else {
@@ -513,7 +513,7 @@ function UsersManagementApp() {
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
                 isNotCurrentUser ?
                   React.createElement(React.Fragment, null,
-                    // Pre nov\u00fdch, neschv\u00e1len\u00fdch adminov zobrazujeme Schv\u00e1li\u0165 aj Odstr\u00e1ni\u0165
+                    // Pre nov\u00fdch, neschv\u00e1len\u00fdch adminov zobrazujeme Schv\u00e1li\u0165 aj Upravi\u0165 aj Odstr\u00e1ni\u0165
                     (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false) ? (
                       React.createElement(React.Fragment, null,
                         React.createElement(
@@ -523,6 +523,14 @@ function UsersManagementApp() {
                             className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
                           },
                           'Schv\u00e1li\u0165'
+                        ),
+                        React.createElement(
+                          'button',
+                          {
+                            onClick: () => setUserToEdit(user),
+                            className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
+                          },
+                          'Upravi\u0165 rolu'
                         ),
                         React.createElement(
                           'button',
@@ -542,9 +550,9 @@ function UsersManagementApp() {
                             onClick: () => setUserToEdit(user),
                             className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
                           },
-                          'Zmeni\u0165 rolu'
+                          'Upravi\u0165 rolu'
                         ),
-                        (isCurrentUserOldestAdmin) && React.createElement(
+                        (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
                           'button',
                           {
                             onClick: () => setUserToDelete(user),
