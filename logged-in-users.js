@@ -15,7 +15,8 @@ import {
   increment,
   setDoc,
   getDocs,
-  where
+  where,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
@@ -263,42 +264,41 @@ function UsersManagementApp() {
 
   const handleChangeRole = async (userId, newRole) => {
     try {
-      // 1. Get document references and data
-      const userDocRef = doc(db, `users`, userId);
-      const userSnap = await getDoc(userDocRef);
-      if (!userSnap.exists()) {
-        setNotification({ message: 'Používateľ nebol nájdený.', type: 'error' });
-        return;
-      }
-      const oldRole = userSnap.data().role;
-      const wasApproved = userSnap.data().approved;
-      
-      // 2. Determine if the user should be approved based on the new role
-      const isApproved = newRole === 'admin';
-      
-      await updateDoc(userDocRef, {
-        role: newRole,
-        approved: isApproved
-      });
-      
-      // 3. If the role changed from 'admin' to something else and the user was approved, decrement the counter
-      if (oldRole === 'admin' && newRole !== 'admin' && wasApproved) {
+        const userDocRef = doc(db, `users`, userId);
         const adminCountRef = doc(db, `settings`, `adminCount`);
-        const adminCountSnap = await getDoc(adminCountRef);
         
-        if (adminCountSnap.exists()) {
-          const currentCount = adminCountSnap.data().count || 0;
-          const newCount = Math.max(0, currentCount - 1);
-          await updateDoc(adminCountRef, {
-            count: newCount
-          });
-        }
-      }
-      
-      setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
+        await runTransaction(db, async (transaction) => {
+            const userSnap = await transaction.get(userDocRef);
+            if (!userSnap.exists()) {
+                throw new Error("Používateľ nebol nájdený.");
+            }
+            const oldRole = userSnap.data().role;
+            const wasApproved = userSnap.data().approved;
+            const isApproved = newRole === 'admin';
+            
+            // Update the user document
+            transaction.update(userDocRef, { role: newRole, approved: isApproved });
+
+            // Only update admin count if there's a change in approved admin status
+            if (oldRole === 'admin' && wasApproved && !isApproved) {
+                // Changing from approved admin to non-admin
+                const adminCountSnap = await transaction.get(adminCountRef);
+                const currentCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+                const newCount = Math.max(0, currentCount - 1);
+                transaction.set(adminCountRef, { count: newCount });
+            } else if (oldRole !== 'admin' && isApproved) {
+                // Changing from non-admin to approved admin
+                const adminCountSnap = await transaction.get(adminCountRef);
+                const currentCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+                const newCount = currentCount < 0 ? 1 : currentCount + 1;
+                transaction.set(adminCountRef, { count: newCount });
+            }
+        });
+
+        setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri zmene roly používateľa:", error);
-      setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
+        console.error("Chyba pri zmene roly používateľa:", error);
+        setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
     }
   };
   
@@ -306,24 +306,25 @@ function UsersManagementApp() {
     if (!userToDelete) return;
 
     try {
-      const userDocRef = doc(db, `users`, userToDelete.id);
-      
-      // Check if the user being deleted is an approved admin
-      if (userToDelete.role === 'admin' && userToDelete.approved === true) {
+        const userDocRef = doc(db, `users`, userToDelete.id);
         const adminCountRef = doc(db, `settings`, `adminCount`);
-        const adminCountSnap = await getDoc(adminCountRef);
-        
-        if (adminCountSnap.exists()) {
-          const currentCount = adminCountSnap.data().count || 0;
-          const newCount = Math.max(0, currentCount - 1);
-          await updateDoc(adminCountRef, {
-            count: newCount
-          });
-        }
-      }
-      
-      await deleteDoc(userDocRef);
 
+        await runTransaction(db, async (transaction) => {
+            const userSnap = await transaction.get(userDocRef);
+            if (!userSnap.exists()) {
+                throw new Error("User not found");
+            }
+
+            if (userSnap.data().role === 'admin' && userSnap.data().approved === true) {
+                const adminCountSnap = await transaction.get(adminCountRef);
+                const currentCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+                const newCount = Math.max(0, currentCount - 1);
+                transaction.set(adminCountRef, { count: newCount });
+            }
+            // Delete the user document
+            transaction.delete(userDocRef);
+        });
+      
       const payload = {
         action: 'deleteUser',
         uid: userToDelete.id,
@@ -385,34 +386,20 @@ function UsersManagementApp() {
 
   const handleApproveAdmin = async (userId, userEmail) => {
     try {
-      // 1. Get document references
-      const userDocRef = doc(db, `users`, userId);
-      const adminCountRef = doc(db, `settings`, `adminCount`);
-      
-      // 2. Approve the user
-      await updateDoc(userDocRef, {
-        approved: true
-      });
-
-      // 3. Get the current admin count and update it
-      const adminCountSnap = await getDoc(adminCountRef);
-      if (adminCountSnap.exists()) {
-        const currentCount = adminCountSnap.data().count;
-        const newCount = currentCount < 0 ? 1 : currentCount + 1;
-        await updateDoc(adminCountRef, {
-          count: newCount
+        const userDocRef = doc(db, `users`, userId);
+        const adminCountRef = doc(db, `settings`, `adminCount`);
+        
+        await runTransaction(db, async (transaction) => {
+            const adminCountSnap = await transaction.get(adminCountRef);
+            const currentCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+            const newCount = currentCount < 0 ? 1 : currentCount + 1;
+            
+            transaction.update(userDocRef, { approved: true });
+            transaction.set(adminCountRef, { count: newCount });
         });
-      } else {
-        // If document doesn't exist, create it and set initial value to 1
-        await setDoc(adminCountRef, {
-          count: 1
-        });
-      }
       
-      // 4. Send email
+      // Send email and notification after the transaction
       await sendApprovalEmail(userEmail);
-      
-      // 5. Show notification
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
