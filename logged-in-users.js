@@ -172,6 +172,8 @@ function UsersManagementApp() {
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
+  // ZMENA: Stav pre ID prvého admina (najstaršieho podľa registrationDate)
+  const [oldestAdminId, setOldestAdminId] = useState(null);
   
   // NOVINKA: Stav pre ukladanie URL adresy Google Apps Script
   const googleScriptUrl = 'https://script.google.com/macros/s/AKfycby6wUq81pxqT-Uf_8BtN-cKHjhMDtB1V-cDBdcJElZP4VDmfa53lNfPgudsxnmQ0Y3T/exec';
@@ -207,6 +209,18 @@ function UsersManagementApp() {
             id: doc.id,
             ...doc.data()
           }));
+          
+          // ZMENA: Logika na nájdenie najstaršieho admina podľa registrationDate
+          const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
+          if (adminUsers.length > 0) {
+            adminUsers.sort((a, b) => {
+              const dateA = a.registrationDate ? a.registrationDate.toDate() : new Date();
+              const dateB = b.registrationDate ? b.registrationDate.toDate() : new Date();
+              return dateA - dateB;
+            });
+            setOldestAdminId(adminUsers[0].id);
+          }
+          
           setUsers(usersList);
           setLoading(false);
         }, (error) => {
@@ -346,7 +360,7 @@ function UsersManagementApp() {
               return 'Administrátor';
           case 'hall':
               return 'Športová hala';
-          case 'user':
+              case 'user':
               return 'Používateľ';
           default:
               return role;
@@ -430,13 +444,16 @@ function UsersManagementApp() {
                     },
                     'Zmeniť rolu'
                   ),
-                  React.createElement(
-                    'button',
-                    {
-                      onClick: () => setUserToDelete(user),
-                      className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
-                    },
-                    'Odstrániť'
+                  // ZMENA: podmienka pre zobrazenie tlačidla "Odstrániť"
+                  user.role === 'admin' && user.id === oldestAdminId && (
+                    React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToDelete(user),
+                        className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
+                      },
+                      'Odstrániť'
+                    )
                   )
                 ) : null
               )
