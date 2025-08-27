@@ -9,6 +9,10 @@
 // Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
 // Nová úprava: Pridáva funkciu na formátovanie telefónnych čísiel v notifikáciách pre lepšiu čitateľnosť.
 
+if (window.top !== window.self) {
+    window.top.location.replace(window.self.location.href);
+}
+
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
