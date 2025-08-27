@@ -247,6 +247,19 @@ function UsersManagementApp() {
     }
   };
 
+  const handleApproveAdmin = async (userId) => {
+    try {
+      const userDocRef = doc(db, `users`, userId);
+      await updateDoc(userDocRef, {
+        approved: true
+      });
+      setNotification({ message: `Admin bol úspešne schválený.`, type: 'success' });
+    } catch (error) {
+      console.error("Chyba pri schvaľovaní admina:", error);
+      setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
+    }
+  };
+
   const getRoleColor = (role) => {
       switch (role) {
           case 'admin':
@@ -331,8 +344,17 @@ function UsersManagementApp() {
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
                 // NOVINKA: Kontrola, či je používateľ aktuálne prihlásený, a skrytie tlačidiel
+                // NOVINKA: Zobrazenie tlačidla na schválenie, ak je rola 'admin' a 'approved' je false
                 user.id !== window.currentUserId ?
                 React.createElement(React.Fragment, null,
+                  (user.role === 'admin' && user.approved === false) && React.createElement(
+                    'button',
+                    {
+                      onClick: () => handleApproveAdmin(user.id),
+                      className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
+                    },
+                    'Schváliť'
+                  ),
                   React.createElement(
                     'button',
                     {
