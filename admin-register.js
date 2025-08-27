@@ -4,7 +4,7 @@
 
 // Importy pre Firebase Auth a Firestore (modulárny prístup, SDK v11)
 import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, addDoc, serverTimestamp, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Konštanty pre reCAPTCHA a Apps Script URL
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -196,6 +196,28 @@ function App() {
             console.log("AdminRegisterApp: Waiting for Auth and DB initialization from authentication.js.");
         }
     }, [auth, db, isAuthReady]);
+
+    // NOVY KOD: Efekt na počítanie adminov po načítaní a inicializácii Firebase
+    React.useEffect(() => {
+        const fetchAdminCount = async () => {
+            if (db && !pageLoading) {
+                try {
+                    console.log("Počítam počet administrátorov...");
+                    // Vytvorenie dotazu na kolekciu 'users' s podmienkou pre rolu 'admin'
+                    const adminsQuery = query(collection(db, 'users'), where('role', '==', 'admin'));
+                    const querySnapshot = await getDocs(adminsQuery);
+                    
+                    // Počítanie dokumentov v výsledku
+                    const adminCount = querySnapshot.size;
+                    console.log(`Počet administrátorov v databáze: ${adminCount}`);
+                } catch (e) {
+                    console.error("Chyba pri získavaní počtu administrátorov:", e);
+                }
+            }
+        };
+
+        fetchAdminCount();
+    }, [db, pageLoading]);
 
     // Efekt pre validáciu hesla pri každej zmene
     React.useEffect(() => {
