@@ -13,10 +13,8 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, ak by tu bolo, aby sa obsah neposúval celý doprava */
         }
         /* Štýly pre modálne okná */
-        /* Tieto štýly sú všeobecné, ale ConfirmationModal už nie je vykresľovaný */
         .modal {
             position: fixed;
             z-index: 100;
@@ -34,118 +32,55 @@
             background-color: #fefefe;
             padding: 20px;
             border-radius: 10px;
-            border: 1px solid #888;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+        .modal-close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .modal-close-btn:hover,
+        .modal-close-btn:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100">
+    <!-- Placeholder pre hlavičku (header.html) -->
     <div id="header-placeholder"></div>
-    <!-- Zmena: premenovaný z 'left-menu-placeholder' na 'menu-placeholder' -->
-    <div id="menu-placeholder"></div>
     
-    <main id="main-content-area" class="flex-grow flex flex-row">
-        <!-- Spacer pre menu, ktoré je pevne umiestnené -->
+    <!-- Placeholder pre ľavé menu (logged-in-left-menu.html) -->
+    <div id="menu-placeholder"></div>
+
+    <!-- Hlavný obsah stránky -->
+    <div class="flex" id="main-content-area">
         <div class="flex-shrink-0 w-16 group-hover:w-64 transition-all duration-300"></div>
-        <div id="users-management-root" class="flex-grow p-4 transition-all duration-300">
-            <!-- React aplikácia bude vykreslená sem -->
-        </div>
-    </main>
+        <main class="flex-grow p-4 md:p-8">
+            <div id="users-management-root">
+                <!-- React aplikácia pre správu používateľov sa vykreslí sem -->
+            </div>
+        </main>
+    </div>
 
-    <!-- Načítanie Firebase a iných skriptov -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Globálne premenné z Canvas prostredia
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    <!-- Firebase a React knižnice -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
 
-        // Inicializácia Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 
-        // Sprístupnenie globálnych premenných
-        window.appId = appId;
-        window.db = db;
-        window.auth = auth;
-        window.__app_id = appId; // Pre konzistentnosť s ostatnými súbormi
+    <!-- Vaše skripty -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="logged-in-left-menu.js"></script>
+    <script type="module" src="logged-in-users.js"></script>
 
-        // Prihlásenie
-        async function authenticate() {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Chyba pri autentifikácii:", error);
-                // V prípade zlyhania, skúste anonymné prihlásenie
-                await signInAnonymously(auth);
-            }
-        }
-
-        // Listener pre zmeny stavu autentifikácie
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                console.log("Používateľ je prihlásený:", user.uid);
-                // Načítanie profilu používateľa
-                const userProfileRef = doc(db, "artifacts", appId, "public", "data", "users", user.uid);
-                const docSnap = await getDoc(userProfileRef);
-                window.globalUserProfileData = docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
-            } else {
-                console.log("Používateľ je odhlásený.");
-                window.globalUserProfileData = null;
-            }
-            window.isGlobalAuthReady = true;
-            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-        });
-
-        // Pomocné funkcie pre načítanie HTML
-        async function loadHtmlContent(placeholderId, filePath) {
-            try {
-                const response = await fetch(filePath);
-                const html = await response.text();
-                const placeholder = document.getElementById(placeholderId);
-                if (placeholder) {
-                    placeholder.innerHTML = html;
-                }
-            } catch (error) {
-                console.error(`Chyba pri načítaní ${filePath}:`, error);
-            }
-        }
-
-        // Načítanie externých skriptov
-        function loadScript(src, isModule = false) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = src;
-                if (isModule) {
-                    script.type = 'module';
-                }
-                script.onload = resolve;
-                script.onerror = reject;
-                document.body.appendChild(script);
-            });
-        }
-
-        window.onload = async () => {
-            await authenticate();
-            await loadHtmlContent('header-placeholder', 'header.html');
-            // Zmena poradia a načítania menu a skriptov
-            await loadHtmlContent('menu-placeholder', 'logged-in-left-menu.html');
-            await loadScript('https://unpkg.com/react@18/umd/react.production.min.js');
-            await loadScript('https://unpkg.com/react-dom@18/umd/react-dom.production.min.js');
-            await loadScript('logged-in-left-menu.js', true); // Načíta sa skript pre menu, ktorý obsahuje logiku
-            await loadScript('logged-in-users.js', true);
-            console.log("logged-in-users.html: Všetky skripty a HTML obsah načítané.");
-        };
-    </script>
 </body>
 </html>
