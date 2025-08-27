@@ -343,8 +343,8 @@ function UsersManagementApp() {
       }
   };
 
-  const getTranslatedRole = (role, isOldestAdmin) => {
-      if (isOldestAdmin) {
+  const getTranslatedRole = (role, isUserOldestAdmin, isCurrentUserOldestAdmin) => {
+      if (isUserOldestAdmin && isCurrentUserOldestAdmin) {
           return 'Superadministrátor';
       }
       switch (role) {
@@ -446,7 +446,7 @@ function UsersManagementApp() {
                 React.createElement(
                   'span',
                   { style: { color: getRoleColor(user.role) }, className: 'font-semibold' },
-                  getTranslatedRole(user.role, isUserOldestAdmin)
+                  getTranslatedRole(user.role, isUserOldestAdmin, isCurrentUserOldestAdmin)
                 )
               ),
               React.createElement(
