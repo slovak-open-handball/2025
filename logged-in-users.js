@@ -422,8 +422,8 @@ function UsersManagementApp() {
                 isNotCurrentUser ?
                   React.createElement(React.Fragment, null,
                     // Tlačidlo Schváliť
-                    // Zobrazí sa iba najstaršiemu adminovi pre neschválených adminov
-                    (isCurrentUserOldestAdmin && user.role === 'admin' && user.approved === false) && React.createElement(
+                    // Zobrazí sa všetkým adminom pre neschválených adminov
+                    (window.isCurrentUserAdmin && user.role === 'admin' && user.approved === false) && React.createElement(
                       'button',
                       {
                         onClick: () => handleApproveAdmin(user.id, user.email),
