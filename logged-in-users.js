@@ -78,7 +78,39 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 const { useState, useEffect, useRef } = React;
 
-// NOVINKA: Komponent pre modálne okno na zmenu roly
+// NOVINKA: Komponent pre potvrdzovacie modálne okno
+function ConfirmationModal({ message, onConfirm, onCancel }) {
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
+      React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Potvrdenie'),
+      React.createElement('p', { className: 'mb-6' }, message),
+      React.createElement('div', { className: 'flex justify-end' },
+        React.createElement(
+          'button',
+          {
+            onClick: onCancel,
+            className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2 hover:bg-gray-400 transition-colors'
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: onConfirm,
+            className: 'bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors'
+          },
+          'Potvrdiť'
+        )
+      )
+    )
+  );
+}
+
+// Komponent pre modálne okno na zmenu roly
 function ChangeRoleModal({ user, onClose, onRoleChange }) {
   const [selectedRole, setSelectedRole] = useState(user.role);
 
@@ -138,7 +170,8 @@ function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({ message: '', type: 'info' });
-  const [userToEdit, setUserToEdit] = useState(null); // NOVINKA: Stav pre modálne okno
+  const [userToEdit, setUserToEdit] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null); // NOVINKA: Stav pre potvrdzovacie okno
 
   // Získame globálne premenné z window
   const db = window.db;
@@ -151,19 +184,15 @@ function UsersManagementApp() {
       setLoading(true);
 
       if (!globalUserProfileData) {
-        // Toto by sa nemalo stať, ak sa komponent spúšťa po udalosti,
-        // ale pre istotu to ponecháme.
         console.log("UsersManagementApp: Dáta používateľa nie sú dostupné.");
         setLoading(false);
         return;
       }
       
-      // UPRAVENÉ: Zmeníme kontrolu na základe tvojich pravidiel Firebase
       const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
       window.isCurrentUserAdmin = isUserAdmin;
 
       if (isUserAdmin) {
-        // Ak je používateľ admin, začneme načítavať zoznam používateľov
         const usersCollectionPath = `users`; 
         const usersCol = collection(db, usersCollectionPath);
         const q = query(usersCol);
@@ -174,7 +203,7 @@ function UsersManagementApp() {
             ...doc.data()
           }));
           setUsers(usersList);
-          setLoading(false); // Skryjeme loader po načítaní dát
+          setLoading(false);
         }, (error) => {
           console.error("Chyba pri načítaní používateľov:", error);
           setLoading(false);
@@ -182,7 +211,6 @@ function UsersManagementApp() {
         });
         return () => unsubscribeUsers();
       } else {
-        // Ak nie je admin, skryjeme loader a zobrazíme "nemáte oprávnenie"
         setLoading(false);
       }
     };
@@ -197,15 +225,56 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         role: newRole
       });
-      setNotification({ message: `Rola používateľa bola zmenená na ${newRole}.`, type: 'success' });
+      setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
     } catch (error) {
       console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
     }
   };
+  
+  // NOVINKA: Funkcia na odstránenie používateľa
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
 
-  // PÔVODNÉ: handleToggleAdmin a handleDeleteUser sú odstránené, namiesto nich je nový handleChangeRole
-  // A je odstránené tlačidlo "Odstrániť"
+    try {
+      const userDocRef = doc(db, `users`, userToDelete.id);
+      await deleteDoc(userDocRef);
+      setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
+    } catch (error) {
+      console.error("Chyba pri odstraňovaní používateľa:", error);
+      setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
+    } finally {
+      setUserToDelete(null);
+    }
+  };
+
+  // Funkcia na získanie farby roly
+  const getRoleColor = (role) => {
+      switch (role) {
+          case 'admin':
+              return '#47b3ff';
+          case 'hall':
+              return '#b06835';
+          case 'user':
+              return '#9333EA';
+          default:
+              return '#1D4ED8';
+      }
+  };
+
+  // Funkcia na preklad názvov rolí
+  const getTranslatedRole = (role) => {
+      switch (role) {
+          case 'admin':
+              return 'Administrátor';
+          case 'hall':
+              return 'Športová hala';
+          case 'user':
+              return 'Používateľ';
+          default:
+              return role;
+      }
+  };
 
   if (loading) {
     return React.createElement(
@@ -221,34 +290,6 @@ function UsersManagementApp() {
     );
   }
   
-  // NOVINKA: Funkcia na získanie farby roly
-  const getRoleColor = (role) => {
-      switch (role) {
-          case 'admin':
-              return '#47b3ff';
-          case 'hall':
-              return '#b06835';
-          case 'user':
-              return '#9333EA';
-          default:
-              return '#1D4ED8';
-      }
-  };
-
-  // NOVINKA: Funkcia na preklad názvov rolí
-  const getTranslatedRole = (role) => {
-      switch (role) {
-          case 'admin':
-              return 'Administrátor';
-          case 'hall':
-              return 'Športová hala';
-          case 'user':
-              return 'Používateľ';
-          default:
-              return role;
-      }
-  };
-
   return React.createElement(
     'div',
     { className: 'flex-grow p-4 md:p-8 bg-gray-100 rounded-lg shadow-inner' },
@@ -283,7 +324,6 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm' },
-                // UPRAVENÉ: Zmena štýlu pre rolu
                 React.createElement(
                   'span',
                   { style: { color: getRoleColor(user.role) }, className: 'font-semibold' },
@@ -297,9 +337,17 @@ function UsersManagementApp() {
                   'button',
                   {
                     onClick: () => setUserToEdit(user),
-                    className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out'
+                    className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
                   },
                   'Zmeniť rolu'
+                ),
+                React.createElement(
+                  'button',
+                  {
+                    onClick: () => setUserToDelete(user),
+                    className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
+                  },
+                  'Odstrániť'
                 )
               )
             )
@@ -312,6 +360,11 @@ function UsersManagementApp() {
       user: userToEdit,
       onClose: () => setUserToEdit(null),
       onRoleChange: handleChangeRole
+    }),
+    userToDelete && React.createElement(ConfirmationModal, {
+      message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
+      onConfirm: handleDeleteUser,
+      onCancel: () => setUserToDelete(null)
     })
   );
 }
@@ -320,16 +373,13 @@ function UsersManagementApp() {
 const initializeAndRenderApp = () => {
   const rootElement = document.getElementById('users-management-root');
 
-  // Počkáme, kým sa globálne dáta používateľa nenahrajú
   if (!window.isGlobalAuthReady || !window.globalUserProfileData) {
     console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie a načítanie dát používateľa...");
-    return; // Zastavíme sa a počkáme na udalosť
+    return;
   }
 
-  // Ak už bol poslucháč nastavený, odstránime ho, aby sme sa vyhli opakovanému volaniu
   window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
 
-  // Uistíme sa, že React a ReactDOM sú načítané
   if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
     console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
     if (rootElement) {
