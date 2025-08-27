@@ -435,6 +435,11 @@ function UsersManagementApp() {
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
             const canDeleteUser = isCurrentUserOldestAdmin && isNotCurrentUser && (user.role !== 'admin' || (user.role === 'admin' && isMoreThanOneApprovedAdmin));
             
+            // Logika na skrytie riadku pre ostatných používateľov
+            if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
+              return null;
+            }
+            
             return React.createElement(
               'tr',
               { key: user.id },
