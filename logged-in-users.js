@@ -171,7 +171,7 @@ function UsersManagementApp() {
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [userToEdit, setUserToEdit] = useState(null);
-  const [userToDelete, setUserToDelete] = useState(null); // NOVINKA: Stav pre potvrdzovacie okno
+  const [userToDelete, setUserToDelete] = useState(null);
 
   // Získame globálne premenné z window
   const db = window.db;
@@ -191,6 +191,7 @@ function UsersManagementApp() {
       
       const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
       window.isCurrentUserAdmin = isUserAdmin;
+      window.currentUserId = auth.currentUser?.uid; // Uloženie ID aktuálneho používateľa
 
       if (isUserAdmin) {
         const usersCollectionPath = `users`; 
@@ -218,7 +219,6 @@ function UsersManagementApp() {
     fetchData();
   }, [globalUserProfileData]);
 
-  // UPRAVENÉ: Funkcia na zmenu roly cez modálne okno
   const handleChangeRole = async (userId, newRole) => {
     try {
       const userDocRef = doc(db, `users`, userId);
@@ -232,7 +232,6 @@ function UsersManagementApp() {
     }
   };
   
-  // NOVINKA: Funkcia na odstránenie používateľa
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
@@ -248,7 +247,6 @@ function UsersManagementApp() {
     }
   };
 
-  // Funkcia na získanie farby roly
   const getRoleColor = (role) => {
       switch (role) {
           case 'admin':
@@ -262,7 +260,6 @@ function UsersManagementApp() {
       }
   };
 
-  // Funkcia na preklad názvov rolí
   const getTranslatedRole = (role) => {
       switch (role) {
           case 'admin':
@@ -333,22 +330,26 @@ function UsersManagementApp() {
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
-                React.createElement(
-                  'button',
-                  {
-                    onClick: () => setUserToEdit(user),
-                    className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
-                  },
-                  'Zmeniť rolu'
-                ),
-                React.createElement(
-                  'button',
-                  {
-                    onClick: () => setUserToDelete(user),
-                    className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
-                  },
-                  'Odstrániť'
-                )
+                // NOVINKA: Kontrola, či je používateľ aktuálne prihlásený, a skrytie tlačidiel
+                user.id !== window.currentUserId ?
+                React.createElement(React.Fragment, null,
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => setUserToEdit(user),
+                      className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
+                    },
+                    'Zmeniť rolu'
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => setUserToDelete(user),
+                      className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out'
+                    },
+                    'Odstrániť'
+                  )
+                ) : null
               )
             )
           )
