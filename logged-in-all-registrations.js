@@ -3812,7 +3812,7 @@ function AllRegistrationsApp() {
             teamName: '',
             category: '', // Kategória by mala byť vybraná v modálnom okne
             _category: '', // Taktiež pre konzistentnosť
-            arrival: { type: '' },
+            arrival: { type: '', time: '' }, // Inicializovať aj čas príchodu
             accommodation: { type: '' },
             packageDetails: { name: '' },
             tshirts: [],
@@ -3911,6 +3911,10 @@ function AllRegistrationsApp() {
     // Handle top-level address fields
     else if (['street', 'houseNumber', 'city', 'country', 'note'].includes(columnId)) { // Added 'note'
         return value;
+    } else if (columnId === 'arrival.type') { // Upraviť zobrazenie pre typ dopravy s časom
+        const arrivalType = getNestedValue(userObject, 'arrival.type');
+        const arrivalTime = getNestedValue(userObject, 'arrival.time');
+        return formatArrivalTime(arrivalType, arrivalTime);
     }
 
     // Všeobecné formátovanie pre iné prípady, podobné formatDisplayValue
@@ -4156,7 +4160,7 @@ function AllRegistrationsApp() {
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menTeamMembersCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenDriversCount), 
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menDriversCount), 
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.arrival?.type || '-'),
+                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'),
                                             (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
