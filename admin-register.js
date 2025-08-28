@@ -400,7 +400,7 @@ function App() {
             // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // This is no longer needed for the 'notifications' collection
             const notificationMessage = approvedStatus
               ? `Nový administrátor ${email} sa zaregistroval a bol automaticky schválený.`
-              : `Nový používateľ ${email} sa zaregistroval ako administrátor. Jeho schválenie čaká na kontrolu.`;
+              : `Nový používateľ ${email} sa zaregistroval ako administrátor.`;
             const notificationRecipientId = 'all_admins'; 
 
             // ZMENA: Ukladanie do kolekcie /notifications/ s náhodným ID
