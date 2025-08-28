@@ -397,23 +397,23 @@ function App() {
 
         // --- Logic for saving notification for administrators ---
         try {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // This is no longer needed for the 'notifications' collection
             const notificationMessage = approvedStatus
               ? `Nový administrátor ${email} sa zaregistroval a bol automaticky schválený.`
               : `Nový používateľ ${email} sa zaregistroval ako administrátor. Jeho schválenie čaká na kontrolu.`;
             const notificationRecipientId = 'all_admins'; 
 
-            // Corrected: Use collection and addDoc functions for nested path
-            const adminNotificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
-            await addDoc(adminNotificationsCollectionRef, {
+            // ZMENA: Ukladanie do kolekcie /notifications/ s náhodným ID
+            const notificationsCollectionRef = collection(db, 'notifications');
+            await addDoc(notificationsCollectionRef, {
                 message: notificationMessage,
                 timestamp: serverTimestamp(), // Corrected: Use serverTimestamp() from modular import
                 recipientId: notificationRecipientId,
                 read: false
             });
-            console.log("Oznámenie o novej registrácii administrátora bolo úspešne uložené do Firestore.");
+            console.log("Oznámenie o novej registrácii administrátora bolo úspešne uložené do Firestore do kolekcie /notifications/.");
         } catch (e) {
-            console.error("App: Chyba pri ukladaní oznámenia o registrácii administrátora:", e);
+            console.error("App: Chyba pri ukladaní oznámenia o registrácii administrátora do /notifications/:", e);
         }
         // --- End logic for saving notification ---
 
