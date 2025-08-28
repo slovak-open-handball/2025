@@ -60,7 +60,7 @@ function TeamAccommodationAndArrival({
     loading,
     accommodationTypes,
     accommodationCounts,
-    tournamentStartDateDisplay,
+    tournamentStartDate, // Už nebude NOVINKA: priamo prijímame Date objekt (bude z Page5Form)
     generateTimeOptions
 }) {
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
@@ -138,6 +138,11 @@ function TeamAccommodationAndArrival({
         });
     };
 
+    // Formátovanie tournamentStartDate pre zobrazenie
+    const formattedTournamentStartDate = tournamentStartDate instanceof Date && !isNaN(tournamentStartDate.getTime())
+        ? tournamentStartDate.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : '';
+
     return React.createElement(
         React.Fragment,
         null,
@@ -202,7 +207,7 @@ function TeamAccommodationAndArrival({
             React.createElement(
                 'p',
                 { className: 'text-sm text-gray-600 mb-4' },
-                `Ak budete prichádzať verejnou dopravou a je potrebné pre Vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${tournamentStartDateDisplay}. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
+                `Ak budete prichádzať verejnou dopravou a je potrebné pre Vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${formattedTournamentStartDate}. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
             ),
             React.createElement(
                 'div',
@@ -529,7 +534,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
                             className: optionClasses + (option.id === value ? ' bg-blue-200' : '')
                         },
                         // Zmena formátu pre zobrazenie v rozbaľovacom zozname
-                        `${option.categoryName} - ${option.categoryName} - ${option.teamName}` // ZMENA: Duplicitný categoryName
+                        `${option.categoryName} - ${option.teamName}`
                     )
                 ))
             )
@@ -539,11 +544,15 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
 
 
 // Hlavný komponent Page5Form
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate, onGranularTeamsDataChange }) {
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, onGranularTeamsDataChange }) { // Odstránené tournamentStartDate, tournamentEndDate z props
     const db = getFirestore();
 
     const [notificationMessage, setNotificationMessage] = React.useState('');
     const [notificationType, setNotificationType] = React.useState('info');
+
+    // Nové lokálne stavy pre dátumy z databázy
+    const [localTournamentStartDate, setLocalTournamentStartDate] = React.useState(null);
+    const [localTournamentEndDate, setLocalTournamentEndDate] = React.useState(null);
 
     const closeNotification = () => {
         setNotificationMessage('');
@@ -553,7 +562,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
     const [packages, setPackages] = React.useState([]);
-    const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
     // Lokálny stav pre záznamy šoférov - teraz inicializovaný z teamsDataFromPage4 v useEffect
     const [driverEntries, setDriverEntries] = React.useState([]);
@@ -638,20 +646,21 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return dates;
     };
 
+    // tournamentDays teraz závisí od lokálnych stavov
     const tournamentDays = React.useMemo(() => {
-        const startDate = tournamentStartDate ? new Date(tournamentStartDate) : null;
-        const endDate = tournamentEndDate ? new Date(tournamentEndDate) : null;
+        const startDate = localTournamentStartDate ? new Date(localTournamentStartDate) : null;
+        const endDate = localTournamentEndDate ? new Date(localTournamentEndDate) : null;
         if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
             return getDaysBetween(startDate, endDate);
         }
         return [];
-    }, [tournamentStartDate, tournamentEndDate]);
+    }, [localTournamentStartDate, localTournamentEndDate]);
 
 
     React.useEffect(() => {
         let unsubscribeAccommodation;
-        let unsubscribeRegistrationSettings;
         let unsubscribePackages;
+        let unsubscribeRegistrationSettings; // NOVINKA: pre registrácia settings
 
         const fetchSettings = () => {
             if (!window.db) {
@@ -684,22 +693,31 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationType('error');
                 });
 
+                // NOVINKA: Načítanie dátumov turnaja z /settings/registration
                 const registrationDocRef = doc(window.db, 'settings', 'registration');
                 unsubscribeRegistrationSettings = onSnapshot(registrationDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
-                        if (data.tournamentStart && data.tournamentStart instanceof Timestamp) {
-                            const date = data.tournamentStart.toDate();
-                            const formattedDate = date.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                            setTournamentStartDateDisplay(formattedDate);
+                        // Prevod Firebase Timestamp na Date objekty
+                        if (data.tournamentStart instanceof Timestamp) {
+                            setLocalTournamentStartDate(data.tournamentStart.toDate());
                         } else {
-                            setTournamentStartDateDisplay('');
+                            setLocalTournamentStartDate(null); // Reset, ak formát nie je Timestamp
+                        }
+                        if (data.tournamentEnd instanceof Timestamp) {
+                            setLocalTournamentEndDate(data.tournamentEnd.toDate());
+                        } else {
+                            setLocalTournamentEndDate(null); // Reset, ak formát nie je Timestamp
                         }
                     } else {
-                        setTournamentStartDateDisplay('');
+                        console.warn("Dokument 'settings/registration' neexistuje. Dátumy turnaja neboli načítané.");
+                        setLocalTournamentStartDate(null);
+                        setLocalTournamentEndDate(null);
                     }
                 }, (error) => {
-                    console.error("Chyba pri načítaní nastavení registrácie (tournamentStart):", error);
+                    console.error("Chyba pri načítaní nastavení registrácie (dátumy turnaja):", error);
+                    setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
+                    setNotificationType('error');
                 });
 
             } catch (e) {
@@ -718,11 +736,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (unsubscribePackages) {
                 unsubscribePackages();
             }
-            if (unsubscribeRegistrationSettings) {
+            if (unsubscribeRegistrationSettings) { // NOVINKA: clean-up pre registration settings
                 unsubscribeRegistrationSettings();
             }
         };
-    }, [db]);
+    }, [db]); // Závislosť na 'db' zabezpečí, že sa to spustí po inicializácii Firebase
+
 
     React.useEffect(() => {
         let unsubscribeCounts;
@@ -951,7 +970,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             // It's meant to ensure that the gender for a given team isn't duplicated in the *same* driver entry being edited.
             // For checking if a NEW entry can be added, this specific check is not directly applicable.
             // We need to check if there are any *available* slots in total.
-            (entry.gender !== '' && !teamsWithOwnTransport.some(t => `${t.categoryName}-${t.teamIndex}` === `${entry.categoryName}-${entry.teamIndex}`))
+            (entry.gender !== '' && !teamsWithOwnTransport.some(t => `${t.categoryName}-${t.teamIndex}`))
         );
         if (hasIncompleteEntry) {
             return false;
@@ -1163,7 +1182,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     loading: loading,
                                     accommodationTypes: accommodationTypes,
                                     accommodationCounts: accommodationCounts,
-                                    tournamentStartDateDisplay: tournamentStartDateDisplay,
+                                    tournamentStartDate: localTournamentStartDate, // ZMENA: Používame lokálny stav z DB
                                     generateTimeOptions: generateTimeOptions,
                                 }),
 
@@ -1174,7 +1193,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     onGranularTeamsDataChange: onGranularTeamsDataChange, // Volá onGranularTeamsDataChange z Page5Form props
                                     loading: loading,
                                     packages: packages,
-                                    tournamentDays: tournamentDays,
+                                    tournamentDays: tournamentDays, // Používame lokálny stav z DB
                                 })
                             )
                         ))
@@ -1270,7 +1289,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }), // <--- ZMENA TU
+                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4 }),
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
