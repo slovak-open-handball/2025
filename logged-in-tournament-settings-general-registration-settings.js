@@ -207,7 +207,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       if (tournamentDurationChanged) {
           setTimeout(() => {
               showNotification("Skontrolujte nastavenia balíčkov (stravovanie a občerstvenie).", 'error');
-          }, 3000); // Oneskorenie 3 sekundy
+          }, 6000); // Oneskorenie 6 sekúnd
       }
 
     } catch (e) {
