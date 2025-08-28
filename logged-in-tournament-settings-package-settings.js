@@ -83,63 +83,64 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   // Nový useEffect na aktualizáciu balíčkov pri zmene dátumov turnaja
   React.useEffect(() => {
     const updatePackagesBasedOnTournamentDates = async () => {
-      if (!db || !userProfileData || userProfileData.role !== 'admin' || packages.length === 0) {
-        return;
+      // Skontrolujeme, či sú splnené všetky predpoklady
+      if (!db || !userProfileData || userProfileData.role !== 'admin' || !tournamentStartDate || !tournamentEndDate) {
+        return; 
       }
 
       const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
       const querySnapshot = await getDocs(packagesCollectionRef); // Získame aktuálne balíčky priamo z DB
 
-      const newTournamentDays = tournamentDays; // Aktuálne dni turnaja
+      const newTournamentDays = tournamentDays; // Dni odvodené z aktuálnych dátumov turnaja (props)
 
       querySnapshot.forEach(async (pkgDoc) => {
         const pkgData = pkgDoc.data();
-        const currentMeals = pkgData.meals || {};
-        const updatedMeals = {};
-
-        // Zachovanie participantCard nastavenia
+        const currentMeals = pkgData.meals || {}; // Aktuálne jedlá uložené v tomto dokumente balíčka
+        const updatedMeals = {}; // Objekt na zostavenie novej štruktúry jedál
+        
+        // 1. Spracovanie účastníckej karty oddelene
         if (currentMeals.participantCard === 1) {
             updatedMeals.participantCard = 1;
         }
 
-        let changesMade = false;
+        // 2. Identifikácia 'starých' dní turnaja z aktuálnej štruktúry jedál
+        // Filtrujeme 'participantCard', pretože to nie je dátum
+        const oldMealDays = Object.keys(currentMeals).filter(day => day !== 'participantCard').sort();
 
-        newTournamentDays.forEach(day => {
-          // Ak deň existoval, prenesieme nastavenia
-          if (currentMeals[day]) {
-            updatedMeals[day] = currentMeals[day];
-          } else {
-            // Ak deň neexistoval, pridáme ho s predvolenými hodnotami (0)
-            updatedMeals[day] = { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
-            changesMade = true;
-          }
-        });
-
-        // Odstránenie dní, ktoré už nie sú súčasťou turnaja
-        for (const day in currentMeals) {
-            // Preskočíme participantCard
-            if (day === 'participantCard') continue;
-
-            if (!newTournamentDays.includes(day)) {
-                if (currentMeals[day] !== undefined) { // Len ak skutočne existoval
-                    changesMade = true;
-                }
+        // 3. Porovnanie trvania starého a nového turnaja
+        if (oldMealDays.length === newTournamentDays.length) {
+          // Prípad 1: Rovnaký počet dní - potenciálny posun dátumov
+          oldMealDays.forEach((oldDay, index) => {
+            const newDay = newTournamentDays[index];
+            const oldDayMeals = currentMeals[oldDay] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+            updatedMeals[newDay] = oldDayMeals; // Mapujeme nastavenia starých jedál na nové dni
+          });
+        } else {
+          // Prípad 2: Rozdielny počet dní - zmena trvania (predĺžené alebo skrátené)
+          // Zachováme prekrývajúce sa dni a vynulujeme nové / odstránime staré dni
+          newTournamentDays.forEach(day => {
+            if (currentMeals[day]) {
+              // Ak nový deň existoval v starých jedlách, ponecháme jeho nastavenia
+              updatedMeals[day] = currentMeals[day];
+            } else {
+              // Ak ide o skutočne nový deň (ktorý nebol v starých jedlách), inicializujeme ho na všetky 0
+              updatedMeals[day] = { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
             }
+          });
+          // Dni zo 'oldMealDays', ktoré už nie sú v 'newTournamentDays', sa implicitne odstránia.
         }
         
-        // Ak sú zmeny, aktualizujeme balíček v databáze
-        // Porovnanie objektov pre reálnu zmenu, aby sa predišlo zbytočným zápisom
-        const mealsChanged = JSON.stringify(currentMeals) !== JSON.stringify(updatedMeals);
+        // 4. Záverečná kontrola skutočných zmien pred aktualizáciou Firestore
+        // Porovnáme stringifikované verzie na detekciu hĺbkovej rovnosti
+        const mealsAreIdentical = JSON.stringify(currentMeals) === JSON.stringify(updatedMeals);
         
-        if (changesMade || mealsChanged) {
+        if (!mealsAreIdentical) { // Aktualizujeme iba v prípade, že existuje rozdiel
           try {
             await updateDoc(doc(db, 'settings', 'packages', 'list', pkgDoc.id), {
               meals: updatedMeals,
               updatedAt: Timestamp.fromDate(new Date())
             });
             console.log(`Balíček "${pkgData.name}" bol aktualizovaný na nové dátumy turnaja.`);
-            // Môžete poslať aj notifikáciu pre administrátora, ak je to potrebné
-            // sendAdminNotification({ type: 'updatePackageDates', data: { packageName: pkgData.name, changes: 'Dátumy stravovania upravené.' } });
           } catch (error) {
             console.error(`Chyba pri aktualizácii balíčka "${pkgData.name}":`, error);
             showNotification(`Chyba pri aktualizácii balíčka "${pkgData.name}" s novými dátumami: ${error.message}`, 'error');
@@ -149,7 +150,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     };
 
     updatePackagesBasedOnTournamentDates();
-  }, [tournamentStartDate, tournamentEndDate, db, userProfileData, packages.length]); // Závislosti pre React.useEffect
+  }, [tournamentStartDate, tournamentEndDate, db, userProfileData]); // Závislosti pre React.useEffect
 
 
   const handleOpenAddPackageModal = () => {
