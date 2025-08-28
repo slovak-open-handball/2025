@@ -1,4 +1,4 @@
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 export function PackageSettings({ db, userProfileData, tournamentStartDate, tournamentEndDate, showNotification, sendAdminNotification }) {
@@ -21,7 +21,12 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   const getDaysBetween = (start, end) => {
     const dates = [];
     let currentDate = new Date(start);
-    while (currentDate <= end) {
+    // Nastavíme čas na začiatok dňa, aby sa predišlo chybám pri porovnávaní dátumov
+    currentDate.setHours(0, 0, 0, 0); 
+    const endDateAdjusted = new Date(end);
+    endDateAdjusted.setHours(0, 0, 0, 0);
+
+    while (currentDate <= endDateAdjusted) {
       dates.push(currentDate.toISOString().split('T')[0]);
       currentDate.setDate(currentDate.getDate() + 1);
     }
@@ -75,12 +80,83 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     fetchPackages();
   }, [db, userProfileData, showNotification]);
 
+  // Nový useEffect na aktualizáciu balíčkov pri zmene dátumov turnaja
+  React.useEffect(() => {
+    const updatePackagesBasedOnTournamentDates = async () => {
+      if (!db || !userProfileData || userProfileData.role !== 'admin' || packages.length === 0) {
+        return;
+      }
+
+      const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
+      const querySnapshot = await getDocs(packagesCollectionRef); // Získame aktuálne balíčky priamo z DB
+
+      const newTournamentDays = tournamentDays; // Aktuálne dni turnaja
+
+      querySnapshot.forEach(async (pkgDoc) => {
+        const pkgData = pkgDoc.data();
+        const currentMeals = pkgData.meals || {};
+        const updatedMeals = {};
+
+        // Zachovanie participantCard nastavenia
+        if (currentMeals.participantCard === 1) {
+            updatedMeals.participantCard = 1;
+        }
+
+        let changesMade = false;
+
+        newTournamentDays.forEach(day => {
+          // Ak deň existoval, prenesieme nastavenia
+          if (currentMeals[day]) {
+            updatedMeals[day] = currentMeals[day];
+          } else {
+            // Ak deň neexistoval, pridáme ho s predvolenými hodnotami (0)
+            updatedMeals[day] = { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+            changesMade = true;
+          }
+        });
+
+        // Odstránenie dní, ktoré už nie sú súčasťou turnaja
+        for (const day in currentMeals) {
+            // Preskočíme participantCard
+            if (day === 'participantCard') continue;
+
+            if (!newTournamentDays.includes(day)) {
+                if (currentMeals[day] !== undefined) { // Len ak skutočne existoval
+                    changesMade = true;
+                }
+            }
+        }
+        
+        // Ak sú zmeny, aktualizujeme balíček v databáze
+        // Porovnanie objektov pre reálnu zmenu, aby sa predišlo zbytočným zápisom
+        const mealsChanged = JSON.stringify(currentMeals) !== JSON.stringify(updatedMeals);
+        
+        if (changesMade || mealsChanged) {
+          try {
+            await updateDoc(doc(db, 'settings', 'packages', 'list', pkgDoc.id), {
+              meals: updatedMeals,
+              updatedAt: Timestamp.fromDate(new Date())
+            });
+            console.log(`Balíček "${pkgData.name}" bol aktualizovaný na nové dátumy turnaja.`);
+            // Môžete poslať aj notifikáciu pre administrátora, ak je to potrebné
+            // sendAdminNotification({ type: 'updatePackageDates', data: { packageName: pkgData.name, changes: 'Dátumy stravovania upravené.' } });
+          } catch (error) {
+            console.error(`Chyba pri aktualizácii balíčka "${pkgData.name}":`, error);
+            showNotification(`Chyba pri aktualizácii balíčka "${pkgData.name}" s novými dátumami: ${error.message}`, 'error');
+          }
+        }
+      });
+    };
+
+    updatePackagesBasedOnTournamentDates();
+  }, [tournamentStartDate, tournamentEndDate, db, userProfileData, packages.length]); // Závislosti pre React.useEffect
+
 
   const handleOpenAddPackageModal = () => {
     setPackageModalMode('add');
     setNewPackageName('');
     setNewPackagePrice(0);
-    setPackageMeals({});
+    setPackageMeals({}); // Reset meals for new package
     setPackageRefreshments([]);
     setCurrentPackageEdit(null);
     setShowPackageModal(true);
@@ -92,8 +168,20 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('edit');
     setNewPackageName(pkg.name);
     setNewPackagePrice(pkg.price);
-    setPackageMeals(pkg.meals || {});
-    setPackageRefreshments([]);
+    // Pri úprave balíčka inicializujeme meals pre všetky dni turnaja
+    const initialMeals = {};
+    tournamentDays.forEach(day => {
+        initialMeals[day] = pkg.meals[day] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+    });
+    // Zachovať participantCard z pôvodného balíčka, ak existuje
+    if (pkg.meals?.participantCard === 1) {
+        initialMeals.participantCard = 1;
+    } else {
+        delete initialMeals.participantCard; // Uistite sa, že nie je nastavené na 0, ak nebolo pôvodne
+    }
+    setPackageMeals(initialMeals);
+    
+    setPackageRefreshments([]); // Refreshments are not currently managed via UI, keeping this for future expansion
     setCurrentPackageEdit(pkg);
     setShowPackageModal(true);
     const hasRefreshment = tournamentDays.some(date => (pkg.meals || {})[date]?.refreshment === 1);
@@ -164,7 +252,13 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
 
     try {
-      const mealsToSave = { ...packageMeals, participantCard: hasParticipantCard ? 1 : 0 };
+      const mealsToSave = { ...packageMeals };
+      if (hasParticipantCard) {
+        mealsToSave.participantCard = 1;
+      } else {
+        delete mealsToSave.participantCard; // Odstrániť, ak nie je začiarknutá
+      }
+
 
       if (packageModalMode === 'add') {
         if (packages.some(pkg => pkg.name === trimmedName)) {
@@ -287,7 +381,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                         React.createElement(
                             'div',
                             { className: 'text-sm text-gray-600 w-full mt-2 md:mt-0' },
-                            Object.keys(pkg.meals || {}).sort().map(date => {
+                            // Filtrujeme iba dni, ktoré sú v aktuálnych tournamentDays
+                            Object.keys(pkg.meals || {})
+                                .filter(date => date !== 'participantCard' && tournamentDays.includes(date))
+                                .sort()
+                                .map(date => {
                                 const mealsForDay = pkg.meals[date];
                                 const includedItems = [];
                                 if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('raňajky');
