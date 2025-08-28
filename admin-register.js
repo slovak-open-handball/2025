@@ -316,6 +316,9 @@ function App() {
     setErrorMessage(''); // Clear previous errors
     setSuccessMessage(''); // Clear any previous success message
 
+    // NEW: Set global flag that admin registration is in progress
+    window.isRegisteringAdmin = true;
+
     try {
       // --- ZMENA: Upravená podmienka. Ak je počet adminov menší ako 2, nastav schválenie na true. Inak na false. ---
       const approvedStatus = adminCount < 2; // CHANGE: Changed condition to < 2
@@ -418,6 +421,7 @@ function App() {
         console.error("Chyba pri ukladaní/aktualizácii Firestore:", firestoreError);
         setErrorMessage(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
         setFormSubmitting(false); // Reset formSubmitting on error
+        window.isRegisteringAdmin = false; // Reset global flag on error
         return;
       }
 
@@ -430,12 +434,15 @@ function App() {
 
       // user will be null after signOut, no need to set explicitly
 
-      // Redirect after 5 seconds
+      // NEW: Redirect after 20 seconds, same as register.js
       setTimeout(async () => {
-        console.log("Presmerovanie. Odhlasujem používateľa.");
-        await auth.signOut();
+        console.log("Presmerovanie. Odhlasujem používateľa (oneskorené o 20s).");
+        if (auth && auth.currentUser) {
+            await auth.signOut();
+        }
+        window.isRegisteringAdmin = false; // Reset global flag after redirect
         window.location.href = 'login.html';
-      }, 5000);
+      }, 20000); // 20-sekundové oneskorenie
 
     } catch (e) {
       console.error("Chyba počas registrácie (Auth alebo iné):", e);
@@ -449,6 +456,7 @@ function App() {
         setErrorMessage(`Chyba pri registrácii: ${e.message}`);
       }
       setFormSubmitting(false); // Reset formSubmitting on error
+      window.isRegisteringAdmin = false; // Reset global flag on error
     }
   };
 
@@ -487,7 +495,7 @@ function App() {
             { className: 'text-white' }, // Text remains white for contrast
             successMessage
           ),
-          React.createElement('p', { className: 'text-gray-200 text-sm mt-4' }, 'Presmerovanie na prihlasovaciu stránku...')
+          React.createElement('p', { className: 'text-gray-200 text-sm mt-4' }, 'Presmerovanie na prihlasovaciu stránku (20s)...')
         )
       )
     );
