@@ -15,6 +15,8 @@ import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/fi
 const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
+    const menuIcon = document.getElementById('menu-icon'); // Získanie SVG ikony
+    const menuText = document.getElementById('menu-text');   // Získanie textu "Menu"
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
@@ -23,8 +25,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const mySettingsLink = document.getElementById('my-settings-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     const allUsersLink = document.getElementById('all-users-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     
-    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
-        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
+    if (!leftMenu || !menuToggleButton || !menuIcon || !menuText || menuTexts.length === 0 || !menuSpacer) {
+        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, #menu-icon, #menu-text, textové elementy alebo menu spacer po vložení HTML.");
         return;
     }
 
@@ -40,11 +42,17 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
+            // Zmena farby pre otvorený stav
+            menuIcon.classList.add('text-blue-400'); // Napr. svetlomodrá
+            menuText.classList.add('text-blue-400');
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
+            // Zmena farby pre zatvorený stav (predvolená biela)
+            menuIcon.classList.remove('text-blue-400');
+            menuText.classList.remove('text-blue-400');
         }
         menuTexts.forEach(span => {
             if (isMenuToggled) {
@@ -80,6 +88,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             tournamentSettingsLink.classList.add('hidden');
             allRegistrationsLink.classList.add('hidden');
             mySettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na moje nastavenia
+            allUsersLink.classList.add('hidden');
         }
     };    
 
@@ -127,6 +136,9 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
+            // Farba pri prechode myšou (ak nie je toggled)
+            menuIcon.classList.add('text-gray-300'); // Svetlejšia šedá pri hoveri
+            menuText.classList.add('text-gray-300');
         }
     });
 
@@ -137,6 +149,9 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
+            // Farba po opustení myšou (ak nie je toggled)
+            menuIcon.classList.remove('text-gray-300');
+            menuText.classList.remove('text-gray-300');
         }
     });
 };
