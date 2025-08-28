@@ -23,8 +23,12 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const mySettingsLink = document.getElementById('my-settings-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     const allUsersLink = document.getElementById('all-users-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     
-    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
-        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
+    // Získanie referencií na SVG a textový prvok
+    const menuToggleSvg = document.getElementById('menu-toggle-svg');
+    const menuToggleText = document.getElementById('menu-toggle-text');
+    
+    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer || !menuToggleSvg || !menuToggleText) {
+        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy, menu spacer alebo prvky pre farbu po vložení HTML.");
         return;
     }
 
@@ -40,11 +44,17 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
+            // Zmena farby pre otvorený stav
+            menuToggleSvg.style.color = 'rgb(59, 130, 246)'; // Príklad modrej farby
+            menuToggleText.style.color = 'rgb(59, 130, 246)';
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
+            // Vrátenie farby na pôvodnú pre zatvorený stav
+            menuToggleSvg.style.color = 'currentColor';
+            menuToggleText.style.color = 'currentColor';
         }
         menuTexts.forEach(span => {
             if (isMenuToggled) {
@@ -127,6 +137,9 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
+            // Zmena farby pri hoveri, keď je menu zatvorené
+            menuToggleSvg.style.color = 'rgb(59, 130, 246)'; 
+            menuToggleText.style.color = 'rgb(59, 130, 246)';
         }
     });
 
@@ -137,6 +150,9 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
+            // Vrátenie farby po odchode myšou, keď je menu zatvorené
+            menuToggleSvg.style.color = 'currentColor';
+            menuToggleText.style.color = 'currentColor';
         }
     });
 };
