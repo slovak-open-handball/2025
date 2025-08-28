@@ -126,15 +126,17 @@ const handleAuthState = async () => {
                         if (snapshot.exists()) {
                             const userProfileData = { id: snapshot.id, ...snapshot.data() };
                             
-                            // NOVÁ KONTROLA: Ak prebieha registrácia, neodhlasujeme
-                            if (window.isRegisteringAdmin) {
-                                console.log("AuthManager: Prebieha registrácia administrátora. Automatické odhlásenie je potlačené.");
+                            // ZMENA: Ak prebieha registrácia admina, potlačíme odhlasovanie TU v authentication.js.
+                            // Odhlasovanie pre novoregistrovaného admina bude oneskorené v admin-register.js.
+                            if (window.isRegisteringAdmin && userProfileData.role === 'admin' && (userProfileData.approved === false || userProfileData.approved === true)) {
+                                console.log("AuthManager: Prebieha registrácia administrátora. Automatické odhlásenie z authentication.js je potlačené.");
                                 window.globalUserProfileData = userProfileData;
                                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                return;
+                                return; // Zastaví ďalšie spracovanie pre tohto používateľa, nechá to na admin-register.js
                             }
-                            
-                            // Logika pre neschváleného administrátora
+
+                            // Logika pre neschváleného administrátora, ktorý už bol registrovaný predtým
+                            // (a NEPREBIEHA práve nová registrácia)
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                                 console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa a posielam e-mail s pripomenutím.");
 
