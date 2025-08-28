@@ -109,9 +109,10 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       }
 
       const settingsDocRef = doc(db, 'settings', 'registration');
-      const oldSettingsDoc = await getDoc(settingsDocRef); // Oprava - bolo "settingsDocRef"
+      const oldSettingsDoc = await getDoc(settingsDocRef); 
       const oldData = oldSettingsDoc.exists() ? oldSettingsDoc.data() : {};
       let changes = [];
+      let tournamentDatesChanged = false; // Nový flag pre sledovanie zmien dátumov turnaja
 
       if ((oldData.registrationStartDate ? oldData.registrationStartDate.toMillis() : null) !== (regStart ? Timestamp.fromDate(regStart).toMillis() : null)) {
           changes.push(`Dátum začiatku registrácie z '${formatDateForDisplay(oldData.registrationStartDate)}' na '${formatDateForDisplay(regStart)}'`);
@@ -127,9 +128,11 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       }
       if ((oldData.tournamentStart ? oldData.tournamentStart.toMillis() : null) !== (tourStart ? Timestamp.fromDate(tourStart).toMillis() : null)) {
           changes.push(`Dátum začiatku turnaja z '${formatDateForDisplay(oldData.tournamentStart)}' na '${formatDateForDisplay(tourStart)}'`);
+          tournamentDatesChanged = true; // Nastavíme flag, ak sa dátum začiatku turnaja zmenil
       }
       if ((oldData.tournamentEnd ? oldData.tournamentEnd.toMillis() : null) !== (tourEnd ? Timestamp.fromDate(tourEnd).toMillis() : null)) {
           changes.push(`Dátum konca turnaja z '${formatDateForDisplay(oldData.tournamentEnd)}' na '${formatDateForDisplay(tourEnd)}'`);
+          tournamentDatesChanged = true; // Nastavíme flag, ak sa dátum konca turnaja zmenil
       }
 
 
@@ -160,6 +163,11 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
                   changesMade: changes.join('; ')
               }
           });
+      }
+
+      // Ak sa zmenili dátumy turnaja, zobrazíme dodatočnú červenú notifikáciu
+      if (tournamentDatesChanged) {
+          showNotification("Skontrolujte nastavenia balíčkov (stravovanie a občerstvenie).", 'error');
       }
 
     } catch (e) {
