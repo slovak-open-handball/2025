@@ -37,7 +37,7 @@ const formatDateForDisplay = (dateOrTimestamp) => {
   return `${day}. ${month}. ${year} ${hours}:${minutes} hod.`;
 };
 
-const showNotification = (message, type = 'success') => {
+const showNotification = (message, type = 'success', duration = 5000) => { // Pridaný parameter duration
     let notificationElement = document.getElementById('global-notification'); 
     
     if (!notificationElement) {
@@ -66,7 +66,7 @@ const showNotification = (message, type = 'success') => {
 
     setTimeout(() => {
         notificationElement.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
-    }, 5000);
+    }, duration); // Použitie dynamického duration
 };
 
 const sendAdminNotification = async (db, auth, notificationData) => {
@@ -133,7 +133,8 @@ const sendAdminNotification = async (db, auth, notificationData) => {
                 const oldStatus = (originalPackage.meals && originalPackage.meals[date] && originalPackage.meals[date][mealType] === 1);
                 const newStatus = (newPackage.meals && newPackage.meals[date] && newPackage.meals[date][mealType] === 1);
                 const displayDate = new Date(date).toLocaleDateString('sk-SK');
-                const mealName = mealType === 'breakfast' ? 'Raňajky' : mealType === 'lunch' ? 'Obed' : mealType === 'dinner' ? 'Večera' : 'Občerstvenie';
+                const mealName = mealType === 'breakfast' ? 'Raňajky' : mealType === 'lunch' ? 'Obed' ? mealType === 'dinner' ? 'Večera' : 'Občerstvenie' : 'Obed' : 'Večera';
+
 
                 if (oldStatus !== newStatus) {
                     if (newStatus) {
