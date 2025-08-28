@@ -3,6 +3,28 @@ import { doc, onSnapshot, setDoc, Timestamp, getDoc } from "https://www.gstatic.
 // Funkcie sú teraz odovzdávané ako props, takže ich už netreba importovať
 // import { formatToDatetimeLocal, formatDateForDisplay, showNotification, sendAdminNotification } from './utils.js';
 
+/**
+ * Vypočíta počet dní medzi dvoma dátumami (vrátane oboch dátumov).
+ * @param {Date} startDate - Začiatočný dátum.
+ * @param {Date} endDate - Koncový dátum.
+ * @returns {number} Počet dní, alebo 0 ak sú dátumy neplatné.
+ */
+const calculateDaysDuration = (startDate, endDate) => {
+  if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return 0; 
+  }
+  // Nastavíme čas na začiatok dňa, aby sme eliminovali vplyv časovej zóny a času
+  const startOfDay = new Date(startDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(endDate);
+  endOfDay.setHours(0, 0, 0, 0);
+
+  const diffTime = Math.abs(endOfDay.getTime() - startOfDay.getTime());
+  // Pridáme +1, aby sme zahrnuli aj začiatočný a koncový deň
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+  return diffDays;
+};
+
 
 export function GeneralRegistrationSettings({ db, userProfileData, tournamentStartDate, setTournamentStartDate, tournamentEndDate, setTournamentEndDate, showNotification, sendAdminNotification, formatToDatetimeLocal, formatDateForDisplay }) {
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
@@ -112,7 +134,9 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       const oldSettingsDoc = await getDoc(settingsDocRef); 
       const oldData = oldSettingsDoc.exists() ? oldSettingsDoc.data() : {};
       let changes = [];
-      let tournamentDatesChanged = false; // Nový flag pre sledovanie zmien dátumov turnaja
+      
+      // Nový flag pre sledovanie zmien trvania turnaja
+      let tournamentDurationChanged = false; 
 
       if ((oldData.registrationStartDate ? oldData.registrationStartDate.toMillis() : null) !== (regStart ? Timestamp.fromDate(regStart).toMillis() : null)) {
           changes.push(`Dátum začiatku registrácie z '${formatDateForDisplay(oldData.registrationStartDate)}' na '${formatDateForDisplay(regStart)}'`);
@@ -126,13 +150,27 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       if ((oldData.rosterEditDeadline ? oldData.rosterEditDeadline.toMillis() : null) !== (rosterEditDead ? Timestamp.fromDate(rosterEditDead).toMillis() : null)) {
           changes.push(`Uzávierka úprav súpisiek z '${formatDateForDisplay(oldData.rosterEditDeadline)}' na '${formatDateForDisplay(rosterEditDead)}'`);
       }
+
+      // Staré dátumy turnaja z databázy
+      const oldTournamentStart = oldData.tournamentStart ? oldData.tournamentStart.toDate() : null;
+      const oldTournamentEnd = oldData.tournamentEnd ? oldData.tournamentEnd.toDate() : null;
+
+      // Ak sa zmení dátum začiatku turnaja
       if ((oldData.tournamentStart ? oldData.tournamentStart.toMillis() : null) !== (tourStart ? Timestamp.fromDate(tourStart).toMillis() : null)) {
           changes.push(`Dátum začiatku turnaja z '${formatDateForDisplay(oldData.tournamentStart)}' na '${formatDateForDisplay(tourStart)}'`);
-          tournamentDatesChanged = true; // Nastavíme flag, ak sa dátum začiatku turnaja zmenil
       }
+      // Ak sa zmení dátum konca turnaja
       if ((oldData.tournamentEnd ? oldData.tournamentEnd.toMillis() : null) !== (tourEnd ? Timestamp.fromDate(tourEnd).toMillis() : null)) {
           changes.push(`Dátum konca turnaja z '${formatDateForDisplay(oldData.tournamentEnd)}' na '${formatDateForDisplay(tourEnd)}'`);
-          tournamentDatesChanged = true; // Nastavíme flag, ak sa dátum konca turnaja zmenil
+      }
+
+      // Vypočítame dĺžku turnaja pre staré a nové nastavenia
+      const oldDurationDays = calculateDaysDuration(oldTournamentStart, oldTournamentEnd);
+      const newDurationDays = calculateDaysDuration(tourStart, tourEnd);
+      
+      // Ak sa zmenil celkový počet dní, nastavíme flag
+      if (oldDurationDays !== newDurationDays) {
+        tournamentDurationChanged = true;
       }
 
 
@@ -165,8 +203,8 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
           });
       }
 
-      // Ak sa zmenili dátumy turnaja, zobrazíme dodatočnú červenú notifikáciu
-      if (tournamentDatesChanged) {
+      // Ak sa zmenil celkový počet dní turnaja, zobrazíme dodatočnú červenú notifikáciu
+      if (tournamentDurationChanged) {
           showNotification("Skontrolujte nastavenia balíčkov (stravovanie a občerstvenie).", 'error');
       }
 
