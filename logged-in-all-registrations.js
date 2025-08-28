@@ -366,6 +366,14 @@ const getTshirtSpans = (team, tshirtSizeOrder) => {
     });
 };
 
+const formatArrivalTime = (type, time) => {
+    if (type) {
+        return time ? `${type} (${time} hod.)` : type;
+    }
+    return '-';
+};
+
+
 const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false, showUsersChecked = false, showTeamsChecked = false) => {
     const menTeamMembersCount = team._menTeamMembersCount !== undefined ? team._menTeamMembersCount : 0;
     const womenTeamMembersCount = team._womenTeamMembersCount !== undefined ? team._womenTeamMembersCount : 0;
@@ -383,7 +391,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (ž): ${womenDriversCount}`)); 
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (m): ${menDriversCount}`)); 
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${team.arrival?.type || '-'}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${formatArrivalTime(team.arrival?.type, team.arrival?.time)}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
         
@@ -405,7 +413,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden xl:inline mr-2 whitespace-nowrap' }, womenDriversCount)); 
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 2xl:inline mr-2 whitespace-nowrap' }, menDriversCount)); 
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, team.arrival?.type || '-'));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 3xl:inline mr-2 whitespace-nowrap' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 4xl:inline mr-2 whitespace-nowrap' }, team.accommodation?.type || '-'));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden 5xl:inline mr-2 whitespace-nowrap' }, team.packageDetails?.name || '-')); 
         titleParts.push(...getTshirtSpans(team, availableTshirtSizes));
@@ -902,6 +910,7 @@ const formatLabel = (key) => {
     if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
     if (key === 'jerseyNumber') return 'Číslo dresu';
     if (key === 'registrationNumber') return 'Číslo registrácie';
+    if (key === 'time') return 'Čas príchodu'; // Nový label pre čas príchodu
 
 
     return label;
@@ -943,6 +952,10 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
         // For objects like arrival, accommodation, packageDetails, use specific properties if available
         if (typeof value === 'object' && !Array.isArray(value)) {
+            // Handle arrival.type and arrival.time
+            if (path === 'arrival' && value.type) {
+                return formatArrivalTime(value.type, value.time);
+            }
             if (value.type) return value.type;
             if (value.name) return value.name;
             // Handle other generic objects by stringifying
@@ -1019,8 +1032,14 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     changeDescription = `Zmena Kategórie: z '${valueA || '-'}' na '${valueB || '-'}'`;
                 } else if (currentPath === 'teamName') {
                     changeDescription = `Zmena Názov tímu: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'arrival.type') { // Use normalized values here
-                    changeDescription = `Zmena Typ dopravy: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                } else if (currentPath === 'arrival.type' || currentPath === 'arrival.time') { // Catch both type and time
+                    // Consolidate 'arrival.type' and 'arrival.time' into one notification
+                    // We will check for the full 'arrival' object change later in this function
+                    // and handle it in the parent `compareObjects` loop.
+                    // For now, prevent individual type/time changes from generating separate notifications.
+                    if (pathPrefix === 'arrival') { // Only prevent if directly nested under 'arrival'
+                        return;
+                    }
                 } else if (currentPath === 'accommodation.type') { // Use normalized values here
                     changeDescription = `Zmena Typ ubytovania: z '${valueA || '-'}' na '${valueB || '-'}'`;
                 } else if (currentPath === 'packageDetails.name') { // Use normalized values here
@@ -1039,6 +1058,19 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     // Start comparison from the top-level
     compareObjects(original, updated);
+
+    // After recursive comparison, specifically handle consolidated changes for 'arrival'
+    const originalArrivalType = original?.arrival?.type;
+    const originalArrivalTime = original?.arrival?.time;
+    const updatedArrivalType = updated?.arrival?.type;
+    const updatedArrivalTime = updated?.arrival?.time;
+
+    const formattedOriginalArrival = formatArrivalTime(originalArrivalType, originalArrivalTime);
+    const formattedUpdatedArrival = formatArrivalTime(updatedArrivalType, updatedArrivalTime);
+
+    if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes('Zmena Typ dopravy:'))) {
+        changes.push(`Zmena Typ dopravy: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
+    }
 
     return changes;
 };
@@ -1132,6 +1164,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
     // Stavy pre typ dopravy
     const [selectedArrivalType, setSelectedArrivalType] = React.useState('');
+    const [arrivalTime, setArrivalTime] = React.useState(''); // Nový stav pre čas príchodu
     const arrivalOptions = [
         'verejná doprava - vlak',
         'verejná doprava - autobus',
@@ -1211,7 +1244,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         }
                     } else {
                         console.warn("Firestore dokument 'settings/accommodation' neexistuje. Žiadne typy ubytovania neboli načítané.");
-                        setAccommodationTypes([]);
+                            setAccommodationTypes([]);
                     }
                 } catch (error) {
                     console.error("Chyba pri načítaní typov ubytovania z Firestore:", error);
@@ -1332,8 +1365,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             setSelectedCategory(initialData._category || initialData.category || ''); // Použiť _category pre flattened tímy
             if (initialData.teamName === undefined) initialData.teamName = '';
             
-            // Inicializovať vybraný typ dopravy
+            // Inicializovať vybraný typ dopravy a čas príchodu
             setSelectedArrivalType(initialData.arrival?.type || '');
+            setArrivalTime(initialData.arrival?.time || '');
             
             // Inicializovať vybraný typ ubytovania
             setSelectedAccommodationType(initialData.accommodation?.type || '');
@@ -1906,11 +1940,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     )
                 );
 
-                // 3. Typ dopravy (Selectbox)
+                // 3. Typ dopravy (Selectbox a Čas)
                 teamElements.push(
                     React.createElement(
                         'div',
-                        { key: 'arrival.type', className: 'mb-4' },
+                        { key: 'arrival', className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ dopravy'),
                         React.createElement(
                             'select',
@@ -1928,6 +1962,23 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             selectedArrivalType && !arrivalOptions.includes(selectedArrivalType) &&
                                 React.createElement('option', { key: selectedArrivalType, value: selectedArrivalType, disabled: true, hidden: true }, selectedArrivalType),
                             arrivalOptions.map(option => React.createElement('option', { key: option, value: option }, option))
+                        ),
+                        // Input pre čas, ak je selectedArrivalType "verejná doprava - vlak" alebo "verejná doprava - autobus"
+                        (selectedArrivalType === 'verejná doprava - vlak' || selectedArrivalType === 'verejná doprava - autobus') &&
+                        React.createElement(
+                            'div',
+                            { key: 'arrival.time-container', className: 'mt-2' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Čas príchodu'),
+                            React.createElement('input', {
+                                type: 'time',
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                value: arrivalTime,
+                                onChange: (e) => {
+                                    setArrivalTime(e.target.value);
+                                    handleChange('arrival.time', e.target.value);
+                                },
+                                readOnly: !isSavable
+                            })
                         )
                     )
                 );
@@ -2234,7 +2285,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
                                     dataToPrepareForSave.category = selectedCategory;
                                     dataToPrepareForSave._category = selectedCategory; 
+                                    // Nastaviť arrival.type a arrival.time
                                     dataToPrepareForSave.arrival = { type: selectedArrivalType };
+                                    if (selectedArrivalType === 'verejná doprava - vlak' || selectedArrivalType === 'verejná doprava - autobus') {
+                                        dataToPrepareForSave.arrival.time = arrivalTime;
+                                    } else {
+                                        // Ak typ dopravy nie je vlak/autobus, čas by nemal byť uložený
+                                        delete dataToPrepareForSave.arrival.time;
+                                    }
+
                                     dataToPrepareForSave.accommodation = { type: selectedAccommodationType };
                                     // Removed the problematic line: dataToPrepareForSave.packageDetails = packages.find(pkg => pkg.name === selectedPackageName) || null;
                                     dataToPrepareForSave.tshirts = teamTshirts.filter(t => t.size && t.quantity > 0).map(({ size, quantity }) => ({ size, quantity }));
@@ -3035,7 +3094,12 @@ function AllRegistrationsApp() {
               for (const part of parts) {
                   nestedVal = nestedVal ? nestedVal[part] : undefined;
               }
-              val = nestedVal;
+              // Špeciálne spracovanie pre arrival.type a arrival.time
+              if (column === 'arrival.type') {
+                val = formatArrivalTime(nestedVal, getNestedValue(u, 'arrival.time'));
+              } else {
+                val = nestedVal;
+              }
           } else {
               // Access top-level address fields directly for filtering
               val = u[column];
@@ -3112,7 +3176,12 @@ function AllRegistrationsApp() {
                       for (const part of parts) {
                           nestedVal = nestedVal ? nestedVal[part] : undefined;
                       }
-                      userValue = String(nestedVal || '').toLowerCase();
+                      // Špeciálne spracovanie pre arrival.type a arrival.time
+                      if (column === 'arrival.type') {
+                          userValue = formatArrivalTime(nestedVal, getNestedValue(user, 'arrival.time')).toLowerCase();
+                      } else {
+                          userValue = String(nestedVal || '').toLowerCase();
+                      }
                   } else {
                       // Access top-level address fields directly for filtering
                       userValue = String(user[column] || '').toLowerCase();
