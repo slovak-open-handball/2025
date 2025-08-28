@@ -203,9 +203,11 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
           });
       }
 
-      // Ak sa zmenil celkový počet dní turnaja, zobrazíme dodatočnú červenú notifikáciu
+      // Ak sa zmenil celkový počet dní turnaja, zobrazíme dodatočnú červenú notifikáciu s oneskorením
       if (tournamentDurationChanged) {
-          showNotification("Skontrolujte nastavenia balíčkov (stravovanie a občerstvenie).", 'error');
+          setTimeout(() => {
+              showNotification("Skontrolujte nastavenia balíčkov (stravovanie a občerstvenie).", 'error');
+          }, 3000); // Oneskorenie 3 sekundy
       }
 
     } catch (e) {
