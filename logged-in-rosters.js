@@ -72,10 +72,11 @@ function RostersApp() {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
       setIsAuthReady(true); 
-      if (!currentUser) {
-        console.log("RostersApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
-        window.location.href = 'login.html';
-      }
+      // Pôvodné presmerovanie pri odhlásení používateľa
+      // if (!currentUser) {
+      //   console.log("RostersApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+      //   window.location.href = 'login.html';
+      // }
     });
 
     const handleGlobalDataUpdated = (event) => {
@@ -120,11 +121,11 @@ function RostersApp() {
             setUserProfileData(userData);
             setLoading(false);
 
-            // Ak nie je admin, presmeruj na inú stránku
-            if (userData.role !== 'admin') {
-                console.log("RostersApp: Používateľ nie je admin, presmerovávam na logged-in-my-data.html.");
-                window.location.href = 'logged-in-my-data.html';
-            }
+            // Pôvodné presmerovanie, ak nie je admin
+            // if (userData.role !== 'admin') {
+            //     console.log("RostersApp: Používateľ nie je admin, presmerovávam na logged-in-my-data.html.");
+            //     window.location.href = 'logged-in-my-data.html';
+            // }
 
           } else {
             console.warn("RostersApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
@@ -133,9 +134,10 @@ function RostersApp() {
             //     showLocalNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error');
             // }
             setLoading(false);
-            auth.signOut(); 
-            setUser(null);
-            setUserProfileData(null);
+            // Pôvodné odhlásenie pri nenájdenom dokumente
+            // auth.signOut(); 
+            // setUser(null);
+            // setUserProfileData(null);
           }
         }, error => {
           console.error("RostersApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
@@ -144,9 +146,10 @@ function RostersApp() {
           //   showLocalNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error');
           // }
           setLoading(false);
-          auth.signOut();
-          setUser(null);
-          setUserProfileData(null);
+          // Pôvodné odhlásenie pri chybe načítania
+          // auth.signOut();
+          // setUser(null);
+          // setUserProfileData(null);
         });
       } catch (e) {
         console.error("RostersApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
@@ -155,9 +158,10 @@ function RostersApp() {
         //     showLocalNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error');
         // }
         setLoading(false);
-        auth.signOut();
-        setUser(null);
-        setUserProfileData(null);
+        // Pôvodné odhlásenie pri chybe nastavovania onSnapshot
+        // auth.signOut();
+        // setUser(null);
+        // setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
         setLoading(false);
