@@ -292,7 +292,6 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
                     React.createElement('div', null,
                         React.createElement('label', { htmlFor: 'city', className: 'block text-sm font-medium text-gray-700' }, 'Mesto/Obec'),
                         React.createElement('input', { type: 'text', id: 'city', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: city, onChange: (e) => setCity(e.target.value) })
-                    )
                 ),
                 showAddressFields && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'country', className: 'block text-sm font-medium text-gray-700' }, 'Krajina'),
@@ -741,7 +740,9 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         console.log("  clubName:", clubName);
         console.log("  teamsData:", teamsData);
 
-        if (selectedCategory && clubName !== 'Neznámy klub' && teamsData) {
+        // Zmena: Odstránená podmienka 'clubName !== 'Neznámy klub''
+        // Názov tímu sa bude generovať aj s defaultným názvom klubu, ak nie je nastavený.
+        if (selectedCategory && teamsData) {
             const teamsInSelectedCategory = teamsData[selectedCategory] || [];
             
             const clubTeamsInThisCategory = teamsInSelectedCategory.filter(team => 
