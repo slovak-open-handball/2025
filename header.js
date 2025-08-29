@@ -381,6 +381,14 @@ const setupNotificationListenerForAdmin = () => {
             }
         });
 
+        // Aktualizujeme globalUserProfileData s novým počtom neprečítaných notifikácií
+        if (window.globalUserProfileData) {
+            window.globalUserProfileData.unreadNotificationCount = unreadCount;
+            // Odošleme udalosť, aby sa zmeny prejavili v ľavom menu
+            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+            console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
+        }
+
         // Zobrazíme súhrnnú notifikáciu o neprečítaných správach, ak sú splnené podmienky
         if (unreadCount >= 3) {
             let message = '';
