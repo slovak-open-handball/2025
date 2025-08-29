@@ -141,7 +141,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
             React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' },
-              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Používateľ'
+              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : role === 'user' ? 'Používateľ' 
             )
           )
         )
@@ -275,6 +275,10 @@ function UsersManagementApp() {
   const auth = window.auth;
   const globalUserProfileData = window.globalUserProfileData;
 
+  // Default deadlines
+  const DEFAULT_DATA_EDIT_DEADLINE = new Date('2025-08-29T14:00:00Z'); // August 29, 2025 at 4:00:00 PM UTC+2
+  const DEFAULT_ROSTER_EDIT_DEADLINE = new Date('2025-09-14T20:00:00Z'); // September 14, 2025 at 10:00:00 PM UTC+2
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -307,10 +311,34 @@ function UsersManagementApp() {
         
         const q = query(usersCol);
         
-        const unsubscribeUsers = onSnapshot(q, (snapshot) => {
-          const usersList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+        const unsubscribeUsers = onSnapshot(q, async (snapshot) => { // Added async here
+          const usersList = await Promise.all(snapshot.docs.map(async docSnapshot => { // Used Promise.all for async operations
+            const userData = {
+              id: docSnapshot.id,
+              ...docSnapshot.data()
+            };
+
+            // Check and set default deadlines for 'user'
+            if (userData.role === 'user') {
+                let needsUpdate = false;
+                if (!userData.dataEditDeadline) {
+                    userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
+                    needsUpdate = true;
+                }
+                if (!userData.rosterEditDeadline) {
+                    userData.rosterEditDeadline = DEFAULT_ROSTER_EDIT_DEADLINE;
+                    needsUpdate = true;
+                }
+
+                if (needsUpdate) {
+                    // Update the document in Firestore if new fields were added
+                    await updateDoc(doc(db, `users`, userData.id), {
+                        dataEditDeadline: userData.dataEditDeadline,
+                        rosterEditDeadline: userData.rosterEditDeadline
+                    });
+                }
+            }
+            return userData;
           }));
           
           const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
@@ -521,12 +549,26 @@ function UsersManagementApp() {
               return 'Administrátor';
           case 'hall':
               return 'Športová hala';
-              case 'user':
+          case 'user':
               return 'Používateľ';
           default:
               return role;
       }
   };
+
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    // Firebase Timestamp object handling
+    if (date.toDate) {
+      date = date.toDate();
+    }
+    // Check if it's a valid Date object
+    if (!(date instanceof Date) || isNaN(date)) {
+        return 'N/A';
+    }
+    return date.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  };
+
 
   if (loading) {
     return React.createElement(
@@ -593,6 +635,8 @@ function UsersManagementApp() {
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'E-mail'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer', onClick: () => setShowFilterModal(true) }, 'Rola'),
+            (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Úprava údajov'),
+            (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Úprava súpisiek'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Akcie')
           )
         ),
@@ -623,6 +667,8 @@ function UsersManagementApp() {
                   getTranslatedRole(user.role, isUserOldestAdmin, isCurrentUserOldestAdmin)
                 )
               ),
+              (window.isCurrentUserAdmin) && React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, formatDate(user.dataEditDeadline)),
+              (window.isCurrentUserAdmin) && React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, formatDate(user.rosterEditDeadline)),
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
