@@ -1580,7 +1580,8 @@ const handleSaveNewMember = async (newMemberDetails) => {
         teamCategories.length > 0 ? (
           React.createElement('div', { className: 'space-y-6 w-full' }, 
             teamCategories.map(([categoryName, teamsArray]) => (
-              React.createElement('div', { key: categoryName, className: 'space-y-4 w-full' }, 
+              // Podmienené zobrazenie nadpisu kategórie iba ak teamsArray nie je prázdne
+              teamsArray.length > 0 && React.createElement('div', { key: categoryName, className: 'space-y-4 w-full' }, 
                 userProfileData && React.createElement(
                     'div',
                     { className: 'flex justify-center mb-4' },
@@ -1782,6 +1783,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
                           )
                         )
                       )
+                    )
                   })
                 )
               )
