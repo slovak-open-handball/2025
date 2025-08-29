@@ -76,7 +76,7 @@ const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
 
 
 // Komponent modálneho okna pre úpravu tímu
-function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages, availableAccommodationTypes }) {
+function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes }) {
     // Tieto stavy sa stále inicializujú z teamData, ale input boxy sa pre ne nebudú renderovať.
     // Sú potrebné pre zostavenie updatedTeamData v handleSubmit.
     const [editedTeamName, setEditedTeamName] = React.useState(teamData ? teamData.teamName : '');
@@ -89,6 +89,9 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     // Stavy pre čas príchodu - hodiny a minúty
     const [editedArrivalHour, setEditedArrivalHour] = React.useState('');
     const [editedArrivalMinute, setEditedArrivalMinute] = React.useState('');
+
+    // Stav pre tričká
+    const [tshirtEntries, setTshirtEntries] = React.useState([]);
 
 
     // Aktualizácia stavu, keď sa zmenia teamData (napr. pri otvorení pre iný tím)
@@ -109,6 +112,9 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                 setEditedArrivalHour('');
                 setEditedArrivalMinute('');
             }
+
+            // Inicializácia tričiek
+            setTshirtEntries(teamData.tshirts && Array.isArray(teamData.tshirts) ? teamData.tshirts.map(t => ({...t})) : []);
         }
     }, [teamData]);
 
@@ -138,6 +144,11 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             finalArrivalTime = `${editedArrivalHour.padStart(2, '0')}:${editedArrivalMinute.padStart(2, '0')}`;
         }
 
+        // Filtrujeme prázdne a neplatné záznamy tričiek a konvertujeme quantity na číslo
+        const filteredTshirtEntries = tshirtEntries.filter(t => t.size && t.quantity && parseInt(t.quantity, 10) > 0)
+                                                    .map(t => ({ ...t, quantity: parseInt(t.quantity, 10) }));
+
+
         const updatedTeamData = {
             ...teamData,
             teamName: editedTeamName, // Použijeme pôvodný názov tímu, lebo sa neupravuje
@@ -151,7 +162,9 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             // Aktualizácia názvu balíka
             packageDetails: { ...teamData.packageDetails, name: editedPackageName },
             // Aktualizácia typu ubytovania
-            accommodation: { ...teamData.accommodation, type: editedAccommodationType }
+            accommodation: { ...teamData.accommodation, type: editedAccommodationType },
+            // Aktualizácia tričiek
+            tshirts: filteredTshirtEntries
             // Ostatné počty členov/šoférov sa zatiaľ neupravujú cez toto modálne okno
         };
         await onSaveTeam(updatedTeamData);
@@ -164,6 +177,29 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
     // Generovanie možností pre minúty (00-59)
     const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+
+    // Funkcie pre správu tričiek
+    const handleAddTshirtEntry = () => {
+        setTshirtEntries([...tshirtEntries, { size: '', quantity: 1 }]);
+    };
+
+    const handleRemoveTshirtEntry = (index) => {
+        setTshirtEntries(tshirtEntries.filter((_, i) => i !== index));
+    };
+
+    const handleTshirtSizeChange = (index, newSize) => {
+        const updatedEntries = [...tshirtEntries];
+        updatedEntries[index].size = newSize;
+        setTshirtEntries(updatedEntries);
+    };
+
+    const handleTshirtQuantityChange = (index, newQuantity) => {
+        const updatedEntries = [...tshirtEntries];
+        // Ensure quantity is a positive number
+        updatedEntries[index].quantity = Math.max(1, parseInt(newQuantity, 10) || 1);
+        setTshirtEntries(updatedEntries);
+    };
+
 
     return React.createElement(
         'div',
@@ -284,6 +320,62 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                     )
                 ),
 
+                // Sekcia pre Tričká
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center justify-between mb-2' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Tričká'),
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: handleAddTshirtEntry,
+                                className: 'flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            },
+                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
+                        )
+                    ),
+                    tshirtEntries.map((tshirt, index) => (
+                        React.createElement(
+                            'div',
+                            { key: index, className: 'flex items-center space-x-2 mb-2' },
+                            React.createElement('select', {
+                                className: 'mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm p-2',
+                                value: tshirt.size,
+                                onChange: (e) => handleTshirtSizeChange(index, e.target.value),
+                                required: true
+                            },
+                            React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
+                            availableTshirtSizes.slice().sort().map((size, sIdx) =>
+                                React.createElement('option', { key: sIdx, value: size }, size)
+                            )
+                            ),
+                            React.createElement('input', {
+                                type: 'number',
+                                className: 'mt-1 block w-1/4 border border-gray-300 rounded-md shadow-sm p-2',
+                                placeholder: 'Počet',
+                                value: tshirt.quantity,
+                                onChange: (e) => handleTshirtQuantityChange(index, e.target.value),
+                                min: '1',
+                                required: true
+                            }),
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleRemoveTshirtEntry(index),
+                                    className: 'flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500'
+                                },
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M20 12H4' }))
+                            )
+                        )
+                    ))
+                ),
+
+
                 React.createElement(
                     'div',
                     { className: 'flex justify-end space-x-2 mt-6' },
@@ -325,6 +417,7 @@ function RostersApp() {
   const [selectedTeam, setSelectedTeam] = React.useState(null); // Stav pre vybraný tím na úpravu
   const [availablePackages, setAvailablePackages] = React.useState([]); // Nový stav pre balíky z databázy
   const [availableAccommodationTypes, setAvailableAccommodationTypes] = React.useState([]); // Nový stav pre typy ubytovania
+  const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]); // Nový stav pre dostupné veľkosti tričiek
 
   // Loading stav pre používateľský profil
   const [loading, setLoading] = React.useState(true); 
@@ -421,6 +514,36 @@ function RostersApp() {
               unsubscribeAccommodation();
           }
       };
+  }, [db]);
+
+  // Načítanie dostupných veľkostí tričiek z Firestore
+  React.useEffect(() => {
+    let unsubscribeTshirtSizes;
+    if (db) {
+        try {
+            const tshirtSizesDocRef = doc(db, 'settings', 'tshirtSizes');
+            unsubscribeTshirtSizes = onSnapshot(tshirtSizesDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    const sizes = data.types?.map(typeObj => typeObj.size) || []; // Predpokladáme pole objektov s kľúčom 'size'
+                    setAvailableTshirtSizes(sizes);
+                    console.log("RostersApp: Tshirt sizes loaded:", sizes);
+                } else {
+                    console.log("RostersApp: Tshirt sizes settings document not found.");
+                    setAvailableTshirtSizes([]);
+                }
+            }, (error) => {
+                console.error("RostersApp: Error fetching tshirt sizes:", error);
+            });
+        } catch (e) {
+            console.error("RostersApp: Error setting up onSnapshot for tshirt sizes:", e);
+        }
+    }
+    return () => {
+        if (unsubscribeTshirtSizes) {
+            unsubscribeTshirtSizes();
+        }
+    };
   }, [db]);
 
 
@@ -868,7 +991,8 @@ function RostersApp() {
           onSaveTeam: handleSaveTeam,
           userProfileData: userProfileData, // Pre farbu nadpisu
           availablePackages: availablePackages, // Odovzdanie zoznamu balíkov
-          availableAccommodationTypes: availableAccommodationTypes // Odovzdanie typov ubytovania
+          availableAccommodationTypes: availableAccommodationTypes, // Odovzdanie typov ubytovania
+          availableTshirtSizes: availableTshirtSizes // Odovzdanie dostupných veľkostí tričiek
         }
       )
     )
