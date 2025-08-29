@@ -173,7 +173,7 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
 }
 
 // Komponent modálneho okna pre pridanie detailov člena tímu
-function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData }) {
+function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData, teamAccommodationType }) {
     const [firstName, setFirstName] = React.useState('');
     const [lastName, setLastName] = React.useState('');
     const [dateOfBirth, setDateOfBirth] = React.useState('');
@@ -199,11 +199,12 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
             setCity('');
             setCountry('');
         }
-    }, [show, memberType]);
+    }, [show, memberType, teamAccommodationType]);
 
     if (!show) return null;
 
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+    const showAddressFields = teamAccommodationType !== 'bez ubytovania';
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -213,14 +214,19 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
             dateOfBirth,
             ...(memberType === 'player' && { jerseyNumber: parseInt(jerseyNumber, 10) || null }), // Len pre hráča
             ...(memberType === 'player' && { registrationNumber }), // Len pre hráča
-            address: {
+        };
+        
+        // Pridaj adresu len ak je zobrazená
+        if (showAddressFields) {
+            newMember.address = {
                 street,
                 houseNumber,
                 postalCode,
                 city,
                 country
-            }
-        };
+            };
+        }
+        
         onSaveMember(newMember);
         onClose();
     };
@@ -270,15 +276,15 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
                     React.createElement('label', { htmlFor: 'registrationNumber', className: 'block text-sm font-medium text-gray-700' }, 'Číslo registrácie'),
                     React.createElement('input', { type: 'text', id: 'registrationNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: registrationNumber, onChange: (e) => setRegistrationNumber(e.target.value) })
                 ),
-                React.createElement('div', null,
+                showAddressFields && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'street', className: 'block text-sm font-medium text-gray-700' }, 'Ulica'),
                     React.createElement('input', { type: 'text', id: 'street', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: street, onChange: (e) => setStreet(e.target.value) })
                 ),
-                React.createElement('div', null,
+                showAddressFields && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'houseNumber', className: 'block text-sm font-medium text-gray-700' }, 'Popisné číslo'),
                     React.createElement('input', { type: 'text', id: 'houseNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: houseNumber, onChange: (e) => setHouseNumber(e.target.value) })
                 ),
-                React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                showAddressFields && React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
                     React.createElement('div', null,
                         React.createElement('label', { htmlFor: 'postalCode', className: 'block text-sm font-medium text-gray-700' }, 'PSČ'),
                         React.createElement('input', { type: 'text', id: 'postalCode', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: postalCode, onChange: (e) => setPostalCode(e.target.value) })
@@ -288,7 +294,7 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
                         React.createElement('input', { type: 'text', id: 'city', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: city, onChange: (e) => setCity(e.target.value) })
                     )
                 ),
-                React.createElement('div', null,
+                showAddressFields && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'country', className: 'block text-sm font-medium text-gray-700' }, 'Krajina'),
                     React.createElement('input', { type: 'text', id: 'country', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: country, onChange: (e) => setCountry(e.target.value) })
                 ),
@@ -654,7 +660,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         {
                             type: 'submit',
                             disabled: isSaveButtonDisabled,
-                            className: `px-4 py-2 rounded-md transition-colors ${isSaveButtonDisabled ? 'bg-white text-current border border-current cursor-not-allowed' : 'text-white'}`,
+                            className: `px-4 py-2 rounded-md transition-colors ${isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'}`,
                             style: { 
                                 backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
                                 color: isSaveButtonDisabled ? roleColor : 'white',
@@ -689,6 +695,7 @@ function RostersApp() {
   const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = React.useState(false); // Stav pre modálne okno detailov člena
   const [memberTypeToAdd, setMemberTypeToAdd] = React.useState(null); // Typ člena, ktorý sa má pridať
   const [teamToAddMemberTo, setTeamToAddMemberTo] = React.useState(null); // Tím, do ktorého sa pridáva člen
+  const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = React.useState(''); // Ubytovanie tímu pre nový modal
 
   // Loading stav pre používateľský profil
   const [loading, setLoading] = React.useState(true); 
@@ -1027,6 +1034,7 @@ function RostersApp() {
   // Funkcia pre otvorenie prvého modálneho okna pre pridanie člena
   const handleOpenAddMemberTypeModal = (team) => {
     setTeamToAddMemberTo(team);
+    setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || ''); // Uloženie typu ubytovania tímu
     setShowAddMemberTypeModal(true);
   };
 
@@ -1362,7 +1370,8 @@ function RostersApp() {
           onClose: () => setShowAddMemberDetailsModal(false),
           onSaveMember: handleSaveNewMember,
           memberType: memberTypeToAdd,
-          userProfileData: userProfileData
+          userProfileData: userProfileData,
+          teamAccommodationType: teamAccommodationTypeToAddMemberTo // Odovzdanie typu ubytovania
         }
       )
     )
