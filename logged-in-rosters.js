@@ -349,7 +349,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                                 required: true
                             },
                             React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
-                            availableTshirtSizes.slice().sort().map((size, sIdx) =>
+                            availableTshirtSizes.slice().sort().map((size, sIdx) => // Načítavanie veľkostí z nového miesta
                                 React.createElement('option', { key: sIdx, value: size }, size)
                             )
                             ),
@@ -521,11 +521,11 @@ function RostersApp() {
     let unsubscribeTshirtSizes;
     if (db) {
         try {
-            const tshirtSizesDocRef = doc(db, 'settings', 'tshirtSizes');
+            const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts'); // Zmenený názov dokumentu
             unsubscribeTshirtSizes = onSnapshot(tshirtSizesDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    const sizes = data.types?.map(typeObj => typeObj.size) || []; // Predpokladáme pole objektov s kľúčom 'size'
+                    const sizes = data.sizes || []; // Predpokladáme pole stringov priamo
                     setAvailableTshirtSizes(sizes);
                     console.log("RostersApp: Tshirt sizes loaded:", sizes);
                 } else {
