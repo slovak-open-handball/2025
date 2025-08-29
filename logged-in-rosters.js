@@ -219,7 +219,8 @@ function RostersApp() {
   };
 
   // Prevod objektu teamsData na pole pre jednoduchšie mapovanie vo React komponente
-  const teamCategories = Object.entries(teamsData);
+  // A zoradenie kategórií podľa názvu abecedne
+  const teamCategories = Object.entries(teamsData).sort((a, b) => a[0].localeCompare(b[0]));
 
   return React.createElement(
     'div',
@@ -245,7 +246,7 @@ function RostersApp() {
                     
                     // Extrahovanie informácií o doprave, ubytovaní a balíku
                     const arrivalType = team.arrival?.type || 'Nezadané';
-                    const accommodationType = team.accommodation?.type || 'Nezadané';
+                    const accommodationType = team.arrival?.accommodation || 'Nezadané'; // Opravené na accommodation?.type
                     const packageName = team.packageDetails?.name || 'Nezadané';
                     
                     // Upravená podmienka pre čas príchodu s pridaným "hod."
