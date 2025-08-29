@@ -46,7 +46,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   } else if (type === 'error') {
     bgColorClass = 'bg-red-600'; // Red
   } else {
-    bgColorClass = 'bg-blue-500'; // Default blue for info
+    bgColorClass = 'bg-blue-500'; // Default blue for info - but this case should not be reached with the new logic
   }
 
   return React.createElement(
@@ -131,6 +131,8 @@ function NotificationsApp() {
   const [loading, setLoading] = React.useState(true); // Loading for data in NotificationsApp
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+  const [userNotificationType, setUserNotificationType] = React.useState('success'); // ZMENA: Predvolený stav pre typ notifikácie na 'success'
+
 
   const [notifications, setNotifications] = React.useState([]);
   const [allAdminUids, setAllAdminUids] = React.useState([]); // New state for storing UIDs of all administrators
@@ -278,6 +280,7 @@ function NotificationsApp() {
   const handleMarkAsRead = async (notificationId) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie označiť upozornenie ako prečítané.");
+      setUserNotificationType('error'); 
       return;
     }
     setLoading(true);
@@ -289,9 +292,11 @@ function NotificationsApp() {
         seenBy: arrayUnion(user.uid) // Pridáme ID používateľa do poľa seenBy
       });
       setUserNotificationMessage("Upozornenie označené ako prečítané.");
+      setUserNotificationType('success'); 
     } catch (e) {
       console.error("NotificationsApp: Error marking notification as read:", e);
       setError(`Chyba pri označení upozornenia ako prečítaného: ${e.message}`);
+      setUserNotificationType('error'); 
     } finally {
       setLoading(false);
     }
@@ -300,6 +305,7 @@ function NotificationsApp() {
   const handleDeleteNotification = async (notificationId) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie odstrániť upozornenie.");
+      setUserNotificationType('error'); 
       return;
     }
     setLoading(true);
@@ -311,6 +317,7 @@ function NotificationsApp() {
       const docSnap = await getDoc(notificationRef);
       if (!docSnap.exists()) {
         setUserNotificationMessage("Upozornenie bolo odstránené pre vás.");
+        setUserNotificationType('success'); 
         setLoading(false);
         return;
       }
@@ -328,6 +335,7 @@ function NotificationsApp() {
       if (allAdminUids.length > 0 && deletedBy.length >= allAdminUids.length) {
         await deleteDoc(notificationRef);
         setUserNotificationMessage("Upozornenie bolo úplne odstránené.");
+        setUserNotificationType('success'); 
         console.log(`Notification ${notificationId} has been completely deleted from the database.`);
       } else {
         // Inak, len aktualizujeme pole 'deletedBy'
@@ -335,11 +343,13 @@ function NotificationsApp() {
           deletedBy: arrayUnion(user.uid) // Pridáme ID používateľa do poľa deletedBy
         });
         setUserNotificationMessage("Upozornenie bolo odstránené pre vás.");
+        setUserNotificationType('success'); 
         console.log(`Notification ${notificationId} has been hidden for user ${user.uid}.`);
       }
     } catch (e) {
       console.error("NotificationsApp: Error deleting notification:", e);
       setError(`Chyba pri odstránení upozornenia: ${e.message}`);
+      setUserNotificationType('error'); 
     } finally {
       setLoading(false);
     }
@@ -349,6 +359,7 @@ function NotificationsApp() {
   const handleMarkAllAsRead = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie označiť upozornenia ako prečítané.");
+      setUserNotificationType('error'); 
       return;
     }
     setLoading(true);
@@ -358,6 +369,7 @@ function NotificationsApp() {
 
       if (unreadNotifications.length === 0) {
         setUserNotificationMessage("Žiadne neprečítané upozornenia na označenie.");
+        setUserNotificationType('success'); // ZMENA: Z 'info' na 'success'
         setLoading(false);
         return;
       }
@@ -370,9 +382,11 @@ function NotificationsApp() {
 
       await batch.commit();
       setUserNotificationMessage("Všetky neprečítané upozornenia boli označené ako prečítané.");
+      setUserNotificationType('success'); 
     } catch (e) {
       console.error("NotificationsApp: Error marking all notifications as read:", e);
       setError(`Chyba pri označení všetkých upozornení ako prečítaných: ${e.message}`);
+      setUserNotificationType('error'); 
     } finally {
       setLoading(false);
     }
@@ -388,6 +402,7 @@ function NotificationsApp() {
   const confirmDeleteAllNotifications = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie odstrániť všetky upozornenia.");
+      setUserNotificationType('error'); 
       return;
     }
     setLoading(true);
@@ -400,6 +415,7 @@ function NotificationsApp() {
 
       if (notificationsToProcess.length === 0) {
         setUserNotificationMessage("Žiadne upozornenia na odstránenie.");
+        setUserNotificationType('success'); // ZMENA: Z 'info' na 'success'
         setLoading(false);
         setShowDeleteAllConfirmationModal(false);
         return;
@@ -424,10 +440,12 @@ function NotificationsApp() {
 
       await batch.commit();
       setUserNotificationMessage("Všetky vybrané upozornenia boli odstránené.");
+      setUserNotificationType('success'); 
       setShowDeleteAllConfirmationModal(false); // Close modal after successful action
     } catch (e) {
       console.error("NotificationsApp: Error deleting all notifications:", e);
       setError(`Chyba pri odstránení všetkých upozornení: ${e.message}`);
+      setUserNotificationType('error'); 
     } finally {
       setLoading(false);
     }
@@ -525,9 +543,11 @@ function NotificationsApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
+    // ZMENA: Odovzdávame userNotificationType do NotificationModal
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage('')
+        onClose: () => setUserNotificationMessage(''),
+        type: userNotificationType
     }),
     React.createElement(ConfirmationModal, {
         show: showDeleteAllConfirmationModal,
