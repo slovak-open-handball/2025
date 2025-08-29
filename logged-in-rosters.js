@@ -248,7 +248,7 @@ function RostersApp() {
                     const accommodationType = team.accommodation?.type || 'Nezadané';
                     const packageName = team.packageDetails?.name || 'Nezadané';
 
-                    return React.createElement('div', { key: index, className: 'border-l-4 border-blue-600 pl-4 py-4 bg-white rounded-md shadow-sm' }, // Modrejší border, biely background
+                    return React.createElement('div', { key: index, className: 'border-l-4 border-[#9333EA] pl-4 py-4 bg-white rounded-md shadow-sm' }, // Zmenená farba na #9333EA
                       React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
                       React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`),
                       React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`),
