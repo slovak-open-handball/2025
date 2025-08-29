@@ -1268,17 +1268,13 @@ function RostersApp() {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
                     const categoriesList = [];
-                    // Iterujeme cez polia (náhodné ID) v dokumente kategórií
+                    // Iterujeme cez náhodné ID polia v dokumente kategórií
                     for (const fieldName in data) {
                         if (Object.prototype.hasOwnProperty.call(data, fieldName)) {
-                            const categoryArray = data[fieldName];
-                            // Predpokladáme, že hodnota každého poľa je pole objektov
-                            if (Array.isArray(categoryArray)) {
-                                categoryArray.forEach(categoryObj => {
-                                    if (categoryObj && typeof categoryObj === 'object' && categoryObj.name) {
-                                        categoriesList.push(categoryObj.name);
-                                    }
-                                });
+                            const categoryObject = data[fieldName]; // categoryObject je teraz {name: "Category Name", ...}
+                            // Priamo pristupujeme ku kľúču 'name' v objekte
+                            if (categoryObject && typeof categoryObject === 'object' && categoryObject.name) {
+                                categoriesList.push(categoryObject.name);
                             }
                         }
                     }
