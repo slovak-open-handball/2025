@@ -13,60 +13,39 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-        }
-        /* Štýly pre modálne okná (ak sa budú používať) */
-        .modal {
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 500px;
-            width: 90%;
-            text-align: left;
+            box-sizing: border-box; /* Zabezpečí, že padding nebude pridávať k celkovej šírke/výške */
+            display: flex; /* Použitie flexboxu pre celé body */
+            flex-direction: column; /* Usporiadanie obsahu vo stĺpci */
+            min-height: 100vh; /* Minimálna výška stránky */
         }
     </style>
     <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Globálne konštanty pre Firebase - MUSIA BYŤ DEFINOVANÉ PRED AKÝMKOĽVEK SKRIPTOM, KTORÝ ICH POUŽÍVA -->
-    <script>
-        // Tieto konštanty by mali byť konzistentné v celej aplikácii
-        // __app_id a __firebase_config sú už definované v authentication.js alebo prostredím.
-        // __initial_auth_token je poskytovaný prostredím.
-        // Nebudeme tu inicializovať Firebase, to už robí authentication.js.
-    </script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Globálne konštanty pre Firebase - už ich nedeclarujeme, sú z authentication.js -->
 </head>
 <body class="bg-gray-100">
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
-    <div class="flex">
+    <div class="flex flex-grow"> <!-- ZMENA: Použitie flex-grow na main kontajneri -->
         <!-- Ľavé menu sa načíta dynamicky -->
         <div id="menu-placeholder"></div>
 
         <!-- Hlavná oblasť obsahu pre React aplikáciu -->
-        <main id="main-content-area" class="flex-1 p-4 ml-64 mt-16">
-            <div id="root">
-                <!-- React aplikácia sa tu vykreslí -->
+        <main id="main-content-area" class="flex-grow flex"> <!-- Pridané triedy 'flex-grow flex' pre správne usporiadanie -->
+            <!-- Tento div vytvára priestor pre zbalené/rozbalené menu, podobne ako v logged-in-my-data.html -->
+            <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+            <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Obsah aplikácie bude vykreslený tu, s počiatočným loaderom -->
+                <div class="flex justify-center pt-16">
+                    <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- Načítanie skriptov pre autentifikáciu, hlavičku a ľavé menu (v tomto poradí!) -->
+    <!-- Načítanie súborov pre autentifikáciu, hlavičku a ľavé menu (v tomto poradí!) -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
@@ -91,12 +70,9 @@
             }
         }
 
-        // Spustíme načítanie hlavičky a menu po načítaní DOM
+        // Spustíme načítanie hlavičky po načítaní DOM
         window.addEventListener('DOMContentLoaded', async () => {
-            // Pred spustením React aplikácie zabezpečíme, že globálne dáta sú pripravené
-            // a hlavička a menu sú načítané.
             await loadHeader(); // Načíta HTML hlavičky, logika sa spustí cez header.js
-            // ODSTRÁNENÉ: await loadLeftMenu(); // logged-in-left-menu.js teraz handled načíta menu HTML samé
 
             const renderApp = () => {
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
@@ -123,7 +99,6 @@
                     renderApp();
                 } else {
                     console.log("logged-in-notifications.html: GlobalUserProfileData je null, používateľ nie je prihlásený. Presmerovanie už mala spracovať authentication.js.");
-                    // V tomto prípade by malo authentication.js presmerovať na login.html
                 }
             });
 
@@ -134,8 +109,6 @@
                 renderApp();
             } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
                 console.log("logged-in-notifications.html: Auth ready, but no user data. Redirecting to login.");
-                // Ak je auth ready, ale používateľ nie je prihlásený, presmerujeme.
-                // Toto by mala primary handling authentication.js robiť, ale je to poistka.
                 window.location.href = 'login.html';
             }
         });
