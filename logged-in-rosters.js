@@ -1,19 +1,8 @@
-// logged-in-rosters.js
-// Tento súbor predpokladá, že Firebase SDK verzie 9.x.x je inicializovaný v authentication.js
-// a globálne funkcie ako window.auth, window.db, showGlobalLoader sú dostupné.
-
-// Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// Uistite sa, že React je dostupný, keďže je načítaný cez CDN
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
-/**
- * Lokálna funkcia pre zobrazenie notifikácií v tomto module.
- * Presunutá sem z logged-in-my-data.js pre nezávislosť štýlovania.
- * Aj keď sa v tejto verzii nepoužíva, je tu pre prípadné budúce využitie.
- */
 function showLocalNotification(message, type = 'success') {
     let notificationElement = document.getElementById('local-notification');
     if (!notificationElement) {
@@ -42,18 +31,15 @@ function showLocalNotification(message, type = 'success') {
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
 
-    // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
     }, 10);
 
-    // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 }
 
-// Formátovanie dátumu na DD. MM. RRRR
 const formatDateToDMMYYYY = (dateString) => {
     if (!dateString) return '-';
     const [year, month, day] = dateString.split('-');
@@ -63,7 +49,6 @@ const formatDateToDMMYYYY = (dateString) => {
     return dateString;
 };
 
-// Mapovanie typov jedál na slovenské názvy a definovanie poradia
 const mealTypeLabels = {
     breakfast: 'raňajky',
     lunch: 'obed',
@@ -73,10 +58,8 @@ const mealTypeLabels = {
 
 const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 
-// Skratky dní v týždni pre slovenčinu (0 = nedeľa, 1 = pondelok, ...)
 const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
 
-// Funkcia na získanie farby roly
 const getRoleColor = (role) => {
     switch (role) {
         case 'admin':
@@ -90,7 +73,6 @@ const getRoleColor = (role) => {
     }
 };
 
-// Komponent modálneho okna pre výber typu člena tímu
 function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData }) {
     const [selectedType, setSelectedType] = useState('');
 
@@ -101,7 +83,7 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
     const handleAdd = () => {
         if (selectedType) {
             onSelectMemberType(selectedType);
-            setSelectedType(''); // Reset selected type
+            setSelectedType('');
             onClose();
         } else {
             showLocalNotification('Prosím, vyberte typ člena.', 'error');
@@ -174,7 +156,6 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
     );
 }
 
-// Komponent modálneho okna pre pridanie detailov člena tímu
 function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData, teamAccommodationType }) {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -188,7 +169,6 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
     const [country, setCountry] = useState('');
 
     useEffect(() => {
-        // Reset form when modal opens for a new memberType or closes
         if (show) {
             setFirstName('');
             setLastName('');
@@ -214,11 +194,10 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
             firstName,
             lastName,
             dateOfBirth,
-            ...(memberType === 'player' && { jerseyNumber: parseInt(jerseyNumber, 10) || null }), // Len pre hráča
-            ...(memberType === 'player' && { registrationNumber }), // Len pre hráča
+            ...(memberType === 'player' && { jerseyNumber: parseInt(jerseyNumber, 10) || null }),
+            ...(memberType === 'player' && { registrationNumber }),
         };
         
-        // Pridaj adresu len ak je zobrazená
         if (showAddressFields) {
             newMember.address = {
                 street,
@@ -327,36 +306,27 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
     );
 }
 
-
-// Komponent modálneho okna pre úpravu tímu
 function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, onAddMember }) {
-    // Tieto stavy sa stále inicializujú z teamData, ale input boxy sa pre ne nebudú renderovať.
-    // Sú potrebné pre zostavenie updatedTeamData v handleSubmit.
     const [editedTeamName, setEditedTeamName] = useState(teamData ? teamData.teamName : '');
     const [editedCategoryName, setEditedCategoryName] = useState(teamData ? teamData.categoryName : '');
-    // Nové stavy pre selectboxy
     const [editedArrivalType, setEditedArrivalType] = useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
     const [editedPackageName, setEditedPackageName] = useState(teamData ? teamData.packageDetails?.name || '' : '');
-    const [editedAccommodationType, setEditedAccommodationType] = useState(teamData ? teamData.accommodation?.type || '' : ''); // Nový stav pre typ ubytovania
+    const [editedAccommodationType, setEditedAccommodationType] = useState(teamData ? teamData.accommodation?.type || '' : '');
     
-    // Stavy pre čas príchodu - hodiny a minúty
     const [editedArrivalHour, setEditedArrivalHour] = useState('');
     const [editedArrivalMinute, setEditedArrivalMinute] = useState('');
 
-    // Stav pre tričká
     const [tshirtEntries, setTshirtEntries] = useState([]);
 
 
-    // Aktualizácia stavu, keď sa zmenia teamData (napr. pri otvorení pre iný tím)
     useEffect(() => {
         if (teamData) {
             setEditedTeamName(teamData.teamName || '');
             setEditedCategoryName(teamData.categoryName || '');
             setEditedArrivalType(teamData.arrival?.type || 'bez dopravy');
             setEditedPackageName(teamData.packageDetails?.name || '');
-            setEditedAccommodationType(teamData.accommodation?.type || ''); // Inicializácia typu ubytovania
+            setEditedAccommodationType(teamData.accommodation?.type || '');
 
-            // Parsujeme čas na hodiny a minúty
             if (teamData.arrival?.time) {
                 const [hour, minute] = teamData.arrival.time.split(':');
                 setEditedArrivalHour(hour || '');
@@ -366,7 +336,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                 setEditedArrivalMinute('');
             }
 
-            // Inicializácia tričiek
             setTshirtEntries(teamData.tshirts && Array.isArray(teamData.tshirts) ? teamData.tshirts.map(t => ({...t})) : []);
         }
     }, [teamData]);
@@ -375,7 +344,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
-    // Výpočet celkového počtu členov tímu
     const totalMembersInTeam = useMemo(() => {
         if (!teamData) return 0;
         const players = teamData.playerDetails?.length || 0;
@@ -386,22 +354,18 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         return players + menTeamMembers + womenTeamMembers + driverFemale + driverMale;
     }, [teamData]);
 
-    // Výpočet celkového počtu tričiek
     const totalTshirtsQuantity = useMemo(() => {
         return tshirtEntries.reduce((sum, entry) => sum + (parseInt(entry.quantity, 10) || 0), 0);
     }, [tshirtEntries]);
 
-    // Kontrola, či sú všetky selectboxy pre veľkosti tričiek vyplnené
     const allTshirtSizesSelected = useMemo(() => {
-        if (tshirtEntries.length === 0) return true; // Ak nie sú žiadne tričká, predpokladáme, že je to OK
+        if (tshirtEntries.length === 0) return true;
         return tshirtEntries.every(tshirt => tshirt.size !== '');
     }, [tshirtEntries]);
 
 
-    // Podmienka pre zablokovanie tlačidla "Uložiť zmeny"
     const isSaveButtonDisabled = totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected;
 
-    // Podmienka pre zablokovanie tlačidla "+" na pridanie tričiek
     const isAddTshirtButtonDisabled = totalTshirtsQuantity === totalMembersInTeam;
 
 
@@ -418,42 +382,32 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
             finalArrivalTime = `${editedArrivalHour.padStart(2, '0')}:${editedArrivalMinute.padStart(2, '0')}`;
         }
 
-        // Filtrujeme prázdne a neplatné záznamy tričiek a konvertujeme quantity na číslo
         const filteredTshirtEntries = tshirtEntries.filter(t => t.size && t.quantity && parseInt(t.quantity, 10) > 0)
                                                     .map(t => ({ ...t, quantity: parseInt(t.quantity, 10) }));
 
 
         const updatedTeamData = {
             ...teamData,
-            teamName: editedTeamName, // Použijeme pôvodný názov tímu, lebo sa neupravuje
-            categoryName: editedCategoryName, // Použijeme pôvodnú kategóriu, lebo sa neupravuje
-            // Aktualizácia typu dopravy a času príchodu
+            teamName: editedTeamName,
+            categoryName: editedCategoryName,
             arrival: { 
                 ...teamData.arrival, 
                 type: editedArrivalType,
                 time: finalArrivalTime
             },
-            // Aktualizácia názvu balíka
             packageDetails: { ...teamData.packageDetails, name: editedPackageName },
-            // Aktualizácia typu ubytovania
             accommodation: { ...teamData.accommodation, type: editedAccommodationType },
-            // Aktualizácia tričiek
             tshirts: filteredTshirtEntries
-            // Ostatné počty členov/šoférov sa zatiaľ neupravujú cez toto modálne okno
         };
         await onSaveTeam(updatedTeamData);
-        // Voláme onClose priamo po dokončení asynchrónnej operácie
         onClose();
     };
 
     const showArrivalTimeInputs = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
 
-    // Generovanie možností pre hodiny (00-23)
     const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-    // Generovanie možností pre minúty (00-59)
     const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
-    // Funkcie pre správu tričiek
     const handleAddTshirtEntry = () => {
         setTshirtEntries([...tshirtEntries, { size: '', quantity: 1 }]);
     };
@@ -470,7 +424,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
     const handleTshirtQuantityChange = (index, newQuantity) => {
         const updatedEntries = [...tshirtEntries];
-        // Ensure quantity is a positive number
         updatedEntries[index].quantity = Math.max(1, parseInt(newQuantity, 10) || 1);
         setTshirtEntries(updatedEntries);
     };
@@ -489,7 +442,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                 React.createElement(
                     'button',
                     { 
-                        onClick: onClose, // Priame volanie onClose
+                        onClick: onClose,
                         className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' 
                     },
                     '×'
@@ -498,9 +451,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
             React.createElement(
                 'form',
                 { onSubmit: handleSubmit, className: 'space-y-4' },
-                // Odstránené input boxy pre Názov tímu a Kategóriu
                 
-                // Selectbox pre Typ dopravy
                 React.createElement(
                     'div',
                     null,
@@ -518,18 +469,17 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                     React.createElement('option', { value: 'vlastná doprava' }, 'vlastná doprava')
                     )
                 ),
-                // Podmienené zobrazenie selectboxov pre čas príchodu
                 showArrivalTimeInputs && React.createElement(
                     'div',
-                    null, // Nový div kontajner pre nadpis a selectboxy
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Plánovaný čas príchodu na turnaj'), // Popisok
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Plánovaný čas príchodu na turnaj'),
                     React.createElement(
                         'div',
                         { className: 'flex space-x-2' },
                         React.createElement(
                             'div',
                             { className: 'w-1/2' },
-                            React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700' }, 'Hodina'), // Zviditeľnený popisok
+                            React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700' }, 'Hodina'),
                             React.createElement('select', {
                                 id: 'arrivalHour',
                                 className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
@@ -537,7 +487,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 onChange: (e) => setEditedArrivalHour(e.target.value),
                                 required: true
                             },
-                            React.createElement('option', { value: '' }, '-- Hodina --'), // Predvolená prázdna hodnota s popisom
+                            React.createElement('option', { value: '' }, '-- Hodina --'),
                             hourOptions.map((hour) =>
                                 React.createElement('option', { key: hour, value: hour }, hour)
                             )
@@ -546,7 +496,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         React.createElement(
                             'div',
                             { className: 'w-1/2' },
-                            React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700' }, 'Minúta'), // Zviditeľnený popisok
+                            React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700' }, 'Minúta'),
                             React.createElement('select', {
                                 id: 'arrivalMinute',
                                 className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
@@ -554,7 +504,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 onChange: (e) => setEditedArrivalMinute(e.target.value),
                                 required: true
                             },
-                            React.createElement('option', { value: '' }, '-- Minúta --'), // Predvolená prázdna hodnota s popisom
+                            React.createElement('option', { value: '' }, '-- Minúta --'),
                             minuteOptions.map((minute) =>
                                 React.createElement('option', { key: minute, value: minute }, minute)
                             )
@@ -562,7 +512,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         )
                     )
                 ),
-                // Selectbox pre Typ ubytovania
                 React.createElement(
                     'div',
                     null,
@@ -574,13 +523,12 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         onChange: (e) => setEditedAccommodationType(e.target.value),
                         required: true
                     },
-                    React.createElement('option', { value: 'bez ubytovania' }, 'bez ubytovania'), // Predvolená možnosť
-                    availableAccommodationTypes.slice().sort((a,b) => a.localeCompare(b)).map((type, idx) => // Zoradenie abecedne
+                    React.createElement('option', { value: 'bez ubytovania' }, 'bez ubytovania'),
+                    availableAccommodationTypes.slice().sort((a,b) => a.localeCompare(b)).map((type, idx) =>
                         React.createElement('option', { key: idx, value: type }, type)
                     )
                     )
                 ),
-                // Selectbox pre Balík
                 React.createElement(
                     'div',
                     null,
@@ -592,17 +540,15 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         onChange: (e) => setEditedPackageName(e.target.value),
                         required: true
                     },
-                    availablePackages.slice().sort().map((pkgName, idx) => // Zoradenie balíkov abecedne
+                    availablePackages.slice().sort().map((pkgName, idx) =>
                         React.createElement('option', { key: idx, value: pkgName }, pkgName)
                     )
                     )
                 ),
 
-                // Sekcia pre Tričká
                 React.createElement(
                     'div',
                     null,
-                    // Zmenené - odstránený dynamický text o počte tričiek/členov
                     React.createElement(
                         'div',
                         { className: 'mb-2' }, 
@@ -619,7 +565,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 required: true
                             },
                             React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
-                            availableTshirtSizes.slice().sort().map((size, sIdx) => // Načítavanie veľkostí z nového miesta
+                            availableTshirtSizes.slice().sort().map((size, sIdx) =>
                                 React.createElement('option', { key: sIdx, value: size }, size)
                             )
                             ),
@@ -643,25 +589,24 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                             )
                         )
                     )),
-                    // Nový kontajner pre tlačidlo "+", vždy centrovaný horizontálne
                     React.createElement(
                         'div',
-                        { className: 'flex justify-center mt-4' }, // Pridané mt-4 pre medzeru
+                        { className: 'flex justify-center mt-4' },
                         React.createElement(
                             'button',
                             {
                                 type: 'button',
                                 onClick: handleAddTshirtEntry,
-                                disabled: isAddTshirtButtonDisabled, // Zablokovanie tlačidla
+                                disabled: isAddTshirtButtonDisabled,
                                 className: `flex items-center justify-center w-8 h-8 rounded-full transition-colors focus:outline-none focus:ring-2
                                     ${isAddTshirtButtonDisabled
-                                        ? 'bg-white border border-solid' // Biele pozadie s orámovaním
+                                        ? 'bg-white border border-solid'
                                         : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500'
                                     }`,
                                 style: { 
-                                    cursor: isAddTshirtButtonDisabled ? 'not-allowed' : 'pointer', // Zmena kurzoru
-                                    borderColor: isAddTshirtButtonDisabled ? roleColor : 'transparent', // Farba orámovania
-                                    color: isAddTshirtButtonDisabled ? roleColor : 'white', // Farba SVG ikony
+                                    cursor: isAddTshirtButtonDisabled ? 'not-allowed' : 'pointer',
+                                    borderColor: isAddTshirtButtonDisabled ? roleColor : 'transparent',
+                                    color: isAddTshirtButtonDisabled ? roleColor : 'white',
                                 }
                             },
                             React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
@@ -677,7 +622,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         'button',
                         {
                             type: 'button',
-                            onClick: () => onDeleteTeam(teamData), // Call onDeleteTeam prop
+                            onClick: () => onDeleteTeam(teamData),
                             className: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors'
                         },
                         'Vymazať'
@@ -689,7 +634,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                             'button',
                             {
                                 type: 'button',
-                                onClick: onClose, // Priame volanie onClose
+                                onClick: onClose,
                                 className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
                             },
                             'Zrušiť'
@@ -716,21 +661,19 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
     );
 }
 
-// Komponent modálneho okna pre pridanie nového tímu
 function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategoriesFromSettings }) {
     const db = getFirestore();
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [teamNamePreview, setTeamNamePreview] = useState(''); // Predbežný názov tímu na zobrazenie
+    const [teamNamePreview, setTeamNamePreview] = useState('');
     const [arrivalType, setArrivalType] = useState('bez dopravy');
     const [arrivalHour, setArrivalHour] = useState('');
     const [arrivalMinute, setArrivalMinute] = useState('');
-    const [accommodationType, setAccommodationType] = useState('bez ubytovania'); // Predvolená hodnota
-    const [packageName, setPackageName] = useState(availablePackages.length > 0 ? availablePackages.sort()[0] : ''); // Predvolená hodnota
+    const [accommodationType, setAccommodationType] = useState('bez ubytovania');
+    const [packageName, setPackageName] = useState(availablePackages.length > 0 ? availablePackages.sort()[0] : '');
 
     const clubName = userProfileData?.billing?.clubName?.trim() || 'Neznámy klub';
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
-    // Reset stavov pri otvorení/zatvorení modalu
     useEffect(() => {
         if (show) {
             setSelectedCategory('');
@@ -743,43 +686,26 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
     }, [show, availablePackages]);
 
-    // Logika pre odvodenie názvu tímu pre náhľad v modálnom okne
     useEffect(() => {
-        console.log("AddTeamModal useEffect (generovanie názvu tímu - náhľad):");
-        console.log("  selectedCategory:", selectedCategory);
-        console.log("  clubName (trimmed):", clubName);
-        console.log("  teamsData:", teamsData);
-
         if (selectedCategory && teamsData && clubName !== 'Neznámy klub') {
             const allTeamsInCategory = teamsData[selectedCategory] || [];
-            console.log("  allTeamsInCategory for current category:", allTeamsInCategory);
 
             const existingClubTeamsInSelectedCategory = allTeamsInCategory
                 .filter(team => {
-                    // Normalize team.clubName for comparison in the filter
                     const teamClubNameNormalized = team.clubName?.trim() || ''; 
                     const isClubMatch = teamClubNameNormalized === clubName;
                     const isCategoryMatch = team.categoryName === selectedCategory;
-                    console.log(`    Team: ${team.teamName || 'N/A'}, Club: '${teamClubNameNormalized}' === '${clubName}' (${isClubMatch}), Category: '${team.categoryName}' === '${selectedCategory}' (${isCategoryMatch})`);
                     return isClubMatch && isCategoryMatch;
                 });
             
-            console.log("  existingClubTeamsInSelectedCategory (filtered):", existingClubTeamsInSelectedCategory);
-
             let generatedName = clubName;
             let hasUnsuffixedTeam = existingClubTeamsInSelectedCategory.some(team => team.teamName === clubName);
-            console.log("  hasUnsuffixedTeam:", hasUnsuffixedTeam);
 
             if (existingClubTeamsInSelectedCategory.length === 0) {
-                // Prvý tím pre tento klub/kategóriu, bez sufixu
                 generatedName = clubName;
-                console.log("  Scenario: No existing club teams in this category. Generated name: unsuffixed.");
             } else if (existingClubTeamsInSelectedCategory.length === 1 && hasUnsuffixedTeam) {
-                // Ak existuje presne jeden tím a je bez sufixu, nový dostane 'B' (starý sa stane 'A')
                 generatedName = `${clubName} B`;
-                console.log("  Scenario: One unsuffixed team exists. New team will be 'B'.");
             } else {
-                // Viac tímov alebo existujúci tím je už sufixový
                 let allExistingSuffixes = new Set();
                 existingClubTeamsInSelectedCategory.forEach(team => {
                     const match = team.teamName.match(new RegExp(`^${clubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s([A-Z])$`));
@@ -793,14 +719,11 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     nextSuffixCode++;
                 }
                 generatedName = `${clubName} ${String.fromCharCode(nextSuffixCode)}`;
-                console.log("  Scenario: Multiple teams or existing suffixed team. Next available suffix:", String.fromCharCode(nextSuffixCode), "Generated name:", generatedName);
             }
             
             setTeamNamePreview(generatedName);
-            console.log("  Vygenerovaný názov tímu (náhľad):", generatedName);
         } else {
             setTeamNamePreview('');
-            console.log("  Podmienky pre generovanie náhľadu názvu tímu nie sú splnené.");
         }
     }, [selectedCategory, clubName, teamsData]);
 
@@ -824,7 +747,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             finalArrivalTime = `${arrivalHour.padStart(2, '0')}:${arrivalMinute.padStart(2, '0')}`;
         }
 
-        const filteredTshirtEntries = []; // Tričká sú vždy prázdne pre nový tím
+        const filteredTshirtEntries = [];
 
         let packageDetails = {};
         if (packageName) {
@@ -849,7 +772,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
         
         const newTeamData = {
-            teamName: teamNamePreview, // Použijeme už vygenerovaný názov z náhľadu
+            teamName: teamNamePreview,
             categoryName: selectedCategory,
             clubName: clubName,
             players: 0,
@@ -865,7 +788,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             packageDetails: packageDetails,
             tshirts: filteredTshirtEntries,
         };
-        await onAddTeam(newTeamData); // Zavoláme funkciu na pridanie tímu z rodičovského komponentu
+        await onAddTeam(newTeamData);
         onClose();
     };
 
@@ -1046,7 +969,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     );
 }
 
-// Main React component for the logged-in-rosters.html page
 function RostersApp() {
   const auth = getAuth(); 
   const db = getFirestore();     
@@ -1054,26 +976,23 @@ function RostersApp() {
   const [user, setUser] = useState(null); 
   const [userProfileData, setUserProfileData] = useState(null); 
   const [isAuthReady, setIsAuthReady] = useState(false); 
-  const [teamsData, setTeamsData] = useState({}); // Nový stav pre dáta tímov
-  const [showEditTeamModal, setShowEditTeamModal] = useState(false); // Stav pre modálne okno
-  const [selectedTeam, setSelectedTeam] = useState(null); // Stav pre vybraný tím na úpravu
-  const [availablePackages, setAvailablePackages] = useState([]); // Nový stav pre balíky z databázy
-  const [availableAccommodationTypes, setAvailableAccommodationTypes] = useState([]); // Nový stav pre typy ubytovania
-  const [availableTshirtSizes, setAvailableTshirtSizes] = useState([]); // Nový stav pre dostupné veľkosti tričiek
-  const [showAddMemberTypeModal, setShowAddMemberTypeModal] = useState(false); // Stav pre modálne okno výberu typu člena
-  const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = useState(false); // Stav pre modálne okno detailov člena
-  const [memberTypeToAdd, setMemberTypeToAdd] = useState(null); // Typ člena, ktorý sa má pridať
-  const [teamToAddMemberTo, setTeamToAddMemberTo] = useState(null); // Tím, do ktorého sa pridáva člen
-  const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = useState(''); // Ubytovanie tímu pre nový modal
-  const [showAddTeamModal, setShowAddTeamModal] = useState(false); // Nový stav pre modálne okno pridania tímu
-  // Zmenený názov stavu pre kategórie z nastavení
+  const [teamsData, setTeamsData] = useState({});
+  const [showEditTeamModal, setShowEditTeamModal] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [availablePackages, setAvailablePackages] = useState([]);
+  const [availableAccommodationTypes, setAvailableAccommodationTypes] = useState([]);
+  const [availableTshirtSizes, setAvailableTshirtSizes] = useState([]);
+  const [showAddMemberTypeModal, setShowAddMemberTypeModal] = useState(false);
+  const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = useState(false);
+  const [memberTypeToAdd, setMemberTypeToAdd] = useState(null);
+  const [teamToAddMemberTo, setTeamToAddMemberTo] = useState(null);
+  const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = useState('');
+  const [showAddTeamModal, setShowAddTeamModal] = useState(false);
   const [availableCategoriesFromSettings, setAvailableCategoriesFromSettings] = useState([]);
 
 
-  // Loading stav pre používateľský profil
   const [loading, setLoading] = useState(true); 
 
-  // Používateľské ID pre Firebase App ID
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
   useEffect(() => {
@@ -1107,7 +1026,6 @@ function RostersApp() {
     };
   }, []); 
 
-  // Načítanie zoznamu balíkov z Firestore
   useEffect(() => {
       let unsubscribePackages;
       if (db) {
@@ -1122,7 +1040,6 @@ function RostersApp() {
                       }
                   });
                   setAvailablePackages(packagesList);
-                  console.log("RostersApp: Packages loaded:", packagesList);
               }, (error) => {
                   console.error("RostersApp: Error fetching packages:", error);
               });
@@ -1137,7 +1054,6 @@ function RostersApp() {
       };
   }, [db]);
 
-  // Načítanie typov ubytovania z Firestore
   useEffect(() => {
       let unsubscribeAccommodation;
       if (db) {
@@ -1148,9 +1064,7 @@ function RostersApp() {
                       const data = docSnapshot.data();
                       const types = data.types?.map(typeObj => typeObj.type) || [];
                       setAvailableAccommodationTypes(types);
-                      console.log("RostersApp: Accommodation types loaded:", types);
                   } else {
-                      console.log("RostersApp: Accommodation settings document not found.");
                       setAvailableAccommodationTypes([]);
                   }
               }, (error) => {
@@ -1167,20 +1081,17 @@ function RostersApp() {
       };
   }, [db]);
 
-  // Načítanie dostupných veľkostí tričiek z Firestore
   useEffect(() => {
     let unsubscribeTshirtSizes;
     if (db) {
         try {
-            const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts'); // Zmenený názov dokumentu
+            const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts');
             unsubscribeTshirtSizes = onSnapshot(tshirtSizesDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    const sizes = data.sizes || []; // Predpokladáme pole stringov priamo
+                    const sizes = data.sizes || [];
                     setAvailableTshirtSizes(sizes);
-                    console.log("RostersApp: Tshirt sizes loaded:", sizes);
                 } else {
-                    console.log("RostersApp: Tshirt sizes settings document not found.");
                     setAvailableTshirtSizes([]);
                 }
             }, (error) => {
@@ -1197,31 +1108,25 @@ function RostersApp() {
     };
   }, [db]);
 
-  // Nový useEffect pre načítanie kategórií z /settings/categories
   useEffect(() => {
     let unsubscribeCategories;
     if (db) {
         try {
-            // Referencia na dokument 'categories' v kolekcii 'settings'
             const categoriesDocRef = doc(db, 'settings', 'categories'); 
             unsubscribeCategories = onSnapshot(categoriesDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
                     const categoriesList = [];
-                    // Iterujeme cez náhodné ID polia v dokumente kategórií
                     for (const fieldName in data) {
                         if (Object.prototype.hasOwnProperty.call(data, fieldName)) {
-                            const categoryObject = data[fieldName]; // categoryObject je teraz {name: "Category Name", ...}
-                            // Priamo pristupujeme ku kľúču 'name' v objekte
+                            const categoryObject = data[fieldName];
                             if (categoryObject && typeof categoryObject === 'object' && categoryObject.name) {
                                 categoriesList.push(categoryObject.name);
                             }
                         }
                     }
                     setAvailableCategoriesFromSettings(categoriesList);
-                    console.log("RostersApp: Categories from settings loaded:", categoriesList);
                 } else {
-                    console.warn("RostersApp: Dokument 'settings/categories' sa nenašiel.");
                     setAvailableCategoriesFromSettings([]);
                 }
             }, (error) => {
@@ -1243,7 +1148,6 @@ function RostersApp() {
     let unsubscribeUserDoc;
 
     if (user && db && isAuthReady) {
-      console.log(`RostersApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
       setLoading(true); 
 
       try {
@@ -1251,11 +1155,9 @@ function RostersApp() {
         unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => { 
           if (docSnapshot.exists()) { 
             const userData = docSnapshot.data();
-            console.log("RostersApp: Používateľský dokument existuje, dáta:", userData);
             setUserProfileData(userData);
             
             if (userData.teams) {
-                // Normalize teams data to ensure clubName and categoryName are always present and trimmed
                 const normalizedTeams = {};
                 const currentClubName = userData.billing?.clubName?.trim() || 'Neznámy klub';
 
@@ -1264,10 +1166,7 @@ function RostersApp() {
                         normalizedTeams[categoryKey] = userData.teams[categoryKey].map(team => {
                             return {
                                 ...team,
-                                // If team.clubName is missing or undefined, assign the current clubName
-                                // Also ensure it's trimmed for consistency
                                 clubName: team.clubName?.trim() || currentClubName,
-                                // If team.categoryName is missing or undefined, assign the current categoryKey
                                 categoryName: team.categoryName || categoryKey 
                             };
                         });
@@ -1279,7 +1178,6 @@ function RostersApp() {
             }
             setLoading(false);
           } else {
-            console.warn("RostersApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             setLoading(false);
           }
         }, error => {
@@ -1298,7 +1196,6 @@ function RostersApp() {
 
     return () => {
       if (unsubscribeUserDoc) {
-        console.log("RostersApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
@@ -1410,7 +1307,6 @@ function RostersApp() {
                 updatedTeamData.packageDetails.price = packageData.price || 0;
                 updatedTeamData.packageDetails.id = packageDoc.id;
             } else {
-                console.warn(`Package with name ${newPackageName} not found.`);
                 updatedTeamData.packageDetails.meals = {};
                 updatedTeamData.packageDetails.price = 0;
                 updatedTeamData.packageDetails.id = null;
@@ -1452,7 +1348,6 @@ const handleDeleteTeam = async (teamToDelete) => {
         return;
     }
 
-    // Confirmation dialog
     const confirmDelete = await new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center';
@@ -1479,11 +1374,11 @@ const handleDeleteTeam = async (teamToDelete) => {
     });
 
     if (!confirmDelete) {
-        return; // User cancelled
+        return;
     }
 
     const userDocRef = doc(db, 'users', user.uid);
-    const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); // Hlboká kópia pre úpravy
+    const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData));
 
     const categoryToDeleteFrom = teamToDelete.categoryName;
     const clubName = userProfileData.billing.clubName?.trim();
@@ -1493,12 +1388,10 @@ const handleDeleteTeam = async (teamToDelete) => {
         return;
     }
 
-    // Filter out the deleted team
     let teamsInCurrentCategory = currentTeamsCopy[categoryToDeleteFrom].filter(
         team => team.teamName !== teamToDelete.teamName
     );
 
-    // Separate teams belonging to this club and others in the same category
     let clubTeamsInCategory = teamsInCurrentCategory.filter(
         team => team.clubName?.trim() === clubName
     );
@@ -1506,37 +1399,29 @@ const handleDeleteTeam = async (teamToDelete) => {
         team => team.clubName?.trim() !== clubName
     );
 
-    // Sort club teams by their current suffix for re-alphabetization
     clubTeamsInCategory.sort((a, b) => {
-        // Extract suffix or consider the whole name if no suffix
         const getSuffixPart = (teamName, baseClubName) => {
             const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
             const match = teamName.match(regex);
-            return match ? match[1] : ''; // Return the suffix letter, or empty string if no suffix
+            return match ? match[1] : '';
         };
 
         const suffixA = getSuffixPart(a.teamName, clubName);
         const suffixB = getSuffixPart(b.teamName, clubName);
 
-        // Treat empty suffix as "before A" for sorting purposes
         if (suffixA === '' && suffixB !== '') return -1;
         if (suffixA !== '' && suffixB === '') return 1;
         return suffixA.localeCompare(suffixB);
     });
 
-    // Apply new suffixes if necessary
     if (clubTeamsInCategory.length > 1) {
-        // More than one team, re-alphabetize with suffixes A, B, C...
         for (let i = 0; i < clubTeamsInCategory.length; i++) {
             clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
         }
     } else if (clubTeamsInCategory.length === 1) {
-        // Only one team left, remove suffix
         clubTeamsInCategory[0].teamName = clubName;
     }
-    // If clubTeamsInCategory.length === 0, no teams left, nothing to re-suffix
 
-    // Reconstruct the category array
     currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategory, ...clubTeamsInCategory];
 
     try {
@@ -1544,7 +1429,7 @@ const handleDeleteTeam = async (teamToDelete) => {
             teams: currentTeamsCopy
         });
         showLocalNotification('Tím bol úspešne vymazaný!', 'success');
-        setShowEditTeamModal(false); // Close the modal after deletion
+        setShowEditTeamModal(false);
     } catch (error) {
         console.error("Chyba pri mazaní tímu:", error);
         showLocalNotification('Nastala chyba pri mazaní tímu.', 'error');
@@ -1803,7 +1688,7 @@ const handleDeleteTeam = async (teamToDelete) => {
           onClose: () => setShowEditTeamModal(false),
           teamData: selectedTeam,
           onSaveTeam: handleSaveTeam,
-          onDeleteTeam: handleDeleteTeam, // Pass the new delete handler
+          onDeleteTeam: handleDeleteTeam,
           userProfileData: userProfileData,
           availablePackages: availablePackages,
           availableAccommodationTypes: availableAccommodationTypes,
