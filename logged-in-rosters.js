@@ -734,22 +734,35 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     useEffect(() => {
         console.log("AddTeamModal useEffect (generovanie názvu tímu - náhľad):");
         console.log("  selectedCategory:", selectedCategory);
-        console.log("  clubName:", clubName);
+        console.log("  clubName (trimmed):", clubName);
         console.log("  teamsData:", teamsData);
 
         if (selectedCategory && teamsData && clubName !== 'Neznámy klub') {
-            const existingClubTeamsInSelectedCategory = (teamsData[selectedCategory] || [])
-                .filter(team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory);
+            const allTeamsInCategory = teamsData[selectedCategory] || [];
+            console.log("  allTeamsInCategory for current category:", allTeamsInCategory);
+
+            const existingClubTeamsInSelectedCategory = allTeamsInCategory
+                .filter(team => {
+                    const isClubMatch = team.clubName?.trim() === clubName;
+                    const isCategoryMatch = team.categoryName === selectedCategory;
+                    console.log(`    Team: ${team.teamName || 'N/A'}, Club: '${team.clubName?.trim()}' === '${clubName}' (${isClubMatch}), Category: '${team.categoryName}' === '${selectedCategory}' (${isCategoryMatch})`);
+                    return isClubMatch && isCategoryMatch;
+                });
             
+            console.log("  existingClubTeamsInSelectedCategory (filtered):", existingClubTeamsInSelectedCategory);
+
             let generatedName = clubName;
             let hasUnsuffixedTeam = existingClubTeamsInSelectedCategory.some(team => team.teamName === clubName);
+            console.log("  hasUnsuffixedTeam:", hasUnsuffixedTeam);
 
             if (existingClubTeamsInSelectedCategory.length === 0) {
                 // Prvý tím pre tento klub/kategóriu, bez sufixu
                 generatedName = clubName;
+                console.log("  Scenario: No existing club teams in this category. Generated name: unsuffixed.");
             } else if (existingClubTeamsInSelectedCategory.length === 1 && hasUnsuffixedTeam) {
                 // Ak existuje presne jeden tím a je bez sufixu, nový dostane 'B' (starý sa stane 'A')
                 generatedName = `${clubName} B`;
+                console.log("  Scenario: One unsuffixed team exists. New team will be 'B'.");
             } else {
                 // Viac tímov alebo existujúci tím je už sufixový
                 let allExistingSuffixes = new Set();
@@ -765,6 +778,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     nextSuffixCode++;
                 }
                 generatedName = `${clubName} ${String.fromCharCode(nextSuffixCode)}`;
+                console.log("  Scenario: Multiple teams or existing suffixed team. Next available suffix:", String.fromCharCode(nextSuffixCode), "Generated name:", generatedName);
             }
             
             setTeamNamePreview(generatedName);
