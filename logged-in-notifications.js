@@ -677,7 +677,7 @@ function NotificationsApp() {
             },
             'Označiť všetky ako prečítané'
           ),
-          hasActiveNotifications && React.createElement(
+          hasActiveNotifications && !showRestoreView && React.createElement( // ZMENA: "Vymazať všetky" sa nezobrazí v režime obnovy
             'button',
             {
               onClick: handleDeleteAllNotificationsClick,
@@ -695,7 +695,7 @@ function NotificationsApp() {
             },
             restoreButtonText
           ),
-          // NOVÉ: Tlačidlo "Označiť všetky / Odznačiť všetky" pre režim obnovy
+          // NOVÉ: Tlačidlo "Označiť všetky / Odznač všetky" pre režim obnovy
           showRestoreView && displayedNotifications.length > 0 && React.createElement(
             'button',
             {
