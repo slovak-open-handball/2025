@@ -1783,7 +1783,6 @@ const handleSaveNewMember = async (newMemberDetails) => {
                           )
                         )
                       )
-                    )
                   })
                 )
               )
