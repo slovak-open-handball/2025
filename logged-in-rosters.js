@@ -559,8 +559,22 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         { className: 'mb-2' }, 
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Tričká'),
                     ),
-                    tshirtEntries.map((tshirt, index) => (
-                        React.createElement(
+                    tshirtEntries.map((tshirt, index) => {
+                        // Získame všetky vybraté veľkosti tričiek, okrem tej, ktorá patrí k aktuálnemu riadku
+                        const selectedSizesExcludingCurrent = new Set(
+                            tshirtEntries
+                                .filter((_, i) => i !== index)
+                                .map(entry => entry.size)
+                                .filter(Boolean) 
+                        );
+
+                        // Filtrujeme dostupné veľkosti tričiek
+                        const filteredAvailableSizes = availableTshirtSizes
+                            .filter(size => !selectedSizesExcludingCurrent.has(size) || size === tshirt.size)
+                            .slice()
+                            .sort();
+
+                        return React.createElement(
                             'div',
                             { key: index, className: 'flex items-center space-x-2 mb-2' },
                             React.createElement('select', {
@@ -570,7 +584,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 required: true
                             },
                             React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
-                            availableTshirtSizes.slice().sort().map((size, sIdx) =>
+                            filteredAvailableSizes.map((size, sIdx) =>
                                 React.createElement('option', { key: sIdx, value: size }, size)
                             )
                             ),
@@ -593,7 +607,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M20 12H4' }))
                             )
                         )
-                    )),
+                    }),
                     React.createElement(
                         'div',
                         { className: 'flex justify-center mt-4' },
