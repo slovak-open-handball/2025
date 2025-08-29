@@ -365,22 +365,20 @@ function RostersApp() {
                                         // Zabezpečí, že ak je to dátum, má aspoň jedno aktívne jedlo
                                         // A tiež vylúčime 'participantCard' z dátumov
                                         return isValidDate && key !== 'participantCard' && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
-                                    }).map(date =>
-                                        React.createElement(
-                                            'div',
-                                            { key: date, className: 'ml-2' },
-                                            React.createElement('p', { className: 'text-sm text-gray-600' }, `Dátum: ${formatDateToDMMYYYY(date)}`),
-                                            React.createElement(
-                                                'ul',
-                                                { className: 'list-disc list-inside ml-4' },
-                                                Object.entries(team.packageDetails.meals[date]).map(([mealType, status]) =>
-                                                    React.createElement('li', { key: `${date}-${mealType}`, className: 'text-sm text-gray-600' },
-                                                        `${mealTypeLabels[mealType] || mealType}: ${status === 1 ? 'Áno' : 'Nie'}`
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
+                                    }).map(date => {
+                                        const activeMeals = Object.entries(team.packageDetails.meals[date])
+                                            .filter(([, status]) => status === 1) // Len jedlá s hodnotou 1
+                                            .map(([mealType]) => (mealTypeLabels[mealType] || mealType).toLowerCase()); // Názvy jedál malými písmenami
+
+                                        const activeMealsString = activeMeals.join(', ');
+
+                                        // Zobrazíme dátum a aktívne jedlá v jednom riadku
+                                        return React.createElement(
+                                            'p',
+                                            { key: date, className: 'text-sm text-gray-600 ml-2' },
+                                            `${formatDateToDMMYYYY(date)}: ${activeMealsString}`
+                                        );
+                                    })
                                 )
                             )
                         ),
