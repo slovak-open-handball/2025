@@ -247,9 +247,11 @@ function RostersApp() {
                     const arrivalType = team.arrival?.type || 'Nezadané';
                     const accommodationType = team.accommodation?.type || 'Nezadané';
                     const packageName = team.packageDetails?.name || 'Nezadané';
+                    
+                    // Upravená podmienka pre čas príchodu s pridaným "hod."
                     const arrivalTime = (
                         (arrivalType === "verejná doprava - autobus" || arrivalType === "verejná doprava - vlak") && team.arrival?.time
-                    ) ? ` (čas: ${team.arrival.time})` : '';
+                    ) ? ` (čas: ${team.arrival.time} hod.)` : '';
 
 
                     return React.createElement('div', { key: index, className: 'border-l-4 border-[#9333EA] pl-4 py-4 bg-white rounded-md shadow-sm' }, // Zmenená farba na #9333EA
