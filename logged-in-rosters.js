@@ -166,7 +166,8 @@ function RostersApp() {
           type: 'Hráč',
           firstName: player.firstName,
           lastName: player.lastName,
-          jerseyNumber: player.jerseyNumber
+          jerseyNumber: player.jerseyNumber,
+          address: player.address // Pridanie adresy
         });
       });
     }
@@ -177,7 +178,8 @@ function RostersApp() {
         members.push({
           type: 'Člen realizačného tímu (muž)',
           firstName: member.firstName,
-          lastName: member.lastName
+          lastName: member.lastName,
+          address: member.address // Pridanie adresy
         });
       });
     }
@@ -188,7 +190,8 @@ function RostersApp() {
         members.push({
           type: 'Člen realizačného tímu (žena)',
           firstName: member.firstName,
-          lastName: member.lastName
+          lastName: member.lastName,
+          address: member.address // Pridanie adresy
         });
       });
     }
@@ -199,7 +202,8 @@ function RostersApp() {
         members.push({
           type: 'Šofér (žena)',
           firstName: driver.firstName,
-          lastName: driver.lastName
+          lastName: driver.lastName,
+          address: driver.address // Pridanie adresy
         });
       });
     }
@@ -210,7 +214,8 @@ function RostersApp() {
         members.push({
           type: 'Šofér (muž)',
           firstName: driver.firstName,
-          lastName: driver.lastName
+          lastName: driver.lastName,
+          address: driver.address // Pridanie adresy
         });
       });
     }
@@ -258,7 +263,6 @@ function RostersApp() {
                     
                     // Extrahovanie informácií o doprave, ubytovaní a balíku
                     const arrivalType = team.arrival?.type || 'Nezadané';
-                    // Opravená referencia pre typ ubytovania
                     const accommodationType = team.accommodation?.type || 'Nezadané'; 
                     const packageName = team.packageDetails?.name || 'Nezadané';
                     
@@ -267,6 +271,32 @@ function RostersApp() {
                         (arrivalType === "verejná doprava - autobus" || arrivalType === "verejná doprava - vlak") && team.arrival?.time
                     ) ? ` (čas: ${team.arrival.time} hod.)` : '';
 
+                    // Určenie, či zobraziť stĺpec Adresa
+                    const shouldShowAddressColumn = accommodationType !== 'bez ubytovania';
+
+                    // Helper funkcia na formátovanie adresy
+                    const formatAddress = (address) => {
+                        if (!address) return '-';
+                        const parts = [];
+                        if (address.street && address.houseNumber) {
+                            parts.push(`${address.street} ${address.houseNumber}`);
+                        } else if (address.street) {
+                            parts.push(address.street);
+                        } else if (address.houseNumber) {
+                            parts.push(address.houseNumber);
+                        }
+                        if (address.postalCode && address.city) {
+                            parts.push(`${address.postalCode} ${address.city}`);
+                        } else if (address.postalCode) {
+                            parts.push(address.postalCode);
+                        } else if (address.city) {
+                            parts.push(address.city);
+                        }
+                        if (address.country) {
+                            parts.push(address.country);
+                        }
+                        return parts.length > 0 ? parts.join(', ') : '-';
+                    };
 
                     return React.createElement('div', { key: index, className: 'border-l-4 border-[#9333EA] pl-4 py-4 bg-white rounded-md shadow-sm' }, // Zmenená farba na #9333EA
                       React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
@@ -289,6 +319,8 @@ function RostersApp() {
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Typ člena'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Meno'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Priezvisko'),
+                                  // Podmienené zobrazenie stĺpca Adresa
+                                  shouldShowAddressColumn && React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Adresa'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Číslo dresu (len hráč)'),
                                 )
                               ),
@@ -298,6 +330,8 @@ function RostersApp() {
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
+                                    // Podmienené zobrazenie bunky s adresou
+                                    shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 text-sm text-gray-800' }, formatAddress(member.address)),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
                                   )
                                 ))
