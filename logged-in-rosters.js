@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -75,6 +75,204 @@ const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
 
 
+// Komponent modálneho okna pre úpravu tímu
+function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData }) {
+    const [editedTeamName, setEditedTeamName] = React.useState(teamData ? teamData.teamName : '');
+    const [editedCategoryName, setEditedCategoryName] = React.useState(teamData ? teamData.categoryName : '');
+    const [editedPlayers, setEditedPlayers] = React.useState(teamData ? teamData.players : 0);
+    const [editedWomenTeamMembers, setEditedWomenTeamMembers] = React.useState(teamData ? teamData.womenTeamMembers : 0);
+    const [editedMenTeamMembers, setEditedMenTeamMembers] = React.useState(teamData ? teamData.menTeamMembers : 0);
+    const [editedDriverDetailsFemale, setEditedDriverDetailsFemale] = React.useState(teamData ? teamData.driverDetailsFemale?.length || 0 : 0);
+    const [editedDriverDetailsMale, setEditedDriverDetailsMale] = React.useState(teamData ? teamData.driverDetailsMale?.length || 0 : 0);
+
+
+    // Aktualizácia stavu, keď sa zmenia teamData (napr. pri otvorení pre iný tím)
+    React.useEffect(() => {
+        if (teamData) {
+            setEditedTeamName(teamData.teamName || '');
+            setEditedCategoryName(teamData.categoryName || '');
+            setEditedPlayers(teamData.players || 0);
+            setEditedWomenTeamMembers(teamData.womenTeamMembers || 0);
+            setEditedMenTeamMembers(teamData.menTeamMembers || 0);
+            setEditedDriverDetailsFemale(teamData.driverDetailsFemale?.length || 0);
+            setEditedDriverDetailsMale(teamData.driverDetailsMale?.length || 0);
+        }
+    }, [teamData]);
+
+    if (!show) return null;
+
+    // Funkcia na získanie farby roly pre nadpis modálneho okna
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'admin':
+                return '#47b3ff';
+            case 'hall':
+                return '#b06835';
+            case 'user':
+                return '#9333EA';
+            default:
+                return '#1D4ED8';
+        }
+    };
+    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const updatedTeamData = {
+            ...teamData,
+            teamName: editedTeamName,
+            categoryName: editedCategoryName,
+            players: editedPlayers,
+            womenTeamMembers: editedWomenTeamMembers,
+            menTeamMembers: editedMenTeamMembers,
+            // Pre šoférov uložíme len počet, nie celé pole detailov
+            // Predpokladáme, že detaily šoférov by sa upravovali inde, ak vôbec
+            driverDetailsFemale: Array(editedDriverDetailsFemale).fill({}), // Len placeholder pre počet
+            driverDetailsMale: Array(editedDriverDetailsMale).fill({})      // Len placeholder pre počet
+        };
+        await onSaveTeam(updatedTeamData);
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center' },
+        React.createElement(
+            'div',
+            { className: 'relative p-8 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg' },
+            React.createElement(
+                'div',
+                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
+                React.createElement('h3', { className: 'text-2xl font-semibold' }, `Upraviť tím: ${teamData.teamName}`),
+                React.createElement(
+                    'button',
+                    { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
+                    '×'
+                )
+            ),
+            React.createElement(
+                'form',
+                { onSubmit: handleSubmit, className: 'space-y-4' },
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'teamName', className: 'block text-sm font-medium text-gray-700' }, 'Názov tímu'),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'teamName',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedTeamName,
+                        onChange: (e) => setEditedTeamName(e.target.value),
+                        required: true
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'categoryName', className: 'block text-sm font-medium text-gray-700' }, 'Kategória'),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'categoryName',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedCategoryName,
+                        onChange: (e) => setEditedCategoryName(e.target.value),
+                        required: true
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'players', className: 'block text-sm font-medium text-gray-700' }, 'Počet hráčov'),
+                    React.createElement('input', {
+                        type: 'number',
+                        id: 'players',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedPlayers,
+                        onChange: (e) => setEditedPlayers(parseInt(e.target.value, 10) || 0),
+                        min: '0'
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'womenTeamMembers', className: 'block text-sm font-medium text-gray-700' }, 'Členovia realizačného tímu (ženy)'),
+                    React.createElement('input', {
+                        type: 'number',
+                        id: 'womenTeamMembers',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedWomenTeamMembers,
+                        onChange: (e) => setEditedWomenTeamMembers(parseInt(e.target.value, 10) || 0),
+                        min: '0'
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'menTeamMembers', className: 'block text-sm font-medium text-gray-700' }, 'Členovia realizačného tímu (muži)'),
+                    React.createElement('input', {
+                        type: 'number',
+                        id: 'menTeamMembers',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedMenTeamMembers,
+                        onChange: (e) => setEditedMenTeamMembers(parseInt(e.target.value, 10) || 0),
+                        min: '0'
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'driverDetailsFemale', className: 'block text-sm font-medium text-gray-700' }, 'Šoféri (ženy)'),
+                    React.createElement('input', {
+                        type: 'number',
+                        id: 'driverDetailsFemale',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedDriverDetailsFemale,
+                        onChange: (e) => setEditedDriverDetailsFemale(parseInt(e.target.value, 10) || 0),
+                        min: '0'
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'driverDetailsMale', className: 'block text-sm font-medium text-gray-700' }, 'Šoféri (muži)'),
+                    React.createElement('input', {
+                        type: 'number',
+                        id: 'driverDetailsMale',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedDriverDetailsMale,
+                        onChange: (e) => setEditedDriverDetailsMale(parseInt(e.target.value, 10) || 0),
+                        min: '0'
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end space-x-2 mt-6' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: onClose,
+                            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'submit',
+                            className: `px-4 py-2 text-white rounded-md transition-colors`,
+                            style: { backgroundColor: roleColor, hoverBackgroundColor: roleColor }
+                        },
+                        'Uložiť zmeny'
+                    )
+                )
+            )
+        )
+    );
+}
+
+
 // Main React component for the logged-in-rosters.html page
 function RostersApp() {
   const auth = getAuth(); 
@@ -84,6 +282,8 @@ function RostersApp() {
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
   const [teamsData, setTeamsData] = React.useState({}); // Nový stav pre dáta tímov
+  const [showEditTeamModal, setShowEditTeamModal] = React.useState(false); // Stav pre modálne okno
+  const [selectedTeam, setSelectedTeam] = React.useState(null); // Stav pre vybraný tím na úpravu
 
   // Loading stav pre používateľský profil
   const [loading, setLoading] = React.useState(true); 
@@ -261,6 +461,62 @@ function RostersApp() {
     }
   };
 
+  // Funkcia pre otvorenie modálneho okna na úpravu tímu
+  const handleOpenEditTeamModal = (team) => {
+    setSelectedTeam({ ...team, categoryName: team.categoryName }); // Uložíme celý tím a jeho kategóriu
+    setShowEditTeamModal(true);
+  };
+
+  // Funkcia pre uloženie zmien tímu
+  const handleSaveTeam = async (updatedTeamData) => {
+    if (!user || !user.uid) {
+        showLocalNotification('Chyba: Používateľ nie je prihlásený.', 'error');
+        return;
+    }
+
+    // Predpokladáme, že updatedTeamData obsahuje všetky upravené polia
+    // Potrebujeme nájsť správny tím v rámci user.teams[categoryName]
+    // A aktualizovať ho vo Firestore
+    const teamCategory = updatedTeamData.categoryName;
+    const teamIndex = teamsData[teamCategory].findIndex(t => t.teamName === updatedTeamData.teamName);
+
+    if (teamIndex !== -1) {
+        const userDocRef = doc(db, 'users', user.uid);
+        const currentTeams = { ...teamsData }; // Kópia existujúcich tímov
+
+        // Vytvorenie novej štruktúry pre aktualizáciu konkrétneho tímu v rámci kategórie
+        currentTeams[teamCategory][teamIndex] = updatedTeamData;
+
+        try {
+            await updateDoc(userDocRef, {
+                teams: currentTeams
+            });
+            showLocalNotification('Údaje tímu boli úspešne aktualizované!', 'success');
+        } catch (error) {
+            console.error("Chyba pri aktualizácii tímu:", error);
+            showLocalNotification('Nastala chyba pri aktualizácii údajov tímu.', 'error');
+        }
+    } else {
+        showLocalNotification('Chyba: Tím nebol nájdený pre aktualizáciu.', 'error');
+    }
+};
+
+    // Funkcia na získanie farby roly pre nadpis
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'admin':
+                return '#47b3ff';
+            case 'hall':
+                return '#b06835';
+            case 'user':
+                return '#9333EA'; // Používateľ má fialovú
+            default:
+                return '#1D4ED8';
+        }
+    };
+    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto w-full' }, // Odstránené 'items-center'
@@ -328,14 +584,29 @@ function RostersApp() {
                         className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4 w-full' // Pridané w-full
                     }, 
                       // Kontajner pre fialový pásik a texty kategórie a názvu tímu
-                      React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 rounded-t-lg w-full' }, // Pridané w-full
-                        React.createElement('div', { className: 'text-center font-bold text-xl mb-2' }, 'Súpiska tímu'), // Pridané text-xl
-                        React.createElement('p', { className: 'text-xl font-semibold mb-2' }, `Kategória: ${categoryName}`), 
-                        React.createElement('p', { className: 'text-xl font-semibold mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`)
+                      // Pridal som flexbox a justify-between pre zarovnanie nadpisu a tlačidla
+                      React.createElement('div', { className: `bg-[#9333EA] text-white py-2 px-6 rounded-t-lg w-full flex justify-between items-center` }, // Upravené
+                        React.createElement('p', { className: 'text-xl font-semibold' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`), // Zmenený poriadok, aby bol nadpis hlavný
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => handleOpenEditTeamModal({ ...team, categoryName: categoryName }),
+                                className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
+                                'aria-label': 'Upraviť tím',
+                                style: { color: roleColor }
+                            },
+                            React.createElement(
+                                'svg',
+                                { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                            ),
+                            React.createElement('span', { className: 'font-medium' }, 'Upraviť')
+                        )
                       ),
                       
                       // Kontajner pre ostatný obsah pod fialovým pásikom s polstrovaním
                       React.createElement('div', { className: 'px-6 pt-4 w-full' }, // Pridané w-full
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Kategória: ${categoryName}`), // Kategória premiestnená
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`), 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}`),
@@ -457,7 +728,18 @@ function RostersApp() {
         ) : (
           React.createElement('p', { className: 'text-center text-gray-600 text-lg py-8' }, 'Zatiaľ neboli vytvorené žiadne tímy pre tohto používateľa.')
         )
-      ) 
+      ),
+      // Modálne okno pre úpravu tímu
+      selectedTeam && React.createElement(
+        EditTeamModal,
+        {
+          show: showEditTeamModal,
+          onClose: () => setShowEditTeamModal(false),
+          teamData: selectedTeam,
+          onSaveTeam: handleSaveTeam,
+          userProfileData: userProfileData // Pre farbu nadpisu
+        }
+      )
     )
   );
 }
