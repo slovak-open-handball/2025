@@ -316,23 +316,23 @@ function RostersApp() {
                             React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
                               React.createElement('thead', null,
                                 React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
-                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Typ člena'),
-                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Meno'),
-                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Priezvisko'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Typ člena'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu'), {/* Presunutý stĺpec a odstránený "(len hráč)" */}
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Meno'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Priezvisko'),
                                   // Podmienené zobrazenie stĺpca Adresa
-                                  shouldShowAddressColumn && React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Adresa'),
-                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Číslo dresu (len hráč)'),
+                                  shouldShowAddressColumn && React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Adresa'),
                                 )
                               ),
                               React.createElement('tbody', { className: 'divide-y divide-gray-200' },
                                 allMembers.map((member, mIndex) => (
                                   React.createElement('tr', { key: mIndex, className: 'hover:bg-gray-50' },
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'), {/* Presunutá bunka */}
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
                                     // Podmienené zobrazenie bunky s adresou
                                     shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, formatAddress(member.address)),
-                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
                                   )
                                 ))
                               )
