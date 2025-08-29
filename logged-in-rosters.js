@@ -348,7 +348,7 @@ function RostersApp() {
                             React.createElement(
                                 'div',
                                 { className: 'ml-4 mt-2 mb-4 space-y-1' }, // Odsadenie a priestor pre detaily
-                                React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} €`),
+                                React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} € / osoba`), // Upravený text
                                 // Úprava pre zobrazenie Účastníckej karty
                                 // Teraz kontrolujeme, či je 'participantCard' kľúčom v meals a má hodnotu 1
                                 team.packageDetails.meals && team.packageDetails.meals.participantCard === 1 && React.createElement(
