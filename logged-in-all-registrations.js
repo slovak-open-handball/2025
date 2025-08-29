@@ -476,7 +476,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         team.menTeamMemberDetails.forEach((member, index) => {
             allConsolidatedMembers.push({
                 ...member,
-                type: 'Člen realizačného tímu (muži)',
+                type: 'Člen realizačného tímu (muž)',
                 originalArray: 'menTeamMemberDetails',
                 originalIndex: index,
                 uniqueId: `${team.teamName}-menstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
@@ -487,7 +487,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         team.womenTeamMemberDetails.forEach((member, index) => {
             allConsolidatedMembers.push({
                 ...member,
-                type: 'Člen realizačného tímu (ženy)',
+                type: 'Člen realizačného tímu (žena)',
                 originalArray: 'womenTeamMemberDetails',
                 originalIndex: index,
                 uniqueId: `${team.teamName}-womenstaff-${member.firstName || ''}-${member.lastName || ''}-${index}`
