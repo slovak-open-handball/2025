@@ -24,6 +24,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const allUsersLink = document.getElementById('all-users-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     const notificationsLink = document.getElementById('notifications-link'); // NOVINKA: Získanie odkazu na upozornenia
     const notificationsTextWithCount = document.getElementById('notifications-text-with-count'); // NOVINKA: Získanie elementu pre text Upozornenia s počtom
+    const notificationBadgeCount = document.getElementById('notification-badge-count'); // NOVINKA: Získanie elementu pre červený krúžok s počtom
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -79,13 +80,23 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             allUsersLink.classList.remove('hidden');
             notificationsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na upozornenia
 
-            // Aktualizácia počtu neprečítaných upozornení
+            // Aktualizácia počtu neprečítaných upozornení v texte
             const unreadCount = userProfileData.unreadNotificationCount || 0;
             if (notificationsTextWithCount) {
                 if (unreadCount > 0) {
                     notificationsTextWithCount.textContent = `Upozornenia (${unreadCount})`;
                 } else {
                     notificationsTextWithCount.textContent = 'Upozornenia'; // Ak nie sú žiadne, len text
+                }
+            }
+
+            // Aktualizácia červeného krúžku s počtom upozornení
+            if (notificationBadgeCount) {
+                if (unreadCount > 0) {
+                    notificationBadgeCount.textContent = unreadCount.toString();
+                    notificationBadgeCount.classList.remove('hidden');
+                } else {
+                    notificationBadgeCount.classList.add('hidden');
                 }
             }
 
@@ -97,6 +108,9 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             notificationsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na upozornenia
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
+            }
+            if (notificationBadgeCount) { // Skrytie aj odznaku
+                notificationBadgeCount.classList.add('hidden');
             }
         }
     };    
