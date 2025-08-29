@@ -256,7 +256,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         onChange: (e) => setEditedPackageName(e.target.value),
                         required: true
                     },
-                    React.createElement('option', { value: '' }, 'Vyberte balík'), // Defaultná prázdna možnosť
+                    // Removed the "Vyberte balík" option
                     availablePackages.slice().sort().map((pkgName, idx) => // Zoradenie balíkov abecedne
                         React.createElement('option', { key: idx, value: pkgName }, pkgName)
                     )
