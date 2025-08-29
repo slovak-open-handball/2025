@@ -329,7 +329,7 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
 
 
 // Komponent modálneho okna pre úpravu tímu
-function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, onAddMember }) {
+function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, onAddMember }) {
     // Tieto stavy sa stále inicializujú z teamData, ale input boxy sa pre ne nebudú renderovať.
     // Sú potrebné pre zostavenie updatedTeamData v handleSubmit.
     const [editedTeamName, setEditedTeamName] = useState(teamData ? teamData.teamName : '');
@@ -672,30 +672,43 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
 
                 React.createElement(
                     'div',
-                    { className: 'flex justify-end space-x-2 mt-6' },
+                    { className: 'flex justify-between space-x-2 mt-6' }, {/* Changed to justify-between for delete button */}
                     React.createElement(
                         'button',
                         {
                             type: 'button',
-                            onClick: onClose, // Priame volanie onClose
-                            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
+                            onClick: () => onDeleteTeam(teamData), // Call onDeleteTeam prop
+                            className: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors'
                         },
-                        'Zrušiť'
+                        'Vymazať'
                     ),
                     React.createElement(
-                        'button',
-                        {
-                            type: 'submit',
-                            disabled: isSaveButtonDisabled,
-                            className: `px-4 py-2 rounded-md transition-colors ${isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'}`,
-                            style: { 
-                                backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
-                                color: isSaveButtonDisabled ? roleColor : 'white',
-                                borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
-                                cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
-                            }
-                        },
-                        'Uložiť zmeny'
+                        'div',
+                        { className: 'flex space-x-2' }, {/* Wrapper for "Zrušiť" and "Uložiť zmeny" */}
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: onClose, // Priame volanie onClose
+                                className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
+                            },
+                            'Zrušiť'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'submit',
+                                disabled: isSaveButtonDisabled,
+                                className: `px-4 py-2 rounded-md transition-colors ${isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'}`,
+                                style: { 
+                                    backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
+                                    color: isSaveButtonDisabled ? roleColor : 'white',
+                                    borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
+                                    cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
+                                }
+                            },
+                            'Uložiť zmeny'
+                        )
                     )
                 )
             )
@@ -1433,146 +1446,110 @@ function RostersApp() {
     }
 };
 
-  const handleOpenAddMemberTypeModal = (team) => {
-    setTeamToAddMemberTo(team);
-    setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || '');
-    setShowAddMemberTypeModal(true);
-  };
-
-  const handleSelectMemberType = (type) => {
-    setMemberTypeToAdd(type);
-    setShowAddMemberTypeModal(false);
-    setShowAddMemberDetailsModal(true);
-  };
-
-  const handleSaveNewMember = async (newMemberDetails) => {
-    if (!user || !user.uid || !teamToAddMemberTo || !memberTypeToAdd) {
-        showLocalNotification('Chyba: Chýbajú dáta pre pridanie člena.', 'error');
-        return;
-    }
-
-    const teamCategory = teamToAddMemberTo.categoryName;
-    const teamIndex = teamsData[teamCategory].findIndex(t => t.teamName === teamToAddMemberTo.teamName);
-
-    if (teamIndex !== -1) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const currentTeams = { ...teamsData };
-        const updatedTeam = { ...currentTeams[teamCategory][teamIndex] };
-
-        if (!updatedTeam.playerDetails) updatedTeam.playerDetails = [];
-        if (!updatedTeam.menTeamMemberDetails) updatedTeam.menTeamMemberDetails = [];
-        if (!updatedTeam.womenTeamMemberDetails) updatedTeam.womenTeamMemberDetails = [];
-        if (!updatedTeam.driverDetailsFemale) updatedTeam.driverDetailsFemale = [];
-        if (!updatedTeam.driverDetailsMale) updatedTeam.driverDetailsMale = [];
-
-        switch (memberTypeToAdd) {
-            case 'player':
-                updatedTeam.playerDetails.push(newMemberDetails);
-                updatedTeam.players = (updatedTeam.players || 0) + 1;
-                break;
-            case 'womenTeamMember':
-                updatedTeam.womenTeamMemberDetails.push(newMemberDetails);
-                updatedTeam.womenTeamMembers = (updatedTeam.womenTeamMembers || 0) + 1;
-                break;
-            case 'menTeamMember':
-                updatedTeam.menTeamMemberDetails.push(newMemberDetails);
-                updatedTeam.menTeamMembers = (updatedTeam.menTeamMembers || 0) + 1;
-                break;
-            case 'driverFemale':
-                updatedTeam.driverDetailsFemale.push(newMemberDetails);
-                break;
-            case 'driverMale':
-                updatedTeam.driverDetailsMale.push(newMemberDetails);
-                break;
-            default:
-                console.warn("Neznámy typ člena na pridanie:", memberTypeToAdd);
-                showLocalNotification('Chyba: Neznámy typ člena.', 'error');
-                return;
-        }
-        
-        currentTeams[teamCategory][teamIndex] = updatedTeam;
-
-        try {
-            await updateDoc(userDocRef, {
-                teams: currentTeams
-            });
-            showLocalNotification('Člen tímu bol úspešne pridaný!', 'success');
-        } catch (error) {
-            console.error("Chyba pri pridávaní člena tímu:", error);
-            showLocalNotification('Nastala chyba pri pridávaní člena tímu.', 'error');
-        }
-    } else {
-        showLocalNotification('Chyba: Tím nebol nájdený pre pridanie člena.', 'error');
-    }
-  };
-
-  // Funkcia pre pridanie nového tímu s inteligentným prideľovaním sufixov
-  const handleAddTeam = async (newTeamDataFromModal) => {
-    if (!user || !user.uid || !userProfileData?.billing?.clubName) { 
+const handleDeleteTeam = async (teamToDelete) => {
+    if (!user || !user.uid || !userProfileData?.billing?.clubName) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
         return;
     }
 
-    const userDocRef = doc(db, 'users', user.uid);
-    const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); 
+    // Confirmation dialog
+    const confirmDelete = await new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Potvrdiť vymazanie tímu</h3>
+                <p class="mb-6 text-gray-700">Naozaj chcete vymazať tím <strong>${teamToDelete.teamName}</strong>? Táto akcia je nevratná.</p>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelDelete" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors">Zrušiť</button>
+                    <button id="confirmDelete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">Vymazať</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
 
-    const selectedCategory = newTeamDataFromModal.categoryName;
+        document.getElementById('cancelDelete').onclick = () => {
+            document.body.removeChild(modal);
+            resolve(false);
+        };
+        document.getElementById('confirmDelete').onclick = () => {
+            document.body.removeChild(modal);
+            resolve(true);
+        };
+    });
+
+    if (!confirmDelete) {
+        return; // User cancelled
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); // Hlboká kópia pre úpravy
+
+    const categoryToDeleteFrom = teamToDelete.categoryName;
     const clubName = userProfileData.billing.clubName?.trim();
 
-    if (!currentTeamsCopy[selectedCategory]) {
-        currentTeamsCopy[selectedCategory] = [];
+    if (!currentTeamsCopy[categoryToDeleteFrom]) {
+        showLocalNotification('Chyba: Kategória tímu nebola nájdená.', 'error');
+        return;
     }
 
-    // 1. Získanie existujúcich tímov pre tento klub v tejto kategórii
-    let existingClubTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
-                                        .filter(team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory);
+    // Filter out the deleted team
+    let teamsInCurrentCategory = currentTeamsCopy[categoryToDeleteFrom].filter(
+        team => team.teamName !== teamToDelete.teamName
+    );
 
-    let finalTeamsForCategory = []; // Zoznam tímov po úprave názvov pre danú kategóriu
-    let teamToRenameToA = null; // Tím, ktorý bude premenovaný na "ClubName A"
-    let newTeamFinalName = newTeamDataFromModal.teamName; // Názov pre nový tím (z náhľadu)
+    // Separate teams belonging to this club and others in the same category
+    let clubTeamsInCategory = teamsInCurrentCategory.filter(
+        team => team.clubName?.trim() === clubName
+    );
+    let otherTeamsInCategory = teamsInCurrentCategory.filter(
+        team => team.clubName?.trim() !== clubName
+    );
 
-    // Detekcia, či existuje tím bez sufixu
-    const unsuffixedExistingTeam = existingClubTeamsInSelectedCategory.find(team => team.teamName === clubName);
-    
-    // Scenár 2: Prechod z jedného nesufixovaného tímu na dva
-    if (existingClubTeamsInSelectedCategory.length === 1 && unsuffixedExistingTeam) {
-        teamToRenameToA = { ...unsuffixedExistingTeam, teamName: `${clubName} A` }; // Pôvodný tím sa premenuje na 'A'
-        newTeamFinalName = `${clubName} B`; // Nový tím dostane 'B'
-        
-        // Pridáme premenovaný pôvodný tím
-        finalTeamsForCategory.push(teamToRenameToA);
+    // Sort club teams by their current suffix for re-alphabetization
+    clubTeamsInCategory.sort((a, b) => {
+        // Extract suffix or consider the whole name if no suffix
+        const getSuffixPart = (teamName, baseClubName) => {
+            const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
+            const match = teamName.match(regex);
+            return match ? match[1] : ''; // Return the suffix letter, or empty string if no suffix
+        };
 
-        // Filter out the original unsuffixed team as it's been handled
-        existingClubTeamsInSelectedCategory = existingClubTeamsInSelectedCategory.filter(team => team.teamName !== clubName);
-    } 
-    // Ostatné scenáre (0 tímov, alebo viac ako 1 tím, alebo 1 suffixed tím)
-    else {
-        // Pridáme všetky existujúce tímy, ktoré neboli premenované (pretože už majú sufix alebo sú iný prípad)
-        existingClubTeamsInSelectedCategory.forEach(team => finalTeamsForCategory.push(team));
+        const suffixA = getSuffixPart(a.teamName, clubName);
+        const suffixB = getSuffixPart(b.teamName, clubName);
+
+        // Treat empty suffix as "before A" for sorting purposes
+        if (suffixA === '' && suffixB !== '') return -1;
+        if (suffixA !== '' && suffixB === '') return 1;
+        return suffixA.localeCompare(suffixB);
+    });
+
+    // Apply new suffixes if necessary
+    if (clubTeamsInCategory.length > 1) {
+        // More than one team, re-alphabetize with suffixes A, B, C...
+        for (let i = 0; i < clubTeamsInCategory.length; i++) {
+            clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+        }
+    } else if (clubTeamsInCategory.length === 1) {
+        // Only one team left, remove suffix
+        clubTeamsInCategory[0].teamName = clubName;
     }
+    // If clubTeamsInCategory.length === 0, no teams left, nothing to re-suffix
 
-    // Nastavíme finálny názov pre nový tím a pridáme ho
-    newTeamDataFromModal.teamName = newTeamFinalName;
-    finalTeamsForCategory.push(newTeamDataFromModal);
-
-    // Filter out any teams belonging to this club from the original category array
-    const otherTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
-                                            .filter(team => team.clubName?.trim() !== clubName);
-
-    // Update the category with the new list of teams for this club
-    currentTeamsCopy[selectedCategory] = [...otherTeamsInSelectedCategory, ...finalTeamsForCategory];
+    // Reconstruct the category array
+    currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategory, ...clubTeamsInCategory];
 
     try {
         await updateDoc(userDocRef, {
             teams: currentTeamsCopy
         });
-        showLocalNotification('Nový tím bol úspešne pridaný a názvy tímov aktualizované!', 'success');
-        setShowAddTeamModal(false);
+        showLocalNotification('Tím bol úspešne vymazaný!', 'success');
+        setShowEditTeamModal(false); // Close the modal after deletion
     } catch (error) {
-        console.error("Chyba pri pridávaní nového tímu a aktualizácii názvov:", error);
-        showLocalNotification('Nastala chyba pri pridávaní nového tímu.', 'error');
+        console.error("Chyba pri mazaní tímu:", error);
+        showLocalNotification('Nastala chyba pri mazaní tímu.', 'error');
     }
-  };
+};
 
 
   return React.createElement(
@@ -1826,6 +1803,7 @@ function RostersApp() {
           onClose: () => setShowEditTeamModal(false),
           teamData: selectedTeam,
           onSaveTeam: handleSaveTeam,
+          onDeleteTeam: handleDeleteTeam, // Pass the new delete handler
           userProfileData: userProfileData,
           availablePackages: availablePackages,
           availableAccommodationTypes: availableAccommodationTypes,
