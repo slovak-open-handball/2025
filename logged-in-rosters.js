@@ -211,7 +211,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         React.createElement(
                             'div',
                             { className: 'w-1/2' },
-                            React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700 sr-only' }, 'Hodina'), // Skrytý popisok
+                            React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700' }, 'Hodina'), // Zviditeľnený popisok
                             React.createElement('select', {
                                 id: 'arrivalHour',
                                 className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
@@ -228,7 +228,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         React.createElement(
                             'div',
                             { className: 'w-1/2' },
-                            React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700 sr-only' }, 'Minúta'), // Skrytý popisok
+                            React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700' }, 'Minúta'), // Zviditeľnený popisok
                             React.createElement('select', {
                                 id: 'arrivalMinute',
                                 className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
