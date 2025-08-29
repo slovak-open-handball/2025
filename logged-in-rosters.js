@@ -1442,6 +1442,7 @@ const handleDeleteTeam = async (teamToDelete) => {
         });
         showLocalNotification('Tím bol úspešne vymazaný!', 'success');
         setShowEditTeamModal(false);
+        setSelectedTeam(null); // Clear selectedTeam after deletion
     } catch (error) {
         console.error("Chyba pri mazaní tímu:", error);
         showLocalNotification('Nastala chyba pri mazaní tímu.', 'error');
