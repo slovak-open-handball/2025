@@ -628,7 +628,7 @@ function NotificationsApp() {
   // ZMENA: Text tlačidla pre obnovu
   const restoreButtonText = showRestoreView 
     ? (selectedNotificationsToRestore.size > 0 ? `Obnoviť vybrané (${selectedNotificationsToRestore.size})` : 'Zatvoriť obnovu') 
-    : 'Obnoviť oznámenia';
+    : 'Obnoviť upozornenia';
 
 
   return React.createElement(
