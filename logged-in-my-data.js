@@ -140,7 +140,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     const emailLabel = userProfileData?.role === 'user' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
     const phoneLabel = userProfileData?.role === 'user' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
 
-    // NOVINKA: Logika pre zobrazenie tlačidla Upraviť pre profil
+    // Logika pre zobrazenie tlačidla Upraviť pre profil
     // Tlačidlo je viditeľné, ak je canEdit true (všetky úpravy sú povolené)
     // ALEBO ak je canEdit false, ale používateľ je typu 'user' a je povolený len režim zmeny hesla.
     const showProfilePencil = canEdit || (userProfileData.role === 'user' && isPasswordChangeOnlyMode);
@@ -333,8 +333,8 @@ const MyDataApp = ({ userProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
-    // NOVINKA: Lokálny stav pre registrationDates
-    const [localRegistrationDates, setLocalRegistrationDates] = useState(null);
+    // NOVINKA: Lokálny stav pre registrationDates (z /settings/registration)
+    const [settingsRegistrationDates, setSettingsRegistrationDates] = useState(null);
     // NOVINKA: Stav pre indikáciu režimu zmeny hesla (true, ak je po deadline a používateľ je 'user')
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
 
@@ -357,15 +357,15 @@ const MyDataApp = ({ userProfileData }) => {
         const unsubscribe = onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                setLocalRegistrationDates(data);
-                console.log("MyDataApp: Lokálne registrationDates aktualizované (onSnapshot).", data);
+                setSettingsRegistrationDates(data);
+                console.log("MyDataApp: Lokálne settingsRegistrationDates aktualizované (onSnapshot).", data);
             } else {
-                setLocalRegistrationDates(null);
+                setSettingsRegistrationDates(null);
                 console.warn("MyDataApp: Dokument 'settings/registration' nebol nájdený!");
             }
         }, (error) => {
             console.error("MyDataApp: Chyba pri počúvaní dát o registrácii:", error);
-            setLocalRegistrationDates(null);
+            setSettingsRegistrationDates(null);
         });
 
         // Cleanup function pre odhlásenie z listenera
@@ -380,11 +380,14 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
 
-    // Calculate deadlineMillis from localRegistrationDates
-    // Ensure that localRegistrationDates.dataEditDeadline is correctly accessed and converted
-    const dataEditDeadline = localRegistrationDates?.dataEditDeadline;
-    const deadlineMillis = (dataEditDeadline instanceof Timestamp) ? 
-                            dataEditDeadline.toDate().getTime() : 
+    // Calculate deadlineMillis
+    // Priorita: userProfileData.dataEditDeadline > settingsRegistrationDates.dataEditDeadline
+    const effectiveDataEditDeadline = userProfileData?.dataEditDeadline || settingsRegistrationDates?.dataEditDeadline;
+    
+    const deadlineMillis = (effectiveDataEditDeadline instanceof Timestamp) ? 
+                            effectiveDataEditDeadline.toDate().getTime() : 
+                            (effectiveDataEditDeadline instanceof Date) ?
+                            effectiveDataEditDeadline.getTime() :
                             null;
 
 
@@ -398,7 +401,7 @@ const MyDataApp = ({ userProfileData }) => {
             setIsPasswordChangeOnlyMode(false); // Reset režimu zmeny hesla
 
             // Zabezpečenie, že dáta používateľa a globálne dáta sú pripravené
-            if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !localRegistrationDates) {
+            if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !settingsRegistrationDates) {
                 console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky/lokálne dáta registrácie nie sú pripravené. Úpravy nie sú povolené.");
                 return;
             }
@@ -465,8 +468,8 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, localRegistrationDates, deadlineMillis]); 
-    // Dependencies now include localRegistrationDates, a isPasswordChangeOnlyMode je tiež ovplyvňované
+    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates, deadlineMillis]); 
+    // Dependencies now include settingsRegistrationDates, a isPasswordChangeOnlyMode je tiež ovplyvňované
 
     const getRoleColor = (role) => {
         switch (role) {
