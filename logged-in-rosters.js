@@ -347,13 +347,19 @@ function RostersApp() {
                                 'div',
                                 { className: 'ml-4 mt-2 mb-4 space-y-1' }, // Odsadenie a priestor pre detaily
                                 React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} €`),
+                                // Riadok pre Účastnícku kartu je teraz upravený, aby správne zobrazoval Áno/Nie
                                 React.createElement('p', { className: 'text-sm text-gray-600' }, `Účastnícka karta: ${team.packageDetails.participantCard === 1 ? 'Áno' : 'Nie'}`),
                                 team.packageDetails.meals && React.createElement(
                                     'div',
                                     { className: 'mt-2' },
                                     React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
-                                    // Zobrazenie jedál pre každý dátum
-                                    Object.keys(team.packageDetails.meals).sort().map(date =>
+                                    // Zobrazenie jedál pre každý dátum, ktorý je platným dátumovým reťazcom a má aspoň jedno jedlo s hodnotou 1
+                                    Object.keys(team.packageDetails.meals).sort().filter(key => {
+                                        // Kontrola, či je kľúč platným dátumovým reťazcom (YYYY-MM-DD formát)
+                                        const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(key);
+                                        // Zabezpečí, že ak je to dátum, má aspoň jedno aktívne jedlo
+                                        return isValidDate && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
+                                    }).map(date =>
                                         React.createElement(
                                             'div',
                                             { key: date, className: 'ml-2' },
