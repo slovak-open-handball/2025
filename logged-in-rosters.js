@@ -672,7 +672,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between space-x-2 mt-6' }, {/* Changed to justify-between for delete button */}
+                    { className: 'flex justify-between space-x-2 mt-6' },
                     React.createElement(
                         'button',
                         {
