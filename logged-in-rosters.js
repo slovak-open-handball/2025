@@ -440,11 +440,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             // Ostatné počty členov/šoférov sa zatiaľ neupravujú cez toto modálne okno
         };
         await onSaveTeam(updatedTeamData);
-        
-        // Odloženie onClose na ďalší cyklus udalostí
-        setTimeout(() => {
-            onClose();
-        }, 0);
+        // Voláme onClose priamo po dokončení asynchrónnej operácie
+        onClose();
     };
 
     const showArrivalTimeInputs = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
@@ -490,7 +487,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                 React.createElement(
                     'button',
                     { 
-                        onClick: () => setTimeout(() => onClose(), 0), // Obalenie onClose do setTimeout
+                        onClick: onClose, // Priame volanie onClose
                         className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' 
                     },
                     '×'
@@ -678,7 +675,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setTimeout(() => onClose(), 0), // Obalenie onClose do setTimeout
+                            onClick: onClose, // Priame volanie onClose
                             className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
                         },
                         'Zrušiť'
@@ -842,7 +839,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             tshirts: filteredTshirtEntries, // Tričká sú prázdne
         };
         await onAddTeam(newTeamData); // Zavoláme funkciu na pridanie tímu z rodičovského komponentu
-        setTimeout(() => onClose(), 0);
+        onClose(); // Voláme onClose priamo po dokončení asynchrónnej operácie
     };
 
     if (!show) return null;
@@ -859,7 +856,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                 React.createElement('h3', { className: 'text-2xl font-semibold' }, 'Pridať nový tím'),
                 React.createElement(
                     'button',
-                    { onClick: () => setTimeout(() => onClose(), 0), className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
+                    { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' }, // Priame volanie onClose
                     '×'
                 )
             ),
@@ -1003,7 +1000,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setTimeout(() => onClose(), 0), 
+                            onClick: onClose, // Priame volanie onClose
                             className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
                         },
                         'Zrušiť'
@@ -1042,7 +1039,7 @@ function RostersApp() {
   const [selectedTeam, setSelectedTeam] = React.useState(null); // Stav pre vybraný tím na úpravu
   const [availablePackages, setAvailablePackages] = React.useState([]); // Nový stav pre balíky z databázy
   const [availableAccommodationTypes, setAvailableAccommodationTypes] = React.useState([]); // Nový stav pre typy ubytovania
-  const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]); // Nový stav pre dostupné veľkosti tričiek
+  const [availableTshirtSizes, setAvailableTshirtSizes] = React.React.useState([]); // Nový stav pre dostupné veľkosti tričiek
   const [showAddMemberTypeModal, setShowAddMemberTypeModal] = React.useState(false); // Stav pre modálne okno výberu typu člena
   const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = React.useState(false); // Stav pre modálne okno detailov člena
   const [memberTypeToAdd, setMemberTypeToAdd] = React.useState(null); // Typ člena, ktorý sa má pridať
@@ -1548,7 +1545,7 @@ function RostersApp() {
     allClubTeamsInSelectedCategory.sort((a, b) => a.teamName.localeCompare(b.teamName));
 
     const updatedTeamsForCategory = [];
-    for (let i = 0; i < allClubTeamsInSelectedCategory.length; i++) {
+    for (let i = 0; i = allClubTeamsInSelectedCategory.length; i++) {
         const team = allClubTeamsInSelectedCategory[i];
         const newSuffix = String.fromCharCode('A'.charCodeAt(0) + i); // Generujeme príponu (A, B, C...)
         const newTeamName = `${clubName} ${newSuffix}`; // Vytvoríme nový názov tímu
