@@ -437,16 +437,21 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
             { className: 'relative p-8 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg' },
             React.createElement(
                 'div',
-                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
-                React.createElement('h3', { className: 'text-2xl font-semibold' }, `Upraviť tím: ${teamData.teamName}`),
+                { className: `flex flex-col text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } }, // Adjusted to flex-col
                 React.createElement(
-                    'button',
-                    { 
-                        onClick: onClose,
-                        className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' 
-                    },
-                    '×'
-                )
+                    'div',
+                    { className: 'flex justify-between items-center w-full' },
+                    React.createElement('h3', { className: 'text-2xl font-semibold' }, `Upraviť tím: ${teamData.teamName}`),
+                    React.createElement(
+                        'button',
+                        { 
+                            onClick: onClose,
+                            className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' 
+                        },
+                        '×'
+                    )
+                ),
+                React.createElement('p', { className: 'text-md font-medium mt-1' }, `Kategória: ${editedCategoryName}`) // Added category name
             ),
             React.createElement(
                 'form',
