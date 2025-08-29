@@ -697,17 +697,16 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                 team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory
             );
 
-            // Určíme počet tímov, ktoré by existovali *po* pridaní nového tímu.
-            // Ak je to 1. tím (vytvárame prvý tím), sufix je 'A'.
-            // Ak je to 2. tím, sufix je 'B', atď.
-            // Index pre 'A' je 0, pre 'B' je 1, atď.
-            // Takže, ak numberOfTeamsAfterAddingNew je 1, offset je 0.
-            // Ak numberOfTeamsAfterAddingNew je 2, offset je 1.
-            // offset = numberOfTeamsAfterAddingNew - 1
-            const numberOfTeamsAfterAddingNew = existingClubTeamsForCategory.length + 1;
-            const suffixOffset = numberOfTeamsAfterAddingNew - 1;
-
-            const generatedName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + suffixOffset)}`;
+            let generatedName;
+            if (existingClubTeamsForCategory.length === 0) {
+                // Ak je to prvý tím v kategórii pre tento klub, žiadny sufix
+                generatedName = clubName;
+            } else {
+                // Inak generujeme sufix A, B, C...
+                const numberOfTeamsAfterAddingNew = existingClubTeamsForCategory.length; // Použijeme existujúci počet pre správny index
+                const suffixOffset = numberOfTeamsAfterAddingNew; // Nový tím bude mať ďalší sufix
+                generatedName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + suffixOffset)}`;
+            }
             
             setTeamNamePreview(generatedName);
         } else {
@@ -1407,7 +1406,10 @@ const handleDeleteTeam = async (teamToDelete) => {
     });
 
     // Prepriradíme názvy tímov s novými sufixami po vymazaní
-    if (clubTeamsInCategory.length === 1) {
+    if (clubTeamsInCategory.length === 0) { // Ak už žiadne tímy nezostali, nie je potrebné priraďovať názvy
+        // Ak už v kategórii nie sú žiadne tímy pre tento klub, kategória sa vymaže
+        delete currentTeamsCopy[categoryToDeleteFrom];
+    } else if (clubTeamsInCategory.length === 1) {
         // Ak zostane iba jeden tím, odstráni sa mu sufix
         clubTeamsInCategory[0].teamName = clubName;
     } else {
@@ -1417,8 +1419,11 @@ const handleDeleteTeam = async (teamToDelete) => {
         }
     }
 
-    // Rekombinujeme všetky tímy v kategórii
-    currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategory, ...clubTeamsInCategory];
+    // Rekombinujeme všetky tímy v kategórii, ak kategória stále existuje
+    if (currentTeamsCopy[categoryToDeleteFrom]) {
+        currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategory, ...clubTeamsInCategory];
+    }
+
 
     try {
         await updateDoc(userDocRef, {
@@ -1452,8 +1457,6 @@ const handleAddTeam = async (newTeamDataFromModal) => {
     }
 
     // Získame existujúce tímy daného klubu v aktuálnej kategórii
-    // Vytvoríme nový hypotetický zoznam, do ktorého pridáme aj nový tím,
-    // aby sme mohli správne priradiť názvy s abecednými sufixami.
     let existingClubTeamsInThisCategory = currentTeamsCopy[category].filter(
         team => team.clubName?.trim() === clubName && team.categoryName === category
     );
@@ -1466,12 +1469,30 @@ const handleAddTeam = async (newTeamDataFromModal) => {
     ];
 
     // Zoradíme ich abecedne, aby sme zabezpečili konzistentné priradenie sufixov
-    allRelevantTeamsBeforeUpdate.sort((a, b) => a.originalNameForSort.localeCompare(b.originalNameForSort));
+    allRelevantTeamsBeforeUpdate.sort((a, b) => {
+        const getSuffixPart = (teamName, baseClubName) => {
+            const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
+            const match = teamName.match(regex);
+            return match ? match[1] : '';
+        };
+
+        const suffixA = getSuffixPart(a.originalNameForSort, clubName);
+        const suffixB = getSuffixPart(b.originalNameForSort, clubName);
+
+        if (suffixA === '' && suffixB !== '') return -1;
+        if (suffixA !== '' && suffixB === '') return 1;
+        return suffixA.localeCompare(suffixB);
+    });
 
     // Teraz priradíme aktualizované názvy tímov s prírastkovými sufixami.
-    // Všetky tímy daného klubu v kategórii budú mať "A", "B", "C" atď.
-    for (let i = 0; i < allRelevantTeamsBeforeUpdate.length; i++) {
-        allRelevantTeamsBeforeUpdate[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+    // Ak je len jeden tím (t.j. práve sme pridali prvý tím pre tento klub v tejto kategórii), nebude mať sufix.
+    if (allRelevantTeamsBeforeUpdate.length === 1) {
+        allRelevantTeamsBeforeUpdate[0].teamName = clubName;
+    } else {
+        // Všetky tímy daného klubu v kategórii budú mať "A", "B", "C" atď.
+        for (let i = 0; i < allRelevantTeamsBeforeUpdate.length; i++) {
+            allRelevantTeamsBeforeUpdate[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+        }
     }
 
     // Filtrujeme ostatné tímy, ktoré nepatria pod tento klub a kategóriu
