@@ -735,6 +735,12 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 
     // Logika pre odvodenie názvu tímu
     React.useEffect(() => {
+        // Pridávame logy pre debugovanie
+        console.log("AddTeamModal useEffect (generovanie názvu tímu):");
+        console.log("  selectedCategory:", selectedCategory);
+        console.log("  clubName:", clubName);
+        console.log("  teamsData:", teamsData);
+
         if (selectedCategory && clubName !== 'Neznámy klub' && teamsData) {
             const teamsInSelectedCategory = teamsData[selectedCategory] || [];
             
@@ -756,9 +762,12 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             while (existingSuffixes.has(nextSuffixChar)) {
                 nextSuffixChar = String.fromCharCode(nextSuffixChar.charCodeAt(0) + 1);
             }
-            setTeamNamePreview(`${clubName} ${nextSuffixChar}`);
+            const generatedTeamName = `${clubName} ${nextSuffixChar}`;
+            setTeamNamePreview(generatedTeamName);
+            console.log("  Vygenerovaný názov tímu:", generatedTeamName);
         } else {
             setTeamNamePreview('');
+            console.log("  Podmienky pre generovanie názvu tímu nie sú splnené.");
         }
     }, [selectedCategory, clubName, teamsData]);
 
@@ -1861,7 +1870,7 @@ function RostersApp() {
             availablePackages: availablePackages,
             availableAccommodationTypes: availableAccommodationTypes,
             availableTshirtSizes: availableTshirtSizes,
-            teamsData: teamsData, // Pre logiku generovania názvu tímu
+            teamsData: teamsData || {}, // Dôležité: zabezpečiť, že teamsData je vždy objekt
             // Používame nové kategórie zo settings namiesto starých
             availableCategoriesFromSettings: availableCategoriesFromSettings 
         }
