@@ -326,17 +326,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                     null,
                     React.createElement(
                         'div',
-                        { className: 'flex items-center justify-between mb-2' },
+                        { className: 'mb-2' }, // Container for just the label
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Tričká'),
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: handleAddTshirtEntry,
-                                className: 'flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            },
-                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
-                        )
                     ),
                     tshirtEntries.map((tshirt, index) => (
                         React.createElement(
@@ -372,7 +363,21 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                                 React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M20 12H4' }))
                             )
                         )
-                    ))
+                    )),
+                    // Nový kontajner pre tlačidlo "+", vždy centrovaný horizontálne
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-center mt-4' }, // Pridané mt-4 pre medzeru
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: handleAddTshirtEntry,
+                                className: 'flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            },
+                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
+                        )
+                    )
                 ),
 
 
