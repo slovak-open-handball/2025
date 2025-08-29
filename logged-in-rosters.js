@@ -240,7 +240,7 @@ function RostersApp() {
 
   return React.createElement(
     'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto w-full' },
+    { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto w-full' }, // Odstránené 'items-center'
     React.createElement(
       'div',
       { className: 'w-full p-4' }, // Odstránené 'max-w-3xl' aby sa to správalo ako v all-registrations.html
