@@ -1436,6 +1436,104 @@ const handleDeleteTeam = async (teamToDelete) => {
     }
 };
 
+const handleAddTeam = async (newTeamData) => {
+    if (!user || !user.uid) {
+        showLocalNotification('Chyba: Používateľ nie je prihlásený.', 'error');
+        return;
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const currentTeams = { ...teamsData };
+
+    if (!currentTeams[newTeamData.categoryName]) {
+        currentTeams[newTeamData.categoryName] = [];
+    }
+    currentTeams[newTeamData.categoryName].push(newTeamData);
+
+    try {
+        await updateDoc(userDocRef, {
+            teams: currentTeams
+        });
+        showLocalNotification('Nový tím bol úspešne pridaný!', 'success');
+    } catch (error) {
+        console.error("Chyba pri pridávaní tímu:", error);
+        showLocalNotification('Nastala chyba pri pridávaní nového tímu.', 'error');
+    }
+};
+
+const handleOpenAddMemberTypeModal = (team) => {
+    setTeamToAddMemberTo(team);
+    setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || 'bez ubytovania');
+    setShowAddMemberTypeModal(true);
+};
+
+const handleSelectMemberType = (type) => {
+    setMemberTypeToAdd(type);
+    setShowAddMemberDetailsModal(true);
+};
+
+const handleSaveNewMember = async (newMemberDetails) => {
+    if (!user || !user.uid || !teamToAddMemberTo) {
+        showLocalNotification('Chyba: Používateľ nie je prihlásený alebo tím nie je vybraný.', 'error');
+        return;
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const currentTeams = { ...teamsData };
+    const teamCategory = teamToAddMemberTo.categoryName;
+    const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === teamToAddMemberTo.teamName);
+
+    if (teamIndex === -1) {
+        showLocalNotification('Chyba: Tím nebol nájdený.', 'error');
+        return;
+    }
+
+    const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
+
+    switch (memberTypeToAdd) {
+        case 'player':
+            if (!teamToUpdate.playerDetails) teamToUpdate.playerDetails = [];
+            teamToUpdate.playerDetails.push(newMemberDetails);
+            teamToUpdate.players = (teamToUpdate.players || 0) + 1;
+            break;
+        case 'womenTeamMember':
+            if (!teamToUpdate.womenTeamMemberDetails) teamToUpdate.womenTeamMemberDetails = [];
+            teamToUpdate.womenTeamMemberDetails.push(newMemberDetails);
+            teamToUpdate.womenTeamMembers = (teamToUpdate.womenTeamMembers || 0) + 1;
+            break;
+        case 'menTeamMember':
+            if (!teamToUpdate.menTeamMemberDetails) teamToUpdate.menTeamMemberDetails = [];
+            teamToUpdate.menTeamMemberDetails.push(newMemberDetails);
+            teamToUpdate.menTeamMembers = (teamToUpdate.menTeamMembers || 0) + 1;
+            break;
+        case 'driverFemale':
+            if (!teamToUpdate.driverDetailsFemale) teamToUpdate.driverDetailsFemale = [];
+            teamToUpdate.driverDetailsFemale.push(newMemberDetails);
+            break;
+        case 'driverMale':
+            if (!teamToUpdate.driverDetailsMale) teamToUpdate.driverDetailsMale = [];
+            teamToUpdate.driverDetailsMale.push(newMemberDetails);
+            break;
+        default:
+            showLocalNotification('Neznámy typ člena tímu.', 'error');
+            return;
+    }
+
+    currentTeams[teamCategory][teamIndex] = teamToUpdate;
+
+    try {
+        await updateDoc(userDocRef, {
+            teams: currentTeams
+        });
+        showLocalNotification('Nový člen tímu bol úspešne pridaný!', 'success');
+        setTeamToAddMemberTo(null);
+        setMemberTypeToAdd(null);
+    } catch (error) {
+        console.error("Chyba pri pridávaní člena tímu:", error);
+        showLocalNotification('Nastala chyba pri pridávaní člena tímu.', 'error');
+    }
+};
+
 
   return React.createElement(
     'div',
