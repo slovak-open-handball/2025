@@ -240,10 +240,10 @@ function RostersApp() {
 
   return React.createElement(
     'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto w-full' }, // Pridané w-full
+    { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto w-full' },
     React.createElement(
       'div',
-      { className: 'w-full max-w-3xl p-4' }, // w-full už bolo prítomné
+      { className: 'w-full p-4' }, // Odstránené 'max-w-3xl' aby sa to správalo ako v all-registrations.html
       // Odstránené triedy pre biely podklad a tieň z hlavného kontajnera
       React.createElement(
         'div',
