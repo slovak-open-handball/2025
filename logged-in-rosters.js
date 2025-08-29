@@ -1242,7 +1242,7 @@ function RostersApp() {
             setUserProfileData(userData);
             
             if (userData.teams) {
-                // Normalize teams data to ensure clubName is always present and trimmed
+                // Normalize teams data to ensure clubName and categoryName are always present and trimmed
                 const normalizedTeams = {};
                 const currentClubName = userData.billing?.clubName?.trim() || 'Neznámy klub';
 
@@ -1253,7 +1253,9 @@ function RostersApp() {
                                 ...team,
                                 // If team.clubName is missing or undefined, assign the current clubName
                                 // Also ensure it's trimmed for consistency
-                                clubName: team.clubName?.trim() || currentClubName
+                                clubName: team.clubName?.trim() || currentClubName,
+                                // If team.categoryName is missing or undefined, assign the current categoryKey
+                                categoryName: team.categoryName || categoryKey 
                             };
                         });
                     }
