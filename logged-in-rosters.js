@@ -244,7 +244,6 @@ function RostersApp() {
     React.createElement(
       'div',
       { className: 'w-full max-w-3xl p-4' },
-      // Obnovený biely obdĺžnik a nadpis "Súpiska tímov"
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
@@ -255,8 +254,8 @@ function RostersApp() {
         teamCategories.length > 0 ? (
           React.createElement('div', { className: 'space-y-6' }, // Väčší priestor medzi kategóriami
             teamCategories.map(([categoryName, teamsArray]) => (
-              React.createElement('div', { key: categoryName, className: 'bg-gray-50 p-6 rounded-lg shadow-md' }, // Väčší padding a shadow
-                // Použitie helper funkcie na skloňovanie
+              // Kontajner kategórie už nebude mať vlastný biely podklad, len nadpis a medzery
+              React.createElement('div', { key: categoryName, className: 'space-y-4' }, // Pridal som space-y-4 pre medzeru medzi h2 a prvým tímom
                 React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} ${getTeamPluralization(teamsArray.length)})`), // Väčší a tučnejší nadpis
                 React.createElement('div', { className: 'space-y-6' }, // Priestor medzi jednotlivými tímami v kategórii
                   teamsArray.map((team, index) => {
@@ -299,7 +298,11 @@ function RostersApp() {
                         return parts.length > 0 ? parts.join(', ') : '-';
                     };
 
-                    return React.createElement('div', { key: index, className: 'border-l-4 border-[#9333EA] pl-4 py-4 bg-white rounded-md shadow-sm' }, // Zmenená farba na #9333EA
+                    // Každý tím bude mať svoj vlastný biely obdĺžnik s tieňom a fialovým okrajom
+                    return React.createElement('div', { 
+                        key: index, 
+                        className: 'bg-gray-50 p-6 rounded-lg shadow-md border-l-4 border-[#9333EA]' 
+                    }, 
                       React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
                       React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`),
                       React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`),
