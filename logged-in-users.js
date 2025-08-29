@@ -259,6 +259,62 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
     );
 }
 
+// Komponent pre modálne okno na úpravu dátumu
+function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
+    const [selectedDate, setSelectedDate] = useState(currentDate ? new Date(currentDate.seconds * 1000 + (currentDate.nanoseconds || 0) / 1000000).toISOString().slice(0, 16) : ''); // Format to YYYY-MM-DDTHH:MM
+
+    const handleDateChange = (e) => {
+        setSelectedDate(e.target.value);
+    };
+
+    const handleSave = () => {
+        onSave(user.id, dateType, new Date(selectedDate));
+        onClose();
+    };
+
+    const title = dateType === 'dataEditDeadline' ? 'Úprava dátumu pre úpravu údajov' : 'Úprava dátumu pre úpravu súpisiek';
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
+            React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, title),
+            React.createElement('p', { className: 'mb-4' }, `Používateľ: ${user.firstName} ${user.lastName}`),
+            React.createElement('div', { className: 'mb-4' },
+                React.createElement('label', { htmlFor: 'date-input', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Vyberte dátum a čas:'),
+                React.createElement('input', {
+                    type: 'datetime-local',
+                    id: 'date-input',
+                    value: selectedDate,
+                    onChange: handleDateChange,
+                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
+                })
+            ),
+            React.createElement('div', { className: 'flex justify-end' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleSave,
+                        className: 'bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700'
+                    },
+                    'Uložiť'
+                )
+            )
+        )
+    );
+}
+
+
 function UsersManagementApp() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -268,6 +324,11 @@ function UsersManagementApp() {
   const [oldestAdminId, setOldestAdminId] = useState(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
+  // Nové stavy pre modálne okno úpravy dátumu
+  const [showDateEditModal, setShowDateEditModal] = useState(false);
+  const [dateToEditUser, setDateToEditUser] = useState(null);
+  const [dateToEditType, setDateToEditType] = useState('');
+  const [dateToEditCurrentValue, setDateToEditCurrentValue] = useState(null);
   
   const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
   const db = window.db;
@@ -557,16 +618,43 @@ function UsersManagementApp() {
   };
 
   const formatDate = (date) => {
-    if (!date) return '-';
+    if (!date) return 'N/A';
     // Firebase Timestamp object handling
     if (date.toDate) {
       date = date.toDate();
     }
     // Check if it's a valid Date object
     if (!(date instanceof Date) || isNaN(date)) {
-        return '-';
+        return 'N/A';
     }
     return date.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Funkcia na otvorenie modálneho okna pre úpravu dátumu
+  const handleEditDateClick = (user, dateType, currentValue) => {
+    setDateToEditUser(user);
+    setDateToEditType(dateType);
+    setDateToEditCurrentValue(currentValue);
+    setShowDateEditModal(true);
+  };
+
+  // Funkcia na uloženie upraveného dátumu do Firestore
+  const handleDateSave = async (userId, dateType, newDate) => {
+    try {
+      const userDocRef = doc(db, `users`, userId);
+      await updateDoc(userDocRef, {
+        [dateType]: newDate // Dynamicky nastaví názov poľa
+      });
+      setNotification({ message: `Dátum bol úspešne aktualizovaný pre ${dateToEditUser.firstName} ${dateToEditUser.lastName}.`, type: 'success' });
+    } catch (error) {
+      console.error("Chyba pri aktualizácii dátumu:", error);
+      setNotification({ message: 'Nepodarilo sa aktualizovať dátum.', type: 'error' });
+    } finally {
+      setShowDateEditModal(false);
+      setDateToEditUser(null);
+      setDateToEditType('');
+      setDateToEditCurrentValue(null);
+    }
   };
 
 
@@ -667,8 +755,22 @@ function UsersManagementApp() {
                   getTranslatedRole(user.role, isUserOldestAdmin, isCurrentUserOldestAdmin)
                 )
               ),
-              (window.isCurrentUserAdmin) && React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, formatDate(user.dataEditDeadline)),
-              (window.isCurrentUserAdmin) && React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, formatDate(user.rosterEditDeadline)),
+              (window.isCurrentUserAdmin) && React.createElement(
+                'td',
+                {
+                  className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer hover:bg-gray-50',
+                  onClick: () => handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline)
+                },
+                formatDate(user.dataEditDeadline)
+              ),
+              (window.isCurrentUserAdmin) && React.createElement(
+                'td',
+                {
+                  className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer hover:bg-gray-50',
+                  onClick: () => handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline)
+                },
+                formatDate(user.rosterEditDeadline)
+              ),
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
@@ -727,6 +829,13 @@ function UsersManagementApp() {
             setShowFilterModal(false);
         },
         initialRoles: selectedRoles
+    }),
+    showDateEditModal && React.createElement(EditDateModal, {
+      user: dateToEditUser,
+      dateType: dateToEditType,
+      currentDate: dateToEditCurrentValue,
+      onClose: () => setShowDateEditModal(false),
+      onSave: handleDateSave
     })
   );
 }
