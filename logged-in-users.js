@@ -707,7 +707,7 @@ function UsersManagementApp() {
   return React.createElement(
     'div',
     { className: 'flex-grow p-4 md:p-8 bg-gray-100 rounded-lg shadow-inner' },
-    React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-6 text-center' }, 'Správa používateľov')
+    React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-6' }, 'Správa používateľov')
     React.createElement(
       'div',
       { className: 'overflow-x-auto bg-white rounded-lg shadow' },
