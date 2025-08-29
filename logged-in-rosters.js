@@ -597,10 +597,11 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                 React.createElement(
                     'div',
                     null,
+                    // Zmenené - odstránený dynamický text o počte tričiek/členov
                     React.createElement(
                         'div',
-                        { className: 'mb-2' }, // Container for just the label
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, `Tričká (celkom: ${totalTshirtsQuantity} / ${totalMembersInTeam} členov)`),
+                        { className: 'mb-2' }, 
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Tričká'),
                     ),
                     tshirtEntries.map((tshirt, index) => (
                         React.createElement(
