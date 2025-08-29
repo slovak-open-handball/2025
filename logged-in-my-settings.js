@@ -171,7 +171,7 @@ function MySettingsApp() {
           React.createElement(
             'div',
             { className: 'flex items-center justify-between mt-4' },
-            React.createElement('label', { className: 'text-gray-700 text-base', htmlFor: 'display-notifications-toggle' }, 'Zobrazovať notifikácie a oznámenia'),
+            React.createElement('label', { className: 'text-gray-700 text-base', htmlFor: 'display-notifications-toggle' }, 'Zobrazovať notifikácie a upozornenia'),
             React.createElement(
               'label',
               { className: 'toggle-switch' },
