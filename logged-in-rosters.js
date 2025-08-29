@@ -156,7 +156,7 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
     );
 }
 
-function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData, teamAccommodationType }) {
+function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData, teamAccommodationType, memberData, isEditMode }) {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
@@ -170,18 +170,31 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
 
     useEffect(() => {
         if (show) {
-            setFirstName('');
-            setLastName('');
-            setDateOfBirth('');
-            setJerseyNumber('');
-            setRegistrationNumber('');
-            setStreet('');
-            setHouseNumber('');
-            setPostalCode('');
-            setCity('');
-            setCountry('');
+            if (isEditMode && memberData) {
+                setFirstName(memberData.firstName || '');
+                setLastName(memberData.lastName || '');
+                setDateOfBirth(memberData.dateOfBirth || '');
+                setJerseyNumber(memberData.jerseyNumber || '');
+                setRegistrationNumber(memberData.registrationNumber || '');
+                setStreet(memberData.address?.street || '');
+                setHouseNumber(memberData.address?.houseNumber || '');
+                setPostalCode(memberData.address?.postalCode || '');
+                setCity(memberData.address?.city || '');
+                setCountry(memberData.address?.country || '');
+            } else {
+                setFirstName('');
+                setLastName('');
+                setDateOfBirth('');
+                setJerseyNumber('');
+                setRegistrationNumber('');
+                setStreet('');
+                setHouseNumber('');
+                setPostalCode('');
+                setCity('');
+                setCountry('');
+            }
         }
-    }, [show, memberType, teamAccommodationType]);
+    }, [show, memberType, teamAccommodationType, memberData, isEditMode]);
 
     if (!show) return null;
 
@@ -190,7 +203,7 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const newMember = {
+        const memberDetails = {
             firstName,
             lastName,
             dateOfBirth,
@@ -199,7 +212,7 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
         };
         
         if (showAddressFields) {
-            newMember.address = {
+            memberDetails.address = {
                 street,
                 houseNumber,
                 postalCode,
@@ -208,9 +221,17 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
             };
         }
         
-        onSaveMember(newMember);
+        onSaveMember(memberDetails);
         onClose();
     };
+
+    const modalTitlePrefix = isEditMode ? 'Upraviť' : 'Pridať';
+    const modalTitleMemberType =
+        memberType === 'player' ? 'hráča' :
+        memberType === 'womenTeamMember' ? 'členku realizačného tímu' :
+        memberType === 'menTeamMember' ? 'člena realizačného tímu' :
+        memberType === 'driverFemale' ? 'šoférku' :
+        memberType === 'driverMale' ? 'šoféra' : 'člena';
 
     return React.createElement(
         'div',
@@ -221,13 +242,7 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
             React.createElement(
                 'div',
                 { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
-                React.createElement('h3', { className: 'text-xl font-semibold' }, `Pridať ${
-                    memberType === 'player' ? 'hráča' :
-                    memberType === 'womenTeamMember' ? 'členku realizačného tímu' :
-                    memberType === 'menTeamMember' ? 'člena realizačného tímu' :
-                    memberType === 'driverFemale' ? 'šoférku' :
-                    memberType === 'driverMale' ? 'šoféra' : 'člena'
-                }`),
+                React.createElement('h3', { className: 'text-xl font-semibold' }, `${modalTitlePrefix} ${modalTitleMemberType}`),
                 React.createElement(
                     'button',
                     { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
@@ -298,7 +313,7 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
                             className: `px-4 py-2 text-white rounded-md transition-colors`,
                             style: { backgroundColor: roleColor, hoverBackgroundColor: roleColor }
                         },
-                        'Pridať člena'
+                        isEditMode ? 'Uložiť zmeny' : 'Pridať člena'
                     )
                 )
             )
@@ -990,12 +1005,17 @@ function RostersApp() {
   const [availableAccommodationTypes, setAvailableAccommodationTypes] = useState([]);
   const [availableTshirtSizes, setAvailableTshirtSizes] = useState([]);
   const [showAddMemberTypeModal, setShowAddMemberTypeModal] = useState(false);
-  const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = useState(false);
+  const [showMemberDetailsModal, setShowMemberDetailsModal] = useState(false); // Changed from showAddMemberDetailsModal
   const [memberTypeToAdd, setMemberTypeToAdd] = useState(null);
   const [teamToAddMemberTo, setTeamToAddMemberTo] = useState(null);
   const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = useState('');
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
   const [availableCategoriesFromSettings, setAvailableCategoriesFromSettings] = useState([]);
+
+  // New states for editing members
+  const [isMemberEditMode, setIsMemberEditMode] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState(null);
+  const [teamOfMemberToEdit, setTeamOfMemberToEdit] = useState(null);
 
 
   const [loading, setLoading] = useState(true); 
@@ -1219,11 +1239,9 @@ function RostersApp() {
     if (team.playerDetails && team.playerDetails.length > 0) {
       team.playerDetails.forEach(player => {
         members.push({
+          originalType: 'player', // Add this
           type: 'Hráč',
-          firstName: player.firstName,
-          lastName: player.lastName,
-          jerseyNumber: player.jerseyNumber,
-          address: player.address
+          ...player, // Include all original player details
         });
       });
     }
@@ -1231,10 +1249,9 @@ function RostersApp() {
     if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
       team.menTeamMemberDetails.forEach(member => {
         members.push({
+          originalType: 'menTeamMember', // Add this
           type: 'Člen realizačného tímu (muž)',
-          firstName: member.firstName,
-          lastName: member.lastName,
-          address: member.address
+          ...member,
         });
       });
     }
@@ -1242,10 +1259,9 @@ function RostersApp() {
     if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
       team.womenTeamMemberDetails.forEach(member => {
         members.push({
+          originalType: 'womenTeamMember', // Add this
           type: 'Člen realizačného tímu (žena)',
-          firstName: member.firstName,
-          lastName: member.lastName,
-          address: member.address
+          ...member,
         });
       });
     }
@@ -1253,10 +1269,9 @@ function RostersApp() {
     if (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) {
       team.driverDetailsFemale.forEach(driver => {
         members.push({
+          originalType: 'driverFemale', // Add this
           type: 'Šofér (žena)',
-          firstName: driver.firstName,
-          lastName: driver.lastName,
-          address: driver.address
+          ...driver,
         });
       });
     }
@@ -1264,10 +1279,9 @@ function RostersApp() {
     if (team.driverDetailsMale && team.driverDetailsMale.length > 0) {
       team.driverDetailsMale.forEach(driver => {
         members.push({
+          originalType: 'driverMale', // Add this
           type: 'Šofér (muž)',
-          firstName: driver.firstName,
-          lastName: driver.lastName,
-          address: driver.address
+          ...driver,
         });
       });
     }
@@ -1536,12 +1550,14 @@ const handleAddTeam = async (newTeamDataFromModal) => {
 const handleOpenAddMemberTypeModal = (team) => {
     setTeamToAddMemberTo(team);
     setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || 'bez ubytovania');
-    setShowAddMemberTypeModal(true);
+    setIsMemberEditMode(false); // Ensure add mode
+    setMemberToEdit(null); // Clear any member in edit mode
+    setShowMemberDetailsModal(true);
 };
 
 const handleSelectMemberType = (type) => {
     setMemberTypeToAdd(type);
-    setShowAddMemberDetailsModal(true);
+    setShowMemberDetailsModal(true);
 };
 
 const handleSaveNewMember = async (newMemberDetails) => {
@@ -1603,6 +1619,73 @@ const handleSaveNewMember = async (newMemberDetails) => {
     } catch (error) {
         console.error("Chyba pri pridávaní člena tímu:", error);
         showLocalNotification('Nastala chyba pri pridávaní člena tímu.', 'error');
+    }
+};
+
+const handleOpenEditMemberDetailsModal = (team, member) => {
+    setTeamOfMemberToEdit(team);
+    setMemberToEdit(member);
+    setMemberTypeToAdd(member.originalType); // Set the type for the modal title
+    setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || 'bez ubytovania');
+    setIsMemberEditMode(true);
+    setShowMemberDetailsModal(true);
+};
+
+const handleSaveEditedMember = async (updatedMemberDetails) => {
+    if (!user || !user.uid || !teamOfMemberToEdit || !memberToEdit) {
+        showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýbajú údaje pre úpravu člena.', 'error');
+        return;
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const currentTeams = { ...teamsData };
+    const teamCategory = teamOfMemberToEdit.categoryName;
+    const teamName = teamOfMemberToEdit.teamName;
+    const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === teamName);
+
+    if (teamIndex === -1) {
+        showLocalNotification('Chyba: Tím nebol nájdený pre aktualizáciu člena.', 'error');
+        return;
+    }
+
+    const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
+    let memberArrayName;
+
+    switch (memberToEdit.originalType) {
+        case 'player': memberArrayName = 'playerDetails'; break;
+        case 'womenTeamMember': memberArrayName = 'womenTeamMemberDetails'; break;
+        case 'menTeamMember': memberArrayName = 'menTeamMemberDetails'; break;
+        case 'driverFemale': memberArrayName = 'driverDetailsFemale'; break;
+        case 'driverMale': memberArrayName = 'driverDetailsMale'; break;
+        default:
+            showLocalNotification('Neznámy typ člena tímu pre aktualizáciu.', 'error');
+            return;
+    }
+
+    const memberArray = teamToUpdate[memberArrayName];
+    const memberIndex = memberArray.findIndex(
+        m => m.firstName === memberToEdit.firstName && 
+             m.lastName === memberToEdit.lastName && 
+             m.dateOfBirth === memberToEdit.dateOfBirth
+    );
+
+    if (memberIndex !== -1) {
+        memberArray[memberIndex] = { ...memberArray[memberIndex], ...updatedMemberDetails };
+    } else {
+        showLocalNotification('Chyba: Člen tímu nebol nájdený pre aktualizáciu.', 'error');
+        return;
+    }
+
+    currentTeams[teamCategory][teamIndex] = teamToUpdate;
+
+    try {
+        await updateDoc(userDocRef, { teams: currentTeams });
+        showLocalNotification('Údaje člena tímu boli úspešne aktualizované!', 'success');
+        setMemberToEdit(null);
+        setTeamOfMemberToEdit(null);
+    } catch (error) {
+        console.error("Chyba pri aktualizácii člena tímu:", error);
+        showLocalNotification('Nastala chyba pri aktualizácii údajov člena tímu.', 'error');
     }
 };
 
@@ -1782,6 +1865,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
                               React.createElement('thead', null,
                                 React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
                                   [
+                                    React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Akcie'), // New column for actions
                                     React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Typ člena'),
                                     React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu'),
                                     React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Meno'),
@@ -1794,6 +1878,16 @@ const handleSaveNewMember = async (newMemberDetails) => {
                                 allMembers.map((member, mIndex) => (
                                   React.createElement('tr', { key: mIndex, className: 'hover:bg-gray-50' },
                                     [
+                                      React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, 
+                                        React.createElement('button', {
+                                            onClick: () => handleOpenEditMemberDetailsModal(team, member),
+                                            className: 'flex items-center space-x-1 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors',
+                                            'aria-label': 'Upraviť člena'
+                                        },
+                                            React.createElement('svg', { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z` })),
+                                            React.createElement('span', null, 'Upraviť')
+                                        )
+                                      ),
                                       React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type),
                                       React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
                                       React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
@@ -1880,14 +1974,20 @@ const handleSaveNewMember = async (newMemberDetails) => {
         }
       ),
       React.createElement(
-        AddMemberDetailsModal,
+        MemberDetailsModal, // Changed from AddMemberDetailsModal
         {
-          show: showAddMemberDetailsModal,
-          onClose: () => setShowAddMemberDetailsModal(false),
-          onSaveMember: handleSaveNewMember,
+          show: showMemberDetailsModal, // Changed state variable
+          onClose: () => {
+            setShowMemberDetailsModal(false);
+            setMemberToEdit(null); // Clear memberToEdit on close
+            setIsMemberEditMode(false); // Reset mode
+          },
+          onSaveMember: isMemberEditMode ? handleSaveEditedMember : handleSaveNewMember, // Conditional save handler
           memberType: memberTypeToAdd,
           userProfileData: userProfileData,
-          teamAccommodationType: teamAccommodationTypeToAddMemberTo
+          teamAccommodationType: teamAccommodationTypeToAddMemberTo,
+          memberData: memberToEdit, // Pass member data for editing
+          isEditMode: isMemberEditMode // Pass edit mode flag
         }
       ),
       React.createElement(
