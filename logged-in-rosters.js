@@ -244,10 +244,10 @@ function RostersApp() {
     React.createElement(
       'div',
       { className: 'w-full max-w-3xl p-4' },
-      // Obnovený biely obdĺžnik s tieňom a nadpisom "Súpiska tímov"
+      // Odstránené triedy pre biely podklad a tieň z hlavného kontajnera
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
+        { className: 'w-full' }, 
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Súpiska tímov'
         ),
@@ -365,7 +365,7 @@ function RostersApp() {
         ) : (
           React.createElement('p', { className: 'text-center text-gray-600 text-lg py-8' }, 'Zatiaľ neboli vytvorené žiadne tímy pre tohto používateľa.')
         )
-      ) // Uzatvorenie pre Re-added white box
+      ) 
     )
   );
 }
