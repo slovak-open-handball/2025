@@ -84,8 +84,10 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     // Nové stavy pre selectboxy
     const [editedArrivalType, setEditedArrivalType] = React.useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
     const [editedPackageName, setEditedPackageName] = React.useState(teamData ? teamData.packageDetails?.name || '' : '');
-    // Stav pre čas príchodu
-    const [editedArrivalTime, setEditedArrivalTime] = React.useState(teamData ? teamData.arrival?.time || '' : '');
+    
+    // Stavy pre čas príchodu - hodiny a minúty
+    const [editedArrivalHour, setEditedArrivalHour] = React.useState('');
+    const [editedArrivalMinute, setEditedArrivalMinute] = React.useState('');
 
 
     // Aktualizácia stavu, keď sa zmenia teamData (napr. pri otvorení pre iný tím)
@@ -95,7 +97,16 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             setEditedCategoryName(teamData.categoryName || '');
             setEditedArrivalType(teamData.arrival?.type || 'bez dopravy');
             setEditedPackageName(teamData.packageDetails?.name || '');
-            setEditedArrivalTime(teamData.arrival?.time || '');
+
+            // Parsujeme čas na hodiny a minúty
+            if (teamData.arrival?.time) {
+                const [hour, minute] = teamData.arrival.time.split(':');
+                setEditedArrivalHour(hour || '');
+                setEditedArrivalMinute(minute || '');
+            } else {
+                setEditedArrivalHour('');
+                setEditedArrivalMinute('');
+            }
         }
     }, [teamData]);
 
@@ -119,6 +130,12 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        let finalArrivalTime = '';
+        if (editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus') {
+            finalArrivalTime = `${editedArrivalHour.padStart(2, '0')}:${editedArrivalMinute.padStart(2, '0')}`;
+        }
+
         const updatedTeamData = {
             ...teamData,
             teamName: editedTeamName, // Použijeme pôvodný názov tímu, lebo sa neupravuje
@@ -127,7 +144,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             arrival: { 
                 ...teamData.arrival, 
                 type: editedArrivalType,
-                time: (editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus') ? editedArrivalTime : ''
+                time: finalArrivalTime
             },
             // Aktualizácia názvu balíka
             packageDetails: { ...teamData.packageDetails, name: editedPackageName }
@@ -137,7 +154,12 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
         onClose();
     };
 
-    const showArrivalTimeInput = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
+    const showArrivalTimeInputs = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
+
+    // Generovanie možností pre hodiny (00-23)
+    const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+    // Generovanie možností pre minúty (00-59)
+    const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
     return React.createElement(
         'div',
@@ -178,19 +200,44 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                     React.createElement('option', { value: 'vlastná doprava' }, 'vlastná doprava')
                     )
                 ),
-                // Podmienené zobrazenie inputboxu pre čas príchodu
-                showArrivalTimeInput && React.createElement(
+                // Podmienené zobrazenie selectboxov pre čas príchodu
+                showArrivalTimeInputs && React.createElement(
                     'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'arrivalTime', className: 'block text-sm font-medium text-gray-700' }, 'Čas príchodu (napr. 14:30)'),
-                    React.createElement('input', {
-                        type: 'text',
-                        id: 'arrivalTime',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedArrivalTime,
-                        onChange: (e) => setEditedArrivalTime(e.target.value),
-                        placeholder: 'HH:MM'
-                    })
+                    { className: 'flex space-x-2' },
+                    React.createElement(
+                        'div',
+                        { className: 'w-1/2' },
+                        React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700' }, 'Hodina'),
+                        React.createElement('select', {
+                            id: 'arrivalHour',
+                            className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                            value: editedArrivalHour,
+                            onChange: (e) => setEditedArrivalHour(e.target.value),
+                            required: true
+                        },
+                        React.createElement('option', { value: '' }, '--'), // Predvolená prázdna hodnota
+                        hourOptions.map((hour) =>
+                            React.createElement('option', { key: hour, value: hour }, hour)
+                        )
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'w-1/2' },
+                        React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700' }, 'Minúta'),
+                        React.createElement('select', {
+                            id: 'arrivalMinute',
+                            className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                            value: editedArrivalMinute,
+                            onChange: (e) => setEditedArrivalMinute(e.target.value),
+                            required: true
+                        },
+                        React.createElement('option', { value: '' }, '--'), // Predvolená prázdna hodnota
+                        minuteOptions.map((minute) =>
+                            React.createElement('option', { key: minute, value: minute }, minute)
+                        )
+                        )
+                    )
                 ),
                 // Selectbox pre Balík
                 React.createElement(
