@@ -1005,7 +1005,7 @@ function RostersApp() {
   const [availableAccommodationTypes, setAvailableAccommodationTypes] = useState([]);
   const [availableTshirtSizes, setAvailableTshirtSizes] = useState([]);
   const [showAddMemberTypeModal, setShowAddMemberTypeModal] = useState(false);
-  const [showMemberDetailsModal, setShowMemberDetailsModal] = useState(false); // Changed from showAddMemberDetailsModal
+  const [showMemberDetailsModal, setShowMemberDetailsModal] = useState(false); 
   const [memberTypeToAdd, setMemberTypeToAdd] = useState(null);
   const [teamToAddMemberTo, setTeamToAddMemberTo] = useState(null);
   const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = useState('');
@@ -1552,12 +1552,13 @@ const handleOpenAddMemberTypeModal = (team) => {
     setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || 'bez ubytovania');
     setIsMemberEditMode(false); // Ensure add mode
     setMemberToEdit(null); // Clear any member in edit mode
-    setShowMemberDetailsModal(true);
+    setShowAddMemberTypeModal(true); // Corrected: shows the member type selection modal
 };
 
 const handleSelectMemberType = (type) => {
     setMemberTypeToAdd(type);
-    setShowMemberDetailsModal(true);
+    setShowAddMemberTypeModal(false); // Hide the type selection modal
+    setShowMemberDetailsModal(true); // Show the details modal
 };
 
 const handleSaveNewMember = async (newMemberDetails) => {
@@ -1974,20 +1975,20 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         }
       ),
       React.createElement(
-        MemberDetailsModal, // Changed from AddMemberDetailsModal
+        MemberDetailsModal, 
         {
-          show: showMemberDetailsModal, // Changed state variable
+          show: showMemberDetailsModal, 
           onClose: () => {
             setShowMemberDetailsModal(false);
-            setMemberToEdit(null); // Clear memberToEdit on close
-            setIsMemberEditMode(false); // Reset mode
+            setMemberToEdit(null); 
+            setIsMemberEditMode(false); 
           },
-          onSaveMember: isMemberEditMode ? handleSaveEditedMember : handleSaveNewMember, // Conditional save handler
+          onSaveMember: isMemberEditMode ? handleSaveEditedMember : handleSaveNewMember, 
           memberType: memberTypeToAdd,
           userProfileData: userProfileData,
           teamAccommodationType: teamAccommodationTypeToAddMemberTo,
-          memberData: memberToEdit, // Pass member data for editing
-          isEditMode: isMemberEditMode // Pass edit mode flag
+          memberData: memberToEdit, 
+          isEditMode: isMemberEditMode 
         }
       ),
       React.createElement(
