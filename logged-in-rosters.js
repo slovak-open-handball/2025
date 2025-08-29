@@ -348,7 +348,8 @@ function RostersApp() {
                                 { className: 'ml-4 mt-2 mb-4 space-y-1' }, // Odsadenie a priestor pre detaily
                                 React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} €`),
                                 // Úprava pre zobrazenie Účastníckej karty
-                                team.packageDetails.participantCard === 1 && React.createElement(
+                                // Teraz kontrolujeme, či je 'participantCard' kľúčom v meals a má hodnotu 1
+                                team.packageDetails.meals && team.packageDetails.meals.participantCard === 1 && React.createElement(
                                     'p',
                                     { className: 'text-sm text-gray-600' },
                                     `Účastnícka karta: zahŕňa účastnícku kartu`
@@ -362,7 +363,8 @@ function RostersApp() {
                                         // Kontrola, či je kľúč platným dátumovým reťazcom (YYYY-MM-DD formát)
                                         const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(key);
                                         // Zabezpečí, že ak je to dátum, má aspoň jedno aktívne jedlo
-                                        return isValidDate && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
+                                        // A tiež vylúčime 'participantCard' z dátumov
+                                        return isValidDate && key !== 'participantCard' && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
                                     }).map(date =>
                                         React.createElement(
                                             'div',
