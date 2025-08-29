@@ -1069,7 +1069,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                                     color: isAddTshirtButtonDisabled ? roleColor : 'white', 
                                 }
                             },
-                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
+                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d=
+'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
                         )
                     )
                 ),
@@ -1668,6 +1669,27 @@ function RostersApp() {
           React.createElement('div', { className: 'space-y-6 w-full' }, 
             teamCategories.map(([categoryName, teamsArray]) => (
               React.createElement('div', { key: categoryName, className: 'space-y-4 w-full' }, 
+                // Tlačidlo "Pridať nový tím" pred každou kategóriou
+                userProfileData && React.createElement(
+                    'div',
+                    { className: 'flex justify-start mb-4' }, // Zmenené z justify-center na justify-start a pridané mb-4
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setShowAddTeamModal(true),
+                            className: `flex items-center space-x-2 px-6 py-3 rounded-full text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#9333EA] hover:bg-opacity-90`,
+                            style: { backgroundColor: getRoleColor(userProfileData?.role) },
+                            'aria-label': 'Pridať nový tím'
+                        },
+                        React.createElement(
+                            'svg',
+                            { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' })
+                        ),
+                        React.createElement('span', { className: 'font-semibold' }, 'Pridať nový tím')
+                    )
+                ),
                 React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} ${getTeamPluralization(teamsArray.length)})`), 
                 React.createElement('div', { className: 'space-y-6 w-full' }, 
                   teamsArray.map((team, index) => {
@@ -1842,7 +1864,8 @@ function RostersApp() {
                                     className: 'flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
                                     'aria-label': 'Pridať člena tímu'
                                 },
-                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d=
+'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
                             )
                           )
                         )
@@ -1873,7 +1896,8 @@ function RostersApp() {
               React.createElement(
                   'svg',
                   { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
-                  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' })
+                  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d=
+'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
               ),
               React.createElement('span', { className: 'font-semibold' }, 'Pridať nový tím')
           )
