@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -513,7 +513,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         onChange: (e) => setEditedArrivalType(e.target.value),
                         required: true
                     },
-                    React.createElement('option', { value: '' }, 'bez dopravy'),
+                    React.createElement('option', { value: 'bez dopravy' }, 'bez dopravy'),
                     React.createElement('option', { value: 'verejná doprava - autobus' }, 'verejná doprava - autobus'),
                     React.createElement('option', { value: 'verejná doprava - vlak' }, 'verejná doprava - vlak'),
                     React.createElement('option', { value: 'vlastná doprava' }, 'vlastná doprava')
@@ -704,6 +704,406 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     );
 }
 
+// Komponent modálneho okna pre pridanie nového tímu
+function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategories }) {
+    const db = getFirestore();
+    const [selectedCategory, setSelectedCategory] = React.useState('');
+    const [teamNamePreview, setTeamNamePreview] = React.useState(''); // Predbežný názov tímu na zobrazenie
+    const [arrivalType, setArrivalType] = React.useState('bez dopravy');
+    const [arrivalHour, setArrivalHour] = React.useState('');
+    const [arrivalMinute, setArrivalMinute] = React.useState('');
+    const [accommodationType, setAccommodationType] = React.useState('bez ubytovania'); // Predvolená hodnota
+    const [packageName, setPackageName] = React.useState(availablePackages.length > 0 ? availablePackages.sort()[0] : ''); // Predvolená hodnota
+    const [tshirtEntries, setTshirtEntries] = React.useState([]);
+
+    const clubName = userProfileData?.clubName || 'Neznámy klub';
+    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+
+    // Reset stavov pri otvorení/zatvorení modalu
+    React.useEffect(() => {
+        if (show) {
+            setSelectedCategory('');
+            setTeamNamePreview('');
+            setArrivalType('bez dopravy');
+            setArrivalHour('');
+            setArrivalMinute('');
+            setAccommodationType('bez ubytovania');
+            setPackageName(availablePackages.length > 0 ? availablePackages.sort()[0] : '');
+            setTshirtEntries([]);
+        }
+    }, [show, availablePackages]);
+
+    // Logika pre odvodenie názvu tímu
+    React.useEffect(() => {
+        if (selectedCategory && clubName !== 'Neznámy klub' && teamsData) {
+            const teamsInSelectedCategory = teamsData[selectedCategory] || [];
+            
+            const clubTeamsInThisCategory = teamsInSelectedCategory.filter(team => 
+                team.clubName === clubName && team.categoryName === selectedCategory
+            );
+
+            let nextSuffixChar = 'A';
+            const existingSuffixes = new Set();
+
+            clubTeamsInThisCategory.forEach(team => {
+                const match = team.teamName.match(new RegExp(`${clubName}\\s*([A-Z])$`));
+                if (match) {
+                    existingSuffixes.add(match[1]);
+                }
+            });
+
+            // Nájdite najmenšie nepoužité písmeno ako príponu
+            while (existingSuffixes.has(nextSuffixChar)) {
+                nextSuffixChar = String.fromCharCode(nextSuffixChar.charCodeAt(0) + 1);
+            }
+            setTeamNamePreview(`${clubName} ${nextSuffixChar}`);
+        } else {
+            setTeamNamePreview('');
+        }
+    }, [selectedCategory, clubName, teamsData]);
+
+    const totalMembersInTeam = 0; // Nový tím má na začiatku 0 členov
+    const totalTshirtsQuantity = tshirtEntries.reduce((sum, entry) => sum + (parseInt(entry.quantity, 10) || 0), 0);
+    const allTshirtSizesSelected = tshirtEntries.every(tshirt => tshirt.size !== '');
+    
+    // Tlačidlo "Uložiť" je neaktívne, ak nie je vybraná kategória, vygenerovaný názov tímu, 
+    // alebo ak sa počet tričiek nezhoduje s počtom členov (čo je 0 pre nový tím)
+    const isSaveButtonDisabled = !selectedCategory || !teamNamePreview || totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected;
+    const isAddTshirtButtonDisabled = totalTshirtsQuantity === totalMembersInTeam; // Zablokované, ak je 0 členov (pre nový tím)
+
+    const showArrivalTimeInputs = arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus';
+
+    const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+    const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+
+    const handleAddTshirtEntry = () => {
+        setTshirtEntries([...tshirtEntries, { size: '', quantity: 1 }]);
+    };
+
+    const handleRemoveTshirtEntry = (index) => {
+        setTshirtEntries(tshirtEntries.filter((_, i) => i !== index));
+    };
+
+    const handleTshirtSizeChange = (index, newSize) => {
+        const updatedEntries = [...tshirtEntries];
+        updatedEntries[index].size = newSize;
+        setTshirtEntries(updatedEntries);
+    };
+
+    const handleTshirtQuantityChange = (index, newQuantity) => {
+        const updatedEntries = [...tshirtEntries];
+        updatedEntries[index].quantity = Math.max(1, parseInt(newQuantity, 10) || 1);
+        setTshirtEntries(updatedEntries);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (isSaveButtonDisabled) {
+            showLocalNotification('Prosím, vyplňte kategóriu, uistite sa, že počet tričiek sa zhoduje s počtom členov tímu (0 pre nový tím) a sú vybraté všetky veľkosti tričiek.', 'error');
+            return;
+        }
+
+        let finalArrivalTime = '';
+        if (arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus') {
+            finalArrivalTime = `${arrivalHour.padStart(2, '0')}:${arrivalMinute.padStart(2, '0')}`;
+        }
+
+        const filteredTshirtEntries = tshirtEntries.filter(t => t.size && t.quantity && parseInt(t.quantity, 10) > 0)
+                                                    .map(t => ({ ...t, quantity: parseInt(t.quantity, 10) }));
+
+        // Načítanie detailov balíka pre informácie o jedle a cene
+        let packageDetails = {};
+        if (packageName) {
+            try {
+                const packagesRef = collection(db, 'settings', 'packages', 'list');
+                const q = query(packagesRef, where('name', '==', packageName));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const packageDoc = querySnapshot.docs[0];
+                    packageDetails = {
+                        name: packageName,
+                        meals: packageDoc.data().meals || {},
+                        price: packageDoc.data().price || 0,
+                        id: packageDoc.id
+                    };
+                }
+            } catch (error) {
+                console.error("Error fetching package details for new team:", error);
+                showLocalNotification('Nastala chyba pri načítavaní detailov balíka.', 'error');
+                return;
+            }
+        }
+        
+        const newTeamData = {
+            teamName: teamNamePreview, // Použijeme už vygenerovaný názov
+            categoryName: selectedCategory,
+            clubName: clubName,
+            players: 0,
+            menTeamMembers: 0,
+            womenTeamMembers: 0,
+            playerDetails: [],
+            menTeamMemberDetails: [],
+            womenTeamMemberDetails: [],
+            driverDetailsFemale: [],
+            driverDetailsMale: [],
+            arrival: { type: arrivalType, time: finalArrivalTime },
+            accommodation: { type: accommodationType },
+            packageDetails: packageDetails,
+            tshirts: filteredTshirtEntries,
+        };
+        await onAddTeam(newTeamData); // Zavoláme funkciu na pridanie tímu z rodičovského komponentu
+        setTimeout(() => onClose(), 0);
+    };
+
+    if (!show) return null;
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center' },
+        React.createElement(
+            'div',
+            { className: 'relative p-8 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg' },
+            React.createElement(
+                'div',
+                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
+                React.createElement('h3', { className: 'text-2xl font-semibold' }, 'Pridať nový tím'),
+                React.createElement(
+                    'button',
+                    { onClick: () => setTimeout(() => onClose(), 0), className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
+                    '×'
+                )
+            ),
+            React.createElement(
+                'form',
+                { onSubmit: handleSubmit, className: 'space-y-4' },
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'categoryName', className: 'block text-sm font-medium text-gray-700' }, 'Kategória'),
+                    React.createElement('select', {
+                        id: 'categoryName',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: selectedCategory,
+                        onChange: (e) => setSelectedCategory(e.target.value),
+                        required: true
+                    },
+                    React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
+                    availableCategories.sort().map((cat, idx) => (
+                        React.createElement('option', { key: idx, value: cat }, cat)
+                    ))
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Názov tímu (automaticky generovaný)'),
+                    React.createElement('input', {
+                        type: 'text',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-not-allowed',
+                        value: teamNamePreview,
+                        readOnly: true,
+                        disabled: true
+                    })
+                ),
+                // Selectbox pre Typ dopravy
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'arrivalType', className: 'block text-sm font-medium text-gray-700' }, 'Typ dopravy'),
+                    React.createElement('select', {
+                        id: 'arrivalType',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: arrivalType,
+                        onChange: (e) => setArrivalType(e.target.value),
+                        required: true
+                    },
+                    React.createElement('option', { value: 'bez dopravy' }, 'bez dopravy'),
+                    React.createElement('option', { value: 'verejná doprava - autobus' }, 'verejná doprava - autobus'),
+                    React.createElement('option', { value: 'verejná doprava - vlak' }, 'verejná doprava - vlak'),
+                    React.createElement('option', { value: 'vlastná doprava' }, 'vlastná doprava')
+                    )
+                ),
+                // Podmienené zobrazenie selectboxov pre čas príchodu
+                showArrivalTimeInputs && React.createElement(
+                    'div',
+                    null, 
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Plánovaný čas príchodu na turnaj'), 
+                    React.createElement(
+                        'div',
+                        { className: 'flex space-x-2' },
+                        React.createElement(
+                            'div',
+                            { className: 'w-1/2' },
+                            React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700' }, 'Hodina'), 
+                            React.createElement('select', {
+                                id: 'arrivalHour',
+                                className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                                value: arrivalHour,
+                                onChange: (e) => setArrivalHour(e.target.value),
+                                required: true
+                            },
+                            React.createElement('option', { value: '' }, '-- Hodina --'), 
+                            hourOptions.map((hour) =>
+                                React.createElement('option', { key: hour, value: hour }, hour)
+                            )
+                            )
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'w-1/2' },
+                            React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700' }, 'Minúta'), 
+                            React.createElement('select', {
+                                id: 'arrivalMinute',
+                                className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                                value: arrivalMinute,
+                                onChange: (e) => setArrivalMinute(e.target.value),
+                                required: true
+                            },
+                            React.createElement('option', { value: '' }, '-- Minúta --'), 
+                            minuteOptions.map((minute) =>
+                                React.createElement('option', { key: minute, value: minute }, minute)
+                            )
+                            )
+                        )
+                    )
+                ),
+                // Selectbox pre Typ ubytovania
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'accommodationType', className: 'block text-sm font-medium text-gray-700' }, 'Typ ubytovania'),
+                    React.createElement('select', {
+                        id: 'accommodationType',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: accommodationType,
+                        onChange: (e) => setAccommodationType(e.target.value),
+                        required: true
+                    },
+                    React.createElement('option', { value: 'bez ubytovania' }, 'bez ubytovania'), 
+                    availableAccommodationTypes.slice().sort((a,b) => a.localeCompare(b)).map((type, idx) => 
+                        React.createElement('option', { key: idx, value: type }, type)
+                    )
+                    )
+                ),
+                // Selectbox pre Balík
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'packageName', className: 'block text-sm font-medium text-gray-700' }, 'Balík'),
+                    React.createElement('select', {
+                        id: 'packageName',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: packageName,
+                        onChange: (e) => setPackageName(e.target.value),
+                        required: true
+                    },
+                    availablePackages.slice().sort().map((pkgName, idx) => 
+                        React.createElement('option', { key: idx, value: pkgName }, pkgName)
+                    )
+                    )
+                ),
+
+                // Sekcia pre Tričká (začínajú prázdne)
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement(
+                        'div',
+                        { className: 'mb-2' }, 
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Tričká'),
+                    ),
+                    tshirtEntries.map((tshirt, index) => (
+                        React.createElement(
+                            'div',
+                            { key: index, className: 'flex items-center space-x-2 mb-2' },
+                            React.createElement('select', {
+                                className: 'mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm p-2',
+                                value: tshirt.size,
+                                onChange: (e) => handleTshirtSizeChange(index, e.target.value),
+                                required: true
+                            },
+                            React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
+                            availableTshirtSizes.slice().sort().map((size, sIdx) => 
+                                React.createElement('option', { key: sIdx, value: size }, size)
+                            )
+                            ),
+                            React.createElement('input', {
+                                type: 'number',
+                                className: 'mt-1 block w-1/4 border border-gray-300 rounded-md shadow-sm p-2',
+                                placeholder: 'Počet',
+                                value: tshirt.quantity,
+                                onChange: (e) => handleTshirtQuantityChange(index, e.target.value),
+                                min: '1',
+                                required: true
+                            }),
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleRemoveTshirtEntry(index),
+                                    className: 'flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500'
+                                },
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M20 12H4' }))
+                            )
+                        )
+                    )),
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-center mt-4' }, 
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: handleAddTshirtEntry,
+                                disabled: isAddTshirtButtonDisabled, 
+                                className: `flex items-center justify-center w-8 h-8 rounded-full transition-colors focus:outline-none focus:ring-2
+                                    ${isAddTshirtButtonDisabled
+                                        ? 'bg-white border border-solid' 
+                                        : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500'
+                                    }`,
+                                style: { 
+                                    cursor: isAddTshirtButtonDisabled ? 'not-allowed' : 'pointer', 
+                                    borderColor: isAddTshirtButtonDisabled ? roleColor : 'transparent', 
+                                    color: isAddTshirtButtonDisabled ? roleColor : 'white', 
+                                }
+                            },
+                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end space-x-2 mt-6' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setTimeout(() => onClose(), 0), 
+                            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'submit',
+                            disabled: isSaveButtonDisabled,
+                            className: `px-4 py-2 rounded-md transition-colors ${isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'}`,
+                            style: { 
+                                backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
+                                color: isSaveButtonDisabled ? roleColor : 'white',
+                                borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
+                                cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
+                            }
+                        },
+                        'Uložiť tím'
+                    )
+                )
+            )
+        )
+    );
+}
 
 // Main React component for the logged-in-rosters.html page
 function RostersApp() {
@@ -724,6 +1124,9 @@ function RostersApp() {
   const [memberTypeToAdd, setMemberTypeToAdd] = React.useState(null); // Typ člena, ktorý sa má pridať
   const [teamToAddMemberTo, setTeamToAddMemberTo] = React.useState(null); // Tím, do ktorého sa pridáva člen
   const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = React.useState(''); // Ubytovanie tímu pre nový modal
+  const [showAddTeamModal, setShowAddTeamModal] = React.useState(false); // Nový stav pre modálne okno pridania tímu
+  const [availableCategories, setAvailableCategories] = React.useState([]); // Nový stav pre dostupné kategórie
+
 
   // Loading stav pre používateľský profil
   const [loading, setLoading] = React.useState(true); 
@@ -871,8 +1274,10 @@ function RostersApp() {
             // Extrahovanie a nastavenie dát tímov
             if (userData.teams) {
                 setTeamsData(userData.teams);
+                setAvailableCategories(Object.keys(userData.teams).sort()); // Aktualizácia dostupných kategórií
             } else {
                 setTeamsData({}); // Ak teams neexistuje, nastavíme prázdny objekt
+                setAvailableCategories([]);
             }
 
             setLoading(false);
@@ -892,6 +1297,7 @@ function RostersApp() {
         setLoading(false);
         setUserProfileData(null);
         setTeamsData({});
+        setAvailableCategories([]);
     }
 
     return () => {
@@ -1139,45 +1545,66 @@ function RostersApp() {
     }
   };
 
+  // Funkcia pre pridanie nového tímu
+  const handleAddTeam = async (newTeamData) => {
+    if (!user || !user.uid || !userProfileData?.clubName) {
+        showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
+        return;
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const currentTeams = { ...teamsData }; // Kópia existujúcich tímov
+
+    // Ak kategória ešte neexistuje, inicializujeme ju ako prázdne pole
+    if (!currentTeams[newTeamData.categoryName]) {
+        currentTeams[newTeamData.categoryName] = [];
+    }
+    
+    // Pridáme nový tím do príslušnej kategórie
+    currentTeams[newTeamData.categoryName].push(newTeamData);
+
+    try {
+        await updateDoc(userDocRef, {
+            teams: currentTeams
+        });
+        showLocalNotification('Nový tím bol úspešne pridaný!', 'success');
+        setShowAddTeamModal(false); // Zatvoríme modal po úspešnom pridaní
+    } catch (error) {
+        console.error("Chyba pri pridávaní nového tímu:", error);
+        showLocalNotification('Nastala chyba pri pridávaní nového tímu.', 'error');
+    }
+  };
+
 
   return React.createElement(
     'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto w-full' }, // Odstránené 'items-center'
+    { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto w-full' }, 
     React.createElement(
       'div',
-      { className: 'w-full p-4' }, // Odstránené 'max-w-3xl' aby sa to správalo ako v all-registrations.html
-      // Odstránené triedy pre biely podklad a tieň z hlavného kontajnera
+      { className: 'w-full p-4' }, 
       React.createElement(
         'div',
         { className: 'w-full' }, 
-//        React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-//          'Súpiska tímov'
-//        ),
         
         teamCategories.length > 0 ? (
-          React.createElement('div', { className: 'space-y-6 w-full' }, // Pridané w-full
+          React.createElement('div', { className: 'space-y-6 w-full' }, 
             teamCategories.map(([categoryName, teamsArray]) => (
-              // Kontajner kategórie s nadpisom
-              React.createElement('div', { key: categoryName, className: 'space-y-4 w-full' }, // Pridané w-full
-                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} ${getTeamPluralization(teamsArray.length)})`), // Väčší a tučnejší nadpis
-                React.createElement('div', { className: 'space-y-6 w-full' }, // Pridané w-full
+              React.createElement('div', { key: categoryName, className: 'space-y-4 w-full' }, 
+                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} ${getTeamPluralization(teamsArray.length)})`), 
+                React.createElement('div', { className: 'space-y-6 w-full' }, 
                   teamsArray.map((team, index) => {
                     const allMembers = getAllTeamMembers(team);
                     
-                    // Extrahovanie informácií o doprave, ubytovaní a balíku
                     const arrivalType = team.arrival?.type || 'Nezadané';
                     const accommodationType = team.accommodation?.type || 'Nezadané'; 
                     const packageName = team.packageDetails?.name || 'Nezadané';
                     
-                    // Upravená podmienka pre čas príchodu s pridaným "hod."
                     const arrivalTime = (
                         (arrivalType === "verejná doprava - autobus" || arrivalType === "verejná doprava - vlak") && team.arrival?.time
                     ) ? ` (čas: ${team.arrival.time} hod.)` : '';
 
-                    // Určenie, či zobraziť stĺpec Adresa
                     const shouldShowAddressColumn = accommodationType !== 'bez ubytovania';
 
-                    // Helper funkcia na formátovanie adresy
                     const formatAddress = (address) => {
                         if (!address) return '-';
                         const parts = [];
@@ -1201,15 +1628,12 @@ function RostersApp() {
                         return parts.length > 0 ? parts.join(', ') : '-';
                     };
 
-                    // Každý tím bude mať svoj vlastný biely obdĺžnik s tieňom a fialovým okrajom
                     return React.createElement('div', { 
                         key: index, 
-                        className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4 w-full' // Pridané w-full
+                        className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4 w-full' 
                     }, 
-                      // Kontajner pre fialový pásik a texty kategórie a názvu tímu
-                      // Pridal som flexbox a justify-between pre zarovnanie nadpisu a tlačidla
-                      React.createElement('div', { className: `bg-[#9333EA] text-white py-2 px-6 rounded-t-lg w-full flex justify-between items-center` }, // Upravené
-                        React.createElement('p', { className: 'text-xl font-semibold' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`), // Zmenený poriadok, aby bol nadpis hlavný
+                      React.createElement('div', { className: `bg-[#9333EA] text-white py-2 px-6 rounded-t-lg w-full flex justify-between items-center` }, 
+                        React.createElement('p', { className: 'text-xl font-semibold' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`), 
                         React.createElement(
                             'button',
                             {
@@ -1227,43 +1651,36 @@ function RostersApp() {
                         )
                       ),
                       
-                      // Kontajner pre ostatný obsah pod fialovým pásikom s polstrovaním
-                      React.createElement('div', { className: 'px-6 pt-4 w-full' }, // Pridané w-full
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Kategória: ${categoryName}`), // Kategória premiestnená
+                      React.createElement('div', { className: 'px-6 pt-4 w-full' }, 
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Kategória: ${categoryName}`), 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`), 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Šoféri (ženy): ${team.driverDetailsFemale?.length || 0}`),
                         React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Šoféri (muži): ${team.driverDetailsMale?.length || 0}`),
                         
-                        // Nové informácie o doprave, ubytovaní a balíku
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`), 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`), 
                         
-                        // Zobrazenie detailov balíka
                         team.packageDetails && React.createElement(
                             'div',
-                            { className: 'mt-2 mb-4' }, // upravené marginy
+                            { className: 'mt-2 mb-4' }, 
                             React.createElement('p', { className: 'text-md text-gray-700' }, `Balík: ${packageName}`),
                             React.createElement(
                                 'div',
-                                { className: 'ml-4 mt-2 mb-4 space-y-1' }, // Odsadenie a priestor pre detaily
-                                React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} € / osoba`), // Upravený text
-                                // Úprava pre zobrazenie Účastníckej karty
-                                // Teraz kontrolujeme, či je 'participantCard' kľúčom v meals a má hodnotu 1
+                                { className: 'ml-4 mt-2 mb-4 space-y-1' }, 
+                                React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} € / osoba`), 
                                 team.packageDetails.meals && team.packageDetails.meals.participantCard === 1 && React.createElement(
                                     'p',
                                     { className: 'text-sm text-gray-600' },
                                     `Zahŕňa účastnícku kartu` 
                                 ),
                                 team.packageDetails.meals && (() => {
-                                    // Získanie filtrovaných a zoradených dátumov s aktívnymi jedlami
                                     const activeMealDates = Object.keys(team.packageDetails.meals).sort().filter(key => {
                                         const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(key);
                                         return isValidDate && key !== 'participantCard' && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
                                     });
 
-                                    // Ak existujú nejaké aktívne stravovacie dni, zobrazíme nadpis a zoznam
                                     if (activeMealDates.length > 0) {
                                         return React.createElement(
                                             'div',
@@ -1271,12 +1688,12 @@ function RostersApp() {
                                             React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
                                             activeMealDates.map(date => {
                                                 const dateObj = new Date(date);
-                                                const dayIndex = dateObj.getDay(); // 0 = nedeľa, 1 = pondelok, ...
+                                                const dayIndex = dateObj.getDay(); 
                                                 const dayAbbr = dayAbbreviations[dayIndex];
 
                                                 const activeMeals = mealOrder
                                                     .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
-                                                    .map(mealType => mealTypeLabels[mealType]); // Používame priamo mealTypeLabels, ktoré sú už malými písmenami
+                                                    .map(mealType => mealTypeLabels[mealType]); 
 
                                                 const activeMealsString = activeMeals.join(', ');
 
@@ -1288,13 +1705,12 @@ function RostersApp() {
                                             })
                                         );
                                     }
-                                    return null; // Ak nie sú žiadne aktívne stravovacie dni, nezobrazíme nič
+                                    return null; 
                                 })()
                             )
                         ),
-                        // Zobrazenie veľkostí a počtu tričiek
                         team.tshirts && team.tshirts.length > 0 && (
-                            React.createElement('div', { className: 'mb-4 w-full' }, // Pridané w-full
+                            React.createElement('div', { className: 'mb-4 w-full' }, 
                                 React.createElement('p', { className: 'text-md text-gray-700 font-semibold mb-1' }, 'Tričká:'),
                                 team.tshirts.map((tshirt, tIndex) => (
                                     React.createElement('p', { key: tIndex, className: 'text-md text-gray-700 ml-4' }, 
@@ -1303,14 +1719,13 @@ function RostersApp() {
                                 ))
                             )
                         )
-                      ), // Koniec kontajnera pre obsah
+                      ), 
                       
 
                       allMembers.length > 0 && (
-                        React.createElement('div', { className: 'mt-4 px-6 w-full' }, // Pridané w-full
+                        React.createElement('div', { className: 'mt-4 px-6 w-full' }, 
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
-                          // Vraciam overflow-x-auto, aby sa tabuľka skrolovala, ak je príliš široká
-                          React.createElement('div', { className: 'overflow-x-auto w-full' }, // Pridané w-full
+                          React.createElement('div', { className: 'overflow-x-auto w-full' }, 
                             React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
                               React.createElement('thead', null,
                                 React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
@@ -1319,9 +1734,8 @@ function RostersApp() {
                                     React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu'),
                                     React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Meno'),
                                     React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Priezvisko'),
-                                    // Podmienené zobrazenie stĺpca Adresa
                                     shouldShowAddressColumn && React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Adresa'),
-                                  ].filter(Boolean) // Filter out 'false' values
+                                  ].filter(Boolean) 
                                 )
                               ),
                               React.createElement('tbody', { className: 'divide-y divide-gray-200' },
@@ -1332,9 +1746,8 @@ function RostersApp() {
                                       React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
                                       React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
                                       React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
-                                      // Podmienené zobrazenie bunky s adresou
                                       shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, formatAddress(member.address)),
-                                    ].filter(Boolean) // Filter out 'false' values
+                                    ].filter(Boolean) 
                                   )
                                 ))
                               )
@@ -1366,6 +1779,28 @@ function RostersApp() {
           React.createElement('p', { className: 'text-center text-gray-600 text-lg py-8' }, 'Zatiaľ neboli vytvorené žiadne tímy pre tohto používateľa.')
         )
       ),
+      // Tlačidlo pre pridanie nového tímu na konci stránky
+      userProfileData && React.createElement(
+          'div',
+          { className: 'flex justify-center mt-8 pb-8' },
+          React.createElement(
+              'button',
+              {
+                  type: 'button',
+                  onClick: () => setShowAddTeamModal(true),
+                  className: `flex items-center space-x-2 px-6 py-3 rounded-full text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#9333EA] hover:bg-opacity-90`,
+                  style: { backgroundColor: getRoleColor(userProfileData?.role) },
+                  'aria-label': 'Pridať nový tím'
+              },
+              React.createElement(
+                  'svg',
+                  { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' })
+              ),
+              React.createElement('span', { className: 'font-semibold' }, 'Pridať nový tím')
+          )
+      ),
+
       // Modálne okno pre úpravu tímu
       selectedTeam && React.createElement(
         EditTeamModal,
@@ -1400,6 +1835,21 @@ function RostersApp() {
           memberType: memberTypeToAdd,
           userProfileData: userProfileData,
           teamAccommodationType: teamAccommodationTypeToAddMemberTo // Odovzdanie typu ubytovania
+        }
+      ),
+      // Modálne okno pre pridanie nového tímu
+      React.createElement(
+        AddTeamModal,
+        {
+            show: showAddTeamModal,
+            onClose: () => setShowAddTeamModal(false),
+            onAddTeam: handleAddTeam, // Funkcia na pridanie tímu
+            userProfileData: userProfileData,
+            availablePackages: availablePackages,
+            availableAccommodationTypes: availableAccommodationTypes,
+            availableTshirtSizes: availableTshirtSizes,
+            teamsData: teamsData, // Pre logiku generovania názvu tímu
+            availableCategories: availableCategories // Pre selectbox kategórie
         }
       )
     )
