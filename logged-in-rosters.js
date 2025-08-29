@@ -71,6 +71,9 @@ const mealTypeLabels = {
 
 const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 
+// Skratky dní v týždni pre slovenčinu (0 = nedeľa, 1 = pondelok, ...)
+const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
+
 
 // Main React component for the logged-in-rosters.html page
 function RostersApp() {
@@ -370,16 +373,20 @@ function RostersApp() {
                                             { className: 'mt-2' },
                                             React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
                                             activeMealDates.map(date => {
+                                                const dateObj = new Date(date);
+                                                const dayIndex = dateObj.getDay(); // 0 = nedeľa, 1 = pondelok, ...
+                                                const dayAbbr = dayAbbreviations[dayIndex];
+
                                                 const activeMeals = mealOrder
                                                     .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
-                                                    .map(mealType => mealTypeLabels[mealType].toLowerCase()); 
+                                                    .map(mealType => mealTypeLabels[mealType]); // Používame priamo mealTypeLabels, ktoré sú už malými písmenami
 
                                                 const activeMealsString = activeMeals.join(', ');
 
                                                 return React.createElement(
                                                     'p',
                                                     { key: date, className: 'text-sm text-gray-600 ml-2' },
-                                                    `${formatDateToDMMYYYY(date)}: ${activeMealsString}`
+                                                    `${dayAbbr} ${formatDateToDMMYYYY(date)}: ${activeMealsString}`
                                                 );
                                             })
                                         );
