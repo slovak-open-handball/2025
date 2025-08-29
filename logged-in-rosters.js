@@ -687,28 +687,44 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     }, [show, availablePackages]);
 
     useEffect(() => {
+        // Táto funkcia generuje náhľad názvu tímu vrátane sufixov (A, B, ...)
+        // tak, aby odrážala logiku, ktorá sa použije pri skutočnom ukladaní tímu.
         if (selectedCategory && teamsData && clubName !== 'Neznámy klub') {
             const allTeamsInCategory = teamsData[selectedCategory] || [];
 
+            // Filtrujeme existujúce tímy, ktoré patria pod rovnaký klub a kategóriu
             const existingClubTeams = allTeamsInCategory.filter(
                 team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory
             );
 
+            // Vytvoríme dočasný placeholder pre nový tím, aby sme simulovali jeho prítomnosť
             const NEW_TEAM_PLACEHOLDER = { 
-                teamName: `_NEW_TEAM_PLACEHOLDER_${Date.now()}_`, 
+                teamName: `_NEW_TEAM_PLACEHOLDER_${Date.now()}_`, // Unikátny dočasný názov
                 categoryName: selectedCategory, 
                 clubName: clubName 
             };
-            const hypotheticalTeams = [...existingClubTeams, NEW_TEAM_PLACEHOLDER];
+            
+            // Vytvoríme hypotetický zoznam všetkých tímov (existujúcich + nový placeholder)
+            // pre tento klub a kategóriu. Pridáme 'originalNameForSort' pre stabilné zoradenie.
+            const hypotheticalTeams = [
+                ...existingClubTeams.map(team => ({ ...team, originalNameForSort: team.teamName })), 
+                { ...NEW_TEAM_PLACEHOLDER, originalNameForSort: NEW_TEAM_PLACEHOLDER.teamName }
+            ];
 
-            hypotheticalTeams.sort((a, b) => a.teamName.localeCompare(b.teamName));
+            // Zoradíme ich, aby sme určili ich poradie pre priradenie sufixov
+            // Predpokladáme, že placeholder príde na koniec po zoradení abecedne.
+            hypotheticalTeams.sort((a, b) => a.originalNameForSort.localeCompare(b.originalNameForSort));
 
             let generatedNameForNewTeam = '';
 
+            // Aplikujeme logiku priradenia sufixov (A, B, C...)
             if (hypotheticalTeams.length === 1) {
+                // Ak je to jediný tím (vrátane nového), nemá sufix
                 generatedNameForNewTeam = clubName;
             } else {
+                // Ak je tímov viac, priradíme sufixy podľa poradia
                 for (let i = 0; i < hypotheticalTeams.length; i++) {
+                    // Nájde náš placeholder v zozname a priradí mu jeho predpokladaný názov
                     if (hypotheticalTeams[i].teamName === NEW_TEAM_PLACEHOLDER.teamName) {
                         generatedNameForNewTeam = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
                         break;
@@ -720,7 +736,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         } else {
             setTeamNamePreview('');
         }
-    }, [selectedCategory, clubName, teamsData]);
+    }, [selectedCategory, clubName, teamsData]); // Závislosti pre opätovné spustenie efektu
 
     const isSaveButtonDisabled = !selectedCategory || !teamNamePreview;
 
@@ -766,6 +782,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             }
         }
         
+        // Nový tím bude mať základný názov klubu, sufixy sa priradia vo funkcii onAddTeam
         const newTeamData = {
             teamName: clubName, 
             categoryName: selectedCategory,
@@ -1438,37 +1455,47 @@ const handleAddTeam = async (newTeamDataFromModal) => {
     }
 
     const userDocRef = doc(db, 'users', user.uid);
+    // Vytvoríme hlbokú kópiu teamsData, aby sme nemodifikovali pôvodný stav priamo
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); 
 
     const category = newTeamDataFromModal.categoryName;
     const clubName = newTeamDataFromModal.clubName;
 
+    // Ak kategória neexistuje v teamsData, inicializujeme ju ako prázdne pole
     if (!currentTeamsCopy[category]) {
         currentTeamsCopy[category] = [];
     }
 
+    // Získame existujúce tímy daného klubu v aktuálnej kategórii
     let existingClubTeamsInThisCategory = currentTeamsCopy[category].filter(
         team => team.clubName?.trim() === clubName
     );
 
+    // Vytvoríme zoznam všetkých relevantných tímov pre daný klub a kategóriu
+    // vrátane nového tímu. Použijeme 'originalNameForSort' pre stabilné zoradenie.
     const allRelevantTeams = [
         ...existingClubTeamsInThisCategory.map(team => ({ ...team, originalNameForSort: team.teamName })), 
         { ...newTeamDataFromModal, originalNameForSort: newTeamDataFromModal.teamName } 
     ];
 
+    // Zoradíme tímy, aby sme zabezpečili konzistentné priradenie sufixov
     allRelevantTeams.sort((a, b) => a.originalNameForSort.localeCompare(b.originalNameForSort));
 
+    // Ak je len jeden tím (aj po pridaní nového), nemá sufix
     if (allRelevantTeams.length === 1) {
         allRelevantTeams[0].teamName = clubName; 
     } else {
+        // Ak je tímov viac, priradíme im sufixy (A, B, C...)
         for (let i = 0; i < allRelevantTeams.length; i++) {
             allRelevantTeams[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
         }
     }
 
+    // Odstránime staré záznamy tímov daného klubu z kategórie
     currentTeamsCopy[category] = currentTeamsCopy[category].filter(
         team => team.clubName?.trim() !== clubName
     );
+    // A pridáme aktualizované tímy s novými názvami (vrátane novo pridaného)
     currentTeamsCopy[category] = [...currentTeamsCopy[category], ...allRelevantTeams];
 
     try {
@@ -1806,7 +1833,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
           show: showEditTeamModal,
           onClose: () => {
             setShowEditTeamModal(false);
-            setSelectedTeam(null); // Clear selectedTeam when modal closes
+            setSelectedTeam(null); // Vymaže selectedTeam po zatvorení modálneho okna
           },
           teamData: selectedTeam,
           onSaveTeam: handleSaveTeam,
