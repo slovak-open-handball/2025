@@ -433,6 +433,56 @@ function NotificationsApp() {
     }
   };
 
+  // Helper function to render text with specific styling based on single quotes
+  function renderStyledText(text) {
+    const parts = [];
+    let lastIndex = 0;
+    const quoteIndices = [];
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === "'") {
+        quoteIndices.push(i);
+      }
+    }
+
+    // No special styling if less than 2 quotes
+    if (quoteIndices.length < 2) {
+      return React.createElement('span', null, text);
+    }
+
+    // Process first italic part
+    const firstQuote = quoteIndices[0];
+    const secondQuote = quoteIndices[1];
+    
+    // Part before first quote
+    if (firstQuote > lastIndex) {
+      parts.push(React.createElement('span', { key: `part-before-italic-${lastIndex}` }, text.substring(lastIndex, firstQuote)));
+    }
+    // Italic part
+    parts.push(React.createElement('em', { key: `italic-part-${firstQuote}`, className: 'italic' }, text.substring(firstQuote + 1, secondQuote)));
+    lastIndex = secondQuote + 1;
+
+    // Process second bold part if enough quotes
+    if (quoteIndices.length >= 4) {
+      const thirdQuote = quoteIndices[2];
+      const fourthQuote = quoteIndices[3];
+
+      // Part between second and third quote
+      if (thirdQuote > lastIndex) {
+        parts.push(React.createElement('span', { key: `part-between-italic-bold-${lastIndex}` }, text.substring(lastIndex, thirdQuote)));
+      }
+      // Bold part
+      parts.push(React.createElement('strong', { key: `bold-part-${thirdQuote}`, className: 'font-bold' }, text.substring(thirdQuote + 1, fourthQuote)));
+      lastIndex = fourthQuote + 1;
+    }
+
+    // Remaining part of the text
+    if (lastIndex < text.length) {
+      parts.push(React.createElement('span', { key: `remaining-part-${lastIndex}` }, text.substring(lastIndex)));
+    }
+    
+    return parts;
+  }
+
 
   // Display loading state
   if (loading) {
@@ -539,20 +589,21 @@ function NotificationsApp() {
                         { 
                             key: notification.id, 
                             // Dynamické triedy podľa 'read' stavu notifikácie
-                            className: `p-4 rounded-lg shadow-md flex-col justify-between items-start ${notification.read ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-800 border border-blue-200'}` 
+                            className: `p-4 rounded-lg shadow-md flex flex-col justify-between items-start ${notification.read ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-800 border border-blue-200'}` 
                         },
                         React.createElement(
                             'div',
                             { className: 'flex-1 mb-2 w-full' },
-                            // ZMENA: Zobrazuje všetky elementy z poľa 'changes' ako zoznam
+                            // ZMENA: Zobrazuje všetky elementy z poľa 'changes' ako zoznam s aplikovanými štýlmi
                             notification.changes && notification.changes.length > 0 ? (
                                 React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
                                     notification.changes.map((change, index) => (
-                                        React.createElement('li', { key: index, className: 'font-semibold' }, change)
+                                        // Každý riadok notifikácie sa teraz spracováva pomocou renderStyledText
+                                        React.createElement('li', { key: index }, renderStyledText(change))
                                     ))
                                 )
                             ) : (
-                                React.createElement('p', { className: 'font-semibold' }, 'Chybná notifikácia')
+                                React.createElement('p', null, 'Chybná notifikácia') // Removed font-semibold here
                             ),
                             notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
@@ -560,7 +611,7 @@ function NotificationsApp() {
                         ),
                         React.createElement(
                             'div',
-                            { className: 'flex justify-end space-x-2 mt-2 w-full' }, // ZMENA: Upravené triedy pre zarovnanie tlačidiel doprava
+                            { className: 'flex justify-end space-x-2 mt-2 w-full' },
                             // Tlačidlo "Označiť ako prečítané" len ak notifikácia nie je prečítaná
                             !notification.read && React.createElement(
                                 'button',
