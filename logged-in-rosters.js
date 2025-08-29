@@ -222,6 +222,17 @@ function RostersApp() {
   // A zoradenie kategórií podľa názvu abecedne
   const teamCategories = Object.entries(teamsData).sort((a, b) => a[0].localeCompare(b[0]));
 
+  // Helper funkcia na skloňovanie slova "tím"
+  const getTeamPluralization = (count) => {
+    if (count === 1) {
+      return 'tím';
+    } else if (count >= 2 && count <= 4) {
+      return 'tímy';
+    } else {
+      return 'tímov';
+    }
+  };
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -239,14 +250,15 @@ function RostersApp() {
           React.createElement('div', { className: 'space-y-6' }, // Väčší priestor medzi kategóriami
             teamCategories.map(([categoryName, teamsArray]) => (
               React.createElement('div', { key: categoryName, className: 'bg-gray-50 p-6 rounded-lg shadow-md' }, // Väčší padding a shadow
-                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} tímov)`), // Väčší a tučnejší nadpis
+                // Použitie helper funkcie na skloňovanie
+                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} ${getTeamPluralization(teamsArray.length)})`), // Väčší a tučnejší nadpis
                 React.createElement('div', { className: 'space-y-6' }, // Priestor medzi jednotlivými tímami v kategórii
                   teamsArray.map((team, index) => {
                     const allMembers = getAllTeamMembers(team);
                     
                     // Extrahovanie informácií o doprave, ubytovaní a balíku
                     const arrivalType = team.arrival?.type || 'Nezadané';
-                    const accommodationType = team.arrival?.accommodation || 'Nezadané'; // Opravené na accommodation?.type
+                    const accommodationType = team.accommodation?.type || 'Nezadané'; // Opravené na accommodation?.type
                     const packageName = team.packageDetails?.name || 'Nezadané';
                     
                     // Upravená podmienka pre čas príchodu s pridaným "hod."
