@@ -141,7 +141,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
             React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' },
-              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : role === 'user' ? 'Používateľ' 
+              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Používateľ'
             )
           )
         )
@@ -318,8 +318,8 @@ function UsersManagementApp() {
               ...docSnapshot.data()
             };
 
-            // Check and set default deadlines for 'user'
-            if (userData.role === 'user') {
+            // Check and set default deadlines for 'user' role
+            if (userData.role === 'user') { // Corrected condition here
                 let needsUpdate = false;
                 if (!userData.dataEditDeadline) {
                     userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
@@ -549,7 +549,7 @@ function UsersManagementApp() {
               return 'Administrátor';
           case 'hall':
               return 'Športová hala';
-          case 'user':
+              case 'user':
               return 'Používateľ';
           default:
               return role;
