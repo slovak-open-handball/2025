@@ -241,18 +241,10 @@ function RostersApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // Vraciam max-w-3xl, aby biely rámik mal obmedzenú šírku
+    // Odstránený biely obdĺžnik a nadpis "Súpiska tímov"
     React.createElement(
       'div',
       { className: 'w-full max-w-3xl p-4' }, 
-      // Vraciam max-w-3xl aj sem
-      React.createElement(
-        'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl' },
-        React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Súpiska tímov'
-        ),
-        
         teamCategories.length > 0 ? (
           React.createElement('div', { className: 'space-y-6' }, // Väčší priestor medzi kategóriami
             teamCategories.map(([categoryName, teamsArray]) => (
