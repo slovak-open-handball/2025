@@ -367,9 +367,33 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
 
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
+    // Výpočet celkového počtu členov tímu
+    const totalMembersInTeam = React.useMemo(() => {
+        if (!teamData) return 0;
+        const players = teamData.playerDetails?.length || 0;
+        const menTeamMembers = teamData.menTeamMemberDetails?.length || 0;
+        const womenTeamMembers = teamData.womenTeamMemberDetails?.length || 0;
+        const driverFemale = teamData.driverDetailsFemale?.length || 0;
+        const driverMale = teamData.driverDetailsMale?.length || 0;
+        return players + menTeamMembers + womenTeamMembers + driverFemale + driverMale;
+    }, [teamData]);
+
+    // Výpočet celkového počtu tričiek
+    const totalTshirtsQuantity = React.useMemo(() => {
+        return tshirtEntries.reduce((sum, entry) => sum + (parseInt(entry.quantity, 10) || 0), 0);
+    }, [tshirtEntries]);
+
+    // Podmienka pre zablokovanie tlačidla "Uložiť zmeny"
+    const isSaveButtonDisabled = totalTshirtsQuantity !== totalMembersInTeam;
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (isSaveButtonDisabled) {
+            showLocalNotification('Počet tričiek sa nezhoduje s počtom členov tímu.', 'error');
+            return;
+        }
 
         let finalArrivalTime = '';
         if (editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus') {
@@ -559,7 +583,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                     React.createElement(
                         'div',
                         { className: 'mb-2' }, // Container for just the label
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Tričká'),
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, `Tričká (celkom: ${totalTshirtsQuantity} / ${totalMembersInTeam} členov)`),
                     ),
                     tshirtEntries.map((tshirt, index) => (
                         React.createElement(
@@ -629,8 +653,14 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         'button',
                         {
                             type: 'submit',
-                            className: `px-4 py-2 text-white rounded-md transition-colors`,
-                            style: { backgroundColor: roleColor, hoverBackgroundColor: roleColor }
+                            disabled: isSaveButtonDisabled,
+                            className: `px-4 py-2 rounded-md transition-colors ${isSaveButtonDisabled ? 'bg-white text-current border border-current cursor-not-allowed' : 'text-white'}`,
+                            style: { 
+                                backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
+                                color: isSaveButtonDisabled ? roleColor : 'white',
+                                borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
+                                cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
+                            }
                         },
                         'Uložiť zmeny'
                     )
