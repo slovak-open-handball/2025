@@ -526,7 +526,7 @@ function RostersApp() {
     const originalPackageName = selectedTeam?.packageDetails?.name || '';
     const newPackageName = updatedTeamData.packageDetails.name;
 
-    // Ak sa zmenil názov balíka, potrebujeme načítať nové detaily jedál
+    // Ak sa zmenil názov balíka, potrebujeme načítať nové detaily jedál a ID
     if (newPackageName !== originalPackageName) {
         try {
             const packagesRef = collection(db, 'settings', 'packages', 'list');
@@ -534,13 +534,16 @@ function RostersApp() {
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
-                const packageDoc = querySnapshot.docs[0].data();
-                updatedTeamData.packageDetails.meals = packageDoc.meals || {};
-                updatedTeamData.packageDetails.price = packageDoc.price || 0; // Aktualizovať aj cenu
+                const packageDoc = querySnapshot.docs[0]; // Získame celý dokument
+                const packageData = packageDoc.data();
+                updatedTeamData.packageDetails.meals = packageData.meals || {};
+                updatedTeamData.packageDetails.price = packageData.price || 0; // Aktualizovať aj cenu
+                updatedTeamData.packageDetails.id = packageDoc.id; // Uložíme ID balíka
             } else {
                 console.warn(`Package with name ${newPackageName} not found.`);
                 updatedTeamData.packageDetails.meals = {}; // Ak balík neexistuje, vymazať jedlá
                 updatedTeamData.packageDetails.price = 0; // Resetovať cenu
+                updatedTeamData.packageDetails.id = null; // Resetovať ID balíka
             }
         } catch (error) {
             console.error("Error fetching new package details:", error);
