@@ -140,6 +140,7 @@ function NotificationsApp() {
   // NOVÉ STAVY PRE OBNOVU A VÝBER OZNÁMENÍ
   const [selectedNotificationsToRestore, setSelectedNotificationsToRestore] = React.useState(new Set());
   const [showRestoreConfirmationModal, setShowRestoreConfirmationModal] = React.useState(false);
+  const [showRestoreView, setShowRestoreView] = React.useState(false); // ZMENA: Nový stav pre zobrazenie/skrytie obnovovacích oznámení
 
   // STAVY PRE MODÁLNE OKNO VYMAZANIE VŠETKÝCH NOTIFIKÁCIÍ
   const [showDeleteAllConfirmationModal, setShowDeleteAllConfirmationModal] = React.useState(false);
@@ -182,7 +183,6 @@ function NotificationsApp() {
         // If auth is ready but no user data (meaning user is logged out or not approved)
         handleGlobalDataUpdated({ detail: null });
     } else {
-        // If auth not yet ready, remain in loading state
         setLoading(true);
     }
 
@@ -359,7 +359,7 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      const unreadNotifications = notifications.filter(n => !n.read && !n.deletedByMe); // ZMENA: Neoznačujeme vymazané
+      const unreadNotifications = notifications.filter(n => !n.read && !n.deletedByMe);
 
       if (unreadNotifications.length === 0) {
         setUserNotificationMessage("Žiadne neprečítané upozornenia na označenie.");
@@ -400,7 +400,7 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      let notificationsToProcess = notifications.filter(n => !n.deletedByMe); // ZMENA: Neovplyvňujeme už vymazané
+      let notificationsToProcess = notifications.filter(n => !n.deletedByMe);
       if (!deleteUnreadToo) {
         notificationsToProcess = notificationsToProcess.filter(n => n.read);
       }
@@ -442,7 +442,6 @@ function NotificationsApp() {
     }
   };
 
-  // NOVÁ FUNKCIA: Manipulácia so stavom zaškrtávacieho políčka
   const handleNotificationSelectionChange = (notificationId, isChecked) => {
     setSelectedNotificationsToRestore(prev => {
       const newSet = new Set(prev);
@@ -455,17 +454,24 @@ function NotificationsApp() {
     });
   };
 
-  // NOVÁ FUNKCIA: Otvorenie modálneho okna na potvrdenie obnovy
-  const handleRestoreSelectedNotificationsClick = () => {
-    if (selectedNotificationsToRestore.size === 0) {
-      setUserNotificationMessage("Vyberte aspoň jedno upozornenie na obnovenie.");
-      setUserNotificationType('info'); // Informačná správa, nie chyba
-      return;
+  // ZMENA: Upravená logika pre tlačidlo "Obnoviť"
+  const handleRestoreButtonAction = async () => {
+    // Ak je režim obnovy zapnutý a existujú vybrané notifikácie
+    if (showRestoreView && selectedNotificationsToRestore.size > 0) {
+      await confirmRestoreSelectedNotifications(); // Spustí obnovu vybraných
+      setShowRestoreView(false); // Po obnove skryjeme režim obnovy
+      setSelectedNotificationsToRestore(new Set()); // Vymažeme výber
+    } else if (showRestoreView && selectedNotificationsToRestore.size === 0) {
+      // Ak je režim obnovy zapnutý, ale nič nie je vybrané, zatvoríme režim
+      setShowRestoreView(false);
+      setSelectedNotificationsToRestore(new Set()); // Vymažeme výber
+    } else {
+      // Ak režim obnovy nie je zapnutý, zapneme ho
+      setShowRestoreView(true);
     }
-    setShowRestoreConfirmationModal(true);
   };
 
-  // NOVÁ FUNKCIA: Potvrdenie obnovy vybraných notifikácií
+  // ZMENA: Pôvodná funkcia confirmRestoreSelectedNotifications je teraz len interná pre batch operáciu
   const confirmRestoreSelectedNotifications = async () => {
     if (!db || !user || !user.uid) {
       setUserNotificationMessage("Chyba: Nie sú dostupné dáta používateľa alebo databázy.");
@@ -478,13 +484,13 @@ function NotificationsApp() {
       const batch = writeBatch(db);
       selectedNotificationsToRestore.forEach(notificationId => {
         const notificationRef = doc(db, 'notifications', notificationId);
-        batch.update(notificationRef, { deletedBy: arrayRemove(user.uid) }); // Odstránime ID používateľa z poľa deletedBy
+        batch.update(notificationRef, { deletedBy: arrayRemove(user.uid) });
       });
       await batch.commit();
       setUserNotificationMessage("Vybrané upozornenia boli úspešne obnovené.");
       setUserNotificationType('success');
-      setSelectedNotificationsToRestore(new Set()); // Vymažeme výber
-      setShowRestoreConfirmationModal(false); // Zatvoríme modálne okno
+      // setSelectedNotificationsToRestore(new Set()); // Už sa robí v handleRestoreButtonAction
+      // setShowRestoreConfirmationModal(false); // Už sa robí v handleRestoreButtonAction
     } catch (e) {
       console.error("NotificationsApp: Error restoring selected notifications:", e);
       setError(`Chyba pri obnovení upozornení: ${e.message}`);
@@ -583,7 +589,12 @@ function NotificationsApp() {
   // Conditions for displaying buttons
   const hasNotifications = notifications.length > 0;
   const hasUnreadNotifications = notifications.some(n => !n.read && !n.deletedByMe);
-  const hasDeletedByMeNotifications = notifications.some(n => n.deletedByMe);
+  const hasDeletedByMeNotifications = notifications.some(n => n.deletedByMe); // ZMENA: Ak je nejaká notifikácia zmazaná mnou (aj keď je skrytá)
+
+  // ZMENA: Text tlačidla pre obnovu
+  const restoreButtonText = showRestoreView 
+    ? (selectedNotificationsToRestore.size > 0 ? `Obnoviť vybrané (${selectedNotificationsToRestore.size})` : 'Zatvoriť obnovu') 
+    : 'Obnoviť oznámenia';
 
 
   return React.createElement(
@@ -605,15 +616,6 @@ function NotificationsApp() {
         onCheckboxChange: (e) => setDeleteUnreadToo(e.target.checked),
         checkboxChecked: deleteUnreadToo
     }),
-    // NOVÉ: Modálne okno pre potvrdenie obnovy
-    React.createElement(ConfirmationModal, {
-        show: showRestoreConfirmationModal,
-        message: `Naozaj chcete obnoviť ${selectedNotificationsToRestore.size} vybraných upozornení?`,
-        onConfirm: confirmRestoreSelectedNotifications,
-        onCancel: () => setShowRestoreConfirmationModal(false),
-        loading: loading,
-        showCheckbox: false, // Pre obnovu checkbox nepotrebujeme
-    }),
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
@@ -631,7 +633,7 @@ function NotificationsApp() {
         // Skupina tlačidiel
         (hasNotifications || hasDeletedByMeNotifications) && React.createElement(
           'div',
-          { className: 'flex flex-wrap justify-center gap-4 mb-6' }, // Používame gap a flex-wrap
+          { className: 'flex flex-wrap justify-center gap-4 mb-6' },
           hasUnreadNotifications && React.createElement(
             'button',
             {
@@ -641,7 +643,7 @@ function NotificationsApp() {
             },
             'Označiť všetky ako prečítané'
           ),
-          hasNotifications && React.createElement( // Zmena: ukážeme ak sú nejaké notifikácie
+          hasNotifications && React.createElement(
             'button',
             {
               onClick: handleDeleteAllNotificationsClick,
@@ -650,14 +652,14 @@ function NotificationsApp() {
             },
             'Vymazať všetky'
           ),
-          hasDeletedByMeNotifications && React.createElement( // NOVÉ TLAČIDLO: Obnoviť vybrané
+          hasDeletedByMeNotifications && React.createElement( // ZMENA: Obnovovacie tlačidlo
             'button',
             {
-                onClick: handleRestoreSelectedNotificationsClick,
+                onClick: handleRestoreButtonAction, // Voláme novú obsluhu
                 className: 'bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-                disabled: loading || selectedNotificationsToRestore.size === 0,
+                disabled: loading, // Zakázané len ak je loading, nie na základe výberu
             },
-            'Obnoviť vybrané'
+            restoreButtonText // Dynamický text tlačidla
           )
         ),
         notifications.length === 0 && !loading ? (
@@ -666,10 +668,13 @@ function NotificationsApp() {
             React.createElement(
                 'div',
                 { className: 'space-y-4' },
-                notifications.map(notification => (
-                    // ZMENA: Ak je notifikácia označená ako deletedByMe, pridáme triedu pre zobrazenie
-                    // zaškrtávacieho políčka a odlišný štýl.
-                    React.createElement(
+                notifications.map(notification => {
+                    // ZMENA: Kondicionálne renderovanie na základe deletedByMe a showRestoreView
+                    if (notification.deletedByMe && !showRestoreView) {
+                        return null; // Skryť ak je zmazané mnou a nie sme v režime obnovy
+                    }
+
+                    return React.createElement(
                         'div',
                         { 
                             key: notification.id, 
@@ -680,8 +685,8 @@ function NotificationsApp() {
                         React.createElement(
                             'div',
                             { className: 'flex-1 mb-2 w-full' },
-                            // ZMENA: Checkbox pre obnovu ak je notifikácia deletedByMe
-                            notification.deletedByMe && React.createElement(
+                            // ZMENA: Checkbox pre obnovu ak je notifikácia deletedByMe A sme v režime obnovy
+                            notification.deletedByMe && showRestoreView && React.createElement(
                                 'div',
                                 { className: 'flex items-center mb-2' },
                                 React.createElement('input', {
@@ -690,7 +695,7 @@ function NotificationsApp() {
                                     onChange: (e) => handleNotificationSelectionChange(notification.id, e.target.checked),
                                     className: 'form-checkbox h-4 w-4 text-indigo-600 mr-2'
                                 }),
-                                React.createElement('p', { className: 'text-sm text-yellow-800' }, 'Vymazané (na obnovenie zaškrtnite)')
+                                React.createElement('p', { className: 'text-sm text-yellow-800' }, 'Vymazané (zaškrtnite pre obnovenie)')
                             ),
                             React.createElement('p', { className: 'text-base text-gray-700 mb-2' },
                                 `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
@@ -708,11 +713,12 @@ function NotificationsApp() {
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
                             )
                         ),
-                        // Tlačidlá ak notifikácia nie je deletedByMe
-                        !notification.deletedByMe && React.createElement(
+                        // Tlačidlá sa zobrazia, len ak notifikácia nie je deletedByMe, alebo ak sme v režime obnovy a nie je to zmazaná notifikácia (aby sa neopakovali)
+                        (!notification.deletedByMe || (notification.deletedByMe && showRestoreView)) && React.createElement(
                             'div',
                             { className: 'flex justify-end space-x-2 mt-2 w-full' },
-                            !notification.read && React.createElement(
+                            // Tlačidlo "Označiť ako prečítané" len ak notifikácia nie je prečítaná a nie je zmazaná mnou (alebo ak je v režime obnovy)
+                            !notification.read && !notification.deletedByMe && React.createElement(
                                 'button',
                                 {
                                     onClick: () => handleMarkAsRead(notification.id),
@@ -721,7 +727,8 @@ function NotificationsApp() {
                                 },
                                 'Označiť ako prečítané'
                             ),
-                            React.createElement(
+                            // Tlačidlo "Vymazať" len ak notifikácia nie je zmazaná mnou
+                            !notification.deletedByMe && React.createElement(
                                 'button',
                                 {
                                     onClick: () => handleDeleteNotification(notification.id),
@@ -731,8 +738,8 @@ function NotificationsApp() {
                                 'Vymazať'
                             )
                         )
-                    )
-                ))
+                    );
+                })
             )
         )
       )
