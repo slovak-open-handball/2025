@@ -684,7 +684,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                     ),
                     React.createElement(
                         'div',
-                        { className: 'flex space-x-2' }, {/* Wrapper for "Zrušiť" and "Uložiť zmeny" */}
+                        { className: 'flex space-x-2' },
                         React.createElement(
                             'button',
                             {
