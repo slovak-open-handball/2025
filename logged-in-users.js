@@ -618,14 +618,14 @@ function UsersManagementApp() {
   };
 
   const formatDate = (date) => {
-    if (!date) return 'N/A';
+    if (!date) return '-';
     // Firebase Timestamp object handling
     if (date.toDate) {
       date = date.toDate();
     }
     // Check if it's a valid Date object
     if (!(date instanceof Date) || isNaN(date)) {
-        return 'N/A';
+        return '-';
     }
     return date.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
