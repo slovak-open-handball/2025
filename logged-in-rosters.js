@@ -73,7 +73,7 @@ const getRoleColor = (role) => {
     }
 };
 
-function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData }) {
+function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData, isDataEditDeadlinePassed }) {
     const [selectedType, setSelectedType] = useState('');
 
     if (!show) return null;
@@ -88,6 +88,17 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
         } else {
             showLocalNotification('Prosím, vyberte typ člena.', 'error');
         }
+    };
+
+    const isButtonDisabled = isDataEditDeadlinePassed;
+    const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
+        isButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
+    }`;
+    const buttonStyles = { 
+        backgroundColor: isButtonDisabled ? 'white' : roleColor, 
+        color: isButtonDisabled ? roleColor : 'white',
+        borderColor: isButtonDisabled ? roleColor : 'transparent',
+        cursor: isButtonDisabled ? 'not-allowed' : 'pointer'
     };
 
     return React.createElement(
@@ -118,7 +129,8 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                         value: selectedType,
                         onChange: (e) => setSelectedType(e.target.value),
-                        required: true
+                        required: true,
+                        disabled: isButtonDisabled // Disable select as well
                     },
                     React.createElement('option', { value: '' }, 'Vyberte typ'),
                     React.createElement('option', { value: 'player' }, 'Hráč'),
@@ -145,8 +157,9 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
                         {
                             type: 'button',
                             onClick: handleAdd,
-                            className: `px-4 py-2 text-white rounded-md transition-colors`,
-                            style: { backgroundColor: roleColor, hoverBackgroundColor: roleColor }
+                            disabled: isButtonDisabled,
+                            className: buttonClasses,
+                            style: buttonStyles
                         },
                         'Pridať'
                     )
@@ -156,7 +169,7 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
     );
 }
 
-function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData, teamAccommodationType, memberData, isEditMode }) {
+function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData, teamAccommodationType, memberData, isEditMode, isRosterEditDeadlinePassed, isDataEditDeadlinePassed }) {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
@@ -201,8 +214,23 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
     const showAddressFields = teamAccommodationType !== 'bez ubytovania';
 
+    const isButtonDisabled = isEditMode ? isRosterEditDeadlinePassed : isDataEditDeadlinePassed;
+
+    const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
+        isButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
+    }`;
+    const buttonStyles = { 
+        backgroundColor: isButtonDisabled ? 'white' : roleColor, 
+        color: isButtonDisabled ? roleColor : 'white',
+        borderColor: isButtonDisabled ? roleColor : 'transparent',
+        cursor: isButtonDisabled ? 'not-allowed' : 'pointer'
+    };
+
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (isButtonDisabled) return; // Prevent submission if disabled
+
         const memberDetails = {
             firstName,
             lastName,
@@ -254,45 +282,45 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
                 { onSubmit: handleSubmit, className: 'space-y-4' },
                 React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'firstName', className: 'block text-sm font-medium text-gray-700' }, 'Meno'),
-                    React.createElement('input', { type: 'text', id: 'firstName', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: firstName, onChange: (e) => setFirstName(e.target.value), required: true })
+                    React.createElement('input', { type: 'text', id: 'firstName', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: firstName, onChange: (e) => setFirstName(e.target.value), required: true, disabled: isButtonDisabled })
                 ),
                 React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'lastName', className: 'block text-sm font-medium text-gray-700' }, 'Priezvisko'),
-                    React.createElement('input', { type: 'text', id: 'lastName', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: lastName, onChange: (e) => setLastName(e.target.value), required: true })
+                    React.createElement('input', { type: 'text', id: 'lastName', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: lastName, onChange: (e) => setLastName(e.target.value), required: true, disabled: isButtonDisabled })
                 ),
                 React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'dateOfBirth', className: 'block text-sm font-medium text-gray-700' }, 'Dátum narodenia'),
-                    React.createElement('input', { type: 'date', id: 'dateOfBirth', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: dateOfBirth, onChange: (e) => setDateOfBirth(e.target.value) })
+                    React.createElement('input', { type: 'date', id: 'dateOfBirth', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: dateOfBirth, onChange: (e) => setDateOfBirth(e.target.value), disabled: isButtonDisabled })
                 ),
                 (memberType === 'player') && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'jerseyNumber', className: 'block text-sm font-medium text-gray-700' }, 'Číslo dresu'),
-                    React.createElement('input', { type: 'number', id: 'jerseyNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: jerseyNumber, onChange: (e) => setJerseyNumber(e.target.value) })
+                    React.createElement('input', { type: 'number', id: 'jerseyNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: jerseyNumber, onChange: (e) => setJerseyNumber(e.target.value), disabled: isButtonDisabled })
                 ),
                 (memberType === 'player') && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'registrationNumber', className: 'block text-sm font-medium text-gray-700' }, 'Číslo registrácie'),
-                    React.createElement('input', { type: 'text', id: 'registrationNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: registrationNumber, onChange: (e) => setRegistrationNumber(e.target.value) })
+                    React.createElement('input', { type: 'text', id: 'registrationNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: registrationNumber, onChange: (e) => setRegistrationNumber(e.target.value), disabled: isButtonDisabled })
                 ),
                 showAddressFields && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'street', className: 'block text-sm font-medium text-gray-700' }, 'Ulica'),
-                    React.createElement('input', { type: 'text', id: 'street', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: street, onChange: (e) => setStreet(e.target.value) })
+                    React.createElement('input', { type: 'text', id: 'street', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: street, onChange: (e) => setStreet(e.target.value), disabled: isButtonDisabled })
                 ),
                 showAddressFields && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'houseNumber', className: 'block text-sm font-medium text-gray-700' }, 'Popisné číslo'),
-                    React.createElement('input', { type: 'text', id: 'houseNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: houseNumber, onChange: (e) => setHouseNumber(e.target.value) })
+                    React.createElement('input', { type: 'text', id: 'houseNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: houseNumber, onChange: (e) => setHouseNumber(e.target.value), disabled: isButtonDisabled })
                 ),
                 showAddressFields && React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
                     React.createElement('div', null,
                         React.createElement('label', { htmlFor: 'postalCode', className: 'block text-sm font-medium text-gray-700' }, 'PSČ'),
-                        React.createElement('input', { type: 'text', id: 'postalCode', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: postalCode, onChange: (e) => setPostalCode(e.target.value) })
+                        React.createElement('input', { type: 'text', id: 'postalCode', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: postalCode, onChange: (e) => setPostalCode(e.target.value), disabled: isButtonDisabled })
                     ),
                     React.createElement('div', null,
                         React.createElement('label', { htmlFor: 'city', className: 'block text-sm font-medium text-gray-700' }, 'Mesto/Obec'),
-                        React.createElement('input', { type: 'text', id: 'city', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: city, onChange: (e) => setCity(e.target.value) })
+                        React.createElement('input', { type: 'text', id: 'city', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: city, onChange: (e) => setCity(e.target.value), disabled: isButtonDisabled })
                     )
                 ),
                 showAddressFields && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'country', className: 'block text-sm font-medium text-gray-700' }, 'Krajina'),
-                    React.createElement('input', { type: 'text', id: 'country', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: country, onChange: (e) => setCountry(e.target.value) })
+                    React.createElement('input', { type: 'text', id: 'country', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: country, onChange: (e) => setCountry(e.target.value), disabled: isButtonDisabled })
                 ),
                 React.createElement(
                     'div',
@@ -310,8 +338,9 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
                         'button',
                         {
                             type: 'submit',
-                            className: `px-4 py-2 text-white rounded-md transition-colors`,
-                            style: { backgroundColor: roleColor, hoverBackgroundColor: roleColor }
+                            disabled: isButtonDisabled,
+                            className: buttonClasses,
+                            style: buttonStyles
                         },
                         isEditMode ? 'Uložiť zmeny' : 'Pridať člena'
                     )
@@ -321,7 +350,7 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
     );
 }
 
-function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, onAddMember }) {
+function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, isDataEditDeadlinePassed }) {
     const [editedTeamName, setEditedTeamName] = useState(teamData ? teamData.teamName : '');
     const [editedCategoryName, setEditedCategoryName] = useState(teamData ? teamData.categoryName : '');
     const [editedArrivalType, setEditedArrivalType] = useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
@@ -379,9 +408,9 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
     }, [tshirtEntries]);
 
 
-    const isSaveButtonDisabled = totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected;
+    const isSaveButtonDisabled = isDataEditDeadlinePassed || totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected;
 
-    const isAddTshirtButtonDisabled = totalTshirtsQuantity === totalMembersInTeam;
+    const isAddTshirtButtonDisabled = isDataEditDeadlinePassed || totalTshirtsQuantity === totalMembersInTeam;
 
 
     const handleSubmit = async (e) => {
@@ -443,6 +472,27 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         setTshirtEntries(updatedEntries);
     };
 
+    const saveButtonClasses = `px-4 py-2 rounded-md transition-colors ${
+        isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
+    }`;
+    const saveButtonStyles = { 
+        backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
+        color: isSaveButtonDisabled ? roleColor : 'white',
+        borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
+        cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
+    };
+
+    const addTshirtButtonClasses = `flex items-center justify-center w-8 h-8 rounded-full transition-colors focus:outline-none focus:ring-2
+        ${isAddTshirtButtonDisabled
+            ? 'bg-white border border-solid'
+            : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500'
+        }`;
+    const addTshirtButtonStyles = { 
+        cursor: isAddTshirtButtonDisabled ? 'not-allowed' : 'pointer',
+        borderColor: isAddTshirtButtonDisabled ? roleColor : 'transparent',
+        color: isAddTshirtButtonDisabled ? roleColor : 'white',
+    };
+
 
     return React.createElement(
         'div',
@@ -481,7 +531,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                         value: editedArrivalType,
                         onChange: (e) => setEditedArrivalType(e.target.value),
-                        required: true
+                        required: true,
+                        disabled: isDataEditDeadlinePassed
                     },
                     React.createElement('option', { value: 'bez dopravy' }, 'bez dopravy'),
                     React.createElement('option', { value: 'verejná doprava - autobus' }, 'verejná doprava - autobus'),
@@ -505,7 +556,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                                 value: editedArrivalHour,
                                 onChange: (e) => setEditedArrivalHour(e.target.value),
-                                required: true
+                                required: true,
+                                disabled: isDataEditDeadlinePassed
                             },
                             React.createElement('option', { value: '' }, '-- Hodina --'),
                             hourOptions.map((hour) =>
@@ -522,7 +574,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                                 value: editedArrivalMinute,
                                 onChange: (e) => setEditedArrivalMinute(e.target.value),
-                                required: true
+                                required: true,
+                                disabled: isDataEditDeadlinePassed
                             },
                             React.createElement('option', { value: '' }, '-- Minúta --'),
                             minuteOptions.map((minute) =>
@@ -541,7 +594,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                         value: editedAccommodationType,
                         onChange: (e) => setEditedAccommodationType(e.target.value),
-                        required: true
+                        required: true,
+                        disabled: isDataEditDeadlinePassed
                     },
                     React.createElement('option', { value: 'bez ubytovania' }, 'bez ubytovania'),
                     availableAccommodationTypes.slice().sort((a,b) => a.localeCompare(b)).map((type, idx) =>
@@ -558,7 +612,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                         value: editedPackageName,
                         onChange: (e) => setEditedPackageName(e.target.value),
-                        required: true
+                        required: true,
+                        disabled: isDataEditDeadlinePassed
                     },
                     availablePackages.slice().sort().map((pkgName, idx) =>
                         React.createElement('option', { key: idx, value: pkgName }, pkgName)
@@ -596,7 +651,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 className: 'mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm p-2',
                                 value: tshirt.size,
                                 onChange: (e) => handleTshirtSizeChange(index, e.target.value),
-                                required: true
+                                required: true,
+                                disabled: isDataEditDeadlinePassed // Disable select
                             },
                             React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
                             filteredAvailableSizes.map((size, sIdx) =>
@@ -610,14 +666,16 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 value: tshirt.quantity,
                                 onChange: (e) => handleTshirtQuantityChange(index, e.target.value),
                                 min: '1',
-                                required: true
+                                required: true,
+                                disabled: isDataEditDeadlinePassed // Disable input
                             }),
                             React.createElement(
                                 'button',
                                 {
                                     type: 'button',
                                     onClick: () => handleRemoveTshirtEntry(index),
-                                    className: 'flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500'
+                                    className: 'flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500',
+                                    disabled: isDataEditDeadlinePassed // Disable button
                                 },
                                 React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M20 12H4' }))
                             )
@@ -632,16 +690,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 type: 'button',
                                 onClick: handleAddTshirtEntry,
                                 disabled: isAddTshirtButtonDisabled,
-                                className: `flex items-center justify-center w-8 h-8 rounded-full transition-colors focus:outline-none focus:ring-2
-                                    ${isAddTshirtButtonDisabled
-                                        ? 'bg-white border border-solid'
-                                        : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500'
-                                    }`,
-                                style: { 
-                                    cursor: isAddTshirtButtonDisabled ? 'not-allowed' : 'pointer',
-                                    borderColor: isAddTshirtButtonDisabled ? roleColor : 'transparent',
-                                    color: isAddTshirtButtonDisabled ? roleColor : 'white',
-                                }
+                                className: addTshirtButtonClasses,
+                                style: addTshirtButtonStyles
                             },
                             React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M12 6v6m0 0v6m0-6h6m-6 0H6` }))
                         )
@@ -657,7 +707,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         {
                             type: 'button',
                             onClick: () => onDeleteTeam(teamData),
-                            className: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors'
+                            className: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors',
+                            disabled: isDataEditDeadlinePassed // Disable delete button
                         },
                         'Vymazať'
                     ),
@@ -678,13 +729,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                             {
                                 type: 'submit',
                                 disabled: isSaveButtonDisabled,
-                                className: `px-4 py-2 rounded-md transition-colors ${isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'}`,
-                                style: { 
-                                    backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
-                                    color: isSaveButtonDisabled ? roleColor : 'white',
-                                    borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
-                                    cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
-                                }
+                                className: saveButtonClasses,
+                                style: saveButtonStyles
                             },
                             'Uložiť zmeny'
                         )
@@ -695,7 +741,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
     );
 }
 
-function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategoriesFromSettings }) {
+function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategoriesFromSettings, isDataEditDeadlinePassed }) {
     const db = getFirestore();
     const [selectedCategory, setSelectedCategory] = useState('');
     const [teamNamePreview, setTeamNamePreview] = useState('');
@@ -748,7 +794,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
     }, [selectedCategory, clubName, teamsData]); // Závislosti pre opätovné spustenie efektu
 
-    const isSaveButtonDisabled = !selectedCategory || !teamNamePreview;
+    const isSaveButtonDisabled = isDataEditDeadlinePassed || !selectedCategory || !teamNamePreview;
 
     const showArrivalTimeInputs = arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus';
 
@@ -816,6 +862,16 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 
     if (!show) return null;
 
+    const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
+        isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
+    }`;
+    const buttonStyles = { 
+        backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
+        color: isSaveButtonDisabled ? roleColor : 'white',
+        borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
+        cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
+    };
+
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center' },
@@ -844,7 +900,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                         value: selectedCategory,
                         onChange: (e) => setSelectedCategory(e.target.value),
-                        required: true
+                        required: true,
+                        disabled: isDataEditDeadlinePassed
                     },
                     React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
                     availableCategoriesFromSettings.sort().map((cat, idx) => (
@@ -873,7 +930,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                         value: arrivalType,
                         onChange: (e) => setArrivalType(e.target.value),
-                        required: true
+                        required: true,
+                        disabled: isDataEditDeadlinePassed
                     },
                     React.createElement('option', { value: 'bez dopravy' }, 'bez dopravy'),
                     React.createElement('option', { value: 'verejná doprava - autobus' }, 'verejná doprava - autobus'),
@@ -897,7 +955,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                                 className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                                 value: arrivalHour,
                                 onChange: (e) => setArrivalHour(e.target.value),
-                                required: true
+                                required: true,
+                                disabled: isDataEditDeadlinePassed
                             },
                             React.createElement('option', { value: '' }, '-- Hodina --'), 
                             hourOptions.map((hour) =>
@@ -914,7 +973,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                                 className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                                 value: arrivalMinute,
                                 onChange: (e) => setArrivalMinute(e.target.value),
-                                required: true
+                                required: true,
+                                disabled: isDataEditDeadlinePassed
                             },
                             React.createElement('option', { value: '' }, '-- Minúta --'), 
                             minuteOptions.map((minute) =>
@@ -933,7 +993,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                         value: accommodationType,
                         onChange: (e) => setAccommodationType(e.target.value),
-                        required: true
+                        required: true,
+                        disabled: isDataEditDeadlinePassed
                     },
                     React.createElement('option', { value: 'bez ubytovania' }, 'bez ubytovania'), 
                     availableAccommodationTypes.slice().sort((a,b) => a.localeCompare(b)).map((type, idx) => 
@@ -950,7 +1011,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                         value: packageName,
                         onChange: (e) => setPackageName(e.target.value),
-                        required: true
+                        required: true,
+                        disabled: isDataEditDeadlinePassed
                     },
                     availablePackages.slice().sort().map((pkgName, idx) => 
                         React.createElement('option', { key: idx, value: pkgName }, pkgName)
@@ -975,13 +1037,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         {
                             type: 'submit',
                             disabled: isSaveButtonDisabled,
-                            className: `px-4 py-2 rounded-md transition-colors ${isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'}`,
-                            style: { 
-                                backgroundColor: isSaveButtonDisabled ? 'white' : roleColor, 
-                                color: isSaveButtonDisabled ? roleColor : 'white',
-                                borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
-                                cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
-                            }
+                            className: buttonClasses,
+                            style: buttonStyles
                         },
                         'Uložiť tím'
                     )
@@ -1016,6 +1073,12 @@ function RostersApp() {
   const [isMemberEditMode, setIsMemberEditMode] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState(null);
   const [teamOfMemberToEdit, setTeamOfMemberToEdit] = useState(null);
+
+  // Deadline states
+  const [rosterEditDeadline, setRosterEditDeadline] = useState(null);
+  const [dataEditDeadline, setDataEditDeadline] = useState(null);
+  const [isRosterEditDeadlinePassed, setIsRosterEditDeadlinePassed] = useState(false);
+  const [isDataEditDeadlinePassed, setIsDataEditDeadlinePassed] = useState(false);
 
 
   const [loading, setLoading] = useState(true); 
@@ -1052,6 +1115,123 @@ function RostersApp() {
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
   }, []); 
+
+  // Effect to fetch deadlines
+  useEffect(() => {
+    let unsubscribeSettings;
+    let unsubscribeUserDeadlines;
+
+    const fetchDeadlines = async () => {
+        let settingsRosterDeadline = null;
+        let settingsDataDeadline = null;
+
+        // Fetch from settings
+        try {
+            const settingsDocRef = doc(db, 'settings', 'registration');
+            unsubscribeSettings = onSnapshot(settingsDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    settingsRosterDeadline = data.rosterEditDeadline ? new Date(data.rosterEditDeadline) : null;
+                    settingsDataDeadline = data.dataEditDeadline ? new Date(data.dataEditDeadline) : null;
+                    
+                    // If user is available, fetch user-specific deadlines
+                    if (user && user.uid) {
+                        const userDocRef = doc(db, 'users', user.uid);
+                        unsubscribeUserDeadlines = onSnapshot(userDocRef, (userDocSnapshot) => {
+                            let userRosterDeadline = null;
+                            let userDataDeadline = null;
+
+                            if (userDocSnapshot.exists()) {
+                                const userData = userDocSnapshot.data();
+                                userRosterDeadline = userData.rosterEditDeadline ? new Date(userData.rosterEditDeadline) : null;
+                                userDataDeadline = userData.dataEditDeadline ? new Date(userData.dataEditDeadline) : null;
+                            }
+
+                            // Determine final deadlines: later of user's or settings' deadline
+                            let finalRosterDeadline = settingsRosterDeadline;
+                            if (userRosterDeadline) {
+                                if (!finalRosterDeadline || userRosterDeadline > finalRosterDeadline) {
+                                    finalRosterDeadline = userRosterDeadline;
+                                }
+                            }
+
+                            let finalDataDeadline = settingsDataDeadline;
+                            if (userDataDeadline) {
+                                if (!finalDataDeadline || userDataDeadline > finalDataDeadline) {
+                                    finalDataDeadline = userDataDeadline;
+                                }
+                            }
+
+                            setRosterEditDeadline(finalRosterDeadline);
+                            setDataEditDeadline(finalDataDeadline);
+                        }, (error) => {
+                            console.error("Error fetching user deadlines:", error);
+                            // Fallback to settings deadlines if user fetch fails
+                            setRosterEditDeadline(settingsRosterDeadline);
+                            setDataEditDeadline(settingsDataDeadline);
+                        });
+                    } else {
+                        // If no user, just use settings deadlines
+                        setRosterEditDeadline(settingsRosterDeadline);
+                        setDataEditDeadline(settingsDataDeadline);
+                    }
+                } else {
+                    // If settings doc doesn't exist, set to null
+                    setRosterEditDeadline(null);
+                    setDataEditDeadline(null);
+
+                    // Also unsubscribe user deadlines if settings are gone
+                    if (unsubscribeUserDeadlines) {
+                        unsubscribeUserDeadlines();
+                    }
+                }
+            }, (error) => {
+                console.error("Error fetching settings deadlines:", error);
+                setRosterEditDeadline(null);
+                setDataEditDeadline(null);
+                if (unsubscribeUserDeadlines) {
+                    unsubscribeUserDeadlines();
+                }
+            });
+        } catch (e) {
+            console.error("Error setting up onSnapshot for deadlines:", e);
+            setRosterEditDeadline(null);
+            setDataEditDeadline(null);
+            if (unsubscribeSettings) unsubscribeSettings(); // Clean up if initial setup fails
+            if (unsubscribeUserDeadlines) unsubscribeUserDeadlines();
+        }
+    };
+
+    if (db && isAuthReady) {
+        fetchDeadlines();
+    }
+
+    return () => {
+        if (unsubscribeSettings) {
+            unsubscribeSettings();
+        }
+        if (unsubscribeUserDeadlines) {
+            unsubscribeUserDeadlines();
+        }
+    };
+}, [db, user, isAuthReady]); // Re-run if db, user, or auth status changes
+
+// New useEffect for deadline status timer
+useEffect(() => {
+    // Initial check
+    const now = new Date();
+    setIsRosterEditDeadlinePassed(rosterEditDeadline ? now > rosterEditDeadline : false);
+    setIsDataEditDeadlinePassed(dataEditDeadline ? now > dataEditDeadline : false);
+
+    const intervalId = setInterval(() => {
+        const currentCheckTime = new Date();
+        setIsRosterEditDeadlinePassed(rosterEditDeadline ? currentCheckTime > rosterEditDeadline : false);
+        setIsDataEditDeadlinePassed(dataEditDeadline ? currentCheckTime > dataEditDeadline : false);
+    }, 1000); // Check every second
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+}, [rosterEditDeadline, dataEditDeadline]); // Re-run if deadlines change
+
 
   useEffect(() => {
       let unsubscribePackages;
@@ -1307,6 +1487,10 @@ function RostersApp() {
   };
 
   const handleSaveTeam = async (updatedTeamData) => {
+    if (isDataEditDeadlinePassed) {
+        showLocalNotification('Termín pre úpravu dát tímu už uplynul.', 'error');
+        return;
+    }
     if (!user || !user.uid) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený.', 'error');
         return;
@@ -1364,6 +1548,10 @@ function RostersApp() {
 };
 
 const handleDeleteTeam = async (teamToDelete) => {
+    if (isDataEditDeadlinePassed) {
+        showLocalNotification('Termín pre úpravu dát tímu už uplynul, tím nie je možné vymazať.', 'error');
+        return;
+    }
     if (!user || !user.uid || !userProfileData?.billing?.clubName) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
         return;
@@ -1454,7 +1642,7 @@ const handleDeleteTeam = async (teamToDelete) => {
 
     // Rekombinujeme všetky tímy v kategórii, ak kategória stále existuje
     if (currentTeamsCopy[categoryToDeleteFrom]) {
-        currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategory, ...clubTeamsInCategory];
+        currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategories, ...clubTeamsInCategory];
     }
 
 
@@ -1472,6 +1660,10 @@ const handleDeleteTeam = async (teamToDelete) => {
 };
 
 const handleAddTeam = async (newTeamDataFromModal) => {
+    if (isDataEditDeadlinePassed) {
+        showLocalNotification('Termín pre pridanie nového tímu už uplynul.', 'error');
+        return;
+    }
     if (!user || !user.uid) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený.', 'error');
         return;
@@ -1562,6 +1754,10 @@ const handleSelectMemberType = (type) => {
 };
 
 const handleSaveNewMember = async (newMemberDetails) => {
+    if (isDataEditDeadlinePassed) {
+        showLocalNotification('Termín pre pridanie nového člena tímu už uplynul.', 'error');
+        return;
+    }
     if (!user || !user.uid || !teamToAddMemberTo) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo tím nie je vybraný.', 'error');
         return;
@@ -1633,6 +1829,10 @@ const handleOpenEditMemberDetailsModal = (team, member) => {
 };
 
 const handleSaveEditedMember = async (updatedMemberDetails) => {
+    if (isRosterEditDeadlinePassed) {
+        showLocalNotification('Termín pre úpravu členov tímu už uplynul.', 'error');
+        return;
+    }
     if (!user || !user.uid || !teamOfMemberToEdit || !memberToEdit) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýbajú údaje pre úpravu člena.', 'error');
         return;
@@ -1714,13 +1914,19 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         {
                             type: 'button',
                             onClick: () => setShowAddTeamModal(true),
-                            className: `flex items-center space-x-2 px-6 py-3 rounded-full text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#9333EA] hover:bg-opacity-90`,
-                            style: { backgroundColor: getRoleColor(userProfileData?.role) },
+                            disabled: isDataEditDeadlinePassed,
+                            className: `flex items-center space-x-2 px-6 py-3 rounded-full text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#9333EA] hover:bg-opacity-90 ${isDataEditDeadlinePassed ? 'bg-white border border-solid' : ''}`,
+                            style: { 
+                                backgroundColor: isDataEditDeadlinePassed ? 'white' : getRoleColor(userProfileData?.role),
+                                color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white',
+                                borderColor: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'transparent',
+                                cursor: isDataEditDeadlinePassed ? 'not-allowed' : 'pointer'
+                            },
                             'aria-label': 'Pridať nový tím'
                         },
                         React.createElement(
                             'svg',
-                            { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                            { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg', style: { color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white' } },
                             React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M12 6v6m0 0v6m0-6h6m-6 0H6` })
                         ),
                         React.createElement('span', { className: 'font-semibold' }, 'Pridať nový tím')
@@ -1764,6 +1970,15 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         return parts.length > 0 ? parts.join(', ') : '-';
                     };
 
+                    const editTeamButtonClasses = `flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100 ${isDataEditDeadlinePassed ? 'border border-solid' : ''}`;
+                    const editTeamButtonStyles = { 
+                        color: getRoleColor(userProfileData?.role),
+                        borderColor: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'transparent',
+                        cursor: isDataEditDeadlinePassed ? 'not-allowed' : 'pointer',
+                        backgroundColor: isDataEditDeadlinePassed ? 'white' : 'white'
+                    };
+
+
                     return React.createElement('div', { 
                         key: index, 
                         className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4 w-full' 
@@ -1774,13 +1989,14 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                             'button',
                             {
                                 onClick: () => handleOpenEditTeamModal({ ...team, categoryName: categoryName }),
-                                className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
-                                'aria-label': 'Upraviť tím',
-                                style: { color: getRoleColor(userProfileData?.role) }
+                                disabled: isDataEditDeadlinePassed,
+                                className: editTeamButtonClasses,
+                                style: editTeamButtonStyles,
+                                'aria-label': 'Upraviť tím'
                             },
                             React.createElement(
                                 'svg',
-                                { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                                { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg', style: { color: getRoleColor(userProfileData?.role) } },
                                 React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z` })
                             ),
                             React.createElement('span', { className: 'font-medium' }, 'Upraviť')
@@ -1877,28 +2093,39 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                 )
                               ),
                               React.createElement('tbody', { className: 'divide-y divide-gray-200' },
-                                allMembers.map((member, mIndex) => (
-                                  React.createElement('tr', { key: mIndex, className: 'hover:bg-gray-50' },
-                                    [
-                                      React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, 
-                                        React.createElement('button', {
-                                            onClick: () => handleOpenEditMemberDetailsModal(team, member),
-                                            className: 'flex items-center space-x-1 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors',
-                                            'aria-label': 'Upraviť člena'
-                                        },
-                                            React.createElement('svg', { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z` })),
-                                            React.createElement('span', null, 'Upraviť')
+                                allMembers.map((member, mIndex) => {
+                                    const editMemberButtonClasses = `flex items-center space-x-1 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors ${isRosterEditDeadlinePassed ? 'bg-white border border-solid' : ''}`;
+                                    const editMemberButtonStyles = {
+                                        color: isRosterEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white',
+                                        borderColor: isRosterEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'transparent',
+                                        cursor: isRosterEditDeadlinePassed ? 'not-allowed' : 'pointer',
+                                        backgroundColor: isRosterEditDeadlinePassed ? 'white' : getRoleColor(userProfileData?.role)
+                                    };
+                                    return (
+                                        React.createElement('tr', { key: mIndex, className: 'hover:bg-gray-50' },
+                                            [
+                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, 
+                                                React.createElement('button', {
+                                                    onClick: () => handleOpenEditMemberDetailsModal(team, member),
+                                                    disabled: isRosterEditDeadlinePassed,
+                                                    className: editMemberButtonClasses,
+                                                    style: editMemberButtonStyles,
+                                                    'aria-label': 'Upraviť člena'
+                                                },
+                                                    React.createElement('svg', { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg', style: { color: isRosterEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white' } }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z` })),
+                                                    React.createElement('span', null, 'Upraviť')
+                                                )
+                                            ),
+                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type),
+                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
+                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
+                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
+                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.registrationNumber || '-'), // Display registration number or '-'
+                                            shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, formatAddress(member.address)),
+                                            ].filter(Boolean) 
                                         )
-                                      ),
-                                      React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type),
-                                      React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
-                                      React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
-                                      React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
-                                      React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.registrationNumber || '-'), // Display registration number or '-'
-                                      shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, formatAddress(member.address)),
-                                    ].filter(Boolean) 
-                                  )
-                                ))
+                                    );
+                                })
                               )
                             )
                           )) : (
@@ -1912,10 +2139,17 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                 {
                                     type: 'button',
                                     onClick: () => handleOpenAddMemberTypeModal({ ...team, categoryName: categoryName }),
-                                    className: 'flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
+                                    disabled: isDataEditDeadlinePassed,
+                                    className: `flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDataEditDeadlinePassed ? 'bg-white border border-solid' : ''}`,
+                                    style: { 
+                                        backgroundColor: isDataEditDeadlinePassed ? 'white' : getRoleColor(userProfileData?.role),
+                                        color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white',
+                                        borderColor: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'transparent',
+                                        cursor: isDataEditDeadlinePassed ? 'not-allowed' : 'pointer'
+                                    },
                                     'aria-label': 'Pridať člena tímu'
                                 },
-                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M12 6v6m0 0v6m0-6h6m-6 0H6` }))
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg', style: { color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white' } }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M12 6v6m0 0v6m0-6h6m-6 0H6` }))
                             )
                           )
                         )
@@ -1937,13 +2171,19 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               {
                   type: 'button',
                   onClick: () => setShowAddTeamModal(true),
-                  className: `flex items-center space-x-2 px-6 py-3 rounded-full text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#9333EA] hover:bg-opacity-90`,
-                  style: { backgroundColor: getRoleColor(userProfileData?.role) },
+                  disabled: isDataEditDeadlinePassed,
+                  className: `flex items-center space-x-2 px-6 py-3 rounded-full text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#9333EA] hover:bg-opacity-90 ${isDataEditDeadlinePassed ? 'bg-white border border-solid' : ''}`,
+                  style: { 
+                      backgroundColor: isDataEditDeadlinePassed ? 'white' : getRoleColor(userProfileData?.role),
+                      color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white',
+                      borderColor: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'transparent',
+                      cursor: isDataEditDeadlinePassed ? 'not-allowed' : 'pointer'
+                  },
                   'aria-label': 'Pridať nový tím'
               },
               React.createElement(
                   'svg',
-                  { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                  { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg', style: { color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white' } },
                   React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M12 6v6m0 0v6m0-6h6m-6 0H6` })
               ),
               React.createElement('span', { className: 'font-semibold' }, 'Pridať nový tím')
@@ -1964,7 +2204,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
           userProfileData: userProfileData,
           availablePackages: availablePackages,
           availableAccommodationTypes: availableAccommodationTypes,
-          availableTshirtSizes: availableTshirtSizes
+          availableTshirtSizes: availableTshirtSizes,
+          isDataEditDeadlinePassed: isDataEditDeadlinePassed
         }
       ),
       React.createElement(
@@ -1973,7 +2214,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
           show: showAddMemberTypeModal,
           onClose: () => setShowAddMemberTypeModal(false),
           onSelectMemberType: handleSelectMemberType,
-          userProfileData: userProfileData
+          userProfileData: userProfileData,
+          isDataEditDeadlinePassed: isDataEditDeadlinePassed
         }
       ),
       React.createElement(
@@ -1990,7 +2232,9 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
           userProfileData: userProfileData,
           teamAccommodationType: teamAccommodationTypeToAddMemberTo,
           memberData: memberToEdit, 
-          isEditMode: isMemberEditMode 
+          isEditMode: isMemberEditMode,
+          isRosterEditDeadlinePassed: isRosterEditDeadlinePassed,
+          isDataEditDeadlinePassed: isDataEditDeadlinePassed
         }
       ),
       React.createElement(
@@ -2004,7 +2248,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
             availableAccommodationTypes: availableAccommodationTypes,
             availableTshirtSizes: availableTshirtSizes,
             teamsData: teamsData || {},
-            availableCategoriesFromSettings: availableCategoriesFromSettings 
+            availableCategoriesFromSettings: availableCategoriesFromSettings,
+            isDataEditDeadlinePassed: isDataEditDeadlinePassed
         }
       )
     )
