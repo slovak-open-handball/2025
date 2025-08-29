@@ -77,6 +77,8 @@ const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
 
 // Komponent modálneho okna pre úpravu tímu
 function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages }) {
+    // Tieto stavy sa stále inicializujú z teamData, ale input boxy sa pre ne nebudú renderovať.
+    // Sú potrebné pre zostavenie updatedTeamData v handleSubmit.
     const [editedTeamName, setEditedTeamName] = React.useState(teamData ? teamData.teamName : '');
     const [editedCategoryName, setEditedCategoryName] = React.useState(teamData ? teamData.categoryName : '');
     // Nové stavy pre selectboxy
@@ -116,8 +118,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
         e.preventDefault();
         const updatedTeamData = {
             ...teamData,
-            teamName: editedTeamName,
-            categoryName: editedCategoryName,
+            teamName: editedTeamName, // Použijeme pôvodný názov tímu, lebo sa neupravuje
+            categoryName: editedCategoryName, // Použijeme pôvodnú kategóriu, lebo sa neupravuje
             // Aktualizácia typu dopravy
             arrival: { ...teamData.arrival, type: editedArrivalType },
             // Aktualizácia názvu balíka
@@ -147,32 +149,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             React.createElement(
                 'form',
                 { onSubmit: handleSubmit, className: 'space-y-4' },
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'teamName', className: 'block text-sm font-medium text-gray-700' }, 'Názov tímu'),
-                    React.createElement('input', {
-                        type: 'text',
-                        id: 'teamName',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedTeamName,
-                        onChange: (e) => setEditedTeamName(e.target.value),
-                        required: true
-                    })
-                ),
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'categoryName', className: 'block text-sm font-medium text-gray-700' }, 'Kategória'),
-                    React.createElement('input', {
-                        type: 'text',
-                        id: 'categoryName',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedCategoryName,
-                        onChange: (e) => setEditedCategoryName(e.target.value),
-                        required: true
-                    })
-                ),
+                // Odstránené input boxy pre Názov tímu a Kategóriu
+                
                 // Selectbox pre Typ dopravy
                 React.createElement(
                     'div',
