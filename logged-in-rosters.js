@@ -690,38 +690,33 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         if (selectedCategory && teamsData && clubName !== 'Neznámy klub') {
             const allTeamsInCategory = teamsData[selectedCategory] || [];
 
-            const existingClubTeamsInSelectedCategory = allTeamsInCategory
-                .filter(team => {
-                    const teamClubNameNormalized = team.clubName?.trim() || ''; 
-                    const isClubMatch = teamClubNameNormalized === clubName;
-                    const isCategoryMatch = team.categoryName === selectedCategory;
-                    return isClubMatch && isCategoryMatch;
-                });
-            
-            let generatedName = clubName;
-            let hasUnsuffixedTeam = existingClubTeamsInSelectedCategory.some(team => team.teamName === clubName);
+            const existingClubTeams = allTeamsInCategory.filter(
+                team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory
+            );
 
-            if (existingClubTeamsInSelectedCategory.length === 0) {
-                generatedName = clubName;
-            } else if (existingClubTeamsInSelectedCategory.length === 1 && hasUnsuffixedTeam) {
-                generatedName = `${clubName} B`;
+            const NEW_TEAM_PLACEHOLDER = { 
+                teamName: `_NEW_TEAM_PLACEHOLDER_${Date.now()}_`, 
+                categoryName: selectedCategory, 
+                clubName: clubName 
+            };
+            const hypotheticalTeams = [...existingClubTeams, NEW_TEAM_PLACEHOLDER];
+
+            hypotheticalTeams.sort((a, b) => a.teamName.localeCompare(b.teamName));
+
+            let generatedNameForNewTeam = '';
+
+            if (hypotheticalTeams.length === 1) {
+                generatedNameForNewTeam = clubName;
             } else {
-                let allExistingSuffixes = new Set();
-                existingClubTeamsInSelectedCategory.forEach(team => {
-                    const match = team.teamName.match(new RegExp(`^${clubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s([A-Z])$`));
-                    if (match) {
-                        allExistingSuffixes.add(match[1]);
+                for (let i = 0; i < hypotheticalTeams.length; i++) {
+                    if (hypotheticalTeams[i].teamName === NEW_TEAM_PLACEHOLDER.teamName) {
+                        generatedNameForNewTeam = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+                        break;
                     }
-                });
-
-                let nextSuffixCode = 'A'.charCodeAt(0);
-                while (allExistingSuffixes.has(String.fromCharCode(nextSuffixCode))) {
-                    nextSuffixCode++;
                 }
-                generatedName = `${clubName} ${String.fromCharCode(nextSuffixCode)}`;
             }
             
-            setTeamNamePreview(generatedName);
+            setTeamNamePreview(generatedNameForNewTeam);
         } else {
             setTeamNamePreview('');
         }
@@ -772,7 +767,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
         
         const newTeamData = {
-            teamName: teamNamePreview,
+            teamName: clubName, 
             categoryName: selectedCategory,
             clubName: clubName,
             players: 0,
@@ -1436,28 +1431,54 @@ const handleDeleteTeam = async (teamToDelete) => {
     }
 };
 
-const handleAddTeam = async (newTeamData) => {
+const handleAddTeam = async (newTeamDataFromModal) => {
     if (!user || !user.uid) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený.', 'error');
         return;
     }
 
     const userDocRef = doc(db, 'users', user.uid);
-    const currentTeams = { ...teamsData };
+    const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); 
 
-    if (!currentTeams[newTeamData.categoryName]) {
-        currentTeams[newTeamData.categoryName] = [];
+    const category = newTeamDataFromModal.categoryName;
+    const clubName = newTeamDataFromModal.clubName;
+
+    if (!currentTeamsCopy[category]) {
+        currentTeamsCopy[category] = [];
     }
-    currentTeams[newTeamData.categoryName].push(newTeamData);
+
+    let existingClubTeamsInThisCategory = currentTeamsCopy[category].filter(
+        team => team.clubName?.trim() === clubName
+    );
+
+    const allRelevantTeams = [
+        ...existingClubTeamsInThisCategory.map(team => ({ ...team, originalNameForSort: team.teamName })), 
+        { ...newTeamDataFromModal, originalNameForSort: newTeamDataFromModal.teamName } 
+    ];
+
+    allRelevantTeams.sort((a, b) => a.originalNameForSort.localeCompare(b.originalNameForSort));
+
+    if (allRelevantTeams.length === 1) {
+        allRelevantTeams[0].teamName = clubName; 
+    } else {
+        for (let i = 0; i < allRelevantTeams.length; i++) {
+            allRelevantTeams[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+        }
+    }
+
+    currentTeamsCopy[category] = currentTeamsCopy[category].filter(
+        team => team.clubName?.trim() !== clubName
+    );
+    currentTeamsCopy[category] = [...currentTeamsCopy[category], ...allRelevantTeams];
 
     try {
         await updateDoc(userDocRef, {
-            teams: currentTeams
+            teams: currentTeamsCopy
         });
-        showLocalNotification('Nový tím bol úspešne pridaný!', 'success');
+        showLocalNotification('Nový tím bol úspešne pridaný a názvy tímov aktualizované!', 'success');
     } catch (error) {
-        console.error("Chyba pri pridávaní tímu:", error);
-        showLocalNotification('Nastala chyba pri pridávaní nového tímu.', 'error');
+        console.error("Chyba pri pridávaní tímu a aktualizácii názvov:", error);
+        showLocalNotification('Nastala chyba pri pridávaní tímu a aktualizácii názvov.', 'error');
     }
 };
 
@@ -1783,7 +1804,10 @@ const handleSaveNewMember = async (newMemberDetails) => {
         EditTeamModal,
         {
           show: showEditTeamModal,
-          onClose: () => setShowEditTeamModal(false),
+          onClose: () => {
+            setShowEditTeamModal(false);
+            setSelectedTeam(null); // Clear selectedTeam when modal closes
+          },
           teamData: selectedTeam,
           onSaveTeam: handleSaveTeam,
           onDeleteTeam: handleDeleteTeam,
