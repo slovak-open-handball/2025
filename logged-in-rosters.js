@@ -320,6 +320,18 @@ function RostersApp() {
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`), 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`), 
                         React.createElement('p', { className: 'text-md text-gray-700 mb-4' }, `Balík: ${packageName}`), 
+
+                        // Zobrazenie veľkostí a počtu tričiek
+                        team.tshirts && team.tshirts.length > 0 && (
+                            React.createElement('div', { className: 'mb-4' },
+                                React.createElement('p', { className: 'text-md text-gray-700 font-semibold mb-1' }, 'Tričká:'),
+                                team.tshirts.map((tshirt, tIndex) => (
+                                    React.createElement('p', { key: tIndex, className: 'text-md text-gray-700 ml-4' }, 
+                                        `Veľkosť: ${tshirt.size}, Počet: ${tshirt.quantity}`
+                                    )
+                                ))
+                            )
+                        )
                       ), // Koniec kontajnera pre obsah
                       
 
