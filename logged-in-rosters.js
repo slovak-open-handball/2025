@@ -301,7 +301,7 @@ function RostersApp() {
                     // Každý tím bude mať svoj vlastný biely obdĺžnik s tieňom a fialovým okrajom
                     return React.createElement('div', { 
                         key: index, 
-                        className: 'bg-gray-50 p-6 rounded-lg shadow-md border-l-4 border-[#9333EA]' 
+                        className: 'bg-white p-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4' // Pridal som mb-4 pre medzeru medzi tímami
                     }, 
                       React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
                       React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`),
