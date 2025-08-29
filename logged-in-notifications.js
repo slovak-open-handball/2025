@@ -539,22 +539,28 @@ function NotificationsApp() {
                         { 
                             key: notification.id, 
                             // Dynamické triedy podľa 'read' stavu notifikácie
-                            className: `p-4 rounded-lg shadow-md flex justify-between items-center ${notification.read ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-800 border border-blue-200'}` 
+                            className: `p-4 rounded-lg shadow-md flex-col justify-between items-start ${notification.read ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-800 border border-blue-200'}` 
                         },
                         React.createElement(
                             'div',
-                            { className: 'flex-1' },
-                            // ZMENA: Zobrazuje prvý element z poľa 'changes', ak existuje
-                            React.createElement('p', { className: 'font-semibold' }, 
-                                notification.changes && notification.changes.length > 0 ? notification.changes[0] : 'Chybná notifikácia'
+                            { className: 'flex-1 mb-2 w-full' },
+                            // ZMENA: Zobrazuje všetky elementy z poľa 'changes' ako zoznam
+                            notification.changes && notification.changes.length > 0 ? (
+                                React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
+                                    notification.changes.map((change, index) => (
+                                        React.createElement('li', { key: index, className: 'font-semibold' }, change)
+                                    ))
+                                )
+                            ) : (
+                                React.createElement('p', { className: 'font-semibold' }, 'Chybná notifikácia')
                             ),
-                            notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500' }, 
+                            notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
                             )
                         ),
                         React.createElement(
                             'div',
-                            { className: 'flex space-x-2 ml-4' },
+                            { className: 'flex justify-end space-x-2 mt-2 w-full' }, // ZMENA: Upravené triedy pre zarovnanie tlačidiel doprava
                             // Tlačidlo "Označiť ako prečítané" len ak notifikácia nie je prečítaná
                             !notification.read && React.createElement(
                                 'button',
