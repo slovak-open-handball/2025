@@ -302,26 +302,29 @@ function RostersApp() {
                     // Každý tím bude mať svoj vlastný biely obdĺžnik s tieňom a fialovým okrajom
                     return React.createElement('div', { 
                         key: index, 
-                        className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4' // Odstránené pt-6, ponechané pb-6
+                        className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4' 
                     }, 
                       // Nový nadpis "Súpiska tímu"
-                      React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 mb-2 text-center font-bold rounded-t-lg' }, 'Súpiska tímu'), // Pridané rounded-t-lg
+                      React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 text-center font-bold rounded-t-lg' }, 'Súpiska tímu'), // Odstránené mb-2
                       
-                      // Typ kategórie tímu (napr. U10 CH)
-                      React.createElement('p', { className: 'text-xl font-semibold text-gray-800 mb-2 px-6 pt-4' }, `Kategória: ${categoryName}`), // Zmenené text-lg na text-xl
+                      // Kontajner pre obsah pod fialovým nadpisom s polstrovaním
+                      React.createElement('div', { className: 'px-6 pt-4' }, 
+                        // Typ kategórie tímu (napr. U10 CH)
+                        React.createElement('p', { className: 'text-xl font-semibold text-gray-800 mb-2' }, `Kategória: ${categoryName}`), // Odstránené px-6 a pt-4
 
-                      React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2 px-6' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`), 
-                      React.createElement('p', { className: 'text-md text-gray-700 px-6' }, `Počet hráčov: ${team.players || 0}`), 
-                      React.createElement('p', { className: 'text-md text-gray-700 mb-2 px-6' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`), 
+                        React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`), // Odstránené px-6
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`), // Odstránené px-6
+                        React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`), // Odstránené px-6
+                        
+                        // Nové informácie o doprave, ubytovaní a balíku
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`), // Odstránené px-6
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`), // Odstránené px-6
+                        React.createElement('p', { className: 'text-md text-gray-700 mb-4' }, `Balík: ${packageName}`), // Odstránené px-6
+                      ), // Koniec kontajnera pre obsah
                       
-                      // Nové informácie o doprave, ubytovaní a balíku
-                      React.createElement('p', { className: 'text-md text-gray-700 px-6' }, `Typ dopravy: ${arrivalType}${arrivalTime}`), 
-                      React.createElement('p', { className: 'text-md text-gray-700 px-6' }, `Typ ubytovania: ${accommodationType}`), 
-                      React.createElement('p', { className: 'text-md text-gray-700 mb-4 px-6' }, `Balík: ${packageName}`), 
-
 
                       allMembers.length > 0 && (
-                        React.createElement('div', { className: 'mt-4 px-6' }, 
+                        React.createElement('div', { className: 'mt-4 px-6' }, // Toto zostáva s px-6, pretože je mimo nového kontajnera
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
                           // Vraciam overflow-x-auto, aby sa tabuľka skrolovala, ak je príliš široká
                           React.createElement('div', { className: 'overflow-x-auto' }, 
