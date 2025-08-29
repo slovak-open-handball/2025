@@ -739,7 +739,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         console.log("  clubName:", clubName); // Teraz by malo byť orezané
         console.log("  teamsData:", teamsData);
 
-        if (selectedCategory && teamsData) {
+        if (selectedCategory && teamsData && clubName !== 'Neznámy klub') { // Pridana kontrola na 'Neznámy klub'
             const teamsInSelectedCategory = teamsData[selectedCategory] || [];
             
             // Orezanie clubName pri porovnávaní s existujúcimi tímami
@@ -747,21 +747,9 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                 team.clubName?.trim() === clubName && team.categoryName === selectedCategory
             );
 
-            let nextSuffixChar = 'A';
-            const existingSuffixes = new Set();
-
-            clubTeamsInThisCategory.forEach(team => {
-                // Použijeme orezaný clubName v regulárnom výraze a orezanie team.teamName
-                const match = team.teamName?.trim().match(new RegExp(`${clubName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*([A-Z])$`));
-                if (match) {
-                    existingSuffixes.add(match[1]);
-                }
-            });
-
-            // Nájdite najmenšie nepoužité písmeno ako príponu
-            while (existingSuffixes.has(nextSuffixChar)) {
-                nextSuffixChar = String.fromCharCode(nextSuffixChar.charCodeAt(0) + 1);
-            }
+            // Zmena: Priame určenie sufixu na základe dĺžky existujúcich tímov
+            const nextSuffixChar = String.fromCharCode('A'.charCodeAt(0) + clubTeamsInThisCategory.length);
+            
             const generatedTeamName = `${clubName} ${nextSuffixChar}`;
             setTeamNamePreview(generatedTeamName);
             console.log("  Vygenerovaný názov tímu:", generatedTeamName);
@@ -1039,7 +1027,7 @@ function RostersApp() {
   const [selectedTeam, setSelectedTeam] = React.useState(null); // Stav pre vybraný tím na úpravu
   const [availablePackages, setAvailablePackages] = React.useState([]); // Nový stav pre balíky z databázy
   const [availableAccommodationTypes, setAvailableAccommodationTypes] = React.useState([]); // Nový stav pre typy ubytovania
-  const [availableTshirtSizes, setAvailableTshirtSizes] = React.React.useState([]); // Nový stav pre dostupné veľkosti tričiek
+  const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]); // Nový stav pre dostupné veľkosti tričiek
   const [showAddMemberTypeModal, setShowAddMemberTypeModal] = React.useState(false); // Stav pre modálne okno výberu typu člena
   const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = React.useState(false); // Stav pre modálne okno detailov člena
   const [memberTypeToAdd, setMemberTypeToAdd] = React.useState(null); // Typ člena, ktorý sa má pridať
@@ -1545,7 +1533,7 @@ function RostersApp() {
     allClubTeamsInSelectedCategory.sort((a, b) => a.teamName.localeCompare(b.teamName));
 
     const updatedTeamsForCategory = [];
-    for (let i = 0; i = allClubTeamsInSelectedCategory.length; i++) {
+    for (let i = 0; i < allClubTeamsInSelectedCategory.length; i++) { // Opravená podmienka cyklu
         const team = allClubTeamsInSelectedCategory[i];
         const newSuffix = String.fromCharCode('A'.charCodeAt(0) + i); // Generujeme príponu (A, B, C...)
         const newTeamName = `${clubName} ${newSuffix}`; // Vytvoríme nový názov tímu
