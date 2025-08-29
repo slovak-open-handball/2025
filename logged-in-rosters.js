@@ -1262,8 +1262,16 @@ function RostersApp() {
     let unsubscribeCategories;
     if (db) {
         try {
-            const categoriesRef = collection(db, 'settings', 'categories');
-            unsubscribeCategories = onSnapshot(categoriesRef, (snapshot) => {
+            // Predpokladáme, že 'settings' je kolekcia a 'categories' je dokument,
+            // ktorý obsahuje subkolekciu s náhodnými ID dokumentov, kde každý má pole 'name'.
+            // Správna referencia na kolekciu by teda mala byť: collection(db, 'settings', 'categories', 'nejake_nahodne_ID_dokumentu_s_kategoriou', 'subkolekcia_s_kategoriami')
+            // Ak je categories subkolekcia v dokumente 'settings', tak cesta bude: collection(db, 'settings', 'categories').
+            // Ak 'categories' je názov subkolekcie v DOKUMENTE 'settings' a v nej sú náhodné ID s poľom 'name',
+            // potom potrebujeme iterovať cez dokumenty v subkolekcii 'categories'.
+
+            // Zjednodušená verzia, ak 'categories' je subkolekcia, kde každý dokument má pole 'name'.
+            const categoriesCollectionRef = collection(db, 'settings', 'categories'); // Opravená referencia
+            unsubscribeCategories = onSnapshot(categoriesCollectionRef, (snapshot) => {
                 const categoriesList = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
