@@ -304,27 +304,27 @@ function RostersApp() {
                         key: index, 
                         className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4' 
                     }, 
-                      // Nový nadpis "Súpiska tímu"
-                      React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 text-center font-bold rounded-t-lg' }, 'Súpiska tímu'), // Odstránené mb-2
+                      // Kontajner pre fialový pásik a texty kategórie a názvu tímu
+                      React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 rounded-t-lg' }, 
+                        React.createElement('div', { className: 'text-center font-bold mb-2' }, 'Súpiska tímu'), // Pôvodný nadpis "Súpiska tímu"
+                        React.createElement('p', { className: 'text-xl font-semibold mb-2' }, `Kategória: ${categoryName}`), 
+                        React.createElement('p', { className: 'text-xl font-semibold mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`)
+                      ),
                       
-                      // Kontajner pre obsah pod fialovým nadpisom s polstrovaním
+                      // Kontajner pre ostatný obsah pod fialovým pásikom s polstrovaním
                       React.createElement('div', { className: 'px-6 pt-4' }, 
-                        // Typ kategórie tímu (napr. U10 CH)
-                        React.createElement('p', { className: 'text-xl font-semibold text-gray-800 mb-2' }, `Kategória: ${categoryName}`), // Odstránené px-6 a pt-4
-
-                        React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`), // Odstránené px-6
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`), // Odstránené px-6
-                        React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`), // Odstránené px-6
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`), 
+                        React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`), 
                         
                         // Nové informácie o doprave, ubytovaní a balíku
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`), // Odstránené px-6
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`), // Odstránené px-6
-                        React.createElement('p', { className: 'text-md text-gray-700 mb-4' }, `Balík: ${packageName}`), // Odstránené px-6
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`), 
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`), 
+                        React.createElement('p', { className: 'text-md text-gray-700 mb-4' }, `Balík: ${packageName}`), 
                       ), // Koniec kontajnera pre obsah
                       
 
                       allMembers.length > 0 && (
-                        React.createElement('div', { className: 'mt-4 px-6' }, // Toto zostáva s px-6, pretože je mimo nového kontajnera
+                        React.createElement('div', { className: 'mt-4 px-6' }, 
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
                           // Vraciam overflow-x-auto, aby sa tabuľka skrolovala, ak je príliš široká
                           React.createElement('div', { className: 'overflow-x-auto' }, 
