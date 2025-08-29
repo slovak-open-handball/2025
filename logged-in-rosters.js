@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -256,7 +256,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         onChange: (e) => setEditedPackageName(e.target.value),
                         required: true
                     },
-                    // Removed the "Vyberte balík" option
                     availablePackages.slice().sort().map((pkgName, idx) => // Zoradenie balíkov abecedne
                         React.createElement('option', { key: idx, value: pkgName }, pkgName)
                     )
@@ -524,9 +523,33 @@ function RostersApp() {
         return;
     }
 
-    // Predpokladáme, že updatedTeamData obsahuje všetky upravené polia
-    // Potrebujeme nájsť správny tím v rámci user.teams[categoryName]
-    // A aktualizovať ho vo Firestore
+    const originalPackageName = selectedTeam?.packageDetails?.name || '';
+    const newPackageName = updatedTeamData.packageDetails.name;
+
+    // Ak sa zmenil názov balíka, potrebujeme načítať nové detaily jedál
+    if (newPackageName !== originalPackageName) {
+        try {
+            const packagesRef = collection(db, 'settings', 'packages', 'list');
+            const q = query(packagesRef, where('name', '==', newPackageName));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                const packageDoc = querySnapshot.docs[0].data();
+                updatedTeamData.packageDetails.meals = packageDoc.meals || {};
+                updatedTeamData.packageDetails.price = packageDoc.price || 0; // Aktualizovať aj cenu
+            } else {
+                console.warn(`Package with name ${newPackageName} not found.`);
+                updatedTeamData.packageDetails.meals = {}; // Ak balík neexistuje, vymazať jedlá
+                updatedTeamData.packageDetails.price = 0; // Resetovať cenu
+            }
+        } catch (error) {
+            console.error("Error fetching new package details:", error);
+            showLocalNotification('Nastala chyba pri načítavaní detailov nového balíka.', 'error');
+            return; // Predčasné ukončenie, ak nastala chyba pri načítaní balíka
+        }
+    }
+
+
     const teamCategory = updatedTeamData.categoryName;
     const teamIndex = teamsData[teamCategory].findIndex(t => t.teamName === updatedTeamData.teamName);
 
