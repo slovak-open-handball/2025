@@ -705,7 +705,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
 }
 
 // Komponent modálneho okna pre pridanie nového tímu
-function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategories }) {
+function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategoriesFromSettings }) { // Zmenený názov propu
     const db = getFirestore();
     const [selectedCategory, setSelectedCategory] = React.useState('');
     const [teamNamePreview, setTeamNamePreview] = React.useState(''); // Predbežný názov tímu na zobrazenie
@@ -889,7 +889,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         required: true
                     },
                     React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
-                    availableCategories.sort().map((cat, idx) => (
+                    // Používame availableCategoriesFromSettings namiesto availableCategories
+                    availableCategoriesFromSettings.sort().map((cat, idx) => (
                         React.createElement('option', { key: idx, value: cat }, cat)
                     ))
                     )
@@ -1125,7 +1126,8 @@ function RostersApp() {
   const [teamToAddMemberTo, setTeamToAddMemberTo] = React.useState(null); // Tím, do ktorého sa pridáva člen
   const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = React.useState(''); // Ubytovanie tímu pre nový modal
   const [showAddTeamModal, setShowAddTeamModal] = React.useState(false); // Nový stav pre modálne okno pridania tímu
-  const [availableCategories, setAvailableCategories] = React.useState([]); // Nový stav pre dostupné kategórie
+  // Zmenený názov stavu pre kategórie z nastavení
+  const [availableCategoriesFromSettings, setAvailableCategoriesFromSettings] = React.useState([]);
 
 
   // Loading stav pre používateľský profil
@@ -1255,6 +1257,36 @@ function RostersApp() {
     };
   }, [db]);
 
+  // Nový useEffect pre načítanie kategórií z /settings/categories
+  React.useEffect(() => {
+    let unsubscribeCategories;
+    if (db) {
+        try {
+            const categoriesRef = collection(db, 'settings', 'categories');
+            unsubscribeCategories = onSnapshot(categoriesRef, (snapshot) => {
+                const categoriesList = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.name) {
+                        categoriesList.push(data.name);
+                    }
+                });
+                setAvailableCategoriesFromSettings(categoriesList);
+                console.log("RostersApp: Categories from settings loaded:", categoriesList);
+            }, (error) => {
+                console.error("RostersApp: Error fetching categories from settings:", error);
+            });
+        } catch (e) {
+            console.error("RostersApp: Error setting up onSnapshot for categories from settings:", e);
+        }
+    }
+    return () => {
+        if (unsubscribeCategories) {
+            unsubscribeCategories();
+        }
+    };
+}, [db]);
+
 
   React.useEffect(() => {
     let unsubscribeUserDoc;
@@ -1274,11 +1306,10 @@ function RostersApp() {
             // Extrahovanie a nastavenie dát tímov
             if (userData.teams) {
                 setTeamsData(userData.teams);
-                // Extrakt kategórií z tímov a ich zoradenie abecedne
-                setAvailableCategories(Object.keys(userData.teams).sort()); 
+                // Toto už nebude primárny zdroj kategórií pre selectbox v AddTeamModal
+                // setAvailableCategories(Object.keys(userData.teams).sort()); 
             } else {
                 setTeamsData({}); // Ak teams neexistuje, nastavíme prázdny objekt
-                setAvailableCategories([]);
             }
 
             setLoading(false);
@@ -1298,7 +1329,6 @@ function RostersApp() {
         setLoading(false);
         setUserProfileData(null);
         setTeamsData({});
-        setAvailableCategories([]);
     }
 
     return () => {
@@ -1889,7 +1919,8 @@ function RostersApp() {
             availableAccommodationTypes: availableAccommodationTypes,
             availableTshirtSizes: availableTshirtSizes,
             teamsData: teamsData, // Pre logiku generovania názvu tímu
-            availableCategories: availableCategories // Pre selectbox kategórie
+            // Používame nové kategórie zo settings namiesto starých
+            availableCategoriesFromSettings: availableCategoriesFromSettings 
         }
       )
     )
