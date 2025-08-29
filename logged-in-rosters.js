@@ -716,8 +716,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     const [packageName, setPackageName] = React.useState(availablePackages.length > 0 ? availablePackages.sort()[0] : ''); // Predvolená hodnota
     // Odstránený stav pre tričká, pretože sa nebudú spravovať pri vytváraní tímu
 
-    // Zmena: Správne načítanie clubName z billing.clubName
-    const clubName = userProfileData?.billing?.clubName || 'Neznámy klub';
+    // Zmena: Správne načítanie clubName z billing.clubName a orezanie
+    const clubName = userProfileData?.billing?.clubName?.trim() || 'Neznámy klub';
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
     // Reset stavov pri otvorení/zatvorení modalu
@@ -739,23 +739,23 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         // Pridávame logy pre debugovanie
         console.log("AddTeamModal useEffect (generovanie názvu tímu):");
         console.log("  selectedCategory:", selectedCategory);
-        console.log("  clubName:", clubName);
+        console.log("  clubName:", clubName); // Teraz by malo byť orezané
         console.log("  teamsData:", teamsData);
 
-        // Zmena: Odstránená podmienka 'clubName !== 'Neznámy klub''
-        // Názov tímu sa bude generovať aj s defaultným názvom klubu, ak nie je nastavený.
         if (selectedCategory && teamsData) {
             const teamsInSelectedCategory = teamsData[selectedCategory] || [];
             
+            // Orezanie clubName pri porovnávaní s existujúcimi tímami
             const clubTeamsInThisCategory = teamsInSelectedCategory.filter(team => 
-                team.clubName === clubName && team.categoryName === selectedCategory
+                team.clubName?.trim() === clubName && team.categoryName === selectedCategory
             );
 
             let nextSuffixChar = 'A';
             const existingSuffixes = new Set();
 
             clubTeamsInThisCategory.forEach(team => {
-                const match = team.teamName.match(new RegExp(`${clubName}\\s*([A-Z])$`));
+                // Použijeme orezaný clubName v regulárnom výraze a orezanie team.teamName
+                const match = team.teamName?.trim().match(new RegExp(`${clubName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*([A-Z])$`));
                 if (match) {
                     existingSuffixes.add(match[1]);
                 }
@@ -827,7 +827,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         const newTeamData = {
             teamName: teamNamePreview, // Použijeme už vygenerovaný názov
             categoryName: selectedCategory,
-            clubName: clubName,
+            clubName: clubName, // Uistite sa, že clubName je orezané
             players: 0,
             menTeamMembers: 0,
             womenTeamMembers: 0,
@@ -1512,7 +1512,7 @@ function RostersApp() {
 
   // Funkcia pre pridanie nového tímu s premenovaním existujúcich
   const handleAddTeam = async (newTeamDataFromModal) => {
-    if (!user || !user.uid || !userProfileData?.billing?.clubName) { // Zmenená podmienka
+    if (!user || !user.uid || !userProfileData?.billing?.clubName) { 
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
         return;
     }
@@ -1522,7 +1522,7 @@ function RostersApp() {
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); 
 
     const selectedCategory = newTeamDataFromModal.categoryName;
-    const clubName = userProfileData.billing.clubName; // Zmena: Správne načítanie clubName
+    const clubName = userProfileData.billing.clubName?.trim(); // Zmena: Orezanie clubName
 
     // Inicializujeme kategóriu v kópii, ak ešte neexistuje
     if (!currentTeamsCopy[selectedCategory]) {
@@ -1539,7 +1539,7 @@ function RostersApp() {
     // Získame všetky tímy pre aktuálny klub v vybranej kategórii
     // a pridáme k nim nový tím pre reevaluáciu prípon
     let allClubTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
-                                        .filter(team => team.clubName === clubName);
+                                        .filter(team => team.clubName?.trim() === clubName); // Zmena: Orezanie team.clubName
 
     allClubTeamsInSelectedCategory.push(newTeam);
 
@@ -1562,7 +1562,7 @@ function RostersApp() {
     // Teraz nahradíme tímy patriace k tomuto klubu v kópii pre vybranú kategóriu,
     // pričom zachováme ostatné tímy (ak existujú), ktoré do tohto klubu v tejto kategórii nepatria.
     const otherTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
-                                            .filter(team => team.clubName !== clubName);
+                                            .filter(team => team.clubName?.trim() !== clubName); // Zmena: Orezanie team.clubName
 
     currentTeamsCopy[selectedCategory] = [...otherTeamsInSelectedCategory, ...updatedTeamsForCategory];
 
