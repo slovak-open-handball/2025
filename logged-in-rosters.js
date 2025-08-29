@@ -692,44 +692,37 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         if (selectedCategory && teamsData && clubName !== 'Neznámy klub') {
             const allTeamsInCategory = teamsData[selectedCategory] || [];
 
-            // Filtrujeme existujúce tímy, ktoré patria pod rovnaký klub a kategóriu
+            // Filtrujeme existujúce tímy, ktoré patria pod rovnaký klub a kategóriu.
+            // Ignorujeme prípad, kedy názov tímu je len samotný clubName (bez sufixu), aby
+            // sa vyhnúť duplicitným názvom s novo pridaným "hlavným" tímom.
             const existingClubTeams = allTeamsInCategory.filter(
-                team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory
+                team => team.clubName?.trim() === clubName && 
+                        team.categoryName === selectedCategory &&
+                        team.teamName.startsWith(clubName) 
             );
 
-            // Vytvoríme dočasný placeholder pre nový tím, aby sme simulovali jeho prítomnosť
-            const NEW_TEAM_PLACEHOLDER = { 
-                teamName: `_NEW_TEAM_PLACEHOLDER_${Date.now()}_`, // Unikátny dočasný názov
-                categoryName: selectedCategory, 
-                clubName: clubName 
-            };
-            
-            // Vytvoríme hypotetický zoznam všetkých tímov (existujúcich + nový placeholder)
-            // pre tento klub a kategóriu. Pridáme 'originalNameForSort' pre stabilné zoradenie.
-            const hypotheticalTeams = [
-                ...existingClubTeams.map(team => ({ ...team, originalNameForSort: team.teamName })), 
-                { ...NEW_TEAM_PLACEHOLDER, originalNameForSort: NEW_TEAM_PLACEHOLDER.teamName }
-            ];
-
-            // Zoradíme ich, aby sme určili ich poradie pre priradenie sufixov
-            // Predpokladáme, že placeholder príde na koniec po zoradení abecedne.
-            hypotheticalTeams.sort((a, b) => a.originalNameForSort.localeCompare(b.originalNameForSort));
+            // Spočítame, koľko "prírastkových" tímov (s A, B, C...) už existuje.
+            // To nám dá správny index pre nový tím.
+            const countExistingIncrementalTeams = existingClubTeams.filter(team => {
+                const suffixRegex = new RegExp(`^${clubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s+([A-Z])$`);
+                return suffixRegex.test(team.teamName);
+            }).length;
 
             let generatedNameForNewTeam = '';
 
-            // Aplikujeme logiku priradenia sufixov (A, B, C...)
-            if (hypotheticalTeams.length === 1) {
-                // Ak je to jediný tím (vrátane nového), nemá sufix
-                generatedNameForNewTeam = clubName;
-            } else {
-                // Ak je tímov viac, priradíme sufixy podľa poradia
-                for (let i = 0; i < hypotheticalTeams.length; i++) {
-                    // Nájde náš placeholder v zozname a priradí mu jeho predpokladaný názov
-                    if (hypotheticalTeams[i].teamName === NEW_TEAM_PLACEHOLDER.teamName) {
-                        generatedNameForNewTeam = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
-                        break;
-                    }
-                }
+            // Ak žiadne prírastkové tímy pre daný klub v kategórii neexistujú, nový tím bude "ClubName A"
+            // (a existujúci by sa mal premenovať na "ClubName A", ak to bol len "ClubName")
+            // alebo ak existuje len jeden tím (bez sufixu)
+            if (existingClubTeams.length === 0) {
+                 generatedNameForNewTeam = clubName; // Nový tím bude mať základný názov
+            } else if (existingClubTeams.length === 1 && existingClubTeams[0].teamName === clubName) {
+                // Ak existuje len jeden tím a je to základný názov, nový tím bude "ClubName A"
+                generatedNameForNewTeam = `${clubName} A`;
+            }
+            else {
+                // V opačnom prípade priradíme ďalšie písmeno abecedy.
+                // countExistingIncrementalTeams už zohľadňuje existujúce tímy s písmenom.
+                generatedNameForNewTeam = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + countExistingIncrementalTeams)}`;
             }
             
             setTeamNamePreview(generatedNameForNewTeam);
@@ -784,7 +777,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         
         // Nový tím bude mať základný názov klubu, sufixy sa priradia vo funkcii onAddTeam
         const newTeamData = {
-            teamName: clubName, 
+            teamName: teamNamePreview, // Používame vygenerovaný názov
             categoryName: selectedCategory,
             clubName: clubName,
             players: 0,
@@ -1405,13 +1398,15 @@ const handleDeleteTeam = async (teamToDelete) => {
     );
 
     let clubTeamsInCategory = teamsInCurrentCategory.filter(
-        team => team.clubName?.trim() === clubName
+        team => team.clubName?.trim() === clubName && team.categoryName === categoryToDeleteFrom
     );
     let otherTeamsInCategory = teamsInCurrentCategory.filter(
-        team => team.clubName?.trim() !== clubName
+        team => !(team.clubName?.trim() === clubName && team.categoryName === categoryToDeleteFrom)
     );
 
+    // Zoradíme tímy klubu abecedne, aby sme zabezpečili konzistentné priradenie sufixov
     clubTeamsInCategory.sort((a, b) => {
+        // Pomocná funkcia na získanie sufixovej časti názvu tímu (napr. 'A', 'B')
         const getSuffixPart = (teamName, baseClubName) => {
             const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
             const match = teamName.match(regex);
@@ -1421,19 +1416,24 @@ const handleDeleteTeam = async (teamToDelete) => {
         const suffixA = getSuffixPart(a.teamName, clubName);
         const suffixB = getSuffixPart(b.teamName, clubName);
 
+        // Zoradenie: tímy bez sufixu idú pred tímy so sufixom A, B, C...
         if (suffixA === '' && suffixB !== '') return -1;
         if (suffixA !== '' && suffixB === '') return 1;
-        return suffixA.localeCompare(suffixB);
+        return suffixA.localeCompare(suffixB); // Abecedné zoradenie sufixov
     });
 
+    // Prepriradíme názvy tímov s novými sufixami po vymazaní
     if (clubTeamsInCategory.length > 1) {
+        // Ak zostane viac ako jeden tím, priradíme im "A", "B", "C" atď.
         for (let i = 0; i < clubTeamsInCategory.length; i++) {
             clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
         }
     } else if (clubTeamsInCategory.length === 1) {
+        // Ak zostane len jeden tím, jeho názov bude len názov klubu (bez sufixu)
         clubTeamsInCategory[0].teamName = clubName;
     }
 
+    // Rekombinujeme všetky tímy v kategórii
     currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategory, ...clubTeamsInCategory];
 
     try {
@@ -1468,36 +1468,40 @@ const handleAddTeam = async (newTeamDataFromModal) => {
     }
 
     // Získame existujúce tímy daného klubu v aktuálnej kategórii
+    // Vytvoríme nový hypotetický zoznam, do ktorého pridáme aj nový tím,
+    // aby sme mohli správne priradiť názvy s abecednými sufixami.
     let existingClubTeamsInThisCategory = currentTeamsCopy[category].filter(
-        team => team.clubName?.trim() === clubName
+        team => team.clubName?.trim() === clubName && team.categoryName === category
     );
 
-    // Vytvoríme zoznam všetkých relevantných tímov pre daný klub a kategóriu
-    // vrátane nového tímu. Použijeme 'originalNameForSort' pre stabilné zoradenie.
-    const allRelevantTeams = [
+    // Vytvoríme hypotetický zoznam všetkých tímov pre tento klub a kategóriu,
+    // vrátane nového tímu. Toto slúži na výpočet správnych sufixov.
+    const allRelevantTeamsBeforeUpdate = [
         ...existingClubTeamsInThisCategory.map(team => ({ ...team, originalNameForSort: team.teamName })), 
-        { ...newTeamDataFromModal, originalNameForSort: newTeamDataFromModal.teamName } 
+        { ...newTeamDataFromModal, originalNameForSort: newTeamDataFromModal.teamName } // Pridáme nový tím
     ];
 
-    // Zoradíme tímy, aby sme zabezpečili konzistentné priradenie sufixov
-    allRelevantTeams.sort((a, b) => a.originalNameForSort.localeCompare(b.originalNameForSort));
+    // Zoradíme ich abecedne, aby sme zabezpečili konzistentné priradenie sufixov
+    allRelevantTeamsBeforeUpdate.sort((a, b) => a.originalNameForSort.localeCompare(b.originalNameForSort));
 
-    // Ak je len jeden tím (aj po pridaní nového), nemá sufix
-    if (allRelevantTeams.length === 1) {
-        allRelevantTeams[0].teamName = clubName; 
+    // Teraz priradíme aktualizované názvy tímov s prírastkovými sufixami.
+    // Ak je len jeden tím (po pridaní nového), jeho názov bude len názov klubu.
+    if (allRelevantTeamsBeforeUpdate.length === 1) {
+        allRelevantTeamsBeforeUpdate[0].teamName = clubName; 
     } else {
-        // Ak je tímov viac, priradíme im sufixy (A, B, C...)
-        for (let i = 0; i < allRelevantTeams.length; i++) {
-            allRelevantTeams[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+        // Ak je tímov viac, priradíme im "A", "B", "C" atď.
+        for (let i = 0; i < allRelevantTeamsBeforeUpdate.length; i++) {
+            allRelevantTeamsBeforeUpdate[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
         }
     }
 
-    // Odstránime staré záznamy tímov daného klubu z kategórie
-    currentTeamsCopy[category] = currentTeamsCopy[category].filter(
-        team => team.clubName?.trim() !== clubName
+    // Filtrujeme ostatné tímy, ktoré nepatria pod tento klub a kategóriu
+    const otherTeamsInCategories = currentTeamsCopy[category].filter(
+        team => !(team.clubName?.trim() === clubName && team.categoryName === category)
     );
-    // A pridáme aktualizované tímy s novými názvami (vrátane novo pridaného)
-    currentTeamsCopy[category] = [...currentTeamsCopy[category], ...allRelevantTeams];
+
+    // Aktualizujeme zoznam tímov v danej kategórii
+    currentTeamsCopy[category] = [...otherTeamsInCategories, ...allRelevantTeamsBeforeUpdate];
 
     try {
         await updateDoc(userDocRef, {
