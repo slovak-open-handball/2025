@@ -245,13 +245,7 @@ function RostersApp() {
       'div',
       { className: 'w-full max-w-3xl p-4' },
       // Odstránené triedy pre biely podklad a tieň z hlavného kontajnera
-      React.createElement(
-        'div',
-        { className: 'w-full' }, 
-        React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Súpiska tímov'
-        ),
-        
+      // a taktiež odstránený React.createElement pre nadpis "Súpiska tímov"
         teamCategories.length > 0 ? (
           React.createElement('div', { className: 'space-y-6' }, // Väčší priestor medzi kategóriami
             teamCategories.map(([categoryName, teamsArray]) => (
