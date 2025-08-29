@@ -331,7 +331,7 @@ function RostersApp() {
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
                                     // Podmienené zobrazenie bunky s adresou
-                                    shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 text-sm text-gray-800' }, formatAddress(member.address)),
+                                    shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, formatAddress(member.address)),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
                                   )
                                 ))
