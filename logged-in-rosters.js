@@ -1671,7 +1671,7 @@ function RostersApp() {
                 // Tlačidlo "Pridať nový tím" pred každou kategóriou
                 userProfileData && React.createElement(
                     'div',
-                    { className: 'flex justify-start mb-4' }, // Zmenené z justify-center na justify-start a pridané mb-4
+                    { className: 'flex justify-center mb-4' }, // Zmenené z justify-start na justify-center
                     React.createElement(
                         'button',
                         {
