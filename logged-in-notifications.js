@@ -1,6 +1,12 @@
 // logged-in-notifications.js
 // Tento súbor obsahuje React komponent pre správu notifikácií prihláseného používateľa.
-// Predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-notifications.html.
+// Predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-notifications.html
+// prostredníctvom authentication.js.
+
+// Importy pre potrebné Firebase funkcie z verzie 11.6.1
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot, collection, query, where, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose, type = 'info' }) {
@@ -114,18 +120,16 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading, showCh
 
 // Main React component for the logged-in-notifications.html page
 function NotificationsApp() {
-  // NEW: Get references to Firebase services directly
-  const app = firebase.app();
-  const auth = firebase.auth(app);
-  const db = firebase.firestore(app);
+  // Use global Firebase instances provided by authentication.js
+  const auth = React.useRef(getAuth()).current; // Ensure auth is consistent
+  const db = React.useRef(getFirestore()).current; // Ensure db is consistent
 
-  // NEW: Local state for the current user and their profile data
-  // These states will be updated by the local onAuthStateChanged and onSnapshot
-  const [user, setUser] = React.useState(auth.currentUser); // Initialize with current user
+  // Local state for the current user and their profile data,
+  // derived from global state once authentication.js sets it up.
+  const [user, setUser] = React.useState(null); // Will be updated by globalDataUpdated
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [loading, setLoading] = React.useState(true); // Loading for data in NotificationsApp
   const [error, setError] = React.useState('');
-  // Retained: userNotificationMessage for local notifications
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   const [notifications, setNotifications] = React.useState([]);
@@ -136,184 +140,59 @@ function NotificationsApp() {
   const [deleteUnreadToo, setDeleteUnreadToo] = React.useState(false);
 
 
-  // NEW: Local Auth Listener for NotificationsApp
-  // This listener ensures that NotificationsApp reacts to authentication changes,
-  // but primary logout/redirection is handled by GlobalNotificationHandler.
+  // Listen for globalDataUpdated event from authentication.js
   React.useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
-      console.log("NotificationsApp: Local onAuthStateChanged - User:", currentUser ? currentUser.uid : "null");
-      setUser(currentUser);
-      // If user is not logged in, redirect (even if GNH should handle it)
-      if (!currentUser) {
-        console.log("NotificationsApp: User is not logged in, redirecting to login.html.");
-        window.location.href = 'login.html';
+    const handleGlobalDataUpdated = (event) => {
+      console.log("NotificationsApp: Received 'globalDataUpdated' event.");
+      const globalUser = auth.currentUser; // Get current user from global auth instance
+      const globalProfileData = event.detail;
+
+      setUser(globalUser);
+      setUserProfileData(globalProfileData);
+      setLoading(false); // Authentication and user profile data should now be loaded
+
+      if (!globalUser) {
+        console.log("NotificationsApp: User is not logged in via global state, redirecting to login.html.");
+        window.location.href = 'login.html'; // Redirect if not logged in
+      } else if (globalProfileData && (globalProfileData.role !== 'admin' || globalProfileData.approved !== true)) {
+        console.log("NotificationsApp: User is not an approved administrator via global state, redirecting.");
+        window.location.href = 'logged-in-my-data.html'; // Redirect if not approved admin
       }
-    });
-    return () => unsubscribeAuth();
-  }, [auth]); // Depends on auth instance
+    };
 
-  // NEW: Local Effect for loading user data from Firestore
-  // This effect will run when the user is logged in and db is available.
-  // It assumes that passwordLastChanged and approved status are already verified in header.js.
-  React.useEffect(() => {
-    let unsubscribeUserDoc;
+    // Ensure we are listening for global data updates
+    window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
 
-    if (user && db) { // Only runs if user is logged in and db is available
-      console.log(`NotificationsApp: Attempting to load user document for UID: ${user.uid}`);
-      setLoading(true); // Set loading to true while profile data is being loaded
-
-      try {
-        const userDocRef = db.collection('users').doc(user.uid);
-        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-          console.log("NotificationsApp: onSnapshot for user document triggered.");
-          if (docSnapshot.exists) {
-            const userData = docSnapshot.data();
-            console.log("NotificationsApp: User document exists, data:", userData);
-
-            // --- IMMEDIATE LOGOUT IF passwordLastChanged IS NOT A VALID TIMESTAMP ---
-            // This is added logic that runs immediately after data is loaded.
-            // If passwordLastChanged is invalid or missing, log out.
-            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                console.error("NotificationsApp: passwordLastChanged IS NOT a valid Timestamp object! Type:", typeof userData.passwordLastChanged, "Value:", userData.passwordLastChanged);
-                console.log("NotificationsApp: Immediately logging out user due to invalid password change timestamp.");
-                auth.signOut(); // Use auth from React state
-                window.location.href = 'login.html';
-                localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Clear localStorage
-                setUser(null); // Explicitly set user to null
-                setUserProfileData(null); // Explicitly set userProfileData to null
-                return; // Stop further processing
-            }
-
-            // Normal processing if passwordLastChanged is valid
-            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-            const localStorageKey = `passwordLastChanged_${user.uid}`;
-            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-            console.log(`NotificationsApp: Firestore passwordLastChanged (converted): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                // First load for this user/browser, initialize localStorage and DO NOT LOG OUT
-                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                console.log("NotificationsApp: Initializing passwordLastChanged in localStorage (first load).");
-                // Do not continue here, continue with normal data processing for first load
-            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                // Password was changed on another device/session
-                console.log("NotificationsApp: Password change detected on another device/session. Logging out user.");
-                auth.signOut(); // Use auth from React state
-                window.location.href = 'login.html';
-                localStorage.removeItem(localStorageKey); // Clear localStorage after logout
-                setUser(null); // Explicitly set user to null
-                setUserProfileData(null); // Explicitly set userProfileData to null
-                return;
-            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                // This ideally should not happen if Firestore is the source of truth
-                console.warn("NotificationsApp: Detected older timestamp from Firestore than stored. Logging out user (potential mismatch).");
-                auth.signOut(); // Use auth from React state
-                window.location.href = 'login.html';
-                localStorage.removeItem(localStorageKey);
-                setUser(null); // Explicitly set user to null
-                setUserProfileData(null); // Explicitly set userProfileData to null
-                return;
-            } else {
-                // Times are the same, ensure localStorage is up-to-date
-                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                console.log("NotificationsApp: Timestamps are the same, updating localStorage.");
-            }
-
-            // NEW LOGIC: Logout if user is admin and not approved
-            if (userData.role === 'admin' && userData.approved === false) {
-                console.log("NotificationsApp: User is admin and not approved. Logging out.");
-                auth.signOut();
-                window.location.href = 'login.html';
-                setUser(null); // Explicitly set user to null
-                setUserProfileData(null); // Explicitly set userProfileData to null
-                return; // Stop further processing
-            }
-
-            setUserProfileData(userData); // Update userProfileData state
-            
-            setLoading(false); // Stop loading after user data is loaded
-            setError(''); // Clear errors after successful load
-
-            // Update menu visibility after role is loaded (call global function from left-menu.js)
-            if (typeof window.updateMenuItemsVisibility === 'function') {
-                window.updateMenuItemsVisibility(userData.role);
-            } else {
-                console.warn("NotificationsApp: Function updateMenuItemsVisibility is not defined.");
-            }
-
-            console.log("NotificationsApp: User data loading complete, loading: false");
-          } else {
-            console.warn("NotificationsApp: User document not found for UID:", user.uid);
-            setError("Error: User profile not found or you do not have sufficient permissions. Please try logging in again.");
-            setLoading(false); // Stop loading so error can be displayed
-            setUser(null); // Explicitly set user to null
-            setUserProfileData(null); // Explicitly set userProfileData to null
-          }
-        }, error => {
-          console.error("NotificationsApp: Error loading user data from Firestore (onSnapshot error):", error);
-          if (error.code === 'permission-denied') {
-              setError(`Permission error: You do not have access to your profile. Please try logging in again or contact support.`);
-          } else if (error.code === 'unavailable') {
-              setError(`Connection error: Firestore service is unavailable. Please try again later.`);
-          } else if (error.code === 'unauthenticated') {
-               setError(`Authentication error: You are not logged in. Please try logging in again.`);
-               if (auth) {
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitly set user to null
-                  setUserProfileData(null); // Explicitly set userProfileData to null
-               }
-          } else {
-              setError(`Error loading user data: ${error.message}`);
-          }
-          setLoading(false); // Stop loading even on error
-          console.log("NotificationsApp: User data loading failed, loading: false");
-          setUser(null); // Explicitly set user to null
-          setUserProfileData(null); // Explicitly set userProfileData to null
-        });
-      } catch (e) {
-        console.error("NotificationsApp: Error setting up onSnapshot for user data (try-catch):", e);
-        setError(`Error setting up listener for user data: ${e.message}`);
-        setLoading(false); // Stop loading even on error
-        setUser(null); // Explicitly set user to null
-        setUserProfileData(null); // Explicitly set userProfileData to null
-      }
-    } else if (user === null) {
-        // If user is null (and not undefined), it means they have been logged out.
-        // Redirection should already be handled by GlobalNotificationHandler.
-        // Here, we just ensure loading is false and data is cleared.
-        setLoading(false);
-        setUserProfileData(null);
+    // Initial check in case event already fired before component mounted
+    if (window.isGlobalAuthReady) {
+        handleGlobalDataUpdated({ detail: window.globalUserProfileData });
+    } else {
+        // If auth is not yet ready, remain in loading state
+        setLoading(true);
     }
 
     return () => {
-      // Unsubscribe from onSnapshot on unmount
-      if (unsubscribeUserDoc) {
-        console.log("NotificationsApp: Unsubscribing onSnapshot for user document.");
-        unsubscribeUserDoc();
-      }
+      window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
-  }, [user, db, auth]); // Depends on user and db (and auth for signOut)
+  }, [auth]); // Depends on auth instance
+
 
   // Effect for fetching all admin Uids
   React.useEffect(() => {
     let unsubscribeAdmins;
-    if (db) {
+    if (db) { // Only run if db is available
       try {
-        unsubscribeAdmins = db.collection('users')
-          .where('role', '==', 'admin')
-          .where('approved', '==', true)
-          .onSnapshot(snapshot => {
-            const adminUids = [];
-            snapshot.forEach(doc => {
-              adminUids.push(doc.id);
-            });
-            setAllAdminUids(adminUids);
-            console.log("NotificationsApp: List of approved administrators updated:", adminUids);
-          }, error => {
-            console.error("NotificationsApp: Error loading list of administrators:", error);
+        const adminQuery = query(collection(db, 'users'), where('role', '==', 'admin'), where('approved', '==', true));
+        unsubscribeAdmins = onSnapshot(adminQuery, snapshot => {
+          const adminUids = [];
+          snapshot.forEach(doc => {
+            adminUids.push(doc.id);
           });
+          setAllAdminUids(adminUids);
+          console.log("NotificationsApp: List of approved administrators updated:", adminUids);
+        }, error => {
+          console.error("NotificationsApp: Error loading list of administrators:", error);
+        });
       } catch (e) {
         console.error("NotificationsApp: Error setting up listener for administrators:", e);
       }
@@ -323,55 +202,68 @@ function NotificationsApp() {
         unsubscribeAdmins();
       }
     };
-  }, [db]);
+  }, [db]); // Depends on db
 
 
   // Effect for fetching notifications (runs after DB, userProfileData, user and allAdminUids are ready)
   React.useEffect(() => {
     let unsubscribeNotifications;
 
-    // Use fixed 'default-app-id' for notification path
+    // Use fixed 'default-app-id' for notification path, or __app_id if defined globally
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
+    // Only fetch if user is an approved admin, and we have their UID and the list of all admins
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true && user && allAdminUids.length > 0) {
       console.log("NotificationsApp: Logged-in user is an approved administrator. Loading notifications.");
-      setLoading(true);
+      setLoading(true); // Re-set loading for notifications specific data
       try {
         // Load notifications for this admin, or for 'all_admins', sorted by timestamp (newest first)
-        unsubscribeNotifications = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
-          .where('recipientId', 'in', [user.uid, 'all_admins']) // Filter by current admin's ID OR 'all_admins'
-          .onSnapshot(snapshot => {
-            const fetchedNotifications = [];
-            snapshot.forEach(doc => {
-              const data = doc.data();
-              // Display notification only if it's not marked as deleted for the current user
-              const isDeletedForCurrentUser = data.deletedFor && data.deletedFor.includes(user.uid);
-              if (!isDeletedForCurrentUser) {
-                fetchedNotifications.push({
-                  id: doc.id,
-                  ...data,
-                  timestamp: data.timestamp ? data.timestamp.toDate() : null // Convert Timestamp to Date object
-                });
-              }
-            });
-            // Sort notifications from newest to oldest
-            fetchedNotifications.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
-            setNotifications(fetchedNotifications);
-            setLoading(false);
-            setError('');
-            console.log("NotificationsApp: Notifications updated from onSnapshot.");
-          }, error => {
-            console.error("NotificationsApp: Error loading notifications from Firestore (onSnapshot error):", error);
-            setError(`Error loading notifications: ${error.message}`);
-            setLoading(false);
+        const notificationsQuery = query(
+          collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications'),
+          where('recipientId', 'in', [user.uid, 'all_admins'])
+        );
+        unsubscribeNotifications = onSnapshot(notificationsQuery, snapshot => {
+          const fetchedNotifications = [];
+          snapshot.forEach(document => {
+            const data = document.data();
+            // Display notification only if it's not marked as deleted for the current user
+            const isDeletedForCurrentUser = data.deletedFor && data.deletedFor.includes(user.uid);
+            if (!isDeletedForCurrentUser) {
+              fetchedNotifications.push({
+                id: document.id,
+                ...data,
+                timestamp: data.timestamp ? data.timestamp.toDate() : null // Convert Timestamp to Date object
+              });
+            }
           });
+          // Sort notifications from newest to oldest
+          fetchedNotifications.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+          setNotifications(fetchedNotifications);
+          setLoading(false); // Notifications data loaded
+          setError('');
+          console.log("NotificationsApp: Notifications updated from onSnapshot.");
+        }, error => {
+          console.error("NotificationsApp: Error loading notifications from Firestore (onSnapshot error):", error);
+          setError(`Error loading notifications: ${error.message}`);
+          setLoading(false); // Stop loading even on error
+        });
       } catch (e) {
         console.error("NotificationsApp: Error setting up onSnapshot for notifications (try-catch):", e);
         setError(`Error setting up listener for notifications: ${e.message}`);
-        setLoading(false);
+        setLoading(false); // Stop loading even on error
       }
     } else {
-        setNotifications([]); // Clear notifications if not admin
+        setNotifications([]); // Clear notifications if not admin or data is not ready
+        if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
+            // Already handled by globalDataUpdated listener for redirection
+            setLoading(false); // Ensure loading is off if not admin
+        } else if (!user || !userProfileData) {
+            // Still waiting for global user/profile data, keep loading true if in initial state
+            // or if user is truly null, redirect will happen.
+            if (!user && !userProfileData && !loading) { // If global data is not ready and not already loading, set loading.
+                setLoading(true);
+            }
+        }
     }
 
     return () => {
@@ -382,22 +274,23 @@ function NotificationsApp() {
     };
   }, [db, userProfileData, user, allAdminUids]); // Depends on db, userProfileData (for admin role), user (for UID) and allAdminUids
 
+
   const handleMarkAsRead = async (notificationId) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
-      setError("You do not have permission to mark the notification as read.");
+      setUserNotificationMessage("Nemáte oprávnenie označiť upozornenie ako prečítané.");
       return;
     }
     setLoading(true);
     setError('');
     try {
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'adminNotifications', notificationId), {
         read: true
       });
-      setUserNotificationMessage("Notification marked as read.");
+      setUserNotificationMessage("Upozornenie označené ako prečítané.");
     } catch (e) {
       console.error("NotificationsApp: Error marking notification as read:", e);
-      setError(`Error marking notification as read: ${e.message}`);
+      setError(`Chyba pri označení upozornenia ako prečítaného: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -405,24 +298,24 @@ function NotificationsApp() {
 
   const handleDeleteNotification = async (notificationId) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
-      setError("You do not have permission to delete the notification.");
+      setUserNotificationMessage("Nemáte oprávnenie odstrániť upozornenie.");
       return;
     }
     setLoading(true);
     setError('');
     try {
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId);
+      const notificationRef = doc(db, 'artifacts', appId, 'public', 'data', 'adminNotifications', notificationId);
 
       // Load current state of the notification
-      const doc = await notificationRef.get();
-      if (!doc.exists) {
-        setUserNotificationMessage("Notification has been deleted for you."); // Updated message
+      const docSnap = await getDoc(notificationRef); // Use getDoc from v11.6.1
+      if (!docSnap.exists()) {
+        setUserNotificationMessage("Upozornenie bolo odstránené pre vás."); // Updated message
         setLoading(false);
         return;
       }
 
-      const notificationData = doc.data();
+      const notificationData = docSnap.data();
       let deletedFor = notificationData.deletedFor || [];
 
       // Add the current administrator's ID to the 'deletedFor' list
@@ -432,20 +325,20 @@ function NotificationsApp() {
 
       // If all administrators "deleted" this notification, delete it completely
       if (allAdminUids.length > 0 && deletedFor.length >= allAdminUids.length) {
-        await notificationRef.delete();
-        setUserNotificationMessage("Notification has been deleted for you."); // Updated message
+        await deleteDoc(notificationRef); // Use deleteDoc from v11.6.1
+        setUserNotificationMessage("Upozornenie bolo odstránené pre vás."); // Updated message
         console.log(`Notification ${notificationId} has been completely deleted from the database.`);
       } else {
         // Otherwise, just update the 'deletedFor' field
-        await notificationRef.update({
+        await updateDoc(notificationRef, { // Use updateDoc from v11.6.1
           deletedFor: deletedFor
         });
-        setUserNotificationMessage("Notification has been deleted for you."); // Updated message
+        setUserNotificationMessage("Upozornenie bolo odstránené pre vás."); // Updated message
         console.log(`Notification ${notificationId} has been hidden for user ${user.uid}.`);
       }
     } catch (e) {
       console.error("NotificationsApp: Error deleting notification:", e);
-      setError(`Error deleting notification: ${e.message}`);
+      setError(`Chyba pri odstránení upozornenia: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -454,7 +347,7 @@ function NotificationsApp() {
   // NEW FUNCTION: Mark all unread notifications as read
   const handleMarkAllAsRead = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
-      setError("You do not have permission to mark notifications as read.");
+      setUserNotificationMessage("Nemáte oprávnenie označiť upozornenia ako prečítané.");
       return;
     }
     setLoading(true);
@@ -464,23 +357,23 @@ function NotificationsApp() {
       const unreadNotifications = notifications.filter(n => !n.read);
 
       if (unreadNotifications.length === 0) {
-        setUserNotificationMessage("No unread notifications to mark.");
+        setUserNotificationMessage("Žiadne neprečítané upozornenia na označenie.");
         setLoading(false);
         return;
       }
 
       // Create a batch operation for more efficient updates
-      const batch = db.batch();
+      const batch = writeBatch(db); // Use writeBatch from v11.6.1
       unreadNotifications.forEach(notification => {
-        const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notification.id);
+        const notificationRef = doc(db, 'artifacts', appId, 'public', 'data', 'adminNotifications', notification.id);
         batch.update(notificationRef, { read: true });
       });
 
       await batch.commit();
-      setUserNotificationMessage("All unread notifications have been marked as read.");
+      setUserNotificationMessage("Všetky neprečítané upozornenia boli označené ako prečítané.");
     } catch (e) {
       console.error("NotificationsApp: Error marking all notifications as read:", e);
-      setError(`Error marking all notifications as read: ${e.message}`);
+      setError(`Chyba pri označení všetkých upozornení ako prečítaných: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -495,7 +388,7 @@ function NotificationsApp() {
   // NEW FUNCTION: Delete all notifications (confirmed action)
   const confirmDeleteAllNotifications = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
-      setError("You do not have permission to delete all notifications.");
+      setUserNotificationMessage("Nemáte oprávnenie odstrániť všetky upozornenia.");
       return;
     }
     setLoading(true);
@@ -509,15 +402,15 @@ function NotificationsApp() {
       }
 
       if (notificationsToProcess.length === 0) {
-        setUserNotificationMessage("No notifications to delete.");
+        setUserNotificationMessage("Žiadne upozornenia na odstránenie.");
         setLoading(false);
         setShowDeleteAllConfirmationModal(false);
         return;
       }
 
-      const batch = db.batch();
+      const batch = writeBatch(db); // Use writeBatch from v11.6.1
       notificationsToProcess.forEach(notification => {
-        const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notification.id);
+        const notificationRef = doc(db, 'artifacts', appId, 'public', 'data', 'adminNotifications', notification.id);
         
         let deletedFor = notification.deletedFor || [];
         if (!deletedFor.includes(user.uid)) {
@@ -532,11 +425,11 @@ function NotificationsApp() {
       });
 
       await batch.commit();
-      setUserNotificationMessage("All selected notifications have been deleted.");
+      setUserNotificationMessage("Všetky vybrané upozornenia boli odstránené.");
       setShowDeleteAllConfirmationModal(false); // Close modal after successful action
     } catch (e) {
       console.error("NotificationsApp: Error deleting all notifications:", e);
-      setError(`Error deleting all notifications: ${e.message}`);
+      setError(`Chyba pri odstránení všetkých upozornení: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -544,17 +437,16 @@ function NotificationsApp() {
 
 
   // Display loading state
-  if (!user || (user && !userProfileData) || loading) {
-    if (user === null) {
-        console.log("NotificationsApp: User is null, redirecting to login.html");
-        window.location.href = 'login.html';
-        return null;
-    }
-    let loadingMessage = 'Loading...';
-    if (user && !userProfileData) {
-        loadingMessage = 'Loading...';
+  if (loading) {
+    let loadingMessage = 'Načítavam...'; // Default loading message
+    if (!window.isGlobalAuthReady) {
+        loadingMessage = 'Prebieha inicializácia autentifikácie...';
+    } else if (window.isGlobalAuthReady && !user) {
+        loadingMessage = 'Čakám na dáta používateľa...';
+    } else if (user && !userProfileData) {
+        loadingMessage = 'Načítavam profil používateľa...';
     } else if (loading) {
-        loadingMessage = 'Loading...';
+        loadingMessage = 'Načítavam upozornenia...';
     }
 
     return React.createElement(
@@ -564,9 +456,16 @@ function NotificationsApp() {
     );
   }
 
-  // If user is not admin, redirect
+  // If user is null (not logged in), redirect (should be handled by globalDataUpdated listener)
+  if (!user) {
+    console.log("NotificationsApp: Používateľ nie je prihlásený, presmerovanie na login.html");
+    window.location.href = 'login.html';
+    return null;
+  }
+
+  // If user is not an approved admin, redirect (should be handled by globalDataUpdated listener)
   if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
-    console.log("NotificationsApp: User is not an approved administrator, redirecting.");
+    console.log("NotificationsApp: Používateľ nie je schválený administrátor, presmerovanie.");
     window.location.href = 'logged-in-my-data.html'; // Redirect to logged-in-my-data.html
     return null;
   }
@@ -584,12 +483,12 @@ function NotificationsApp() {
     }),
     React.createElement(ConfirmationModal, {
         show: showDeleteAllConfirmationModal,
-        message: "Are you sure you want to delete all notifications?",
+        message: "Naozaj chcete odstrániť všetky upozornenia?",
         onConfirm: confirmDeleteAllNotifications,
         onCancel: () => setShowDeleteAllConfirmationModal(false),
         loading: loading,
         showCheckbox: notifications.some(n => !n.read), // Show checkbox only if unread notifications exist
-        checkboxLabel: "Delete unread notifications too",
+        checkboxLabel: "Odstrániť aj neprečítané upozornenia",
         onCheckboxChange: (e) => setDeleteUnreadToo(e.target.checked),
         checkboxChecked: deleteUnreadToo
     }),
@@ -623,7 +522,7 @@ function NotificationsApp() {
           hasAtLeastTwoNotifications && React.createElement(
             'button',
             {
-              onClick: handleDeleteAllNotificationsClick, // CHANGE: Calls new function to open modal
+              onClick: handleDeleteAllNotificationsClick, // Calls new function to open modal
               className: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
               disabled: loading,
             },
@@ -670,7 +569,7 @@ function NotificationsApp() {
                                     className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                     disabled: loading,
                                 },
-                                'Vymazať' // CHANGE: Button text
+                                'Vymazať'
                             )
                         )
                     )
