@@ -39,41 +39,15 @@
             text-align: left;
         }
     </style>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <!-- React and ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Globálne konštanty pre Firebase - MUSIA BYŤ DEFINOVANÉ PRED AKÝMKOĽVEK SKRIPTOM, KTORÝ ICH POUŽÍVA -->
     <script>
         // Tieto konštanty by mali byť konzistentné v celej aplikácii
-        const __app_id = '1:572988314768:web:781e27eb035179fe34b415';
-        const __firebase_config = JSON.stringify({
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
-        }); 
-        // __initial_auth_token je poskytovaný prostredím, preto ho tu nedeklarujeme znova ako const.
-        // Bude prístupný v logged-in-notifications.js
-        
-        // Inicializácia Firebase aplikácie globálne
-        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-            try {
-                firebase.initializeApp(JSON.parse(__firebase_config));
-                console.log("logged-in-notifications.html: Firebase inicializovaný globálne.");
-            } catch (e) {
-                console.error("logged-in-notifications.html: Chyba pri globálnej inicializácii Firebase:", e);
-            }
-        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
-            console.log("logged-in-notifications.html: Firebase už bol inicializovaný.");
-        } else {
-            console.error("logged-in-notifications.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
-        }
+        // __app_id a __firebase_config sú už definované v authentication.js alebo prostredím.
+        // __initial_auth_token je poskytovaný prostredím.
+        // Nebudeme tu inicializovať Firebase, to už robí authentication.js.
     </script>
 </head>
 <body class="bg-gray-100">
@@ -92,12 +66,14 @@
         </main>
     </div>
 
-    <!-- Načítanie skriptov pre hlavičku a ľavé menu -->
-    <script src="header.js"></script>
-    <script src="left-menu.js"></script>
+    <!-- Načítanie skriptov pre autentifikáciu, hlavičku a ľavé menu (v tomto poradí!) -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="logged-in-left-menu.js"></script>
     <!-- Načítanie hlavného React komponentu pre túto stránku -->
-    <script src="logged-in-notifications.js"></script>
-    <script>
+    <script type="module" src="logged-in-notifications.js"></script>
+
+    <script type="module">
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
             try {
@@ -107,12 +83,8 @@
                 }
                 const headerHtml = await response.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
-                // Inicializácia logiky hlavičky po načítaní HTML
-                if (typeof window.initializeHeaderLogic === 'function') {
-                    window.initializeHeaderLogic();
-                } else {
-                    console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
-                }
+                // Logika hlavičky je teraz spustená priamo v header.js (window.loadHeaderAndScripts)
+                // a reaguje na globalDataUpdated event.
             } catch (error) {
                 console.error("Chyba pri načítaní hlavičky:", error);
                 document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
@@ -122,13 +94,13 @@
         // Funkcia na načítanie ľavého menu
         async function loadLeftMenu() {
             try {
-                const response = await fetch('left-menu.html');
+                const response = await fetch('logged-in-left-menu.html');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const menuHtml = await response.text();
                 document.getElementById('left-menu-placeholder').innerHTML = menuHtml;
-                // Logika pre ľavé menu (napr. updateMenuItemsVisibility) bude volaná z MyDataApp
+                // Logika pre ľavé menu je spustená cez globalDataUpdated event v logged-in-left-menu.js
             } catch (error) {
                 console.error("Chyba pri načítaní ľavého menu:", error);
                 document.getElementById('left-menu-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní menu.</div>';
@@ -136,27 +108,57 @@
         }
 
         // Spustíme načítanie hlavičky a menu po načítaní DOM
-        window.onload = async () => {
-            await loadHeader();
-            await loadLeftMenu();
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Pred spustením React aplikácie zabezpečíme, že globálne dáta sú pripravené
+            // a hlavička a menu sú načítané.
+            await loadHeader(); // Načíta HTML hlavičky, logika sa spustí cez header.js
+            await loadLeftMenu(); // Načíta HTML menu, logika sa spustí cez logged-in-left-menu.js
 
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-            if (typeof NotificationsApp === 'undefined') {
-                console.error("Chyba: Komponent NotificationsApp nie je definovaný. Skontrolujte logged-in-notifications.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
+            // Počkáme na udalosti, ktoré indikujú, že globálne nastavenia sú načítané a autentifikácia je pripravená
+            // a hlavička a menu boli inicializované ich vlastnými skriptmi.
+            // NotificationsApp sa vykreslí, keď je všetko pripravené a globalUserProfileData je k dispozícii.
 
-            // ZMENA: Použitie createRoot namiesto render
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(NotificationsApp, null));
-            console.log("logged-in-notifications.html: React App vykreslená.");
-        };
+            const renderApp = () => {
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                if (typeof NotificationsApp === 'undefined') {
+                    console.error("Chyba: Komponent NotificationsApp nie je definovaný. Skontrolujte logged-in-notifications.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(NotificationsApp, null));
+                console.log("logged-in-notifications.html: React App vykreslená.");
+            };
+
+            // Počkáme na globalDataUpdated, ktorá signalizuje, že authentication.js dokončil svoju prácu
+            // a globalUserProfileData je k dispozícii.
+            window.addEventListener('globalDataUpdated', (event) => {
+                console.log("logged-in-notifications.html: Prijatá udalosť 'globalDataUpdated'. Pripravujem vykreslenie React aplikácie.");
+                if (event.detail) { // Ak sú dáta používateľa k dispozícii
+                    renderApp();
+                } else {
+                    console.log("logged-in-notifications.html: GlobalUserProfileData je null, používateľ nie je prihlásený. Presmerovanie už mala spracovať authentication.js.");
+                    // V tomto prípade by malo authentication.js presmerovať na login.html
+                }
+            });
+
+            // Ak už sú globálne dáta k dispozícii (napr. po rýchlom refresh-i, kde authentication.js prebehne skôr),
+            // vykreslíme aplikáciu ihneď.
+            if (window.isGlobalAuthReady && window.globalUserProfileData) {
+                console.log("logged-in-notifications.html: GlobalData už pripravená pri DOMContentLoaded. Vykresľujem React aplikáciu.");
+                renderApp();
+            } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
+                console.log("logged-in-notifications.html: Auth ready, but no user data. Redirecting to login.");
+                // Ak je auth ready, ale používateľ nie je prihlásený, presmerujeme.
+                // Toto by mala primary handling authentication.js robiť, ale je to poistka.
+                window.location.href = 'login.html';
+            }
+        });
     </script>
 </body>
 </html>
