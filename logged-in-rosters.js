@@ -1267,9 +1267,21 @@ function RostersApp() {
             unsubscribeCategories = onSnapshot(categoriesDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    // Predpokladáme, že kategórie sú uložené v poli s názvom 'categoryNames'
-                    // Ak máte iný názov poľa (napr. 'names', 'list'), upravte ho tu.
-                    const categoriesList = data.categoryNames || []; 
+                    const categoriesList = [];
+                    // Iterujeme cez polia (náhodné ID) v dokumente kategórií
+                    for (const fieldName in data) {
+                        if (Object.prototype.hasOwnProperty.call(data, fieldName)) {
+                            const categoryArray = data[fieldName];
+                            // Predpokladáme, že hodnota každého poľa je pole objektov
+                            if (Array.isArray(categoryArray)) {
+                                categoryArray.forEach(categoryObj => {
+                                    if (categoryObj && typeof categoryObj === 'object' && categoryObj.name) {
+                                        categoriesList.push(categoryObj.name);
+                                    }
+                                });
+                            }
+                        }
+                    }
                     setAvailableCategoriesFromSettings(categoriesList);
                     console.log("RostersApp: Categories from settings loaded:", categoriesList);
                 } else {
@@ -1642,7 +1654,7 @@ function RostersApp() {
         });
         showLocalNotification('Nový tím bol úspešne pridaný a názvy tímov aktualizované!', 'success');
         setShowAddTeamModal(false); // Zatvoríme modálne okno po úspešnom pridaní
-    } catch (error) {
+    } /* intentionally no catch here */ catch (error) {
         console.error("Chyba pri pridávaní nového tímu a aktualizácii názvov:", error);
         showLocalNotification('Nastala chyba pri pridávaní nového tímu.', 'error');
     }
