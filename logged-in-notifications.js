@@ -5,7 +5,7 @@
 
 // Importy pre potrebné Firebase funkcie z verzie 11.6.1
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, query, where, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, where, updateDoc, deleteDoc, writeBatch, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
@@ -149,14 +149,19 @@ function NotificationsApp() {
 
       setUser(globalUser);
       setUserProfileData(globalProfileData);
-      setLoading(false); // Authentication and user profile data should now be loaded
-
-      if (!globalUser) {
+      
+      // If global auth is ready and we have profile data, then loading for initial setup is done.
+      if (window.isGlobalAuthReady && globalUser && globalProfileData) {
+        setLoading(false);
+      } else if (window.isGlobalAuthReady && !globalUser) {
+        // If auth is ready but no user, redirect (this should be handled by authentication.js primarily)
         console.log("NotificationsApp: User is not logged in via global state, redirecting to login.html.");
-        window.location.href = 'login.html'; // Redirect if not logged in
-      } else if (globalProfileData && (globalProfileData.role !== 'admin' || globalProfileData.approved !== true)) {
+        window.location.href = 'login.html';
+      }
+      // If globalProfileData exists, but user is not an approved admin, redirect
+      if (globalProfileData && (globalProfileData.role !== 'admin' || globalProfileData.approved !== true)) {
         console.log("NotificationsApp: User is not an approved administrator via global state, redirecting.");
-        window.location.href = 'logged-in-my-data.html'; // Redirect if not approved admin
+        window.location.href = 'logged-in-my-data.html';
       }
     };
 
@@ -164,12 +169,17 @@ function NotificationsApp() {
     window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
 
     // Initial check in case event already fired before component mounted
-    if (window.isGlobalAuthReady) {
+    // If globalAuthReady and globalUserProfileData are already set, use them directly
+    if (window.isGlobalAuthReady && window.globalUserProfileData) {
         handleGlobalDataUpdated({ detail: window.globalUserProfileData });
+    } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
+        // If auth is ready but no user data (meaning user is logged out or not approved)
+        handleGlobalDataUpdated({ detail: null });
     } else {
-        // If auth is not yet ready, remain in loading state
+        // If auth not yet ready, remain in loading state
         setLoading(true);
     }
+
 
     return () => {
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
@@ -180,7 +190,7 @@ function NotificationsApp() {
   // Effect for fetching all admin Uids
   React.useEffect(() => {
     let unsubscribeAdmins;
-    if (db) { // Only run if db is available
+    if (db && window.isGlobalAuthReady) { // Only run if db is available and auth is ready
       try {
         const adminQuery = query(collection(db, 'users'), where('role', '==', 'admin'), where('approved', '==', true));
         unsubscribeAdmins = onSnapshot(adminQuery, snapshot => {
@@ -202,36 +212,36 @@ function NotificationsApp() {
         unsubscribeAdmins();
       }
     };
-  }, [db]); // Depends on db
+  }, [db, window.isGlobalAuthReady]); // Depends on db and global auth ready state
 
 
-  // Effect for fetching notifications (runs after DB, userProfileData, user and allAdminUids are ready)
+  // Effect for fetching notifications
   React.useEffect(() => {
     let unsubscribeNotifications;
 
-    // Use fixed 'default-app-id' for notification path, or __app_id if defined globally
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
-
-    // Only fetch if user is an approved admin, and we have their UID and the list of all admins
-    if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true && user && allAdminUids.length > 0) {
+    // Only fetch if user is an approved admin, and we have their UID
+    if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true && user) {
       console.log("NotificationsApp: Logged-in user is an approved administrator. Loading notifications.");
-      setLoading(true); // Re-set loading for notifications specific data
       try {
-        // Load notifications for this admin, or for 'all_admins', sorted by timestamp (newest first)
-        const notificationsQuery = query(
-          collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications'),
-          where('recipientId', 'in', [user.uid, 'all_admins'])
-        );
-        unsubscribeNotifications = onSnapshot(notificationsQuery, snapshot => {
+        // ZMENA: Načítanie notifikácií z kolekcie '/notifications'
+        // Notifikácie sú pre všetkých adminov, stav seenBy/deletedBy sa riadi individuálne.
+        const notificationsCollectionRef = collection(db, 'notifications');
+        
+        // Získavame všetky notifikácie a filtrujeme ich na základe 'deletedBy' poľa na strane klienta.
+        unsubscribeNotifications = onSnapshot(notificationsCollectionRef, snapshot => {
           const fetchedNotifications = [];
           snapshot.forEach(document => {
             const data = document.data();
-            // Display notification only if it's not marked as deleted for the current user
-            const isDeletedForCurrentUser = data.deletedFor && data.deletedFor.includes(user.uid);
+            // ZMENA: Filter based on deletedBy for the current user
+            const isDeletedForCurrentUser = data.deletedBy && data.deletedBy.includes(user.uid);
+            
             if (!isDeletedForCurrentUser) {
+              // ZMENA: Notifikácia je "prečítaná" ak je user.uid v seenBy poli
+              const isRead = data.seenBy && data.seenBy.includes(user.uid);
               fetchedNotifications.push({
                 id: document.id,
                 ...data,
+                read: isRead, // Pridáme 'read' status pre konzistenciu s UI
                 timestamp: data.timestamp ? data.timestamp.toDate() : null // Convert Timestamp to Date object
               });
             }
@@ -239,30 +249,20 @@ function NotificationsApp() {
           // Sort notifications from newest to oldest
           fetchedNotifications.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
           setNotifications(fetchedNotifications);
-          setLoading(false); // Notifications data loaded
           setError('');
           console.log("NotificationsApp: Notifications updated from onSnapshot.");
         }, error => {
           console.error("NotificationsApp: Error loading notifications from Firestore (onSnapshot error):", error);
-          setError(`Error loading notifications: ${error.message}`);
-          setLoading(false); // Stop loading even on error
+          setError(`Chyba pri načítaní upozornení: ${error.message}`);
         });
       } catch (e) {
         console.error("NotificationsApp: Error setting up onSnapshot for notifications (try-catch):", e);
-        setError(`Error setting up listener for notifications: ${e.message}`);
-        setLoading(false); // Stop loading even on error
+        setError(`Chyba pri nastavení poslucháča pre upozornenia: ${e.message}`);
       }
     } else {
         setNotifications([]); // Clear notifications if not admin or data is not ready
-        if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
-            // Already handled by globalDataUpdated listener for redirection
-            setLoading(false); // Ensure loading is off if not admin
-        } else if (!user || !userProfileData) {
-            // Still waiting for global user/profile data, keep loading true if in initial state
-            // or if user is truly null, redirect will happen.
-            if (!user && !userProfileData && !loading) { // If global data is not ready and not already loading, set loading.
-                setLoading(true);
-            }
+        if (window.isGlobalAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
+            setLoading(false);
         }
     }
 
@@ -272,20 +272,21 @@ function NotificationsApp() {
         unsubscribeNotifications();
       }
     };
-  }, [db, userProfileData, user, allAdminUids]); // Depends on db, userProfileData (for admin role), user (for UID) and allAdminUids
+  }, [db, userProfileData, user, window.isGlobalAuthReady]); // Removed allAdminUids from dependencies, as it's not used for recipientId filtering here
 
 
   const handleMarkAsRead = async (notificationId) => {
-    if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
+    if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie označiť upozornenie ako prečítané.");
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'adminNotifications', notificationId), {
-        read: true
+      // ZMENA: Aktualizujeme pole 'seenBy'
+      const notificationRef = doc(db, 'notifications', notificationId);
+      await updateDoc(notificationRef, {
+        seenBy: arrayUnion(user.uid) // Pridáme ID používateľa do poľa seenBy
       });
       setUserNotificationMessage("Upozornenie označené ako prečítané.");
     } catch (e) {
@@ -304,36 +305,36 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      const notificationRef = doc(db, 'artifacts', appId, 'public', 'data', 'adminNotifications', notificationId);
+      const notificationRef = doc(db, 'notifications', notificationId);
 
-      // Load current state of the notification
-      const docSnap = await getDoc(notificationRef); // Use getDoc from v11.6.1
+      // Načítame aktuálny stav notifikácie
+      const docSnap = await getDoc(notificationRef);
       if (!docSnap.exists()) {
-        setUserNotificationMessage("Upozornenie bolo odstránené pre vás."); // Updated message
+        setUserNotificationMessage("Upozornenie bolo odstránené pre vás.");
         setLoading(false);
         return;
       }
 
       const notificationData = docSnap.data();
-      let deletedFor = notificationData.deletedFor || [];
+      let deletedBy = notificationData.deletedBy || [];
 
-      // Add the current administrator's ID to the 'deletedFor' list
-      if (!deletedFor.includes(user.uid)) {
-        deletedFor.push(user.uid);
+      // Pridáme ID aktuálneho administrátora do zoznamu 'deletedBy'
+      if (!deletedBy.includes(user.uid)) {
+        deletedBy.push(user.uid);
       }
-
-      // If all administrators "deleted" this notification, delete it completely
-      if (allAdminUids.length > 0 && deletedFor.length >= allAdminUids.length) {
-        await deleteDoc(notificationRef); // Use deleteDoc from v11.6.1
-        setUserNotificationMessage("Upozornenie bolo odstránené pre vás."); // Updated message
+      
+      // Ak všetci administrátori "vymazali" túto notifikáciu, vymažeme ju úplne
+      // Predpokladáme, že allAdminUids je aktuálny zoznam všetkých schválených adminov
+      if (allAdminUids.length > 0 && deletedBy.length >= allAdminUids.length) {
+        await deleteDoc(notificationRef);
+        setUserNotificationMessage("Upozornenie bolo úplne odstránené.");
         console.log(`Notification ${notificationId} has been completely deleted from the database.`);
       } else {
-        // Otherwise, just update the 'deletedFor' field
-        await updateDoc(notificationRef, { // Use updateDoc from v11.6.1
-          deletedFor: deletedFor
+        // Inak, len aktualizujeme pole 'deletedBy'
+        await updateDoc(notificationRef, {
+          deletedBy: arrayUnion(user.uid) // Pridáme ID používateľa do poľa deletedBy
         });
-        setUserNotificationMessage("Upozornenie bolo odstránené pre vás."); // Updated message
+        setUserNotificationMessage("Upozornenie bolo odstránené pre vás.");
         console.log(`Notification ${notificationId} has been hidden for user ${user.uid}.`);
       }
     } catch (e) {
@@ -344,16 +345,15 @@ function NotificationsApp() {
     }
   };
 
-  // NEW FUNCTION: Mark all unread notifications as read
+  // Mark all unread notifications as read
   const handleMarkAllAsRead = async () => {
-    if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
+    if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie označiť upozornenia ako prečítané.");
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
       const unreadNotifications = notifications.filter(n => !n.read);
 
       if (unreadNotifications.length === 0) {
@@ -362,11 +362,10 @@ function NotificationsApp() {
         return;
       }
 
-      // Create a batch operation for more efficient updates
-      const batch = writeBatch(db); // Use writeBatch from v11.6.1
+      const batch = writeBatch(db);
       unreadNotifications.forEach(notification => {
-        const notificationRef = doc(db, 'artifacts', appId, 'public', 'data', 'adminNotifications', notification.id);
-        batch.update(notificationRef, { read: true });
+        const notificationRef = doc(db, 'notifications', notification.id);
+        batch.update(notificationRef, { seenBy: arrayUnion(user.uid) }); // ZMENA: Aktualizujeme pole seenBy
       });
 
       await batch.commit();
@@ -379,13 +378,13 @@ function NotificationsApp() {
     }
   };
 
-  // Original handleDeleteAllNotifications function, now opens the modal
+  // Opens the delete all notifications modal
   const handleDeleteAllNotificationsClick = () => {
     setShowDeleteAllConfirmationModal(true);
     setDeleteUnreadToo(false); // Reset checkbox when modal opens
   };
 
-  // NEW FUNCTION: Delete all notifications (confirmed action)
+  // Delete all notifications (confirmed action)
   const confirmDeleteAllNotifications = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie odstrániť všetky upozornenia.");
@@ -394,8 +393,6 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      
       let notificationsToProcess = notifications;
       if (!deleteUnreadToo) {
         notificationsToProcess = notifications.filter(n => n.read); // Delete only read ones
@@ -408,19 +405,20 @@ function NotificationsApp() {
         return;
       }
 
-      const batch = writeBatch(db); // Use writeBatch from v11.6.1
+      const batch = writeBatch(db);
       notificationsToProcess.forEach(notification => {
-        const notificationRef = doc(db, 'artifacts', appId, 'public', 'data', 'adminNotifications', notification.id);
+        const notificationRef = doc(db, 'notifications', notification.id);
         
-        let deletedFor = notification.deletedFor || [];
-        if (!deletedFor.includes(user.uid)) {
-          deletedFor.push(user.uid);
+        let deletedBy = notification.deletedBy || [];
+        if (!deletedBy.includes(user.uid)) {
+          deletedBy.push(user.uid);
         }
 
-        if (allAdminUids.length > 0 && deletedFor.length >= allAdminUids.length) {
-          batch.delete(notificationRef); // Complete deletion
+        // Ak všetci admini "vymazali" notifikáciu, vymažeme ju úplne z databázy
+        if (allAdminUids.length > 0 && deletedBy.length >= allAdminUids.length) {
+          batch.delete(notificationRef);
         } else {
-          batch.update(notificationRef, { deletedFor: deletedFor }); // Update deletedFor
+          batch.update(notificationRef, { deletedBy: arrayUnion(user.uid) }); // ZMENA: Aktualizujeme pole deletedBy
         }
       });
 
@@ -445,7 +443,7 @@ function NotificationsApp() {
         loadingMessage = 'Čakám na dáta používateľa...';
     } else if (user && !userProfileData) {
         loadingMessage = 'Načítavam profil používateľa...';
-    } else if (loading) {
+    } else if (loading) { // This `loading` refers to the component's own loading state
         loadingMessage = 'Načítavam upozornenia...';
     }
 
@@ -540,6 +538,7 @@ function NotificationsApp() {
                         'div',
                         { 
                             key: notification.id, 
+                            // ZMENA: Dynamické triedy podľa 'read' stavu notifikácie
                             className: `p-4 rounded-lg shadow-md flex justify-between items-center ${notification.read ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-800 border border-blue-200'}` 
                         },
                         React.createElement(
@@ -553,6 +552,7 @@ function NotificationsApp() {
                         React.createElement(
                             'div',
                             { className: 'flex space-x-2 ml-4' },
+                            // ZMENA: Tlačidlo "Označiť ako prečítané" len ak notifikácia nie je prečítaná
                             !notification.read && React.createElement(
                                 'button',
                                 {
