@@ -594,6 +594,10 @@ function NotificationsApp() {
                         React.createElement(
                             'div',
                             { className: 'flex-1 mb-2 w-full' },
+                            // ZMENA: Nadpis notifikácie s userEmail
+                            React.createElement('p', { className: 'text-base text-gray-700 mb-2' }, // Removed font-semibold
+                                `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
+                            ),
                             // ZMENA: Zobrazuje všetky elementy z poľa 'changes' ako zoznam s aplikovanými štýlmi
                             notification.changes && notification.changes.length > 0 ? (
                                 React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
@@ -603,7 +607,7 @@ function NotificationsApp() {
                                     ))
                                 )
                             ) : (
-                                React.createElement('p', null, 'Chybná notifikácia') // Removed font-semibold here
+                                React.createElement('p', null, 'Chybná notifikácia')
                             ),
                             notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
