@@ -162,66 +162,56 @@ function RostersApp() {
     // Hráči
     if (team.playerDetails && team.playerDetails.length > 0) {
       team.playerDetails.forEach(player => {
-        if (player.firstName || player.lastName) { // Len ak má meno
-          members.push({
-            type: 'Hráč',
-            firstName: player.firstName,
-            lastName: player.lastName,
-            jerseyNumber: player.jerseyNumber
-          });
-        }
+        members.push({
+          type: 'Hráč',
+          firstName: player.firstName,
+          lastName: player.lastName,
+          jerseyNumber: player.jerseyNumber
+        });
       });
     }
 
     // Členovia realizačného tímu (muži)
     if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
       team.menTeamMemberDetails.forEach(member => {
-        if (member.firstName || member.lastName) {
-          members.push({
-            type: 'Člen realizačného tímu (muž)',
-            firstName: member.firstName,
-            lastName: member.lastName
-          });
-        }
+        members.push({
+          type: 'Člen realizačného tímu (muž)',
+          firstName: member.firstName,
+          lastName: member.lastName
+        });
       });
     }
 
     // Členky realizačného tímu (ženy)
     if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
       team.womenTeamMemberDetails.forEach(member => {
-        if (member.firstName || member.lastName) {
-          members.push({
-            type: 'Člen realizačného tímu (žena)',
-            firstName: member.firstName,
-            lastName: member.lastName
-          });
-        }
+        members.push({
+          type: 'Člen realizačného tímu (žena)',
+          firstName: member.firstName,
+          lastName: member.lastName
+        });
       });
     }
 
     // Šofér (žena)
     if (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) {
       team.driverDetailsFemale.forEach(driver => {
-        if (driver.firstName || driver.lastName) {
-          members.push({
-            type: 'Šofér (žena)',
-            firstName: driver.firstName,
-            lastName: driver.lastName
-          });
-        }
+        members.push({
+          type: 'Šofér (žena)',
+          firstName: driver.firstName,
+          lastName: driver.lastName
+        });
       });
     }
 
     // Šofér (muž)
     if (team.driverDetailsMale && team.driverDetailsMale.length > 0) {
       team.driverDetailsMale.forEach(driver => {
-        if (driver.firstName || driver.lastName) {
-          members.push({
-            type: 'Šofér (muž)',
-            firstName: driver.firstName,
-            lastName: driver.lastName
-          });
-        }
+        members.push({
+          type: 'Šofér (muž)',
+          firstName: driver.firstName,
+          lastName: driver.lastName
+        });
       });
     }
 
