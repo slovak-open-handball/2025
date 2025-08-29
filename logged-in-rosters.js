@@ -399,6 +399,9 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     // Podmienka pre zablokovanie tlačidla "Uložiť zmeny"
     const isSaveButtonDisabled = totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected;
 
+    // Podmienka pre zablokovanie tlačidla "+" na pridanie tričiek
+    const isAddTshirtButtonDisabled = totalTshirtsQuantity === totalMembersInTeam;
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -510,7 +513,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         onChange: (e) => setEditedArrivalType(e.target.value),
                         required: true
                     },
-                    React.createElement('option', { value: 'bez dopravy' }, 'bez dopravy'),
+                    React.createElement('option', { value: '' }, 'bez dopravy'),
                     React.createElement('option', { value: 'verejná doprava - autobus' }, 'verejná doprava - autobus'),
                     React.createElement('option', { value: 'verejná doprava - vlak' }, 'verejná doprava - vlak'),
                     React.createElement('option', { value: 'vlastná doprava' }, 'vlastná doprava')
@@ -650,7 +653,17 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                             {
                                 type: 'button',
                                 onClick: handleAddTshirtEntry,
-                                className: 'flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                disabled: isAddTshirtButtonDisabled, // Zablokovanie tlačidla
+                                className: `flex items-center justify-center w-8 h-8 rounded-full transition-colors focus:outline-none focus:ring-2
+                                    ${isAddTshirtButtonDisabled
+                                        ? 'bg-white border border-solid' // Biele pozadie s orámovaním
+                                        : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500'
+                                    }`,
+                                style: { 
+                                    cursor: isAddTshirtButtonDisabled ? 'not-allowed' : 'pointer', // Zmena kurzoru
+                                    borderColor: isAddTshirtButtonDisabled ? roleColor : 'transparent', // Farba orámovania
+                                    color: isAddTshirtButtonDisabled ? roleColor : 'white', // Farba SVG ikony
+                                }
                             },
                             React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
                         )
