@@ -430,7 +430,11 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             // Ostatné počty členov/šoférov sa zatiaľ neupravujú cez toto modálne okno
         };
         await onSaveTeam(updatedTeamData);
-        onClose();
+        
+        // Odloženie onClose na ďalší cyklus udalostí
+        setTimeout(() => {
+            onClose();
+        }, 0);
     };
 
     const showArrivalTimeInputs = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
