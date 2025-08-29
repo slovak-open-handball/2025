@@ -743,9 +743,11 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 
             const existingClubTeamsInSelectedCategory = allTeamsInCategory
                 .filter(team => {
-                    const isClubMatch = team.clubName?.trim() === clubName;
+                    // Normalize team.clubName for comparison in the filter
+                    const teamClubNameNormalized = team.clubName?.trim() || ''; 
+                    const isClubMatch = teamClubNameNormalized === clubName;
                     const isCategoryMatch = team.categoryName === selectedCategory;
-                    console.log(`    Team: ${team.teamName || 'N/A'}, Club: '${team.clubName?.trim()}' === '${clubName}' (${isClubMatch}), Category: '${team.categoryName}' === '${selectedCategory}' (${isCategoryMatch})`);
+                    console.log(`    Team: ${team.teamName || 'N/A'}, Club: '${teamClubNameNormalized}' === '${clubName}' (${isClubMatch}), Category: '${team.categoryName}' === '${selectedCategory}' (${isCategoryMatch})`);
                     return isClubMatch && isCategoryMatch;
                 });
             
@@ -1240,11 +1242,26 @@ function RostersApp() {
             setUserProfileData(userData);
             
             if (userData.teams) {
-                setTeamsData(userData.teams);
+                // Normalize teams data to ensure clubName is always present and trimmed
+                const normalizedTeams = {};
+                const currentClubName = userData.billing?.clubName?.trim() || 'Neznámy klub';
+
+                for (const categoryKey in userData.teams) {
+                    if (Object.prototype.hasOwnProperty.call(userData.teams, categoryKey)) {
+                        normalizedTeams[categoryKey] = userData.teams[categoryKey].map(team => {
+                            return {
+                                ...team,
+                                // If team.clubName is missing or undefined, assign the current clubName
+                                // Also ensure it's trimmed for consistency
+                                clubName: team.clubName?.trim() || currentClubName
+                            };
+                        });
+                    }
+                }
+                setTeamsData(normalizedTeams);
             } else {
                 setTeamsData({});
             }
-
             setLoading(false);
           } else {
             console.warn("RostersApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
