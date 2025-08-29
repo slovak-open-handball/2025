@@ -241,9 +241,11 @@ function RostersApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
+    // Odstránenie max-w-3xl z tohto divu, aby sa mohol roztiahnuť podľa potreby
     React.createElement(
       'div',
-      { className: 'w-full max-w-3xl p-4' },
+      { className: 'w-full p-4' }, 
+      // Odstránenie max-w-3xl z tohto divu tiež
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
@@ -312,7 +314,8 @@ function RostersApp() {
                       allMembers.length > 0 && (
                         React.createElement('div', { className: 'mt-4' },
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
-                          React.createElement('div', { className: 'overflow-x-auto' }, // Pre responsive tabuľku
+                          // Odstránenie overflow-x-auto z tohto divu
+                          React.createElement('div', null, 
                             React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
                               React.createElement('thead', null,
                                 React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
