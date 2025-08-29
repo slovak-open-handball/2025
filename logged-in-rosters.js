@@ -704,7 +704,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
 }
 
 // Komponent modálneho okna pre pridanie nového tímu
-function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategoriesFromSettings }) { // Zmenený názov propu
+function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategoriesFromSettings }) {
     const db = getFirestore();
     const [selectedCategory, setSelectedCategory] = useState('');
     const [teamNamePreview, setTeamNamePreview] = useState(''); // Predbežný názov tímu na zobrazenie
@@ -713,9 +713,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     const [arrivalMinute, setArrivalMinute] = useState('');
     const [accommodationType, setAccommodationType] = useState('bez ubytovania'); // Predvolená hodnota
     const [packageName, setPackageName] = useState(availablePackages.length > 0 ? availablePackages.sort()[0] : ''); // Predvolená hodnota
-    // Odstránený stav pre tričká, pretože sa nebudú spravovať pri vytváraní tímu
 
-    // Zmena: Správne načítanie clubName z billing.clubName a orezanie
     const clubName = userProfileData?.billing?.clubName?.trim() || 'Neznámy klub';
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
@@ -729,47 +727,60 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             setArrivalMinute('');
             setAccommodationType('bez ubytovania');
             setPackageName(availablePackages.length > 0 ? availablePackages.sort()[0] : '');
-            // Odstránený reset tričiek
         }
     }, [show, availablePackages]);
 
-    // Logika pre odvodenie názvu tímu
+    // Logika pre odvodenie názvu tímu pre náhľad v modálnom okne
     useEffect(() => {
-        // Pridávame logy pre debugovanie
-        console.log("AddTeamModal useEffect (generovanie názvu tímu):");
+        console.log("AddTeamModal useEffect (generovanie názvu tímu - náhľad):");
         console.log("  selectedCategory:", selectedCategory);
-        console.log("  clubName:", clubName); // Teraz by malo byť orezané
+        console.log("  clubName:", clubName);
         console.log("  teamsData:", teamsData);
 
-        if (selectedCategory && teamsData && clubName !== 'Neznámy klub') { // Pridana kontrola na 'Neznámy klub'
-            const teamsInSelectedCategory = (teamsData[selectedCategory] || [])
+        if (selectedCategory && teamsData && clubName !== 'Neznámy klub') {
+            const existingClubTeamsInSelectedCategory = (teamsData[selectedCategory] || [])
                 .filter(team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory);
             
             let generatedName = clubName;
-            if (teamsInSelectedCategory.length > 0) {
-                // Ak už existujú tímy, pridáme sufix. Sufix bude A, B, C...
-                const nextSuffixChar = String.fromCharCode('A'.charCodeAt(0) + teamsInSelectedCategory.length);
-                generatedName = `${clubName} ${nextSuffixChar}`;
+            let hasUnsuffixedTeam = existingClubTeamsInSelectedCategory.some(team => team.teamName === clubName);
+
+            if (existingClubTeamsInSelectedCategory.length === 0) {
+                // Prvý tím pre tento klub/kategóriu, bez sufixu
+                generatedName = clubName;
+            } else if (existingClubTeamsInSelectedCategory.length === 1 && hasUnsuffixedTeam) {
+                // Ak existuje presne jeden tím a je bez sufixu, nový dostane 'B' (starý sa stane 'A')
+                generatedName = `${clubName} B`;
+            } else {
+                // Viac tímov alebo existujúci tím je už sufixový
+                let allExistingSuffixes = new Set();
+                existingClubTeamsInSelectedCategory.forEach(team => {
+                    const match = team.teamName.match(new RegExp(`^${clubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s([A-Z])$`));
+                    if (match) {
+                        allExistingSuffixes.add(match[1]);
+                    }
+                });
+
+                let nextSuffixCode = 'A'.charCodeAt(0);
+                while (allExistingSuffixes.has(String.fromCharCode(nextSuffixCode))) {
+                    nextSuffixCode++;
+                }
+                generatedName = `${clubName} ${String.fromCharCode(nextSuffixCode)}`;
             }
             
             setTeamNamePreview(generatedName);
-            console.log("  Vygenerovaný názov tímu:", generatedName);
+            console.log("  Vygenerovaný názov tímu (náhľad):", generatedName);
         } else {
             setTeamNamePreview('');
-            console.log("  Podmienky pre generovanie názvu tímu nie sú splnené.");
+            console.log("  Podmienky pre generovanie náhľadu názvu tímu nie sú splnené.");
         }
     }, [selectedCategory, clubName, teamsData]);
 
-    // Pre nový tím sú tričká prázdne a počet členov je 0, takže stačí kontrolovať kategóriu a názov tímu
     const isSaveButtonDisabled = !selectedCategory || !teamNamePreview;
 
     const showArrivalTimeInputs = arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus';
 
     const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
     const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-
-    // Odstránené funkcie pre správu tričiek
-
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -784,10 +795,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             finalArrivalTime = `${arrivalHour.padStart(2, '0')}:${arrivalMinute.padStart(2, '0')}`;
         }
 
-        // Tričká sú vždy prázdne pre nový tím
-        const filteredTshirtEntries = [];
+        const filteredTshirtEntries = []; // Tričká sú vždy prázdne pre nový tím
 
-        // Načítanie detailov balíka pre informácie o jedle a cene
         let packageDetails = {};
         if (packageName) {
             try {
@@ -811,9 +820,9 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
         
         const newTeamData = {
-            teamName: teamNamePreview, // Použijeme už vygenerovaný názov
+            teamName: teamNamePreview, // Použijeme už vygenerovaný názov z náhľadu
             categoryName: selectedCategory,
-            clubName: clubName, // Uistite sa, že clubName je orezané
+            clubName: clubName,
             players: 0,
             menTeamMembers: 0,
             womenTeamMembers: 0,
@@ -825,10 +834,10 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             arrival: { type: arrivalType, time: finalArrivalTime },
             accommodation: { type: accommodationType },
             packageDetails: packageDetails,
-            tshirts: filteredTshirtEntries, // Tričká sú prázdne
+            tshirts: filteredTshirtEntries,
         };
         await onAddTeam(newTeamData); // Zavoláme funkciu na pridanie tímu z rodičovského komponentu
-        onClose(); // Voláme onClose priamo po dokončení asynchrónnej operácie
+        onClose();
     };
 
     if (!show) return null;
@@ -845,7 +854,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                 React.createElement('h3', { className: 'text-2xl font-semibold' }, 'Pridať nový tím'),
                 React.createElement(
                     'button',
-                    { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' }, // Priame volanie onClose
+                    { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
                     '×'
                 )
             ),
@@ -864,7 +873,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         required: true
                     },
                     React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
-                    // Používame availableCategoriesFromSettings namiesto availableCategories
                     availableCategoriesFromSettings.sort().map((cat, idx) => (
                         React.createElement('option', { key: idx, value: cat }, cat)
                     ))
@@ -882,7 +890,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         disabled: true
                     })
                 ),
-                // Selectbox pre Typ dopravy
                 React.createElement(
                     'div',
                     null,
@@ -900,7 +907,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     React.createElement('option', { value: 'vlastná doprava' }, 'vlastná doprava')
                     )
                 ),
-                // Podmienené zobrazenie selectboxov pre čas príchodu
                 showArrivalTimeInputs && React.createElement(
                     'div',
                     null, 
@@ -944,7 +950,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         )
                     )
                 ),
-                // Selectbox pre Typ ubytovania
                 React.createElement(
                     'div',
                     null,
@@ -962,7 +967,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     )
                     )
                 ),
-                // Selectbox pre Balík
                 React.createElement(
                     'div',
                     null,
@@ -980,8 +984,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     )
                 ),
 
-                // Sekcia pre Tričká je úplne odstránená pre modal pridania nového tímu
-
                 React.createElement(
                     'div',
                     { className: 'flex justify-end space-x-2 mt-6' },
@@ -989,7 +991,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         'button',
                         {
                             type: 'button',
-                            onClick: onClose, // Priame volanie onClose
+                            onClick: onClose,
                             className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
                         },
                         'Zrušiť'
@@ -1220,16 +1222,13 @@ function RostersApp() {
         unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => { 
           if (docSnapshot.exists()) { 
             const userData = docSnapshot.data();
-            console.log("RostersApp: Používateľský dokument existuje, dáta:", userData); // Log celej dátovej štruktúry
+            console.log("RostersApp: Používateľský dokument existuje, dáta:", userData);
             setUserProfileData(userData);
             
-            // Extrahovanie a nastavenie dát tímov
             if (userData.teams) {
                 setTeamsData(userData.teams);
-                // Toto už nebude primárny zdroj kategórií pre selectbox v AddTeamModal
-                // setAvailableCategories(Object.keys(userData.teams).sort()); 
             } else {
-                setTeamsData({}); // Ak teams neexistuje, nastavíme prázdny objekt
+                setTeamsData({});
             }
 
             setLoading(false);
@@ -1261,16 +1260,12 @@ function RostersApp() {
 
 
   if (!isAuthReady || !userProfileData) {
-    // Ak autentifikácia alebo profil ešte nie sú pripravené, zobrazíme prázdnu stránku
-    // alebo loader, ktorý je už v logged-in-rosters.html
     return null;
   }
 
-  // Helper funkcia na konsolidáciu všetkých členov tímu do jedného poľa
   const getAllTeamMembers = (team) => {
     const members = [];
 
-    // Hráči
     if (team.playerDetails && team.playerDetails.length > 0) {
       team.playerDetails.forEach(player => {
         members.push({
@@ -1278,55 +1273,51 @@ function RostersApp() {
           firstName: player.firstName,
           lastName: player.lastName,
           jerseyNumber: player.jerseyNumber,
-          address: player.address // Pridanie adresy
+          address: player.address
         });
       });
     }
 
-    // Členovia realizačného tímu (muži)
     if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
       team.menTeamMemberDetails.forEach(member => {
         members.push({
           type: 'Člen realizačného tímu (muž)',
           firstName: member.firstName,
           lastName: member.lastName,
-          address: member.address // Pridanie adresy
+          address: member.address
         });
       });
     }
 
-    // Členky realizačného tímu (ženy)
     if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
       team.womenTeamMemberDetails.forEach(member => {
         members.push({
           type: 'Člen realizačného tímu (žena)',
           firstName: member.firstName,
           lastName: member.lastName,
-          address: member.address // Pridanie adresy
+          address: member.address
         });
       });
     }
 
-    // Šofér (žena)
     if (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) {
       team.driverDetailsFemale.forEach(driver => {
         members.push({
           type: 'Šofér (žena)',
           firstName: driver.firstName,
           lastName: driver.lastName,
-          address: driver.address // Pridanie adresy
+          address: driver.address
         });
       });
     }
 
-    // Šofér (muž)
     if (team.driverDetailsMale && team.driverDetailsMale.length > 0) {
       team.driverDetailsMale.forEach(driver => {
         members.push({
           type: 'Šofér (muž)',
           firstName: driver.firstName,
           lastName: driver.lastName,
-          address: driver.address // Pridanie adresy
+          address: driver.address
         });
       });
     }
@@ -1334,11 +1325,8 @@ function RostersApp() {
     return members;
   };
 
-  // Prevod objektu teamsData na pole pre jednoduchšie mapovanie vo React komponente
-  // A zoradenie kategórií podľa názvu abecedne
   const teamCategories = Object.entries(teamsData).sort((a, b) => a[0].localeCompare(b[0]));
 
-  // Helper funkcia na skloňovanie slova "tím"
   const getTeamPluralization = (count) => {
     if (count === 1) {
       return 'tím';
@@ -1349,13 +1337,11 @@ function RostersApp() {
     }
   };
 
-  // Funkcia pre otvorenie modálneho okna na úpravu tímu
   const handleOpenEditTeamModal = (team) => {
-    setSelectedTeam({ ...team, categoryName: team.categoryName }); // Uložíme celý tím a jeho kategóriu
+    setSelectedTeam({ ...team, categoryName: team.categoryName });
     setShowEditTeamModal(true);
   };
 
-  // Funkcia pre uloženie zmien tímu
   const handleSaveTeam = async (updatedTeamData) => {
     if (!user || !user.uid) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený.', 'error');
@@ -1365,7 +1351,6 @@ function RostersApp() {
     const originalPackageName = selectedTeam?.packageDetails?.name || '';
     const newPackageName = updatedTeamData.packageDetails.name;
 
-    // Ak sa zmenil názov balíka, potrebujeme načítať nové detaily jedál a ID
     if (newPackageName !== originalPackageName) {
         try {
             const packagesRef = collection(db, 'settings', 'packages', 'list');
@@ -1373,21 +1358,21 @@ function RostersApp() {
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
-                const packageDoc = querySnapshot.docs[0]; // Získame celý dokument
+                const packageDoc = querySnapshot.docs[0];
                 const packageData = packageDoc.data();
                 updatedTeamData.packageDetails.meals = packageData.meals || {};
-                updatedTeamData.packageDetails.price = packageData.price || 0; // Aktualizovať aj cenu
-                updatedTeamData.packageDetails.id = packageDoc.id; // Uložíme ID balíka
+                updatedTeamData.packageDetails.price = packageData.price || 0;
+                updatedTeamData.packageDetails.id = packageDoc.id;
             } else {
                 console.warn(`Package with name ${newPackageName} not found.`);
-                updatedTeamData.packageDetails.meals = {}; // Ak balík neexistuje, vymazať jedlá
-                updatedTeamData.packageDetails.price = 0; // Resetovať cenu
-                updatedTeamData.packageDetails.id = null; // Resetovať ID balíka
+                updatedTeamData.packageDetails.meals = {};
+                updatedTeamData.packageDetails.price = 0;
+                updatedTeamData.packageDetails.id = null;
             }
         } catch (error) {
             console.error("Error fetching new package details:", error);
             showLocalNotification('Nastala chyba pri načítavaní detailov nového balíka.', 'error');
-            return; // Predčasné ukončenie, ak nastala chyba pri načítaní balíka
+            return;
         }
     }
 
@@ -1397,9 +1382,8 @@ function RostersApp() {
 
     if (teamIndex !== -1) {
         const userDocRef = doc(db, 'users', user.uid);
-        const currentTeams = { ...teamsData }; // Kópia existujúcich tímov
+        const currentTeams = { ...teamsData };
 
-        // Vytvorenie novej štruktúry pre aktualizáciu konkrétneho tímu v rámci kategórie
         currentTeams[teamCategory][teamIndex] = updatedTeamData;
 
         try {
@@ -1416,21 +1400,18 @@ function RostersApp() {
     }
 };
 
-  // Funkcia pre otvorenie prvého modálneho okna pre pridanie člena
   const handleOpenAddMemberTypeModal = (team) => {
     setTeamToAddMemberTo(team);
-    setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || ''); // Uloženie typu ubytovania tímu
+    setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || '');
     setShowAddMemberTypeModal(true);
   };
 
-  // Funkcia po výbere typu člena, otvorí druhé modálne okno
   const handleSelectMemberType = (type) => {
     setMemberTypeToAdd(type);
-    setShowAddMemberTypeModal(false); // Zatvorí prvý modal
-    setShowAddMemberDetailsModal(true); // Otvorí druhý modal
+    setShowAddMemberTypeModal(false);
+    setShowAddMemberDetailsModal(true);
   };
 
-  // Funkcia pre uloženie nového člena tímu
   const handleSaveNewMember = async (newMemberDetails) => {
     if (!user || !user.uid || !teamToAddMemberTo || !memberTypeToAdd) {
         showLocalNotification('Chyba: Chýbajú dáta pre pridanie člena.', 'error');
@@ -1445,18 +1426,16 @@ function RostersApp() {
         const currentTeams = { ...teamsData };
         const updatedTeam = { ...currentTeams[teamCategory][teamIndex] };
 
-        // Inicializácia polí, ak neexistujú
         if (!updatedTeam.playerDetails) updatedTeam.playerDetails = [];
         if (!updatedTeam.menTeamMemberDetails) updatedTeam.menTeamMemberDetails = [];
         if (!updatedTeam.womenTeamMemberDetails) updatedTeam.womenTeamMemberDetails = [];
         if (!updatedTeam.driverDetailsFemale) updatedTeam.driverDetailsFemale = [];
         if (!updatedTeam.driverDetailsMale) updatedTeam.driverDetailsMale = [];
 
-        // Pridanie člena do správneho poľa
         switch (memberTypeToAdd) {
             case 'player':
                 updatedTeam.playerDetails.push(newMemberDetails);
-                updatedTeam.players = (updatedTeam.players || 0) + 1; // Aktualizácia počtu
+                updatedTeam.players = (updatedTeam.players || 0) + 1;
                 break;
             case 'womenTeamMember':
                 updatedTeam.womenTeamMemberDetails.push(newMemberDetails);
@@ -1468,11 +1447,9 @@ function RostersApp() {
                 break;
             case 'driverFemale':
                 updatedTeam.driverDetailsFemale.push(newMemberDetails);
-                // Nemá samostatný počet driversFemale, použijeme dĺžku poľa
                 break;
             case 'driverMale':
                 updatedTeam.driverDetailsMale.push(newMemberDetails);
-                // Nemá samostatný počet driversMale, použijeme dĺžku poľa
                 break;
             default:
                 console.warn("Neznámy typ člena na pridanie:", memberTypeToAdd);
@@ -1496,7 +1473,7 @@ function RostersApp() {
     }
   };
 
-  // Funkcia pre pridanie nového tímu s premenovaním existujúcich
+  // Funkcia pre pridanie nového tímu s inteligentným prideľovaním sufixov
   const handleAddTeam = async (newTeamDataFromModal) => {
     if (!user || !user.uid || !userProfileData?.billing?.clubName) { 
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
@@ -1504,70 +1481,61 @@ function RostersApp() {
     }
 
     const userDocRef = doc(db, 'users', user.uid);
-    // Vytvoríme hlbokú kópiu premenných, aby sme sa vyhli priamym mutáciám stavu
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); 
 
     const selectedCategory = newTeamDataFromModal.categoryName;
-    const clubName = userProfileData.billing.clubName?.trim(); // Zmena: Orezanie clubName
+    const clubName = userProfileData.billing.clubName?.trim();
 
-    // Inicializujeme kategóriu v kópii, ak ešte neexistuje
     if (!currentTeamsCopy[selectedCategory]) {
         currentTeamsCopy[selectedCategory] = [];
     }
 
-    // Pripravíme nový tím s názvom vygenerovaným v modálnom okne (napr. "Môj Klub C")
-    const newTeam = {
-        ...newTeamDataFromModal,
-        clubName: clubName,
-        // Názov tímu (teamName) je už nastavený logikou teamNamePreview v modale
-    };
+    // 1. Získanie existujúcich tímov pre tento klub v tejto kategórii
+    let existingClubTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
+                                        .filter(team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory);
 
-    // Získame všetky tímy pre aktuálny klub v vybranej kategórii
-    // a pridáme k nim nový tím pre reevaluáciu prípon
-    let allClubTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
-                                        .filter(team => team.clubName?.trim() === clubName); // Zmena: Orezanie team.clubName
+    let finalTeamsForCategory = []; // Zoznam tímov po úprave názvov pre danú kategóriu
+    let teamToRenameToA = null; // Tím, ktorý bude premenovaný na "ClubName A"
+    let newTeamFinalName = newTeamDataFromModal.teamName; // Názov pre nový tím (z náhľadu)
 
-    allClubTeamsInSelectedCategory.push(newTeam);
-
-    // Zoradíme tieto tímy abecedne podľa ich názvov.
-    // Toto je kľúčové pre konzistentné prideľovanie prípon "A", "B", "C" atď.
-    allClubTeamsInSelectedCategory.sort((a, b) => a.teamName.localeCompare(b.teamName));
-
-    const updatedTeamsForCategory = [];
-    for (let i = 0; i < allClubTeamsInSelectedCategory.length; i++) { // Opravená podmienka cyklu
-        const team = allClubTeamsInSelectedCategory[i];
+    // Detekcia, či existuje tím bez sufixu
+    const unsuffixedExistingTeam = existingClubTeamsInSelectedCategory.find(team => team.teamName === clubName);
+    
+    // Scenár 2: Prechod z jedného nesufixovaného tímu na dva
+    if (existingClubTeamsInSelectedCategory.length === 1 && unsuffixedExistingTeam) {
+        teamToRenameToA = { ...unsuffixedExistingTeam, teamName: `${clubName} A` }; // Pôvodný tím sa premenuje na 'A'
+        newTeamFinalName = `${clubName} B`; // Nový tím dostane 'B'
         
-        let newTeamName;
-        if (i === 0 && allClubTeamsInSelectedCategory.length === 1) {
-            // Ak je to jediný tím pre tento klub v kategórii, nepridávame sufix
-            newTeamName = clubName;
-        } else {
-            // Pre ostatné tímy pridávame sufix (A, B, C...)
-            const newSuffix = String.fromCharCode('A'.charCodeAt(0) + i); 
-            newTeamName = `${clubName} ${newSuffix}`;
-        }
-        
-        updatedTeamsForCategory.push({
-            ...team,
-            teamName: newTeamName // Priradíme nový názov
-        });
+        // Pridáme premenovaný pôvodný tím
+        finalTeamsForCategory.push(teamToRenameToA);
+
+        // Filter out the original unsuffixed team as it's been handled
+        existingClubTeamsInSelectedCategory = existingClubTeamsInSelectedCategory.filter(team => team.teamName !== clubName);
+    } 
+    // Ostatné scenáre (0 tímov, alebo viac ako 1 tím, alebo 1 suffixed tím)
+    else {
+        // Pridáme všetky existujúce tímy, ktoré neboli premenované (pretože už majú sufix alebo sú iný prípad)
+        existingClubTeamsInSelectedCategory.forEach(team => finalTeamsForCategory.push(team));
     }
 
-    // Teraz nahradíme tímy patriace k tomuto klubu v kópii pre vybranú kategóriu,
-    // pričom zachováme ostatné tímy (ak existujú), ktoré do tohto klubu v tejto kategórii nepatria.
+    // Nastavíme finálny názov pre nový tím a pridáme ho
+    newTeamDataFromModal.teamName = newTeamFinalName;
+    finalTeamsForCategory.push(newTeamDataFromModal);
+
+    // Filter out any teams belonging to this club from the original category array
     const otherTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
-                                            .filter(team => team.clubName?.trim() !== clubName); // Zmena: Orezanie team.clubName
+                                            .filter(team => team.clubName?.trim() !== clubName);
 
-    currentTeamsCopy[selectedCategory] = [...otherTeamsInSelectedCategory, ...updatedTeamsForCategory];
+    // Update the category with the new list of teams for this club
+    currentTeamsCopy[selectedCategory] = [...otherTeamsInSelectedCategory, ...finalTeamsForCategory];
 
-    // Aktualizujeme celé pole 'teams' v dokumente používateľa vo Firestore
     try {
         await updateDoc(userDocRef, {
             teams: currentTeamsCopy
         });
         showLocalNotification('Nový tím bol úspešne pridaný a názvy tímov aktualizované!', 'success');
-        setShowAddTeamModal(false); // Zatvoríme modálne okno po úspešnom pridaní
-    } /* intentionally no catch here */ catch (error) {
+        setShowAddTeamModal(false);
+    } catch (error) {
         console.error("Chyba pri pridávaní nového tímu a aktualizácii názvov:", error);
         showLocalNotification('Nastala chyba pri pridávaní nového tímu.', 'error');
     }
@@ -1588,10 +1556,9 @@ function RostersApp() {
           React.createElement('div', { className: 'space-y-6 w-full' }, 
             teamCategories.map(([categoryName, teamsArray]) => (
               React.createElement('div', { key: categoryName, className: 'space-y-4 w-full' }, 
-                // Tlačidlo "Pridať nový tím" pred každou kategóriou
                 userProfileData && React.createElement(
                     'div',
-                    { className: 'flex justify-center mb-4' }, // Zmenené z justify-start na justify-center
+                    { className: 'flex justify-center mb-4' },
                     React.createElement(
                         'button',
                         {
@@ -1798,7 +1765,6 @@ function RostersApp() {
           React.createElement('p', { className: 'text-center text-gray-600 text-lg py-8' }, 'Zatiaľ neboli vytvorené žiadne tímy pre tohto používateľa.')
         )
       ),
-      // Tlačidlo pre pridanie nového tímu na konci stránky
       userProfileData && React.createElement(
           'div',
           { className: 'flex justify-center mt-8 pb-8' },
@@ -1820,7 +1786,6 @@ function RostersApp() {
           )
       ),
 
-      // Modálne okno pre úpravu tímu
       selectedTeam && React.createElement(
         EditTeamModal,
         {
@@ -1828,13 +1793,12 @@ function RostersApp() {
           onClose: () => setShowEditTeamModal(false),
           teamData: selectedTeam,
           onSaveTeam: handleSaveTeam,
-          userProfileData: userProfileData, // Pre farbu nadpisu
-          availablePackages: availablePackages, // Odovzdanie zoznamu balíkov
-          availableAccommodationTypes: availableAccommodationTypes, // Odovzdanie typov ubytovania
-          availableTshirtSizes: availableTshirtSizes // Odovzdanie dostupných veľkostí tričiek
+          userProfileData: userProfileData,
+          availablePackages: availablePackages,
+          availableAccommodationTypes: availableAccommodationTypes,
+          availableTshirtSizes: availableTshirtSizes
         }
       ),
-      // Modálne okno pre výber typu člena
       React.createElement(
         AddMemberTypeModal,
         {
@@ -1844,7 +1808,6 @@ function RostersApp() {
           userProfileData: userProfileData
         }
       ),
-      // Modálne okno pre detaily člena
       React.createElement(
         AddMemberDetailsModal,
         {
@@ -1853,22 +1816,20 @@ function RostersApp() {
           onSaveMember: handleSaveNewMember,
           memberType: memberTypeToAdd,
           userProfileData: userProfileData,
-          teamAccommodationType: teamAccommodationTypeToAddMemberTo // Odovzdanie typu ubytovania
+          teamAccommodationType: teamAccommodationTypeToAddMemberTo
         }
       ),
-      // Modálne okno pre pridanie nového tímu
       React.createElement(
         AddTeamModal,
         {
             show: showAddTeamModal,
             onClose: () => setShowAddTeamModal(false),
-            onAddTeam: handleAddTeam, // Funkcia na pridanie tímu
+            onAddTeam: handleAddTeam,
             userProfileData: userProfileData,
             availablePackages: availablePackages,
             availableAccommodationTypes: availableAccommodationTypes,
             availableTshirtSizes: availableTshirtSizes,
-            teamsData: teamsData || {}, // Dôležité: zabezpečiť, že teamsData je vždy objekt
-            // Používame nové kategórie zo settings namiesto starých
+            teamsData: teamsData || {},
             availableCategoriesFromSettings: availableCategoriesFromSettings 
         }
       )
@@ -1876,5 +1837,4 @@ function RostersApp() {
   );
 }
 
-// Explicitne sprístupniť komponent globálne
 window.RostersApp = RostersApp;
