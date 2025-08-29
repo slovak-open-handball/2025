@@ -244,9 +244,10 @@ function RostersApp() {
     React.createElement(
       'div',
       { className: 'w-full max-w-3xl p-4' },
+      // Odstránené triedy pre biely podklad a tieň
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
+        { className: 'w-full' }, // Odstránené bg-white, p-8, rounded-lg, shadow-xl
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Súpiska tímov'
         ),
