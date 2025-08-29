@@ -1920,7 +1920,6 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                           )
                         )
                       )
-                    )
                   })
                 )
               )
