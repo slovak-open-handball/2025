@@ -244,18 +244,18 @@ function RostersApp() {
     React.createElement(
       'div',
       { className: 'w-full max-w-3xl p-4' },
-      // Odstránené triedy pre biely podklad a tieň
-      React.createElement(
-        'div',
-        { className: 'w-full' }, // Odstránené bg-white, p-8, rounded-lg, shadow-xl
-        React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Súpiska tímov'
-        ),
+      // Odstránený hlavný biely obdĺžnik a nadpis "Súpiska tímov"
+      // React.createElement(
+      //   'div',
+      //   { className: 'w-full' },
+      //   React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
+      //     'Súpiska tímov'
+      //   ),
         
         teamCategories.length > 0 ? (
           React.createElement('div', { className: 'space-y-6' }, // Väčší priestor medzi kategóriami
             teamCategories.map(([categoryName, teamsArray]) => (
-              // Kontajner kategórie už nebude mať vlastný biely podklad, len nadpis a medzery
+              // Kontajner kategórie s nadpisom
               React.createElement('div', { key: categoryName, className: 'space-y-4' }, // Pridal som space-y-4 pre medzeru medzi h2 a prvým tímom
                 React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} ${getTeamPluralization(teamsArray.length)})`), // Väčší a tučnejší nadpis
                 React.createElement('div', { className: 'space-y-6' }, // Priestor medzi jednotlivými tímami v kategórii
@@ -302,8 +302,14 @@ function RostersApp() {
                     // Každý tím bude mať svoj vlastný biely obdĺžnik s tieňom a fialovým okrajom
                     return React.createElement('div', { 
                         key: index, 
-                        className: 'bg-white p-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4' // Pridal som mb-4 pre medzeru medzi tímami
+                        className: 'bg-white p-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4' 
                     }, 
+                      // Nový nadpis "Súpiska tímu"
+                      React.createElement('div', { className: 'bg-[#9333EA] text-white p-2 rounded-md mb-2 text-center font-bold' }, 'Súpiska tímu'),
+                      
+                      // Typ kategórie tímu (napr. U10 CH)
+                      React.createElement('p', { className: 'text-lg font-semibold text-gray-800 mb-2' }, `Kategória: ${categoryName}`),
+
                       React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
                       React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`),
                       React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`),
