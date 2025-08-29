@@ -1302,7 +1302,7 @@ function RostersApp() {
             }
         } catch (error) {
             console.error("Error fetching new package details:", error);
-            showLocalNotification('Nastala chyba pri načítavaní detailov nového balíka.', 'error');
+            showLocalNotification('Nastala chyba pri načítaní detailov nového balíka.', 'error');
             return;
         }
     }
@@ -1720,7 +1720,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
                                     return null; 
                                 })()
                             )
-                        ),
+                        ), 
                         team.tshirts && team.tshirts.length > 0 && (
                             React.createElement('div', { className: 'mb-4 w-full' }, 
                                 React.createElement('p', { className: 'text-md text-gray-700 font-semibold mb-1' }, 'Tričká:'),
