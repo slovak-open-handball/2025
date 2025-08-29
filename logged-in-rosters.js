@@ -3,8 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-// Ponechané pre prípad, že by si v budúcnosti potreboval interakciu s Firestore alebo Auth.
-import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, deleteField, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -61,6 +60,7 @@ function RostersApp() {
   const [user, setUser] = React.useState(null); 
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
+  const [teamsData, setTeamsData] = React.useState({}); // Nový stav pre dáta tímov
 
   // Loading stav pre používateľský profil
   const [loading, setLoading] = React.useState(true); 
@@ -72,11 +72,6 @@ function RostersApp() {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
       setIsAuthReady(true); 
-      // Pôvodné presmerovanie pri odhlásení používateľa
-      // if (!currentUser) {
-      //   console.log("RostersApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
-      //   window.location.href = 'login.html';
-      // }
     });
 
     const handleGlobalDataUpdated = (event) => {
@@ -114,58 +109,35 @@ function RostersApp() {
       try {
         const userDocRef = doc(db, 'users', user.uid);
         unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => { 
-          console.log("RostersApp: Používateľský dokument existuje, dáta:", docSnapshot.data());
-
           if (docSnapshot.exists()) { 
             const userData = docSnapshot.data();
+            console.log("RostersApp: Používateľský dokument existuje, dáta:", userData); // Log celej dátovej štruktúry
             setUserProfileData(userData);
+            
+            // Extrahovanie a nastavenie dát tímov
+            if (userData.teams) {
+                setTeamsData(userData.teams);
+            } else {
+                setTeamsData({}); // Ak teams neexistuje, nastavíme prázdny objekt
+            }
+
             setLoading(false);
-
-            // Pôvodné presmerovanie, ak nie je admin
-            // if (userData.role !== 'admin') {
-            //     console.log("RostersApp: Používateľ nie je admin, presmerovávam na logged-in-my-data.html.");
-            //     window.location.href = 'logged-in-my-data.html';
-            // }
-
           } else {
             console.warn("RostersApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            // showLocalNotification sa nepoužíva v tejto verzii, ale je tu pre referenciu
-            // if (typeof showLocalNotification === 'function') { 
-            //     showLocalNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error');
-            // }
             setLoading(false);
-            // Pôvodné odhlásenie pri nenájdenom dokumente
-            // auth.signOut(); 
-            // setUser(null);
-            // setUserProfileData(null);
           }
         }, error => {
           console.error("RostersApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-          // showLocalNotification sa nepoužíva v tejto verzii
-          // if (typeof showLocalNotification === 'function') { 
-          //   showLocalNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error');
-          // }
           setLoading(false);
-          // Pôvodné odhlásenie pri chybe načítania
-          // auth.signOut();
-          // setUser(null);
-          // setUserProfileData(null);
         });
       } catch (e) {
         console.error("RostersApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-        // showLocalNotification sa nepoužíva v tejto verzii
-        // if (typeof showLocalNotification === 'function') { 
-        //     showLocalNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error');
-        // }
         setLoading(false);
-        // Pôvodné odhlásenie pri chybe nastavovania onSnapshot
-        // auth.signOut();
-        // setUser(null);
-        // setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
         setLoading(false);
         setUserProfileData(null);
+        setTeamsData({});
     }
 
     return () => {
@@ -183,6 +155,9 @@ function RostersApp() {
     return null;
   }
 
+  // Prevod objektu teamsData na pole pre jednoduchšie mapovanie vo React komponente
+  const teamCategories = Object.entries(teamsData);
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -195,11 +170,64 @@ function RostersApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Súpiska tímov'
         ),
-        // Tu bude vykreslený obsah pre súpisku tímov (zatiaľ prázdny)
-        React.createElement('p', { className: 'text-center text-gray-600' }, 'Zatiaľ neboli vytvorené žiadne tímy.')
+        
+        teamCategories.length > 0 ? (
+          React.createElement('div', { className: 'space-y-4' },
+            teamCategories.map(([categoryName, teamsArray]) => (
+              React.createElement('div', { key: categoryName, className: 'bg-gray-50 p-4 rounded-lg shadow-sm' },
+                React.createElement('h2', { className: 'text-xl font-semibold text-gray-700 mb-2' }, `${categoryName} (${teamsArray.length} tímov)`),
+                React.createElement('div', { className: 'space-y-2 ml-4' },
+                  teamsArray.map((team, index) => (
+                    React.createElement('div', { key: index, className: 'border-l-4 border-blue-500 pl-4 py-2' },
+                      React.createElement('p', { className: 'font-medium text-gray-800' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
+                      React.createElement('p', { className: 'text-sm text-gray-600' }, `Počet hráčov: ${team.players || 0}`),
+                      React.createElement('p', { className: 'text-sm text-gray-600' }, `Počet členov tímu (ženy): ${team.womenTeamMembers || 0}`),
+                      React.createElement('p', { className: 'text-sm text-gray-600' }, `Počet členov tímu (muži): ${team.menTeamMembers || 0}`),
+                      // Môžeš pridať ďalšie detaily tímu podľa potreby
+                      // Napr. zobrazenie hráčov
+                      team.playerDetails && team.playerDetails.length > 0 && (
+                          React.createElement('div', { className: 'mt-2' },
+                              React.createElement('h4', { className: 'text-md font-semibold text-gray-700' }, 'Hráči:'),
+                              React.createElement('ul', { className: 'list-disc list-inside text-sm text-gray-600' },
+                                  team.playerDetails.map((player, pIndex) => (
+                                      React.createElement('li', { key: pIndex }, `${player.firstName} ${player.lastName} (číslo dresu: ${player.jerseyNumber || 'N/A'})`)
+                                  ))
+                              )
+                          )
+                      ),
+                      // Zobrazenie členov tímu (ženy)
+                      team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0 && (
+                          React.createElement('div', { className: 'mt-2' },
+                              React.createElement('h4', { className: 'text-md font-semibold text-gray-700' }, 'Členky tímu (ženy):'),
+                              React.createElement('ul', { className: 'list-disc list-inside text-sm text-gray-600' },
+                                  team.womenTeamMemberDetails.map((member, mIndex) => (
+                                      React.createElement('li', { key: mIndex }, `${member.firstName} ${member.lastName}`)
+                                  ))
+                              )
+                          )
+                      ),
+                       // Zobrazenie členov tímu (muži)
+                       team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0 && (
+                          React.createElement('div', { className: 'mt-2' },
+                              React.createElement('h4', { className: 'text-md font-semibold text-gray-700' }, 'Členovia tímu (muži):'),
+                              React.createElement('ul', { className: 'list-disc list-inside text-sm text-gray-600' },
+                                  team.menTeamMemberDetails.map((member, mIndex) => (
+                                      React.createElement('li', { key: mIndex }, `${member.firstName} ${member.lastName}`)
+                                  ))
+                              )
+                          )
+                      )
+                    )
+                  ))
+                )
+              )
+            ))
+          )
+        ) : (
+          React.createElement('p', { className: 'text-center text-gray-600' }, 'Zatiaľ neboli vytvorené žiadne tímy.')
+        )
       )
     )
-    // Tlačidlo "+" na pridanie kategórie je odstránené
   );
 }
 
