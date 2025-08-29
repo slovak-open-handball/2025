@@ -25,6 +25,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const notificationsLink = document.getElementById('notifications-link'); // NOVINKA: Získanie odkazu na upozornenia
     const notificationsTextWithCount = document.getElementById('notifications-text-with-count'); // NOVINKA: Získanie elementu pre text Upozornenia s počtom
     const notificationBadgeCount = document.getElementById('notification-badge-count'); // NOVINKA: Získanie elementu pre červený krúžok s počtom
+    const teamRostersLink = document.getElementById('team-rosters-link'); // NOVINKA: Získanie odkazu na súpisku tímov
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -70,27 +71,26 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         }
     };
     
-    // Funkcia na podmienené zobrazenie odkazov pre admina
-    const showAdminLinks = () => {
+    // Funkcia na podmienené zobrazenie odkazov pre admina a používateľa
+    const showRoleBasedLinks = () => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
-            tournamentSettingsLink.classList.remove('hidden'); 
+            tournamentSettingsLink.classList.remove('hidden');    
             allRegistrationsLink.classList.remove('hidden');
-            mySettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na moje nastavenia
+            mySettingsLink.classList.remove('hidden');
             allUsersLink.classList.remove('hidden');
-            notificationsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na upozornenia
+            notificationsLink.classList.remove('hidden');
+            teamRostersLink.classList.add('hidden'); // Admin nemá vidieť súpisku tímov
 
-            // Aktualizácia počtu neprečítaných upozornení v texte
             const unreadCount = userProfileData.unreadNotificationCount || 0;
             if (notificationsTextWithCount) {
                 if (unreadCount > 0) {
                     notificationsTextWithCount.textContent = `Upozornenia (${unreadCount})`;
                 } else {
-                    notificationsTextWithCount.textContent = 'Upozornenia'; // Ak nie sú žiadne, len text
+                    notificationsTextWithCount.textContent = 'Upozornenia';
                 }
             }
 
-            // Aktualizácia červeného krúžku s počtom upozornení
             if (notificationBadgeCount) {
                 if (unreadCount > 0) {
                     notificationBadgeCount.textContent = unreadCount.toString();
@@ -100,16 +100,35 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 }
             }
 
-        } else {
+        } else if (userProfileData.role === 'user') {
             addCategoriesLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
             allRegistrationsLink.classList.add('hidden');
-            mySettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na moje nastavenia
-            notificationsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na upozornenia
+            mySettingsLink.classList.add('hidden');
+            allUsersLink.classList.add('hidden');
+            notificationsLink.classList.add('hidden');
+            teamRostersLink.classList.remove('hidden'); // Používateľ vidí súpisku tímov
+            
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
             }
-            if (notificationBadgeCount) { // Skrytie aj odznaku
+            if (notificationBadgeCount) {
+                notificationBadgeCount.classList.add('hidden');
+            }
+        } else {
+            // Predvolene skryť všetky špecifické odkazy, ak rola nie je admin ani user
+            addCategoriesLink.classList.add('hidden');
+            tournamentSettingsLink.classList.add('hidden');
+            allRegistrationsLink.classList.add('hidden');
+            mySettingsLink.classList.add('hidden');
+            allUsersLink.classList.add('hidden');
+            notificationsLink.classList.add('hidden');
+            teamRostersLink.classList.add('hidden'); // Skryť aj súpisku tímov
+            
+            if (notificationsTextWithCount) {
+                notificationsTextWithCount.textContent = 'Upozornenia';
+            }
+            if (notificationBadgeCount) {
                 notificationBadgeCount.classList.add('hidden');
             }
         }
@@ -132,7 +151,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             console.error("left-menu.js: Chyba pri ukladaní/vytváraní stavu menu:", error);
             // Zobrazenie globálnej notifikácie, ak je funkcia dostupná
             if (window.showGlobalNotification) {
-                 window.showGlobalNotification('Nepodarilo sa uložiť nastavenia menu. Skontrolujte oprávnenia.', 'error');
+                window.showGlobalNotification('Nepodarilo sa uložiť nastavenia menu. Skontrolujte oprávnenia.', 'error');
             }
         }
     };
@@ -141,8 +160,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     applyMenuState();
     // Aplikujeme dynamický text menu
     updateMenuText();
-    // Zobrazíme admin odkazy na základe roly
-    showAdminLinks();
+    // Zobrazíme odkazy na základe roly
+    showRoleBasedLinks();
     
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
