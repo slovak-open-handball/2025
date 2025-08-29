@@ -609,7 +609,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                     color: isAddTshirtButtonDisabled ? roleColor : 'white',
                                 }
                             },
-                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
+                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M12 6v6m0 0v6m0-6h6m-6 0H6` }))
                         )
                     )
                 ),
@@ -1742,9 +1742,9 @@ const handleSaveNewMember = async (newMemberDetails) => {
                       ), 
                       
 
-                      allMembers.length > 0 && (
-                        React.createElement('div', { className: 'mt-4 px-6 w-full' }, 
+                      React.createElement('div', { className: 'mt-4 px-6 w-full' }, // Removed allMembers.length > 0 condition
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
+                          allMembers.length > 0 ? ( // Condition only for table rendering
                           React.createElement('div', { className: 'overflow-x-auto w-full' }, 
                             React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
                               React.createElement('thead', null,
@@ -1772,6 +1772,8 @@ const handleSaveNewMember = async (newMemberDetails) => {
                                 ))
                               )
                             )
+                          )) : (
+                            React.createElement('p', { className: 'text-center text-gray-600 text-sm py-4' }, 'V tomto tíme zatiaľ nie sú žiadni členovia.')
                           ),
                           React.createElement(
                             'div',
