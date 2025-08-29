@@ -23,6 +23,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const mySettingsLink = document.getElementById('my-settings-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     const allUsersLink = document.getElementById('all-users-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     const notificationsLink = document.getElementById('notifications-link'); // NOVINKA: Získanie odkazu na upozornenia
+    const notificationsCountSpan = document.getElementById('notifications-count'); // NOVINKA: Získanie elementu pre počet upozornení
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -77,12 +78,27 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             mySettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na moje nastavenia
             allUsersLink.classList.remove('hidden');
             notificationsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na upozornenia
+
+            // Aktualizácia počtu neprečítaných upozornení
+            const unreadCount = userProfileData.unreadNotificationCount || 0;
+            if (notificationsCountSpan) {
+                if (unreadCount > 0) {
+                    notificationsCountSpan.textContent = `(${unreadCount})`;
+                    notificationsCountSpan.classList.remove('hidden');
+                } else {
+                    notificationsCountSpan.classList.add('hidden');
+                }
+            }
+
         } else {
             addCategoriesLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
             allRegistrationsLink.classList.add('hidden');
             mySettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na moje nastavenia
             notificationsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na upozornenia
+            if (notificationsCountSpan) {
+                notificationsCountSpan.classList.add('hidden');
+            }
         }
     };    
 
