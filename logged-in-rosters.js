@@ -308,7 +308,7 @@ function RostersApp() {
                       React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 mb-2 text-center font-bold rounded-t-lg' }, 'Súpiska tímu'), // Pridané rounded-t-lg
                       
                       // Typ kategórie tímu (napr. U10 CH)
-                      React.createElement('p', { className: 'text-lg font-semibold text-gray-800 mb-2 px-6 pt-4' }, `Kategória: ${categoryName}`), // Pridané pt-4 na prvý textový element po nadpise
+                      React.createElement('p', { className: 'text-xl font-semibold text-gray-800 mb-2 px-6 pt-4' }, `Kategória: ${categoryName}`), // Zmenené text-lg na text-xl
 
                       React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2 px-6' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`), 
                       React.createElement('p', { className: 'text-md text-gray-700 px-6' }, `Počet hráčov: ${team.players || 0}`), 
