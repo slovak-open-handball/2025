@@ -356,33 +356,36 @@ function RostersApp() {
                                     { className: 'text-sm text-gray-600' },
                                     `Zahŕňa účastnícku kartu` 
                                 ),
-                                team.packageDetails.meals && React.createElement(
-                                    'div',
-                                    { className: 'mt-2' },
-                                    React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
-                                    // Zobrazenie jedál pre každý dátum, ktorý je platným dátumovým reťazcom a má aspoň jedno jedlo s hodnotou 1
-                                    Object.keys(team.packageDetails.meals).sort().filter(key => {
-                                        // Kontrola, či je kľúč platným dátumovým reťazcom (YYYY-MM-DD formát)
+                                team.packageDetails.meals && (() => {
+                                    // Získanie filtrovaných a zoradených dátumov s aktívnymi jedlami
+                                    const activeMealDates = Object.keys(team.packageDetails.meals).sort().filter(key => {
                                         const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(key);
-                                        // Zabezpečí, že ak je to dátum, má aspoň jedno aktívne jedlo
-                                        // A tiež vylúčime 'participantCard' z dátumov, ak sa tam náhodou ocitne
                                         return isValidDate && key !== 'participantCard' && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
-                                    }).map(date => {
-                                        // Získanie aktívnych jedál pre daný dátum a zoradenie podľa preddefinovaného poradia
-                                        const activeMeals = mealOrder
-                                            .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
-                                            .map(mealType => mealTypeLabels[mealType].toLowerCase()); 
+                                    });
 
-                                        const activeMealsString = activeMeals.join(', ');
-
-                                        // Zobrazíme dátum a aktívne jedlá v jednom riadku
+                                    // Ak existujú nejaké aktívne stravovacie dni, zobrazíme nadpis a zoznam
+                                    if (activeMealDates.length > 0) {
                                         return React.createElement(
-                                            'p',
-                                            { key: date, className: 'text-sm text-gray-600 ml-2' },
-                                            `${formatDateToDMMYYYY(date)}: ${activeMealsString}`
+                                            'div',
+                                            { className: 'mt-2' },
+                                            React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
+                                            activeMealDates.map(date => {
+                                                const activeMeals = mealOrder
+                                                    .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
+                                                    .map(mealType => mealTypeLabels[mealType].toLowerCase()); 
+
+                                                const activeMealsString = activeMeals.join(', ');
+
+                                                return React.createElement(
+                                                    'p',
+                                                    { key: date, className: 'text-sm text-gray-600 ml-2' },
+                                                    `${formatDateToDMMYYYY(date)}: ${activeMealsString}`
+                                                );
+                                            })
                                         );
-                                    })
-                                )
+                                    }
+                                    return null; // Ak nie sú žiadne aktívne stravovacie dni, nezobrazíme nič
+                                })()
                             )
                         ),
                         // Zobrazenie veľkostí a počtu tričiek
