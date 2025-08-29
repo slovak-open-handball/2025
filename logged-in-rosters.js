@@ -61,13 +61,15 @@ const formatDateToDMMYYYY = (dateString) => {
     return dateString;
 };
 
-// Mapovanie typov jedál na slovenské názvy
+// Mapovanie typov jedál na slovenské názvy a definovanie poradia
 const mealTypeLabels = {
-    breakfast: 'Raňajky',
-    lunch: 'Obed',
-    dinner: 'Večera',
-    refreshment: 'Občerstvenie'
+    breakfast: 'raňajky',
+    lunch: 'obed',
+    dinner: 'večera',
+    refreshment: 'občerstvenie'
 };
+
+const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 
 
 // Main React component for the logged-in-rosters.html page
@@ -352,7 +354,7 @@ function RostersApp() {
                                 team.packageDetails.meals && team.packageDetails.meals.participantCard === 1 && React.createElement(
                                     'p',
                                     { className: 'text-sm text-gray-600' },
-                                    `Zahŕňa účastnícku kartu` // Upravený text
+                                    `Zahŕňa účastnícku kartu` 
                                 ),
                                 team.packageDetails.meals && React.createElement(
                                     'div',
@@ -363,12 +365,13 @@ function RostersApp() {
                                         // Kontrola, či je kľúč platným dátumovým reťazcom (YYYY-MM-DD formát)
                                         const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(key);
                                         // Zabezpečí, že ak je to dátum, má aspoň jedno aktívne jedlo
-                                        // A tiež vylúčime 'participantCard' z dátumov
+                                        // A tiež vylúčime 'participantCard' z dátumov, ak sa tam náhodou ocitne
                                         return isValidDate && key !== 'participantCard' && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
                                     }).map(date => {
-                                        const activeMeals = Object.entries(team.packageDetails.meals[date])
-                                            .filter(([, status]) => status === 1) // Len jedlá s hodnotou 1
-                                            .map(([mealType]) => (mealTypeLabels[mealType] || mealType).toLowerCase()); // Názvy jedál malými písmenami
+                                        // Získanie aktívnych jedál pre daný dátum a zoradenie podľa preddefinovaného poradia
+                                        const activeMeals = mealOrder
+                                            .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
+                                            .map(mealType => mealTypeLabels[mealType].toLowerCase()); 
 
                                         const activeMealsString = activeMeals.join(', ');
 
