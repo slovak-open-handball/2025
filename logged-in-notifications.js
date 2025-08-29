@@ -131,13 +131,17 @@ function NotificationsApp() {
   const [loading, setLoading] = React.useState(true); // Loading for data in NotificationsApp
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
-  const [userNotificationType, setUserNotificationType] = React.useState('success'); // ZMENA: Predvolený stav pre typ notifikácie na 'success'
+  const [userNotificationType, setUserNotificationType] = React.useState('success'); // Predvolený stav pre typ notifikácie na 'success'
 
 
   const [notifications, setNotifications] = React.useState([]);
   const [allAdminUids, setAllAdminUids] = React.useState([]); // New state for storing UIDs of all administrators
 
-  // NEW STATES FOR DELETE ALL NOTIFICATIONS MODAL
+  // NOVÉ STAVY PRE OBNOVU A VÝBER OZNÁMENÍ
+  const [selectedNotificationsToRestore, setSelectedNotificationsToRestore] = React.useState(new Set());
+  const [showRestoreConfirmationModal, setShowRestoreConfirmationModal] = React.useState(false);
+
+  // STAVY PRE MODÁLNE OKNO VYMAZANIE VŠETKÝCH NOTIFIKÁCIÍ
   const [showDeleteAllConfirmationModal, setShowDeleteAllConfirmationModal] = React.useState(false);
   const [deleteUnreadToo, setDeleteUnreadToo] = React.useState(false);
 
@@ -225,28 +229,25 @@ function NotificationsApp() {
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true && user) {
       console.log("NotificationsApp: Logged-in user is an approved administrator. Loading notifications.");
       try {
-        // Načítanie notifikácií z kolekcie '/notifications'
-        // Notifikácie sú pre všetkých adminov, stav seenBy/deletedBy sa riadi individuálne.
         const notificationsCollectionRef = collection(db, 'notifications');
         
-        // Získavame všetky notifikácie a filtrujeme ich na základe 'deletedBy' poľa na strane klienta.
         unsubscribeNotifications = onSnapshot(notificationsCollectionRef, snapshot => {
           const fetchedNotifications = [];
           snapshot.forEach(document => {
             const data = document.data();
-            // Filter based on deletedBy for the current user
             const isDeletedForCurrentUser = data.deletedBy && data.deletedBy.includes(user.uid);
             
-            if (!isDeletedForCurrentUser) {
-              // Notifikácia je "prečítaná" ak je user.uid v seenBy poli
-              const isRead = data.seenBy && data.seenBy.includes(user.uid);
-              fetchedNotifications.push({
+            // Notifikácia sa načíta, aj keď je "vymazaná" pre aktuálneho používateľa,
+            // aby sa dala zobraziť možnosť obnovenia.
+            fetchedNotifications.push({
                 id: document.id,
                 ...data,
-                read: isRead, // Pridáme 'read' status pre konzistenciu s UI
+                // Notifikácia je "prečítaná" ak je user.uid v seenBy poli
+                read: data.seenBy && data.seenBy.includes(user.uid), 
+                // Pridáme stav, či je vymazaná pre aktuálneho používateľa
+                deletedByMe: isDeletedForCurrentUser,
                 timestamp: data.timestamp ? data.timestamp.toDate() : null // Convert Timestamp to Date object
-              });
-            }
+            });
           });
           // Sort notifications from newest to oldest
           fetchedNotifications.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
@@ -286,10 +287,9 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      // Aktualizujeme pole 'seenBy'
       const notificationRef = doc(db, 'notifications', notificationId);
       await updateDoc(notificationRef, {
-        seenBy: arrayUnion(user.uid) // Pridáme ID používateľa do poľa seenBy
+        seenBy: arrayUnion(user.uid)
       });
       setUserNotificationMessage("Upozornenie označené ako prečítané.");
       setUserNotificationType('success'); 
@@ -313,7 +313,6 @@ function NotificationsApp() {
     try {
       const notificationRef = doc(db, 'notifications', notificationId);
 
-      // Načítame aktuálny stav notifikácie
       const docSnap = await getDoc(notificationRef);
       if (!docSnap.exists()) {
         setUserNotificationMessage("Upozornenie bolo odstránené pre vás.");
@@ -325,22 +324,18 @@ function NotificationsApp() {
       const notificationData = docSnap.data();
       let deletedBy = notificationData.deletedBy || [];
 
-      // Pridáme ID aktuálneho administrátora do zoznamu 'deletedBy'
       if (!deletedBy.includes(user.uid)) {
         deletedBy.push(user.uid);
       }
       
-      // Ak všetci administrátori "vymazali" túto notifikáciu, vymažeme ju úplne
-      // Predpokladáme, že allAdminUids je aktuálny zoznam všetkých schválených adminov
       if (allAdminUids.length > 0 && deletedBy.length >= allAdminUids.length) {
         await deleteDoc(notificationRef);
         setUserNotificationMessage("Upozornenie bolo úplne odstránené.");
         setUserNotificationType('success'); 
         console.log(`Notification ${notificationId} has been completely deleted from the database.`);
       } else {
-        // Inak, len aktualizujeme pole 'deletedBy'
         await updateDoc(notificationRef, {
-          deletedBy: arrayUnion(user.uid) // Pridáme ID používateľa do poľa deletedBy
+          deletedBy: arrayUnion(user.uid)
         });
         setUserNotificationMessage("Upozornenie bolo odstránené pre vás.");
         setUserNotificationType('success'); 
@@ -355,7 +350,6 @@ function NotificationsApp() {
     }
   };
 
-  // Mark all unread notifications as read
   const handleMarkAllAsRead = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie označiť upozornenia ako prečítané.");
@@ -365,11 +359,11 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      const unreadNotifications = notifications.filter(n => !n.read);
+      const unreadNotifications = notifications.filter(n => !n.read && !n.deletedByMe); // ZMENA: Neoznačujeme vymazané
 
       if (unreadNotifications.length === 0) {
         setUserNotificationMessage("Žiadne neprečítané upozornenia na označenie.");
-        setUserNotificationType('success'); // ZMENA: Z 'info' na 'success'
+        setUserNotificationType('success'); 
         setLoading(false);
         return;
       }
@@ -377,7 +371,7 @@ function NotificationsApp() {
       const batch = writeBatch(db);
       unreadNotifications.forEach(notification => {
         const notificationRef = doc(db, 'notifications', notification.id);
-        batch.update(notificationRef, { seenBy: arrayUnion(user.uid) }); // Aktualizujeme pole seenBy
+        batch.update(notificationRef, { seenBy: arrayUnion(user.uid) });
       });
 
       await batch.commit();
@@ -392,13 +386,11 @@ function NotificationsApp() {
     }
   };
 
-  // Opens the delete all notifications modal
   const handleDeleteAllNotificationsClick = () => {
     setShowDeleteAllConfirmationModal(true);
     setDeleteUnreadToo(false); // Reset checkbox when modal opens
   };
 
-  // Delete all notifications (confirmed action)
   const confirmDeleteAllNotifications = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setUserNotificationMessage("Nemáte oprávnenie odstrániť všetky upozornenia.");
@@ -408,14 +400,14 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      let notificationsToProcess = notifications;
+      let notificationsToProcess = notifications.filter(n => !n.deletedByMe); // ZMENA: Neovplyvňujeme už vymazané
       if (!deleteUnreadToo) {
-        notificationsToProcess = notifications.filter(n => n.read); // Delete only read ones
+        notificationsToProcess = notificationsToProcess.filter(n => n.read);
       }
 
       if (notificationsToProcess.length === 0) {
         setUserNotificationMessage("Žiadne upozornenia na odstránenie.");
-        setUserNotificationType('success'); // ZMENA: Z 'info' na 'success'
+        setUserNotificationType('success'); 
         setLoading(false);
         setShowDeleteAllConfirmationModal(false);
         return;
@@ -430,18 +422,17 @@ function NotificationsApp() {
           deletedBy.push(user.uid);
         }
 
-        // Ak všetci admini "vymazali" notifikáciu, vymažeme ju úplne z databázy
         if (allAdminUids.length > 0 && deletedBy.length >= allAdminUids.length) {
           batch.delete(notificationRef);
         } else {
-          batch.update(notificationRef, { deletedBy: arrayUnion(user.uid) }); // Aktualizujeme pole deletedBy
+          batch.update(notificationRef, { deletedBy: arrayUnion(user.uid) });
         }
       });
 
       await batch.commit();
       setUserNotificationMessage("Všetky vybrané upozornenia boli odstránené.");
       setUserNotificationType('success'); 
-      setShowDeleteAllConfirmationModal(false); // Close modal after successful action
+      setShowDeleteAllConfirmationModal(false);
     } catch (e) {
       console.error("NotificationsApp: Error deleting all notifications:", e);
       setError(`Chyba pri odstránení všetkých upozornení: ${e.message}`);
@@ -450,6 +441,59 @@ function NotificationsApp() {
       setLoading(false);
     }
   };
+
+  // NOVÁ FUNKCIA: Manipulácia so stavom zaškrtávacieho políčka
+  const handleNotificationSelectionChange = (notificationId, isChecked) => {
+    setSelectedNotificationsToRestore(prev => {
+      const newSet = new Set(prev);
+      if (isChecked) {
+        newSet.add(notificationId);
+      } else {
+        newSet.delete(notificationId);
+      }
+      return newSet;
+    });
+  };
+
+  // NOVÁ FUNKCIA: Otvorenie modálneho okna na potvrdenie obnovy
+  const handleRestoreSelectedNotificationsClick = () => {
+    if (selectedNotificationsToRestore.size === 0) {
+      setUserNotificationMessage("Vyberte aspoň jedno upozornenie na obnovenie.");
+      setUserNotificationType('info'); // Informačná správa, nie chyba
+      return;
+    }
+    setShowRestoreConfirmationModal(true);
+  };
+
+  // NOVÁ FUNKCIA: Potvrdenie obnovy vybraných notifikácií
+  const confirmRestoreSelectedNotifications = async () => {
+    if (!db || !user || !user.uid) {
+      setUserNotificationMessage("Chyba: Nie sú dostupné dáta používateľa alebo databázy.");
+      setUserNotificationType('error');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const batch = writeBatch(db);
+      selectedNotificationsToRestore.forEach(notificationId => {
+        const notificationRef = doc(db, 'notifications', notificationId);
+        batch.update(notificationRef, { deletedBy: arrayRemove(user.uid) }); // Odstránime ID používateľa z poľa deletedBy
+      });
+      await batch.commit();
+      setUserNotificationMessage("Vybrané upozornenia boli úspešne obnovené.");
+      setUserNotificationType('success');
+      setSelectedNotificationsToRestore(new Set()); // Vymažeme výber
+      setShowRestoreConfirmationModal(false); // Zatvoríme modálne okno
+    } catch (e) {
+      console.error("NotificationsApp: Error restoring selected notifications:", e);
+      setError(`Chyba pri obnovení upozornení: ${e.message}`);
+      setUserNotificationType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   // Helper function to render text with specific styling based on single quotes
   function renderStyledText(text) {
@@ -537,13 +581,14 @@ function NotificationsApp() {
   }
 
   // Conditions for displaying buttons
-  const hasAtLeastTwoNotifications = notifications.length >= 2;
-  const hasAtLeastTwoUnreadNotifications = notifications.filter(n => !n.read).length >= 2;
+  const hasNotifications = notifications.length > 0;
+  const hasUnreadNotifications = notifications.some(n => !n.read && !n.deletedByMe);
+  const hasDeletedByMeNotifications = notifications.some(n => n.deletedByMe);
+
 
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ZMENA: Odovzdávame userNotificationType do NotificationModal
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
         onClose: () => setUserNotificationMessage(''),
@@ -555,10 +600,19 @@ function NotificationsApp() {
         onConfirm: confirmDeleteAllNotifications,
         onCancel: () => setShowDeleteAllConfirmationModal(false),
         loading: loading,
-        showCheckbox: notifications.some(n => !n.read), // Show checkbox only if unread notifications exist
+        showCheckbox: notifications.some(n => !n.read && !n.deletedByMe), // Show checkbox only if unread, not-deleted notifications exist
         checkboxLabel: "Odstrániť aj neprečítané upozornenia",
         onCheckboxChange: (e) => setDeleteUnreadToo(e.target.checked),
         checkboxChecked: deleteUnreadToo
+    }),
+    // NOVÉ: Modálne okno pre potvrdenie obnovy
+    React.createElement(ConfirmationModal, {
+        show: showRestoreConfirmationModal,
+        message: `Naozaj chcete obnoviť ${selectedNotificationsToRestore.size} vybraných upozornení?`,
+        onConfirm: confirmRestoreSelectedNotifications,
+        onCancel: () => setShowRestoreConfirmationModal(false),
+        loading: loading,
+        showCheckbox: false, // Pre obnovu checkbox nepotrebujeme
     }),
     React.createElement(
       'div',
@@ -574,11 +628,11 @@ function NotificationsApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Upozornenia'
         ),
-        // NEW: "Mark all as read" and "Delete all" buttons
-        (hasAtLeastTwoNotifications || hasAtLeastTwoUnreadNotifications) && React.createElement(
+        // Skupina tlačidiel
+        (hasNotifications || hasDeletedByMeNotifications) && React.createElement(
           'div',
-          { className: 'flex justify-center space-x-4 mb-6' },
-          hasAtLeastTwoUnreadNotifications && React.createElement(
+          { className: 'flex flex-wrap justify-center gap-4 mb-6' }, // Používame gap a flex-wrap
+          hasUnreadNotifications && React.createElement(
             'button',
             {
               onClick: handleMarkAllAsRead,
@@ -587,14 +641,23 @@ function NotificationsApp() {
             },
             'Označiť všetky ako prečítané'
           ),
-          hasAtLeastTwoNotifications && React.createElement(
+          hasNotifications && React.createElement( // Zmena: ukážeme ak sú nejaké notifikácie
             'button',
             {
-              onClick: handleDeleteAllNotificationsClick, // Calls new function to open modal
+              onClick: handleDeleteAllNotificationsClick,
               className: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
               disabled: loading,
             },
             'Vymazať všetky'
+          ),
+          hasDeletedByMeNotifications && React.createElement( // NOVÉ TLAČIDLO: Obnoviť vybrané
+            'button',
+            {
+                onClick: handleRestoreSelectedNotificationsClick,
+                className: 'bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+                disabled: loading || selectedNotificationsToRestore.size === 0,
+            },
+            'Obnoviť vybrané'
           )
         ),
         notifications.length === 0 && !loading ? (
@@ -604,25 +667,37 @@ function NotificationsApp() {
                 'div',
                 { className: 'space-y-4' },
                 notifications.map(notification => (
+                    // ZMENA: Ak je notifikácia označená ako deletedByMe, pridáme triedu pre zobrazenie
+                    // zaškrtávacieho políčka a odlišný štýl.
                     React.createElement(
                         'div',
                         { 
                             key: notification.id, 
-                            // Dynamické triedy podľa 'read' stavu notifikácie
-                            className: `p-4 rounded-lg shadow-md flex flex-col justify-between items-start ${notification.read ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-800 border border-blue-200'}` 
+                            className: `p-4 rounded-lg shadow-md flex flex-col justify-between items-start 
+                                ${notification.deletedByMe ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' : 
+                                   (notification.read ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-800 border border-green-200')}` 
                         },
                         React.createElement(
                             'div',
                             { className: 'flex-1 mb-2 w-full' },
-                            // ZMENA: Nadpis notifikácie s userEmail
-                            React.createElement('p', { className: 'text-base text-gray-700 mb-2' }, // Removed font-semibold
+                            // ZMENA: Checkbox pre obnovu ak je notifikácia deletedByMe
+                            notification.deletedByMe && React.createElement(
+                                'div',
+                                { className: 'flex items-center mb-2' },
+                                React.createElement('input', {
+                                    type: 'checkbox',
+                                    checked: selectedNotificationsToRestore.has(notification.id),
+                                    onChange: (e) => handleNotificationSelectionChange(notification.id, e.target.checked),
+                                    className: 'form-checkbox h-4 w-4 text-indigo-600 mr-2'
+                                }),
+                                React.createElement('p', { className: 'text-sm text-yellow-800' }, 'Vymazané (na obnovenie zaškrtnite)')
+                            ),
+                            React.createElement('p', { className: 'text-base text-gray-700 mb-2' },
                                 `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
                             ),
-                            // ZMENA: Zobrazuje všetky elementy z poľa 'changes' ako zoznam s aplikovanými štýlmi
                             notification.changes && notification.changes.length > 0 ? (
                                 React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
                                     notification.changes.map((change, index) => (
-                                        // Každý riadok notifikácie sa teraz spracováva pomocou renderStyledText
                                         React.createElement('li', { key: index }, renderStyledText(change))
                                     ))
                                 )
@@ -633,10 +708,10 @@ function NotificationsApp() {
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
                             )
                         ),
-                        React.createElement(
+                        // Tlačidlá ak notifikácia nie je deletedByMe
+                        !notification.deletedByMe && React.createElement(
                             'div',
                             { className: 'flex justify-end space-x-2 mt-2 w-full' },
-                            // Tlačidlo "Označiť ako prečítané" len ak notifikácia nie je prečítaná
                             !notification.read && React.createElement(
                                 'button',
                                 {
