@@ -2487,6 +2487,15 @@ const recalculateTeamCounts = (teamToUpdate) => {
     teamToUpdate.womenTeamMemberDetails = teamToUpdate.womenTeamMemberDetails || [];
     teamToUpdate.driverDetailsMale = teamToUpdate.driverDetailsMale || [];
     teamToUpdate.driverDetailsFemale = teamToUpdate.driverDetailsFemale || [];
+
+    // Calculate and set the counts directly on the teamToUpdate object
+    teamToUpdate.players = teamToUpdate.playerDetails.length;
+    teamToUpdate.menTeamMembersCount = teamToUpdate.menTeamMemberDetails.length;
+    teamToUpdate.womenTeamMembersCount = teamToUpdate.womenTeamMemberDetails.length;
+    teamToUpdate.drivers = { // Používame vnorený objekt pre šoférov, ako ste uviedli v popise
+        female: teamToUpdate.driverDetailsFemale.length,
+        male: teamToUpdate.driverDetailsMale.length
+    };
     // No need to explicitly update `players`, `menTeamMembersCount` etc. here,
     // as they are derived properties in `allTeamsFlattened` based on the array lengths.
     return teamToUpdate;
