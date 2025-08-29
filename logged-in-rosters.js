@@ -74,9 +74,254 @@ const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 // Skratky dní v týždni pre slovenčinu (0 = nedeľa, 1 = pondelok, ...)
 const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
 
+// Funkcia na získanie farby roly
+const getRoleColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#47b3ff';
+        case 'hall':
+            return '#b06835';
+        case 'user':
+            return '#9333EA';
+        default:
+            return '#1D4ED8';
+    }
+};
+
+// Komponent modálneho okna pre výber typu člena tímu
+function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData }) {
+    const [selectedType, setSelectedType] = React.useState('');
+
+    if (!show) return null;
+
+    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+
+    const handleAdd = () => {
+        if (selectedType) {
+            onSelectMemberType(selectedType);
+            setSelectedType(''); // Reset selected type
+            onClose();
+        } else {
+            showLocalNotification('Prosím, vyberte typ člena.', 'error');
+        }
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center' },
+        React.createElement(
+            'div',
+            { className: 'relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg' },
+            React.createElement(
+                'div',
+                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
+                React.createElement('h3', { className: 'text-xl font-semibold' }, 'Pridať člena tímu'),
+                React.createElement(
+                    'button',
+                    { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
+                    '×'
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'space-y-4' },
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'memberType', className: 'block text-sm font-medium text-gray-700' }, 'Typ člena'),
+                    React.createElement('select', {
+                        id: 'memberType',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: selectedType,
+                        onChange: (e) => setSelectedType(e.target.value),
+                        required: true
+                    },
+                    React.createElement('option', { value: '' }, 'Vyberte typ'),
+                    React.createElement('option', { value: 'player' }, 'Hráč'),
+                    React.createElement('option', { value: 'womenTeamMember' }, 'Člen realizačného tímu (žena)'),
+                    React.createElement('option', { value: 'menTeamMember' }, 'Člen realizačného tímu (muž)'),
+                    React.createElement('option', { value: 'driverFemale' }, 'Šofér (žena)'),
+                    React.createElement('option', { value: 'driverMale' }, 'Šofér (muž)')
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end space-x-2 mt-6' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: onClose,
+                            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: handleAdd,
+                            className: `px-4 py-2 text-white rounded-md transition-colors`,
+                            style: { backgroundColor: roleColor, hoverBackgroundColor: roleColor }
+                        },
+                        'Pridať'
+                    )
+                )
+            )
+        )
+    );
+}
+
+// Komponent modálneho okna pre pridanie detailov člena tímu
+function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData }) {
+    const [firstName, setFirstName] = React.useState('');
+    const [lastName, setLastName] = React.useState('');
+    const [dateOfBirth, setDateOfBirth] = React.useState('');
+    const [jerseyNumber, setJerseyNumber] = React.useState('');
+    const [registrationNumber, setRegistrationNumber] = React.useState('');
+    const [street, setStreet] = React.useState('');
+    const [houseNumber, setHouseNumber] = React.useState('');
+    const [postalCode, setPostalCode] = React.useState('');
+    const [city, setCity] = React.useState('');
+    const [country, setCountry] = React.useState('');
+
+    React.useEffect(() => {
+        // Reset form when modal opens for a new memberType or closes
+        if (show) {
+            setFirstName('');
+            setLastName('');
+            setDateOfBirth('');
+            setJerseyNumber('');
+            setRegistrationNumber('');
+            setStreet('');
+            setHouseNumber('');
+            setPostalCode('');
+            setCity('');
+            setCountry('');
+        }
+    }, [show, memberType]);
+
+    if (!show) return null;
+
+    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const newMember = {
+            firstName,
+            lastName,
+            dateOfBirth,
+            ...(memberType === 'player' && { jerseyNumber: parseInt(jerseyNumber, 10) || null }), // Len pre hráča
+            ...(memberType === 'player' && { registrationNumber }), // Len pre hráča
+            address: {
+                street,
+                houseNumber,
+                postalCode,
+                city,
+                country
+            }
+        };
+        onSaveMember(newMember);
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center' },
+        React.createElement(
+            'div',
+            { className: 'relative p-8 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg' },
+            React.createElement(
+                'div',
+                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
+                React.createElement('h3', { className: 'text-xl font-semibold' }, `Pridať ${
+                    memberType === 'player' ? 'hráča' :
+                    memberType === 'womenTeamMember' ? 'členku realizačného tímu' :
+                    memberType === 'menTeamMember' ? 'člena realizačného tímu' :
+                    memberType === 'driverFemale' ? 'šoférku' :
+                    memberType === 'driverMale' ? 'šoféra' : 'člena'
+                }`),
+                React.createElement(
+                    'button',
+                    { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
+                    '×'
+                )
+            ),
+            React.createElement(
+                'form',
+                { onSubmit: handleSubmit, className: 'space-y-4' },
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'firstName', className: 'block text-sm font-medium text-gray-700' }, 'Meno'),
+                    React.createElement('input', { type: 'text', id: 'firstName', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: firstName, onChange: (e) => setFirstName(e.target.value), required: true })
+                ),
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'lastName', className: 'block text-sm font-medium text-gray-700' }, 'Priezvisko'),
+                    React.createElement('input', { type: 'text', id: 'lastName', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: lastName, onChange: (e) => setLastName(e.target.value), required: true })
+                ),
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'dateOfBirth', className: 'block text-sm font-medium text-gray-700' }, 'Dátum narodenia'),
+                    React.createElement('input', { type: 'date', id: 'dateOfBirth', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: dateOfBirth, onChange: (e) => setDateOfBirth(e.target.value) })
+                ),
+                (memberType === 'player') && React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'jerseyNumber', className: 'block text-sm font-medium text-gray-700' }, 'Číslo dresu'),
+                    React.createElement('input', { type: 'number', id: 'jerseyNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: jerseyNumber, onChange: (e) => setJerseyNumber(e.target.value) })
+                ),
+                (memberType === 'player') && React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'registrationNumber', className: 'block text-sm font-medium text-gray-700' }, 'Číslo registrácie'),
+                    React.createElement('input', { type: 'text', id: 'registrationNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: registrationNumber, onChange: (e) => setRegistrationNumber(e.target.value) })
+                ),
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'street', className: 'block text-sm font-medium text-gray-700' }, 'Ulica'),
+                    React.createElement('input', { type: 'text', id: 'street', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: street, onChange: (e) => setStreet(e.target.value) })
+                ),
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'houseNumber', className: 'block text-sm font-medium text-gray-700' }, 'Popisné číslo'),
+                    React.createElement('input', { type: 'text', id: 'houseNumber', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: houseNumber, onChange: (e) => setHouseNumber(e.target.value) })
+                ),
+                React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                    React.createElement('div', null,
+                        React.createElement('label', { htmlFor: 'postalCode', className: 'block text-sm font-medium text-gray-700' }, 'PSČ'),
+                        React.createElement('input', { type: 'text', id: 'postalCode', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: postalCode, onChange: (e) => setPostalCode(e.target.value) })
+                    ),
+                    React.createElement('div', null,
+                        React.createElement('label', { htmlFor: 'city', className: 'block text-sm font-medium text-gray-700' }, 'Mesto/Obec'),
+                        React.createElement('input', { type: 'text', id: 'city', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: city, onChange: (e) => setCity(e.target.value) })
+                    )
+                ),
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'country', className: 'block text-sm font-medium text-gray-700' }, 'Krajina'),
+                    React.createElement('input', { type: 'text', id: 'country', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: country, onChange: (e) => setCountry(e.target.value) })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end space-x-2 mt-6' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: onClose,
+                            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'submit',
+                            className: `px-4 py-2 text-white rounded-md transition-colors`,
+                            style: { backgroundColor: roleColor, hoverBackgroundColor: roleColor }
+                        },
+                        'Pridať člena'
+                    )
+                )
+            )
+        )
+    );
+}
+
 
 // Komponent modálneho okna pre úpravu tímu
-function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes }) {
+function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, onAddMember }) {
     // Tieto stavy sa stále inicializujú z teamData, ale input boxy sa pre ne nebudú renderovať.
     // Sú potrebné pre zostavenie updatedTeamData v handleSubmit.
     const [editedTeamName, setEditedTeamName] = React.useState(teamData ? teamData.teamName : '');
@@ -120,19 +365,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
 
     if (!show) return null;
 
-    // Funkcia na získanie farby roly pre nadpis modálneho okna
-    const getRoleColor = (role) => {
-        switch (role) {
-            case 'admin':
-                return '#47b3ff';
-            case 'hall':
-                return '#b06835';
-            case 'user':
-                return '#9333EA';
-            default:
-                return '#1D4ED8';
-        }
-    };
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
 
@@ -423,6 +655,10 @@ function RostersApp() {
   const [availablePackages, setAvailablePackages] = React.useState([]); // Nový stav pre balíky z databázy
   const [availableAccommodationTypes, setAvailableAccommodationTypes] = React.useState([]); // Nový stav pre typy ubytovania
   const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]); // Nový stav pre dostupné veľkosti tričiek
+  const [showAddMemberTypeModal, setShowAddMemberTypeModal] = React.useState(false); // Stav pre modálne okno výberu typu člena
+  const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = React.useState(false); // Stav pre modálne okno detailov člena
+  const [memberTypeToAdd, setMemberTypeToAdd] = React.useState(null); // Typ člena, ktorý sa má pridať
+  const [teamToAddMemberTo, setTeamToAddMemberTo] = React.useState(null); // Tím, do ktorého sa pridáva člen
 
   // Loading stav pre používateľský profil
   const [loading, setLoading] = React.useState(true); 
@@ -758,20 +994,84 @@ function RostersApp() {
     }
 };
 
-    // Funkcia na získanie farby roly pre nadpis
-    const getRoleColor = (role) => {
-        switch (role) {
-            case 'admin':
-                return '#47b3ff';
-            case 'hall':
-                return '#b06835';
-            case 'user':
-                return '#9333EA'; // Používateľ má fialovú
+  // Funkcia pre otvorenie prvého modálneho okna pre pridanie člena
+  const handleOpenAddMemberTypeModal = (team) => {
+    setTeamToAddMemberTo(team);
+    setShowAddMemberTypeModal(true);
+  };
+
+  // Funkcia po výbere typu člena, otvorí druhé modálne okno
+  const handleSelectMemberType = (type) => {
+    setMemberTypeToAdd(type);
+    setShowAddMemberTypeModal(false); // Zatvorí prvý modal
+    setShowAddMemberDetailsModal(true); // Otvorí druhý modal
+  };
+
+  // Funkcia pre uloženie nového člena tímu
+  const handleSaveNewMember = async (newMemberDetails) => {
+    if (!user || !user.uid || !teamToAddMemberTo || !memberTypeToAdd) {
+        showLocalNotification('Chyba: Chýbajú dáta pre pridanie člena.', 'error');
+        return;
+    }
+
+    const teamCategory = teamToAddMemberTo.categoryName;
+    const teamIndex = teamsData[teamCategory].findIndex(t => t.teamName === teamToAddMemberTo.teamName);
+
+    if (teamIndex !== -1) {
+        const userDocRef = doc(db, 'users', user.uid);
+        const currentTeams = { ...teamsData };
+        const updatedTeam = { ...currentTeams[teamCategory][teamIndex] };
+
+        // Inicializácia polí, ak neexistujú
+        if (!updatedTeam.playerDetails) updatedTeam.playerDetails = [];
+        if (!updatedTeam.menTeamMemberDetails) updatedTeam.menTeamMemberDetails = [];
+        if (!updatedTeam.womenTeamMemberDetails) updatedTeam.womenTeamMemberDetails = [];
+        if (!updatedTeam.driverDetailsFemale) updatedTeam.driverDetailsFemale = [];
+        if (!updatedTeam.driverDetailsMale) updatedTeam.driverDetailsMale = [];
+
+        // Pridanie člena do správneho poľa
+        switch (memberTypeToAdd) {
+            case 'player':
+                updatedTeam.playerDetails.push(newMemberDetails);
+                updatedTeam.players = (updatedTeam.players || 0) + 1; // Aktualizácia počtu
+                break;
+            case 'womenTeamMember':
+                updatedTeam.womenTeamMemberDetails.push(newMemberDetails);
+                updatedTeam.womenTeamMembers = (updatedTeam.womenTeamMembers || 0) + 1;
+                break;
+            case 'menTeamMember':
+                updatedTeam.menTeamMemberDetails.push(newMemberDetails);
+                updatedTeam.menTeamMembers = (updatedTeam.menTeamMembers || 0) + 1;
+                break;
+            case 'driverFemale':
+                updatedTeam.driverDetailsFemale.push(newMemberDetails);
+                // Nemá samostatný počet driversFemale, použijeme dĺžku poľa
+                break;
+            case 'driverMale':
+                updatedTeam.driverDetailsMale.push(newMemberDetails);
+                // Nemá samostatný počet driversMale, použijeme dĺžku poľa
+                break;
             default:
-                return '#1D4ED8';
+                console.warn("Neznámy typ člena na pridanie:", memberTypeToAdd);
+                showLocalNotification('Chyba: Neznámy typ člena.', 'error');
+                return;
         }
-    };
-    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+        
+        currentTeams[teamCategory][teamIndex] = updatedTeam;
+
+        try {
+            await updateDoc(userDocRef, {
+                teams: currentTeams
+            });
+            showLocalNotification('Člen tímu bol úspešne pridaný!', 'success');
+        } catch (error) {
+            console.error("Chyba pri pridávaní člena tímu:", error);
+            showLocalNotification('Nastala chyba pri pridávaní člena tímu.', 'error');
+        }
+    } else {
+        showLocalNotification('Chyba: Tím nebol nájdený pre pridanie člena.', 'error');
+    }
+  };
 
 
   return React.createElement(
@@ -850,7 +1150,7 @@ function RostersApp() {
                                 onClick: () => handleOpenEditTeamModal({ ...team, categoryName: categoryName }),
                                 className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
                                 'aria-label': 'Upraviť tím',
-                                style: { color: roleColor }
+                                style: { color: getRoleColor(userProfileData?.role) }
                             },
                             React.createElement(
                                 'svg',
@@ -973,6 +1273,20 @@ function RostersApp() {
                                 ))
                               )
                             )
+                          ),
+                          React.createElement(
+                            'div',
+                            { className: 'flex justify-center mt-4' },
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleOpenAddMemberTypeModal({ ...team, categoryName: categoryName }),
+                                    className: 'flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
+                                    'aria-label': 'Pridať člena tímu'
+                                },
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
+                            )
                           )
                         )
                       )
@@ -998,6 +1312,27 @@ function RostersApp() {
           availablePackages: availablePackages, // Odovzdanie zoznamu balíkov
           availableAccommodationTypes: availableAccommodationTypes, // Odovzdanie typov ubytovania
           availableTshirtSizes: availableTshirtSizes // Odovzdanie dostupných veľkostí tričiek
+        }
+      ),
+      // Modálne okno pre výber typu člena
+      React.createElement(
+        AddMemberTypeModal,
+        {
+          show: showAddMemberTypeModal,
+          onClose: () => setShowAddMemberTypeModal(false),
+          onSelectMemberType: handleSelectMemberType,
+          userProfileData: userProfileData
+        }
+      ),
+      // Modálne okno pre detaily člena
+      React.createElement(
+        AddMemberDetailsModal,
+        {
+          show: showAddMemberDetailsModal,
+          onClose: () => setShowAddMemberDetailsModal(false),
+          onSaveMember: handleSaveNewMember,
+          memberType: memberTypeToAdd,
+          userProfileData: userProfileData
         }
       )
     )
