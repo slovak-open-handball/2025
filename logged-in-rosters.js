@@ -306,7 +306,7 @@ function RostersApp() {
                     }, 
                       // Kontajner pre fialový pásik a texty kategórie a názvu tímu
                       React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 rounded-t-lg' }, 
-                        React.createElement('div', { className: 'text-center font-bold mb-2' }, 'Súpiska tímu'), // Pôvodný nadpis "Súpiska tímu"
+                        React.createElement('div', { className: 'text-center font-bold text-xl mb-2' }, 'Súpiska tímu'), // Pridané text-xl
                         React.createElement('p', { className: 'text-xl font-semibold mb-2' }, `Kategória: ${categoryName}`), 
                         React.createElement('p', { className: 'text-xl font-semibold mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`)
                       ),
