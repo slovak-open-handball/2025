@@ -1262,25 +1262,20 @@ function RostersApp() {
     let unsubscribeCategories;
     if (db) {
         try {
-            // Predpokladáme, že 'settings' je kolekcia a 'categories' je dokument,
-            // ktorý obsahuje subkolekciu s náhodnými ID dokumentov, kde každý má pole 'name'.
-            // Správna referencia na kolekciu by teda mala byť: collection(db, 'settings', 'categories', 'nejake_nahodne_ID_dokumentu_s_kategoriou', 'subkolekcia_s_kategoriami')
-            // Ak je categories subkolekcia v dokumente 'settings', tak cesta bude: collection(db, 'settings', 'categories').
-            // Ak 'categories' je názov subkolekcie v DOKUMENTE 'settings' a v nej sú náhodné ID s poľom 'name',
-            // potom potrebujeme iterovať cez dokumenty v subkolekcii 'categories'.
-
-            // Zjednodušená verzia, ak 'categories' je subkolekcia, kde každý dokument má pole 'name'.
-            const categoriesCollectionRef = collection(db, 'settings', 'categories'); // Opravená referencia
-            unsubscribeCategories = onSnapshot(categoriesCollectionRef, (snapshot) => {
-                const categoriesList = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.name) {
-                        categoriesList.push(data.name);
-                    }
-                });
-                setAvailableCategoriesFromSettings(categoriesList);
-                console.log("RostersApp: Categories from settings loaded:", categoriesList);
+            // Referencia na dokument 'categories' v kolekcii 'settings'
+            const categoriesDocRef = doc(db, 'settings', 'categories'); 
+            unsubscribeCategories = onSnapshot(categoriesDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    // Predpokladáme, že kategórie sú uložené v poli s názvom 'categoryNames'
+                    // Ak máte iný názov poľa (napr. 'names', 'list'), upravte ho tu.
+                    const categoriesList = data.categoryNames || []; 
+                    setAvailableCategoriesFromSettings(categoriesList);
+                    console.log("RostersApp: Categories from settings loaded:", categoriesList);
+                } else {
+                    console.warn("RostersApp: Dokument 'settings/categories' sa nenašiel.");
+                    setAvailableCategoriesFromSettings([]);
+                }
             }, (error) => {
                 console.error("RostersApp: Error fetching categories from settings:", error);
             });
