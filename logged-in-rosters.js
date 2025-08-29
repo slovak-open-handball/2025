@@ -51,6 +51,24 @@ function showLocalNotification(message, type = 'success') {
     }, 5000);
 }
 
+// Formátovanie dátumu na DD. MM. RRRR
+const formatDateToDMMYYYY = (dateString) => {
+    if (!dateString) return '-';
+    const [year, month, day] = dateString.split('-');
+    if (year && month && day) {
+        return `${day}. ${month}. ${year}`;
+    }
+    return dateString;
+};
+
+// Mapovanie typov jedál na slovenské názvy
+const mealTypeLabels = {
+    breakfast: 'Raňajky',
+    lunch: 'Obed',
+    dinner: 'Večera',
+    refreshment: 'Občerstvenie'
+};
+
 
 // Main React component for the logged-in-rosters.html page
 function RostersApp() {
@@ -319,8 +337,41 @@ function RostersApp() {
                         // Nové informácie o doprave, ubytovaní a balíku
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`), 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`), 
-                        React.createElement('p', { className: 'text-md text-gray-700 mb-4' }, `Balík: ${packageName}`), 
-
+                        
+                        // Zobrazenie detailov balíka
+                        team.packageDetails && React.createElement(
+                            'div',
+                            { className: 'mt-2 mb-4' }, // upravené marginy
+                            React.createElement('p', { className: 'text-md text-gray-700' }, `Balík: ${packageName}`),
+                            React.createElement(
+                                'div',
+                                { className: 'ml-4 mt-2 mb-4 space-y-1' }, // Odsadenie a priestor pre detaily
+                                React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} €`),
+                                React.createElement('p', { className: 'text-sm text-gray-600' }, `Účastnícka karta: ${team.packageDetails.participantCard === 1 ? 'Áno' : 'Nie'}`),
+                                team.packageDetails.meals && React.createElement(
+                                    'div',
+                                    { className: 'mt-2' },
+                                    React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
+                                    // Zobrazenie jedál pre každý dátum
+                                    Object.keys(team.packageDetails.meals).sort().map(date =>
+                                        React.createElement(
+                                            'div',
+                                            { key: date, className: 'ml-2' },
+                                            React.createElement('p', { className: 'text-sm text-gray-600' }, `Dátum: ${formatDateToDMMYYYY(date)}`),
+                                            React.createElement(
+                                                'ul',
+                                                { className: 'list-disc list-inside ml-4' },
+                                                Object.entries(team.packageDetails.meals[date]).map(([mealType, status]) =>
+                                                    React.createElement('li', { key: `${date}-${mealType}`, className: 'text-sm text-gray-600' },
+                                                        `${mealTypeLabels[mealType] || mealType}: ${status === 1 ? 'Áno' : 'Nie'}`
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
                         // Zobrazenie veľkostí a počtu tričiek
                         team.tshirts && team.tshirts.length > 0 && (
                             React.createElement('div', { className: 'mb-4 w-full' }, // Pridané w-full
