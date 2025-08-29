@@ -242,10 +242,22 @@ function RostersApp() {
                 React.createElement('div', { className: 'space-y-6' }, // Priestor medzi jednotlivými tímami v kategórii
                   teamsArray.map((team, index) => {
                     const allMembers = getAllTeamMembers(team);
+                    
+                    // Extrahovanie informácií o doprave, ubytovaní a balíku
+                    const arrivalType = team.arrival?.type || 'Nezadané';
+                    const accommodationType = team.accommodation?.type || 'Nezadané';
+                    const packageName = team.packageDetails?.name || 'Nezadané';
+
                     return React.createElement('div', { key: index, className: 'border-l-4 border-blue-600 pl-4 py-4 bg-white rounded-md shadow-sm' }, // Modrejší border, biely background
                       React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
                       React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`),
-                      React.createElement('p', { className: 'text-md text-gray-700 mb-4' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`),
+                      React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`),
+                      
+                      // Nové informácie o doprave, ubytovaní a balíku
+                      React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}`),
+                      React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
+                      React.createElement('p', { className: 'text-md text-gray-700 mb-4' }, `Balík: ${packageName}`),
+
 
                       allMembers.length > 0 && (
                         React.createElement('div', { className: 'mt-4' },
