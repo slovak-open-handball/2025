@@ -223,7 +223,7 @@ function NotificationsApp() {
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true && user) {
       console.log("NotificationsApp: Logged-in user is an approved administrator. Loading notifications.");
       try {
-        // ZMENA: Načítanie notifikácií z kolekcie '/notifications'
+        // Načítanie notifikácií z kolekcie '/notifications'
         // Notifikácie sú pre všetkých adminov, stav seenBy/deletedBy sa riadi individuálne.
         const notificationsCollectionRef = collection(db, 'notifications');
         
@@ -232,11 +232,11 @@ function NotificationsApp() {
           const fetchedNotifications = [];
           snapshot.forEach(document => {
             const data = document.data();
-            // ZMENA: Filter based on deletedBy for the current user
+            // Filter based on deletedBy for the current user
             const isDeletedForCurrentUser = data.deletedBy && data.deletedBy.includes(user.uid);
             
             if (!isDeletedForCurrentUser) {
-              // ZMENA: Notifikácia je "prečítaná" ak je user.uid v seenBy poli
+              // Notifikácia je "prečítaná" ak je user.uid v seenBy poli
               const isRead = data.seenBy && data.seenBy.includes(user.uid);
               fetchedNotifications.push({
                 id: document.id,
@@ -272,7 +272,7 @@ function NotificationsApp() {
         unsubscribeNotifications();
       }
     };
-  }, [db, userProfileData, user, window.isGlobalAuthReady]); // Removed allAdminUids from dependencies, as it's not used for recipientId filtering here
+  }, [db, userProfileData, user, window.isGlobalAuthReady]);
 
 
   const handleMarkAsRead = async (notificationId) => {
@@ -283,7 +283,7 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      // ZMENA: Aktualizujeme pole 'seenBy'
+      // Aktualizujeme pole 'seenBy'
       const notificationRef = doc(db, 'notifications', notificationId);
       await updateDoc(notificationRef, {
         seenBy: arrayUnion(user.uid) // Pridáme ID používateľa do poľa seenBy
@@ -365,7 +365,7 @@ function NotificationsApp() {
       const batch = writeBatch(db);
       unreadNotifications.forEach(notification => {
         const notificationRef = doc(db, 'notifications', notification.id);
-        batch.update(notificationRef, { seenBy: arrayUnion(user.uid) }); // ZMENA: Aktualizujeme pole seenBy
+        batch.update(notificationRef, { seenBy: arrayUnion(user.uid) }); // Aktualizujeme pole seenBy
       });
 
       await batch.commit();
@@ -418,7 +418,7 @@ function NotificationsApp() {
         if (allAdminUids.length > 0 && deletedBy.length >= allAdminUids.length) {
           batch.delete(notificationRef);
         } else {
-          batch.update(notificationRef, { deletedBy: arrayUnion(user.uid) }); // ZMENA: Aktualizujeme pole deletedBy
+          batch.update(notificationRef, { deletedBy: arrayUnion(user.uid) }); // Aktualizujeme pole deletedBy
         }
       });
 
@@ -538,13 +538,16 @@ function NotificationsApp() {
                         'div',
                         { 
                             key: notification.id, 
-                            // ZMENA: Dynamické triedy podľa 'read' stavu notifikácie
+                            // Dynamické triedy podľa 'read' stavu notifikácie
                             className: `p-4 rounded-lg shadow-md flex justify-between items-center ${notification.read ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-800 border border-blue-200'}` 
                         },
                         React.createElement(
                             'div',
                             { className: 'flex-1' },
-                            React.createElement('p', { className: 'font-semibold' }, notification.message),
+                            // ZMENA: Zobrazuje prvý element z poľa 'changes', ak existuje
+                            React.createElement('p', { className: 'font-semibold' }, 
+                                notification.changes && notification.changes.length > 0 ? notification.changes[0] : 'Chybná notifikácia'
+                            ),
                             notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500' }, 
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
                             )
@@ -552,7 +555,7 @@ function NotificationsApp() {
                         React.createElement(
                             'div',
                             { className: 'flex space-x-2 ml-4' },
-                            // ZMENA: Tlačidlo "Označiť ako prečítané" len ak notifikácia nie je prečítaná
+                            // Tlačidlo "Označiť ako prečítané" len ak notifikácia nie je prečítaná
                             !notification.read && React.createElement(
                                 'button',
                                 {
