@@ -692,40 +692,28 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         if (selectedCategory && teamsData && clubName !== 'Neznámy klub') {
             const allTeamsInCategory = teamsData[selectedCategory] || [];
 
-            // Filtrujeme existujúce tímy, ktoré patria pod rovnaký klub a kategóriu.
-            // Ignorujeme prípad, kedy názov tímu je len samotný clubName (bez sufixu), aby
-            // sa vyhnúť duplicitným názvom s novo pridaným "hlavným" tímom.
-            const existingClubTeams = allTeamsInCategory.filter(
-                team => team.clubName?.trim() === clubName && 
-                        team.categoryName === selectedCategory &&
-                        team.teamName.startsWith(clubName) 
+            // Filtrujeme existujúce tímy, ktoré patria pod rovnaký klub a kategóriu
+            const existingClubTeamsForCategory = allTeamsInCategory.filter(
+                team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory
             );
 
-            // Spočítame, koľko "prírastkových" tímov (s A, B, C...) už existuje.
-            // To nám dá správny index pre nový tím.
-            const countExistingIncrementalTeams = existingClubTeams.filter(team => {
-                const suffixRegex = new RegExp(`^${clubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s+([A-Z])$`);
-                return suffixRegex.test(team.teamName);
-            }).length;
+            // Určíme počet tímov, ktoré by existovali *po* pridaní nového tímu.
+            // Tento počet priamo koreluje s indexom sufixu:
+            // 1. tím (po pridaní nového) -> názov klubu (bez sufixu)
+            // 2. tím (po pridaní nového) -> názov klubu A
+            // 3. tím (po pridaní nového) -> názov klubu B
+            const numberOfTeamsAfterAddingNew = existingClubTeamsForCategory.length + 1;
 
-            let generatedNameForNewTeam = '';
-
-            // Ak žiadne prírastkové tímy pre daný klub v kategórii neexistujú, nový tím bude "ClubName A"
-            // (a existujúci by sa mal premenovať na "ClubName A", ak to bol len "ClubName")
-            // alebo ak existuje len jeden tím (bez sufixu)
-            if (existingClubTeams.length === 0) {
-                 generatedNameForNewTeam = clubName; // Nový tím bude mať základný názov
-            } else if (existingClubTeams.length === 1 && existingClubTeams[0].teamName === clubName) {
-                // Ak existuje len jeden tím a je to základný názov, nový tím bude "ClubName A"
-                generatedNameForNewTeam = `${clubName} A`;
-            }
-            else {
-                // V opačnom prípade priradíme ďalšie písmeno abecedy.
-                // countExistingIncrementalTeams už zohľadňuje existujúce tímy s písmenom.
-                generatedNameForNewTeam = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + countExistingIncrementalTeams)}`;
+            let generatedName = '';
+            if (numberOfTeamsAfterAddingNew === 1) {
+                generatedName = clubName;
+            } else {
+                // Pre n-tý tím (kde n = numberOfTeamsAfterAddingNew), index sufixu je n-1.
+                // Znak sufixu je 'A' + (index - 1), pretože 'A' je pre 2. tím (index 1), 'B' pre 3. tím (index 2).
+                generatedName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + (numberOfTeamsAfterAddingNew - 2))}`;
             }
             
-            setTeamNamePreview(generatedNameForNewTeam);
+            setTeamNamePreview(generatedName);
         } else {
             setTeamNamePreview('');
         }
