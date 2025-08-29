@@ -714,7 +714,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     const [arrivalMinute, setArrivalMinute] = React.useState('');
     const [accommodationType, setAccommodationType] = React.useState('bez ubytovania'); // Predvolená hodnota
     const [packageName, setPackageName] = React.useState(availablePackages.length > 0 ? availablePackages.sort()[0] : ''); // Predvolená hodnota
-    const [tshirtEntries, setTshirtEntries] = React.useState([]);
+    // Odstránený stav pre tričká, pretože sa nebudú spravovať pri vytváraní tímu
 
     const clubName = userProfileData?.clubName || 'Neznámy klub';
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
@@ -729,7 +729,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             setArrivalMinute('');
             setAccommodationType('bez ubytovania');
             setPackageName(availablePackages.length > 0 ? availablePackages.sort()[0] : '');
-            setTshirtEntries([]);
+            // Odstránený reset tričiek
         }
     }, [show, availablePackages]);
 
@@ -762,45 +762,22 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
     }, [selectedCategory, clubName, teamsData]);
 
-    const totalMembersInTeam = 0; // Nový tím má na začiatku 0 členov
-    const totalTshirtsQuantity = tshirtEntries.reduce((sum, entry) => sum + (parseInt(entry.quantity, 10) || 0), 0);
-    const allTshirtSizesSelected = tshirtEntries.every(tshirt => tshirt.size !== '');
-    
-    // Tlačidlo "Uložiť" je neaktívne, ak nie je vybraná kategória, vygenerovaný názov tímu, 
-    // alebo ak sa počet tričiek nezhoduje s počtom členov (čo je 0 pre nový tím)
-    const isSaveButtonDisabled = !selectedCategory || !teamNamePreview || totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected;
-    const isAddTshirtButtonDisabled = totalTshirtsQuantity === totalMembersInTeam; // Zablokované, ak je 0 členov (pre nový tím)
+    // Pre nový tím sú tričká prázdne a počet členov je 0, takže stačí kontrolovať kategóriu a názov tímu
+    const isSaveButtonDisabled = !selectedCategory || !teamNamePreview;
 
     const showArrivalTimeInputs = arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus';
 
     const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
     const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
-    const handleAddTshirtEntry = () => {
-        setTshirtEntries([...tshirtEntries, { size: '', quantity: 1 }]);
-    };
+    // Odstránené funkcie pre správu tričiek
 
-    const handleRemoveTshirtEntry = (index) => {
-        setTshirtEntries(tshirtEntries.filter((_, i) => i !== index));
-    };
-
-    const handleTshirtSizeChange = (index, newSize) => {
-        const updatedEntries = [...tshirtEntries];
-        updatedEntries[index].size = newSize;
-        setTshirtEntries(updatedEntries);
-    };
-
-    const handleTshirtQuantityChange = (index, newQuantity) => {
-        const updatedEntries = [...tshirtEntries];
-        updatedEntries[index].quantity = Math.max(1, parseInt(newQuantity, 10) || 1);
-        setTshirtEntries(updatedEntries);
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (isSaveButtonDisabled) {
-            showLocalNotification('Prosím, vyplňte kategóriu, uistite sa, že počet tričiek sa zhoduje s počtom členov tímu (0 pre nový tím) a sú vybraté všetky veľkosti tričiek.', 'error');
+            showLocalNotification('Prosím, vyplňte kategóriu a názov tímu.', 'error');
             return;
         }
 
@@ -809,8 +786,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             finalArrivalTime = `${arrivalHour.padStart(2, '0')}:${arrivalMinute.padStart(2, '0')}`;
         }
 
-        const filteredTshirtEntries = tshirtEntries.filter(t => t.size && t.quantity && parseInt(t.quantity, 10) > 0)
-                                                    .map(t => ({ ...t, quantity: parseInt(t.quantity, 10) }));
+        // Tričká sú vždy prázdne pre nový tím
+        const filteredTshirtEntries = [];
 
         // Načítanie detailov balíka pre informácie o jedle a cene
         let packageDetails = {};
@@ -850,7 +827,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             arrival: { type: arrivalType, time: finalArrivalTime },
             accommodation: { type: accommodationType },
             packageDetails: packageDetails,
-            tshirts: filteredTshirtEntries,
+            tshirts: filteredTshirtEntries, // Tričká sú prázdne
         };
         await onAddTeam(newTeamData); // Zavoláme funkciu na pridanie tímu z rodičovského komponentu
         setTimeout(() => onClose(), 0);
@@ -1005,74 +982,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     )
                 ),
 
-                // Sekcia pre Tričká (začínajú prázdne)
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement(
-                        'div',
-                        { className: 'mb-2' }, 
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Tričká'),
-                    ),
-                    tshirtEntries.map((tshirt, index) => (
-                        React.createElement(
-                            'div',
-                            { key: index, className: 'flex items-center space-x-2 mb-2' },
-                            React.createElement('select', {
-                                className: 'mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm p-2',
-                                value: tshirt.size,
-                                onChange: (e) => handleTshirtSizeChange(index, e.target.value),
-                                required: true
-                            },
-                            React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
-                            availableTshirtSizes.slice().sort().map((size, sIdx) => 
-                                React.createElement('option', { key: sIdx, value: size }, size)
-                            )
-                            ),
-                            React.createElement('input', {
-                                type: 'number',
-                                className: 'mt-1 block w-1/4 border border-gray-300 rounded-md shadow-sm p-2',
-                                placeholder: 'Počet',
-                                value: tshirt.quantity,
-                                onChange: (e) => handleTshirtQuantityChange(index, e.target.value),
-                                min: '1',
-                                required: true
-                            }),
-                            React.createElement(
-                                'button',
-                                {
-                                    type: 'button',
-                                    onClick: () => handleRemoveTshirtEntry(index),
-                                    className: 'flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500'
-                                },
-                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M20 12H4' }))
-                            )
-                        )
-                    )),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-center mt-4' }, 
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: handleAddTshirtEntry,
-                                disabled: isAddTshirtButtonDisabled, 
-                                className: `flex items-center justify-center w-8 h-8 rounded-full transition-colors focus:outline-none focus:ring-2
-                                    ${isAddTshirtButtonDisabled
-                                        ? 'bg-white border border-solid' 
-                                        : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500'
-                                    }`,
-                                style: { 
-                                    cursor: isAddTshirtButtonDisabled ? 'not-allowed' : 'pointer', 
-                                    borderColor: isAddTshirtButtonDisabled ? roleColor : 'transparent', 
-                                    color: isAddTshirtButtonDisabled ? roleColor : 'white', 
-                                }
-                            },
-                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 6v6m0 0v6m0-6h6m-6 0H6' }))
-                        )
-                    )
-                ),
+                // Sekcia pre Tričká je úplne odstránená pre modal pridania nového tímu
+
                 React.createElement(
                     'div',
                     { className: 'flex justify-end space-x-2 mt-6' },
