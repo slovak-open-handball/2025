@@ -76,7 +76,7 @@ const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
 
 
 // Komponent modálneho okna pre úpravu tímu
-function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages }) {
+function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages, availableAccommodationTypes }) {
     // Tieto stavy sa stále inicializujú z teamData, ale input boxy sa pre ne nebudú renderovať.
     // Sú potrebné pre zostavenie updatedTeamData v handleSubmit.
     const [editedTeamName, setEditedTeamName] = React.useState(teamData ? teamData.teamName : '');
@@ -84,6 +84,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     // Nové stavy pre selectboxy
     const [editedArrivalType, setEditedArrivalType] = React.useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
     const [editedPackageName, setEditedPackageName] = React.useState(teamData ? teamData.packageDetails?.name || '' : '');
+    const [editedAccommodationType, setEditedAccommodationType] = React.useState(teamData ? teamData.accommodation?.type || '' : ''); // Nový stav pre typ ubytovania
     
     // Stavy pre čas príchodu - hodiny a minúty
     const [editedArrivalHour, setEditedArrivalHour] = React.useState('');
@@ -97,6 +98,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             setEditedCategoryName(teamData.categoryName || '');
             setEditedArrivalType(teamData.arrival?.type || 'bez dopravy');
             setEditedPackageName(teamData.packageDetails?.name || '');
+            setEditedAccommodationType(teamData.accommodation?.type || ''); // Inicializácia typu ubytovania
 
             // Parsujeme čas na hodiny a minúty
             if (teamData.arrival?.time) {
@@ -147,7 +149,9 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                 time: finalArrivalTime
             },
             // Aktualizácia názvu balíka
-            packageDetails: { ...teamData.packageDetails, name: editedPackageName }
+            packageDetails: { ...teamData.packageDetails, name: editedPackageName },
+            // Aktualizácia typu ubytovania
+            accommodation: { ...teamData.accommodation, type: editedAccommodationType }
             // Ostatné počty členov/šoférov sa zatiaľ neupravujú cez toto modálne okno
         };
         await onSaveTeam(updatedTeamData);
@@ -244,6 +248,24 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         )
                     )
                 ),
+                // Selectbox pre Typ ubytovania
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'accommodationType', className: 'block text-sm font-medium text-gray-700' }, 'Typ ubytovania'),
+                    React.createElement('select', {
+                        id: 'accommodationType',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedAccommodationType,
+                        onChange: (e) => setEditedAccommodationType(e.target.value),
+                        required: true
+                    },
+                    React.createElement('option', { value: 'bez ubytovania' }, 'bez ubytovania'), // Predvolená možnosť
+                    availableAccommodationTypes.slice().sort((a,b) => a.localeCompare(b)).map((type, idx) => // Zoradenie abecedne
+                        React.createElement('option', { key: idx, value: type }, type)
+                    )
+                    )
+                ),
                 // Selectbox pre Balík
                 React.createElement(
                     'div',
@@ -302,6 +324,7 @@ function RostersApp() {
   const [showEditTeamModal, setShowEditTeamModal] = React.useState(false); // Stav pre modálne okno
   const [selectedTeam, setSelectedTeam] = React.useState(null); // Stav pre vybraný tím na úpravu
   const [availablePackages, setAvailablePackages] = React.useState([]); // Nový stav pre balíky z databázy
+  const [availableAccommodationTypes, setAvailableAccommodationTypes] = React.useState([]); // Nový stav pre typy ubytovania
 
   // Loading stav pre používateľský profil
   const [loading, setLoading] = React.useState(true); 
@@ -366,6 +389,36 @@ function RostersApp() {
       return () => {
           if (unsubscribePackages) {
               unsubscribePackages();
+          }
+      };
+  }, [db]);
+
+  // Načítanie typov ubytovania z Firestore
+  React.useEffect(() => {
+      let unsubscribeAccommodation;
+      if (db) {
+          try {
+              const accommodationDocRef = doc(db, 'settings', 'accommodation');
+              unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
+                  if (docSnapshot.exists()) {
+                      const data = docSnapshot.data();
+                      const types = data.types?.map(typeObj => typeObj.type) || [];
+                      setAvailableAccommodationTypes(types);
+                      console.log("RostersApp: Accommodation types loaded:", types);
+                  } else {
+                      console.log("RostersApp: Accommodation settings document not found.");
+                      setAvailableAccommodationTypes([]);
+                  }
+              }, (error) => {
+                  console.error("RostersApp: Error fetching accommodation types:", error);
+              });
+          } catch (e) {
+              console.error("RostersApp: Error setting up onSnapshot for accommodation types:", e);
+          }
+      }
+      return () => {
+          if (unsubscribeAccommodation) {
+              unsubscribeAccommodation();
           }
       };
   }, [db]);
@@ -814,7 +867,8 @@ function RostersApp() {
           teamData: selectedTeam,
           onSaveTeam: handleSaveTeam,
           userProfileData: userProfileData, // Pre farbu nadpisu
-          availablePackages: availablePackages // Odovzdanie zoznamu balíkov
+          availablePackages: availablePackages, // Odovzdanie zoznamu balíkov
+          availableAccommodationTypes: availableAccommodationTypes // Odovzdanie typov ubytovania
         }
       )
     )
