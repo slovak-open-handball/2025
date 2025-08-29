@@ -141,6 +141,7 @@ function NotificationsApp() {
   const [selectedNotificationsToRestore, setSelectedNotificationsToRestore] = React.useState(new Set());
   const [showRestoreConfirmationModal, setShowRestoreConfirmationModal] = React.useState(false);
   const [showRestoreView, setShowRestoreView] = React.useState(false); // ZMENA: Nový stav pre zobrazenie/skrytie obnovovacích oznámení
+  const [areAllRestorableSelected, setAreAllRestorableSelected] = React.useState(false); // NOVÉ: Stav pre tlačidlo "Označiť všetky"
 
   // STAVY PRE MODÁLNE OKNO VYMAZANIE VŠETKÝCH NOTIFIKÁCIÍ
   const [showDeleteAllConfirmationModal, setShowDeleteAllConfirmationModal] = React.useState(false);
@@ -450,6 +451,14 @@ function NotificationsApp() {
       } else {
         newSet.delete(notificationId);
       }
+
+      // NOVÉ: Aktualizujeme stav 'areAllRestorableSelected'
+      const restorableNotifications = notifications.filter(n => n.deletedByMe);
+      if (restorableNotifications.length > 0 && newSet.size === restorableNotifications.length) {
+        setAreAllRestorableSelected(true);
+      } else {
+        setAreAllRestorableSelected(false);
+      }
       return newSet;
     });
   };
@@ -461,13 +470,35 @@ function NotificationsApp() {
       await confirmRestoreSelectedNotifications(); // Spustí obnovu vybraných
       setShowRestoreView(false); // Po obnove skryjeme režim obnovy
       setSelectedNotificationsToRestore(new Set()); // Vymažeme výber
+      setAreAllRestorableSelected(false); // NOVÉ: Zrušíme "Označiť všetky"
     } else if (showRestoreView && selectedNotificationsToRestore.size === 0) {
       // Ak je režim obnovy zapnutý, ale nič nie je vybrané, zatvoríme režim
       setShowRestoreView(false);
       setSelectedNotificationsToRestore(new Set()); // Vymažeme výber
+      setAreAllRestorableSelected(false); // NOVÉ: Zrušíme "Označiť všetky"
     } else {
       // Ak režim obnovy nie je zapnutý, zapneme ho
       setShowRestoreView(true);
+      // NOVÉ: Nastavíme 'Označiť všetky' podľa predvoleného stavu (napr. nič nie je vybrané)
+      const restorableNotifications = notifications.filter(n => n.deletedByMe);
+      if (restorableNotifications.length > 0 && selectedNotificationsToRestore.size === restorableNotifications.length) {
+        setAreAllRestorableSelected(true);
+      } else {
+        setAreAllRestorableSelected(false);
+      }
+    }
+  };
+
+  // NOVÁ FUNKCIA: Označenie/Odznačenie všetkých obnoviteľných notifikácií
+  const handleSelectAllRestorable = () => {
+    const restorableNotifications = notifications.filter(n => n.deletedByMe);
+    if (areAllRestorableSelected) {
+      setSelectedNotificationsToRestore(new Set());
+      setAreAllRestorableSelected(false);
+    } else {
+      const allRestorableIds = new Set(restorableNotifications.map(n => n.id));
+      setSelectedNotificationsToRestore(allRestorableIds);
+      setAreAllRestorableSelected(true);
     }
   };
 
@@ -489,8 +520,6 @@ function NotificationsApp() {
       await batch.commit();
       setUserNotificationMessage("Vybrané upozornenia boli úspešne obnovené.");
       setUserNotificationType('success');
-      // setSelectedNotificationsToRestore(new Set()); // Už sa robí v handleRestoreButtonAction
-      // setShowRestoreConfirmationModal(false); // Už sa robí v handleRestoreButtonAction
     } catch (e) {
       console.error("NotificationsApp: Error restoring selected notifications:", e);
       setError(`Chyba pri obnovení upozornení: ${e.message}`);
@@ -588,7 +617,7 @@ function NotificationsApp() {
 
   // Filter notifications based on whether they are deleted by the current user and if restore view is active
   const displayedNotifications = showRestoreView 
-    ? notifications // If in restore view, show all notifications
+    ? notifications.filter(n => n.deletedByMe) // If in restore view, show only notifications deleted by me
     : notifications.filter(n => !n.deletedByMe); // Otherwise, show only those not deleted by me
 
   // Check if there are any active notifications that can be seen (not deleted by me)
@@ -636,7 +665,7 @@ function NotificationsApp() {
           'Upozornenia'
         ),
         // Skupina tlačidiel
-        (hasActiveNotifications || hasDeletedByMeNotifications) && React.createElement( // ZMENA: tlačidlá sa zobrazia, ak sú buď aktívne, alebo deletedByMe
+        (hasActiveNotifications || hasDeletedByMeNotifications) && React.createElement(
           'div',
           { className: 'flex flex-wrap justify-center gap-4 mb-6' },
           hasUnreadNotifications && React.createElement(
@@ -648,7 +677,7 @@ function NotificationsApp() {
             },
             'Označiť všetky ako prečítané'
           ),
-          hasActiveNotifications && React.createElement( // ZMENA: tlačidlo "Vymazať všetky" sa zobrazí, len ak existujú notifikácie, ktoré nie sú deletedByMe
+          hasActiveNotifications && React.createElement(
             'button',
             {
               onClick: handleDeleteAllNotificationsClick,
@@ -657,7 +686,7 @@ function NotificationsApp() {
             },
             'Vymazať všetky'
           ),
-          hasDeletedByMeNotifications && React.createElement( // ZMENA: Obnovovacie tlačidlo, zobrazí sa, len ak existujú notifikácie deletedByMe
+          hasDeletedByMeNotifications && React.createElement(
             'button',
             {
                 onClick: handleRestoreButtonAction,
@@ -665,16 +694,25 @@ function NotificationsApp() {
                 disabled: loading,
             },
             restoreButtonText
+          ),
+          // NOVÉ: Tlačidlo "Označiť všetky / Odznačiť všetky" pre režim obnovy
+          showRestoreView && displayedNotifications.length > 0 && React.createElement(
+            'button',
+            {
+              onClick: handleSelectAllRestorable,
+              className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+              disabled: loading,
+            },
+            areAllRestorableSelected ? 'Odznačiť všetky' : 'Označiť všetky'
           )
         ),
-        // ZMENA: Text "Žiadne upozornenia." sa zobrazí, ak po filtrovaní nie sú žiadne notifikácie
         displayedNotifications.length === 0 && !loading ? (
             React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadne upozornenia.')
         ) : (
             React.createElement(
                 'div',
                 { className: 'space-y-4' },
-                displayedNotifications.map(notification => { // ZMENA: Mapujeme cez filtrovaný zoznam
+                displayedNotifications.map(notification => {
                     return React.createElement(
                         'div',
                         { 
@@ -714,8 +752,8 @@ function NotificationsApp() {
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
                             )
                         ),
-                        // Tlačidlá sa zobrazia, len ak notifikácia nie je deletedByMe, alebo ak sme v režime obnovy a nie je to zmazaná notifikácia (aby sa neopakovali)
-                        !notification.deletedByMe && React.createElement( // ZMENA: Tlačidlá sa nezobrazia, ak je notifikácia deletedByMe (okrem režimu obnovy)
+                        // Tlačidlá sa zobrazia, len ak notifikácia nie je deletedByMe (mimo režimu obnovy)
+                        !notification.deletedByMe && React.createElement(
                             'div',
                             { className: 'flex justify-end space-x-2 mt-2 w-full' },
                             !notification.read && React.createElement(
