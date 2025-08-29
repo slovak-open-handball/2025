@@ -258,7 +258,8 @@ function RostersApp() {
                     
                     // Extrahovanie informácií o doprave, ubytovaní a balíku
                     const arrivalType = team.arrival?.type || 'Nezadané';
-                    const accommodationType = team.accommodation?.type || 'Nezadané'; // Opravené na accommodation?.type
+                    // Opravená referencia pre typ ubytovania
+                    const accommodationType = team.accommodation?.type || 'Nezadané'; 
                     const packageName = team.packageDetails?.name || 'Nezadané';
                     
                     // Upravená podmienka pre čas príchodu s pridaným "hod."
