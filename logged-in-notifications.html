@@ -91,32 +91,12 @@
             }
         }
 
-        // Funkcia na načítanie ľavého menu
-        async function loadLeftMenu() {
-            try {
-                const response = await fetch('logged-in-left-menu.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const menuHtml = await response.text();
-                document.getElementById('left-menu-placeholder').innerHTML = menuHtml;
-                // Logika pre ľavé menu je spustená cez globalDataUpdated event v logged-in-left-menu.js
-            } catch (error) {
-                console.error("Chyba pri načítaní ľavého menu:", error);
-                document.getElementById('left-menu-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní menu.</div>';
-            }
-        }
-
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.addEventListener('DOMContentLoaded', async () => {
             // Pred spustením React aplikácie zabezpečíme, že globálne dáta sú pripravené
             // a hlavička a menu sú načítané.
             await loadHeader(); // Načíta HTML hlavičky, logika sa spustí cez header.js
-            await loadLeftMenu(); // Načíta HTML menu, logika sa spustí cez logged-in-left-menu.js
-
-            // Počkáme na udalosti, ktoré indikujú, že globálne nastavenia sú načítané a autentifikácia je pripravená
-            // a hlavička a menu boli inicializované ich vlastnými skriptmi.
-            // NotificationsApp sa vykreslí, keď je všetko pripravené a globalUserProfileData je k dispozícii.
+            // ODSTRÁNENÉ: await loadLeftMenu(); // logged-in-left-menu.js teraz handled načíta menu HTML samé
 
             const renderApp = () => {
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
