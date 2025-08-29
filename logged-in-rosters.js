@@ -240,10 +240,10 @@ function RostersApp() {
 
   return React.createElement(
     'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
+    { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto w-full' }, // Pridané w-full
     React.createElement(
       'div',
-      { className: 'w-full max-w-3xl p-4' },
+      { className: 'w-full max-w-3xl p-4' }, // w-full už bolo prítomné
       // Odstránené triedy pre biely podklad a tieň z hlavného kontajnera
       React.createElement(
         'div',
@@ -253,12 +253,12 @@ function RostersApp() {
 //        ),
         
         teamCategories.length > 0 ? (
-          React.createElement('div', { className: 'space-y-6' }, // Väčší priestor medzi kategóriami
+          React.createElement('div', { className: 'space-y-6 w-full' }, // Pridané w-full
             teamCategories.map(([categoryName, teamsArray]) => (
               // Kontajner kategórie s nadpisom
-              React.createElement('div', { key: categoryName, className: 'space-y-4' }, // Pridal som space-y-4 pre medzeru medzi h2 a prvým tímom
+              React.createElement('div', { key: categoryName, className: 'space-y-4 w-full' }, // Pridané w-full
                 React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} ${getTeamPluralization(teamsArray.length)})`), // Väčší a tučnejší nadpis
-                React.createElement('div', { className: 'space-y-6' }, // Priestor medzi jednotlivými tímami v kategórii
+                React.createElement('div', { className: 'space-y-6 w-full' }, // Pridané w-full
                   teamsArray.map((team, index) => {
                     const allMembers = getAllTeamMembers(team);
                     
@@ -302,17 +302,17 @@ function RostersApp() {
                     // Každý tím bude mať svoj vlastný biely obdĺžnik s tieňom a fialovým okrajom
                     return React.createElement('div', { 
                         key: index, 
-                        className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4' 
+                        className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4 w-full' // Pridané w-full
                     }, 
                       // Kontajner pre fialový pásik a texty kategórie a názvu tímu
-                      React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 rounded-t-lg' }, 
+                      React.createElement('div', { className: 'bg-[#9333EA] text-white py-2 px-6 rounded-t-lg w-full' }, // Pridané w-full
                         React.createElement('div', { className: 'text-center font-bold text-xl mb-2' }, 'Súpiska tímu'), // Pridané text-xl
                         React.createElement('p', { className: 'text-xl font-semibold mb-2' }, `Kategória: ${categoryName}`), 
                         React.createElement('p', { className: 'text-xl font-semibold mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`)
                       ),
                       
                       // Kontajner pre ostatný obsah pod fialovým pásikom s polstrovaním
-                      React.createElement('div', { className: 'px-6 pt-4' }, 
+                      React.createElement('div', { className: 'px-6 pt-4 w-full' }, // Pridané w-full
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`), 
                         React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`), 
                         
@@ -323,7 +323,7 @@ function RostersApp() {
 
                         // Zobrazenie veľkostí a počtu tričiek
                         team.tshirts && team.tshirts.length > 0 && (
-                            React.createElement('div', { className: 'mb-4' },
+                            React.createElement('div', { className: 'mb-4 w-full' }, // Pridané w-full
                                 React.createElement('p', { className: 'text-md text-gray-700 font-semibold mb-1' }, 'Tričká:'),
                                 team.tshirts.map((tshirt, tIndex) => (
                                     React.createElement('p', { key: tIndex, className: 'text-md text-gray-700 ml-4' }, 
@@ -336,10 +336,10 @@ function RostersApp() {
                       
 
                       allMembers.length > 0 && (
-                        React.createElement('div', { className: 'mt-4 px-6' }, 
+                        React.createElement('div', { className: 'mt-4 px-6 w-full' }, // Pridané w-full
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
                           // Vraciam overflow-x-auto, aby sa tabuľka skrolovala, ak je príliš široká
-                          React.createElement('div', { className: 'overflow-x-auto' }, 
+                          React.createElement('div', { className: 'overflow-x-auto w-full' }, // Pridané w-full
                             React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
                               React.createElement('thead', null,
                                 React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
