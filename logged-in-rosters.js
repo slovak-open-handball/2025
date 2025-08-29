@@ -389,15 +389,22 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
         return tshirtEntries.reduce((sum, entry) => sum + (parseInt(entry.quantity, 10) || 0), 0);
     }, [tshirtEntries]);
 
+    // Kontrola, či sú všetky selectboxy pre veľkosti tričiek vyplnené
+    const allTshirtSizesSelected = React.useMemo(() => {
+        if (tshirtEntries.length === 0) return true; // Ak nie sú žiadne tričká, predpokladáme, že je to OK
+        return tshirtEntries.every(tshirt => tshirt.size !== '');
+    }, [tshirtEntries]);
+
+
     // Podmienka pre zablokovanie tlačidla "Uložiť zmeny"
-    const isSaveButtonDisabled = totalTshirtsQuantity !== totalMembersInTeam;
+    const isSaveButtonDisabled = totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected;
 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (isSaveButtonDisabled) {
-            showLocalNotification('Počet tričiek sa nezhoduje s počtom členov tímu.', 'error');
+            showLocalNotification('Počet tričiek sa nezhoduje s počtom členov tímu alebo nie sú vybraté všetky veľkosti tričiek.', 'error');
             return;
         }
 
