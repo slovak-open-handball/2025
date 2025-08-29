@@ -352,7 +352,7 @@ function RostersApp() {
                                 team.packageDetails.meals && team.packageDetails.meals.participantCard === 1 && React.createElement(
                                     'p',
                                     { className: 'text-sm text-gray-600' },
-                                    `Účastnícka karta: zahŕňa účastnícku kartu`
+                                    `Zahŕňa účastnícku kartu` // Upravený text
                                 ),
                                 team.packageDetails.meals && React.createElement(
                                     'div',
