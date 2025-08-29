@@ -698,20 +698,16 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             );
 
             // Určíme počet tímov, ktoré by existovali *po* pridaní nového tímu.
-            // Tento počet priamo koreluje s indexom sufixu:
-            // 1. tím (po pridaní nového) -> názov klubu (bez sufixu)
-            // 2. tím (po pridaní nového) -> názov klubu A
-            // 3. tím (po pridaní nového) -> názov klubu B
+            // Ak je to 1. tím (vytvárame prvý tím), sufix je 'A'.
+            // Ak je to 2. tím, sufix je 'B', atď.
+            // Index pre 'A' je 0, pre 'B' je 1, atď.
+            // Takže, ak numberOfTeamsAfterAddingNew je 1, offset je 0.
+            // Ak numberOfTeamsAfterAddingNew je 2, offset je 1.
+            // offset = numberOfTeamsAfterAddingNew - 1
             const numberOfTeamsAfterAddingNew = existingClubTeamsForCategory.length + 1;
+            const suffixOffset = numberOfTeamsAfterAddingNew - 1;
 
-            let generatedName = '';
-            if (numberOfTeamsAfterAddingNew === 1) {
-                generatedName = clubName;
-            } else {
-                // Pre n-tý tím (kde n = numberOfTeamsAfterAddingNew), index sufixu je n-1.
-                // Znak sufixu je 'A' + (index - 1), pretože 'A' je pre 2. tím (index 1), 'B' pre 3. tím (index 2).
-                generatedName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + (numberOfTeamsAfterAddingNew - 2))}`;
-            }
+            const generatedName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + suffixOffset)}`;
             
             setTeamNamePreview(generatedName);
         } else {
@@ -1411,14 +1407,9 @@ const handleDeleteTeam = async (teamToDelete) => {
     });
 
     // Prepriradíme názvy tímov s novými sufixami po vymazaní
-    if (clubTeamsInCategory.length > 1) {
-        // Ak zostane viac ako jeden tím, priradíme im "A", "B", "C" atď.
-        for (let i = 0; i < clubTeamsInCategory.length; i++) {
-            clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
-        }
-    } else if (clubTeamsInCategory.length === 1) {
-        // Ak zostane len jeden tím, jeho názov bude len názov klubu (bez sufixu)
-        clubTeamsInCategory[0].teamName = clubName;
+    // Teraz sa všetky tímy daného klubu v kategórii budú generovať s "A", "B", "C" atď.
+    for (let i = 0; i < clubTeamsInCategory.length; i++) {
+        clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
     }
 
     // Rekombinujeme všetky tímy v kategórii
@@ -1473,14 +1464,9 @@ const handleAddTeam = async (newTeamDataFromModal) => {
     allRelevantTeamsBeforeUpdate.sort((a, b) => a.originalNameForSort.localeCompare(b.originalNameForSort));
 
     // Teraz priradíme aktualizované názvy tímov s prírastkovými sufixami.
-    // Ak je len jeden tím (po pridaní nového), jeho názov bude len názov klubu.
-    if (allRelevantTeamsBeforeUpdate.length === 1) {
-        allRelevantTeamsBeforeUpdate[0].teamName = clubName; 
-    } else {
-        // Ak je tímov viac, priradíme im "A", "B", "C" atď.
-        for (let i = 0; i < allRelevantTeamsBeforeUpdate.length; i++) {
-            allRelevantTeamsBeforeUpdate[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
-        }
+    // Všetky tímy daného klubu v kategórii budú mať "A", "B", "C" atď.
+    for (let i = 0; i < allRelevantTeamsBeforeUpdate.length; i++) {
+        allRelevantTeamsBeforeUpdate[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
     }
 
     // Filtrujeme ostatné tímy, ktoré nepatria pod tento klub a kategóriu
@@ -1742,9 +1728,9 @@ const handleSaveNewMember = async (newMemberDetails) => {
                       ), 
                       
 
-                      React.createElement('div', { className: 'mt-4 px-6 w-full' }, // Removed allMembers.length > 0 condition
+                      React.createElement('div', { className: 'mt-4 px-6 w-full' }, 
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
-                          allMembers.length > 0 ? ( // Condition only for table rendering
+                          allMembers.length > 0 ? ( 
                           React.createElement('div', { className: 'overflow-x-auto w-full' }, 
                             React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
                               React.createElement('thead', null,
