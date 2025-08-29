@@ -203,39 +203,44 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                 // Podmienené zobrazenie selectboxov pre čas príchodu
                 showArrivalTimeInputs && React.createElement(
                     'div',
-                    { className: 'flex space-x-2' },
+                    null, // Nový div kontajner pre nadpis a selectboxy
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Plánovaný čas príchodu na turnaj'), // Popisok
                     React.createElement(
                         'div',
-                        { className: 'w-1/2' },
-                        React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700' }, 'Hodina'),
-                        React.createElement('select', {
-                            id: 'arrivalHour',
-                            className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                            value: editedArrivalHour,
-                            onChange: (e) => setEditedArrivalHour(e.target.value),
-                            required: true
-                        },
-                        React.createElement('option', { value: '' }, '--'), // Predvolená prázdna hodnota
-                        hourOptions.map((hour) =>
-                            React.createElement('option', { key: hour, value: hour }, hour)
-                        )
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'w-1/2' },
-                        React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700' }, 'Minúta'),
-                        React.createElement('select', {
-                            id: 'arrivalMinute',
-                            className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                            value: editedArrivalMinute,
-                            onChange: (e) => setEditedArrivalMinute(e.target.value),
-                            required: true
-                        },
-                        React.createElement('option', { value: '' }, '--'), // Predvolená prázdna hodnota
-                        minuteOptions.map((minute) =>
-                            React.createElement('option', { key: minute, value: minute }, minute)
-                        )
+                        { className: 'flex space-x-2' },
+                        React.createElement(
+                            'div',
+                            { className: 'w-1/2' },
+                            React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700 sr-only' }, 'Hodina'), // Skrytý popisok
+                            React.createElement('select', {
+                                id: 'arrivalHour',
+                                className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                                value: editedArrivalHour,
+                                onChange: (e) => setEditedArrivalHour(e.target.value),
+                                required: true
+                            },
+                            React.createElement('option', { value: '' }, '-- Hodina --'), // Predvolená prázdna hodnota s popisom
+                            hourOptions.map((hour) =>
+                                React.createElement('option', { key: hour, value: hour }, hour)
+                            )
+                            )
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'w-1/2' },
+                            React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700 sr-only' }, 'Minúta'), // Skrytý popisok
+                            React.createElement('select', {
+                                id: 'arrivalMinute',
+                                className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                                value: editedArrivalMinute,
+                                onChange: (e) => setEditedArrivalMinute(e.target.value),
+                                required: true
+                            },
+                            React.createElement('option', { value: '' }, '-- Minúta --'), // Predvolená prázdna hodnota s popisom
+                            minuteOptions.map((minute) =>
+                                React.createElement('option', { key: minute, value: minute }, minute)
+                            )
+                            )
                         )
                     )
                 ),
