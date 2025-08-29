@@ -84,6 +84,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     // Nové stavy pre selectboxy
     const [editedArrivalType, setEditedArrivalType] = React.useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
     const [editedPackageName, setEditedPackageName] = React.useState(teamData ? teamData.packageDetails?.name || '' : '');
+    // Stav pre čas príchodu
+    const [editedArrivalTime, setEditedArrivalTime] = React.useState(teamData ? teamData.arrival?.time || '' : '');
 
 
     // Aktualizácia stavu, keď sa zmenia teamData (napr. pri otvorení pre iný tím)
@@ -93,6 +95,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             setEditedCategoryName(teamData.categoryName || '');
             setEditedArrivalType(teamData.arrival?.type || 'bez dopravy');
             setEditedPackageName(teamData.packageDetails?.name || '');
+            setEditedArrivalTime(teamData.arrival?.time || '');
         }
     }, [teamData]);
 
@@ -120,8 +123,12 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
             ...teamData,
             teamName: editedTeamName, // Použijeme pôvodný názov tímu, lebo sa neupravuje
             categoryName: editedCategoryName, // Použijeme pôvodnú kategóriu, lebo sa neupravuje
-            // Aktualizácia typu dopravy
-            arrival: { ...teamData.arrival, type: editedArrivalType },
+            // Aktualizácia typu dopravy a času príchodu
+            arrival: { 
+                ...teamData.arrival, 
+                type: editedArrivalType,
+                time: (editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus') ? editedArrivalTime : ''
+            },
             // Aktualizácia názvu balíka
             packageDetails: { ...teamData.packageDetails, name: editedPackageName }
             // Ostatné počty členov/šoférov sa zatiaľ neupravujú cez toto modálne okno
@@ -129,6 +136,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
         await onSaveTeam(updatedTeamData);
         onClose();
     };
+
+    const showArrivalTimeInput = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
 
     return React.createElement(
         'div',
@@ -168,6 +177,20 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                     React.createElement('option', { value: 'verejná doprava - vlak' }, 'verejná doprava - vlak'),
                     React.createElement('option', { value: 'vlastná doprava' }, 'vlastná doprava')
                     )
+                ),
+                // Podmienené zobrazenie inputboxu pre čas príchodu
+                showArrivalTimeInput && React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { htmlFor: 'arrivalTime', className: 'block text-sm font-medium text-gray-700' }, 'Čas príchodu (napr. 14:30)'),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'arrivalTime',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: editedArrivalTime,
+                        onChange: (e) => setEditedArrivalTime(e.target.value),
+                        placeholder: 'HH:MM'
+                    })
                 ),
                 // Selectbox pre Balík
                 React.createElement(
