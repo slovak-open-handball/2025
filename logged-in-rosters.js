@@ -155,6 +155,79 @@ function RostersApp() {
     return null;
   }
 
+  // Helper funkcia na konsolidáciu všetkých členov tímu do jedného poľa
+  const getAllTeamMembers = (team) => {
+    const members = [];
+
+    // Hráči
+    if (team.playerDetails && team.playerDetails.length > 0) {
+      team.playerDetails.forEach(player => {
+        if (player.firstName || player.lastName) { // Len ak má meno
+          members.push({
+            type: 'Hráč',
+            firstName: player.firstName,
+            lastName: player.lastName,
+            jerseyNumber: player.jerseyNumber
+          });
+        }
+      });
+    }
+
+    // Členovia realizačného tímu (muži)
+    if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
+      team.menTeamMemberDetails.forEach(member => {
+        if (member.firstName || member.lastName) {
+          members.push({
+            type: 'Člen realizačného tímu (muž)',
+            firstName: member.firstName,
+            lastName: member.lastName
+          });
+        }
+      });
+    }
+
+    // Členky realizačného tímu (ženy)
+    if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
+      team.womenTeamMemberDetails.forEach(member => {
+        if (member.firstName || member.lastName) {
+          members.push({
+            type: 'Člen realizačného tímu (žena)',
+            firstName: member.firstName,
+            lastName: member.lastName
+          });
+        }
+      });
+    }
+
+    // Šofér (žena)
+    if (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) {
+      team.driverDetailsFemale.forEach(driver => {
+        if (driver.firstName || driver.lastName) {
+          members.push({
+            type: 'Šofér (žena)',
+            firstName: driver.firstName,
+            lastName: driver.lastName
+          });
+        }
+      });
+    }
+
+    // Šofér (muž)
+    if (team.driverDetailsMale && team.driverDetailsMale.length > 0) {
+      team.driverDetailsMale.forEach(driver => {
+        if (driver.firstName || driver.lastName) {
+          members.push({
+            type: 'Šofér (muž)',
+            firstName: driver.firstName,
+            lastName: driver.lastName
+          });
+        }
+      });
+    }
+
+    return members;
+  };
+
   // Prevod objektu teamsData na pole pre jednoduchšie mapovanie vo React komponente
   const teamCategories = Object.entries(teamsData);
 
@@ -172,59 +245,53 @@ function RostersApp() {
         ),
         
         teamCategories.length > 0 ? (
-          React.createElement('div', { className: 'space-y-4' },
+          React.createElement('div', { className: 'space-y-6' }, // Väčší priestor medzi kategóriami
             teamCategories.map(([categoryName, teamsArray]) => (
-              React.createElement('div', { key: categoryName, className: 'bg-gray-50 p-4 rounded-lg shadow-sm' },
-                React.createElement('h2', { className: 'text-xl font-semibold text-gray-700 mb-2' }, `${categoryName} (${teamsArray.length} tímov)`),
-                React.createElement('div', { className: 'space-y-2 ml-4' },
-                  teamsArray.map((team, index) => (
-                    React.createElement('div', { key: index, className: 'border-l-4 border-blue-500 pl-4 py-2' },
-                      React.createElement('p', { className: 'font-medium text-gray-800' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
-                      React.createElement('p', { className: 'text-sm text-gray-600' }, `Počet hráčov: ${team.players || 0}`),
-                      React.createElement('p', { className: 'text-sm text-gray-600' }, `Počet členov tímu (ženy): ${team.womenTeamMembers || 0}`),
-                      React.createElement('p', { className: 'text-sm text-gray-600' }, `Počet členov tímu (muži): ${team.menTeamMembers || 0}`),
-                      // Môžeš pridať ďalšie detaily tímu podľa potreby
-                      // Napr. zobrazenie hráčov
-                      team.playerDetails && team.playerDetails.length > 0 && (
-                          React.createElement('div', { className: 'mt-2' },
-                              React.createElement('h4', { className: 'text-md font-semibold text-gray-700' }, 'Hráči:'),
-                              React.createElement('ul', { className: 'list-disc list-inside text-sm text-gray-600' },
-                                  team.playerDetails.map((player, pIndex) => (
-                                      React.createElement('li', { key: pIndex }, `${player.firstName} ${player.lastName} (číslo dresu: ${player.jerseyNumber || 'N/A'})`)
-                                  ))
+              React.createElement('div', { key: categoryName, className: 'bg-gray-50 p-6 rounded-lg shadow-md' }, // Väčší padding a shadow
+                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, `${categoryName} (${teamsArray.length} tímov)`), // Väčší a tučnejší nadpis
+                React.createElement('div', { className: 'space-y-6' }, // Priestor medzi jednotlivými tímami v kategórii
+                  teamsArray.map((team, index) => {
+                    const allMembers = getAllTeamMembers(team);
+                    return React.createElement('div', { key: index, className: 'border-l-4 border-blue-600 pl-4 py-4 bg-white rounded-md shadow-sm' }, // Modrejší border, biely background
+                      React.createElement('p', { className: 'text-xl font-semibold text-gray-900 mb-2' }, `Názov tímu: ${team.teamName || 'Neznámy tím'}`),
+                      React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`),
+                      React.createElement('p', { className: 'text-md text-gray-700 mb-4' }, `Členovia tímu: ${team.womenTeamMembers + team.menTeamMembers || 0}`),
+
+                      allMembers.length > 0 && (
+                        React.createElement('div', { className: 'mt-4' },
+                          React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
+                          React.createElement('div', { className: 'overflow-x-auto' }, // Pre responsive tabuľku
+                            React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
+                              React.createElement('thead', null,
+                                React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Typ člena'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Meno'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Priezvisko'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200' }, 'Číslo dresu (len hráč)'),
+                                )
+                              ),
+                              React.createElement('tbody', { className: 'divide-y divide-gray-200' },
+                                allMembers.map((member, mIndex) => (
+                                  React.createElement('tr', { key: mIndex, className: 'hover:bg-gray-50' },
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
+                                  )
+                                ))
                               )
+                            )
                           )
-                      ),
-                      // Zobrazenie členov tímu (ženy)
-                      team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0 && (
-                          React.createElement('div', { className: 'mt-2' },
-                              React.createElement('h4', { className: 'text-md font-semibold text-gray-700' }, 'Členky tímu (ženy):'),
-                              React.createElement('ul', { className: 'list-disc list-inside text-sm text-gray-600' },
-                                  team.womenTeamMemberDetails.map((member, mIndex) => (
-                                      React.createElement('li', { key: mIndex }, `${member.firstName} ${member.lastName}`)
-                                  ))
-                              )
-                          )
-                      ),
-                       // Zobrazenie členov tímu (muži)
-                       team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0 && (
-                          React.createElement('div', { className: 'mt-2' },
-                              React.createElement('h4', { className: 'text-md font-semibold text-gray-700' }, 'Členovia tímu (muži):'),
-                              React.createElement('ul', { className: 'list-disc list-inside text-sm text-gray-600' },
-                                  team.menTeamMemberDetails.map((member, mIndex) => (
-                                      React.createElement('li', { key: mIndex }, `${member.firstName} ${member.lastName}`)
-                                  ))
-                              )
-                          )
+                        )
                       )
                     )
-                  ))
+                  })
                 )
               )
             ))
           )
         ) : (
-          React.createElement('p', { className: 'text-center text-gray-600' }, 'Zatiaľ neboli vytvorené žiadne tímy.')
+          React.createElement('p', { className: 'text-center text-gray-600 text-lg py-8' }, 'Zatiaľ neboli vytvorené žiadne tímy pre tohto používateľa.')
         )
       )
     )
