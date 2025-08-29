@@ -208,49 +208,43 @@ const handleAuthState = async () => {
                                 } 
                                 // Ak je používateľ typu 'user' (schválený)
                                 else if (userProfileData.role === 'user') {
-                                    // Ak je používateľ na prihlasovacej stránke, presmeruje na my-data
                                     if (currentPath.includes(loginPath)) {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.`);
                                         window.location.href = targetPathMyData;
-                                    } 
-                                    // Ak je používateľ na stránke súpisky tímov, môže tam zostať
-                                    else if (currentPath.includes(targetPathRosters)) {
-                                        console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je na stránke súpisky tímov. Zostávam na aktuálnej stránke.`);
                                     }
-                                    // Ak je používateľ na inej nepovolenej stránke (ale nie na prihlasovacej), presmeruje ho na my-data
-                                    else if (!currentPath.includes(targetPathMyData)) {
+                                    // Ak nie je na povolenej stránke (rosters alebo my-data), presmeruje ho na my-data
+                                    else if (!currentPath.includes(targetPathRosters) && !currentPath.includes(targetPathMyData)) {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je na nepovolenej stránke (${currentPath}). Presmerovávam na logged-in-my-data.html.`);
                                         window.location.href = targetPathMyData;
-                                    } else {
-                                        // Používateľ je schválený a je na povolenej stránke (my-data), zostane na aktuálnej stránke.
+                                    }
+                                    // Inak, zostáva na aktuálnej povolenej stránke (rosters alebo my-data)
+                                    else {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je už prihlásený a je na povolenej stránke. Zostávam na aktuálnej stránke.`);
                                     }
                                 }
                                 // Ak je používateľ typu 'hall' (schválený)
                                 else if (userProfileData.role === 'hall') {
-                                    // Ak je používateľ na prihlasovacej stránke, presmeruje na my-data
                                     if (currentPath.includes(loginPath)) {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.`);
                                         window.location.href = targetPathMyData;
-                                    } 
+                                    }
                                     // Ak je na stránke súpisky tímov (targetPathRosters), presmeruje ho na my-data
                                     else if (currentPath.includes(targetPathRosters)) {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je na stránke súpisky tímov. Presmerovávam na logged-in-my-data.html.`);
                                         window.location.href = targetPathMyData;
                                     }
-                                    // Ak je na inej nepovolenej stránke (ale nie na prihlasovacej), presmeruje ho na my-data
+                                    // Ak nie je na stránke my-data (a nie je na login/rosters), presmeruje ho na my-data
                                     else if (!currentPath.includes(targetPathMyData)) {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je na nepovolenej stránke (${currentPath}). Presmerovávam na logged-in-my-data.html.`);
                                         window.location.href = targetPathMyData;
-                                    } else {
-                                        // Používateľ je schválený a je na povolenej stránke (my-data), zostane na aktuálnej stránke.
+                                    }
+                                    // Inak, zostáva na stránke my-data
+                                    else {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je už prihlásený a je na povolenej stránke. Zostávam na aktuálnej stránke.`);
                                     }
                                 } 
+                                // Ostatné roly alebo neschválení používatelia (predvolené presmerovanie na my-data, ak už tam nie sú)
                                 else {
-                                    // Ak je používateľ prihlásený, schválený, ale má neznámu rolu,
-                                    // alebo je na stránke, ktorá nie je explicitly povolená pre jeho rolu,
-                                    // presmerujeme ho na logged-in-my-data.html
                                     if (!currentPath.includes(targetPathMyData)) { // Ak už nie je na my-data
                                         console.log(`AuthManager: Schválený používateľ s neznámou alebo nešpecifikovanou rolou (${userProfileData.role}) je na nepovolenej stránke. Presmerovávam na logged-in-my-data.html.`);
                                         window.location.href = targetPathMyData;
