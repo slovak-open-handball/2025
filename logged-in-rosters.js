@@ -486,7 +486,10 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                 React.createElement('h3', { className: 'text-2xl font-semibold' }, `Upraviť tím: ${teamData.teamName}`),
                 React.createElement(
                     'button',
-                    { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
+                    { 
+                        onClick: () => setTimeout(() => onClose(), 0), // Obalenie onClose do setTimeout
+                        className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' 
+                    },
                     '×'
                 )
             ),
@@ -662,7 +665,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
                         'button',
                         {
                             type: 'button',
-                            onClick: onClose,
+                            onClick: () => setTimeout(() => onClose(), 0), // Obalenie onClose do setTimeout
                             className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
                         },
                         'Zrušiť'
