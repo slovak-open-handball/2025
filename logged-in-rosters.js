@@ -292,6 +292,7 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
                     React.createElement('div', null,
                         React.createElement('label', { htmlFor: 'city', className: 'block text-sm font-medium text-gray-700' }, 'Mesto/Obec'),
                         React.createElement('input', { type: 'text', id: 'city', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: city, onChange: (e) => setCity(e.target.value) })
+                    )
                 ),
                 showAddressFields && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'country', className: 'block text-sm font-medium text-gray-700' }, 'Krajina'),
@@ -715,7 +716,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     const [packageName, setPackageName] = React.useState(availablePackages.length > 0 ? availablePackages.sort()[0] : ''); // Predvolená hodnota
     // Odstránený stav pre tričká, pretože sa nebudú spravovať pri vytváraní tímu
 
-    const clubName = userProfileData?.clubName || 'Neznámy klub';
+    // Zmena: Správne načítanie clubName z billing.clubName
+    const clubName = userProfileData?.billing?.clubName || 'Neznámy klub';
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
     // Reset stavov pri otvorení/zatvorení modalu
@@ -1510,7 +1512,7 @@ function RostersApp() {
 
   // Funkcia pre pridanie nového tímu s premenovaním existujúcich
   const handleAddTeam = async (newTeamDataFromModal) => {
-    if (!user || !user.uid || !userProfileData?.clubName) {
+    if (!user || !user.uid || !userProfileData?.billing?.clubName) { // Zmenená podmienka
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
         return;
     }
@@ -1520,7 +1522,7 @@ function RostersApp() {
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); 
 
     const selectedCategory = newTeamDataFromModal.categoryName;
-    const clubName = userProfileData.clubName;
+    const clubName = userProfileData.billing.clubName; // Zmena: Správne načítanie clubName
 
     // Inicializujeme kategóriu v kópii, ak ešte neexistuje
     if (!currentTeamsCopy[selectedCategory]) {
