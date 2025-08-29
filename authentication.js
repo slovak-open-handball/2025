@@ -126,17 +126,15 @@ const handleAuthState = async () => {
                         if (snapshot.exists()) {
                             const userProfileData = { id: snapshot.id, ...snapshot.data() };
                             
-                            // ZMENA: Ak prebieha registrácia admina, potlačíme odhlasovanie TU v authentication.js.
-                            // Odhlasovanie pre novoregistrovaného admina bude oneskorené v admin-register.js.
+                            // Ak prebieha registrácia admina, potlačíme akékoľvek odhlasovanie alebo presmerovanie v authentication.js.
                             if (window.isRegisteringAdmin && userProfileData.role === 'admin' && (userProfileData.approved === false || userProfileData.approved === true)) {
-                                console.log("AuthManager: Prebieha registrácia administrátora. Automatické odhlásenie z authentication.js je potlačené.");
+                                console.log("AuthManager: Prebieha registrácia administrátora. Automatické odhlásenie/presmerovanie z authentication.js je potlačené.");
                                 window.globalUserProfileData = userProfileData;
                                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                return; // Zastaví ďalšie spracovanie pre tohto používateľa, nechá to na admin-register.js
+                                return; // Zastaví ďalšie spracovanie pre tohto používateľa
                             }
 
-                            // Logika pre neschváleného administrátora, ktorý už bol registrovaný predtým
-                            // (a NEPREBIEHA práve nová registrácia)
+                            // Pôvodná logika pre neschváleného administrátora zostáva
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                                 console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa a posielam e-mail s pripomenutím.");
 
@@ -191,7 +189,7 @@ const handleAuthState = async () => {
                                 return; // Zastaví ďalšie spracovanie pre tohto používateľa
                             } 
                             // NOVÁ LOGIKA: Presmerovanie schválených používateľov (admin, user, hall s approved: true)
-                            // ALE LEN AK SÚ NA PRIHLASOVACEJ STRÁNKE, alebo ak nie sú na povolených stránkach
+                            // LEN AK SÚ NA PRIHLASOVACEJ STRÁNKE, alebo ak nemajú prístup na aktuálnu stránku
                             else if (userProfileData.approved === true) {
                                 const currentPath = window.location.pathname;
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
@@ -235,7 +233,7 @@ const handleAuthState = async () => {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.`);
                                         window.location.href = targetPathMyData;
                                     } 
-                                    // Ak je na stránke súpisky tímov, presmeruje ho na my-data
+                                    // Ak je na stránke súpisky tímov (targetPathRosters), presmeruje ho na my-data
                                     else if (currentPath.includes(targetPathRosters)) {
                                         console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je na stránke súpisky tímov. Presmerovávam na logged-in-my-data.html.`);
                                         window.location.href = targetPathMyData;
