@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -76,14 +76,12 @@ const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
 
 
 // Komponent modálneho okna pre úpravu tímu
-function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData }) {
+function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages }) {
     const [editedTeamName, setEditedTeamName] = React.useState(teamData ? teamData.teamName : '');
     const [editedCategoryName, setEditedCategoryName] = React.useState(teamData ? teamData.categoryName : '');
-    const [editedPlayers, setEditedPlayers] = React.useState(teamData ? teamData.players : 0);
-    const [editedWomenTeamMembers, setEditedWomenTeamMembers] = React.useState(teamData ? teamData.womenTeamMembers : 0);
-    const [editedMenTeamMembers, setEditedMenTeamMembers] = React.useState(teamData ? teamData.menTeamMembers : 0);
-    const [editedDriverDetailsFemale, setEditedDriverDetailsFemale] = React.useState(teamData ? teamData.driverDetailsFemale?.length || 0 : 0);
-    const [editedDriverDetailsMale, setEditedDriverDetailsMale] = React.useState(teamData ? teamData.driverDetailsMale?.length || 0 : 0);
+    // Nové stavy pre selectboxy
+    const [editedArrivalType, setEditedArrivalType] = React.useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
+    const [editedPackageName, setEditedPackageName] = React.useState(teamData ? teamData.packageDetails?.name || '' : '');
 
 
     // Aktualizácia stavu, keď sa zmenia teamData (napr. pri otvorení pre iný tím)
@@ -91,11 +89,8 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData })
         if (teamData) {
             setEditedTeamName(teamData.teamName || '');
             setEditedCategoryName(teamData.categoryName || '');
-            setEditedPlayers(teamData.players || 0);
-            setEditedWomenTeamMembers(teamData.womenTeamMembers || 0);
-            setEditedMenTeamMembers(teamData.menTeamMembers || 0);
-            setEditedDriverDetailsFemale(teamData.driverDetailsFemale?.length || 0);
-            setEditedDriverDetailsMale(teamData.driverDetailsMale?.length || 0);
+            setEditedArrivalType(teamData.arrival?.type || 'bez dopravy');
+            setEditedPackageName(teamData.packageDetails?.name || '');
         }
     }, [teamData]);
 
@@ -123,13 +118,11 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData })
             ...teamData,
             teamName: editedTeamName,
             categoryName: editedCategoryName,
-            players: editedPlayers,
-            womenTeamMembers: editedWomenTeamMembers,
-            menTeamMembers: editedMenTeamMembers,
-            // Pre šoférov uložíme len počet, nie celé pole detailov
-            // Predpokladáme, že detaily šoférov by sa upravovali inde, ak vôbec
-            driverDetailsFemale: Array(editedDriverDetailsFemale).fill({}), // Len placeholder pre počet
-            driverDetailsMale: Array(editedDriverDetailsMale).fill({})      // Len placeholder pre počet
+            // Aktualizácia typu dopravy
+            arrival: { ...teamData.arrival, type: editedArrivalType },
+            // Aktualizácia názvu balíka
+            packageDetails: { ...teamData.packageDetails, name: editedPackageName }
+            // Ostatné počty členov/šoférov sa zatiaľ neupravujú cez toto modálne okno
         };
         await onSaveTeam(updatedTeamData);
         onClose();
@@ -180,71 +173,43 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData })
                         required: true
                     })
                 ),
+                // Selectbox pre Typ dopravy
                 React.createElement(
                     'div',
                     null,
-                    React.createElement('label', { htmlFor: 'players', className: 'block text-sm font-medium text-gray-700' }, 'Počet hráčov'),
-                    React.createElement('input', {
-                        type: 'number',
-                        id: 'players',
+                    React.createElement('label', { htmlFor: 'arrivalType', className: 'block text-sm font-medium text-gray-700' }, 'Typ dopravy'),
+                    React.createElement('select', {
+                        id: 'arrivalType',
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedPlayers,
-                        onChange: (e) => setEditedPlayers(parseInt(e.target.value, 10) || 0),
-                        min: '0'
-                    })
+                        value: editedArrivalType,
+                        onChange: (e) => setEditedArrivalType(e.target.value),
+                        required: true
+                    },
+                    React.createElement('option', { value: 'bez dopravy' }, 'bez dopravy'),
+                    React.createElement('option', { value: 'verejná doprava - autobus' }, 'verejná doprava - autobus'),
+                    React.createElement('option', { value: 'verejná doprava - vlak' }, 'verejná doprava - vlak'),
+                    React.createElement('option', { value: 'vlastná doprava' }, 'vlastná doprava')
+                    )
                 ),
+                // Selectbox pre Balík
                 React.createElement(
                     'div',
                     null,
-                    React.createElement('label', { htmlFor: 'womenTeamMembers', className: 'block text-sm font-medium text-gray-700' }, 'Členovia realizačného tímu (ženy)'),
-                    React.createElement('input', {
-                        type: 'number',
-                        id: 'womenTeamMembers',
+                    React.createElement('label', { htmlFor: 'packageName', className: 'block text-sm font-medium text-gray-700' }, 'Balík'),
+                    React.createElement('select', {
+                        id: 'packageName',
                         className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedWomenTeamMembers,
-                        onChange: (e) => setEditedWomenTeamMembers(parseInt(e.target.value, 10) || 0),
-                        min: '0'
-                    })
+                        value: editedPackageName,
+                        onChange: (e) => setEditedPackageName(e.target.value),
+                        required: true
+                    },
+                    React.createElement('option', { value: '' }, 'Vyberte balík'), // Defaultná prázdna možnosť
+                    availablePackages.map((pkgName, idx) =>
+                        React.createElement('option', { key: idx, value: pkgName }, pkgName)
+                    )
+                    )
                 ),
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'menTeamMembers', className: 'block text-sm font-medium text-gray-700' }, 'Členovia realizačného tímu (muži)'),
-                    React.createElement('input', {
-                        type: 'number',
-                        id: 'menTeamMembers',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedMenTeamMembers,
-                        onChange: (e) => setEditedMenTeamMembers(parseInt(e.target.value, 10) || 0),
-                        min: '0'
-                    })
-                ),
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'driverDetailsFemale', className: 'block text-sm font-medium text-gray-700' }, 'Šoféri (ženy)'),
-                    React.createElement('input', {
-                        type: 'number',
-                        id: 'driverDetailsFemale',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedDriverDetailsFemale,
-                        onChange: (e) => setEditedDriverDetailsFemale(parseInt(e.target.value, 10) || 0),
-                        min: '0'
-                    })
-                ),
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'driverDetailsMale', className: 'block text-sm font-medium text-gray-700' }, 'Šoféri (muži)'),
-                    React.createElement('input', {
-                        type: 'number',
-                        id: 'driverDetailsMale',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedDriverDetailsMale,
-                        onChange: (e) => setEditedDriverDetailsMale(parseInt(e.target.value, 10) || 0),
-                        min: '0'
-                    })
-                ),
+
                 React.createElement(
                     'div',
                     { className: 'flex justify-end space-x-2 mt-6' },
@@ -284,6 +249,7 @@ function RostersApp() {
   const [teamsData, setTeamsData] = React.useState({}); // Nový stav pre dáta tímov
   const [showEditTeamModal, setShowEditTeamModal] = React.useState(false); // Stav pre modálne okno
   const [selectedTeam, setSelectedTeam] = React.useState(null); // Stav pre vybraný tím na úpravu
+  const [availablePackages, setAvailablePackages] = React.useState([]); // Nový stav pre balíky z databázy
 
   // Loading stav pre používateľský profil
   const [loading, setLoading] = React.useState(true); 
@@ -321,6 +287,37 @@ function RostersApp() {
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
   }, []); 
+
+  // Načítanie zoznamu balíkov z Firestore
+  React.useEffect(() => {
+      let unsubscribePackages;
+      if (db) {
+          try {
+              const packagesRef = collection(db, 'settings', 'packages', 'list');
+              unsubscribePackages = onSnapshot(packagesRef, (snapshot) => {
+                  const packagesList = [];
+                  snapshot.forEach(doc => {
+                      const data = doc.data();
+                      if (data.name) {
+                          packagesList.push(data.name);
+                      }
+                  });
+                  setAvailablePackages(packagesList);
+                  console.log("RostersApp: Packages loaded:", packagesList);
+              }, (error) => {
+                  console.error("RostersApp: Error fetching packages:", error);
+              });
+          } catch (e) {
+              console.error("RostersApp: Error setting up onSnapshot for packages:", e);
+          }
+      }
+      return () => {
+          if (unsubscribePackages) {
+              unsubscribePackages();
+          }
+      };
+  }, [db]);
+
 
   React.useEffect(() => {
     let unsubscribeUserDoc;
@@ -737,7 +734,8 @@ function RostersApp() {
           onClose: () => setShowEditTeamModal(false),
           teamData: selectedTeam,
           onSaveTeam: handleSaveTeam,
-          userProfileData: userProfileData // Pre farbu nadpisu
+          userProfileData: userProfileData, // Pre farbu nadpisu
+          availablePackages: availablePackages // Odovzdanie zoznamu balíkov
         }
       )
     )
