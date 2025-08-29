@@ -1274,7 +1274,8 @@ function RostersApp() {
             // Extrahovanie a nastavenie dát tímov
             if (userData.teams) {
                 setTeamsData(userData.teams);
-                setAvailableCategories(Object.keys(userData.teams).sort()); // Aktualizácia dostupných kategórií
+                // Extrakt kategórií z tímov a ich zoradenie abecedne
+                setAvailableCategories(Object.keys(userData.teams).sort()); 
             } else {
                 setTeamsData({}); // Ak teams neexistuje, nastavíme prázdny objekt
                 setAvailableCategories([]);
@@ -1545,32 +1546,71 @@ function RostersApp() {
     }
   };
 
-  // Funkcia pre pridanie nového tímu
-  const handleAddTeam = async (newTeamData) => {
+  // Funkcia pre pridanie nového tímu s premenovaním existujúcich
+  const handleAddTeam = async (newTeamDataFromModal) => {
     if (!user || !user.uid || !userProfileData?.clubName) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
         return;
     }
 
     const userDocRef = doc(db, 'users', user.uid);
-    const currentTeams = { ...teamsData }; // Kópia existujúcich tímov
+    // Vytvoríme hlbokú kópiu premenných, aby sme sa vyhli priamym mutáciám stavu
+    const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData)); 
 
-    // Ak kategória ešte neexistuje, inicializujeme ju ako prázdne pole
-    if (!currentTeams[newTeamData.categoryName]) {
-        currentTeams[newTeamData.categoryName] = [];
+    const selectedCategory = newTeamDataFromModal.categoryName;
+    const clubName = userProfileData.clubName;
+
+    // Inicializujeme kategóriu v kópii, ak ešte neexistuje
+    if (!currentTeamsCopy[selectedCategory]) {
+        currentTeamsCopy[selectedCategory] = [];
     }
-    
-    // Pridáme nový tím do príslušnej kategórie
-    currentTeams[newTeamData.categoryName].push(newTeamData);
 
+    // Pripravíme nový tím s názvom vygenerovaným v modálnom okne (napr. "Môj Klub C")
+    const newTeam = {
+        ...newTeamDataFromModal,
+        clubName: clubName,
+        // Názov tímu (teamName) je už nastavený logikou teamNamePreview v modale
+    };
+
+    // Získame všetky tímy pre aktuálny klub v vybranej kategórii
+    // a pridáme k nim nový tím pre reevaluáciu prípon
+    let allClubTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
+                                        .filter(team => team.clubName === clubName);
+
+    allClubTeamsInSelectedCategory.push(newTeam);
+
+    // Zoradíme tieto tímy abecedne podľa ich názvov.
+    // Toto je kľúčové pre konzistentné prideľovanie prípon "A", "B", "C" atď.
+    allClubTeamsInSelectedCategory.sort((a, b) => a.teamName.localeCompare(b.teamName));
+
+    const updatedTeamsForCategory = [];
+    for (let i = 0; i < allClubTeamsInSelectedCategory.length; i++) {
+        const team = allClubTeamsInSelectedCategory[i];
+        const newSuffix = String.fromCharCode('A'.charCodeAt(0) + i); // Generujeme príponu (A, B, C...)
+        const newTeamName = `${clubName} ${newSuffix}`; // Vytvoríme nový názov tímu
+
+        updatedTeamsForCategory.push({
+            ...team,
+            teamName: newTeamName // Priradíme nový názov
+        });
+    }
+
+    // Teraz nahradíme tímy patriace k tomuto klubu v kópii pre vybranú kategóriu,
+    // pričom zachováme ostatné tímy (ak existujú), ktoré do tohto klubu v tejto kategórii nepatria.
+    const otherTeamsInSelectedCategory = (currentTeamsCopy[selectedCategory] || [])
+                                            .filter(team => team.clubName !== clubName);
+
+    currentTeamsCopy[selectedCategory] = [...otherTeamsInSelectedCategory, ...updatedTeamsForCategory];
+
+    // Aktualizujeme celé pole 'teams' v dokumente používateľa vo Firestore
     try {
         await updateDoc(userDocRef, {
-            teams: currentTeams
+            teams: currentTeamsCopy
         });
-        showLocalNotification('Nový tím bol úspešne pridaný!', 'success');
-        setShowAddTeamModal(false); // Zatvoríme modal po úspešnom pridaní
+        showLocalNotification('Nový tím bol úspešne pridaný a názvy tímov aktualizované!', 'success');
+        setShowAddTeamModal(false); // Zatvoríme modálne okno po úspešnom pridaní
     } catch (error) {
-        console.error("Chyba pri pridávaní nového tímu:", error);
+        console.error("Chyba pri pridávaní nového tímu a aktualizácii názvov:", error);
         showLocalNotification('Nastala chyba pri pridávaní nového tímu.', 'error');
     }
   };
