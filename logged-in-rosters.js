@@ -6,6 +6,8 @@
 import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+// Uistite sa, že React je dostupný, keďže je načítaný cez CDN
+const { useState, useEffect, useRef, useMemo } = window.React || {};
 
 /**
  * Lokálna funkcia pre zobrazenie notifikácií v tomto module.
@@ -90,7 +92,7 @@ const getRoleColor = (role) => {
 
 // Komponent modálneho okna pre výber typu člena tímu
 function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData }) {
-    const [selectedType, setSelectedType] = React.useState('');
+    const [selectedType, setSelectedType] = useState('');
 
     if (!show) return null;
 
@@ -174,18 +176,18 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
 
 // Komponent modálneho okna pre pridanie detailov člena tímu
 function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData, teamAccommodationType }) {
-    const [firstName, setFirstName] = React.useState('');
-    const [lastName, setLastName] = React.useState('');
-    const [dateOfBirth, setDateOfBirth] = React.useState('');
-    const [jerseyNumber, setJerseyNumber] = React.useState('');
-    const [registrationNumber, setRegistrationNumber] = React.useState('');
-    const [street, setStreet] = React.useState('');
-    const [houseNumber, setHouseNumber] = React.useState('');
-    const [postalCode, setPostalCode] = React.useState('');
-    const [city, setCity] = React.useState('');
-    const [country, setCountry] = React.useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [dateOfBirth, setDateOfBirth] = useState('');
+    const [jerseyNumber, setJerseyNumber] = useState('');
+    const [registrationNumber, setRegistrationNumber] = useState('');
+    const [street, setStreet] = useState('');
+    const [houseNumber, setHouseNumber] = useState('');
+    const [postalCode, setPostalCode] = useState('');
+    const [city, setCity] = useState('');
+    const [country, setCountry] = useState('');
 
-    React.useEffect(() => {
+    useEffect(() => {
         // Reset form when modal opens for a new memberType or closes
         if (show) {
             setFirstName('');
@@ -330,23 +332,23 @@ function AddMemberDetailsModal({ show, onClose, onSaveMember, memberType, userPr
 function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, onAddMember }) {
     // Tieto stavy sa stále inicializujú z teamData, ale input boxy sa pre ne nebudú renderovať.
     // Sú potrebné pre zostavenie updatedTeamData v handleSubmit.
-    const [editedTeamName, setEditedTeamName] = React.useState(teamData ? teamData.teamName : '');
-    const [editedCategoryName, setEditedCategoryName] = React.useState(teamData ? teamData.categoryName : '');
+    const [editedTeamName, setEditedTeamName] = useState(teamData ? teamData.teamName : '');
+    const [editedCategoryName, setEditedCategoryName] = useState(teamData ? teamData.categoryName : '');
     // Nové stavy pre selectboxy
-    const [editedArrivalType, setEditedArrivalType] = React.useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
-    const [editedPackageName, setEditedPackageName] = React.useState(teamData ? teamData.packageDetails?.name || '' : '');
-    const [editedAccommodationType, setEditedAccommodationType] = React.useState(teamData ? teamData.accommodation?.type || '' : ''); // Nový stav pre typ ubytovania
+    const [editedArrivalType, setEditedArrivalType] = useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
+    const [editedPackageName, setEditedPackageName] = useState(teamData ? teamData.packageDetails?.name || '' : '');
+    const [editedAccommodationType, setEditedAccommodationType] = useState(teamData ? teamData.accommodation?.type || '' : ''); // Nový stav pre typ ubytovania
     
     // Stavy pre čas príchodu - hodiny a minúty
-    const [editedArrivalHour, setEditedArrivalHour] = React.useState('');
-    const [editedArrivalMinute, setEditedArrivalMinute] = React.useState('');
+    const [editedArrivalHour, setEditedArrivalHour] = useState('');
+    const [editedArrivalMinute, setEditedArrivalMinute] = useState('');
 
     // Stav pre tričká
-    const [tshirtEntries, setTshirtEntries] = React.useState([]);
+    const [tshirtEntries, setTshirtEntries] = useState([]);
 
 
     // Aktualizácia stavu, keď sa zmenia teamData (napr. pri otvorení pre iný tím)
-    React.useEffect(() => {
+    useEffect(() => {
         if (teamData) {
             setEditedTeamName(teamData.teamName || '');
             setEditedCategoryName(teamData.categoryName || '');
@@ -374,7 +376,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
     // Výpočet celkového počtu členov tímu
-    const totalMembersInTeam = React.useMemo(() => {
+    const totalMembersInTeam = useMemo(() => {
         if (!teamData) return 0;
         const players = teamData.playerDetails?.length || 0;
         const menTeamMembers = teamData.menTeamMemberDetails?.length || 0;
@@ -385,12 +387,12 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
     }, [teamData]);
 
     // Výpočet celkového počtu tričiek
-    const totalTshirtsQuantity = React.useMemo(() => {
+    const totalTshirtsQuantity = useMemo(() => {
         return tshirtEntries.reduce((sum, entry) => sum + (parseInt(entry.quantity, 10) || 0), 0);
     }, [tshirtEntries]);
 
     // Kontrola, či sú všetky selectboxy pre veľkosti tričiek vyplnené
-    const allTshirtSizesSelected = React.useMemo(() => {
+    const allTshirtSizesSelected = useMemo(() => {
         if (tshirtEntries.length === 0) return true; // Ak nie sú žiadne tričká, predpokladáme, že je to OK
         return tshirtEntries.every(tshirt => tshirt.size !== '');
     }, [tshirtEntries]);
@@ -704,13 +706,13 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, userProfileData, a
 // Komponent modálneho okna pre pridanie nového tímu
 function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategoriesFromSettings }) { // Zmenený názov propu
     const db = getFirestore();
-    const [selectedCategory, setSelectedCategory] = React.useState('');
-    const [teamNamePreview, setTeamNamePreview] = React.useState(''); // Predbežný názov tímu na zobrazenie
-    const [arrivalType, setArrivalType] = React.useState('bez dopravy');
-    const [arrivalHour, setArrivalHour] = React.useState('');
-    const [arrivalMinute, setArrivalMinute] = React.useState('');
-    const [accommodationType, setAccommodationType] = React.useState('bez ubytovania'); // Predvolená hodnota
-    const [packageName, setPackageName] = React.useState(availablePackages.length > 0 ? availablePackages.sort()[0] : ''); // Predvolená hodnota
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [teamNamePreview, setTeamNamePreview] = useState(''); // Predbežný názov tímu na zobrazenie
+    const [arrivalType, setArrivalType] = useState('bez dopravy');
+    const [arrivalHour, setArrivalHour] = useState('');
+    const [arrivalMinute, setArrivalMinute] = useState('');
+    const [accommodationType, setAccommodationType] = useState('bez ubytovania'); // Predvolená hodnota
+    const [packageName, setPackageName] = useState(availablePackages.length > 0 ? availablePackages.sort()[0] : ''); // Predvolená hodnota
     // Odstránený stav pre tričká, pretože sa nebudú spravovať pri vytváraní tímu
 
     // Zmena: Správne načítanie clubName z billing.clubName a orezanie
@@ -718,7 +720,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
     // Reset stavov pri otvorení/zatvorení modalu
-    React.useEffect(() => {
+    useEffect(() => {
         if (show) {
             setSelectedCategory('');
             setTeamNamePreview('');
@@ -732,7 +734,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     }, [show, availablePackages]);
 
     // Logika pre odvodenie názvu tímu
-    React.useEffect(() => {
+    useEffect(() => {
         // Pridávame logy pre debugovanie
         console.log("AddTeamModal useEffect (generovanie názvu tímu):");
         console.log("  selectedCategory:", selectedCategory);
@@ -740,19 +742,18 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         console.log("  teamsData:", teamsData);
 
         if (selectedCategory && teamsData && clubName !== 'Neznámy klub') { // Pridana kontrola na 'Neznámy klub'
-            const teamsInSelectedCategory = teamsData[selectedCategory] || [];
+            const teamsInSelectedCategory = (teamsData[selectedCategory] || [])
+                .filter(team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory);
             
-            // Orezanie clubName pri porovnávaní s existujúcimi tímami
-            const clubTeamsInThisCategory = teamsInSelectedCategory.filter(team => 
-                team.clubName?.trim() === clubName && team.categoryName === selectedCategory
-            );
-
-            // Zmena: Priame určenie sufixu na základe dĺžky existujúcich tímov
-            const nextSuffixChar = String.fromCharCode('A'.charCodeAt(0) + clubTeamsInThisCategory.length);
+            let generatedName = clubName;
+            if (teamsInSelectedCategory.length > 0) {
+                // Ak už existujú tímy, pridáme sufix. Sufix bude A, B, C...
+                const nextSuffixChar = String.fromCharCode('A'.charCodeAt(0) + teamsInSelectedCategory.length);
+                generatedName = `${clubName} ${nextSuffixChar}`;
+            }
             
-            const generatedTeamName = `${clubName} ${nextSuffixChar}`;
-            setTeamNamePreview(generatedTeamName);
-            console.log("  Vygenerovaný názov tímu:", generatedTeamName);
+            setTeamNamePreview(generatedName);
+            console.log("  Vygenerovaný názov tímu:", generatedName);
         } else {
             setTeamNamePreview('');
             console.log("  Podmienky pre generovanie názvu tímu nie sú splnené.");
@@ -1019,32 +1020,32 @@ function RostersApp() {
   const auth = getAuth(); 
   const db = getFirestore();     
 
-  const [user, setUser] = React.useState(null); 
-  const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); 
-  const [teamsData, setTeamsData] = React.useState({}); // Nový stav pre dáta tímov
-  const [showEditTeamModal, setShowEditTeamModal] = React.useState(false); // Stav pre modálne okno
-  const [selectedTeam, setSelectedTeam] = React.useState(null); // Stav pre vybraný tím na úpravu
-  const [availablePackages, setAvailablePackages] = React.useState([]); // Nový stav pre balíky z databázy
-  const [availableAccommodationTypes, setAvailableAccommodationTypes] = React.useState([]); // Nový stav pre typy ubytovania
-  const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]); // Nový stav pre dostupné veľkosti tričiek
-  const [showAddMemberTypeModal, setShowAddMemberTypeModal] = React.useState(false); // Stav pre modálne okno výberu typu člena
-  const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = React.useState(false); // Stav pre modálne okno detailov člena
-  const [memberTypeToAdd, setMemberTypeToAdd] = React.useState(null); // Typ člena, ktorý sa má pridať
-  const [teamToAddMemberTo, setTeamToAddMemberTo] = React.useState(null); // Tím, do ktorého sa pridáva člen
-  const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = React.useState(''); // Ubytovanie tímu pre nový modal
-  const [showAddTeamModal, setShowAddTeamModal] = React.useState(false); // Nový stav pre modálne okno pridania tímu
+  const [user, setUser] = useState(null); 
+  const [userProfileData, setUserProfileData] = useState(null); 
+  const [isAuthReady, setIsAuthReady] = useState(false); 
+  const [teamsData, setTeamsData] = useState({}); // Nový stav pre dáta tímov
+  const [showEditTeamModal, setShowEditTeamModal] = useState(false); // Stav pre modálne okno
+  const [selectedTeam, setSelectedTeam] = useState(null); // Stav pre vybraný tím na úpravu
+  const [availablePackages, setAvailablePackages] = useState([]); // Nový stav pre balíky z databázy
+  const [availableAccommodationTypes, setAvailableAccommodationTypes] = useState([]); // Nový stav pre typy ubytovania
+  const [availableTshirtSizes, setAvailableTshirtSizes] = useState([]); // Nový stav pre dostupné veľkosti tričiek
+  const [showAddMemberTypeModal, setShowAddMemberTypeModal] = useState(false); // Stav pre modálne okno výberu typu člena
+  const [showAddMemberDetailsModal, setShowAddMemberDetailsModal] = useState(false); // Stav pre modálne okno detailov člena
+  const [memberTypeToAdd, setMemberTypeToAdd] = useState(null); // Typ člena, ktorý sa má pridať
+  const [teamToAddMemberTo, setTeamToAddMemberTo] = useState(null); // Tím, do ktorého sa pridáva člen
+  const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = useState(''); // Ubytovanie tímu pre nový modal
+  const [showAddTeamModal, setShowAddTeamModal] = useState(false); // Nový stav pre modálne okno pridania tímu
   // Zmenený názov stavu pre kategórie z nastavení
-  const [availableCategoriesFromSettings, setAvailableCategoriesFromSettings] = React.useState([]);
+  const [availableCategoriesFromSettings, setAvailableCategoriesFromSettings] = useState([]);
 
 
   // Loading stav pre používateľský profil
-  const [loading, setLoading] = React.useState(true); 
+  const [loading, setLoading] = useState(true); 
 
   // Používateľské ID pre Firebase App ID
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-  React.useEffect(() => {
+  useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
       setIsAuthReady(true); 
@@ -1076,7 +1077,7 @@ function RostersApp() {
   }, []); 
 
   // Načítanie zoznamu balíkov z Firestore
-  React.useEffect(() => {
+  useEffect(() => {
       let unsubscribePackages;
       if (db) {
           try {
@@ -1106,7 +1107,7 @@ function RostersApp() {
   }, [db]);
 
   // Načítanie typov ubytovania z Firestore
-  React.useEffect(() => {
+  useEffect(() => {
       let unsubscribeAccommodation;
       if (db) {
           try {
@@ -1136,7 +1137,7 @@ function RostersApp() {
   }, [db]);
 
   // Načítanie dostupných veľkostí tričiek z Firestore
-  React.useEffect(() => {
+  useEffect(() => {
     let unsubscribeTshirtSizes;
     if (db) {
         try {
@@ -1166,7 +1167,7 @@ function RostersApp() {
   }, [db]);
 
   // Nový useEffect pre načítanie kategórií z /settings/categories
-  React.useEffect(() => {
+  useEffect(() => {
     let unsubscribeCategories;
     if (db) {
         try {
@@ -1207,7 +1208,7 @@ function RostersApp() {
 }, [db]);
 
 
-  React.useEffect(() => {
+  useEffect(() => {
     let unsubscribeUserDoc;
 
     if (user && db && isAuthReady) {
@@ -1535,9 +1536,17 @@ function RostersApp() {
     const updatedTeamsForCategory = [];
     for (let i = 0; i < allClubTeamsInSelectedCategory.length; i++) { // Opravená podmienka cyklu
         const team = allClubTeamsInSelectedCategory[i];
-        const newSuffix = String.fromCharCode('A'.charCodeAt(0) + i); // Generujeme príponu (A, B, C...)
-        const newTeamName = `${clubName} ${newSuffix}`; // Vytvoríme nový názov tímu
-
+        
+        let newTeamName;
+        if (i === 0 && allClubTeamsInSelectedCategory.length === 1) {
+            // Ak je to jediný tím pre tento klub v kategórii, nepridávame sufix
+            newTeamName = clubName;
+        } else {
+            // Pre ostatné tímy pridávame sufix (A, B, C...)
+            const newSuffix = String.fromCharCode('A'.charCodeAt(0) + i); 
+            newTeamName = `${clubName} ${newSuffix}`;
+        }
+        
         updatedTeamsForCategory.push({
             ...team,
             teamName: newTeamName // Priradíme nový názov
