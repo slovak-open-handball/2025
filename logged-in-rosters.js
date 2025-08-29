@@ -241,14 +241,14 @@ function RostersApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // Odstránenie max-w-3xl z tohto divu, aby sa mohol roztiahnuť podľa potreby
+    // Vraciam max-w-3xl, aby biely rámik mal obmedzenú šírku
     React.createElement(
       'div',
-      { className: 'w-full p-4' }, 
-      // Odstránenie max-w-3xl z tohto divu tiež
+      { className: 'w-full max-w-3xl p-4' }, 
+      // Vraciam max-w-3xl aj sem
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
+        { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Súpiska tímov'
         ),
@@ -314,8 +314,8 @@ function RostersApp() {
                       allMembers.length > 0 && (
                         React.createElement('div', { className: 'mt-4' },
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
-                          // Odstránenie overflow-x-auto z tohto divu
-                          React.createElement('div', null, 
+                          // Vraciam overflow-x-auto, aby sa tabuľka skrolovala, ak je príliš široká
+                          React.createElement('div', { className: 'overflow-x-auto' }, 
                             React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
                               React.createElement('thead', null,
                                 React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
