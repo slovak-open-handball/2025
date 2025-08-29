@@ -1407,9 +1407,14 @@ const handleDeleteTeam = async (teamToDelete) => {
     });
 
     // Prepriradíme názvy tímov s novými sufixami po vymazaní
-    // Teraz sa všetky tímy daného klubu v kategórii budú generovať s "A", "B", "C" atď.
-    for (let i = 0; i < clubTeamsInCategory.length; i++) {
-        clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+    if (clubTeamsInCategory.length === 1) {
+        // Ak zostane iba jeden tím, odstráni sa mu sufix
+        clubTeamsInCategory[0].teamName = clubName;
+    } else {
+        // Ak zostane viacero tímov, pregenerujú sa sufixy A, B, C...
+        for (let i = 0; i < clubTeamsInCategory.length; i++) {
+            clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+        }
     }
 
     // Rekombinujeme všetky tímy v kategórii
@@ -1777,6 +1782,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
                           )
                         )
                       )
+                    )
                   })
                 )
               )
