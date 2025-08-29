@@ -347,8 +347,12 @@ function RostersApp() {
                                 'div',
                                 { className: 'ml-4 mt-2 mb-4 space-y-1' }, // Odsadenie a priestor pre detaily
                                 React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} €`),
-                                // Riadok pre Účastnícku kartu je teraz upravený, aby správne zobrazoval Áno/Nie
-                                React.createElement('p', { className: 'text-sm text-gray-600' }, `Účastnícka karta: ${team.packageDetails.participantCard === 1 ? 'Áno' : 'Nie'}`),
+                                // Úprava pre zobrazenie Účastníckej karty
+                                team.packageDetails.participantCard === 1 && React.createElement(
+                                    'p',
+                                    { className: 'text-sm text-gray-600' },
+                                    `Účastnícka karta: zahŕňa účastnícku kartu`
+                                ),
                                 team.packageDetails.meals && React.createElement(
                                     'div',
                                     { className: 'mt-2' },
