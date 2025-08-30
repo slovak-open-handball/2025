@@ -115,7 +115,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             // Iterácia cez objekty v poli
                             groupArray.forEach(groupObject => {
                                 if (groupObject && groupObject.name) {
-                                    groupsList.push(groupObject.name);
+                                    groupsList.push(groupObject); // Ukladáme celý objekt, nie len názov
                                     console.log("Nájdený názov skupiny:", groupObject.name);
                                 }
                             });
@@ -174,7 +174,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 React.createElement(
                     'li',
                     { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
-                    group // group je už názov
+                    `${group.type}: ${group.name}` // Zobrazujeme typ aj názov skupiny
                 )
             )
         );
