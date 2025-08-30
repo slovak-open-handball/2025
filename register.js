@@ -505,6 +505,16 @@ function App() {
       return;
     }
 
+//odtiaľto
+    // Pred prechodom na ďalšiu stránku skontroluj, či neexistuje špecifická notifikácia
+    if (notificationMessage && notificationMessage.includes('Zadaná e-mailová adresa už existuje.')) {
+        // Ak je zobrazená správa o existujúcom e-maile, prechádzaj na Page 7.
+        setPage(7);
+        setLoading(false);
+        return;
+    }
+//potiaľto
+
     const recaptchaToken = await getRecaptchaToken('page_transition');
     if (!recaptchaToken) {
         setLoading(false);
