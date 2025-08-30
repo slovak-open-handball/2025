@@ -652,8 +652,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             React.createElement('strong', null, 'potrebné ich doplniť'),
             ' neskôr: po prihlásení sa do svojho turnajového účtu e\u2011mailovou adresou a\u00A0heslom z\u00A0tohto registračného formulára, a\u00A0to v\u00A0ľavom menu v\u00A0sekcii "Súpiska tímov" ',
             React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, 'do ' + formatDateAndTime(dataEditDeadline) + ' hod.')
-        );
-
+        ),
+        
         React.createElement(
             'form',
             { onSubmit: handlePage6Submit, className: 'space-y-4' },
