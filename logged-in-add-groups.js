@@ -94,7 +94,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: `w-full max-w-2xl transform transition-all duration-500 hover:scale-[1.01]` },
             React.createElement(
                 'div',
-                { className: `flex flex-col items-center justify-center mb-6` },
+                { className: `w-full flex flex-col items-center justify-center mb-6` },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Vytvorenie skupín')
             ),
             React.createElement(
