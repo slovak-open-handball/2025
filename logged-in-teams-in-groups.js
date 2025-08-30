@@ -248,10 +248,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     return React.createElement(
         'div',
-        { className: 'flex flex-col md:flex-row justify-center space-x-0 md:space-x-4 w-full px-4' }, // Zmena tried na tomto riadku
+        { className: 'flex flex-wrap lg:flex-nowrap justify-center space-x-0 lg:space-x-4 w-full px-4' }, 
         React.createElement(
             'div',
-            { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0` },
+            { className: `w-full lg:w-1/3 max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0` },
             React.createElement(
                 'div',
                 { className: 'mt-8' },
@@ -265,7 +265,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         ),
         React.createElement(
             'div',
-            { className: 'flex-grow min-w-0' }, // Pridaná trieda 'min-w-0'
+            { className: 'flex flex-wrap lg:flex-grow justify-center min-w-0' },
             renderGroupedCategories()
         )
     );
