@@ -57,7 +57,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const fetchCategories = async () => {
             if (window.db) {
                 try {
-                    // Správny odkaz na kolekciu, ktorá obsahuje dokumenty s náhodným ID
+                    // Správny odkaz na kolekciu 'categories' v rámci 'settings'
                     const categoriesCollection = collection(window.db, 'settings', 'categories');
                     const categoriesSnapshot = await getDocs(categoriesCollection);
 
