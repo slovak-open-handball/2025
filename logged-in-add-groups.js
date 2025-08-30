@@ -159,14 +159,14 @@ const handleDataUpdateAndRender = (event) => {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-center items-center h-full pt-16' },
-                    React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-                )
-            );
-        }
-        console.error("logged-in-add-groups.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
+            React.createElement(
+                'div',
+                { className: 'flex justify-center items-center h-full pt-16' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+            )
+        );
+    }
+    console.error("logged-in-add-groups.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
     }
 };
 
@@ -186,11 +186,11 @@ if (window.globalUserProfileData) {
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
         root.render(
-            React.createElement(
-                'div',
-                { className: 'flex justify-center items-center h-full pt-16' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-            )
+        React.createElement(
+            'div',
+            { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+        )
         );
     }
 }
