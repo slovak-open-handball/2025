@@ -331,6 +331,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
         );
     };
+    
+    // Zoradenie kategórií podľa názvu pred vykreslením
+    const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
 
     return React.createElement(
         'div',
@@ -355,7 +359,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     { value: '' },
                     'Všetky kategórie'
                 ),
-                Object.entries(categoryIdToNameMap).map(([id, name]) =>
+                sortedCategoryEntries.map(([id, name]) =>
                     React.createElement(
                         'option',
                         { key: id, value: id },
