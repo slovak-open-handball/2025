@@ -51,8 +51,103 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+// Modal pre vytvorenie skupiny
+const CreateGroupModal = ({ isVisible, onClose, categories }) => {
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [groupName, setGroupName] = useState('');
+    const [groupType, setGroupType] = useState('základná skupina');
+
+    if (!isVisible) return null;
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'relative p-5 border w-96 shadow-lg rounded-md bg-white' },
+            React.createElement(
+                'div',
+                { className: 'mt-3 text-center' },
+                React.createElement('h3', { className: 'text-lg leading-6 font-medium text-gray-900' }, 'Vytvoriť novú skupinu'),
+                React.createElement(
+                    'div',
+                    { className: 'mt-2 px-7 py-3' },
+                    React.createElement(
+                        'div',
+                        { className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1 text-left' }, 'Kategória'),
+                        React.createElement(
+                            'select',
+                            {
+                                className: 'mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md',
+                                value: selectedCategory,
+                                onChange: (e) => setSelectedCategory(e.target.value)
+                            },
+                            React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
+                            categories.map(category =>
+                                React.createElement('option', { key: category, value: category }, category)
+                            )
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1 text-left' }, 'Názov skupiny'),
+                        React.createElement(
+                            'input',
+                            {
+                                type: 'text',
+                                className: 'mt-1 block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
+                                value: groupName,
+                                onChange: (e) => setGroupName(e.target.value),
+                                placeholder: 'Zadajte názov skupiny'
+                            }
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1 text-left' }, 'Typ skupiny'),
+                        React.createElement(
+                            'select',
+                            {
+                                className: 'mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md',
+                                value: groupType,
+                                onChange: (e) => setGroupType(e.target.value)
+                            },
+                            React.createElement('option', { value: 'základná skupina' }, 'Základná skupina'),
+                            React.createElement('option', { value: 'nadstavbová skupina' }, 'Nadstavbová skupina')
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'items-center px-4 py-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            className: 'px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                            onClick: onClose
+                        },
+                        'Vytvoriť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            className: 'mt-2 px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500',
+                            onClick: onClose
+                        },
+                        'Zrušiť'
+                    )
+                )
+            )
+        )
+    );
+};
+
 const AddGroupsApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
+    const [isModalVisible, setModalVisible] = useState(false);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -110,7 +205,35 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 )
             )
-        )
+        ),
+        React.createElement(
+            'button',
+            {
+                className: 'fixed bottom-4 right-4 bg-green-500 text-white rounded-full p-4 shadow-lg hover:bg-green-600 transition-colors duration-300',
+                onClick: () => setModalVisible(true)
+            },
+            React.createElement(
+                'svg',
+                {
+                    xmlns: 'http://www.w3.org/2000/svg',
+                    className: 'h-6 w-6',
+                    fill: 'none',
+                    viewBox: '0 0 24 24',
+                    stroke: 'currentColor'
+                },
+                React.createElement('path', {
+                    strokeLinecap: 'round',
+                    strokeLinejoin: 'round',
+                    strokeWidth: 2,
+                    d: 'M12 4v16m8-8H4'
+                })
+            )
+        ),
+        React.createElement(CreateGroupModal, {
+            isVisible: isModalVisible,
+            onClose: () => setModalVisible(false),
+            categories: categories
+        })
     );
 };
 
