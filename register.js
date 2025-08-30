@@ -737,7 +737,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
             switch (authError.code) {
                 case 'auth/email-already-in-use':
                     // OPRAVA: Odstránenie nefunkčného HTML a automatické presmerovanie po 3 sekundách.
-                    authErrorMessage = 'Zadaná e-mailová adresa už existuje. Budete presmerovaní na prvú stranu registrácie.';
+                    authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.';
                     dispatchAppNotification(authErrorMessage, 'error');
                     setTimeout(() => {
                         setPage(1);
