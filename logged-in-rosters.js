@@ -56,6 +56,36 @@ const mealTypeLabels = {
     refreshment: 'občerstvenie'
 };
 
+const parseFirebaseDate = (dateString) => {
+    if (!dateString) return null;
+    // Príklad: "September 14, 2025 at 10:00:00 PM UTC+2" → "2025-09-14T22:00:00+02:00"
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        // Ak new Date zlyhá, skús parsovať ručne
+        const months = {
+            January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+            July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
+        };
+        const parts = dateString.match(/(\w+) (\d+), (\d+) at (\d+):(\d+):(\d+) (AM|PM)/);
+        if (parts) {
+            const month = months[parts[1]];
+            const day = parseInt(parts[2], 10);
+            const year = parseInt(parts[3], 10);
+            let hour = parseInt(parts[4], 10);
+            const minute = parseInt(parts[5], 10);
+            const second = parseInt(parts[6], 10);
+            const period = parts[7];
+
+            if (period === "PM" && hour < 12) hour += 12;
+            if (period === "AM" && hour === 12) hour = 0;
+
+            return new Date(year, month, day, hour, minute, second);
+        }
+        return null;
+    }
+    return date;
+};
+
 const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 
 const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
@@ -1129,10 +1159,9 @@ useEffect(() => {
             unsubscribeSettings = onSnapshot(settingsDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    settingsRosterDeadline = data.rosterEditDeadline ? new Date(data.rosterEditDeadline) : null;
-                    settingsDataDeadline = data.dataEditDeadline ? new Date(data.dataEditDeadline) : null;
+                    settingsRosterDeadline = data.rosterEditDeadline ? parseFirebaseDate(data.rosterEditDeadline) : null;
+                    settingsDataDeadline = data.dataEditDeadline ? parseFirebaseDate(data.dataEditDeadline) : null;
 
-                    // Debug: Výpis načítaných hodnôt z nastavení
                     console.log("Načítané deadliny z nastavení:", {
                         rosterEditDeadline: settingsRosterDeadline,
                         dataEditDeadline: settingsDataDeadline
@@ -1146,17 +1175,15 @@ useEffect(() => {
 
                             if (userDocSnapshot.exists()) {
                                 const userData = userDocSnapshot.data();
-                                userRosterDeadline = userData.rosterEditDeadline ? new Date(userData.rosterEditDeadline) : null;
-                                userDataDeadline = userData.dataEditDeadline ? new Date(userData.dataEditDeadline) : null;
+                                userRosterDeadline = userData.rosterEditDeadline ? parseFirebaseDate(userData.rosterEditDeadline) : null;
+                                userDataDeadline = userData.dataEditDeadline ? parseFirebaseDate(userData.dataEditDeadline) : null;
 
-                                // Debug: Výpis načítaných hodnôt z používateľského profilu
                                 console.log("Načítané deadliny z používateľského profilu:", {
                                     userRosterDeadline,
                                     userDataDeadline
                                 });
                             }
 
-                            // Určenie finálnych deadlinov
                             let finalRosterDeadline = settingsRosterDeadline;
                             if (userRosterDeadline) {
                                 if (!finalRosterDeadline || userRosterDeadline > finalRosterDeadline) {
@@ -1171,7 +1198,6 @@ useEffect(() => {
                                 }
                             }
 
-                            // Debug: Výpis finálnych deadlinov
                             console.log("Finálne deadliny po porovnaní:", {
                                 rosterEditDeadline: finalRosterDeadline,
                                 dataEditDeadline: finalDataDeadline
