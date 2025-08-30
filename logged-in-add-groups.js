@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -52,6 +52,27 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 const AddGroupsApp = ({ userProfileData }) => {
+    // Načítanie kategórií z databázy
+    useEffect(() => {
+        const fetchCategories = async () => {
+            if (window.db) {
+                try {
+                    const categoriesCollection = collection(window.db, 'settings', 'categories');
+                    const categoriesSnapshot = await getDocs(categoriesCollection);
+
+                    console.log("Načítané kategórie:");
+                    categoriesSnapshot.forEach(doc => {
+                        console.log(doc.id, "=>", doc.data());
+                    });
+                } catch (error) {
+                    console.error("Chyba pri načítavaní kategórií:", error);
+                }
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
