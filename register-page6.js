@@ -646,11 +646,13 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         React.createElement(
             'p',
             { className: 'text-center text-sm text-gray-600 mb-6 px-4' },
-            'Všetky údaje na tejto strane sú nepovinné pre registráciu tímu, ',
-            React.createElement('strong', null, 'ale je povinné ich vyplniť v\u00A0sekcii "Moja zóna"'),
-            ' po prihlásení sa do svojho turnajového účtu do ',
-            React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, formatDateAndTime(dataEditDeadline) + ' hod.') /* Použitie novej formátovacej funkcie */
-        ),
+            'Údaje na tejto strane sú ',
+            React.createElement('strong', null, 'nepovinné pre registráciu tímu na turnaj.'),
+            ' V\u00A0prípade ich nevyplnenia bude ',
+            React.createElement('strong', null, 'potrebné ich doplniť'),
+            ' neskôr: po prihlásení sa do svojho turnajového účtu e\u2011mailovou adresou a\u00A0heslom z\u00A0tohto registračného formulára, a\u00A0to v\u00A0ľavom menu v\u00A0sekcii "Súpiska tímov" ',
+            React.createElement('strong', { style: { whiteSpace: 'nowrap' } }, 'do ' + formatDateAndTime(dataEditDeadline) + ' hod.')
+        );
 
         React.createElement(
             'form',
