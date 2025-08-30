@@ -62,8 +62,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
 
         const fetchAllTeams = async () => {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const usersRef = collection(window.db, `artifacts/${appId}/public/data/users`);
+            const usersRef = collection(window.db, 'users');
             const teamsList = [];
 
             try {
