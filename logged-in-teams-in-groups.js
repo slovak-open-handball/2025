@@ -198,7 +198,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                             React.createElement(
                                 'li',
                                 { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
-                                `${group.type}: ${group.name}`
+                                React.createElement(
+                                    'div',
+                                    null,
+                                    React.createElement(
+                                        'p',
+                                        { className: 'font-semibold' },
+                                        group.name
+                                    ),
+                                    React.createElement(
+                                        'p',
+                                        { className: 'text-sm text-gray-500' },
+                                        group.type
+                                    )
+                                )
                             )
                         )
                     )
