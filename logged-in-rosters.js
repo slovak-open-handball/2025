@@ -61,37 +61,44 @@ const parseFirebaseDate = (dateString) => {
         return null;
     }
 
-    // Regex pre formát "September 14, 2025 at 10:00:00 PM UTC+2"
+    // Mapovanie názvov mesiacov na čísla (0-11)
     const months = {
         January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
         July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
     };
 
-    // Odstránme "UTC+2" (ak je prítomné), pretože to komplikuje parsovanie
-    const cleanString = dateString.replace(/ UTC[+-]\d+$/, '').trim();
-    const parts = cleanString.match(/(\w+) (\d+), (\d+) at (\d+):(\d+):(\d+) (AM|PM)/);
-
-    if (!parts) {
+    // Regex pre extrakciu dátumu, času a UTC offsetu
+    const match = dateString.match(/(\w+) (\d+), (\d+) at (\d+):(\d+):(\d+) (AM|PM) UTC([+-]\d+)/);
+    if (!match) {
         console.warn("Neočakávaný formát dátumu:", dateString);
         return null;
     }
 
-    const monthName = parts[1];
-    const day = parseInt(parts[2], 10);
-    const year = parseInt(parts[3], 10);
-    let hour = parseInt(parts[4], 10);
-    const minute = parseInt(parts[5], 10);
-    const second = parseInt(parts[6], 10);
-    const period = parts[7];
+    // Extrakcia komponentov
+    const monthName = match[1];
+    const day = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    let hour = parseInt(match[4], 10);
+    const minute = parseInt(match[5], 10);
+    const second = parseInt(match[6], 10);
+    const period = match[7];
+    const utcOffsetSign = match[8].charAt(0); // '+' alebo '-'
+    const utcOffsetHours = parseInt(match[8].substring(1), 10);
 
     // Konverzia AM/PM na 24-hodínový formát
     if (period === "PM" && hour < 12) hour += 12;
     if (period === "AM" && hour === 12) hour = 0;
 
-    // Vytvorenie Date objektu
-    return new Date(year, months[monthName], day, hour, minute, second);
-};
+    // Vytvorenie Date objektu (lokálny čas)
+    const localDate = new Date(year, months[monthName], day, hour, minute, second);
 
+    // Úprava podľa UTC offsetu
+    const utcOffsetMinutes = utcOffsetHours * 60 * (utcOffsetSign === '+' ? 1 : -1);
+    const utcTime = localDate.getTime() - (localDate.getTimezoneOffset() * 60000) + (utcOffsetMinutes * 60000);
+
+    // Vrátime nový Date objekt pre UTC čas
+    return new Date(utcTime);
+};
 
 const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 
