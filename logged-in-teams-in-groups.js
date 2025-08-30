@@ -99,17 +99,24 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
 
         const fetchAllGroups = async () => {
-            console.log("Načítavam skupiny z kolekcie 'settings/groups'...");
-            const groupsRef = collection(window.db, 'settings', 'groups');
+            console.log("Načítavam skupiny z dokumentu 'settings/groups'...");
+            const groupsRef = doc(window.db, 'settings', 'groups');
             const groupsList = [];
 
             try {
-                const querySnapshot = await getDocs(groupsRef);
-                console.log(`Nádené dokumenty: ${querySnapshot.docs.length}`);
-
-                querySnapshot.forEach((doc) => {
-                    groupsList.push({ id: doc.id, ...doc.data() });
-                });
+                const docSnap = await getDoc(groupsRef);
+                if (docSnap.exists()) {
+                    const groupData = docSnap.data();
+                    console.log("Údaje z dokumentu skupín:", groupData);
+                    Object.entries(groupData).forEach(([fieldName, fieldValue]) => {
+                        if (fieldValue && fieldValue.name) {
+                            groupsList.push(fieldValue.name);
+                            console.log("Nájdený názov skupiny:", fieldValue.name);
+                        }
+                    });
+                } else {
+                    console.log("Dokument so skupinami nebol nájdený!");
+                }
                 setAllGroups(groupsList);
                 console.log("Celkový zoznam skupín:", groupsList);
 
@@ -160,7 +167,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 React.createElement(
                     'li',
                     { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
-                    group.name // Predpokladáme, že dokumenty majú pole 'name'
+                    group // group je už názov
                 )
             )
         );
