@@ -15,7 +15,8 @@ import {
   increment,
   setDoc,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  deleteField
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
@@ -422,8 +423,20 @@ function UsersManagementApp() {
               ...docSnapshot.data()
             };
 
-            // Check and set default deadlines for 'user' role
-            if (userData.role === 'user') { // Corrected condition here
+            // Nová logika: Vymažte polia pre 'admin' a 'hall' a nastavte default pre 'user'
+            if (userData.role === 'admin' || userData.role === 'hall') {
+                const docToUpdate = {};
+                if (userData.dataEditDeadline) {
+                    docToUpdate.dataEditDeadline = deleteField();
+                }
+                if (userData.rosterEditDeadline) {
+                    docToUpdate.rosterEditDeadline = deleteField();
+                }
+
+                if (Object.keys(docToUpdate).length > 0) {
+                    await updateDoc(doc(db, `users`, userData.id), docToUpdate);
+                }
+            } else if (userData.role === 'user') {
                 let needsUpdate = false;
                 if (!userData.dataEditDeadline) {
                     userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
@@ -433,9 +446,7 @@ function UsersManagementApp() {
                     userData.rosterEditDeadline = DEFAULT_ROSTER_EDIT_DEADLINE;
                     needsUpdate = true;
                 }
-
                 if (needsUpdate) {
-                    // Update the document in Firestore if new fields were added
                     await updateDoc(doc(db, `users`, userData.id), {
                         dataEditDeadline: userData.dataEditDeadline,
                         rosterEditDeadline: userData.rosterEditDeadline
@@ -505,10 +516,20 @@ function UsersManagementApp() {
         });
       }
 
-      await updateDoc(userDocRef, {
-        role: newRole,
-        approved: isApproved
-      });
+      // 3. Nová logika na odstránenie dátumov pre admin a hall
+      const updateData = {
+          role: newRole,
+          approved: isApproved
+      };
+      if (newRole === 'admin' || newRole === 'hall') {
+          updateData.dataEditDeadline = deleteField();
+          updateData.rosterEditDeadline = deleteField();
+      } else if (newRole === 'user') {
+           updateData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
+           updateData.rosterEditDeadline = DEFAULT_ROSTER_EDIT_DEADLINE;
+      }
+
+      await updateDoc(userDocRef, updateData);
       
       setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
       
@@ -820,18 +841,26 @@ function UsersManagementApp() {
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
                 {
-                  className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer hover:bg-gray-50',
-                  onClick: () => handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline)
+                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${user.role === 'user' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                  onClick: () => {
+                    if (user.role === 'user') {
+                      handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline);
+                    }
+                  }
                 },
-                formatDate(user.dataEditDeadline)
+                user.role === 'admin' || user.role === 'hall' ? '-' : formatDate(user.dataEditDeadline)
               ),
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
                 {
-                  className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer hover:bg-gray-50',
-                  onClick: () => handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline)
+                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${user.role === 'user' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                  onClick: () => {
+                    if (user.role === 'user') {
+                      handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline);
+                    }
+                  }
                 },
-                formatDate(user.rosterEditDeadline)
+                user.role === 'admin' || user.role === 'hall' ? '-' : formatDate(user.rosterEditDeadline)
               ),
               React.createElement(
                 'td',
