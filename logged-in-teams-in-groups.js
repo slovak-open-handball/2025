@@ -77,12 +77,12 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                     if (userData && userData.teams) {
                         // Iterovanie cez tímy v užívateľskom profile
-                        Object.values(userData.teams).forEach(teamArray => {
+                        Object.entries(userData.teams).forEach(([categoryName, teamArray]) => {
                             if (Array.isArray(teamArray)) {
                                 teamArray.forEach(team => {
                                     if (team.teamName) {
-                                        teamsList.push(team.teamName);
-                                        console.log("Nádený názov tímu:", team.teamName);
+                                        teamsList.push({ category: categoryName, teamName: team.teamName });
+                                        console.log("Nádený názov tímu:", team.teamName, "v kategórii:", categoryName);
                                     }
                                 });
                             }
@@ -112,11 +112,11 @@ const AddGroupsApp = ({ userProfileData }) => {
         return React.createElement(
             'ul',
             { className: 'space-y-2' },
-            allTeams.map((teamName, index) =>
+            allTeams.map((team, index) =>
                 React.createElement(
                     'li',
                     { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
-                    teamName
+                    `${team.category}: ${team.teamName}`
                 )
             )
         );
