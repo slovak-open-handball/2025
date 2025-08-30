@@ -20,14 +20,17 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
 
   const getDaysBetween = (start, end) => {
     const dates = [];
-    // Vytvoríme Date objekty, ktoré ignorujú časovú zónu a sú založené na YYYY-MM-DD
-    let currentDate = new Date(start.replace(/-/g, '/'));
-    const endDateAdjusted = new Date(end.replace(/-/g, '/'));
+    const [startYear, startMonth, startDay] = start.split('-').map(Number);
+    const [endYear, endMonth, endDay] = end.split('-').map(Number);
+
+    // Používame UTC, aby sme sa vyhli problémom s časovými pásmami
+    let currentDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+    const endDateAdjusted = new Date(Date.UTC(endYear, endMonth - 1, endDay));
 
     while (currentDate <= endDateAdjusted) {
       // Dátum pridáme vo formáte ISO String YYYY-MM-DD
       dates.push(currentDate.toISOString().split('T')[0]);
-      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
     return dates;
   };
