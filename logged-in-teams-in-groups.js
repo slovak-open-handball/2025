@@ -191,7 +191,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         return React.createElement(
             'div',
-            { className: 'flex flex-wrap justify-center gap-4 flex-grow' },
+            { className: 'flex flex-wrap justify-start gap-4 flex-grow' },
             sortedCategoryIds.map((categoryId, index) => {
                 const groups = allGroupsByCategoryId[categoryId];
                 const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
