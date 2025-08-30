@@ -261,16 +261,39 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
 
 // Komponent pre modálne okno na úpravu dátumu
 function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
-    const [selectedDate, setSelectedDate] = useState(currentDate ? new Date(currentDate.seconds * 1000 + (currentDate.nanoseconds || 0) / 1000000).toISOString().slice(0, 16) : ''); // Format to YYYY-MM-DDTHH:MM
+    // Upravená funkcia na konverziu dátumu
+    const formatDateForInput = (date) => {
+      if (!date) return '';
+      // Ak je objekt `Date` už inicializovaný z Firestore Timestamp,
+      // automaticky používa lokálne časové pásmo.
+      let d = date.toDate ? date.toDate() : new Date(date);
+      
+      // Získanie komponentov dátumu a času z objektu Date,
+      // ktoré už sú v lokálnom časovom pásme
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
-    const handleDateChange = (e) => {
-        setSelectedDate(e.target.value);
-    };
+  const [selectedDate, setSelectedDate] = useState(formatDateForInput(currentDate));
 
-    const handleSave = () => {
-        onSave(user.id, dateType, new Date(selectedDate));
-        onClose();
-    };
+  const handleDateChange = (e) => {
+      setSelectedDate(e.target.value);
+  };
+
+  const handleSave = () => {
+    // `datetime-local` input už pracuje s lokálnym časom.
+    // Získame ho ako objekt Date a uložíme do Firestore.
+    // Firestore ho automaticky konvertuje na UTC timestamp.
+    const newDate = new Date(selectedDate);
+    onSave(user.id, dateType, newDate);
+    onClose();
+  };
+
 
     const title = dateType === 'dataEditDeadline' ? 'Úprava dátumu pre úpravu údajov' : 'Úprava dátumu pre úpravu súpisiek';
 
