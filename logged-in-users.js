@@ -654,7 +654,7 @@ function UsersManagementApp() {
       // Log changes
       const userToApprove = users.find(u => u.id === userId);
       if (userToApprove) {
-        await logChanges([`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`]);
+        await logChanges([`Schválenie admina: '''${userToApprove.firstName} ${userToApprove.lastName}'.`]);
       }
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
