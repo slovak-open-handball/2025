@@ -52,7 +52,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 // Modal pre úpravu skupiny
-const EditGroupModal = ({ isVisible, onClose, groupToEdit, category, existingGroups, onUpdate }) => {
+const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingGroups, onUpdate }) => {
     const [groupName, setGroupName] = useState(groupToEdit?.name || '');
     const [groupType, setGroupType] = useState(groupToEdit?.type || 'základná skupina');
 
@@ -71,7 +71,7 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, category, existingGro
             return;
         }
 
-        const groupsInCategory = existingGroups[category] || [];
+        const groupsInCategory = existingGroups[categoryId] || [];
         const isDuplicate = groupsInCategory.some(group => group.name.toLowerCase() === groupName.toLowerCase() && group.name.toLowerCase() !== groupToEdit.name.toLowerCase());
 
         if (isDuplicate) {
@@ -88,10 +88,10 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, category, existingGro
             };
 
             await updateDoc(groupsDocRef, {
-                [category]: arrayRemove(groupToEdit)
+                [categoryId]: arrayRemove(groupToEdit)
             });
             await updateDoc(groupsDocRef, {
-                [category]: arrayUnion(newGroup)
+                [categoryId]: arrayUnion(newGroup)
             });
 
             window.showGlobalNotification('Skupina bola úspešne aktualizovaná.', 'success');
@@ -219,20 +219,20 @@ const DeleteConfirmationModal = ({ isVisible, onClose, onConfirm, groupName }) =
 
 // Modal pre vytvorenie skupiny
 const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) => {
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [groupName, setGroupName] = useState('');
     const [groupType, setGroupType] = useState('základná skupina');
 
     if (!isVisible) return null;
 
     const handleCreateGroup = async () => {
-        if (!selectedCategory || !groupName || !groupType) {
+        if (!selectedCategoryId || !groupName || !groupType) {
             window.showGlobalNotification('Prosím, vyplňte všetky polia.', 'error');
             return;
         }
         
         // Kontrola, či názov skupiny už existuje v danej kategórii
-        const groupsInCategory = existingGroups[selectedCategory] || [];
+        const groupsInCategory = existingGroups[selectedCategoryId] || [];
         const isDuplicate = groupsInCategory.some(group => group.name.toLowerCase() === groupName.toLowerCase());
 
         if (isDuplicate) {
@@ -249,7 +249,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             };
 
             await updateDoc(groupsDocRef, {
-                [selectedCategory]: arrayUnion(newGroup)
+                [selectedCategoryId]: arrayUnion(newGroup)
             });
 
             window.showGlobalNotification('Skupina bola úspešne vytvorená.', 'success');
@@ -264,7 +264,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                     creationDate: new Date(),
                 };
                 await setDoc(groupsDocRef, {
-                    [selectedCategory]: [newGroup]
+                    [selectedCategoryId]: [newGroup]
                 });
                 window.showGlobalNotification('Skupina bola úspešne vytvorená.', 'success');
                 onClose();
@@ -296,12 +296,12 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                             'select',
                             {
                                 className: 'mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md',
-                                value: selectedCategory,
-                                onChange: (e) => setSelectedCategory(e.target.value)
+                                value: selectedCategoryId,
+                                onChange: (e) => setSelectedCategoryId(e.target.value)
                             },
                             React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
                             categories.map(category =>
-                                React.createElement('option', { key: category, value: category }, category)
+                                React.createElement('option', { key: category.id, value: category.id }, category.name)
                             )
                         )
                     ),
@@ -381,13 +381,13 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                     if (categoriesSnapshot.exists()) {
                         const categoriesData = categoriesSnapshot.data();
-                        const loadedCategories = [];
-                        for (const key in categoriesData) {
-                            if (categoriesData.hasOwnProperty(key) && categoriesData[key].name) {
-                                loadedCategories.push(categoriesData[key].name);
-                            }
-                        }
-                        loadedCategories.sort((a, b) => a.localeCompare(b));
+                        // Pre lepšiu integritu dát používame ID kategórií ako kľúče
+                        // a vytvárame pole objektov pre jednoduché mapovanie v UI.
+                        const loadedCategories = Object.keys(categoriesData).map(id => ({
+                            id: id,
+                            name: categoriesData[id].name
+                        }));
+                        loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
                         setCategories(loadedCategories);
                     } else {
                         console.log("Dokument 'categories' nebol nájdený v 'settings'.");
@@ -419,15 +419,15 @@ const AddGroupsApp = ({ userProfileData }) => {
         fetchGroups();
     }, []);
 
-    const handleEditClick = (group, category) => {
+    const handleEditClick = (group, categoryId) => {
         setGroupToEdit(group);
-        setCategoryOfGroupToEdit(category);
+        setCategoryOfGroupToEdit(categoryId);
         setEditModalVisible(true);
     };
 
-    const handleDeleteClick = (group, category) => {
+    const handleDeleteClick = (group, categoryId) => {
         setGroupToDelete(group);
-        setCategoryOfGroupToDelete(category);
+        setCategoryOfGroupToDelete(categoryId);
         setDeleteModalVisible(true);
     };
 
@@ -464,13 +464,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap justify-center gap-4' },
-                categories.map((category, index) =>
+                categories.map(category =>
                     React.createElement(
                         'div',
-                        { key: index, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center' },
-                        React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category),
+                        { key: category.id, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center' },
+                        React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category.name),
                         React.createElement('ul', { className: 'w-full' },
-                            groups[category] && groups[category].map((group, groupIndex) =>
+                            groups[category.id] && groups[category.id].map((group, groupIndex) =>
                                 React.createElement('li', { key: groupIndex, className: 'bg-gray-100 rounded-md p-2 my-1 text-sm flex justify-between items-center' }, 
                                     React.createElement('div', { className: 'flex-1 text-left' },
                                         React.createElement('div', { className: 'font-semibold' }, group.name),
@@ -481,7 +481,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             'button',
                                             {
                                                 className: 'text-gray-500 hover:text-blue-500 transition-colors duration-200',
-                                                onClick: () => handleEditClick(group, category)
+                                                onClick: () => handleEditClick(group, category.id)
                                             },
                                             React.createElement(
                                                 'svg',
@@ -499,7 +499,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             'button',
                                             {
                                                 className: 'text-gray-500 hover:text-red-500 transition-colors duration-200',
-                                                onClick: () => handleDeleteClick(group, category)
+                                                onClick: () => handleDeleteClick(group, category.id)
                                             },
                                             React.createElement(
                                                 'svg',
@@ -556,7 +556,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 setGroupToEdit(null);
             },
             groupToEdit: groupToEdit,
-            category: categoryOfGroupToEdit,
+            categoryId: categoryOfGroupToEdit,
             existingGroups: groups,
             onUpdate: () => {
                 // Toto sa volá po aktualizácii, aby sa zabezpečilo, že stav je čistý
