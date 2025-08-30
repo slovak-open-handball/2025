@@ -252,7 +252,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         { className: 'flex-grow flex justify-center items-center' },
         React.createElement(
             'div',
-            { className: `w-full transform transition-all duration-500 hover:scale-[1.01]` },
+            { className: `w-full transform transition-all duration-500` },
             React.createElement(
                 'div',
                 { className: `w-full flex flex-col items-center justify-center mb-6` },
