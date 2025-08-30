@@ -295,16 +295,16 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                     
                     if (isDateFromActive && playerDob < categoryDateFrom) {
                         const minDateFormatted = formatDateToDDMMYYYY(categoryData.dateFrom);
-                        dateOfBirthError = `Dátum narodenia je príliš starý pre túto kategóriu. <span style="white-space:nowrap;">(Min: ${minDateFormatted})</span>`;
+                        dateOfBirthError = `Neplatný dátum narodenia pre túto kategóriu. <span style="white-space:nowrap;">(Min: ${minDateFormatted})</span>`;
                         teamHasErrors = true;
                     }
 
                     if (isDateToActive && playerDob > categoryDateTo) {
                         const maxDateFormatted = formatDateToDDMMYYYY(categoryData.dateTo);
                         if (dateOfBirthError) {
-                            dateOfBirthError += ` a príliš mladý <span style="white-space:nowrap;">(Max: ${maxDateFormatted})</span>`; 
+                            dateOfBirthError += `<span style="white-space:nowrap;">(Max: ${maxDateFormatted})</span>`; 
                         } else {
-                            dateOfBirthError = `Dátum narodenia je príliš mladý pre túto kategóriu. <span style="white-space:nowrap;">(Max: ${maxDateFormatted})</span>`;
+                            dateOfBirthError = `Neplatný dátum narodenia pre túto kategóriu. <span style="white-space:nowrap;">(Max: ${maxDateFormatted})</span>`;
                         }
                         teamHasErrors = true;
                     }
