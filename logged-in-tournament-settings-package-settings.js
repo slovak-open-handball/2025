@@ -34,10 +34,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   };
 
   const tournamentDays = React.useMemo(() => {
+    // Vytvoríme ISO dátumy, ktoré sa dajú ľahko porovnávať, a uistíme sa, že pracujeme s dátumami bez času
     const startDate = tournamentStartDate ? new Date(tournamentStartDate) : null;
     const endDate = tournamentEndDate ? new Date(tournamentEndDate) : null;
     if (startDate && endDate && !isNaN(startDate) && !isNaN(endDate)) {
-        return getDaysBetween(startDate, endDate);
+        return getDaysBetween(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
     }
     return [];
   }, [tournamentStartDate, tournamentEndDate]);
@@ -83,58 +84,39 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   // Nový useEffect na aktualizáciu balíčkov pri zmene dátumov turnaja
   React.useEffect(() => {
     const updatePackagesBasedOnTournamentDates = async () => {
-      // Skontrolujeme, či sú splnené všetky predpoklady
       if (!db || !userProfileData || userProfileData.role !== 'admin' || !tournamentStartDate || !tournamentEndDate) {
         return; 
       }
 
       const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
-      const querySnapshot = await getDocs(packagesCollectionRef); // Získame aktuálne balíčky priamo z DB
-
-      const newTournamentDays = tournamentDays; // Dni odvodené z aktuálnych dátumov turnaja (props)
+      const querySnapshot = await getDocs(packagesCollectionRef); 
+      
+      const newTournamentDays = tournamentDays; 
+      const newDaysSet = new Set(newTournamentDays);
 
       querySnapshot.forEach(async (pkgDoc) => {
         const pkgData = pkgDoc.data();
-        const currentMeals = pkgData.meals || {}; // Aktuálne jedlá uložené v tomto dokumente balíčka
-        const updatedMeals = {}; // Objekt na zostavenie novej štruktúry jedál
+        const currentMeals = pkgData.meals || {}; 
+        const updatedMeals = {};
         
-        // 1. Spracovanie účastníckej karty oddelene
+        // Vytvorenie objektu meals len s dátumami, ktoré sú v nových dňoch turnaja
+        newTournamentDays.forEach(day => {
+            if (currentMeals[day]) {
+              updatedMeals[day] = currentMeals[day];
+            } else {
+              updatedMeals[day] = { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+            }
+        });
+
+        // Zachovanie participantCard, ak existuje
         if (currentMeals.participantCard === 1) {
             updatedMeals.participantCard = 1;
         }
-
-        // 2. Identifikácia 'starých' dní turnaja z aktuálnej štruktúry jedál
-        // Filtrujeme 'participantCard', pretože to nie je dátum
-        const oldMealDays = Object.keys(currentMeals).filter(day => day !== 'participantCard').sort();
-
-        // 3. Porovnanie trvania starého a nového turnaja
-        if (oldMealDays.length === newTournamentDays.length) {
-          // Prípad 1: Rovnaký počet dní - potenciálny posun dátumov
-          oldMealDays.forEach((oldDay, index) => {
-            const newDay = newTournamentDays[index];
-            const oldDayMeals = currentMeals[oldDay] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
-            updatedMeals[newDay] = oldDayMeals; // Mapujeme nastavenia starých jedál na nové dni
-          });
-        } else {
-          // Prípad 2: Rozdielny počet dní - zmena trvania (predĺžené alebo skrátené)
-          // Zachováme prekrývajúce sa dni a vynulujeme nové / odstránime staré dni
-          newTournamentDays.forEach(day => {
-            if (currentMeals[day]) {
-              // Ak nový deň existoval v starých jedlách, ponecháme jeho nastavenia
-              updatedMeals[day] = currentMeals[day];
-            } else {
-              // Ak ide o skutočne nový deň (ktorý nebol v starých jedlách), inicializujeme ho na všetky 0
-              updatedMeals[day] = { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
-            }
-          });
-          // Dni zo 'oldMealDays', ktoré už nie sú v 'newTournamentDays', sa implicitne odstránia.
-        }
         
-        // 4. Záverečná kontrola skutočných zmien pred aktualizáciou Firestore
-        // Porovnáme stringifikované verzie na detekciu hĺbkovej rovnosti
+        // Porovnanie stringifikovaných verzií na detekciu hĺbkovej rovnosti
         const mealsAreIdentical = JSON.stringify(currentMeals) === JSON.stringify(updatedMeals);
         
-        if (!mealsAreIdentical) { // Aktualizujeme iba v prípade, že existuje rozdiel
+        if (!mealsAreIdentical) { 
           try {
             await updateDoc(doc(db, 'settings', 'packages', 'list', pkgDoc.id), {
               meals: updatedMeals,
@@ -260,6 +242,17 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         delete mealsToSave.participantCard; // Odstrániť, ak nie je začiarknutá
       }
 
+      // Vytvorenie objektu, ktorý obsahuje iba dni, ktoré sú v rámci turnaja a odstránenie starých, ktoré už nie sú relevantné
+      const mealsForNewDays = {};
+      tournamentDays.forEach(day => {
+          if (mealsToSave[day]) {
+              mealsForNewDays[day] = mealsToSave[day];
+          }
+      });
+      // Ak má balíček účastnícku kartu, pridajme ju späť
+      if (mealsToSave.participantCard) {
+          mealsForNewDays.participantCard = mealsToSave.participantCard;
+      }
 
       if (packageModalMode === 'add') {
         if (packages.some(pkg => pkg.name === trimmedName)) {
@@ -269,7 +262,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await addDoc(packagesCollectionRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: mealsToSave,
+          meals: mealsForNewDays,
           refreshments: [],
           createdAt: Timestamp.fromDate(new Date())
         });
@@ -293,7 +286,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             id: originalPkgData.id, 
             name: trimmedName,
             price: newPackagePrice,
-            meals: mealsToSave,
+            meals: mealsForNewDays,
             refreshments: [], 
         };
 
@@ -301,7 +294,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await updateDoc(packageDocRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: mealsToSave,
+          meals: mealsForNewDays,
           refreshments: [],
           updatedAt: Timestamp.fromDate(new Date())
         });
