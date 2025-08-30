@@ -63,93 +63,85 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
 
-        const fetchAllTeams = async () => {
-            console.log("Načítavam tímy z kolekcie 'users'...");
-            const usersRef = collection(window.db, 'users');
+        const usersRef = collection(window.db, 'users');
+        const groupsRef = doc(window.db, 'settings', 'groups');
+        const categoriesRef = doc(window.db, 'settings', 'categories');
+        
+        // Listener na zmeny v kolekcii 'users' (pre tímy)
+        const unsubscribeTeams = onSnapshot(usersRef, (querySnapshot) => {
+            console.log("onSnapshot: Načítavam tímy z kolekcie 'users'...");
             const teamsList = [];
+            querySnapshot.forEach((doc) => {
+                const userData = doc.data();
+                if (userData && userData.teams) {
+                    Object.entries(userData.teams).forEach(([categoryName, teamArray]) => {
+                        if (Array.isArray(teamArray)) {
+                            teamArray.forEach(team => {
+                                if (team.teamName) {
+                                    teamsList.push({ category: categoryName, teamName: team.teamName });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            setAllTeams(teamsList);
+            console.log("onSnapshot: Celkový zoznam tímov aktualizovaný:", teamsList);
+        }, (error) => {
+            console.error("onSnapshot: Chyba pri načítaní tímov: ", error);
+        });
 
-            try {
-                const querySnapshot = await getDocs(usersRef);
-                console.log(`Nádené dokumenty: ${querySnapshot.docs.length}`);
-                
-                querySnapshot.forEach((doc) => {
-                    const userData = doc.data();
-                    console.log("Spracovávam dokument s ID:", doc.id);
-                    console.log("Údaje z dokumentu:", userData);
-
-                    if (userData && userData.teams) {
-                        // Iterovanie cez tímy v užívateľskom profile
-                        Object.entries(userData.teams).forEach(([categoryName, teamArray]) => {
-                            if (Array.isArray(teamArray)) {
-                                teamArray.forEach(team => {
-                                    if (team.teamName) {
-                                        teamsList.push({ category: categoryName, teamName: team.teamName });
-                                        console.log("Nádený názov tímu:", team.teamName, "v kategórii:", categoryName);
-                                    }
-                                });
-                            }
-                        });
+        // Listener na zmeny v dokumente 'categories'
+        const unsubscribeCategories = onSnapshot(categoriesRef, (docSnap) => {
+            console.log("onSnapshot: Načítavam kategórie...");
+            const categoryIdToName = {};
+            if (docSnap.exists()) {
+                const categoryData = docSnap.data();
+                Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
+                    if (categoryObject && categoryObject.name) {
+                        categoryIdToName[categoryId] = categoryObject.name;
                     }
                 });
-                setAllTeams(teamsList);
-                console.log("Celkový zoznam tímov:", teamsList);
-
-            } catch (e) {
-                console.error("Chyba pri načítaní tímov: ", e);
+            } else {
+                console.log("onSnapshot: Dokument s kategóriami nebol nájdený!");
             }
-        };
+            setCategoryIdToNameMap(categoryIdToName);
+            console.log("onSnapshot: Mapa kategórií aktualizovaná:", categoryIdToName);
+        }, (error) => {
+            console.error("onSnapshot: Chyba pri načítaní kategórií: ", error);
+        });
 
-        const fetchAllGroups = async () => {
-            console.log("Načítavam skupiny a kategórie...");
-            const groupsRef = doc(window.db, 'settings', 'groups');
-            const categoriesRef = doc(window.db, 'settings', 'categories');
+        // Listener na zmeny v dokumente 'groups'
+        const unsubscribeGroups = onSnapshot(groupsRef, (docSnap) => {
+            console.log("onSnapshot: Načítavam skupiny...");
             const groupsByCategoryId = {};
-            const categoryIdToName = {};
-
-            try {
-                // Najprv načítame kategórie na vytvorenie mapy ID na názov
-                const categoriesDocSnap = await getDoc(categoriesRef);
-                if (categoriesDocSnap.exists()) {
-                    const categoryData = categoriesDocSnap.data();
-                    Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
-                        if (categoryObject && categoryObject.name) {
-                            categoryIdToName[categoryId] = categoryObject.name;
-                        }
-                    });
-                    console.log("Mapa kategórií vytvorená:", categoryIdToName);
-                    setCategoryIdToNameMap(categoryIdToName);
-                } else {
-                    console.log("Dokument s kategóriami nebol nájdený!");
-                }
-
-                // Následne načítame skupiny
-                const groupsDocSnap = await getDoc(groupsRef);
-                if (groupsDocSnap.exists()) {
-                    const groupData = groupsDocSnap.data();
-                    console.log("Údaje z dokumentu skupín:", groupData);
-                    // Iterujeme cez kľúče (ID kategórií) a polia skupín
-                    Object.entries(groupData).forEach(([categoryId, groupArray]) => {
-                        if (Array.isArray(groupArray)) {
-                            groupsByCategoryId[categoryId] = groupArray.map(group => ({
-                                name: group.name,
-                                type: group.type
-                            }));
-                        }
-                    });
-                } else {
-                    console.log("Dokument so skupinami nebol nájdený!");
-                }
-                setAllGroupsByCategoryId(groupsByCategoryId);
-                console.log("Skupiny rozdelené podľa kategórií:", groupsByCategoryId);
-
-            } catch (e) {
-                console.error("Chyba pri načítaní skupín alebo kategórií: ", e);
+            if (docSnap.exists()) {
+                const groupData = docSnap.data();
+                Object.entries(groupData).forEach(([categoryId, groupArray]) => {
+                    if (Array.isArray(groupArray)) {
+                        groupsByCategoryId[categoryId] = groupArray.map(group => ({
+                            name: group.name,
+                            type: group.type
+                        }));
+                    }
+                });
+            } else {
+                console.log("onSnapshot: Dokument so skupinami nebol nájdený!");
             }
+            setAllGroupsByCategoryId(groupsByCategoryId);
+            console.log("onSnapshot: Skupiny rozdelené podľa kategórií aktualizované:", groupsByCategoryId);
+        }, (error) => {
+            console.error("onSnapshot: Chyba pri načítaní skupín: ", error);
+        });
+        
+        // Funkcia na vyčistenie poslucháčov pri odpojení komponentu
+        return () => {
+            unsubscribeTeams();
+            unsubscribeCategories();
+            unsubscribeGroups();
+            console.log("onSnapshot: Všetci poslucháči boli zrušení.");
         };
 
-        // Načítanie dát pri štarte
-        fetchAllTeams();
-        fetchAllGroups();
     }, []);
 
     const renderTeamList = () => {
