@@ -208,35 +208,31 @@ const AddGroupsApp = ({ userProfileData }) => {
             
             return React.createElement(
                 'div',
-                { key: index, className: 'w-full min-w-[150px] flex-grow bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
+                { key: index, className: 'w-full min-w-[200px] bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
                 React.createElement(
-                    'div',
-                    { className: 'mt-8' },
-                    React.createElement(
-                        'h3',
-                        { className: 'text-2xl font-semibold mb-4 text-center' },
-                        categoryName
-                    ),
-                    React.createElement(
-                        'ul',
-                        { className: 'space-y-2' },
-                        sortedGroups.map((group, groupIndex) =>
+                    'h3',
+                    { className: 'text-2xl font-semibold mb-4 text-center' },
+                    categoryName
+                ),
+                React.createElement(
+                    'ul',
+                    { className: 'space-y-2' },
+                    sortedGroups.map((group, groupIndex) =>
+                        React.createElement(
+                            'li',
+                            { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis' },
                             React.createElement(
-                                'li',
-                                { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
+                                'div',
+                                null,
                                 React.createElement(
-                                    'div',
-                                    null,
-                                    React.createElement(
-                                        'p',
-                                        { className: 'font-semibold' },
-                                        group.name
-                                    ),
-                                    React.createElement(
-                                        'p',
-                                        { className: 'text-sm text-gray-500' },
-                                        group.type
-                                    )
+                                    'p',
+                                    { className: 'font-semibold' },
+                                    group.name
+                                ),
+                                React.createElement(
+                                    'p',
+                                    { className: 'text-sm text-gray-500' },
+                                    group.type
                                 )
                             )
                         )
