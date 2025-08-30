@@ -57,15 +57,22 @@ const AddGroupsApp = ({ userProfileData }) => {
         const fetchCategories = async () => {
             if (window.db) {
                 try {
-                    // Správny odkaz na kolekciu 'categories' v rámci 'settings'
-                    const categoriesCollection = collection(window.db, 'settings', 'categories');
-                    const categoriesSnapshot = await getDocs(categoriesCollection);
+                    // Správny odkaz na dokument 'categories' v rámci 'settings'
+                    const categoriesDocRef = doc(window.db, 'settings', 'categories');
+                    const categoriesSnapshot = await getDoc(categoriesDocRef);
 
-                    console.log("Načítané kategórie:");
-                    // Prechádzame cez všetky dokumenty a vypisujeme len pole 'name'
-                    categoriesSnapshot.forEach(doc => {
-                        console.log(doc.data().name);
-                    });
+                    if (categoriesSnapshot.exists()) {
+                        const categoriesData = categoriesSnapshot.data();
+                        console.log("Načítané kategórie:");
+                        // Prechádzame cez všetky polia v dokumente
+                        for (const key in categoriesData) {
+                            if (categoriesData.hasOwnProperty(key) && categoriesData[key].name) {
+                                console.log(categoriesData[key].name);
+                            }
+                        }
+                    } else {
+                        console.log("Dokument 'categories' nebol nájdený v 'settings'.");
+                    }
                 } catch (error) {
                     console.error("Chyba pri načítavaní kategórií:", error);
                 }
