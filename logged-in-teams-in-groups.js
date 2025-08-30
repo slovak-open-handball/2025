@@ -175,18 +175,14 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     return React.createElement(
         'div',
-        { className: 'flex-grow flex justify-center items-center' },
+        { className: 'flex-grow flex flex-col justify-center items-center' },
+        React.createElement('h2', { className: 'text-4xl font-extrabold tracking-tight text-center text-gray-800 mb-8' }, 'Tímy do skupín'),
         React.createElement(
             'div',
             { className: `flex space-x-4` },
             React.createElement(
                 'div',
                 { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
-                React.createElement(
-                    'div',
-                    { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
-                    React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Tímy do skupín')
-                ),
                 React.createElement(
                     'div',
                     { className: 'mt-8' },
@@ -201,11 +197,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
-                React.createElement(
-                    'div',
-                    { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
-                    React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Tímy do skupín')
-                ),
                 React.createElement(
                     'div',
                     { className: 'mt-8' },
