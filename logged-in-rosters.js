@@ -57,34 +57,42 @@ const mealTypeLabels = {
 };
 
 const parseFirebaseDate = (dateString) => {
-    if (!dateString) return null;
-    // Príklad: "September 14, 2025 at 10:00:00 PM UTC+2" → "2025-09-14T22:00:00+02:00"
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-        // Ak new Date zlyhá, skús parsovať ručne
-        const months = {
-            January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
-            July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
-        };
-        const parts = dateString.match(/(\w+) (\d+), (\d+) at (\d+):(\d+):(\d+) (AM|PM)/);
-        if (parts) {
-            const month = months[parts[1]];
-            const day = parseInt(parts[2], 10);
-            const year = parseInt(parts[3], 10);
-            let hour = parseInt(parts[4], 10);
-            const minute = parseInt(parts[5], 10);
-            const second = parseInt(parts[6], 10);
-            const period = parts[7];
-
-            if (period === "PM" && hour < 12) hour += 12;
-            if (period === "AM" && hour === 12) hour = 0;
-
-            return new Date(year, month, day, hour, minute, second);
-        }
+    if (!dateString || typeof dateString !== 'string') {
         return null;
     }
-    return date;
+
+    // Skús najprv priamo cez new Date (niektoré formáty fungujú)
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+        return date;
+    }
+
+    // Ak new Date zlyhá, skús parsovať ručne
+    const months = {
+        January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+        July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
+    };
+
+    // Regex pre formát "September 14, 2025 at 10:00:00 PM UTC+2"
+    const parts = dateString.match(/(\w+) (\d+), (\d+) at (\d+):(\d+):(\d+) (AM|PM)/);
+    if (!parts) {
+        return null;
+    }
+
+    const month = months[parts[1]];
+    const day = parseInt(parts[2], 10);
+    const year = parseInt(parts[3], 10);
+    let hour = parseInt(parts[4], 10);
+    const minute = parseInt(parts[5], 10);
+    const second = parseInt(parts[6], 10);
+    const period = parts[7];
+
+    if (period === "PM" && hour < 12) hour += 12;
+    if (period === "AM" && hour === 12) hour = 0;
+
+    return new Date(year, month, day, hour, minute, second);
 };
+
 
 const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 
