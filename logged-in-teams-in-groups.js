@@ -152,10 +152,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'Žiadne tímy neboli nájdené.'
             );
         }
+        
+        // Zoradíme tímy podľa názvu kategórie
+        const sortedTeams = [...allTeams].sort((a, b) => a.category.localeCompare(b.category));
+        
         return React.createElement(
             'ul',
             { className: 'space-y-2' },
-            allTeams.map((team, index) =>
+            sortedTeams.map((team, index) =>
                 React.createElement(
                     'li',
                     { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
@@ -178,7 +182,15 @@ const AddGroupsApp = ({ userProfileData }) => {
             );
         }
 
-        return Object.entries(allGroupsByCategoryId).map(([categoryId, groups], index) => {
+        // Získame a zoradíme kľúče (ID kategórií) na základe názvov kategórií
+        const sortedCategoryIds = Object.keys(allGroupsByCategoryId).sort((a, b) => {
+            const nameA = categoryIdToNameMap[a] || '';
+            const nameB = categoryIdToNameMap[b] || '';
+            return nameA.localeCompare(nameB);
+        });
+
+        return sortedCategoryIds.map((categoryId, index) => {
+            const groups = allGroupsByCategoryId[categoryId];
             const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
             
             const sortedGroups = [...groups].sort((a, b) => {
