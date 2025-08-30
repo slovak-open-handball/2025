@@ -188,28 +188,24 @@ const CreateGroupModal = ({ isVisible, onClose, categories }) => {
 
 const AddGroupsApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
+    const [groups, setGroups] = useState({});
     const [isModalVisible, setModalVisible] = useState(false);
 
     useEffect(() => {
         const fetchCategories = async () => {
             if (window.db) {
                 try {
-                    // Správny odkaz na dokument 'categories' v rámci 'settings'
                     const categoriesDocRef = doc(window.db, 'settings', 'categories');
                     const categoriesSnapshot = await getDoc(categoriesDocRef);
 
                     if (categoriesSnapshot.exists()) {
                         const categoriesData = categoriesSnapshot.data();
-                        console.log("Načítané kategórie:");
                         const loadedCategories = [];
-                        // Prechádzame cez všetky polia v dokumente
                         for (const key in categoriesData) {
                             if (categoriesData.hasOwnProperty(key) && categoriesData[key].name) {
-                                console.log(categoriesData[key].name);
                                 loadedCategories.push(categoriesData[key].name);
                             }
                         }
-                        // Zoradenie kategórií abecedne
                         loadedCategories.sort((a, b) => a.localeCompare(b));
                         setCategories(loadedCategories);
                     } else {
@@ -221,7 +217,25 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         };
 
+        const fetchGroups = () => {
+             if (window.db) {
+                const groupsDocRef = doc(window.db, 'settings', 'groups');
+                const unsubscribe = onSnapshot(groupsDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setGroups(docSnap.data());
+                    } else {
+                        setGroups({});
+                    }
+                }, (error) => {
+                    console.error("Chyba pri načítavaní skupín v reálnom čase:", error);
+                });
+
+                return () => unsubscribe();
+            }
+        };
+
         fetchCategories();
+        fetchGroups();
     }, []);
 
     return React.createElement(
@@ -241,8 +255,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 categories.map((category, index) =>
                     React.createElement(
                         'div',
-                        { key: index, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center justify-center text-center' },
-                        React.createElement('h3', { className: 'text-lg font-semibold' }, category)
+                        { key: index, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center' },
+                        React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category),
+                        React.createElement('ul', { className: 'w-full' },
+                            groups[category] && groups[category].map((group, groupIndex) =>
+                                React.createElement('li', { key: groupIndex, className: 'bg-gray-100 rounded-md p-2 my-1 text-sm' }, `${group.name} (${group.type})`)
+                            )
+                        )
                     )
                 )
             )
