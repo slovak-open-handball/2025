@@ -13,7 +13,9 @@ import {
   deleteDoc,
   getDoc,
   increment,
-  setDoc
+  setDoc,
+  addDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
@@ -363,6 +365,24 @@ function UsersManagementApp() {
   const DEFAULT_DATA_EDIT_DEADLINE = new Date('2025-08-29T14:00:00Z'); // August 29, 2025 at 4:00:00 PM UTC+2
   const DEFAULT_ROSTER_EDIT_DEADLINE = new Date('2025-09-14T20:00:00Z'); // September 14, 2025 at 10:00:00 PM UTC+2
 
+  // Function to log changes to the notifications collection
+  const logNotification = async (changes) => {
+    try {
+      if (!auth.currentUser || !globalUserProfileData || !db) {
+        console.error("Not able to log notification: User not authenticated or global data not available.");
+        return;
+      }
+      const notificationsRef = collection(db, `notifications`);
+      await addDoc(notificationsRef, {
+        changes: changes,
+        timestamp: serverTimestamp(),
+        userEmail: globalUserProfileData.email,
+      });
+    } catch (error) {
+      console.error("Error logging notification:", error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -495,6 +515,9 @@ function UsersManagementApp() {
       });
       
       setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
+      
+      // Log notification
+      await logNotification([`Zmena roly pre ${userSnap.data().firstName} ${userSnap.data().lastName}: z ${oldRole} na ${newRole}.`]);
     } catch (error) {
       console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
@@ -535,6 +558,9 @@ function UsersManagementApp() {
       }
 
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
+
+      // Log notification
+      await logNotification([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}.`]);
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
       setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
@@ -605,6 +631,12 @@ function UsersManagementApp() {
       await sendApprovalEmail(userEmail);
       
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
+      
+      // Log notification
+      const userToApprove = users.find(u => u.id === userId);
+      if (userToApprove) {
+        await logNotification([`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`]);
+      }
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
       setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
@@ -669,6 +701,11 @@ function UsersManagementApp() {
         [dateType]: newDate // Dynamicky nastaví názov poľa
       });
       setNotification({ message: `Dátum bol úspešne aktualizovaný pre ${dateToEditUser.firstName} ${dateToEditUser.lastName}.`, type: 'success' });
+
+      // Log notification
+      const dateTypeString = dateType === 'dataEditDeadline' ? 'údajov' : 'súpisiek';
+      const formattedDate = formatDate(newDate);
+      await logNotification([`Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${dateToEditUser.firstName} ${dateToEditUser.lastName} na ${formattedDate}.`]);
     } catch (error) {
       console.error("Chyba pri aktualizácii dátumu:", error);
       setNotification({ message: 'Nepodarilo sa aktualizovať dátum.', type: 'error' });
