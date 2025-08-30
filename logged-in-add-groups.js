@@ -84,7 +84,6 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
             const newGroup = {
                 name: groupName,
                 type: groupType,
-                creationDate: groupToEdit.creationDate || new Date(),
             };
 
             await updateDoc(groupsDocRef, {
@@ -245,7 +244,6 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             const newGroup = {
                 name: groupName,
                 type: groupType,
-                creationDate: new Date(),
             };
 
             await updateDoc(groupsDocRef, {
@@ -261,7 +259,6 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                 const newGroup = {
                     name: groupName,
                     type: groupType,
-                    creationDate: new Date(),
                 };
                 await setDoc(groupsDocRef, {
                     [selectedCategoryId]: [newGroup]
