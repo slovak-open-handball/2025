@@ -392,22 +392,7 @@ function App() {
     setNotificationMessage('');
     setNotificationType('info');
   };
-
-// odtiaľto  
-  const handlePage1Next = () => {
-    const existingEmailMessage = "Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.";
-    
-    // Použijeme globalNote, ktorý je stabilnejší ako notificationMessage
-    if (globalNote && globalNote.includes(existingEmailMessage)) {
-      setCurrentPage(7);
-    } else {
-      nextPage();
-    }
-    // Až teraz vyčistíme notifikačnú správu
-    closeNotification();
-  };
-// potiaľto  
-
+  
   const dispatchAppNotification = React.useCallback((message, type = 'info') => {
     setNotificationMessage(message);
     setShowNotification(true);
