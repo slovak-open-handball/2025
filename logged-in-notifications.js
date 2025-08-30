@@ -739,7 +739,8 @@ function NotificationsApp() {
                             React.createElement('p', { className: 'text-base text-gray-700 mb-2' },
                                 `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
                             ),
-                            notification.changes && notification.changes.length > 0 ? (
+                            // OPRAVENÁ KONTROLA: Používa Array.isArray pre bezpečné overenie, či je notification.changes pole
+                            Array.isArray(notification.changes) && notification.changes.length > 0 ? (
                                 React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
                                     notification.changes.map((change, index) => (
                                         React.createElement('li', { key: index }, renderStyledText(change))
