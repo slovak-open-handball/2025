@@ -119,7 +119,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
   const [selectedRole, setSelectedRole] = useState(user.role);
 
   const handleSave = () => {
-    onRoleChange(user.id, selectedRole);
+    onRoleChange(user, selectedRole);
     onClose();
   };
 
@@ -292,7 +292,7 @@ function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
     // Získame ho ako objekt Date a uložíme do Firestore.
     // Firestore ho automaticky konvertuje na UTC timestamp.
     const newDate = new Date(selectedDate);
-    onSave(user.id, dateType, newDate);
+    onSave(user, dateType, newDate);
     onClose();
   };
 
@@ -366,7 +366,7 @@ function UsersManagementApp() {
   const DEFAULT_ROSTER_EDIT_DEADLINE = new Date('2025-09-14T20:00:00Z'); // September 14, 2025 at 10:00:00 PM UTC+2
 
   // Function to log changes to the notifications collection
-  const logNotification = async (changes) => {
+  const logNotification = async (message) => {
     try {
       if (!auth.currentUser || !globalUserProfileData || !db) {
         console.error("Not able to log notification: User not authenticated or global data not available.");
@@ -374,7 +374,7 @@ function UsersManagementApp() {
       }
       const notificationsRef = collection(db, `notifications`);
       await addDoc(notificationsRef, {
-        changes: changes,
+        message: message,
         timestamp: serverTimestamp(),
         userEmail: globalUserProfileData.email,
       });
@@ -478,17 +478,13 @@ function UsersManagementApp() {
     fetchData();
   }, [globalUserProfileData]);
 
-  const handleChangeRole = async (userId, newRole) => {
+  // Funkcia na úpravu roly
+  const handleChangeRole = async (userToUpdate, newRole) => {
     try {
       // 1. Získame referencie na dokumenty a ich dáta
-      const userDocRef = doc(db, `users`, userId);
-      const userSnap = await getDoc(userDocRef);
-      if (!userSnap.exists()) {
-        setNotification({ message: 'Používateľ nebol nájdený.', type: 'error' });
-        return;
-      }
-      const oldRole = userSnap.data().role;
-      const wasApproved = userSnap.data().approved; // Získame pôvodný stav schválenia
+      const userDocRef = doc(db, `users`, userToUpdate.id);
+      const oldRole = userToUpdate.role;
+      const wasApproved = userToUpdate.approved; // Získame pôvodný stav schválenia
       
       // 2. Skontrolujeme, či došlo k zmene roly z 'admin'
       const isApproved = newRole !== 'admin';
@@ -517,7 +513,7 @@ function UsersManagementApp() {
       setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
       
       // Log notification
-      await logNotification([`Zmena roly pre ${userSnap.data().firstName} ${userSnap.data().lastName}: z ${oldRole} na ${newRole}.`]);
+      await logNotification(`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${oldRole}' na '${newRole}'`);
     } catch (error) {
       console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
@@ -560,7 +556,7 @@ function UsersManagementApp() {
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
 
       // Log notification
-      await logNotification([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}.`]);
+      await logNotification(`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}.`);
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
       setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
@@ -635,7 +631,7 @@ function UsersManagementApp() {
       // Log notification
       const userToApprove = users.find(u => u.id === userId);
       if (userToApprove) {
-        await logNotification([`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`]);
+        await logNotification(`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`);
       }
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
@@ -694,18 +690,24 @@ function UsersManagementApp() {
   };
 
   // Funkcia na uloženie upraveného dátumu do Firestore
-  const handleDateSave = async (userId, dateType, newDate) => {
+  const handleDateSave = async (userToUpdate, dateType, newDate) => {
     try {
-      const userDocRef = doc(db, `users`, userId);
+      const userDocRef = doc(db, `users`, userToUpdate.id);
+      
+      // Získanie pôvodnej hodnoty pre logovanie
+      const oldDate = userToUpdate[dateType];
+      const formattedOldDate = formatDate(oldDate);
+      const formattedNewDate = formatDate(newDate);
+
       await updateDoc(userDocRef, {
         [dateType]: newDate // Dynamicky nastaví názov poľa
       });
-      setNotification({ message: `Dátum bol úspešne aktualizovaný pre ${dateToEditUser.firstName} ${dateToEditUser.lastName}.`, type: 'success' });
+      setNotification({ message: `Dátum bol úspešne aktualizovaný pre ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
 
-      // Log notification
+      // Log notification s pôvodnou a novou hodnotou
       const dateTypeString = dateType === 'dataEditDeadline' ? 'údajov' : 'súpisiek';
-      const formattedDate = formatDate(newDate);
-      await logNotification([`Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${dateToEditUser.firstName} ${dateToEditUser.lastName} na ${formattedDate}.`]);
+      const notificationMessage = `Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${formattedOldDate}' na '${formattedNewDate}'`;
+      await logNotification(notificationMessage);
     } catch (error) {
       console.error("Chyba pri aktualizácii dátumu:", error);
       setNotification({ message: 'Nepodarilo sa aktualizovať dátum.', type: 'error' });
