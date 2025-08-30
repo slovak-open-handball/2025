@@ -77,10 +77,14 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                     if (userData && userData.teams) {
                         // Iterovanie cez tímy v užívateľskom profile
-                        Object.values(userData.teams).forEach(category => {
-                            if (category.teamName) {
-                                teamsList.push(category.teamName);
-                                console.log("Nádený názov tímu:", category.teamName);
+                        Object.values(userData.teams).forEach(teamArray => {
+                            if (Array.isArray(teamArray)) {
+                                teamArray.forEach(team => {
+                                    if (team.teamName) {
+                                        teamsList.push(team.teamName);
+                                        console.log("Nádený názov tímu:", team.teamName);
+                                    }
+                                });
                             }
                         });
                     }
