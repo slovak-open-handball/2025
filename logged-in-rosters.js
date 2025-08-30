@@ -1165,18 +1165,16 @@ useEffect(() => {
     let unsubscribeUserDeadlines;
 
     const fetchDeadlines = async () => {
-        let settingsRosterDeadline = null;
-        let settingsDataDeadline = null;
-
         try {
             const settingsDocRef = doc(db, 'settings', 'registration');
             unsubscribeSettings = onSnapshot(settingsDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    settingsRosterDeadline = data.rosterEditDeadline ? parseFirebaseDate(data.rosterEditDeadline) : null;
-                    settingsDataDeadline = data.dataEditDeadline ? parseFirebaseDate(data.dataEditDeadline) : null;
+                    // Prevedenie Timestamp na Date
+                    const settingsRosterDeadline = data.rosterEditDeadline?.toDate() || null;
+                    const settingsDataDeadline = data.dataEditDeadline?.toDate() || null;
 
-                    console.log("Načítané deadliny z nastavení:", {
+                    console.log("Načítané deadliny z nastavení (Timestamp → Date):", {
                         rosterEditDeadline: settingsRosterDeadline,
                         dataEditDeadline: settingsDataDeadline
                     });
@@ -1189,30 +1187,21 @@ useEffect(() => {
 
                             if (userDocSnapshot.exists()) {
                                 const userData = userDocSnapshot.data();
-                                userRosterDeadline = userData.rosterEditDeadline ? parseFirebaseDate(userData.rosterEditDeadline) : null;
-                                userDataDeadline = userData.dataEditDeadline ? parseFirebaseDate(userData.dataEditDeadline) : null;
+                                // Prevedenie Timestamp na Date
+                                userRosterDeadline = userData.rosterEditDeadline?.toDate() || null;
+                                userDataDeadline = userData.dataEditDeadline?.toDate() || null;
 
-                                console.log("Načítané deadliny z používateľského profilu:", {
+                                console.log("Načítané deadliny z používateľského profilu (Timestamp → Date):", {
                                     userRosterDeadline,
                                     userDataDeadline
                                 });
                             }
 
-                            let finalRosterDeadline = settingsRosterDeadline;
-                            if (userRosterDeadline) {
-                                if (!finalRosterDeadline || userRosterDeadline > finalRosterDeadline) {
-                                    finalRosterDeadline = userRosterDeadline;
-                                }
-                            }
+                            // Určenie finálnych deadlinov
+                            const finalRosterDeadline = userRosterDeadline || settingsRosterDeadline;
+                            const finalDataDeadline = userDataDeadline || settingsDataDeadline;
 
-                            let finalDataDeadline = settingsDataDeadline;
-                            if (userDataDeadline) {
-                                if (!finalDataDeadline || userDataDeadline > finalDataDeadline) {
-                                    finalDataDeadline = userDataDeadline;
-                                }
-                            }
-
-                            console.log("Finálne deadliny po porovnaní:", {
+                            console.log("Finálne deadliny (Date objekty):", {
                                 rosterEditDeadline: finalRosterDeadline,
                                 dataEditDeadline: finalDataDeadline
                             });
