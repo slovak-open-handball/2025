@@ -248,30 +248,25 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     return React.createElement(
         'div',
-        { className: 'flex-grow flex flex-col justify-center items-center' },
-        React.createElement('h2', { className: 'text-4xl font-extrabold tracking-tight text-center text-gray-800 mb-8' }, 'Tímy do skupín'),
+        { className: 'flex flex-col md:flex-row justify-center space-x-0 md:space-x-4 w-full px-4' }, // Zmena tried na tomto riadku
         React.createElement(
             'div',
-            { className: 'flex flex-col md:flex-row justify-center space-x-0 md:space-x-4 w-full px-4' },
+            { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0` },
             React.createElement(
                 'div',
-                { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0` },
+                { className: 'mt-8' },
                 React.createElement(
-                    'div',
-                    { className: 'mt-8' },
-                    React.createElement(
-                        'h3',
-                        { className: 'text-2xl font-semibold mb-4 text-center' },
-                        'Zoznam všetkých tímov'
-                    ),
-                    renderTeamList()
-                )
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex-grow' },
-                renderGroupedCategories()
+                    'h3',
+                    { className: 'text-2xl font-semibold mb-4 text-center' },
+                    'Zoznam všetkých tímov'
+                ),
+                renderTeamList()
             )
+        ),
+        React.createElement(
+            'div',
+            { className: 'flex-grow min-w-0' }, // Pridaná trieda 'min-w-0'
+            renderGroupedCategories()
         )
     );
 };
