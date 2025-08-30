@@ -53,6 +53,23 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState(''); // Pridaný stav pre vybranú kategóriu
+    
+    // Načítanie kategórie z URL hashu pri prvom renderovaní
+    useEffect(() => {
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            setSelectedCategoryId(hash);
+        }
+    }, []);
+
+    // Synchronizácia URL hashu so stavom `selectedCategoryId`
+    useEffect(() => {
+        if (selectedCategoryId) {
+            window.location.hash = selectedCategoryId;
+        } else {
+            window.location.hash = '';
+        }
+    }, [selectedCategoryId]);
 
     useEffect(() => {
         if (!window.db) {
