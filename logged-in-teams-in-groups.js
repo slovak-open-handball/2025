@@ -62,23 +62,32 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
 
         const fetchAllTeams = async () => {
+            console.log("Načítavam tímy z kolekcie 'users'...");
             const usersRef = collection(window.db, 'users');
             const teamsList = [];
 
             try {
                 const querySnapshot = await getDocs(usersRef);
+                console.log(`Nádené dokumenty: ${querySnapshot.docs.length}`);
+                
                 querySnapshot.forEach((doc) => {
                     const userData = doc.data();
+                    console.log("Spracovávam dokument s ID:", doc.id);
+                    console.log("Údaje z dokumentu:", userData);
+
                     if (userData && userData.teams) {
                         // Iterovanie cez tímy v užívateľskom profile
                         Object.values(userData.teams).forEach(category => {
                             if (category.teamName) {
                                 teamsList.push(category.teamName);
+                                console.log("Nádený názov tímu:", category.teamName);
                             }
                         });
                     }
                 });
                 setAllTeams(teamsList);
+                console.log("Celkový zoznam tímov:", teamsList);
+
             } catch (e) {
                 console.error("Chyba pri načítaní tímov: ", e);
             }
