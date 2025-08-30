@@ -187,7 +187,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         return React.createElement(
             'div',
-            { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' },
+            { className: 'flex flex-wrap gap-4 justify-center' },
             sortedCategoryIds.map((categoryId, index) => {
                 const groups = allGroupsByCategoryId[categoryId];
                 const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
@@ -207,7 +207,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 
                 return React.createElement(
                     'div',
-                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
+                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0' },
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
