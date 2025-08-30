@@ -220,7 +220,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     sortedGroups.map((group, groupIndex) =>
                         React.createElement(
                             'li',
-                            { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis' },
+                            { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
                             React.createElement(
                                 'div',
                                 null,
