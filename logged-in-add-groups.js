@@ -73,6 +73,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 loadedCategories.push(categoriesData[key].name);
                             }
                         }
+                        // Zoradenie kategórií abecedne
+                        loadedCategories.sort((a, b) => a.localeCompare(b));
                         setCategories(loadedCategories);
                     } else {
                         console.log("Dokument 'categories' nebol nájdený v 'settings'.");
