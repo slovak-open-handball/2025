@@ -36,6 +36,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+
         }
         .modal-content {
             background-color: #fefefe;
@@ -135,6 +136,12 @@
             white-space: nowrap;
         }
     </style>
+
+
+
+
+
+
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
@@ -197,16 +204,28 @@
 
         // Funkcia na kontrolu pripravenosti globálnych dát a vykreslenie React aplikácie
         const checkReadyAndRender = () => {
-            // Kontrola, či sú React, ReactDOM a naša aplikácia pripravené
-            if (window.React && window.ReactDOM && window.RostersApp) {
-                console.log("logged-in-rosters.html: React, ReactDOM a RostersApp sú pripravené.");
+            // Kontrola, či sú React a ReactDOM načítané
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            // Kontrola, či je komponent RostersApp definovaný
+            if (typeof window.RostersApp === 'undefined') { // Používame window.RostersApp
+                console.log("logged-in-rosters.html: Čakám na definíciu RostersApp...");
+                setTimeout(checkReadyAndRender, 100); // Skúste znova po krátkom oneskorení
+                return;
+            }
 
-                // Skryjeme globálny loader
-                if (typeof window.hideGlobalLoader === 'function') {
+            // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
+            // a kým je načítaný aj loader (window.showGlobalLoader existuje)
+            if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
+                // Skryjeme globálny loader (ten, ktorý vytvorí loader.js)
+                if (window.hideGlobalLoader) {
                     window.hideGlobalLoader();
                 }
                 
-                // Vymažeme originálny loader, ktorý je priamo v HTML (v #root)
+                // Odstránime lokálny loader, ktorý je priamo v HTML (v #root)
                 const rootElement = document.getElementById('root');
                 if (rootElement) {
                     rootElement.innerHTML = ''; // Pred samotným vykreslením Reactu vyčistíme obsah root elementu
@@ -215,19 +234,6 @@
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(window.RostersApp, null)); // Používame window.RostersApp
                 console.log("logged-in-rosters.html: React App vykreslená.");
-
-                // Pridáme event listener pre text "Odhlásenie" po vykreslení hlavičky
-                const logoutLink = document.getElementById('logout-button');
-                if (logoutLink) {
-                    logoutLink.addEventListener('click', (event) => {
-                        event.preventDefault(); // Zabraňuje prechodu na iný URL, ak je to <a> tag
-                        if (window.handleLogout) {
-                            window.handleLogout();
-                        } else {
-                            console.error("logged-in-rosters.html: Funkcia handleLogout nie je dostupná.");
-                        }
-                    });
-                }
             } else {
                 // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
                 setTimeout(checkReadyAndRender, 100);
