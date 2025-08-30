@@ -61,6 +61,18 @@ const getAppBasePath = () => {
 
 const appBasePath = getAppBasePath(); // Získanie dynamickej základnej cesty
 
+// Zoznam stránok prístupných len pre adminov
+const blockedPages = [
+    'logged-in-add-categories.html',
+    'logged-in-add-groups.html',
+    'logged-in-teams-in-groups.html',
+    'logged-in-tournament-settings.html',
+    'logged-in-all-registrations.html',
+    'logged-in-users.html',
+    'logged-in-notifications.html'
+];
+
+
 // Inicializácia Firebase aplikácie
 let app;
 let db;
@@ -189,7 +201,7 @@ const handleAuthState = async () => {
                                 return; // Zastaví ďalšie spracovanie pre tohto používateľa
                             } 
                             // NOVÁ LOGIKA: Presmerovanie schválených používateľov (admin, user, hall s approved: true)
-                            // LEN AK SÚ NA PRIHLASOVACEJ STRÁNKE
+                            // LEN AK SÚ NA PRIHLASOVACEJ STRÁNKE, ALEBO AK NEMÁJÚ PRÍSTUP NA STRÁNKY PRE ADMINA
                             else if (userProfileData.approved === true) {
                                 const currentPath = window.location.pathname;
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
@@ -199,9 +211,14 @@ const handleAuthState = async () => {
                                 if (currentPath.includes(loginPath)) {
                                     console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.`);
                                     window.location.href = targetPathMyData;
+                                } 
+                                // Kontrola prístupu na stránky prístupné len pre admina pre používateľov, ktorí nie sú admin
+                                else if (userProfileData.role !== 'admin' && blockedPages.some(page => currentPath.includes(page))) {
+                                    console.log(`AuthManager: Používateľ typu '${userProfileData.role}' sa pokúsil o prístup na zablokovanú stránku. Presmerovávam na logged-in-my-data.html.`);
+                                    window.location.href = targetPathMyData;
                                 } else {
                                     // Inak, nechajte ho na aktuálnej stránke
-                                    console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je už prihlásený a nie je na prihlasovacej stránke. Zostávam na aktuálnej stránke.`);
+                                    console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je už prihlásený a má prístup k aktuálnej stránke. Zostávam na aktuálnej stránke.`);
                                 }
                             }
 
