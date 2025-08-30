@@ -366,21 +366,23 @@ function UsersManagementApp() {
   const DEFAULT_DATA_EDIT_DEADLINE = new Date('2025-08-29T14:00:00Z'); // August 29, 2025 at 4:00:00 PM UTC+2
   const DEFAULT_ROSTER_EDIT_DEADLINE = new Date('2025-09-14T20:00:00Z'); // September 14, 2025 at 10:00:00 PM UTC+2
 
-  // Function to log changes to the notifications collection
-  const logNotification = async (message) => {
+  // Funkcia na logovanie zmien do kolekcie 'notifications'
+  const logChanges = async (changes) => {
     try {
       if (!auth.currentUser || !globalUserProfileData || !db) {
-        console.error("Not able to log notification: User not authenticated or global data not available.");
+        console.error("Not able to log changes: User not authenticated or global data not available.");
         return;
       }
       const notificationsRef = collection(db, `notifications`);
       await addDoc(notificationsRef, {
-        message: message,
+        changes: changes,
         timestamp: serverTimestamp(),
+        userId: globalUserProfileData.id,
         userEmail: globalUserProfileData.email,
+        userName: `${globalUserProfileData.firstName} ${globalUserProfileData.lastName}`
       });
     } catch (error) {
-      console.error("Error logging notification:", error);
+      console.error("Error logging changes:", error);
     }
   };
 
@@ -534,7 +536,7 @@ function UsersManagementApp() {
       setNotification({ message: `Rola používateľa bola úspešne zmenená na ${newRole}.`, type: 'success' });
       
       // Log notification
-      await logNotification(`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${oldRole}' na '${newRole}'`);
+      await logChanges([`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${oldRole}' na '${newRole}'`]);
     } catch (error) {
       console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
@@ -576,8 +578,8 @@ function UsersManagementApp() {
 
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
 
-      // Log notification
-      await logNotification(`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}.`);
+      // Log changes
+      await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}.`]);
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
       setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
@@ -649,10 +651,10 @@ function UsersManagementApp() {
       
       setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
       
-      // Log notification
+      // Log changes
       const userToApprove = users.find(u => u.id === userId);
       if (userToApprove) {
-        await logNotification(`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`);
+        await logChanges([`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`]);
       }
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
@@ -725,10 +727,10 @@ function UsersManagementApp() {
       });
       setNotification({ message: `Dátum bol úspešne aktualizovaný pre ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
 
-      // Log notification s pôvodnou a novou hodnotou
+      // Log changes s pôvodnou a novou hodnotou
       const dateTypeString = dateType === 'dataEditDeadline' ? 'údajov' : 'súpisiek';
-      const notificationMessage = `Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${formattedOldDate}' na '${formattedNewDate}'`;
-      await logNotification(notificationMessage);
+      const change = `Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${formattedOldDate}' na '${formattedNewDate}'`;
+      await logChanges([change]);
     } catch (error) {
       console.error("Chyba pri aktualizácii dátumu:", error);
       setNotification({ message: 'Nepodarilo sa aktualizovať dátum.', type: 'error' });
