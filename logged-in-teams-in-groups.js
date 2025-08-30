@@ -108,10 +108,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                 if (docSnap.exists()) {
                     const groupData = docSnap.data();
                     console.log("Údaje z dokumentu skupín:", groupData);
-                    Object.entries(groupData).forEach(([fieldName, fieldValue]) => {
-                        if (fieldValue && fieldValue.name) {
-                            groupsList.push(fieldValue.name);
-                            console.log("Nájdený názov skupiny:", fieldValue.name);
+                    // Prechádzame hodnoty (polia) dokumentu
+                    Object.values(groupData).forEach(groupArray => {
+                        // Kontrola, či je hodnota pole
+                        if (Array.isArray(groupArray)) {
+                            // Iterácia cez objekty v poli
+                            groupArray.forEach(groupObject => {
+                                if (groupObject && groupObject.name) {
+                                    groupsList.push(groupObject.name);
+                                    console.log("Nájdený názov skupiny:", groupObject.name);
+                                }
+                            });
                         }
                     });
                 } else {
