@@ -736,8 +736,9 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         if (authError.code) {
             switch (authError.code) {
                 case 'auth/email-already-in-use':
-                    // ZMENA: pridaný <a> tag pre klikateľný odkaz
-                    authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zmeňte ju na <a href="register-page1.js">strane 1</a> (tlačidlo späť).';
+                    // Oprava: Namiesto automatického presmerovania, vytvorenie klikateľného odkazu,
+                    // ktorý zavolá funkciu setPage(1) a zmení stav stránky.
+                    authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zmeňte ju na <span onclick="setPage(1)" style="cursor: pointer; text-decoration: underline;">strane 1</span> (tlačidlo späť).';
                     break;
                 case 'auth/invalid-email':
                     authErrorMessage = 'Neplatný formát e-mailovej adresy.';
@@ -943,7 +944,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
     setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
     setTeamsDataFromPage4({});
     setGlobalNote(''); // NOVINKA: Reset globálnej poznámky
-    setPage(1);
+    // setPage(1);  // Už sa volá vyššie v prípade chyby s emailom
 
     setTimeout(async () => {
       if (authInstance && authInstance.currentUser) {
@@ -960,6 +961,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
     isRegisteringRef.current = false;
   }
 };
+  
 
   const isPage1FormDataEmpty = (data) => {
     if (data.firstName.trim() !== '' ||
