@@ -1,4 +1,4 @@
-const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+const RECAPTCHA_SITE_KEY = "6LfqRLgrAAAAACKddwhsDL-LYi4WmcEimSzDSHOy";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
