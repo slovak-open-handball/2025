@@ -456,13 +456,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap justify-center gap-4' },
-                categories.map(category =>
-                    React.createElement(
+                categories.map(category => {
+                    // Zoradenie skupín v rámci kategórie
+                    const categoryGroups = groups[category.id] || [];
+                    const zakladneSkupiny = categoryGroups.filter(g => g.type === 'základná skupina').sort((a, b) => a.name.localeCompare(b.name));
+                    const nadstavboveSkupiny = categoryGroups.filter(g => g.type === 'nadstavbová skupina').sort((a, b) => a.name.localeCompare(b.name));
+                    const sortedGroups = [...zakladneSkupiny, ...nadstavboveSkupiny];
+                    
+                    return React.createElement(
                         'div',
                         { key: category.id, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center' },
                         React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category.name),
                         React.createElement('ul', { className: 'w-full' },
-                            groups[category.id] && groups[category.id].map((group, groupIndex) =>
+                            sortedGroups.map((group, groupIndex) =>
                                 React.createElement('li', {
                                     key: groupIndex,
                                     className: `
@@ -515,7 +521,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             )
                         )
                     )
-                )
+                })
             )
         ),
         React.createElement(
