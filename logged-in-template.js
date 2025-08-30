@@ -61,7 +61,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Vytvorenie skupín')
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Šablóna')
             )
         )
     );
