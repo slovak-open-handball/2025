@@ -395,14 +395,17 @@ function App() {
 
 // odtiaľto  
   const handlePage1Next = () => {
-    const existingEmailMessage = "Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.";
+    const existingEmailMessage = "Zadaná e-mailová adresa už existuje";
     // KONTROLA: Teraz kontrolujeme, či je správa v globalNote alebo v notificationMessage, aby sme sa vyhli problému s načasovaním
-    if ((globalNote && globalNote.includes(existingEmailMessage)) || (notificationMessage && notificationMessage.includes(existingEmailMessage))) {
+    const shouldGoToPage7 = (globalNote && globalNote.includes(existingEmailMessage)) || (notificationMessage && notificationMessage.includes(existingEmailMessage));
+    
+    if (shouldGoToPage7) {
       setCurrentPage(7);
-      return;
+    } else {
+      nextPage();
     }
-    // Inak pokračujeme na ďalšiu stránku (strana 2)
-    nextPage();
+    // Vymazať notifikáciu až po rozhodnutí o presmerovaní
+    closeNotification();
   };
 // potiaľto  
 
