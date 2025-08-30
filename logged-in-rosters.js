@@ -1116,8 +1116,7 @@ function RostersApp() {
     };
   }, []); 
 
-  // Effect to fetch deadlines
-  useEffect(() => {
+useEffect(() => {
     let unsubscribeSettings;
     let unsubscribeUserDeadlines;
 
@@ -1125,7 +1124,6 @@ function RostersApp() {
         let settingsRosterDeadline = null;
         let settingsDataDeadline = null;
 
-        // Fetch from settings
         try {
             const settingsDocRef = doc(db, 'settings', 'registration');
             unsubscribeSettings = onSnapshot(settingsDocRef, (docSnapshot) => {
@@ -1133,8 +1131,13 @@ function RostersApp() {
                     const data = docSnapshot.data();
                     settingsRosterDeadline = data.rosterEditDeadline ? new Date(data.rosterEditDeadline) : null;
                     settingsDataDeadline = data.dataEditDeadline ? new Date(data.dataEditDeadline) : null;
-                    
-                    // If user is available, fetch user-specific deadlines
+
+                    // Debug: Výpis načítaných hodnôt z nastavení
+                    console.log("Načítané deadliny z nastavení:", {
+                        rosterEditDeadline: settingsRosterDeadline,
+                        dataEditDeadline: settingsDataDeadline
+                    });
+
                     if (user && user.uid) {
                         const userDocRef = doc(db, 'users', user.uid);
                         unsubscribeUserDeadlines = onSnapshot(userDocRef, (userDocSnapshot) => {
@@ -1145,9 +1148,15 @@ function RostersApp() {
                                 const userData = userDocSnapshot.data();
                                 userRosterDeadline = userData.rosterEditDeadline ? new Date(userData.rosterEditDeadline) : null;
                                 userDataDeadline = userData.dataEditDeadline ? new Date(userData.dataEditDeadline) : null;
+
+                                // Debug: Výpis načítaných hodnôt z používateľského profilu
+                                console.log("Načítané deadliny z používateľského profilu:", {
+                                    userRosterDeadline,
+                                    userDataDeadline
+                                });
                             }
 
-                            // Determine final deadlines: later of user's or settings' deadline
+                            // Určenie finálnych deadlinov
                             let finalRosterDeadline = settingsRosterDeadline;
                             if (userRosterDeadline) {
                                 if (!finalRosterDeadline || userRosterDeadline > finalRosterDeadline) {
@@ -1162,43 +1171,37 @@ function RostersApp() {
                                 }
                             }
 
+                            // Debug: Výpis finálnych deadlinov
+                            console.log("Finálne deadliny po porovnaní:", {
+                                rosterEditDeadline: finalRosterDeadline,
+                                dataEditDeadline: finalDataDeadline
+                            });
+
                             setRosterEditDeadline(finalRosterDeadline);
                             setDataEditDeadline(finalDataDeadline);
                         }, (error) => {
-                            console.error("Error fetching user deadlines:", error);
-                            // Fallback to settings deadlines if user fetch fails
+                            console.error("Chyba pri načítaní používateľských deadlinov:", error);
                             setRosterEditDeadline(settingsRosterDeadline);
                             setDataEditDeadline(settingsDataDeadline);
                         });
                     } else {
-                        // If no user, just use settings deadlines
                         setRosterEditDeadline(settingsRosterDeadline);
                         setDataEditDeadline(settingsDataDeadline);
                     }
                 } else {
-                    // If settings doc doesn't exist, set to null
+                    console.log("Dokument s nastaveniami neexistuje.");
                     setRosterEditDeadline(null);
                     setDataEditDeadline(null);
-
-                    // Also unsubscribe user deadlines if settings are gone
-                    if (unsubscribeUserDeadlines) {
-                        unsubscribeUserDeadlines();
-                    }
                 }
             }, (error) => {
-                console.error("Error fetching settings deadlines:", error);
+                console.error("Chyba pri načítaní deadlinov z nastavení:", error);
                 setRosterEditDeadline(null);
                 setDataEditDeadline(null);
-                if (unsubscribeUserDeadlines) {
-                    unsubscribeUserDeadlines();
-                }
             });
         } catch (e) {
-            console.error("Error setting up onSnapshot for deadlines:", e);
+            console.error("Chyba pri nastavovaní onSnapshot pre deadliny:", e);
             setRosterEditDeadline(null);
             setDataEditDeadline(null);
-            if (unsubscribeSettings) unsubscribeSettings(); // Clean up if initial setup fails
-            if (unsubscribeUserDeadlines) unsubscribeUserDeadlines();
         }
     };
 
@@ -1207,14 +1210,17 @@ function RostersApp() {
     }
 
     return () => {
-        if (unsubscribeSettings) {
-            unsubscribeSettings();
-        }
-        if (unsubscribeUserDeadlines) {
-            unsubscribeUserDeadlines();
-        }
+        if (unsubscribeSettings) unsubscribeSettings();
+        if (unsubscribeUserDeadlines) unsubscribeUserDeadlines();
     };
-}, [db, user, isAuthReady]); // Re-run if db, user, or auth status changes
+}, [db, user, isAuthReady]);
+
+useEffect(() => {
+    console.log("Aktuálne deadliny v stave:", {
+        rosterEditDeadline,
+        dataEditDeadline
+    });
+}, [rosterEditDeadline, dataEditDeadline]);
 
 // New useEffect for deadline status timer
 useEffect(() => {
