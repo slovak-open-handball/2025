@@ -242,7 +242,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 
                 return React.createElement(
                     'div',
-                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0' },
+                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0' },
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
@@ -297,7 +297,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
             React.createElement(
                 'div',
-                { className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0" },
+                { className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0" },
                 React.createElement(
                     'h3',
                     { className: 'text-2xl font-semibold mb-4 text-center' },
@@ -320,7 +320,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     sortedGroups.map((group, groupIndex) =>
                         React.createElement(
                             'div',
-                            { key: groupIndex, className: `flex flex-col rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}` },
+                            { key: groupIndex, className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}` },
                             React.createElement(
                                 'h3',
                                 { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
@@ -404,7 +404,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
                 React.createElement(
                     'div',
-                    { className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0` },
+                    { className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0` },
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold mb-4 text-center' },
