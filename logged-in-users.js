@@ -302,8 +302,8 @@ function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
         React.createElement(
             'div',
-            { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
-            React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, title),
+            { className: 'bg-white p-8 rounded-lg shadow-xl max-w-fit' },
+            React.createElement('h2', { className: 'text-2xl font-bold mb-4 whitespace-nowrap' }, title),
             React.createElement('p', { className: 'mb-4' }, `Používateľ: ${user.firstName} ${user.lastName}`),
             React.createElement('div', { className: 'mb-4' },
                 React.createElement('label', { htmlFor: 'date-input', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Vyberte dátum a čas:'),
