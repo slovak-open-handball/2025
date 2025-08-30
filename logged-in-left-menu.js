@@ -19,7 +19,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     const addGroupsLink = document.getElementById('add-groups-link'); // NOVINKA: Získanie odkazu na skupiny
-    const addTeamsToGroupsLink = document.getElementById('add-teams-to-groups-link'); // NOVINKA: Získanie odkazu na pridávanie tímov do skupín
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
     const mySettingsLink = document.getElementById('my-settings-link'); // NOVINKA: Získanie odkazu na moje nastavenia
@@ -78,7 +77,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
             addGroupsLink.classList.remove('hidden');
-            addTeamsToGroupsLink.classList.remove('hidden');
             tournamentSettingsLink.classList.remove('hidden');    
             allRegistrationsLink.classList.remove('hidden');
             mySettingsLink.classList.remove('hidden');
@@ -107,7 +105,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         } else if (userProfileData.role === 'user') {
             addCategoriesLink.classList.add('hidden');
             addGroupsLink.classList.add('hidden');
-            addTeamsToGroupsLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
             allRegistrationsLink.classList.add('hidden');
             mySettingsLink.classList.add('hidden');
@@ -125,7 +122,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             // Predvolene skryť všetky špecifické odkazy, ak rola nie je admin ani user
             addCategoriesLink.classList.add('hidden');
             addGroupsLink.classList.add('hidden');
-            addTeamsToGroupsLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
             allRegistrationsLink.classList.add('hidden');
             mySettingsLink.classList.add('hidden');
