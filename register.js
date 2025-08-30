@@ -395,8 +395,9 @@ function App() {
 
 // odtiaľto  
   const handlePage1Next = () => {
-    // KONTROLA: Ak je zobrazená správa o existujúcom e-maili, prejdeme na stránku 7
-    if (globalNote && globalNote.includes("Zadaná e-mailová adresa už existuje")) {
+    const existingEmailMessage = "Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.";
+    // KONTROLA: Teraz kontrolujeme, či je správa v globalNote alebo v notificationMessage, aby sme sa vyhli problému s načasovaním
+    if ((globalNote && globalNote.includes(existingEmailMessage)) || (notificationMessage && notificationMessage.includes(existingEmailMessage))) {
       setCurrentPage(7);
       return;
     }
