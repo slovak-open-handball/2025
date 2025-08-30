@@ -108,7 +108,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             setCategoryIdToNameMap(categoryIdToName);
             console.log("onSnapshot: Mapa kategórií aktualizovaná:", categoryIdToName);
         }, (error) => {
-            console.error("onSnapshot: Chyba pri načítaní kategórií: ", error);
+error("onSnapshot: Chyba pri načítaní kategórií: ", error);
         });
 
         // Listener na zmeny v dokumente 'groups'
@@ -211,7 +211,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 
                 return React.createElement(
                     'div',
-                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 min-w-[300px]' },
+                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-grow' },
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold mb-4 text-center' },
