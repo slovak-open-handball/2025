@@ -57,13 +57,16 @@ const AddGroupsApp = ({ userProfileData }) => {
         const fetchCategories = async () => {
             if (window.db) {
                 try {
-                    const categoriesCollection = collection(window.db, 'settings', 'categories');
-                    const categoriesSnapshot = await getDocs(categoriesCollection);
+                    const categoriesDocRef = doc(window.db, 'settings', 'categories');
+                    const categoriesSnap = await getDoc(categoriesDocRef);
 
-                    console.log("Načítané kategórie:");
-                    categoriesSnapshot.forEach(doc => {
-                        console.log(doc.id, "=>", doc.data());
-                    });
+                    if (categoriesSnap.exists()) {
+                        const data = categoriesSnap.data();
+                        console.log("Načítané kategórie:");
+                        console.log(data);
+                    } else {
+                        console.log("Dokument s kategóriami nebol nájdený!");
+                    }
                 } catch (error) {
                     console.error("Chyba pri načítavaní kategórií:", error);
                 }
