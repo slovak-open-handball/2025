@@ -225,7 +225,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     null,
                                     React.createElement(
                                         'p',
-                                        { className: 'font-semibold **truncate**' },
+                                        { className: 'font-semibold' },
                                         group.name
                                     ),
                                     React.createElement(
