@@ -373,50 +373,39 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [categoryOfGroupToDelete, setCategoryOfGroupToDelete] = useState('');
 
     useEffect(() => {
-        const fetchCategories = async () => {
-            if (window.db) {
-                try {
-                    const categoriesDocRef = doc(window.db, 'settings', 'categories');
-                    const categoriesSnapshot = await getDoc(categoriesDocRef);
-
-                    if (categoriesSnapshot.exists()) {
-                        const categoriesData = categoriesSnapshot.data();
-                        // Pre lepšiu integritu dát používame ID kategórií ako kľúče
-                        // a vytvárame pole objektov pre jednoduché mapovanie v UI.
-                        const loadedCategories = Object.keys(categoriesData).map(id => ({
-                            id: id,
-                            name: categoriesData[id].name
-                        }));
-                        loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
-                        setCategories(loadedCategories);
-                    } else {
-                        console.log("Dokument 'categories' nebol nájdený v 'settings'.");
-                    }
-                } catch (error) {
-                    console.error("Chyba pri načítavaní kategórií:", error);
-                }
+        // Načítanie kategórií v reálnom čase
+        const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
+            if (docSnap.exists()) {
+                const categoriesData = docSnap.data();
+                const loadedCategories = Object.keys(categoriesData).map(id => ({
+                    id: id,
+                    name: categoriesData[id].name
+                }));
+                loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
+                setCategories(loadedCategories);
+            } else {
+                setCategories([]);
+                console.log("Dokument 'categories' nebol nájdený v 'settings'.");
             }
-        };
+        }, (error) => {
+            console.error("Chyba pri načítavaní kategórií v reálnom čase:", error);
+        });
 
-        const fetchGroups = () => {
-             if (window.db) {
-                const groupsDocRef = doc(window.db, 'settings', 'groups');
-                const unsubscribe = onSnapshot(groupsDocRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        setGroups(docSnap.data());
-                    } else {
-                        setGroups({});
-                    }
-                }, (error) => {
-                    console.error("Chyba pri načítavaní skupín v reálnom čase:", error);
-                });
-
-                return () => unsubscribe();
+        // Načítanie skupín v reálnom čase
+        const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
+            if (docSnap.exists()) {
+                setGroups(docSnap.data());
+            } else {
+                setGroups({});
             }
-        };
+        }, (error) => {
+            console.error("Chyba pri načítavaní skupín v reálnom čase:", error);
+        });
 
-        fetchCategories();
-        fetchGroups();
+        return () => {
+            unsubscribeCategories();
+            unsubscribeGroups();
+        };
     }, []);
 
     const handleEditClick = (group, categoryId) => {
@@ -449,6 +438,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             setCategoryOfGroupToDelete('');
         }
     };
+    
+    // Vytvorenie mapy pre rýchle vyhľadávanie názvov kategórií
+    const categoryNamesMap = categories.reduce((map, category) => {
+        map[category.id] = category.name;
+        return map;
+    }, {});
 
     return React.createElement(
         'div',
