@@ -105,7 +105,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 categories.map((category, index) =>
                     React.createElement(
                         'div',
-                        { key: index, className: 'w-1/4 bg-white rounded-lg shadow-md p-4 flex flex-col items-center justify-center text-center' },
+                        { key: index, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center justify-center text-center' },
                         React.createElement('h3', { className: 'text-lg font-semibold' }, category)
                     )
                 )
