@@ -108,7 +108,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             setCategoryIdToNameMap(categoryIdToName);
             console.log("onSnapshot: Mapa kategórií aktualizovaná:", categoryIdToName);
         }, (error) => {
-error("onSnapshot: Chyba pri načítaní kategórií: ", error);
+            console.error("onSnapshot: Chyba pri načítaní kategórií: ", error);
         });
 
         // Listener na zmeny v dokumente 'groups'
@@ -191,7 +191,7 @@ error("onSnapshot: Chyba pri načítaní kategórií: ", error);
 
         return React.createElement(
             'div',
-            { className: 'flex flex-wrap justify-start gap-4' }, // Odstránenie flex-grow
+            { className: 'flex flex-wrap gap-4' }, // Odstránenie flex-grow a pridanie flex-wrap
             sortedCategoryIds.map((categoryId, index) => {
                 const groups = allGroupsByCategoryId[categoryId];
                 const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
