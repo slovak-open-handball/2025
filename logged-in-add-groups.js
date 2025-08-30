@@ -60,8 +60,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
             React.createElement(
                 'div',
-                { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Vytvorenie skupín')
+                { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Vytvorenie skupín')
             )
         )
     );
