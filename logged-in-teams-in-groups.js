@@ -210,7 +210,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
                     React.createElement(
                         'h3',
-                        { className: 'text-2xl font-semibold mb-4 text-center' },
+                        { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
                         categoryName
                     ),
                     React.createElement(
@@ -219,18 +219,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                         sortedGroups.map((group, groupIndex) =>
                             React.createElement(
                                 'li',
-                                { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
+                                { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 whitespace-nowrap' },
                                 React.createElement(
                                     'div',
                                     null,
                                     React.createElement(
                                         'p',
-                                        { className: 'font-semibold' },
+                                        { className: 'font-semibold whitespace-nowrap' },
                                         group.name
                                     ),
                                     React.createElement(
                                         'p',
-                                        { className: 'text-sm text-gray-500' },
+                                        { className: 'text-sm text-gray-500 whitespace-nowrap' },
                                         group.type
                                     )
                                 )
