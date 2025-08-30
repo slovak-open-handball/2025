@@ -275,6 +275,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             return a.name.localeCompare(b.name);
         });
 
+        // Rozdelíme skupiny podľa typu
+        const zakladneSkupiny = sortedGroups.filter(group => group.type === 'základná skupina');
+        const nadstavboveSkupiny = sortedGroups.filter(group => group.type === 'nadstavbová skupina');
+
         return React.createElement(
             'div',
             { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
@@ -298,9 +302,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             ),
             React.createElement(
                 'div',
-                { className: 'flex-grow min-w-0 flex flex-wrap gap-4 justify-center' },
-                sortedGroups.length > 0 ? (
-                    sortedGroups.map((group, groupIndex) =>
+                { className: 'flex-grow min-w-0' }, // Removed flex-wrap here and will add it to sub-containers
+                
+                // Vykreslenie základných skupín (všetky v jednom riadku)
+                zakladneSkupiny.length > 0 && React.createElement(
+                    'div',
+                    { className: 'flex flex-wrap gap-4 justify-center' },
+                    zakladneSkupiny.map((group, groupIndex) =>
                         React.createElement(
                             'div',
                             { key: groupIndex, className: `flex flex-col rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}` },
@@ -333,12 +341,52 @@ const AddGroupsApp = ({ userProfileData }) => {
                             )
                         )
                     )
-                ) : (
-                    React.createElement(
-                        'p',
-                        { className: 'text-center text-gray-500' },
-                        'Žiadne skupiny v tejto kategórii.'
+                ),
+
+                // Vykreslenie nadstavbových skupín (každá na novom riadku)
+                nadstavboveSkupiny.length > 0 && React.createElement(
+                    'div',
+                    { className: 'flex flex-col gap-4 justify-center' },
+                    nadstavboveSkupiny.map((group, groupIndex) =>
+                        React.createElement(
+                            'div',
+                            { key: groupIndex, className: `flex flex-col rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}` },
+                            React.createElement(
+                                'h3',
+                                { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
+                                group.name
+                            ),
+                            React.createElement(
+                                'ul',
+                                { className: 'space-y-2' },
+                                React.createElement(
+                                    'li',
+                                    { className: 'px-4 py-2 bg-white rounded-lg text-gray-700 whitespace-nowrap' },
+                                    React.createElement(
+                                        'div',
+                                        null,
+                                        React.createElement(
+                                            'p',
+                                            { className: 'font-semibold whitespace-nowrap' },
+                                            'Typ skupiny'
+                                        ),
+                                        React.createElement(
+                                            'p',
+                                            { className: 'text-sm text-gray-500 whitespace-nowrap' },
+                                            group.type
+                                        )
+                                    )
+                                )
+                            )
+                        )
                     )
+                ),
+                
+                // Zobrazenie správy, ak neboli nájdené žiadne skupiny
+                sortedGroups.length === 0 && React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500' },
+                    'Žiadne skupiny v tejto kategórii.'
                 )
             )
         );
