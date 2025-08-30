@@ -180,6 +180,20 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         return Object.entries(allGroupsByCategoryId).map(([categoryId, groups], index) => {
             const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
+            
+            const sortedGroups = [...groups].sort((a, b) => {
+                // Typ "základná skupina" má prednosť
+                if (a.type === 'základná skupina' && b.type !== 'základná skupina') {
+                    return -1;
+                }
+                if (b.type === 'základná skupina' && a.type !== 'základná skupina') {
+                    return 1;
+                }
+                
+                // Ostatné typy sa radia abecedne
+                return a.name.localeCompare(b.name);
+            });
+            
             return React.createElement(
                 'div',
                 { key: index, className: 'w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
@@ -194,7 +208,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement(
                         'ul',
                         { className: 'space-y-2' },
-                        groups.map((group, groupIndex) =>
+                        sortedGroups.map((group, groupIndex) =>
                             React.createElement(
                                 'li',
                                 { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
