@@ -33,10 +33,10 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   };
 
   const tournamentDays = React.useMemo(() => {
+    // Dátumy berieme priamo z props, ktoré by mali byť aktualizované z databázy
     const startDate = tournamentStartDate ? new Date(tournamentStartDate) : null;
     const endDate = tournamentEndDate ? new Date(tournamentEndDate) : null;
     if (startDate && endDate && !isNaN(startDate) && !isNaN(endDate)) {
-        // Zabezpečíme, aby sme posielali iba dátumovú časť
         return getDaysBetween(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
     }
     return [];
