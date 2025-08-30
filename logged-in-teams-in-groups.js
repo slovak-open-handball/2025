@@ -189,7 +189,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold mb-4 text-center' },
-                        `Skupiny pre kategóriu: ${categoryName}`
+                        categoryName
                     ),
                     React.createElement(
                         'ul',
