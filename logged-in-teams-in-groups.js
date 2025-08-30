@@ -191,7 +191,7 @@ error("onSnapshot: Chyba pri načítaní kategórií: ", error);
 
         return React.createElement(
             'div',
-            { className: 'flex flex-wrap justify-start gap-4 flex-grow' },
+            { className: 'flex flex-wrap justify-start gap-4' }, // Odstránenie flex-grow
             sortedCategoryIds.map((categoryId, index) => {
                 const groups = allGroupsByCategoryId[categoryId];
                 const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
@@ -211,7 +211,7 @@ error("onSnapshot: Chyba pri načítaní kategórií: ", error);
                 
                 return React.createElement(
                     'div',
-                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-grow' },
+                    { key: index, className: 'w-64 flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0' }, // Pridaná pevná šírka a flex-shrink
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold mb-4 text-center' },
