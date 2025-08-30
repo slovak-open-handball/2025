@@ -338,7 +338,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         console.error("Chyba: Nemáte oprávnenie na zmazanie balíčka (showNotification not available).");
         return; 
     }
-    if (typeof sendAdminNotification !== 'function') {
+    if (typeof sendAdminNotification === 'function') {
         console.error("DEBUG: sendAdminNotification prop is not a function in handleDeletePackage!");
     }
 
