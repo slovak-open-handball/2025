@@ -65,7 +65,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   return React.createElement(
     'div',
     {
-      className: `fixed top-15 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
+      className: `fixed top-10 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
       style: { zIndex: 1000 }
     },
     React.createElement('p', { className: 'font-semibold' }, message)
