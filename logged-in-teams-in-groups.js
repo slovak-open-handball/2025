@@ -207,7 +207,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 
                 return React.createElement(
                     'div',
-                    { key: index, className: 'w-full sm:w-1/2 md:w-1/3 lg:w-1/4 flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0' }, // Dynamická šírka na základe obrazovky
+                    { key: index, className: 'w-full sm:w-1/2 md:w-1/3 lg:w-1/5 flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0' }, // Dynamická šírka na základe obrazovky
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold mb-4 text-center' },
