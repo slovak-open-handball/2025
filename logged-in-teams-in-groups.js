@@ -189,57 +189,61 @@ const AddGroupsApp = ({ userProfileData }) => {
             return nameA.localeCompare(nameB);
         });
 
-        return sortedCategoryIds.map((categoryId, index) => {
-            const groups = allGroupsByCategoryId[categoryId];
-            const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
-            
-            const sortedGroups = [...groups].sort((a, b) => {
-                // Typ "základná skupina" má prednosť
-                if (a.type === 'základná skupina' && b.type !== 'základná skupina') {
-                    return -1;
-                }
-                if (b.type === 'základná skupina' && a.type !== 'základná skupina') {
-                    return 1;
-                }
+        return React.createElement(
+            'div',
+            { className: 'flex flex-wrap justify-center gap-4 flex-grow' },
+            sortedCategoryIds.map((categoryId, index) => {
+                const groups = allGroupsByCategoryId[categoryId];
+                const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
                 
-                // Ostatné typy sa radia abecedne
-                return a.name.localeCompare(b.name);
-            });
-            
-            return React.createElement(
-                'div',
-                { key: index, className: 'w-full min-w-[200px] bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
-                React.createElement(
-                    'h3',
-                    { className: 'text-2xl font-semibold mb-4 text-center' },
-                    categoryName
-                ),
-                React.createElement(
-                    'ul',
-                    { className: 'space-y-2' },
-                    sortedGroups.map((group, groupIndex) =>
-                        React.createElement(
-                            'li',
-                            { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
+                const sortedGroups = [...groups].sort((a, b) => {
+                    // Typ "základná skupina" má prednosť
+                    if (a.type === 'základná skupina' && b.type !== 'základná skupina') {
+                        return -1;
+                    }
+                    if (b.type === 'základná skupina' && a.type !== 'základná skupina') {
+                        return 1;
+                    }
+                    
+                    // Ostatné typy sa radia abecedne
+                    return a.name.localeCompare(b.name);
+                });
+                
+                return React.createElement(
+                    'div',
+                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-2xl font-semibold mb-4 text-center' },
+                        categoryName
+                    ),
+                    React.createElement(
+                        'ul',
+                        { className: 'space-y-2' },
+                        sortedGroups.map((group, groupIndex) =>
                             React.createElement(
-                                'div',
-                                null,
+                                'li',
+                                { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
                                 React.createElement(
-                                    'p',
-                                    { className: 'font-semibold' },
-                                    group.name
-                                ),
-                                React.createElement(
-                                    'p',
-                                    { className: 'text-sm text-gray-500' },
-                                    group.type
+                                    'div',
+                                    null,
+                                    React.createElement(
+                                        'p',
+                                        { className: 'font-semibold' },
+                                        group.name
+                                    ),
+                                    React.createElement(
+                                        'p',
+                                        { className: 'text-sm text-gray-500' },
+                                        group.type
+                                    )
                                 )
                             )
                         )
                     )
-                )
-            );
-        });
+                );
+            })
+        );
     };
 
     return React.createElement(
@@ -248,7 +252,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         React.createElement('h2', { className: 'text-4xl font-extrabold tracking-tight text-center text-gray-800 mb-8' }, 'Tímy do skupín'),
         React.createElement(
             'div',
-            { className: 'flex flex-row justify-center space-x-4 w-full px-4' },
+            { className: 'flex flex-col md:flex-row justify-center space-x-0 md:space-x-4 w-full px-4' },
             React.createElement(
                 'div',
                 { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0` },
@@ -265,7 +269,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             ),
             React.createElement(
                 'div',
-                { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-grow' },
+                { className: 'flex-grow' },
                 renderGroupedCategories()
             )
         )
