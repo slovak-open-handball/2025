@@ -1,128 +1,173 @@
-// logged-in-add-groups.js
-// Tento súbor obsahuje React komponent pre správu nastavení prihláseného používateľa.
-// Predpokladá, že Firebase SDK je inicializovaný v authentication.js a globálne sprístupnený.
+// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// Importy pre modulárny Firestore
-import { doc, updateDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-// Main React component for the logged-in-my-settings.html page
-function MySettingsApp() {
-  // Prístup k globálnym inštanciám Firebase z window objektu
-  const auth = window.auth;
-  const db = window.db;
+// Import zoznamu predvolieb
+import { countryDialCodes } from "./countryDialCodes.js";
 
-  // Lokálne stavy pre data používateľa a načítanie
-  const [user, setUser] = React.useState(null); // Bude aktualizované z globalDataUpdated
-  const [userProfileData, setUserProfileData] = React.useState(null);
-  const [loading, setLoading] = React.useState(true); // Loading pre data v MySettingsApp
-  const [error, setError] = React.useState(''); // Lokálny stav pre chybové správy
-  const [successMessage, setSuccessMessage] = React.useState('');
 
-  // Efekt pre počúvanie globálnych zmien autentifikácie a dát profilu
-  React.useEffect(() => {
-    const handleGlobalDataUpdated = (event) => {
-      console.log("MySettingsApp: Prijatá udalosť 'globalDataUpdated'.");
-      const globalUser = auth.currentUser; // Získame aktuálneho používateľa priamo z globálneho auth
-      const globalProfileData = event.detail;
+const { useState, useEffect, useRef, useSyncExternalStore } = React;
 
-      setUser(globalUser);
-      setUserProfileData(globalProfileData);
-      setLoading(false); // Ukončíme loading, keď sú dáta prijaté
-
-      if (!globalUser) {
-        console.log("MySettingsApp: Používateľ je odhlásený. Presmerovávam.");
-        if (window.location.pathname.includes('/logged-in-')) {
-            window.location.href = 'login.html';
-        }
-        return;
-      }
-
-      if (globalProfileData) {
-        console.log(`MySettingsApp: Spracovávam profilové dáta pre UID: ${globalUser.uid}`);
-        
-        // Logika pre presmerovanie 'user' role
-        if (globalProfileData.role === 'user') {
-            console.log("MySettingsApp: Používateľ má rolu 'user'. Presmerovávam na logged-in-my-data.html.");
-            window.location.href = 'logged-in-my-data.html';
-            return;
-        }
-        
-        setError(''); // Vyčistí chyby po úspešnom načítaní
-        setSuccessMessage('');
-      } else {
-        console.warn("MySettingsApp: Profilové dáta používateľa nie sú dostupné.");
-        setError("Chyba: Profil používateľa nebol nájdený alebo nemáte dostatočné povolenia.");
-        setSuccessMessage(''); 
-      }
-    };
-
-    // Pridanie listenera pre globálne aktualizácie dát
-    window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
-
-    // Initial check if data is already available (e.g., after a page refresh)
-    if (window.isGlobalAuthReady && window.globalUserProfileData) {
-      console.log("MySettingsApp: Initial check - globálne dáta sú už pripravené.");
-      handleGlobalDataUpdated({ detail: window.globalUserProfileData });
-    } else if (window.isGlobalAuthReady && !window.globalUserProfileData && auth.currentUser) {
-      console.warn("MySettingsApp: Initial check - Firebase Auth je pripravený, ale globalUserProfileData chýba pre prihláseného používateľa.");
-      setError("Chyba: Váš profil sa nepodarilo načítať. Skúste sa prosím odhlásiť a znova prihlásiť.");
-      setLoading(false);
-    } else if (window.isGlobalAuthReady && !auth.currentUser) {
-        console.log("MySettingsApp: Initial check - používateľ nie je prihlásený, ale globalAuthReady je true.");
-        setLoading(false); // Ak nie je prihlásený, nie je čo načítavať
+/**
+ * Globálna funkcia pre zobrazenie notifikácií
+ */
+window.showGlobalNotification = (message, type = 'success') => {
+    let notificationElement = document.getElementById('global-notification');
+    if (!notificationElement) {
+        notificationElement = document.createElement('div');
+        notificationElement.id = 'global-notification';
+        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
+        document.body.appendChild(notificationElement);
     }
-    
-    return () => {
-      window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
-    };
-  }, [auth, db]); // Závisí od globálnych inštancií auth a db
 
-  // Renderovanie loadera, ak je stav `loading` true
-  if (loading) {
+    const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
+    let typeClasses = '';
+    switch (type) {
+        case 'success':
+            typeClasses = 'bg-green-500 text-white';
+            break;
+        case 'error':
+            typeClasses = 'bg-red-500 text-white';
+            break;
+        case 'info':
+            typeClasses = 'bg-blue-500 text-white';
+            break;
+        default:
+            typeClasses = 'bg-gray-700 text-white';
+    }
+
+    notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
+    notificationElement.textContent = message;
+
+    // Zobrazenie notifikácie
+    setTimeout(() => {
+        notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
+    }, 10);
+
+    // Skrytie notifikácie po 5 sekundách
+    setTimeout(() => {
+        notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
+    }, 5000);
+};
+
+const AddGroupsApp = ({ userProfileData }) => {
     return React.createElement(
-      'div',
-      { className: 'flex justify-center items-center h-screen pt-16' },
-      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-    );
-  }
-
-  // Ak existuje chyba alebo úspešná správa, zobrazíme ju ako pop-up
-  const notificationElement = (error || successMessage) && React.createElement(
-    'div',
-    { 
-      className: `fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-white text-center transition-all duration-300 transform 
-                  ${error ? 'bg-red-500' : 'bg-green-500'}`,
-      role: 'alert' 
-    },
-    error && React.createElement('strong', { className: 'font-bold' }, 'Chyba! '),
-    successMessage && React.createElement('strong', { className: 'font-bold' }, ''),
-    React.createElement('span', { className: 'block sm:inline' }, error || successMessage)
-  );
-
-  // Hlavné vykreslenie komponentu
-  return React.createElement(
-    'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    React.createElement(
-      'div',
-      { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
-      notificationElement,
-      React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
-        React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Vytvorenie skupín'
-        ),
+        { className: 'flex-grow' },
         React.createElement(
-          React.Fragment,
-          null,
-          // Sem príde logika pre vytváranie skupín, zatiaľ je to prázdne
-          React.createElement('p', {className: 'text-center text-gray-600'}, 'Táto sekcia bude slúžiť na vytváranie a správu skupín.')
+            'div',
+            { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+            React.createElement(
+                'div',
+                { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Vytvorenie skupín')
+            )
         )
-      )
-    )
-  );
-}
+    );
+};
 
-// Explicitne sprístupníme komponent globálne
-window.MySettingsApp = MySettingsApp;
+
+// Premenná na sledovanie, či bol poslucháč už nastavený
+let isEmailSyncListenerSetup = false;
+
+/**
+ * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
+ * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
+ */
+const handleDataUpdateAndRender = (event) => {
+    const userProfileData = event.detail;
+    const rootElement = document.getElementById('root');
+
+    if (userProfileData) {
+        // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
+        // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
+        if (window.auth && window.db && !isEmailSyncListenerSetup) {
+            console.log("logged-in-add-groups.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
+            
+            onAuthStateChanged(window.auth, async (user) => {
+                if (user) {
+                    try {
+                        const userProfileRef = doc(window.db, 'users', user.uid);
+                        const docSnap = await getDoc(userProfileRef);
+            
+                        if (docSnap.exists()) {
+                            const firestoreEmail = docSnap.data().email;
+                            if (user.email !== firestoreEmail) {
+                                console.log(`logged-in-add-groups.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
+                                
+                                await updateDoc(userProfileRef, {
+                                    email: user.email
+                                });
+            
+                                // Vytvorenie notifikácie v databáze s novou štruktúrou
+                                const notificationsCollectionRef = collection(window.db, 'notifications');
+                                await addDoc(notificationsCollectionRef, {
+                                    userEmail: user.email, // Používame userEmail namiesto userId a userName
+                                    changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                    timestamp: new Date(), // Používame timestamp namiesto createdAt
+                                });
+                                
+                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
+                                console.log("logged-in-add-groups.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
+            
+                            } else {
+                                console.log("logged-in-add-groups.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
+                            }
+                        }
+                    } catch (error) {
+                        console.error("logged-in-add-groups.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
+                        window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
+                    }
+                }
+            });
+            isEmailSyncListenerSetup = true; // Označíme, že poslucháč je nastavený
+        }
+
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(React.createElement(AddGroupsApp, { userProfileData }));
+            console.log("logged-in-add-groups.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
+        } else {
+            console.error("logged-in-add-groups.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+        }
+    } else {
+        // Ak dáta nie sú dostupné, zobrazíme loader
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-center items-center h-full pt-16' },
+                    React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+                )
+            );
+        }
+        console.error("logged-in-add-groups.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
+    }
+};
+
+// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
+console.log("logged-in-add-groups.js: Registrujem poslucháča pre 'globalDataUpdated'.");
+window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
+// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
+// skontrolujeme, či sú dáta už dostupné.
+console.log("logged-in-add-groups.js: Kontrolujem, či existujú globálne dáta.");
+if (window.globalUserProfileData) {
+    console.log("logged-in-add-groups.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
+    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+} else {
+    // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
+    const rootElement = document.getElementById('root');
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(
+            React.createElement(
+                'div',
+                { className: 'flex justify-center items-center h-full pt-16' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+            )
+        );
+    }
+}
