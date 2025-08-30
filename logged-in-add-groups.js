@@ -54,7 +54,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 const AddGroupsApp = ({ userProfileData }) => {
     return React.createElement(
         'div',
-        { className: 'flex-grow' },
+        { className: 'flex-grow flex justify-center items-center' },
         React.createElement(
             'div',
             { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
