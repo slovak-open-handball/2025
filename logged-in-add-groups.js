@@ -472,7 +472,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement('ul', { className: 'w-full' },
                             groups[category] && groups[category].map((group, groupIndex) =>
                                 React.createElement('li', { key: groupIndex, className: 'bg-gray-100 rounded-md p-2 my-1 text-sm flex justify-between items-center' }, 
-                                    React.createElement('span', null, `${group.name} (${group.type})`),
+                                    React.createElement('div', { className: 'flex-1 text-left' },
+                                        React.createElement('div', { className: 'font-semibold' }, group.name),
+                                        React.createElement('div', { className: 'text-gray-500 text-xs' }, group.type)
+                                    ),
                                     React.createElement('div', { className: 'flex gap-2' },
                                         React.createElement(
                                             'button',
