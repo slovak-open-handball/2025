@@ -54,6 +54,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 const AddGroupsApp = ({ userProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
+    const [allGroups, setAllGroups] = useState([]);
 
     useEffect(() => {
         if (!window.db) {
@@ -97,8 +98,30 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         };
 
-        // Načítanie tímov pri štarte
+        const fetchAllGroups = async () => {
+            console.log("Načítavam skupiny z kolekcie 'settings/groups'...");
+            const groupsRef = collection(window.db, 'settings', 'groups');
+            const groupsList = [];
+
+            try {
+                const querySnapshot = await getDocs(groupsRef);
+                console.log(`Nádené dokumenty: ${querySnapshot.docs.length}`);
+
+                querySnapshot.forEach((doc) => {
+                    groupsList.push({ id: doc.id, ...doc.data() });
+                });
+                setAllGroups(groupsList);
+                console.log("Celkový zoznam skupín:", groupsList);
+
+            } catch (e) {
+                console.error("Chyba pri načítaní skupín: ", e);
+            }
+        };
+
+
+        // Načítanie dát pri štarte
         fetchAllTeams();
+        fetchAllGroups();
     }, []);
 
     const renderTeamList = () => {
@@ -122,26 +145,70 @@ const AddGroupsApp = ({ userProfileData }) => {
         );
     };
 
+    const renderGroupList = () => {
+        if (allGroups.length === 0) {
+            return React.createElement(
+                'p',
+                { className: 'text-center text-gray-500' },
+                'Žiadne skupiny neboli nájdené.'
+            );
+        }
+        return React.createElement(
+            'ul',
+            { className: 'space-y-2' },
+            allGroups.map((group, index) =>
+                React.createElement(
+                    'li',
+                    { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
+                    group.name // Predpokladáme, že dokumenty majú pole 'name'
+                )
+            )
+        );
+    };
+
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
         React.createElement(
             'div',
-            { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+            { className: `flex space-x-4` },
             React.createElement(
                 'div',
-                { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Tímy do skupín')
+                { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+                React.createElement(
+                    'div',
+                    { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
+                    React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Tímy do skupín')
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mt-8' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-2xl font-semibold mb-4 text-center' },
+                        'Zoznam všetkých tímov'
+                    ),
+                    renderTeamList()
+                )
             ),
             React.createElement(
                 'div',
-                { className: 'mt-8' },
+                { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
                 React.createElement(
-                    'h3',
-                    { className: 'text-2xl font-semibold mb-4 text-center' },
-                    'Zoznam všetkých tímov'
+                    'div',
+                    { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
+                    React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Tímy do skupín')
                 ),
-                renderTeamList()
+                React.createElement(
+                    'div',
+                    { className: 'mt-8' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-2xl font-semibold mb-4 text-center' },
+                        'Zoznam všetkých skupín'
+                    ),
+                    renderGroupList()
+                )
             )
         )
     );
