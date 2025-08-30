@@ -52,7 +52,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 // Modal pre vytvorenie skupiny
-const CreateGroupModal = ({ isVisible, onClose, categories }) => {
+const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [groupName, setGroupName] = useState('');
     const [groupType, setGroupType] = useState('základná skupina');
@@ -62,6 +62,15 @@ const CreateGroupModal = ({ isVisible, onClose, categories }) => {
     const handleCreateGroup = async () => {
         if (!selectedCategory || !groupName || !groupType) {
             window.showGlobalNotification('Prosím, vyplňte všetky polia.', 'error');
+            return;
+        }
+        
+        // Kontrola, či názov skupiny už existuje v danej kategórii
+        const groupsInCategory = existingGroups[selectedCategory] || [];
+        const isDuplicate = groupsInCategory.some(group => group.name.toLowerCase() === groupName.toLowerCase());
+
+        if (isDuplicate) {
+            window.showGlobalNotification('Skupina s týmto názvom už v tejto kategórii existuje.', 'error');
             return;
         }
 
@@ -292,7 +301,8 @@ const AddGroupsApp = ({ userProfileData }) => {
         React.createElement(CreateGroupModal, {
             isVisible: isModalVisible,
             onClose: () => setModalVisible(false),
-            categories: categories
+            categories: categories,
+            existingGroups: groups
         })
     );
 };
