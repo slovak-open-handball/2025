@@ -146,6 +146,18 @@ const AddGroupsApp = ({ userProfileData }) => {
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId])
         : allTeams;
 
+    // Helper function to get the correct background color class based on group type
+    const getGroupColorClass = (type) => {
+        switch (type) {
+            case 'základná skupina':
+                return 'bg-gray-100'; // Corresponds to 0xF3F4F6
+            case 'nadstavbová skupina':
+                return 'bg-blue-100'; // Corresponds to 0xDBEAFE
+            default:
+                return 'bg-white'; // Default fallback color
+        }
+    };
+
     const renderTeamList = (teamsToRender, title) => {
         if (teamsToRender.length === 0) {
             return React.createElement(
@@ -225,7 +237,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         sortedGroups.map((group, groupIndex) =>
                             React.createElement(
                                 'li',
-                                { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 whitespace-nowrap' },
+                                { key: groupIndex, className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}` },
                                 React.createElement(
                                     'div',
                                     null,
@@ -291,7 +303,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     sortedGroups.map((group, groupIndex) =>
                         React.createElement(
                             'div',
-                            { key: groupIndex, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0' },
+                            { key: groupIndex, className: `flex flex-col rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}` },
                             React.createElement(
                                 'h3',
                                 { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
@@ -302,7 +314,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 { className: 'space-y-2' },
                                 React.createElement(
                                     'li',
-                                    { className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 whitespace-nowrap' },
+                                    { className: 'px-4 py-2 bg-white rounded-lg text-gray-700 whitespace-nowrap' },
                                     React.createElement(
                                         'div',
                                         null,
