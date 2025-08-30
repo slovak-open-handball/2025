@@ -122,11 +122,11 @@ const CreateGroupModal = ({ isVisible, onClose, categories }) => {
                 ),
                 React.createElement(
                     'div',
-                    { className: 'items-center px-4 py-3' },
+                    { className: 'items-center px-4 py-3 sm:flex sm:flex-row-reverse' },
                     React.createElement(
                         'button',
                         {
-                            className: 'px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                            className: 'flex-1 w-full px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:ml-3',
                             onClick: onClose
                         },
                         'Vytvoriť'
@@ -134,7 +134,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories }) => {
                     React.createElement(
                         'button',
                         {
-                            className: 'mt-2 px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500',
+                            className: 'flex-1 mt-2 w-full px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 sm:mt-0',
                             onClick: onClose
                         },
                         'Zrušiť'
