@@ -91,7 +91,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         { className: 'flex-grow flex justify-center items-center' },
         React.createElement(
             'div',
-            { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+            { className: `w-full max-w-2xl transform transition-all duration-500 hover:scale-[1.01]` },
             React.createElement(
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6` },
@@ -103,7 +103,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 categories.map((category, index) =>
                     React.createElement(
                         'div',
-                        { key: index, className: 'w-full sm:w-1/2 md:w-1/3 lg:w-1/4 bg-gray-100 rounded-lg shadow-md p-4 flex flex-col items-center justify-center text-center' },
+                        { key: index, className: 'w-full sm:w-1/2 md:w-1/3 lg:w-1/4 bg-white rounded-lg shadow-md p-4 flex flex-col items-center justify-center text-center' },
                         React.createElement('h3', { className: 'text-lg font-semibold' }, category)
                     )
                 )
