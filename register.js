@@ -690,209 +690,209 @@ function App() {
   };
 
 
-  // ZMENA: confirmFinalRegistration teraz prijíma globalNote
-  const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote) => {
-    setLoading(true);
-    dispatchAppNotification('', 'info');
-    isRegisteringRef.current = true;
+// ZMENA: confirmFinalRegistration teraz prijíma globalNote
+const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote) => {
+  setLoading(true);
+  dispatchAppNotification('', 'info');
+  isRegisteringRef.current = true;
 
-    const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
+  const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
 
-    let teamsDataToSaveFinal = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
+  let teamsDataToSaveFinal = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
 
+  try {
+    const authInstance = window.auth;
+    const firestoreDb = window.db;
+
+    if (!authInstance || !firestoreDb) {
+      dispatchAppNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error');
+      return;
+    }
+
+    let recaptchaToken = null;
     try {
-      const authInstance = window.auth;
-      const firestoreDb = window.db;
+      recaptchaToken = await getRecaptchaToken('register_user');
+      if (!recaptchaToken) {
+        dispatchAppNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error');
+        return;
+      }
+    } catch (recaptchaError) {
+        dispatchAppNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error');
+        return;
+    }
 
-      if (!authInstance || !firestoreDb) {
-        dispatchAppNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error');
+    let user = null;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
+      user = userCredential.user;
+
+      if (!user || !user.uid) {
+        dispatchAppNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error');
         return;
       }
 
-      let recaptchaToken = null;
-      try {
-        recaptchaToken = await getRecaptchaToken('register_user');
-        if (!recaptchaToken) {
-          dispatchAppNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error');
-          return;
+    } catch (authError) {
+        let authErrorMessage = 'Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.';
+        if (authError.code) {
+            switch (authError.code) {
+                case 'auth/email-already-in-use':
+                    // ZMENA: pridaný <a> tag pre klikateľný odkaz
+                    authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zmeňte ju na <a href="register-page1.js">strane 1</a> (tlačidlo späť).';
+                    break;
+                case 'auth/invalid-email':
+                    authErrorMessage = 'Neplatný formát e-mailovej adresy.';
+                    break;
+                case 'auth/weak-password':
+                    authErrorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
+                    break;
+                default:
+                    authErrorMessage = authError.message || authErrorMessage;
+                    break;
+            }
+        } else {
+            authErrorMessage = authError.message || authErrorMessage;
         }
-      } catch (recaptchaError) {
-          dispatchAppNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error');
-          return;
-      }
+        dispatchAppNotification(authErrorMessage, 'error');
+        return;
+    }
 
-      let user = null;
-      try {
-        const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
-        user = userCredential.user;
+    const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
+    try {
+      for (const categoryName in teamsDataToSaveFinal) {
+          const currentTeamsInCategory = Array.isArray(teamsDataToSaveFinal[categoryName]) ? teamsDataToSaveFinal[categoryName] : [];
+          teamsDataToSaveFinal[categoryName] = currentTeamsInCategory.map(team => {
+              const updatedTeam = { ...team };
 
-        if (!user || !user.uid) {
-          dispatchAppNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error');
-          return;
-        }
+              updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
+              updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
+              updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
 
-      } catch (authError) {
-          let authErrorMessage = 'Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.';
-          if (authError.code) {
-              switch (authError.code) {
-                  case 'auth/email-already-in-use':
-                      authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zmeňte ju na strane 1 (tlačidlo späť).';
-                      break;
-                  case 'auth/invalid-email':
-                      authErrorMessage = 'Neplatný formát e-mailovej adresy.';
-                      break;
-                  case 'auth/weak-password':
-                      authErrorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
-                      break;
-                  default:
-                      authErrorMessage = authError.message || authErrorMessage;
-                      break;
+              updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
+                  ...tshirt,
+                  quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
+              }));
+
+              updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
+              if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
+
+              updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
+              if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
+
+              if (updatedTeam.arrival.type === 'vlastná doprava') {
+                  updatedTeam.arrival.drivers = {
+                      male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
+                      female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
+                  };
+              } else {
+                  updatedTeam.arrival.drivers = null;
               }
-          } else {
-              authErrorMessage = authError.message || authErrorMessage;
-          }
-          dispatchAppNotification(authErrorMessage, 'error');
-          return;
+
+              if (updatedTeam.packageId === '') updatedTeam.packageId = null;
+              if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
+
+              updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
+                  ...p,
+                  jerseyNumber: p.jerseyNumber || '',
+                  firstName: p.firstName || '',
+                  lastName: p.lastName || '',
+                  dateOfBirth: p.dateOfBirth || '',
+                  address: {
+                      street: p.address?.street || '',
+                      houseNumber: p.address?.houseNumber || '',
+                      city: p.address?.city || '',
+                      postalCode: p.address?.postalCode || '',
+                      country: p.address?.country || '',
+                  }
+              })) || [];
+
+              updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
+                  ...m,
+                  firstName: m.firstName || '',
+                  lastName: m.lastName || '',
+                  dateOfBirth: m.dateOfBirth || '',
+                  address: {
+                      street: m.address?.street || '',
+                      houseNumber: m.address?.houseNumber || '',
+                      city: m.address?.city || '',
+                      postalCode: m.address?.postalCode || '',
+                      country: m.address?.country || '',
+                  }
+              })) || [];
+
+              updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
+                  ...m,
+                  firstName: m.firstName || '',
+                  lastName: m.lastName || '',
+                  dateOfBirth: m.dateOfBirth || '',
+                  address: {
+                      street: m.address?.street || '',
+                      houseNumber: m.address?.houseNumber || '',
+                      city: m.address?.city || '',
+                      postalCode: m.address?.postalCode || '',
+                      country: m.address?.country || '',
+                  }
+              })) || [];
+
+              // NOVINKA: Normalizácia driverDetailsMale a driverDetailsFemale
+              updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale?.map(d => ({
+                  ...d,
+                  firstName: d.firstName || '', lastName: d.lastName || '', dateOfBirth: d.dateOfBirth || '',
+                  address: {
+                      street: d.address?.street || '', houseNumber: d.address?.houseNumber || '',
+                      city: d.address?.city || '', postalCode: d.address?.postalCode || '', country: d.address?.country || '',
+                  }
+              })) || [];
+              updatedTeam.driverDetailsFemale = updatedTeam.driverDetailsFemale?.map(d => ({
+                  ...d,
+                  firstName: d.firstName || '', lastName: d.lastName || '', dateOfBirth: d.dateOfBirth || '',
+                  address: {
+                      street: d.address?.street || '', houseNumber: d.address?.houseNumber || '',
+                      city: d.address?.city || '', postalCode: d.address?.postalCode || '', country: d.address?.country || '',
+                  }
+              })) || [];
+
+              return updatedTeam;
+          });
       }
 
-      const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
-      try {
-        for (const categoryName in teamsDataToSaveFinal) {
-            const currentTeamsInCategory = Array.isArray(teamsDataToSaveFinal[categoryName]) ? teamsDataToSaveFinal[categoryName] : [];
-            teamsDataToSaveFinal[categoryName] = currentTeamsInCategory.map(team => {
-                const updatedTeam = { ...team };
-
-                updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
-                updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
-                updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
-
-                updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
-                    ...tshirt,
-                    quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                }));
-
-                updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
-                if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
-
-                updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
-                if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
-
-                if (updatedTeam.arrival.type === 'vlastná doprava') {
-                    updatedTeam.arrival.drivers = {
-                        male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
-                        female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
-                    };
-                } else {
-                    updatedTeam.arrival.drivers = null;
-                }
-
-                if (updatedTeam.packageId === '') updatedTeam.packageId = null;
-                if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
-
-                updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
-                    ...p,
-                    jerseyNumber: p.jerseyNumber || '',
-                    firstName: p.firstName || '',
-                    lastName: p.lastName || '',
-                    dateOfBirth: p.dateOfBirth || '',
-                    registrationNumber: p.registrationNumber || '',
-                    address: {
-                        street: p.address?.street || '',
-                        houseNumber: p.address?.houseNumber || '',
-                        city: p.address?.city || '',
-                        postalCode: p.address?.postalCode || '',
-                        country: p.address?.country || '',
-                    }
-                })) || [];
-
-                updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
-                    ...m,
-                    firstName: m.firstName || '',
-                    lastName: m.lastName || '',
-                    dateOfBirth: m.dateOfBirth || '',
-                    address: {
-                        street: m.address?.street || '',
-                        houseNumber: m.address?.houseNumber || '',
-                        city: m.address?.city || '',
-                        postalCode: m.address?.postalCode || '',
-                        country: m.address?.country || '',
-                    }
-                })) || [];
-
-                updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
-                    ...m,
-                    firstName: m.firstName || '',
-                    lastName: m.lastName || '',
-                    dateOfBirth: m.dateOfBirth || '',
-                    address: {
-                        street: m.address?.street || '',
-                        houseNumber: m.address?.houseNumber || '',
-                        city: m.address?.city || '',
-                        postalCode: m.address?.postalCode || '',
-                        country: m.address?.country || '',
-                    }
-                })) || [];
-
-                // NOVINKA: Normalizácia driverDetailsMale a driverDetailsFemale
-                updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale?.map(d => ({
-                    ...d,
-                    firstName: d.firstName || '', lastName: d.lastName || '', dateOfBirth: d.dateOfBirth || '',
-                    address: {
-                        street: d.address?.street || '', houseNumber: d.address?.houseNumber || '',
-                        city: d.address?.city || '', postalCode: d.address?.postalCode || '', country: d.address?.country || '',
-                    }
-                })) || [];
-                updatedTeam.driverDetailsFemale = updatedTeam.driverDetailsFemale?.map(d => ({
-                    ...d,
-                    firstName: d.firstName || '', lastName: d.lastName || '', dateOfBirth: d.dateOfBirth || '',
-                    address: {
-                        street: d.address?.street || '', houseNumber: d.address?.houseNumber || '',
-                        city: d.address?.city || '', postalCode: d.address?.postalCode || '', country: d.address?.country || '',
-                    }
-                })) || [];
-
-                return updatedTeam;
-            });
+      await setDoc(userDocRef, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        contactPhoneNumber: fullPhoneNumber,
+        country: formData.country,
+        city: formData.city,
+        postalCode: formData.postalCode,
+        street: formData.street,
+        houseNumber: formData.houseNumber,
+        billing: formData.billing,
+        role: userRole,
+        approved: true,
+        registrationDate: serverTimestamp(),
+        passwordLastChanged: serverTimestamp(),
+        categories: formData.categories,
+        teams: teamsDataToSaveFinal,
+        note: finalGlobalNote || '' // NOVINKA: Uloženie poznámky zo samostatného propu
+      });
+    } catch (firestoreError) {
+        let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
+        if (firestoreError.code === 'permission-denied') {
+            firestoreErrorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
+        } else {
+            firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
         }
+        dispatchAppNotification(firestoreErrorMessage, 'error');
+        try {
+            if (user && authInstance && authInstance.currentUser && authInstance.currentUser.uid === user.uid) {
+                await authInstance.currentUser.delete();
+            }
+        } catch (deleteError) {
+        }
+        return;
+    }
 
-        await setDoc(userDocRef, {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          contactPhoneNumber: fullPhoneNumber,
-          country: formData.country,
-          city: formData.city,
-          postalCode: formData.postalCode,
-          street: formData.street,
-          houseNumber: formData.houseNumber,
-          billing: formData.billing,
-          role: userRole,
-          approved: true,
-          registrationDate: serverTimestamp(),
-          passwordLastChanged: serverTimestamp(),
-          categories: formData.categories,
-          teams: teamsDataToSaveFinal,
-          note: finalGlobalNote || '' // NOVINKA: Uloženie poznámky zo samostatného propu
-        });
-      } catch (firestoreError) {
-          let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
-          if (firestoreError.code === 'permission-denied') {
-              firestoreErrorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
-          } else {
-              firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
-          }
-          dispatchAppNotification(firestoreErrorMessage, 'error');
-          try {
-              if (user && authInstance && authInstance.currentUser && authInstance.currentUser.uid === user.uid) {
-                  await authInstance.currentUser.delete();
-              }
-          } catch (deleteError) {
-          }
-          return;
-      }
-
-      try {
-          const payload = {
+    try {
+        const payload = {
             action: 'sendRegistrationEmail',
             email: formData.email,
             firstName: formData.firstName,
@@ -916,51 +916,50 @@ function App() {
             teams: teamsDataToSaveFinal,
             globalNote: finalGlobalNote // NOVINKA: Odoslanie globalNote do Apps Scriptu
           };
-          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload)
-          });
-          console.log('E-mailová požiadavka odoslaná (status neznámy kvôli no-cors).');
-      } catch (emailError) {
-          console.error('Chyba pri odosielaní e-mailovej požiadavky (nemožno potvrdiť, či bol e-mail odoslaný):', emailError);
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      dispatchAppNotification(`Ďakujeme za vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
-      setRegistrationSuccess(true);
-
-      setFormData({
-        firstName: '', lastName: '', email: '', contactPhoneNumber: '',
-        password: '', confirmPassword: '', houseNumber: '', country: '',
-        city: '', postalCode: '', street: '',
-        billing: { clubName: '', ico: '', dic: '', icDph: '' },
-      });
-      setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
-      setTeamsDataFromPage4({});
-      setGlobalNote(''); // NOVINKA: Reset globálnej poznámky
-      setPage(1);
-
-      setTimeout(async () => {
-        if (authInstance && authInstance.currentUser) {
-            await signOut(authInstance);
-        }
-        window.location.href = 'login.html';
-      }, 20000);
-
-    } catch (globalError) {
-      let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
-      dispatchAppNotification(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-      isRegisteringRef.current = false;
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+        console.log('E-mailová požiadavka odoslaná (status neznámy kvôli no-cors).');
+    } catch (emailError) {
+        console.error('Chyba pri odosielaní e-mailovej požiadavky (nemožno potvrdiť, či bol e-mail odoslaný):', emailError);
     }
-  };
 
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    dispatchAppNotification(`Ďakujeme za vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
+    setRegistrationSuccess(true);
+
+    setFormData({
+      firstName: '', lastName: '', email: '', contactPhoneNumber: '',
+      password: '', confirmPassword: '', houseNumber: '', country: '',
+      city: '', postalCode: '', street: '',
+      billing: { clubName: '', ico: '', dic: '', icDph: '' },
+    });
+    setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
+    setTeamsDataFromPage4({});
+    setGlobalNote(''); // NOVINKA: Reset globálnej poznámky
+    setPage(1);
+
+    setTimeout(async () => {
+      if (authInstance && authInstance.currentUser) {
+          await signOut(authInstance);
+      }
+      window.location.href = 'login.html';
+    }, 20000);
+
+  } catch (globalError) {
+    let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
+    dispatchAppNotification(errorMessage, 'error');
+  } finally {
+    setLoading(false);
+    isRegisteringRef.current = false;
+  }
+};
 
   const isPage1FormDataEmpty = (data) => {
     if (data.firstName.trim() !== '' ||
