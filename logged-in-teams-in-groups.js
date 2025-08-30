@@ -99,24 +99,43 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
 
         const fetchAllGroups = async () => {
-            console.log("Načítavam skupiny z dokumentu 'settings/groups'...");
+            console.log("Načítavam skupiny a kategórie...");
             const groupsRef = doc(window.db, 'settings', 'groups');
+            const categoriesRef = doc(window.db, 'settings', 'categories');
             const groupsList = [];
+            const categoryIdToNameMap = {};
 
             try {
-                const docSnap = await getDoc(groupsRef);
-                if (docSnap.exists()) {
-                    const groupData = docSnap.data();
+                // Najprv načítame kategórie na vytvorenie mapy ID na názov
+                const categoriesDocSnap = await getDoc(categoriesRef);
+                if (categoriesDocSnap.exists()) {
+                    const categoryData = categoriesDocSnap.data();
+                    Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
+                        if (categoryObject && categoryObject.name) {
+                            categoryIdToNameMap[categoryId] = categoryObject.name;
+                        }
+                    });
+                    console.log("Mapa kategórií vytvorená:", categoryIdToNameMap);
+                } else {
+                    console.log("Dokument s kategóriami nebol nájdený!");
+                }
+
+                // Následne načítame skupiny
+                const groupsDocSnap = await getDoc(groupsRef);
+                if (groupsDocSnap.exists()) {
+                    const groupData = groupsDocSnap.data();
                     console.log("Údaje z dokumentu skupín:", groupData);
-                    // Prechádzame hodnoty (polia) dokumentu
-                    Object.values(groupData).forEach(groupArray => {
-                        // Kontrola, či je hodnota pole
+                    // Iterujeme cez kľúče (ID kategórií) a polia skupín
+                    Object.entries(groupData).forEach(([categoryId, groupArray]) => {
                         if (Array.isArray(groupArray)) {
-                            // Iterácia cez objekty v poli
+                            // Získame názov kategórie z mapy, ak existuje, inak použijeme "Neznáma kategória"
+                            const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
                             groupArray.forEach(groupObject => {
                                 if (groupObject && groupObject.name) {
-                                    groupsList.push(groupObject); // Ukladáme celý objekt, nie len názov
-                                    console.log("Nájdený názov skupiny:", groupObject.name);
+                                    groupsList.push({
+                                        categoryName: categoryName,
+                                        group: groupObject
+                                    });
                                 }
                             });
                         }
@@ -125,10 +144,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                     console.log("Dokument so skupinami nebol nájdený!");
                 }
                 setAllGroups(groupsList);
-                console.log("Celkový zoznam skupín:", groupsList);
+                console.log("Celkový zoznam skupín s kategóriami:", groupsList);
 
             } catch (e) {
-                console.error("Chyba pri načítaní skupín: ", e);
+                console.error("Chyba pri načítaní skupín alebo kategórií: ", e);
             }
         };
 
@@ -170,11 +189,11 @@ const AddGroupsApp = ({ userProfileData }) => {
         return React.createElement(
             'ul',
             { className: 'space-y-2' },
-            allGroups.map((group, index) =>
+            allGroups.map((item, index) =>
                 React.createElement(
                     'li',
                     { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
-                    `${group.type}: ${group.name}` // Zobrazujeme typ aj názov skupiny
+                    `${item.categoryName}: ${item.group.name}` // Zobrazujeme názov kategórie a názov skupiny
                 )
             )
         );
