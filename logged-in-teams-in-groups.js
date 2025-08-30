@@ -240,10 +240,10 @@ const AddGroupsApp = ({ userProfileData }) => {
         React.createElement('h2', { className: 'text-4xl font-extrabold tracking-tight text-center text-gray-800 mb-8' }, 'Tímy do skupín'),
         React.createElement(
             'div',
-            { className: 'flex flex-wrap justify-center space-x-4' },
+            { className: 'flex flex-row justify-center space-x-4 w-full px-4' },
             React.createElement(
                 'div',
-                { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6` },
+                { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0` },
                 React.createElement(
                     'div',
                     { className: 'mt-8' },
@@ -255,7 +255,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                     renderTeamList()
                 )
             ),
-            renderGroupedCategories()
+            React.createElement(
+                'div',
+                { className: 'flex flex-wrap justify-start space-x-4 flex-grow' },
+                renderGroupedCategories()
+            )
         )
     );
 };
