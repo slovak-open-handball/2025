@@ -84,6 +84,7 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
             const newGroup = {
                 name: groupName,
                 type: groupType,
+                creationDate: groupToEdit.creationDate || new Date(),
             };
 
             await updateDoc(groupsDocRef, {
@@ -244,6 +245,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             const newGroup = {
                 name: groupName,
                 type: groupType,
+                creationDate: new Date(),
             };
 
             await updateDoc(groupsDocRef, {
@@ -259,6 +261,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                 const newGroup = {
                     name: groupName,
                     type: groupType,
+                    creationDate: new Date(),
                 };
                 await setDoc(groupsDocRef, {
                     [selectedCategoryId]: [newGroup]
@@ -463,7 +466,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category.name),
                         React.createElement('ul', { className: 'w-full' },
                             groups[category.id] && groups[category.id].map((group, groupIndex) =>
-                                React.createElement('li', { key: groupIndex, className: 'bg-gray-100 rounded-md p-2 my-1 text-sm flex justify-between items-center' }, 
+                                React.createElement('li', {
+                                    key: groupIndex,
+                                    className: `
+                                        ${group.type === 'nadstavbová skupina' ? 'bg-blue-100' : 'bg-gray-100'}
+                                        rounded-md p-2 my-1 text-sm flex justify-between items-center
+                                    `.trim()
+                                }, 
                                     React.createElement('div', { className: 'flex-1 text-left' },
                                         React.createElement('div', { className: 'font-semibold' }, group.name),
                                         React.createElement('div', { className: 'text-gray-500 text-xs' }, group.type)
