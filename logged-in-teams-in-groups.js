@@ -208,7 +208,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             
             return React.createElement(
                 'div',
-                { key: index, className: 'w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
+                { key: index, className: 'w-full min-w-[150px] flex-grow bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
                 React.createElement(
                     'div',
                     { className: 'mt-8' },
