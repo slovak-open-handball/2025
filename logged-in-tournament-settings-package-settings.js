@@ -21,8 +21,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   const getDaysBetween = (start, end) => {
     const dates = [];
     // Vytvoríme Date objekty, ktoré ignorujú časovú zónu a sú založené na YYYY-MM-DD
-    let currentDate = new Date(start.replace(/-/g, '\/'));
-    const endDateAdjusted = new Date(end.replace(/-/g, '\/'));
+    let currentDate = new Date(start.replace(/-/g, '/'));
+    const endDateAdjusted = new Date(end.replace(/-/g, '/'));
 
     while (currentDate <= endDateAdjusted) {
       // Dátum pridáme vo formáte ISO String YYYY-MM-DD
