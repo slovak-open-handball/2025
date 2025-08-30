@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -58,6 +58,47 @@ const CreateGroupModal = ({ isVisible, onClose, categories }) => {
     const [groupType, setGroupType] = useState('základná skupina');
 
     if (!isVisible) return null;
+
+    const handleCreateGroup = async () => {
+        if (!selectedCategory || !groupName || !groupType) {
+            window.showGlobalNotification('Prosím, vyplňte všetky polia.', 'error');
+            return;
+        }
+
+        try {
+            const groupsDocRef = doc(window.db, 'settings', 'groups');
+            const newGroup = {
+                name: groupName,
+                type: groupType,
+                creationDate: new Date(),
+            };
+
+            await updateDoc(groupsDocRef, {
+                [selectedCategory]: arrayUnion(newGroup)
+            });
+
+            window.showGlobalNotification('Skupina bola úspešne vytvorená.', 'success');
+            onClose(); // Zatvorenie modálneho okna po úspešnom uložení
+        } catch (e) {
+            // Ak dokument 'groups' neexistuje, vytvoríme ho
+            if (e.code === 'not-found') {
+                const groupsDocRef = doc(window.db, 'settings', 'groups');
+                const newGroup = {
+                    name: groupName,
+                    type: groupType,
+                    creationDate: new Date(),
+                };
+                await setDoc(groupsDocRef, {
+                    [selectedCategory]: [newGroup]
+                });
+                window.showGlobalNotification('Skupina bola úspešne vytvorená.', 'success');
+                onClose();
+            } else {
+                console.error("Chyba pri pridávaní skupiny: ", e);
+                window.showGlobalNotification('Nastala chyba pri vytváraní skupiny.', 'error');
+            }
+        }
+    };
 
     return React.createElement(
         'div',
@@ -127,7 +168,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories }) => {
                         'button',
                         {
                             className: 'flex-1 w-full px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:ml-3',
-                            onClick: onClose
+                            onClick: handleCreateGroup
                         },
                         'Vytvoriť'
                     ),
