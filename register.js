@@ -736,7 +736,7 @@ function App() {
           if (authError.code) {
               switch (authError.code) {
                   case 'auth/email-already-in-use':
-                      authErrorMessage = 'Zadaná e-mailová adresa je už používaná.';
+                      authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zmeňte ju na strane 1 (tlačidlo späť).';
                       break;
                   case 'auth/invalid-email':
                       authErrorMessage = 'Neplatný formát e-mailovej adresy.';
