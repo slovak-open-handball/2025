@@ -398,13 +398,14 @@ function App() {
     const existingEmailMessage = "Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.";
     
     // Uistíme sa, že notifikácia existuje predtým, ako ju vymažeme
-    if (notificationMessage && notificationMessage.includes(existingEmailMessage)) {
+    const shouldGoToPage7 = notificationMessage && notificationMessage.includes(existingEmailMessage);
+    
+    closeNotification();
+    
+    if (shouldGoToPage7) {
       setCurrentPage(7);
-      // Následne vymažeme notifikáciu, aby sa skryla
-      closeNotification();
     } else {
       nextPage();
-      closeNotification();
     }
   };
 // potiaľto  
