@@ -397,16 +397,14 @@ function App() {
   const handlePage1Next = () => {
     const existingEmailMessage = "Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.";
     
-    // Uistíme sa, že notifikácia existuje predtým, ako ju vymažeme
-    const shouldGoToPage7 = notificationMessage && notificationMessage.includes(existingEmailMessage);
-    
-    closeNotification();
-    
-    if (shouldGoToPage7) {
+    // Použijeme globalNote, ktorý je stabilnejší ako notificationMessage
+    if (globalNote && globalNote.includes(existingEmailMessage)) {
       setCurrentPage(7);
     } else {
       nextPage();
     }
+    // Až teraz vyčistíme notifikačnú správu
+    closeNotification();
   };
 // potiaľto  
 
