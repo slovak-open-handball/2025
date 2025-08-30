@@ -52,7 +52,8 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 const AddGroupsApp = ({ userProfileData }) => {
-    // Načítanie kategórií z databázy
+    const [categories, setCategories] = useState([]);
+
     useEffect(() => {
         const fetchCategories = async () => {
             if (window.db) {
@@ -64,12 +65,15 @@ const AddGroupsApp = ({ userProfileData }) => {
                     if (categoriesSnapshot.exists()) {
                         const categoriesData = categoriesSnapshot.data();
                         console.log("Načítané kategórie:");
+                        const loadedCategories = [];
                         // Prechádzame cez všetky polia v dokumente
                         for (const key in categoriesData) {
                             if (categoriesData.hasOwnProperty(key) && categoriesData[key].name) {
                                 console.log(categoriesData[key].name);
+                                loadedCategories.push(categoriesData[key].name);
                             }
                         }
+                        setCategories(loadedCategories);
                     } else {
                         console.log("Dokument 'categories' nebol nájdený v 'settings'.");
                     }
@@ -90,8 +94,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
             React.createElement(
                 'div',
-                { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
+                { className: `flex flex-col items-center justify-center mb-6` },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Vytvorenie skupín')
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex flex-wrap justify-center gap-4' },
+                categories.map((category, index) =>
+                    React.createElement(
+                        'div',
+                        { key: index, className: 'w-full sm:w-1/2 md:w-1/3 lg:w-1/4 bg-gray-100 rounded-lg shadow-md p-4 flex flex-col items-center justify-center text-center' },
+                        React.createElement('h3', { className: 'text-lg font-semibold' }, category)
+                    )
+                )
             )
         )
     );
