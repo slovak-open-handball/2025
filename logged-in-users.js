@@ -366,6 +366,20 @@ function UsersManagementApp() {
   const DEFAULT_DATA_EDIT_DEADLINE = new Date('2025-08-29T14:00:00Z'); // August 29, 2025 at 4:00:00 PM UTC+2
   const DEFAULT_ROSTER_EDIT_DEADLINE = new Date('2025-09-14T20:00:00Z'); // September 14, 2025 at 10:00:00 PM UTC+2
 
+  // Funkcia na preklad anglických rolí na slovenské
+  const getTranslatedRole = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrátor';
+      case 'user':
+        return 'Používateľ';
+      case 'hall':
+        return 'Športová hala';
+      default:
+        return role;
+    }
+  };
+
   // Funkcia na logovanie zmien do kolekcie 'notifications'
   const logChanges = async (changes) => {
     try {
@@ -533,10 +547,10 @@ function UsersManagementApp() {
 
       await updateDoc(userDocRef, updateData);
       
-      setNotification({ message: `Rola používateľa bola zmenená.`, type: 'success' });
+      setNotification({ message: `Rola používateľa bola úspešne zmenená na ${getTranslatedRole(newRole)}.`, type: 'success' });
       
-      // Log notification
-      await logChanges([`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${oldRole}' na '${newRole}'`]);
+      // Log notification s preloženými názvami
+      await logChanges([`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${getTranslatedRole(oldRole)}' na '${getTranslatedRole(newRole)}'`]);
     } catch (error) {
       console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
@@ -576,7 +590,7 @@ function UsersManagementApp() {
         console.error("Firebase projectId nie je k dispozícii. Uistite sa, že 'firebaseConfig' je globálne definovaný.");
       }
 
-      setNotification({ message: `Používateľ ${userToDelete.firstName} bol odstránený.`, type: 'success' });
+      setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
 
       // Log changes
       await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}.`]);
@@ -649,12 +663,12 @@ function UsersManagementApp() {
       
       await sendApprovalEmail(userEmail);
       
-      setNotification({ message: `Admin bol schválený a e-mail bol odoslaný.`, type: 'success' });
+      setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
       
       // Log changes
       const userToApprove = users.find(u => u.id === userId);
       if (userToApprove) {
-        await logChanges([`Schválenie admina: '''${userToApprove.firstName} ${userToApprove.lastName}'.`]);
+        await logChanges([`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`]);
       }
     } catch (error) {
       console.error("Chyba pri schvaľovaní admina:", error);
@@ -675,7 +689,7 @@ function UsersManagementApp() {
       }
   };
 
-  const getTranslatedRole = (role, isUserOldestAdmin, isCurrentUserOldestAdmin) => {
+  const getTranslatedRoleForDisplay = (role, isUserOldestAdmin, isCurrentUserOldestAdmin) => {
       if (isUserOldestAdmin && isCurrentUserOldestAdmin) {
           return 'Superadministrátor';
       }
@@ -725,7 +739,7 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         [dateType]: newDate // Dynamicky nastaví názov poľa
       });
-      setNotification({ message: `Dátum bol aktualizovaný pre ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
+      setNotification({ message: `Dátum bol úspešne aktualizovaný pre ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
 
       // Log changes s pôvodnou a novou hodnotou
       const dateTypeString = dateType === 'dataEditDeadline' ? 'údajov' : 'súpisiek';
@@ -837,7 +851,7 @@ function UsersManagementApp() {
                 React.createElement(
                   'span',
                   { style: { color: getRoleColor(user.role) }, className: 'font-semibold' },
-                  getTranslatedRole(user.role, isUserOldestAdmin, isCurrentUserOldestAdmin)
+                  getTranslatedRoleForDisplay(user.role, isUserOldestAdmin, isCurrentUserOldestAdmin)
                 )
               ),
               (window.isCurrentUserAdmin) && React.createElement(
