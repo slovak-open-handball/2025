@@ -146,7 +146,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId])
         : allTeams;
 
-    const renderTeamList = (teamsToRender) => {
+    const renderTeamList = (teamsToRender, title) => {
         if (teamsToRender.length === 0) {
             return React.createElement(
                 'p',
@@ -165,7 +165,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 React.createElement(
                     'li',
                     { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
-                    `${team.category}: ${team.teamName}`
+                    `${title === 'Zoznam všetkých tímov' ? `${team.category}: ` : ''}${team.teamName}`
                 )
             )
         );
@@ -268,24 +268,14 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
             React.createElement(
                 'div',
-                { className: "w-full lg:w-1/3 max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0" },
+                { className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0" },
                 React.createElement(
                     'h3',
                     { className: 'text-2xl font-semibold mb-4 text-center' },
                     `Tímy v kategórii: ${categoryName}`
                 ),
                 filteredTeams.length > 0 ? (
-                    React.createElement(
-                        'ul',
-                        { className: 'space-y-2' },
-                        filteredTeams.map((team, index) =>
-                            React.createElement(
-                                'li',
-                                { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
-                                team.teamName
-                            )
-                        )
-                    )
+                    renderTeamList(filteredTeams, `Tímy v kategórii: ${categoryName}`)
                 ) : (
                     React.createElement(
                         'p',
@@ -296,29 +286,37 @@ const AddGroupsApp = ({ userProfileData }) => {
             ),
             React.createElement(
                 'div',
-                { className: 'w-full lg:w-2/3 max-w-lg bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0' },
-                React.createElement(
-                    'h3',
-                    { className: 'text-2xl font-semibold mb-4 text-center' },
-                    `Skupiny v kategórii: ${categoryName}`
-                ),
+                { className: 'flex-grow min-w-0 flex flex-wrap gap-4 justify-center' },
                 sortedGroups.length > 0 ? (
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-wrap gap-4 justify-center' },
-                        sortedGroups.map((group, groupIndex) =>
+                    sortedGroups.map((group, groupIndex) =>
+                        React.createElement(
+                            'div',
+                            { key: groupIndex, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6 flex-shrink-0' },
                             React.createElement(
-                                'div',
-                                { key: groupIndex, className: 'flex flex-col bg-gray-100 rounded-lg p-4' },
+                                'h3',
+                                { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
+                                group.name
+                            ),
+                            React.createElement(
+                                'ul',
+                                { className: 'space-y-2' },
                                 React.createElement(
-                                    'p',
-                                    { className: 'font-semibold whitespace-nowrap' },
-                                    group.name
-                                ),
-                                React.createElement(
-                                    'p',
-                                    { className: 'text-sm text-gray-500 whitespace-nowrap' },
-                                    group.type
+                                    'li',
+                                    { className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 whitespace-nowrap' },
+                                    React.createElement(
+                                        'div',
+                                        null,
+                                        React.createElement(
+                                            'p',
+                                            { className: 'font-semibold whitespace-nowrap' },
+                                            'Typ skupiny'
+                                        ),
+                                        React.createElement(
+                                            'p',
+                                            { className: 'text-sm text-gray-500 whitespace-nowrap' },
+                                            group.type
+                                        )
+                                    )
                                 )
                             )
                         )
@@ -379,7 +377,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { className: 'text-2xl font-semibold mb-4 text-center' },
                         'Zoznam všetkých tímov'
                     ),
-                    renderTeamList(filteredTeams)
+                    renderTeamList(filteredTeams, 'Zoznam všetkých tímov')
                 ),
                 React.createElement(
                     'div',
