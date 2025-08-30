@@ -1153,11 +1153,16 @@ useEffect(() => {
                                 });
                             }
 
-                            // Určenie finálnych deadlinov
-                            const finalRosterDeadline = userRosterDeadline || settingsRosterDeadline;
-                            const finalDataDeadline = userDataDeadline || settingsDataDeadline;
+                            // Nezávislé porovnanie pre každý deadline
+                            const finalRosterDeadline = !userRosterDeadline || !settingsRosterDeadline
+                                ? userRosterDeadline || settingsRosterDeadline
+                                : new Date(Math.max(userRosterDeadline.getTime(), settingsRosterDeadline.getTime()));
 
-                            console.log("Finálne deadliny (Date objekty):", {
+                            const finalDataDeadline = !userDataDeadline || !settingsDataDeadline
+                                ? userDataDeadline || settingsDataDeadline
+                                : new Date(Math.max(userDataDeadline.getTime(), settingsDataDeadline.getTime()));
+
+                            console.log("Finálne deadliny (maximum z oboch zdrojov):", {
                                 rosterEditDeadline: finalRosterDeadline,
                                 dataEditDeadline: finalDataDeadline
                             });
