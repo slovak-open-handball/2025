@@ -1,5 +1,5 @@
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Importy pre Firebase funkcie
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -51,7 +51,65 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+
 const AddGroupsApp = ({ userProfileData }) => {
+    const [allTeams, setAllTeams] = useState([]);
+
+    useEffect(() => {
+        if (!window.db) {
+            console.error("Firebase Firestore nie je inicializovaný.");
+            return;
+        }
+
+        const fetchAllTeams = async () => {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const usersRef = collection(window.db, `artifacts/${appId}/public/data/users`);
+            const teamsList = [];
+
+            try {
+                const querySnapshot = await getDocs(usersRef);
+                querySnapshot.forEach((doc) => {
+                    const userData = doc.data();
+                    if (userData && userData.teams) {
+                        // Iterovanie cez tímy v užívateľskom profile
+                        Object.values(userData.teams).forEach(category => {
+                            if (category.teamName) {
+                                teamsList.push(category.teamName);
+                            }
+                        });
+                    }
+                });
+                setAllTeams(teamsList);
+            } catch (e) {
+                console.error("Chyba pri načítaní tímov: ", e);
+            }
+        };
+
+        // Načítanie tímov pri štarte
+        fetchAllTeams();
+    }, []);
+
+    const renderTeamList = () => {
+        if (allTeams.length === 0) {
+            return React.createElement(
+                'p',
+                { className: 'text-center text-gray-500' },
+                'Žiadne tímy neboli nájdené.'
+            );
+        }
+        return React.createElement(
+            'ul',
+            { className: 'space-y-2' },
+            allTeams.map((teamName, index) =>
+                React.createElement(
+                    'li',
+                    { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
+                    teamName
+                )
+            )
+        );
+    };
+
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -62,6 +120,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Tímy do skupín')
+            ),
+            React.createElement(
+                'div',
+                { className: 'mt-8' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-2xl font-semibold mb-4 text-center' },
+                    'Zoznam všetkých tímov'
+                ),
+                renderTeamList()
             )
         )
     );
