@@ -54,7 +54,8 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 const AddGroupsApp = ({ userProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
-    const [allGroups, setAllGroups] = useState([]);
+    const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
+    const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
 
     useEffect(() => {
         if (!window.db) {
@@ -102,8 +103,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.log("Načítavam skupiny a kategórie...");
             const groupsRef = doc(window.db, 'settings', 'groups');
             const categoriesRef = doc(window.db, 'settings', 'categories');
-            const groupsList = [];
-            const categoryIdToNameMap = {};
+            const groupsByCategoryId = {};
+            const categoryIdToName = {};
 
             try {
                 // Najprv načítame kategórie na vytvorenie mapy ID na názov
@@ -112,10 +113,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                     const categoryData = categoriesDocSnap.data();
                     Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
                         if (categoryObject && categoryObject.name) {
-                            categoryIdToNameMap[categoryId] = categoryObject.name;
+                            categoryIdToName[categoryId] = categoryObject.name;
                         }
                     });
-                    console.log("Mapa kategórií vytvorená:", categoryIdToNameMap);
+                    console.log("Mapa kategórií vytvorená:", categoryIdToName);
+                    setCategoryIdToNameMap(categoryIdToName);
                 } else {
                     console.log("Dokument s kategóriami nebol nájdený!");
                 }
@@ -128,29 +130,22 @@ const AddGroupsApp = ({ userProfileData }) => {
                     // Iterujeme cez kľúče (ID kategórií) a polia skupín
                     Object.entries(groupData).forEach(([categoryId, groupArray]) => {
                         if (Array.isArray(groupArray)) {
-                            // Získame názov kategórie z mapy, ak existuje, inak použijeme "Neznáma kategória"
-                            const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
-                            groupArray.forEach(groupObject => {
-                                if (groupObject && groupObject.name) {
-                                    groupsList.push({
-                                        categoryName: categoryName,
-                                        group: groupObject
-                                    });
-                                }
-                            });
+                            groupsByCategoryId[categoryId] = groupArray.map(group => ({
+                                name: group.name,
+                                type: group.type
+                            }));
                         }
                     });
                 } else {
                     console.log("Dokument so skupinami nebol nájdený!");
                 }
-                setAllGroups(groupsList);
-                console.log("Celkový zoznam skupín s kategóriami:", groupsList);
+                setAllGroupsByCategoryId(groupsByCategoryId);
+                console.log("Skupiny rozdelené podľa kategórií:", groupsByCategoryId);
 
             } catch (e) {
                 console.error("Chyba pri načítaní skupín alebo kategórií: ", e);
             }
         };
-
 
         // Načítanie dát pri štarte
         fetchAllTeams();
@@ -178,25 +173,46 @@ const AddGroupsApp = ({ userProfileData }) => {
         );
     };
 
-    const renderGroupList = () => {
-        if (allGroups.length === 0) {
+    const renderGroupedCategories = () => {
+        if (Object.keys(allGroupsByCategoryId).length === 0) {
             return React.createElement(
-                'p',
-                { className: 'text-center text-gray-500' },
-                'Žiadne skupiny neboli nájdené.'
+                'div',
+                { className: 'w-full max-w-xl mx-auto' },
+                React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500' },
+                    'Žiadne skupiny neboli nájdené.'
+                )
             );
         }
-        return React.createElement(
-            'ul',
-            { className: 'space-y-2' },
-            allGroups.map((item, index) =>
+
+        return Object.entries(allGroupsByCategoryId).map(([categoryId, groups], index) => {
+            const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
+            return React.createElement(
+                'div',
+                { key: index, className: 'w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6' },
                 React.createElement(
-                    'li',
-                    { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
-                    `${item.categoryName}: ${item.group.name}` // Zobrazujeme názov kategórie a názov skupiny
+                    'div',
+                    { className: 'mt-8' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-2xl font-semibold mb-4 text-center' },
+                        `Skupiny pre kategóriu: ${categoryName}`
+                    ),
+                    React.createElement(
+                        'ul',
+                        { className: 'space-y-2' },
+                        groups.map((group, groupIndex) =>
+                            React.createElement(
+                                'li',
+                                { key: groupIndex, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
+                                `${group.type}: ${group.name}`
+                            )
+                        )
+                    )
                 )
-            )
-        );
+            );
+        });
     };
 
     return React.createElement(
@@ -205,10 +221,10 @@ const AddGroupsApp = ({ userProfileData }) => {
         React.createElement('h2', { className: 'text-4xl font-extrabold tracking-tight text-center text-gray-800 mb-8' }, 'Tímy do skupín'),
         React.createElement(
             'div',
-            { className: `flex space-x-4` },
+            { className: 'flex flex-wrap justify-center space-x-4' },
             React.createElement(
                 'div',
-                { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+                { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mb-6` },
                 React.createElement(
                     'div',
                     { className: 'mt-8' },
@@ -220,20 +236,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     renderTeamList()
                 )
             ),
-            React.createElement(
-                'div',
-                { className: `w-full max-w-sm bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
-                React.createElement(
-                    'div',
-                    { className: 'mt-8' },
-                    React.createElement(
-                        'h3',
-                        { className: 'text-2xl font-semibold mb-4 text-center' },
-                        'Zoznam všetkých skupín'
-                    ),
-                    renderGroupList()
-                )
-            )
+            renderGroupedCategories()
         )
     );
 };
