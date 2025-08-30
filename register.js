@@ -393,6 +393,18 @@ function App() {
     setNotificationType('info');
   };
 
+// odtiaľto  
+  const handlePage1Next = () => {
+    // KONTROLA: Ak je zobrazená správa o existujúcom e-maili, prejdeme na stránku 7
+    if (globalNote && globalNote.includes("Zadaná e-mailová adresa už existuje")) {
+      setCurrentPage(7);
+      return;
+    }
+    // Inak pokračujeme na ďalšiu stránku (strana 2)
+    nextPage();
+  };
+// potiaľto  
+
   const dispatchAppNotification = React.useCallback((message, type = 'info') => {
     setNotificationMessage(message);
     setShowNotification(true);
