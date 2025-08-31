@@ -407,7 +407,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         return tshirtEntries.every(tshirt => tshirt.size !== '');
     }, [tshirtEntries]);
 
-    const isSaveButtonDisabled = isDataEditDeadlinePassed || (!hasChanges && (totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected));
+    const isSaveButtonDisabled = isDataEditDeadlinePassed || !hasChanges || !selectedCategory;
 
     const isAddTshirtButtonDisabled = isDataEditDeadlinePassed || totalTshirtsQuantity === totalMembersInTeam;
 
@@ -416,10 +416,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
         if (isDataEditDeadlinePassed) {
           showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
-          return;
-        }
-        if (totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected) {
-          showLocalNotification('Počet tričiek sa nezhoduje s počtom členov tímu alebo nie sú vybraté všetky veľkosti tričiek.', 'error');
           return;
         }
         
@@ -816,7 +812,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
     }, [selectedCategory, clubName, teamsData]); // Závislosti pre opätovné spustenie efektu
 
-    const isSaveButtonDisabled = isDataEditDeadlinePassed || (!hasChanges && (totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected));
+    const isSaveButtonDisabled = isDataEditDeadlinePassed || !hasChanges || !selectedCategory;
 
     const showArrivalTimeInputs = arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus';
 
@@ -828,10 +824,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 
         if (isDataEditDeadlinePassed) {
           showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
-          return;
-        }
-        if (totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected) {
-          showLocalNotification('Počet tričiek sa nezhoduje s počtom členov tímu alebo nie sú vybraté všetky veľkosti tričiek.', 'error');
           return;
         }
 
