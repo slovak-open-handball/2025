@@ -1074,7 +1074,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     React.useEffect(() => {
-        const fetchAllUserAccommodationData = async () => {
+        const fetchAllUserData = async () => {
              // Čakáme, kým nie je k dispozícii globálny objekt db z authentication.js
             if (typeof window.db === 'undefined' || typeof __app_id === 'undefined') {
                 console.error("Firebase nie je k dispozícii. Ak je to React aplikácia, počkajte, kým sa znova nenačíta komponent.");
@@ -1083,7 +1083,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
             try {
                 const usersCollectionRef = collection(window.db, 'users');
-                console.log("Sťahujem dáta o ubytovaní pre všetkých používateľov...");
+                console.log("Sťahujem dáta o tímoch pre všetkých používateľov...");
 
                 const usersSnapshot = await getDocs(usersCollectionRef);
 
@@ -1100,15 +1100,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     console.group(`--- Dáta o tímoch pre používateľa: ${userId} ---`);
 
                     if (teamsData) {
-                        for (const categoryName in teamsData) {
-                            if (teamsData.hasOwnProperty(categoryName) && Array.isArray(teamsData[categoryName])) {
-                                teamsData[categoryName].forEach((team, teamIndex) => {
-                                    if (team && team.accommodation) {
-                                        console.log(`Kategória: ${categoryName}, Tím: ${team.teamName}, Ubytovanie:`, team.accommodation);
-                                    }
-                                });
-                            }
-                        }
+                       console.log(JSON.stringify(teamsData, null, 2));
                     } else {
                         console.log("Žiadne dáta tímu pre tohto používateľa.");
                     }
@@ -1121,7 +1113,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         };
 
         if (typeof AuthManager !== 'undefined' && AuthManager.onReady) {
-            AuthManager.onReady(fetchAllUserAccommodationData);
+            AuthManager.onReady(fetchAllUserData);
         } else {
             console.error("AuthManager.onReady nie je k dispozícii.");
         }
