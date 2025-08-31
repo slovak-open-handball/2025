@@ -219,10 +219,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
-            // NOVINKA: Zmena farby textu "Menu" pri mouseenter, keď je zbalené
-            if (menuText) {
-                menuText.style.color = getColorForRole(userProfileData?.role || 'default');
-            }
+            // Zrušenie zmeny farby textu "Menu" pri mouseenter, keď je zbalené
         }
     });
 
@@ -233,10 +230,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
-            // NOVINKA: Reset farby textu "Menu" pri mouseleave, keď je zbalené
-            if (menuText) {
-                menuText.style.color = '';
-            }
+            // Zrušenie resetu farby textu "Menu" pri mouseleave, keď je zbalené
         }
     });
 };
