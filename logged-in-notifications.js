@@ -729,7 +729,7 @@ function NotificationsApp() {
         // NOVÝ PRÍDAVOK: Toggle switch pre notifikácie
         React.createElement(
           'div',
-          { className: 'flex items-center justify-between mb-6 p-4 rounded-lg' },
+          { className: 'flex items-center justify-between mb-6' },
           React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobrazovať upozornenia'),
           React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
             React.createElement('input', {
@@ -739,7 +739,10 @@ function NotificationsApp() {
               className: 'sr-only peer',
               disabled: loading
             }),
-            React.createElement('div', { className: 'w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600' })
+            React.createElement('div', { 
+                className: 'w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all',
+                style: { backgroundColor: displayNotifications ? '#47b3ff' : '' }
+            })
           )
         ),
         // Skupina tlačidiel
@@ -768,8 +771,9 @@ function NotificationsApp() {
             'button',
             {
                 onClick: handleRestoreButtonAction,
-                className: 'bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+                className: 'text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                 disabled: loading,
+                style: { backgroundColor: '#47b3ff', hover: { backgroundColor: '#3A9ACD' }}
             },
             restoreButtonText
           ),
