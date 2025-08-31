@@ -750,15 +750,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             Object.values(teams).forEach(teamsArray => {
                                 teamsArray.forEach(team => {
                                     // Výpočet celkového počtu osôb v tíme
-                                    const menCount = team.menTeamMembers ? team.menTeamMembers : 0;
-                                    const womenCount = team.womenTeamMembers ? team.womenTeamMembers : 0;
+                                    const menCount = team.menTeamMembers || 0;
+                                    const womenCount = team.womenTeamMembers || 0;
                                     const maleDriversCount = (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 0;
                                     const femaleDriversCount = (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 0;
                                     const totalCount = menCount + womenCount + maleDriversCount + femaleDriversCount;
                                     
                                     teamsDataForTable.push({
-                                        teamName: team.teamName || 0, 
-                                        accommodationType: team.accommodation?.type || 0, 
+                                        teamName: team.teamName || '', 
+                                        accommodationType: team.accommodation?.type || '', 
                                         players: team.players || 0, 
                                         menTeamMembers: team.menTeamMembers || 0, 
                                         womenTeamMembers: team.womenTeamMembers || 0, 
@@ -774,7 +774,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
                         // NOVINKA: Zobrazí sa aj tabuľka s typmi ubytovania pri zmene údajov tímov
                         console.log("-----------------------------------------");
-                        console.log("Aktualizácia dát z '/settings/accommodation':");
                         const accommodationDoc = await getDoc(accommodationDocRef);
                         if (accommodationDoc.exists()) {
                              const data = accommodationDoc.data();
@@ -1205,7 +1204,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const generateTimeOptions = (limit) => {
         const options = [React.createElement('option', { key: "placeholder", value: "" }, "--")];
         for (let i = 0; i < limit; i++) {
-            const value = i.toString().padStart(2, 0);
+            const value = i.toString().padStart(2, '0');
             options.push(React.createElement('option', { key: value, value: value }, value));
         }
         return options;
