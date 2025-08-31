@@ -1137,15 +1137,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     React.useEffect(() => {
         const fetchAllUserAccommodationData = async () => {
             if (!window.db || !window.__app_id) {
-                // Skontrolujeme, či je Firebase inicializovaný a máme ID aplikácie
                 console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
                 return;
             }
 
             try {
-                // Kolekcia 'users' pre danú aplikáciu
                 const usersCollectionRef = collection(window.db, 'artifacts', window.__app_id, 'users');
-                console.log("Sťahujem dáta všetkých používateľov z databázy...");
+                console.log("Sťahujem dáta o ubytovaní pre všetkých používateľov...");
 
                 const usersSnapshot = await getDocs(usersCollectionRef);
 
@@ -1154,33 +1152,26 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     return;
                 }
 
-                usersSnapshot.forEach(async (userDoc) => {
+                usersSnapshot.forEach(userDoc => {
                     const userId = userDoc.id;
-                    // Predpokladáme, že tímové dáta sú v subkolekcii 'teams'
-                    const teamsCollectionRef = collection(window.db, 'artifacts', window.__app_id, 'users', userId, 'teams');
-                    const teamsSnapshot = await getDocs(teamsCollectionRef);
+                    const userData = userDoc.data();
+                    const teamsData = userData.teamsData; // Dáta sú priamo v dokumente
 
-                    console.group(`--- Dáta pre používateľa: ${userId} ---`);
+                    console.group(`--- Dáta o tímoch pre používateľa: ${userId} ---`);
 
-                    if (teamsSnapshot.empty) {
-                        console.log("Žiadne dáta tímu pre tohto používateľa.");
-                    } else {
-                        teamsSnapshot.forEach(teamDoc => {
-                            const teamsData = teamDoc.data()?.teamsData;
-                            if (teamsData) {
-                                for (const categoryName in teamsData) {
-                                    if (teamsData.hasOwnProperty(categoryName) && Array.isArray(teamsData[categoryName])) {
-                                        teamsData[categoryName].forEach((team, teamIndex) => {
-                                            if (team && team.accommodation) {
-                                                console.log(`Kategória: ${categoryName}, Tím: ${team.teamName}, Ubytovanie:`, team.accommodation);
-                                            }
-                                        });
+                    if (teamsData) {
+                        for (const categoryName in teamsData) {
+                            if (teamsData.hasOwnProperty(categoryName) && Array.isArray(teamsData[categoryName])) {
+                                teamsData[categoryName].forEach((team, teamIndex) => {
+                                    if (team && team.accommodation) {
+                                        console.log(`Kategória: ${categoryName}, Tím: ${team.teamName}, Ubytovanie:`, team.accommodation);
                                     }
-                                }
+                                });
                             }
-                        });
+                        }
+                    } else {
+                        console.log("Žiadne dáta tímu pre tohto používateľa.");
                     }
-
                     console.groupEnd();
                 });
 
@@ -1189,7 +1180,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        // Spustíme funkciu po inicializácii komponentu
         fetchAllUserAccommodationData();
     }, []); // Spustí sa len raz
 
