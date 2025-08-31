@@ -183,7 +183,8 @@ function MemberDetailsModal({
     const [postalCode, setPostalCode] = useState('');
     const [city, setCity] = useState('');
     const [country, setCountry] = useState('');
-    const [dateOfBirthError, setDateOfBirthError] = useState(''); // Pridané
+    const [dateOfBirthError, setDateOfBirthError] = useState(''); 
+    const [isDateOfBirthValid, setIsDateOfBirthValid] = useState(true); 
 
     useEffect(() => {
         if (show) {
@@ -223,12 +224,14 @@ function MemberDetailsModal({
     const validateDateOfBirth = (dateString, categoryName) => {
         if (!dateString) {
             setDateOfBirthError('Dátum narodenia je povinný.');
+            setIsDateOfBirthValid(false);
             return false;
         }
         const birthDate = new Date(dateString);
         const today = new Date();
         if (birthDate > today) {
             setDateOfBirthError('Dátum narodenia nemôže byť v budúcnosti.');
+            setIsDateOfBirthValid(false);
             return false;
         }
         if (window.categoriesWithDates && window.categoriesWithDates[categoryName]) {
@@ -238,15 +241,18 @@ function MemberDetailsModal({
                 const dateToObj = dateTo ? new Date(dateTo) : null;
                 if (dateFromObj && birthDate < dateFromObj) {
                     setDateOfBirthError(`Dátum narodenia musí byť neskôr ako ${formatDateToDMMYYYY(dateFrom)}.`);
+                    setIsDateOfBirthValid(false);
                     return false;
                 }
                 if (dateToObj && birthDate > dateToObj) {
                     setDateOfBirthError(`Dátum narodenia musí byť skôr ako ${formatDateToDMMYYYY(dateTo)}.`);
+                    setIsDateOfBirthValid(false);
                     return false;
                 }
             }
         }
         setDateOfBirthError('');
+        setIsDateOfBirthValid(true);
         return true;
     };
 
@@ -285,13 +291,13 @@ function MemberDetailsModal({
     };
 
     const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
-        isButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
+        isButtonDisabled || !isDateOfBirthValid ? 'bg-white text-current border border-current' : 'text-white'
     }`;
     const buttonStyles = {
-        backgroundColor: isButtonDisabled ? 'white' : roleColor,
-        color: isButtonDisabled ? roleColor : 'white',
-        borderColor: isButtonDisabled ? roleColor : 'transparent',
-        cursor: isButtonDisabled ? 'not-allowed' : 'pointer'
+        backgroundColor: isButtonDisabled || !isDateOfBirthValid ? 'white' : roleColor,
+        color: isButtonDisabled || !isDateOfBirthValid ? roleColor : 'white',
+        borderColor: isButtonDisabled || !isDateOfBirthValid ? roleColor : 'transparent',
+        cursor: isButtonDisabled || !isDateOfBirthValid ? 'not-allowed' : 'pointer'
     };
 
     return React.createElement(
@@ -379,7 +385,7 @@ function MemberDetailsModal({
                         'button',
                         {
                             type: 'submit',
-                            disabled: isButtonDisabled,
+                            disabled: isButtonDisabled || !isDateOfBirthValid,
                             className: buttonClasses,
                             style: buttonStyles
                         },
