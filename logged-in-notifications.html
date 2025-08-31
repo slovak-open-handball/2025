@@ -55,30 +55,27 @@
     <script type="module">
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
-            try {
-                const response = await fetch('header.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const headerHtml = await response.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml;
-    
-                // Pridaj obsluhu udalosti pre odhlásenie (pre id="logout-button")
-                // Pridaj obsluhu udalosti pre odhlásenie (pre id="logout-button")
-                const logoutButton = document.getElementById('logout-button');
-                if (logoutButton) {
-                    logoutButton.addEventListener('click', async function(e) {
-                        e.preventDefault();
-                        console.log("Odhlásenie kliknuté!");
-                        await handleLogout();
-                    });
-                } else {
-                    console.error("Element s ID 'logout-button' nebol nájdený v header.html!");
-                }
+            const headerPlaceholder = document.getElementById('header-placeholder');
+            if (headerPlaceholder) {
+                try {
+                    const response = await fetch('header.html');
+                    if (!response.ok) throw new Error('Network response was not ok.');
+                    const headerHtml = await response.text();
+                    headerPlaceholder.innerHTML = headerHtml;
 
-            } catch (error) {
-                console.error("Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+                    const headerScript = document.createElement('script');
+                    headerScript.src = 'header.js';
+                    headerScript.type = 'module';
+                    headerScript.onload = () => {
+                        console.log("header.js načítaný a spustený.");
+                    };
+                    headerScript.onerror = (e) => {
+                        console.error("Chyba pri načítaní header.js:", e);
+                    };
+                    document.body.appendChild(headerScript);
+                } catch (error) {
+                    console.error("Chyba pri načítaní hlavičky:", error);
+                }
             }
         }
     
