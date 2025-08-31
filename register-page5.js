@@ -675,17 +675,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
                         setAccommodationTypes(data.types || []);
-                        
-                        // Zobrazenie tabuľky pri zmene údajov o ubytovaní
-                        console.log("-----------------------------------------");
-                        console.log("Aktualizácia dát z '/settings/accommodation':");
-                        // Zmena: odobranie stĺpca s cenou
-                        const accommodationTableData = (data.types || []).map(acc => ({
-                            Typ: acc.type,
-                            Kapacita: acc.capacity
-                        }));
-                        console.table(accommodationTableData);
-                        console.log("-----------------------------------------");
                     } else {
                         setAccommodationTypes([]);
                     }
@@ -773,7 +762,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         
                         console.table(teamsDataForTable);
 
-                        // NOVINKA: Vytvorenie a výpis súhrnnej tabuľky podľa typu ubytovania
+                        // Vytvorenie a výpis súhrnnej tabuľky podľa typu ubytovania
                         const accommodationSummary = {};
                         teamsDataForTable.forEach(team => {
                             const accType = team.accommodationType || 'Nezadané';
@@ -793,20 +782,33 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         console.log("Súhrn podľa ubytovania:");
                         console.table(summaryTableData);
 
-                        // NOVINKA: Zobrazí sa aj tabuľka s typmi ubytovania pri zmene údajov tímov
-                        console.log("-----------------------------------------");
+                        // NOVINKA: Načítanie a porovnanie s kapacitami ubytovania
                         const accommodationDoc = await getDoc(accommodationDocRef);
-                        if (accommodationDoc.exists()) {
-                             const data = accommodationDoc.data();
-                             // Zmena: odobranie stĺpca s cenou
-                             const accommodationTableData = (data.types || []).map(acc => ({
-                                 Typ: acc.type,
-                                 Kapacita: acc.capacity
-                             }));
-                             console.table(accommodationTableData);
-                        } else {
-                            console.log("Dokument 'settings/accommodation' neexistuje.");
+                        const accommodationData = accommodationDoc.exists() ? accommodationDoc.data() : { types: [] };
+                        const comparisonTableData = accommodationData.types.map(acc => {
+                            const occupied = accommodationSummary[acc.type] || 0;
+                            const remaining = acc.capacity - occupied;
+                            return {
+                                "Typ ubytovania": acc.type,
+                                "Obsadenosť": occupied,
+                                "Kapacita": acc.capacity,
+                                "Zostáva": remaining,
+                            };
+                        });
+
+                        // Pridanie riadku pre "bez ubytovania" do porovnávacej tabuľky
+                        if (accommodationSummary['bez ubytovania']) {
+                             comparisonTableData.unshift({
+                                "Typ ubytovania": "bez ubytovania",
+                                "Obsadenosť": accommodationSummary['bez ubytovania'],
+                                "Kapacita": "N/A",
+                                "Zostáva": "N/A",
+                             });
                         }
+                        
+                        console.log("-----------------------------------------");
+                        console.log("Súhrnné porovnanie obsadenosti a kapacity:");
+                        console.table(comparisonTableData);
                     }
                     console.log("-----------------------------------------");
                 }, (error) => {
