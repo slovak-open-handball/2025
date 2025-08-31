@@ -750,11 +750,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             Object.values(teams).forEach(teamsArray => {
                                 teamsArray.forEach(team => {
                                     // Výpočet celkového počtu osôb v tíme
+                                    const playersCount = team.players || 0;
                                     const menCount = team.menTeamMembers || 0;
                                     const womenCount = team.womenTeamMembers || 0;
                                     const maleDriversCount = (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 0;
                                     const femaleDriversCount = (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 0;
-                                    const totalCount = menCount + womenCount + maleDriversCount + femaleDriversCount;
+                                    const totalCount = playersCount + menCount + womenCount + maleDriversCount + femaleDriversCount;
                                     
                                     teamsDataForTable.push({
                                         teamName: team.teamName || '', 
