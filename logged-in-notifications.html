@@ -68,13 +68,14 @@
                 if (logoutButton) {
                     logoutButton.addEventListener('click', async function(e) {
                         e.preventDefault();
-    
-                        // Volanie funkcie signOut z authentication.js
+
+                        // Volanie funkcie signOut
                         if (typeof signOut === 'function') {
-                            await signOut();
+                            await signOut(); // Funkcia už obsahuje presmerovanie a čistenie dát
                         } else {
                             console.error("Funkcia signOut nie je dostupná!");
                         }
+                });
     
                         // Dodatočná logika (napr. presmerovanie)
 //                        sessionStorage.removeItem("prihlaseny");
