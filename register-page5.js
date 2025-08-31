@@ -561,6 +561,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
+    // Zmena: Ubytovacie počty sú teraz lokálny stav
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
     const [packages, setPackages] = React.useState([]);
 
@@ -774,6 +775,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             accommodationSummary[accType] += totalMembers;
                         });
 
+                        // Aktualizácia lokálneho stavu s počtami obsadenosti
+                        setAccommodationCounts(accommodationSummary);
+
                         const summaryTableData = Object.keys(accommodationSummary).map(type => ({
                             "Typ ubytovania": type,
                             "Počet osôb": accommodationSummary[type]
@@ -842,45 +846,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeUsers();
             }
         };
-    }, [db]);
+    }, [db, setAccommodationCounts]); // ZMENA: Pridaná závislosť na setAccommodationCounts
 
 
-    React.useEffect(() => {
-        let unsubscribeCounts;
-        const fetchAccommodationCounts = () => {
-            if (!window.db) {
-                setTimeout(fetchAccommodationCounts, 100);
-                return;
-            }
-            try {
-                const accommodationCountsDocRef = doc(window.db, 'settings', 'accommodationCounts');
-                unsubscribeCounts = onSnapshot(accommodationCountsDocRef, (docSnapshot) => {
-                    if (docSnapshot.exists()) {
-                        const data = docSnapshot.data();
-                        setAccommodationCounts(data || {});
-                    } else {
-                        setAccommodationCounts({});
-                    }
-                }, (error) => {
-                    console.error("Chyba pri načítaní počtov obsadenosti ubytovania:", error);
-                    setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
-                    setNotificationType('error');
-                });
-            } catch (e) {
-                console.error("Chyba pri nastavovaní poslucháča pre počty ubytovania:", e);
-                setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
-                setNotificationType('error');
-            }
-        };
+    // ZMENA: Odstránený useEffect, ktorý počúval na accommodationCounts,
+    // pretože teraz sa počty počítajú priamo z dát používateľov.
 
-        fetchAccommodationCounts();
-
-        return () => {
-            if (unsubscribeCounts) {
-                unsubscribeCounts();
-            }
-        };
-    }, [db]);
 
     // Táto funkcia teraz volá onGranularTeamsDataChange
     const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
