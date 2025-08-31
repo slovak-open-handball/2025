@@ -64,22 +64,19 @@
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
     
                 // Pridaj obsluhu udalosti pre odhlásenie (pre id="logout-button")
+                // Pridaj obsluhu udalosti pre odhlásenie (pre id="logout-button")
                 const logoutButton = document.getElementById('logout-button');
                 if (logoutButton) {
                     logoutButton.addEventListener('click', async function(e) {
                         e.preventDefault();
-
+                        console.log("Odhlásenie kliknuté!");
+                
                         // Volanie funkcie signOut
                         if (typeof signOut === 'function') {
                             await signOut(); // Funkcia už obsahuje presmerovanie a čistenie dát
                         } else {
                             console.error("Funkcia signOut nie je dostupná!");
                         }
-                });
-    
-                        // Dodatočná logika (napr. presmerovanie)
-//                        sessionStorage.removeItem("prihlaseny");
-//                        window.location.href = "login.html";
                     });
                 } else {
                     console.error("Element s ID 'logout-button' nebol nájdený v header.html!");
