@@ -70,13 +70,7 @@
                     logoutButton.addEventListener('click', async function(e) {
                         e.preventDefault();
                         console.log("Odhlásenie kliknuté!");
-                
-                        // Volanie funkcie signOut
-                        if (typeof signOut === 'function') {
-                            await signOut(); // Funkcia už obsahuje presmerovanie a čistenie dát
-                        } else {
-                            console.error("Funkcia signOut nie je dostupná!");
-                        }
+                        await handleLogout();
                     });
                 } else {
                     console.error("Element s ID 'logout-button' nebol nájdený v header.html!");
