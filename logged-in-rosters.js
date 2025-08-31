@@ -449,16 +449,20 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         onClose();
     };
 
+    const handleCategoryChange = (e) => {
+      setSelectedCategory(e.target.value);
+      setHasChanges(true);
+    };
     const handleArrivalTypeChange = (e) => {
-      setEditedArrivalType(e.target.value);
+      setArrivalType(e.target.value);
       setHasChanges(true);
     };
     const handleAccommodationTypeChange = (e) => {
-      setEditedAccommodationType(e.target.value);
+      setAccommodationType(e.target.value);
       setHasChanges(true);
     };
     const handlePackageNameChange = (e) => {
-      setEditedPackageName(e.target.value);
+      setPackageName(e.target.value);
       setHasChanges(true);
     };
 
@@ -780,6 +784,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             setArrivalMinute('');
             setAccommodationType('bez ubytovania');
             setPackageName(availablePackages.length > 0 ? availablePackages.sort()[0] : '');
+            setHasChanges(false);
         }
     }, [show, availablePackages]);
 
