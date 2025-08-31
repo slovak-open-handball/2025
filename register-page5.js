@@ -172,8 +172,9 @@ function TeamAccommodationAndArrival({
                     ),
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
                         const currentCount = accommodationCounts[acc.type] || 0;
-                        const isFull = currentCount >= acc.capacity;
-                        const isDisabled = isFull || loading;
+                        const remaining = acc.capacity - currentCount;
+                        // Zmena: zablokovanie ak je zostávajúci počet menší alebo rovný nule
+                        const isDisabled = remaining <= 0 || loading;
                         const labelClasses = `flex items-center p-3 rounded-lg ${isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-blue-50 cursor-pointer'} transition-colors duration-200`;
 
                         return React.createElement(
@@ -192,7 +193,7 @@ function TeamAccommodationAndArrival({
                                 disabled: isDisabled,
                             }),
                             React.createElement('span', { className: 'ml-3 text-gray-800' },
-                                `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}`
+                                `${acc.type}${remaining <= 0 ? ' (naplnená kapacita)' : ''}`
                             )
                         );
                     })
@@ -1120,8 +1121,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         return false; // Typ ubytovania musí byť vybraný, ak sú dostupné typy
                     }
                     const selectedAccType = accommodationTypes.find(acc => acc.type === team.accommodation.type);
-                    if (team.accommodation.type !== 'bez ubytovania' && selectedAccType && (accommodationCounts[selectedAccType.type] || 0) >= selectedAccType.capacity) {
-                        return false; // Vybrané ubytovanie je plne obsadené
+                    if (team.accommodation.type !== 'bez ubytovania' && selectedAccType) {
+                        const occupied = accommodationCounts[selectedAccType.type] || 0;
+                        const remaining = selectedAccType.capacity - occupied;
+                        if (remaining <= 0) {
+                             return false; // Vybrané ubytovanie je plne obsadené
+                        }
                     }
                 }
                 
