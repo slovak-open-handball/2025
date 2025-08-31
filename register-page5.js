@@ -744,8 +744,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             players: team.players || 'Nezadané',
                                             menTeamMembers: team.menTeamMembers || 'Nezadané',
                                             womenTeamMembers: team.womenTeamMembers || 'Nezadané',
-                                            driverDetailsMale: (team.driverDetailsMale && team.driverDetailsMale.length > 0) ? JSON.stringify(team.driverDetailsMale) : 'Nezadané',
-                                            driverDetailsFemale: (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) ? JSON.stringify(team.driverDetailsFemale) : 'Nezadané',
+                                            // Počítanie veľkosti poľa pre vypísanie do konzoly
+                                            driverDetailsMale: (team.driverDetailsMale && team.driverDetailsMale.length > 0) ? team.driverDetailsMale.length : 'Nezadané',
+                                            driverDetailsFemale: (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) ? team.driverDetailsFemale.length : 'Nezadané',
                                         });
                                     });
                                 });
