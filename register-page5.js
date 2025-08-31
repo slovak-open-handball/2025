@@ -749,15 +749,22 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             
                             Object.values(teams).forEach(teamsArray => {
                                 teamsArray.forEach(team => {
+                                    // Výpočet celkového počtu osôb v tíme
+                                    const menCount = team.menTeamMembers ? team.menTeamMembers : 0;
+                                    const womenCount = team.womenTeamMembers ? team.womenTeamMembers : 0;
+                                    const maleDriversCount = (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 0;
+                                    const femaleDriversCount = (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 0;
+                                    const totalCount = menCount + womenCount + maleDriversCount + femaleDriversCount;
+                                    
                                     teamsDataForTable.push({
-                                        teamName: team.teamName || '0', // Zmena: Nezadane na 0
-                                        accommodationType: team.accommodation?.type || '0', // Zmena: Nezadane na 0
-                                        players: team.players || '0', // Zmena: Nezadane na 0
-                                        menTeamMembers: team.menTeamMembers || '0', // Zmena: Nezadane na 0
-                                        womenTeamMembers: team.womenTeamMembers || '0', // Zmena: Nezadane na 0
-                                        // Zmena: Vypisuje dĺžku poľa, nie celý objekt alebo text "Nezadané"
-                                        driverDetailsMale: (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 0, 
-                                        driverDetailsFemale: (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 0,
+                                        teamName: team.teamName || '0', 
+                                        accommodationType: team.accommodation?.type || '0', 
+                                        players: team.players || '0', 
+                                        menTeamMembers: team.menTeamMembers || '0', 
+                                        womenTeamMembers: team.womenTeamMembers || '0', 
+                                        driverDetailsMale: maleDriversCount, 
+                                        driverDetailsFemale: femaleDriversCount,
+                                        totalMembers: totalCount // Nový stĺpec s celkovým počtom
                                     });
                                 });
                             });
