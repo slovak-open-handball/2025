@@ -545,7 +545,9 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
 
 // Hlavný komponent Page5Form
 export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, onGranularTeamsDataChange }) { // Odstránené tournamentStartDate, tournamentEndDate z props
-    const db = getFirestore();
+    
+    // ZMENA: Namiesto importu getFirestore používame globálnu premennú
+    const db = window.db; 
 
     const [notificationMessage, setNotificationMessage] = React.useState('');
     const [notificationType, setNotificationType] = React.useState('info');
@@ -663,7 +665,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let unsubscribeRegistrationSettings; // NOVINKA: pre registrácia settings
 
         const fetchSettings = () => {
-            if (!window.db) {
+            // ZMENA: Používame globálne premenné
+            if (!window.db || !window.auth) {
                 setTimeout(fetchSettings, 100);
                 return;
             }
@@ -740,13 +743,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeRegistrationSettings();
             }
         };
-    }, [db]); // Závislosť na 'db' zabezpečí, že sa to spustí po inicializácii Firebase
+    }, []); // Závislosť na 'db' zabezpečí, že sa to spustí po inicializácii Firebase
 
 
     React.useEffect(() => {
         let unsubscribeCounts;
         const fetchAccommodationCounts = () => {
-            if (!window.db) {
+            // ZMENA: Používame globálne premenné
+            if (!window.db || !window.auth) {
                 setTimeout(fetchAccommodationCounts, 100);
                 return;
             }
@@ -778,7 +782,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeCounts();
             }
         };
-    }, [db]);
+    }, []);
 
     // Táto funkcia teraz volá onGranularTeamsDataChange
     const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
@@ -1136,13 +1140,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // NOVÁ FUNKCIA: Načítanie a vypísanie dát o ubytovaní z databázy pre všetkých používateľov
     React.useEffect(() => {
         const fetchAllUserAccommodationData = async () => {
+            // ZMENA: Používame globálne premenné
             if (!window.db || !window.__app_id) {
                 console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
                 return;
             }
 
             try {
-                const usersCollectionRef = collection(window.db, 'artifacts', window.__app_id, 'users');
+                // ZMENA: Správna cesta podľa vašej požiadavky
+                const usersCollectionRef = collection(window.db, 'users');
                 console.log("Sťahujem dáta o ubytovaní pre všetkých používateľov...");
 
                 const usersSnapshot = await getDocs(usersCollectionRef);
