@@ -662,6 +662,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let unsubscribePackages;
         let unsubscribeRegistrationSettings;
         let unsubscribeUsers; // NOVINKA: pre poslucháča na users
+        let unsubscribeAccommodationTypes;
 
         const fetchSettings = () => {
             if (!window.db) {
@@ -670,10 +671,21 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
             try {
                 const accommodationDocRef = doc(window.db, 'settings', 'accommodation');
-                unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
+                unsubscribeAccommodationTypes = onSnapshot(accommodationDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
                         setAccommodationTypes(data.types || []);
+                        
+                        // NOVINKA: Zobrazí tabuľku s typmi ubytovania a kapacitou
+                        const accommodationTableData = (data.types || []).map(acc => ({
+                            Typ: acc.type,
+                            Kapacita: acc.capacity,
+                            Cena: `${acc.price} €`
+                        }));
+                        console.log("-----------------------------------------");
+                        console.log("Načítavam dáta z /settings/accommodation (aktualizácia v reálnom čase):");
+                        console.table(accommodationTableData);
+                        console.log("-----------------------------------------");
                     } else {
                         setAccommodationTypes([]);
                     }
@@ -682,6 +694,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationMessage("Chyba pri načítaní nastavení ubytovania.", 'error');
                     setNotificationType('error');
                 });
+
 
                 const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
                 unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
@@ -769,8 +782,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         fetchSettings();
 
         return () => {
-            if (unsubscribeAccommodation) {
-                unsubscribeAccommodation();
+            if (unsubscribeAccommodationTypes) {
+                unsubscribeAccommodationTypes();
             }
             if (unsubscribePackages) {
                 unsubscribePackages();
