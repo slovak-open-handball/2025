@@ -4317,9 +4317,6 @@ function AllRegistrationsApp() {
                 )
             )
         ),
-        // Predchádzajúce tlačidlo na pridanie tímu pod celou tabuľkou (ktoré bolo zobrazené v režime "iba tímy")
-        // bolo odstránené, pretože už nemá byť zobrazené v režime "iba tímy"
-        // Ako bolo požadované, zobrazí sa iba v režime "Zobraziť používateľov" a "Zobraziť tímy" a to v rozbalenom riadku používateľa.
       )
     )
   );
