@@ -257,16 +257,16 @@ function NotificationsApp() {
   }, [db, window.isGlobalAuthReady]); // Depends on db and global auth ready state
 
 
-  // Effect for fetching notifications
+  // NOVÝ KÓD: Listener pre aktualizácie notifikácií
   React.useEffect(() => {
     let unsubscribeNotifications;
-
-    // Only fetch if user is an approved admin, and we have their UID
+    // Len ak je používateľ schválený administrátor a máme jeho UID, tak načítame notifikácie
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true && user) {
-      console.log("NotificationsApp: Logged-in user is an approved administrator. Loading notifications.");
+      console.log("NotificationsApp: Prihlásený používateľ je schválený administrátor. Načítavam notifikácie.");
       try {
         const notificationsCollectionRef = collection(db, 'notifications');
         
+        // onSnapshot na real-time aktualizácie
         unsubscribeNotifications = onSnapshot(notificationsCollectionRef, snapshot => {
           const fetchedNotifications = [];
           snapshot.forEach(document => {
@@ -282,36 +282,37 @@ function NotificationsApp() {
                 read: data.seenBy && data.seenBy.includes(user.uid), 
                 // Pridáme stav, či je vymazaná pre aktuálneho používateľa
                 deletedByMe: isDeletedForCurrentUser,
-                timestamp: data.timestamp ? data.timestamp.toDate() : null // Convert Timestamp to Date object
+                timestamp: data.timestamp ? data.timestamp.toDate() : null // Konvertujeme Timestamp na objekt Date
             });
           });
-          // Sort notifications from newest to oldest
+          // Zoraď notifikácie od najnovších po najstaršie
           fetchedNotifications.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
           setNotifications(fetchedNotifications);
           setError('');
-          console.log("NotificationsApp: Notifications updated from onSnapshot.");
+          console.log("NotificationsApp: Upozornenia aktualizované z onSnapshot.");
         }, error => {
-          console.error("NotificationsApp: Error loading notifications from Firestore (onSnapshot error):", error);
+          console.error("NotificationsApp: Chyba pri načítaní upozornení z Firestore (onSnapshot chyba):", error);
           setError(`Chyba pri načítaní upozornení: ${error.message}`);
         });
       } catch (e) {
-        console.error("NotificationsApp: Error setting up onSnapshot for notifications (try-catch):", e);
+        console.error("NotificationsApp: Chyba pri nastavovaní onSnapshot pre upozornenia (try-catch):", e);
         setError(`Chyba pri nastavení poslucháča pre upozornenia: ${e.message}`);
       }
     } else {
-        setNotifications([]); // Clear notifications if not admin or data is not ready
+        setNotifications([]); // Vymaž notifikácie, ak nie je admin alebo nie sú dáta pripravené
         if (window.isGlobalAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
             setLoading(false);
         }
     }
 
+    // Odhlásenie z listenera pri zrušení komponentu
     return () => {
       if (unsubscribeNotifications) {
-        console.log("NotificationsApp: Unsubscribing onSnapshot for notifications.");
+        console.log("NotificationsApp: Odhlasujem onSnapshot pre notifikácie.");
         unsubscribeNotifications();
       }
     };
-  }, [db, userProfileData, user, window.isGlobalAuthReady]);
+  }, [db, userProfileData, user]);
 
 
   // NEW HANDLER: For updating the displayNotifications field
