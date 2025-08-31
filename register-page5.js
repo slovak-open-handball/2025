@@ -735,7 +735,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
                 // Poslucháč pre `/users/` kolekciu
                 const usersCollectionRef = collection(window.db, 'users');
-                unsubscribeUsers = onSnapshot(usersCollectionRef, (querySnapshot) => {
+                unsubscribeUsers = onSnapshot(usersCollectionRef, async (querySnapshot) => {
                     console.log("-----------------------------------------");
                     console.log("Aktualizácia dát z '/users/':");
                     
@@ -763,6 +763,22 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         });
                         
                         console.table(teamsDataForTable);
+
+                        // NOVINKA: Zobrazí sa aj tabuľka s typmi ubytovania pri zmene údajov tímov
+                        console.log("-----------------------------------------");
+                        console.log("Aktualizácia dát z '/settings/accommodation':");
+                        const accommodationDoc = await getDoc(accommodationDocRef);
+                        if (accommodationDoc.exists()) {
+                             const data = accommodationDoc.data();
+                             const accommodationTableData = (data.types || []).map(acc => ({
+                                 Typ: acc.type,
+                                 Kapacita: acc.capacity,
+                                 Cena: `${acc.price} €`
+                             }));
+                             console.table(accommodationTableData);
+                        } else {
+                            console.log("Dokument 'settings/accommodation' neexistuje.");
+                        }
                     }
                     console.log("-----------------------------------------");
                 }, (error) => {
