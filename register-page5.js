@@ -728,15 +728,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         console.log("Načítavam dáta zo zbierky '/users/':");
                         const usersCollectionRef = collection(window.db, 'users');
                         const querySnapshot = await getDocs(usersCollectionRef);
-
+                
+                        const teamsDataForTable = [];
+                        const accommodationSummary = {};
+                
                         if (querySnapshot.empty) {
                             console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
                         } else {
-                            const teamsDataForTable = [];
                             querySnapshot.forEach((doc) => {
                                 const data = doc.data();
                                 const teams = data.teams || {};
-                                
+                
                                 Object.values(teams).forEach(teamsArray => {
                                     teamsArray.forEach(team => {
                                         // Prevádzame hodnoty 'Nezadané' na 0
@@ -745,9 +747,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         const womenTeamMembersCount = (typeof team.womenTeamMembers === 'number' && !isNaN(team.womenTeamMembers)) ? team.womenTeamMembers : 0;
                                         const driverDetailsMaleCount = (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 0;
                                         const driverDetailsFemaleCount = (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 0;
-                                        
+                
                                         const total = playersCount + menTeamMembersCount + womenTeamMembersCount + driverDetailsMaleCount + driverDetailsFemaleCount;
-
+                
                                         teamsDataForTable.push({
                                             teamName: team.teamName || 'Nezadané',
                                             players: playersCount,
@@ -758,15 +760,28 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             accommodationType: team.accommodation?.type || 'Nezadané',
                                             Total: total, // NOVINKA: Pridanie stĺpca s celkovým počtom
                                         });
+                
+                                        // Agregácia pre druhú tabuľku
+                                        const accommodationType = team.accommodation?.type || 'Nezadané';
+                                        accommodationSummary[accommodationType] = (accommodationSummary[accommodationType] || 0) + total;
                                     });
                                 });
                             });
-                            
+                
                             console.log("--- Dáta tímov ---");
                             console.table(teamsDataForTable);
                             console.log("------------------------");
+                
+                            // NOVINKA: Vytvorenie a výpis druhej tabuľky so súčtom osôb podľa typu ubytovania
+                            const accommodationTableData = Object.keys(accommodationSummary).map(key => ({
+                                'Typ ubytovania': key,
+                                'Celkový počet osôb': accommodationSummary[key],
+                            }));
+                
+                            console.log("\n--- Súčet osôb podľa typu ubytovania ---");
+                            console.table(accommodationTableData);
+                            console.log("------------------------");
                         }
-                        
                     } catch (e) {
                         console.error("Chyba pri načítaní a výpise dát z '/users/':", e);
                     }
@@ -843,7 +858,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
         for (const categoryName in teamsDataFromPage4) {
-            // Filter out any undefined or null categories at this level
+            // Filter categories that might be undefined or null
             if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
