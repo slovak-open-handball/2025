@@ -536,8 +536,6 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
 // Hlavný komponent Page5Form
 export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, onGranularTeamsDataChange }) {
     
-    const db = window.db; 
-
     const [notificationMessage, setNotificationMessage] = React.useState('');
     const [notificationType, setNotificationType] = React.useState('info');
 
@@ -643,10 +641,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let unsubscribeAccommodation;
         let unsubscribePackages;
         let unsubscribeRegistrationSettings;
+        let unsubscribeCounts;
 
         const startListeners = () => {
-            if (!window.db || !window.auth) {
-                setTimeout(startListeners, 200);
+            if (!window.db) {
+                console.warn("Firebase nie je pripravený, čakám...");
                 return;
             }
 
@@ -706,36 +705,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
                     setNotificationType('error');
                 });
-            } catch (e) {
-                console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/balíčky/registrácie:", e);
-                setNotificationMessage("Chyba pri načítaní údajov.", 'error');
-                setNotificationType('error');
-            }
-        };
-
-        startListeners();
-
-        return () => {
-            if (unsubscribeAccommodation) {
-                unsubscribeAccommodation();
-            }
-            if (unsubscribePackages) {
-                unsubscribePackages();
-            }
-            if (unsubscribeRegistrationSettings) {
-                unsubscribeRegistrationSettings();
-            }
-        };
-    }, []);
-
-    React.useEffect(() => {
-        let unsubscribeCounts;
-        const fetchAccommodationCounts = () => {
-            if (!window.db || !window.auth) {
-                setTimeout(fetchAccommodationCounts, 100);
-                return;
-            }
-            try {
+                
                 const accommodationCountsDocRef = doc(window.db, 'settings', 'accommodationCounts');
                 unsubscribeCounts = onSnapshot(accommodationCountsDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
@@ -750,15 +720,32 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationType('error');
                 });
             } catch (e) {
-                console.error("Chyba pri nastavovaní poslucháča pre počty ubytovania:", e);
-                setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+                console.error("Chyba pri nastavovaní poslucháčov pre ubytovanie/balíčky/registrácie:", e);
+                setNotificationMessage("Chyba pri načítaní údajov.", 'error');
                 setNotificationType('error');
             }
         };
 
-        fetchAccommodationCounts();
+        if (window.isGlobalAuthReady) {
+            startListeners();
+        } else {
+            const handleAuthReady = () => {
+                startListeners();
+                window.removeEventListener('globalDataUpdated', handleAuthReady);
+            };
+            window.addEventListener('globalDataUpdated', handleAuthReady);
+        }
 
         return () => {
+            if (unsubscribeAccommodation) {
+                unsubscribeAccommodation();
+            }
+            if (unsubscribePackages) {
+                unsubscribePackages();
+            }
+            if (unsubscribeRegistrationSettings) {
+                unsubscribeRegistrationSettings();
+            }
             if (unsubscribeCounts) {
                 unsubscribeCounts();
             }
@@ -1091,11 +1078,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     React.useEffect(() => {
         const fetchAllUserAccommodationData = async () => {
-            if (!window.db || typeof __app_id === 'undefined') {
-                setTimeout(fetchAllUserAccommodationData, 200);
+             // Čakáme, kým nie je k dispozícii globálny objekt db z authentication.js
+             if (!window.db || typeof __app_id === 'undefined') {
                 return;
             }
-             try {
+
+            try {
                 const usersCollectionRef = collection(window.db, 'users');
                 console.log("Sťahujem dáta o ubytovaní pre všetkých používateľov...");
 
@@ -1134,7 +1122,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        fetchAllUserAccommodationData();
+        if (window.isGlobalAuthReady) {
+            fetchAllUserAccommodationData();
+        } else {
+            const handleAuthReady = () => {
+                fetchAllUserAccommodationData();
+                window.removeEventListener('globalDataUpdated', handleAuthReady);
+            };
+            window.addEventListener('globalDataUpdated', handleAuthReady);
+        }
+
     }, []);
 
 
