@@ -399,7 +399,7 @@ function NotificationsApp() {
     try {
       let notificationsToProcess = notifications.filter(n => !n.deletedByMe);
       if (!deleteUnreadToo) {
-        notificationsToProcess = notificationsToProcess.filter(n => n.read);
+        notificationsToProcess = notificationsTo-process.filter(n => n.read);
       }
 
       if (notificationsToProcess.length === 0) {
