@@ -165,7 +165,7 @@ function NotificationsApp() {
       if (window.isGlobalAuthReady && globalUser && globalProfileData) {
         setLoading(false);
         // NEW: Set initial state for the toggle switch
-        setDisplayNotifications(globalProfileData.displayNotifications || false);
+        // This is now handled by the separate onSnapshot listener
       } else if (window.isGlobalAuthReady && !globalUser) {
         // If auth is ready but no user, redirect (this should be handled by authentication.js primarily)
         console.log("NotificationsApp: User is not logged in via global state, redirecting to login.html.");
@@ -198,6 +198,36 @@ function NotificationsApp() {
     };
   }, [auth]); // Depends on auth instance
 
+    // NEW EFFECT: Listen for real-time updates to the 'displayNotifications' field
+    React.useEffect(() => {
+        let unsubscribeNotificationsToggle;
+        if (db && user) {
+            console.log("NotificationsApp: Setting up onSnapshot for user notifications toggle.");
+            const userDocRef = doc(db, 'users', user.uid);
+            unsubscribeNotificationsToggle = onSnapshot(userDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    // Update the state with the latest value from the database
+                    if (data.hasOwnProperty('displayNotifications')) {
+                        setDisplayNotifications(data.displayNotifications);
+                        console.log("NotificationsApp: 'displayNotifications' value updated from database:", data.displayNotifications);
+                    }
+                }
+            }, (error) => {
+                console.error("NotificationsApp: Error listening to displayNotifications:", error);
+                // Handle error, e.g., display an error message
+                setUserNotificationMessage(`Chyba pri načítaní nastavení notifikácií: ${error.message}`);
+                setUserNotificationType('error');
+            });
+        }
+        
+        return () => {
+            if (unsubscribeNotificationsToggle) {
+                console.log("NotificationsApp: Unsubscribing from displayNotifications listener.");
+                unsubscribeNotificationsToggle();
+            }
+        };
+    }, [db, user]); // Depend on db and user to ensure listener is set up correctly
 
   // Effect for fetching all admin Uids
   React.useEffect(() => {
@@ -297,7 +327,7 @@ function NotificationsApp() {
         const userRef = doc(db, 'users', user.uid);
         const newToggleState = !displayNotifications;
         await updateDoc(userRef, { displayNotifications: newToggleState });
-        setDisplayNotifications(newToggleState);
+        // The state will now be updated by the onSnapshot listener, not here directly
         setUserNotificationMessage(newToggleState ? "Zobrazovanie notifikácií bolo zapnuté." : "Zobrazovanie notifikácií bolo vypnuté.");
         setUserNotificationType('success');
     } catch (e) {
