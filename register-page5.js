@@ -739,16 +739,24 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 
                                 Object.values(teams).forEach(teamsArray => {
                                     teamsArray.forEach(team => {
+                                        // Prevádzame hodnoty 'Nezadané' na 0
+                                        const playersCount = (typeof team.players === 'number' && !isNaN(team.players)) ? team.players : 0;
+                                        const menTeamMembersCount = (typeof team.menTeamMembers === 'number' && !isNaN(team.menTeamMembers)) ? team.menTeamMembers : 0;
+                                        const womenTeamMembersCount = (typeof team.womenTeamMembers === 'number' && !isNaN(team.womenTeamMembers)) ? team.womenTeamMembers : 0;
+                                        const driverDetailsMaleCount = (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 0;
+                                        const driverDetailsFemaleCount = (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 0;
+                                        
+                                        const total = playersCount + menTeamMembersCount + womenTeamMembersCount + driverDetailsMaleCount + driverDetailsFemaleCount;
+
                                         teamsDataForTable.push({
                                             teamName: team.teamName || 'Nezadané',
-                                            players: team.players || 'Nezadané',
-                                            menTeamMembers: team.menTeamMembers || 'Nezadané',
-                                            womenTeamMembers: team.womenTeamMembers || 'Nezadané',
-                                            // Počítanie veľkosti poľa pre vypísanie do konzoly
-                                            driverDetailsMale: (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 'Nezadané',
-                                            driverDetailsFemale: (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 'Nezadané',
-                                            // NOVINKA: Pridanie typu ubytovania do tabuľky
-                                            accommodationType: team.accommodation?.type || 'Nezadané'
+                                            players: playersCount,
+                                            menTeamMembers: menTeamMembersCount,
+                                            womenTeamMembers: womenTeamMembersCount,
+                                            driverDetailsMale: driverDetailsMaleCount,
+                                            driverDetailsFemale: driverDetailsFemaleCount,
+                                            accommodationType: team.accommodation?.type || 'Nezadané',
+                                            Total: total, // NOVINKA: Pridanie stĺpca s celkovým počtom
                                         });
                                     });
                                 });
