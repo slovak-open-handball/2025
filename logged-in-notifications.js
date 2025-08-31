@@ -729,8 +729,8 @@ function NotificationsApp() {
         // NOVÝ PRÍDAVOK: Toggle switch pre notifikácie
         React.createElement(
           'div',
-          { className: 'flex items-center justify-between mb-6 p-4 bg-gray-50 rounded-lg shadow-inner' },
-          React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobraziť notifikácie'),
+          { className: 'flex items-center justify-between mb-6 p-4 rounded-lg' },
+          React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobrazovať upozornenia'),
           React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
             React.createElement('input', {
               type: 'checkbox',
