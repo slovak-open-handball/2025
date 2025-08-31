@@ -361,27 +361,27 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
     const [editedArrivalMinute, setEditedArrivalMinute] = useState('');
 
     const [tshirtEntries, setTshirtEntries] = useState([]);
-
+    
+    const [hasChanges, setHasChanges] = useState(false);
 
     useEffect(() => {
-        if (teamData) {
-            setEditedTeamName(teamData.teamName || '');
-            setEditedCategoryName(teamData.categoryName || '');
-            setEditedArrivalType(teamData.arrival?.type || 'bez dopravy');
-            setEditedPackageName(teamData.packageDetails?.name || '');
-            setEditedAccommodationType(teamData.accommodation?.type || '');
-
-            if (teamData.arrival?.time) {
-                const [hour, minute] = teamData.arrival.time.split(':');
-                setEditedArrivalHour(hour || '');
-                setEditedArrivalMinute(minute || '');
-            } else {
-                setEditedArrivalHour('');
-                setEditedArrivalMinute('');
-            }
-
-            setTshirtEntries(teamData.tshirts && Array.isArray(teamData.tshirts) ? teamData.tshirts.map(t => ({...t})) : []);
+      if (teamData) {
+        setEditedTeamName(teamData.teamName || '');
+        setEditedCategoryName(teamData.categoryName || '');
+        setEditedArrivalType(teamData.arrival?.type || 'bez dopravy');
+        setEditedPackageName(teamData.packageDetails?.name || '');
+        setEditedAccommodationType(teamData.accommodation?.type || '');
+        if (teamData.arrival?.time) {
+          const [hour, minute] = teamData.arrival.time.split(':');
+          setEditedArrivalHour(hour || '');
+          setEditedArrivalMinute(minute || '');
+        } else {
+          setEditedArrivalHour('');
+          setEditedArrivalMinute('');
         }
+        setTshirtEntries(teamData.tshirts && Array.isArray(teamData.tshirts) ? teamData.tshirts.map(t => ({...t})) : []);
+        setHasChanges(false); // Resetujeme pri načítaní
+      }
     }, [teamData]);
 
     if (!show) return null;
@@ -407,14 +407,21 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         return tshirtEntries.every(tshirt => tshirt.size !== '');
     }, [tshirtEntries]);
 
-
-    const isSaveButtonDisabled = isDataEditDeadlinePassed || totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected;
+    const isSaveButtonDisabled = isDataEditDeadlinePassed || (!hasChanges && (totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected));
 
     const isAddTshirtButtonDisabled = isDataEditDeadlinePassed || totalTshirtsQuantity === totalMembersInTeam;
 
-
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (isDataEditDeadlinePassed) {
+          showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
+          return;
+        }
+        if (totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected) {
+          showLocalNotification('Počet tričiek sa nezhoduje s počtom členov tímu alebo nie sú vybraté všetky veľkosti tričiek.', 'error');
+          return;
+        }
 
         if (isSaveButtonDisabled) {
             showLocalNotification('Počet tričiek sa nezhoduje s počtom členov tímu alebo nie sú vybraté všetky veľkosti tričiek.', 'error');
@@ -428,8 +435,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
         const filteredTshirtEntries = tshirtEntries.filter(t => t.size && t.quantity && parseInt(t.quantity, 10) > 0)
                                                     .map(t => ({ ...t, quantity: parseInt(t.quantity, 10) }));
-
-
+        
         const updatedTeamData = {
             ...teamData,
             teamName: editedTeamName,
@@ -444,7 +450,21 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
             tshirts: filteredTshirtEntries
         };
         await onSaveTeam(updatedTeamData);
+        setHasChanges(false);
         onClose();
+    };
+
+    const handleArrivalTypeChange = (e) => {
+      setEditedArrivalType(e.target.value);
+      setHasChanges(true);
+    };
+    const handleAccommodationTypeChange = (e) => {
+      setEditedAccommodationType(e.target.value);
+      setHasChanges(true);
+    };
+    const handlePackageNameChange = (e) => {
+      setEditedPackageName(e.target.value);
+      setHasChanges(true);
     };
 
     const showArrivalTimeInputs = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
@@ -794,7 +814,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
     }, [selectedCategory, clubName, teamsData]); // Závislosti pre opätovné spustenie efektu
 
-    const isSaveButtonDisabled = isDataEditDeadlinePassed || !selectedCategory || !teamNamePreview;
+    const isSaveButtonDisabled = isDataEditDeadlinePassed || (!hasChanges && (totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected));
 
     const showArrivalTimeInputs = arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus';
 
@@ -803,6 +823,15 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (isDataEditDeadlinePassed) {
+          showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
+          return;
+        }
+        if (totalTshirtsQuantity !== totalMembersInTeam || !allTshirtSizesSelected) {
+          showLocalNotification('Počet tričiek sa nezhoduje s počtom členov tímu alebo nie sú vybraté všetky veľkosti tričiek.', 'error');
+          return;
+        }
 
         if (isSaveButtonDisabled) {
             showLocalNotification('Prosím, vyplňte kategóriu a názov tímu.', 'error');
@@ -857,6 +886,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             tshirts: filteredTshirtEntries,
         };
         await onAddTeam(newTeamData);
+        setHasChanges(false);
         onClose();
     };
 
