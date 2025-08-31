@@ -773,6 +773,26 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         
                         console.table(teamsDataForTable);
 
+                        // NOVINKA: Vytvorenie a výpis súhrnnej tabuľky podľa typu ubytovania
+                        const accommodationSummary = {};
+                        teamsDataForTable.forEach(team => {
+                            const accType = team.accommodationType || 'Nezadané';
+                            const totalMembers = team.totalMembers || 0;
+                            if (!accommodationSummary[accType]) {
+                                accommodationSummary[accType] = 0;
+                            }
+                            accommodationSummary[accType] += totalMembers;
+                        });
+
+                        const summaryTableData = Object.keys(accommodationSummary).map(type => ({
+                            "Typ ubytovania": type,
+                            "Počet osôb": accommodationSummary[type]
+                        }));
+
+                        console.log("-----------------------------------------");
+                        console.log("Súhrn podľa ubytovania:");
+                        console.table(summaryTableData);
+
                         // NOVINKA: Zobrazí sa aj tabuľka s typmi ubytovania pri zmene údajov tímov
                         console.log("-----------------------------------------");
                         const accommodationDoc = await getDoc(accommodationDocRef);
