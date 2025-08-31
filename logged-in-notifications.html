@@ -22,16 +22,31 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
     <script type="module" src="logged-in-notifications.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="header-placeholder"></div>
+
+    <div class="flex flex-grow">
+        <div id="menu-placeholder"></div>
+
+        <main id="main-content-area" class="flex-grow flex">
+            <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+            <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="flex justify-center pt-16">
+                    <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+                </div>
+            </div>
+        </main>
+    </div>
 
     <script type="module">
-        // Spustíme načítanie hlavičky po načítaní DOM
+        // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.addEventListener('DOMContentLoaded', async () => {
             const headerPlaceholder = document.getElementById('header-placeholder');
             const menuPlaceholder = document.getElementById('menu-placeholder');
-
+            
             // Načítanie hlavičky
             try {
                 const headerResponse = await fetch('header.html');
@@ -90,6 +105,13 @@
                 console.log("logged-in-notifications.html: Auth ready, but no user data. Redirecting to login.");
                 window.location.href = 'login.html';
             }
+
+            // Až po načítaní všetkého spustiť header.js
+            const headerScript = document.createElement('script');
+            headerScript.type = 'module';
+            headerScript.src = 'header.js';
+            document.body.appendChild(headerScript);
+            console.log("logged-in-notifications.html: Dynamicky načítavam header.js.");
         });
     </script>
 </body>
