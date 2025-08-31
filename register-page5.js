@@ -641,7 +641,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let currentDate = new Date(start);
         while (currentDate <= end) {
             dates.push(currentDate.toISOString().split('T')[0]);
-            currentDate.setDate(currentCDate.getDate() + 1);
+            currentDate.setDate(currentDate.getDate() + 1);
         }
         return dates;
     };
