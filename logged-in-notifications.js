@@ -133,6 +133,9 @@ function NotificationsApp() {
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
   const [userNotificationType, setUserNotificationType] = React.useState('success'); // Predvolený stav pre typ notifikácie na 'success'
 
+  // NOVÝ STAV PRE TOGGLE SWITCH
+  const [isMenuToggled, setIsMenuToggled] = React.useState(false);
+
 
   const [notifications, setNotifications] = React.useState([]);
   const [allAdminUids, setAllAdminUids] = React.useState([]); // New state for storing UIDs of all administrators
@@ -222,6 +225,32 @@ function NotificationsApp() {
   }, [db, window.isGlobalAuthReady]); // Depends on db and global auth ready state
 
 
+  // NOVÝ EFFECT: Načítanie isMenuToggled a poslucháč pre zmeny
+  React.useEffect(() => {
+    let unsubscribeProfile;
+    if (db && user && user.uid) {
+      const userRef = doc(db, 'users', user.uid);
+      unsubscribeProfile = onSnapshot(userRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const profileData = docSnap.data();
+          if (profileData.hasOwnProperty('isMenuToggled')) {
+            setIsMenuToggled(profileData.isMenuToggled);
+            console.log("NotificationsApp: isMenuToggled loaded from Firestore:", profileData.isMenuToggled);
+          }
+        }
+      }, (error) => {
+        console.error("NotificationsApp: Error loading user profile for toggle switch:", error);
+      });
+    }
+
+    return () => {
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+      }
+    };
+  }, [db, user]);
+
+
   // Effect for fetching notifications
   React.useEffect(() => {
     let unsubscribeNotifications;
@@ -277,6 +306,30 @@ function NotificationsApp() {
       }
     };
   }, [db, userProfileData, user, window.isGlobalAuthReady]);
+
+
+  // NOVÁ FUNKCIA: Prepínanie isMenuToggled a aktualizácia v DB
+  const handleToggleMenu = async () => {
+    if (!db || !user || !user.uid) {
+        setUserNotificationMessage("Chyba: Nie sú dostupné dáta používateľa alebo databázy.");
+        setUserNotificationType('error');
+        return;
+    }
+    
+    const newValue = !isMenuToggled;
+    setIsMenuToggled(newValue); // Optimistic update
+    
+    try {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, { isMenuToggled: newValue });
+        console.log("NotificationsApp: isMenuToggled updated to", newValue);
+    } catch (e) {
+        console.error("NotificationsApp: Error updating isMenuToggled:", e);
+        setIsMenuToggled(!newValue); // Rollback on error
+        setUserNotificationMessage(`Chyba pri aktualizácii prepínača: ${e.message}`);
+        setUserNotificationType('error');
+    }
+  };
 
 
   const handleMarkAsRead = async (notificationId) => {
@@ -663,6 +716,22 @@ function NotificationsApp() {
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Upozornenia'
+        ),
+        // NOVÝ PRVOK: Prepínač pre isMenuToggled pod nadpisom
+        React.createElement(
+            'div',
+            { className: 'flex items-center justify-center space-x-2 mb-6' },
+            React.createElement('span', { className: 'text-gray-700' }, 'Zapnúť/Vypnúť menu'),
+            React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
+                React.createElement('input', {
+                    type: 'checkbox',
+                    className: 'sr-only peer',
+                    checked: isMenuToggled,
+                    onChange: handleToggleMenu,
+                    disabled: loading
+                }),
+                React.createElement('div', { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600" })
+            )
         ),
         // Skupina tlačidiel
         (hasActiveNotifications || hasDeletedByMeNotifications) && React.createElement(
