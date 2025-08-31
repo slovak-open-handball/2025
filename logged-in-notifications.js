@@ -133,6 +133,9 @@ function NotificationsApp() {
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
   const [userNotificationType, setUserNotificationType] = React.useState('success'); // Predvolený stav pre typ notifikácie na 'success'
 
+  // NEW STATE FOR NOTIFICATIONS TOGGLE
+  const [displayNotifications, setDisplayNotifications] = React.useState(false);
+
 
   const [notifications, setNotifications] = React.useState([]);
   const [allAdminUids, setAllAdminUids] = React.useState([]); // New state for storing UIDs of all administrators
@@ -161,6 +164,8 @@ function NotificationsApp() {
       // If global auth is ready and we have profile data, then loading for initial setup is done.
       if (window.isGlobalAuthReady && globalUser && globalProfileData) {
         setLoading(false);
+        // NEW: Set initial state for the toggle switch
+        setDisplayNotifications(globalProfileData.displayNotifications || false);
       } else if (window.isGlobalAuthReady && !globalUser) {
         // If auth is ready but no user, redirect (this should be handled by authentication.js primarily)
         console.log("NotificationsApp: User is not logged in via global state, redirecting to login.html.");
@@ -277,6 +282,32 @@ function NotificationsApp() {
       }
     };
   }, [db, userProfileData, user, window.isGlobalAuthReady]);
+
+
+  // NEW HANDLER: For updating the displayNotifications field
+  const handleToggleNotifications = async () => {
+    if (!db || !user || !user.uid) {
+        setUserNotificationMessage("Chyba: Nie sú dostupné dáta používateľa alebo databázy.");
+        setUserNotificationType('error');
+        return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+        const userRef = doc(db, 'users', user.uid);
+        const newToggleState = !displayNotifications;
+        await updateDoc(userRef, { displayNotifications: newToggleState });
+        setDisplayNotifications(newToggleState);
+        setUserNotificationMessage(newToggleState ? "Zobrazovanie notifikácií bolo zapnuté." : "Zobrazovanie notifikácií bolo vypnuté.");
+        setUserNotificationType('success');
+    } catch (e) {
+        console.error("NotificationsApp: Error updating displayNotifications:", e);
+        setError(`Chyba pri aktualizácii nastavenia notifikácií: ${e.message}`);
+        setUserNotificationType('error');
+    } finally {
+        setLoading(false);
+    }
+  };
 
 
   const handleMarkAsRead = async (notificationId) => {
@@ -663,6 +694,22 @@ function NotificationsApp() {
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Upozornenia'
+        ),
+        // NOVÝ PRÍDAVOK: Toggle switch pre notifikácie
+        React.createElement(
+          'div',
+          { className: 'flex items-center justify-between mb-6 p-4 bg-gray-50 rounded-lg shadow-inner' },
+          React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobraziť notifikácie'),
+          React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: displayNotifications,
+              onChange: handleToggleNotifications,
+              className: 'sr-only peer',
+              disabled: loading
+            }),
+            React.createElement('div', { className: 'w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600' })
+          )
         ),
         // Skupina tlačidiel
         (hasActiveNotifications || hasDeletedByMeNotifications) && React.createElement(
