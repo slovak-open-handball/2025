@@ -679,10 +679,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         // Zobrazenie tabuľky pri zmene údajov o ubytovaní
                         console.log("-----------------------------------------");
                         console.log("Aktualizácia dát z '/settings/accommodation':");
+                        // Zmena: odobranie stĺpca s cenou
                         const accommodationTableData = (data.types || []).map(acc => ({
                             Typ: acc.type,
-                            Kapacita: acc.capacity,
-                            Cena: `${acc.price} €`
+                            Kapacita: acc.capacity
                         }));
                         console.table(accommodationTableData);
                         console.log("-----------------------------------------");
@@ -750,13 +750,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             Object.values(teams).forEach(teamsArray => {
                                 teamsArray.forEach(team => {
                                     teamsDataForTable.push({
-                                        teamName: team.teamName || 'Nezadané',
-                                        accommodationType: team.accommodation?.type || 'Nezadané',
-                                        players: team.players || 'Nezadané',
-                                        menTeamMembers: team.menTeamMembers || 'Nezadané',
-                                        womenTeamMembers: team.womenTeamMembers || 'Nezadané',
-                                        driverDetailsMale: (team.driverDetailsMale && team.driverDetailsMale.length > 0) ? JSON.stringify(team.driverDetailsMale) : 'Nezadané',
-                                        driverDetailsFemale: (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) ? JSON.stringify(team.driverDetailsFemale) : 'Nezadané',
+                                        teamName: team.teamName || '0', // Zmena: Nezadane na 0
+                                        accommodationType: team.accommodation?.type || '0', // Zmena: Nezadane na 0
+                                        players: team.players || '0', // Zmena: Nezadane na 0
+                                        menTeamMembers: team.menTeamMembers || '0', // Zmena: Nezadane na 0
+                                        womenTeamMembers: team.womenTeamMembers || '0', // Zmena: Nezadane na 0
+                                        // Zmena: Vypisuje dĺžku poľa, nie celý objekt alebo text "Nezadané"
+                                        driverDetailsMale: (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 0, 
+                                        driverDetailsFemale: (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 0,
                                     });
                                 });
                             });
@@ -770,10 +771,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         const accommodationDoc = await getDoc(accommodationDocRef);
                         if (accommodationDoc.exists()) {
                              const data = accommodationDoc.data();
+                             // Zmena: odobranie stĺpca s cenou
                              const accommodationTableData = (data.types || []).map(acc => ({
                                  Typ: acc.type,
-                                 Kapacita: acc.capacity,
-                                 Cena: `${acc.price} €`
+                                 Kapacita: acc.capacity
                              }));
                              console.table(accommodationTableData);
                         } else {
