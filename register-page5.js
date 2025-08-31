@@ -660,7 +660,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     React.useEffect(() => {
         let unsubscribeAccommodation;
         let unsubscribePackages;
-        let unsubscribeRegistrationSettings; // NOVINKA: pre registrácia settings
+        let unsubscribeRegistrationSettings;
+        let unsubscribeUsers; // NOVINKA: pre poslucháča na users
 
         const fetchSettings = () => {
             if (!window.db) {
@@ -693,7 +694,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationType('error');
                 });
 
-                // NOVINKA: Načítanie dátumov turnaja z /settings/registration
                 const registrationDocRef = doc(window.db, 'settings', 'registration');
                 unsubscribeRegistrationSettings = onSnapshot(registrationDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
@@ -702,12 +702,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         if (data.tournamentStart instanceof Timestamp) {
                             setLocalTournamentStartDate(data.tournamentStart.toDate());
                         } else {
-                            setLocalTournamentStartDate(null); // Reset, ak formát nie je Timestamp
+                            setLocalTournamentStartDate(null);
                         }
                         if (data.tournamentEnd instanceof Timestamp) {
                             setLocalTournamentEndDate(data.tournamentEnd.toDate());
                         } else {
-                            setLocalTournamentEndDate(null); // Reset, ak formát nie je Timestamp
+                            setLocalTournamentEndDate(null);
                         }
                     } else {
                         console.warn("Dokument 'settings/registration' neexistuje. Dátumy turnaja neboli načítané.");
@@ -720,48 +720,43 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationType('error');
                 });
                 
-                // NOVINKA: Načítanie a výpis dát z kolekcie /users/
-                const logAllUsersData = async () => {
-                    if (!window.db) return;
-                    try {
-                        console.log("-----------------------------------------");
-                        console.log("Načítavam dáta zo zbierky '/users/':");
-                        const usersCollectionRef = collection(window.db, 'users');
-                        const querySnapshot = await getDocs(usersCollectionRef);
-
-                        if (querySnapshot.empty) {
-                            console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
-                        } else {
-                            const teamsDataForTable = [];
-                            querySnapshot.forEach((doc) => {
-                                const data = doc.data();
-                                const teams = data.teams || {};
-                                
-                                Object.values(teams).forEach(teamsArray => {
-                                    teamsArray.forEach(team => {
-                                        teamsDataForTable.push({
-                                            teamName: team.teamName || 'Nezadané',
-                                            players: team.players || 'Nezadané',
-                                            menTeamMembers: team.menTeamMembers || 'Nezadané',
-                                            womenTeamMembers: team.womenTeamMembers || 'Nezadané',
-                                            driverDetailsMale: (team.driverDetailsMale && team.driverDetailsMale.length > 0) ? JSON.stringify(team.driverDetailsMale) : 'Nezadané',
-                                            driverDetailsFemale: (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) ? JSON.stringify(team.driverDetailsFemale) : 'Nezadané',
-                                        });
+                // ZMENA: Používame onSnapshot namiesto getDocs pre dynamické aktualizácie
+                const usersCollectionRef = collection(window.db, 'users');
+                unsubscribeUsers = onSnapshot(usersCollectionRef, (querySnapshot) => {
+                    console.log("-----------------------------------------");
+                    console.log("Načítavam dáta zo zbierky '/users/' (aktualizácia v reálnom čase):");
+                    
+                    if (querySnapshot.empty) {
+                        console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
+                    } else {
+                        const teamsDataForTable = [];
+                        querySnapshot.forEach((doc) => {
+                            const data = doc.data();
+                            const teams = data.teams || {};
+                            
+                            Object.values(teams).forEach(teamsArray => {
+                                teamsArray.forEach(team => {
+                                    teamsDataForTable.push({
+                                        teamName: team.teamName || 'Nezadané',
+                                        players: team.players || 'Nezadané',
+                                        menTeamMembers: team.menTeamMembers || 'Nezadané',
+                                        womenTeamMembers: team.womenTeamMembers || 'Nezadané',
+                                        driverDetailsMale: (team.driverDetailsMale && team.driverDetailsMale.length > 0) ? JSON.stringify(team.driverDetailsMale) : 'Nezadané',
+                                        driverDetailsFemale: (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) ? JSON.stringify(team.driverDetailsFemale) : 'Nezadané',
                                     });
                                 });
                             });
-                            
-                            console.log("--- Dáta tímov ---");
-                            console.table(teamsDataForTable);
-                            console.log("------------------------");
-                        }
+                        });
                         
-                    } catch (e) {
-                        console.error("Chyba pri načítaní a výpise dát z '/users/':", e);
+                        console.log("--- Dáta tímov ---");
+                        console.table(teamsDataForTable);
+                        console.log("------------------------");
                     }
-                };
-                
-                logAllUsersData();
+                }, (error) => {
+                    console.error("Chyba pri načítaní a výpise dát z '/users/':", error);
+                    setNotificationMessage("Chyba pri načítaní a výpise dát z '/users/'.", 'error');
+                    setNotificationType('error');
+                });
 
 
             } catch (e) {
@@ -780,11 +775,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (unsubscribePackages) {
                 unsubscribePackages();
             }
-            if (unsubscribeRegistrationSettings) { // NOVINKA: clean-up pre registration settings
+            if (unsubscribeRegistrationSettings) {
                 unsubscribeRegistrationSettings();
             }
+            if (unsubscribeUsers) { // NOVINKA: clean-up pre users
+                unsubscribeUsers();
+            }
         };
-    }, [db]); // Závislosť na 'db' zabezpečí, že sa to spustí po inicializácii Firebase
+    }, [db]);
 
 
     React.useEffect(() => {
