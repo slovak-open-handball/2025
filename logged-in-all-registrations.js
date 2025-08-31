@@ -2699,6 +2699,7 @@ function AllRegistrationsApp() {
       let totalWomenTeamMembers = 0;
       let totalMenDrivers = 0; 
       let totalWomenDrivers = 0; 
+      let totalPeople = 0;
       const totalTshirtQuantities = new Map(availableTshirtSizes.map(size => [size, 0])); // Inicializácia mapy pre tričká
 
       allTeamsFlattened.forEach(team => {
@@ -2707,6 +2708,7 @@ function AllRegistrationsApp() {
           totalWomenTeamMembers += team._womenTeamMembersCount;
           totalMenDrivers += team._menDriversCount; 
           totalWomenDrivers += team._womenDriversCount; 
+          totalPeople = totalPlayers + totalMenTeamMembers + totalWomenTeamMembers + totalMenDrivers + totalWomenDrivers;
 
           if (team._teamTshirtsMap) {
               team._teamTshirtsMap.forEach((quantity, size) => {
@@ -2720,7 +2722,8 @@ function AllRegistrationsApp() {
           totalMenTeamMembers,
           totalWomenTeamMembers,
           totalMenDrivers, 
-          totalWomenDrivers, 
+          totalWomenDrivers,
+          totalPeople,
           totalTshirtQuantities
       };
   }, [allTeamsFlattened, availableTshirtSizes]);
@@ -4210,6 +4213,7 @@ function AllRegistrationsApp() {
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenTeamMembers),
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenDrivers), 
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenDrivers), 
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPeople), 
                                     React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Tričká:'),
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
                                         React.createElement('td', { key: `summary-tshirt-${size}`, className: 'py-3 px-2 text-center' }, teamSummary.totalTshirtQuantities.get(size) || 0)
