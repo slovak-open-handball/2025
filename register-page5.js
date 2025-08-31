@@ -599,6 +599,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     // NOVINKA: Funkcia na spracovanie snapshotu a výpis všetkých dát používateľov
+    // Táto funkcia sa už nevolá automaticky cez onSnapshot, je pripravená na manuálne zavolanie.
     const processUsersSnapshot = (querySnapshot) => {
         console.log("-----------------------------------------");
         console.log("Načítavam dáta zo zbierky '/users/':");
@@ -719,7 +720,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let unsubscribeAccommodation;
         let unsubscribePackages;
         let unsubscribeRegistrationSettings; // NOVINKA: pre registrácia settings
-        let unsubscribeUsersData; // NOVINKA: pre dáta používateľov
 
         const fetchSettings = () => {
             if (!window.db) {
@@ -778,17 +778,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
                     setNotificationType('error');
                 });
-
-                // NOVINKA: Pridanie onSnapshot listenera pre /users/ kolekciu
-                const usersCollectionRef = collection(window.db, 'users');
-                unsubscribeUsersData = onSnapshot(usersCollectionRef, (querySnapshot) => {
-                    // Po každej zmene v databáze voláme funkciu na spracovanie dát a ich výpis do konzoly
-                    processUsersSnapshot(querySnapshot);
-                }, (error) => {
-                    console.error("Chyba pri načítaní dát používateľov:", error);
-                });
-
-
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/balíčky/registrácie:", e);
                 setNotificationMessage("Chyba pri načítaní údajov.", 'error');
@@ -807,9 +796,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
             if (unsubscribeRegistrationSettings) { // NOVINKA: clean-up pre registration settings
                 unsubscribeRegistrationSettings();
-            }
-            if (unsubscribeUsersData) { // NOVINKA: clean-up pre users data
-                unsubscribeUsersData();
             }
         };
     }, [db]); // Závislosť na 'db' zabezpečí, že sa to spustí po inicializácii Firebase
