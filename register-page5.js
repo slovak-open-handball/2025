@@ -732,7 +732,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        // ZMENA: Pridávame poslucháč na udalosť
         const handleGlobalDataUpdated = () => {
              // Skontrolujeme, či je 'window.db' a 'window.auth' definované
             if (window.db && window.auth) {
@@ -745,7 +744,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (window.db && window.auth) {
             startListeners();
         } else {
-            console.log("Firebase ešte nie je pripravené, nastavujem poslucháča na udalosť 'globalDataUpdated'...");
+            console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
             window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
         }
 
