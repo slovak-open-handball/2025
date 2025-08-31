@@ -1,4 +1,4 @@
-import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Komponent pre zobrazenie notifikácií
 function NotificationModal({ message, onClose, type = 'info' }) {
@@ -719,6 +719,33 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
                     setNotificationType('error');
                 });
+                
+                // NOVINKA: Načítanie a výpis dát z kolekcie /users/
+                const logAllUsersData = async () => {
+                    if (!window.db) return;
+                    try {
+                        console.log("-----------------------------------------");
+                        console.log("Načítavam dáta zo zbierky '/users/':");
+                        const usersCollectionRef = collection(window.db, 'users');
+                        const querySnapshot = await getDocs(usersCollectionRef);
+
+                        if (querySnapshot.empty) {
+                            console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
+                        } else {
+                            console.log(`Nájdene dokumenty: ${querySnapshot.size}`);
+                            querySnapshot.forEach((doc) => {
+                                console.log(`  - ID dokumentu: ${doc.id}`);
+                                console.log('    Dáta:', doc.data());
+                            });
+                        }
+                        console.log("-----------------------------------------");
+                    } catch (e) {
+                        console.error("Chyba pri načítaní a výpise dát z '/users/':", e);
+                    }
+                };
+                
+                logAllUsersData();
+
 
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/balíčky/registrácie:", e);
