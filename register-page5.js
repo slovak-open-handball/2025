@@ -664,12 +664,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let unsubscribePackages;
         let unsubscribeRegistrationSettings; // NOVINKA: pre registrácia settings
 
-        const fetchSettings = () => {
-            // ZMENA: Používame globálne premenné
-            if (!window.db || !window.auth) {
-                setTimeout(fetchSettings, 100);
-                return;
-            }
+        // ZMENA: Vytvorenie funkcie, ktorá sa volá, keď je `isGlobalAuthReady` true
+        const startListeners = () => {
             try {
                 const accommodationDocRef = doc(window.db, 'settings', 'accommodation');
                 unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
@@ -688,7 +684,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
                 unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
                     const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    fetchedPackages.sort((a, b) => a.name.localeCompare(b.name));
+                    fetchedPackages.sort((a, b) => a.name.locale('sk').localeCompare(b.name.locale('sk'))); // Používame locale pre správne triedenie
                     setPackages(fetchedPackages);
                 }, (error) => {
                     console.error("Chyba pri načítaní balíčkov:", error);
@@ -722,7 +718,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
                     setNotificationType('error');
                 });
-
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/balíčky/registrácie:", e);
                 setNotificationMessage("Chyba pri načítaní údajov.", 'error');
@@ -730,7 +725,22 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        fetchSettings();
+        // ZMENA: Pridávame poslucháč na udalosť
+        const handleGlobalDataUpdated = () => {
+             // Skontrolujeme, či je 'window.db' a 'window.auth' definované
+            if (window.db && window.auth) {
+                console.log("Firebase inicializované, spúšťam poslucháče pre dáta.");
+                startListeners();
+                window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated); // Odstránenie poslucháča po spustení
+            }
+        };
+
+        if (window.db && window.auth) {
+            startListeners();
+        } else {
+            console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
+            window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
+        }
 
         return () => {
             if (unsubscribeAccommodation) {
@@ -742,8 +752,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (unsubscribeRegistrationSettings) { // NOVINKA: clean-up pre registration settings
                 unsubscribeRegistrationSettings();
             }
+             window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
         };
-    }, []); // Závislosť na 'db' zabezpečí, že sa to spustí po inicializácii Firebase
+    }, []); // Prázdne pole závislostí zabezpečuje, že sa useEffect spustí len raz
 
 
     React.useEffect(() => {
@@ -1139,16 +1150,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // NOVÁ FUNKCIA: Načítanie a vypísanie dát o ubytovaní z databázy pre všetkých používateľov
     React.useEffect(() => {
+        // ZMENA: Vytvorenie funkcie, ktorá sa volá, keď je `isGlobalAuthReady` true
         const fetchAllUserAccommodationData = async () => {
-            // ZMENA: Používame globálne premenné
             if (!window.db || !window.__app_id) {
                 console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
                 return;
             }
-
-            try {
+             try {
                 // ZMENA: Správna cesta podľa vašej požiadavky
-                const usersCollectionRef = collection(window.db, 'users');
+                const usersCollectionRef = collection(window.db, `artifacts/${__app_id}/public/data/users`);
                 console.log("Sťahujem dáta o ubytovaní pre všetkých používateľov...");
 
                 const usersSnapshot = await getDocs(usersCollectionRef);
@@ -1186,7 +1196,21 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        fetchAllUserAccommodationData();
+        const handleGlobalDataUpdated = () => {
+             // Skontrolujeme, či je 'window.db' a 'window.auth' definované
+            if (window.db && window.auth) {
+                console.log("Firebase inicializované, spúšťam fetchAllUserAccommodationData.");
+                fetchAllUserAccommodationData();
+                window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated); // Odstránenie poslucháča po spustení
+            }
+        };
+
+        if (window.db && window.auth) {
+            fetchAllUserAccommodationData();
+        } else {
+            console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
+            window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
+        }
     }, []); // Spustí sa len raz
 
 
