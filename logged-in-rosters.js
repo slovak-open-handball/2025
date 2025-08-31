@@ -1874,15 +1874,6 @@ const handleSaveNewMember = async (newMemberDetails) => {
     }
 };
 
-const handleOpenEditMemberDetailsModal = (team, member) => {
-    setTeamOfMemberToEdit(team);
-    setMemberToEdit(member);
-    setMemberTypeToAdd(member.originalType);
-    setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || 'bez ubytovania');
-    setIsMemberEditMode(true);
-    setShowMemberDetailsModal(true);
-};
-
 const handleSaveEditedMember = async (updatedMemberDetails) => {
     if (isRosterEditDeadlinePassed) {
         showLocalNotification('Termín pre úpravu členov tímu už uplynul.', 'error');
