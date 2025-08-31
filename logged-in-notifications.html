@@ -52,75 +52,83 @@
     <!-- Načítanie hlavného React komponentu pre túto stránku -->
     <script type="module" src="logged-in-notifications.js"></script>
 
-<script type="module">
-    // Funkcia na načítanie hlavičky
-    async function loadHeader() {
-        try {
-            const response = await fetch('header.html');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const headerHtml = await response.text();
-            document.getElementById('header-placeholder').innerHTML = headerHtml;
+    <script type="module">
+        // Funkcia na načítanie hlavičky
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml;
+    
+                // Pridaj obsluhu udalosti pre odhlásenie (pre id="logout-button")
+                const logoutButton = document.getElementById('logout-button');
+                if (logoutButton) {
+                    logoutButton.addEventListener('click', async function(e) {
+                        e.preventDefault();
+                        console.log("Odhlásenie kliknuté!");
+    
+                        // Volanie funkcie signOut z authentication.js
+                        if (typeof signOut === 'function') {
+                            await signOut();
+                        } else {
+                            console.error("Funkcia signOut nie je dostupná!");
+                        }
+    
+                        // Dodatočná logika (napr. presmerovanie)
+                        sessionStorage.removeItem("prihlaseny");
+                        window.location.href = "login.html";
+                    });
+                } else {
+                    console.error("Element s ID 'logout-button' nebol nájdený v header.html!");
+                }
 
-            // **Pridaj obsluhu udalosti pre odhlásenie (pre id="logout-button")**
-            const logoutButton = document.getElementById('logout-button');
-            if (logoutButton) {
-                logoutButton.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    console.log("Odhlásenie kliknuté!");
-                    // Logika pre odhlásenie (napr. mazanie sessionStorage, presmerovanie, atď.)
-                    sessionStorage.removeItem("prihlaseny");
-                    window.location.href = "login.html";
-                });
-            } else {
-                console.error("Element s ID 'logout-button' nebol nájdený v header.html!");
+            } catch (error) {
+                console.error("Chyba pri načítaní hlavičky:", error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
-
-        } catch (error) {
-            console.error("Chyba pri načítaní hlavičky:", error);
-            document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
         }
-    }
+    
+        // Spustíme načítanie hlavičky po načítaní DOM
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadHeader();
+            const renderApp = () => {
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                if (typeof NotificationsApp === 'undefined') {
+                    console.error("Chyba: Komponent NotificationsApp nie je definovaný. Skontrolujte logged-in-notifications.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(NotificationsApp, null));
+                console.log("logged-in-notifications.html: React App vykreslená.");
+            };
+    
+            // Počkáme na globalDataUpdated
+            window.addEventListener('globalDataUpdated', (event) => {
+                console.log("logged-in-notifications.html: Prijatá udalosť 'globalDataUpdated'. Pripravujem vykreslenie React aplikácie.");
+                if (event.detail) {
+                    renderApp();
+                } else {
+                    console.log("logged-in-notifications.html: GlobalUserProfileData je null, používateľ nie je prihlásený. Presmerovanie už mala spracovať authentication.js.");
+                }
+            });
 
-    // Spustíme načítanie hlavičky po načítaní DOM
-    window.addEventListener('DOMContentLoaded', async () => {
-        await loadHeader(); // Načíta HTML hlavičky a pripojí obsluhu udalosti pre odhlásenie
-        const renderApp = () => {
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-            if (typeof NotificationsApp === 'undefined') {
-                console.error("Chyba: Komponent NotificationsApp nie je definovaný. Skontrolujte logged-in-notifications.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(NotificationsApp, null));
-            console.log("logged-in-notifications.html: React App vykreslená.");
-        };
-
-        // Počkáme na globalDataUpdated, ktorá signalizuje, že authentication.js dokončil svoju prácu
-        window.addEventListener('globalDataUpdated', (event) => {
-            console.log("logged-in-notifications.html: Prijatá udalosť 'globalDataUpdated'. Pripravujem vykreslenie React aplikácie.");
-            if (event.detail) {
+            // Ak už sú globálne dáta k dispozícii, vykreslíme aplikáciu ihneď.
+            if (window.isGlobalAuthReady && window.globalUserProfileData) {
+                console.log("logged-in-notifications.html: GlobalData už pripravená pri DOMContentLoaded. Vykresľujem React aplikáciu.");
                 renderApp();
-            } else {
-                console.log("logged-in-notifications.html: GlobalUserProfileData je null, používateľ nie je prihlásený. Presmerovanie už mala spracovať authentication.js.");
+            } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
+                console.log("logged-in-notifications.html: Auth ready, but no user data. Redirecting to login.");
+                window.location.href = 'login.html';
             }
         });
-
-        // Ak už sú globálne dáta k dispozícii, vykreslíme aplikáciu ihneď.
-        if (window.isGlobalAuthReady && window.globalUserProfileData) {
-            console.log("logged-in-notifications.html: GlobalData už pripravená pri DOMContentLoaded. Vykresľujem React aplikáciu.");
-            renderApp();
-        } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
-            console.log("logged-in-notifications.html: Auth ready, but no user data. Redirecting to login.");
-            window.location.href = 'login.html';
-        }
-    });
-</script>
+    </script>
 </body>
 </html>
