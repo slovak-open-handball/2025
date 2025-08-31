@@ -535,7 +535,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
 
 // Hlavný komponent Page5Form
 export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, onGranularTeamsDataChange }) {
-    
+
     const [notificationMessage, setNotificationMessage] = React.useState('');
     const [notificationType, setNotificationType] = React.useState('info');
 
@@ -667,13 +667,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
                 unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
                     const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    
+
                     fetchedPackages.sort((a, b) => {
                         const aName = typeof a.name === 'string' ? a.name : '';
                         const bName = typeof b.name === 'string' ? b.name : '';
-                        return aName.localeCompare(bName, 'sk'); 
+                        return aName.localeCompare(bName, 'sk');
                     });
-                    
+
                     setPackages(fetchedPackages);
                 }, (error) => {
                     console.error("Chyba pri načítaní balíčkov:", error);
@@ -705,7 +705,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
                     setNotificationType('error');
                 });
-                
+
                 const accommodationCountsDocRef = doc(window.db, 'settings', 'accommodationCounts');
                 unsubscribeCounts = onSnapshot(accommodationCountsDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
@@ -726,14 +726,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        if (window.isGlobalAuthReady) {
-            startListeners();
+        // Používame AuthManager.onReady() na zabezpečenie, že db je k dispozícii
+        if (typeof AuthManager !== 'undefined' && AuthManager.onReady) {
+            AuthManager.onReady(startListeners);
         } else {
-            const handleAuthReady = () => {
-                startListeners();
-                window.removeEventListener('globalDataUpdated', handleAuthReady);
-            };
-            window.addEventListener('globalDataUpdated', handleAuthReady);
+            console.error("AuthManager.onReady nie je k dispozícii. Uistite sa, že authentication.js je načítaný a má správnu štruktúru.");
         }
 
         return () => {
@@ -781,14 +778,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             React.createElement('option', { key: "male", value: "male" }, "Muži"),
             React.createElement('option', { key: "female", value: "female" }, "Ženy")
         ];
-    
+
         if (!currentEntry || currentEntry.categoryName === '' || currentEntry.teamIndex === null) {
             return allOptions;
         }
-    
+
         const currentTeamId = `${currentEntry.categoryName}-${currentEntry.teamIndex}`;
         const usedGendersForCurrentTeam = new Set();
-    
+
         driverEntries.forEach(entry => {
             if (entry.id !== currentEntry.id && entry.categoryName && entry.teamIndex !== null && entry.gender !== '') {
                 if (`${entry.categoryName}-${entry.teamIndex}` === currentTeamId) {
@@ -796,7 +793,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             }
         });
-    
+
         return allOptions.filter(option => {
             const optionValue = option.props.value;
             if (optionValue === '') {
@@ -873,19 +870,19 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const newDrivers = currentDrivers.map(entry => ({ ...entry }));
 
             let updatedEntry = null;
-            let updatedEntryIndex = -1; 
+            let updatedEntryIndex = -1;
 
             for (let i = 0; i < newDrivers.length; i++) {
                 if (newDrivers[i].id === id) {
-                    updatedEntry = newDrivers[i]; 
-                    updatedEntryIndex = i; 
+                    updatedEntry = newDrivers[i];
+                    updatedEntryIndex = i;
                     break;
                 }
             }
 
             if (!updatedEntry) {
                 console.warn("Pokus o zmenu záznamu šoféra s neznámym ID:", id);
-                return currentDrivers; 
+                return currentDrivers;
             }
 
             if (field === 'teamId') {
@@ -913,8 +910,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     updateTeamDriversInParent(newDrivers, catName, teamIdx);
                 }
             });
-            
-            return newDrivers; 
+
+            return newDrivers;
         });
     };
 
@@ -976,11 +973,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         return false;
                     }
                 }
-                
+
                 if (packages.length > 0 && (!team.packageId || team.packageId.trim() === '')) {
                     return false;
                 }
-                
+
                 if ((team.arrival?.type === 'verejná doprava - vlak' || team.arrival?.type === 'verejná doprava - autobus') && (!team.arrival?.time || team.arrival.time.trim() === '' || team.arrival.time.length !== 5)) {
                     return false;
                 }
@@ -1015,7 +1012,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (hasTeamWithOwnTransport && !hasValidDriverEntry) {
             return false;
         }
-        
+
         return true;
     }, [teamsDataFromPage4, accommodationTypes, accommodationCounts, packages, driverEntries, teamsWithOwnTransport]);
 
@@ -1055,7 +1052,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         try {
-            await handleSubmit(teamsDataFromPage4); 
+            await handleSubmit(teamsDataFromPage4);
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
@@ -1079,7 +1076,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     React.useEffect(() => {
         const fetchAllUserAccommodationData = async () => {
              // Čakáme, kým nie je k dispozícii globálny objekt db z authentication.js
-             if (!window.db || typeof __app_id === 'undefined') {
+            if (typeof window.db === 'undefined' || typeof __app_id === 'undefined') {
+                console.error("Firebase nie je k dispozícii. Ak je to React aplikácia, počkajte, kým sa znova nenačíta komponent.");
                 return;
             }
 
@@ -1122,14 +1120,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        if (window.isGlobalAuthReady) {
-            fetchAllUserAccommodationData();
+        if (typeof AuthManager !== 'undefined' && AuthManager.onReady) {
+            AuthManager.onReady(fetchAllUserAccommodationData);
         } else {
-            const handleAuthReady = () => {
-                fetchAllUserAccommodationData();
-                window.removeEventListener('globalDataUpdated', handleAuthReady);
-            };
-            window.addEventListener('globalDataUpdated', handleAuthReady);
+            console.error("AuthManager.onReady nie je k dispozícii.");
         }
 
     }, []);
