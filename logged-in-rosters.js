@@ -766,6 +766,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     const [accommodationType, setAccommodationType] = useState('bez ubytovania');
     const [packageName, setPackageName] = useState(availablePackages.length > 0 ? availablePackages.sort()[0] : '');
 
+    const [hasChanges, setHasChanges] = useState(false);
+
     const clubName = userProfileData?.billing?.clubName?.trim() || 'Neznámy klub';
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
