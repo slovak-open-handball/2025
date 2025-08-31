@@ -29,34 +29,28 @@ window.areCategoriesLoaded = false;
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
 window.showGlobalNotification = (message, type = 'success') => {
-    let notificationElement = document.getElementById('global-notification');
-    
-    // Ak element ešte neexistuje, vytvoríme ho a pridáme do tela dokumentu
-    if (!notificationElement) {
-        notificationElement = document.createElement('div');
-        notificationElement.id = 'global-notification';
-        // Používame Tailwind CSS triedy pre štýlovanie a pozicovanie
-        notificationElement.className = `
-            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
-            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
-            flex items-center space-x-2
-            opacity-0 pointer-events-none
-        `;
-        document.body.appendChild(notificationElement);
-    }
+  let notificationElement = document.getElementById('global-notification');
 
-    // Nastavíme obsah a farbu na základe typu notifikácie
-    // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
-    const bgColor = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
-    notificationElement.className = notificationElement.className.replace(/bg-[\w-]+/, bgColor);
-    notificationElement.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            ${type === 'success' 
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'}
-        </svg>
-        <span>${message}</span>
+  if (!notificationElement) {
+    notificationElement = document.createElement('div');
+    notificationElement.id = 'global-notification';
+    notificationElement.className = `
+      fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
+      p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
+      flex items-center space-x-2
+      opacity-0 pointer-events-none
     `;
+    document.body.appendChild(notificationElement);
+  }
+
+  // Odstránime predchádzajúce triedy farby a pridáme novú na základe typu
+  notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
+  
+  if (type === 'success') {
+    notificationElement.classList.add('bg-[#3A8D41]');
+  } else {
+    notificationElement.classList.add('bg-red-600');
+  }
 
     // Zobrazenie notifikácie
     setTimeout(() => {
