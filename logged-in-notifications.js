@@ -134,7 +134,7 @@ function NotificationsApp() {
   const [userNotificationType, setUserNotificationType] = React.useState('success'); // Predvolený stav pre typ notifikácie na 'success'
 
   // NOVÝ STAV PRE TOGGLE SWITCH
-  const [isMenuToggled, setIsMenuToggled] = React.useState(false);
+  const [displayNotifications, setdisplayNotifications] = React.useState(false);
 
 
   const [notifications, setNotifications] = React.useState([]);
@@ -225,7 +225,7 @@ function NotificationsApp() {
   }, [db, window.isGlobalAuthReady]); // Depends on db and global auth ready state
 
 
-  // NOVÝ EFFECT: Načítanie isMenuToggled a poslucháč pre zmeny
+  // NOVÝ EFFECT: Načítanie displayNotifications a poslucháč pre zmeny
   React.useEffect(() => {
     let unsubscribeProfile;
     if (db && user && user.uid) {
@@ -233,9 +233,9 @@ function NotificationsApp() {
       unsubscribeProfile = onSnapshot(userRef, (docSnap) => {
         if (docSnap.exists()) {
           const profileData = docSnap.data();
-          if (profileData.hasOwnProperty('isMenuToggled')) {
-            setIsMenuToggled(profileData.isMenuToggled);
-            console.log("NotificationsApp: isMenuToggled loaded from Firestore:", profileData.isMenuToggled);
+          if (profileData.hasOwnProperty('displayNotifications')) {
+            setdisplayNotifications(profileData.displayNotifications);
+            console.log("NotificationsApp: displayNotifications loaded from Firestore:", profileData.displayNotifications);
           }
         }
       }, (error) => {
@@ -308,7 +308,7 @@ function NotificationsApp() {
   }, [db, userProfileData, user, window.isGlobalAuthReady]);
 
 
-  // NOVÁ FUNKCIA: Prepínanie isMenuToggled a aktualizácia v DB
+  // NOVÁ FUNKCIA: Prepínanie displayNotifications a aktualizácia v DB
   const handleToggleMenu = async () => {
     if (!db || !user || !user.uid) {
         setUserNotificationMessage("Chyba: Nie sú dostupné dáta používateľa alebo databázy.");
@@ -316,16 +316,16 @@ function NotificationsApp() {
         return;
     }
     
-    const newValue = !isMenuToggled;
-    setIsMenuToggled(newValue); // Optimistic update
+    const newValue = !displayNotifications;
+    setdisplayNotifications(newValue); // Optimistic update
     
     try {
         const userRef = doc(db, 'users', user.uid);
-        await updateDoc(userRef, { isMenuToggled: newValue });
-        console.log("NotificationsApp: isMenuToggled updated to", newValue);
+        await updateDoc(userRef, { displayNotifications: newValue });
+        console.log("NotificationsApp: displayNotifications updated to", newValue);
     } catch (e) {
-        console.error("NotificationsApp: Error updating isMenuToggled:", e);
-        setIsMenuToggled(!newValue); // Rollback on error
+        console.error("NotificationsApp: Error updating displayNotifications:", e);
+        setdisplayNotifications(!newValue); // Rollback on error
         setUserNotificationMessage(`Chyba pri aktualizácii prepínača: ${e.message}`);
         setUserNotificationType('error');
     }
@@ -717,7 +717,7 @@ function NotificationsApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Upozornenia'
         ),
-        // NOVÝ PRVOK: Prepínač pre isMenuToggled pod nadpisom
+        // NOVÝ PRVOK: Prepínač pre displayNotifications pod nadpisom
         React.createElement(
             'div',
             { className: 'flex items-center justify-center space-x-2 mb-6' },
@@ -726,7 +726,7 @@ function NotificationsApp() {
                 React.createElement('input', {
                     type: 'checkbox',
                     className: 'sr-only peer',
-                    checked: isMenuToggled,
+                    checked: displayNotifications,
                     onChange: handleToggleMenu,
                     disabled: loading
                 }),
