@@ -739,6 +739,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     console.log("-----------------------------------------");
                     console.log("Načítavam dáta zo zbierky '/users/' (aktualizácia v reálnom čase):");
                     
+                    // Zobrazíme tabuľku s nastaveniami ubytovania
+                    const accommodationTableData = accommodationTypes.map(acc => ({
+                        Typ: acc.type,
+                        Kapacita: acc.capacity,
+                        Cena: `${acc.price} €`
+                    }));
+                    console.log("--- Dáta z /settings/accommodation ---");
+                    console.table(accommodationTableData);
+                    console.log("-------------------------------------");
+
                     if (querySnapshot.empty) {
                         console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
                     } else {
@@ -751,6 +761,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 teamsArray.forEach(team => {
                                     teamsDataForTable.push({
                                         teamName: team.teamName || 'Nezadané',
+                                        accommodationType: team.accommodation?.type || 'Nezadané',
                                         players: team.players || 'Nezadané',
                                         menTeamMembers: team.menTeamMembers || 'Nezadané',
                                         womenTeamMembers: team.womenTeamMembers || 'Nezadané',
