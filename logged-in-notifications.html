@@ -68,7 +68,6 @@
                 if (logoutButton) {
                     logoutButton.addEventListener('click', async function(e) {
                         e.preventDefault();
-                        console.log("Odhlásenie kliknuté!");
     
                         // Volanie funkcie signOut z authentication.js
                         if (typeof signOut === 'function') {
@@ -78,8 +77,8 @@
                         }
     
                         // Dodatočná logika (napr. presmerovanie)
-                        sessionStorage.removeItem("prihlaseny");
-                        window.location.href = "login.html";
+//                        sessionStorage.removeItem("prihlaseny");
+//                        window.location.href = "login.html";
                     });
                 } else {
                     console.error("Element s ID 'logout-button' nebol nájdený v header.html!");
