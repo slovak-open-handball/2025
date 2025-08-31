@@ -598,65 +598,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }, [onGranularTeamsDataChange, teamsDataFromPage4]);
 
 
-    // NOVINKA: Funkcia na spracovanie snapshotu a výpis všetkých dát používateľov
-    // Táto funkcia sa už nevolá automaticky cez onSnapshot, je pripravená na manuálne zavolanie.
-    const processUsersSnapshot = (querySnapshot) => {
-        console.log("-----------------------------------------");
-        console.log("Načítavam dáta zo zbierky '/users/':");
-        
-        const teamsDataForTable = [];
-        const accommodationSummary = {};
-
-        if (querySnapshot.empty) {
-            console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
-        } else {
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const teams = data.teams || {};
-
-                Object.values(teams).forEach(teamsArray => {
-                    teamsArray.forEach(team => {
-                        const playersCount = (typeof team.players === 'number' && !isNaN(team.players)) ? team.players : 0;
-                        const menTeamMembersCount = (typeof team.menTeamMembers === 'number' && !isNaN(team.menTeamMembers)) ? team.menTeamMembers : 0;
-                        const womenTeamMembersCount = (typeof team.womenTeamMembers === 'number' && !isNaN(team.womenTeamMembers)) ? team.womenTeamMembers : 0;
-                        const driverDetailsMaleCount = (team.arrival?.drivers?.male && typeof team.arrival.drivers.male === 'number') ? team.arrival.drivers.male : 0;
-                        const driverDetailsFemaleCount = (team.arrival?.drivers?.female && typeof team.arrival.drivers.female === 'number') ? team.arrival.drivers.female : 0;
-
-                        const total = playersCount + menTeamMembersCount + womenTeamMembersCount + driverDetailsMaleCount + driverDetailsFemaleCount;
-
-                        teamsDataForTable.push({
-                            teamName: team.teamName || 'Nezadané',
-                            players: playersCount,
-                            menTeamMembers: menTeamMembersCount,
-                            womenTeamMembers: womenTeamMembersCount,
-                            driverDetailsMale: driverDetailsMaleCount,
-                            driverDetailsFemale: driverDetailsFemaleCount,
-                            accommodationType: team.accommodation?.type || 'Nezadané',
-                            Total: total,
-                        });
-
-                        const accommodationType = team.accommodation?.type || 'Nezadané';
-                        accommodationSummary[accommodationType] = (accommodationSummary[accommodationType] || 0) + total;
-                    });
-                });
-            });
-
-            console.log("--- Dáta tímov ---");
-            console.table(teamsDataForTable);
-            console.log("------------------------");
-
-            const accommodationTableData = Object.keys(accommodationSummary).map(key => ({
-                'Typ ubytovania': key,
-                'Celkový počet osôb': accommodationSummary[key],
-            }));
-
-            console.log("\n--- Súčet osôb podľa typu ubytovania ---");
-            console.table(accommodationTableData);
-            console.log("------------------------");
-        }
-    };
-
-
     // useEffect na inicializáciu driverEntries z teamsDataFromPage4
     // Spúšťa sa iba raz pri mountnutí komponentu.
     React.useEffect(() => {
@@ -700,7 +641,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let currentDate = new Date(start);
         while (currentDate <= end) {
             dates.push(currentDate.toISOString().split('T')[0]);
-            currentDate.setDate(currentDate.getDate() + 1);
+            currentDate.setDate(currentCDate.getDate() + 1);
         }
         return dates;
     };
@@ -778,6 +719,51 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
                     setNotificationType('error');
                 });
+                
+                // NOVINKA: Načítanie a výpis dát z kolekcie /users/
+                const logAllUsersData = async () => {
+                    if (!window.db) return;
+                    try {
+                        console.log("-----------------------------------------");
+                        console.log("Načítavam dáta zo zbierky '/users/':");
+                        const usersCollectionRef = collection(window.db, 'users');
+                        const querySnapshot = await getDocs(usersCollectionRef);
+
+                        if (querySnapshot.empty) {
+                            console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
+                        } else {
+                            const teamsDataForTable = [];
+                            querySnapshot.forEach((doc) => {
+                                const data = doc.data();
+                                const teams = data.teams || {};
+                                
+                                Object.values(teams).forEach(teamsArray => {
+                                    teamsArray.forEach(team => {
+                                        teamsDataForTable.push({
+                                            teamName: team.teamName || 'Nezadané',
+                                            players: team.players || 'Nezadané',
+                                            menTeamMembers: team.menTeamMembers || 'Nezadané',
+                                            womenTeamMembers: team.womenTeamMembers || 'Nezadané',
+                                            driverDetailsMale: (team.driverDetailsMale && team.driverDetailsMale.length > 0) ? JSON.stringify(team.driverDetailsMale) : 'Nezadané',
+                                            driverDetailsFemale: (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) ? JSON.stringify(team.driverDetailsFemale) : 'Nezadané',
+                                        });
+                                    });
+                                });
+                            });
+                            
+                            console.log("--- Dáta tímov ---");
+                            console.table(teamsDataForTable);
+                            console.log("------------------------");
+                        }
+                        
+                    } catch (e) {
+                        console.error("Chyba pri načítaní a výpise dát z '/users/':", e);
+                    }
+                };
+                
+                logAllUsersData();
+
+
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/balíčky/registrácie:", e);
                 setNotificationMessage("Chyba pri načítaní údajov.", 'error');
@@ -838,7 +824,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         };
     }, [db]);
 
-
+    // Táto funkcia teraz volá onGranularTeamsDataChange
     const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
         onGranularTeamsDataChange(categoryName, teamIndex, field, value);
     };
@@ -846,7 +832,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
         for (const categoryName in teamsDataFromPage4) {
-            // Filter categories that might be undefined or null
+            // Filter out any undefined or null categories at this level
             if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
