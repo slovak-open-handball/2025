@@ -675,17 +675,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
                         setAccommodationTypes(data.types || []);
-                        
-                        // NOVINKA: Zobrazí tabuľku s typmi ubytovania a kapacitou
-                        const accommodationTableData = (data.types || []).map(acc => ({
-                            Typ: acc.type,
-                            Kapacita: acc.capacity,
-                            Cena: `${acc.price} €`
-                        }));
-                        console.log("-----------------------------------------");
-                        console.log("Načítavam dáta z /settings/accommodation (aktualizácia v reálnom čase):");
-                        console.table(accommodationTableData);
-                        console.log("-----------------------------------------");
                     } else {
                         setAccommodationTypes([]);
                     }
@@ -732,14 +721,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
                     setNotificationType('error');
                 });
-                
-                // ZMENA: Používame onSnapshot namiesto getDocs pre dynamické aktualizácie
+
+                // ZMENA: Presunutie logiky pre výpis tabuliek pri zmene dát z 'users'
                 const usersCollectionRef = collection(window.db, 'users');
                 unsubscribeUsers = onSnapshot(usersCollectionRef, (querySnapshot) => {
                     console.log("-----------------------------------------");
                     console.log("Načítavam dáta zo zbierky '/users/' (aktualizácia v reálnom čase):");
                     
-                    // Zobrazíme tabuľku s nastaveniami ubytovania
+                    // Zobrazenie tabuľky s nastaveniami ubytovania
                     const accommodationTableData = accommodationTypes.map(acc => ({
                         Typ: acc.type,
                         Kapacita: acc.capacity,
@@ -806,7 +795,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeUsers();
             }
         };
-    }, [db]);
+    }, [db, accommodationTypes]);
 
 
     React.useEffect(() => {
