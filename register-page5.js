@@ -661,7 +661,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let unsubscribeAccommodation;
         let unsubscribePackages;
         let unsubscribeRegistrationSettings;
-        let unsubscribeUsers; // NOVINKA: pre poslucháča na users
+        let unsubscribeUsers;
         let unsubscribeAccommodationTypes;
 
         const fetchSettings = () => {
@@ -675,6 +675,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
                         setAccommodationTypes(data.types || []);
+                        
+                        // Zobrazenie tabuľky pri zmene údajov o ubytovaní
+                        console.log("-----------------------------------------");
+                        console.log("Aktualizácia dát z '/settings/accommodation':");
+                        const accommodationTableData = (data.types || []).map(acc => ({
+                            Typ: acc.type,
+                            Kapacita: acc.capacity,
+                            Cena: `${acc.price} €`
+                        }));
+                        console.table(accommodationTableData);
+                        console.log("-----------------------------------------");
                     } else {
                         setAccommodationTypes([]);
                     }
@@ -722,22 +733,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationType('error');
                 });
 
-                // ZMENA: Presunutie logiky pre výpis tabuliek pri zmene dát z 'users'
+                // Poslucháč pre `/users/` kolekciu
                 const usersCollectionRef = collection(window.db, 'users');
                 unsubscribeUsers = onSnapshot(usersCollectionRef, (querySnapshot) => {
                     console.log("-----------------------------------------");
-                    console.log("Načítavam dáta zo zbierky '/users/' (aktualizácia v reálnom čase):");
+                    console.log("Aktualizácia dát z '/users/':");
                     
-                    // Zobrazenie tabuľky s nastaveniami ubytovania
-                    const accommodationTableData = accommodationTypes.map(acc => ({
-                        Typ: acc.type,
-                        Kapacita: acc.capacity,
-                        Cena: `${acc.price} €`
-                    }));
-                    console.log("--- Dáta z /settings/accommodation ---");
-                    console.table(accommodationTableData);
-                    console.log("-------------------------------------");
-
                     if (querySnapshot.empty) {
                         console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
                     } else {
@@ -761,10 +762,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             });
                         });
                         
-                        console.log("--- Dáta tímov ---");
                         console.table(teamsDataForTable);
-                        console.log("------------------------");
                     }
+                    console.log("-----------------------------------------");
                 }, (error) => {
                     console.error("Chyba pri načítaní a výpise dát z '/users/':", error);
                     setNotificationMessage("Chyba pri načítaní a výpise dát z '/users/'.", 'error');
@@ -791,11 +791,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (unsubscribeRegistrationSettings) {
                 unsubscribeRegistrationSettings();
             }
-            if (unsubscribeUsers) { // NOVINKA: clean-up pre users
+            if (unsubscribeUsers) {
                 unsubscribeUsers();
             }
         };
-    }, [db, accommodationTypes]);
+    }, [db]);
 
 
     React.useEffect(() => {
