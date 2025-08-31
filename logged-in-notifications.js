@@ -27,7 +27,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
       setShow(false);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        timerRef.current = null;
+        timerRefRef.current = null;
       }
     }
 
@@ -134,7 +134,7 @@ function NotificationsApp() {
   const [userNotificationType, setUserNotificationType] = React.useState('success'); // Predvolený stav pre typ notifikácie na 'success'
 
   // NOVÝ STAV PRE TOGGLE SWITCH
-  const [displayNotifications, setdisplayNotifications] = React.useState(false);
+  const [displayNotifications, setDisplayNotifications] = React.useState(false);
 
 
   const [notifications, setNotifications] = React.useState([]);
@@ -234,7 +234,7 @@ function NotificationsApp() {
         if (docSnap.exists()) {
           const profileData = docSnap.data();
           if (profileData.hasOwnProperty('displayNotifications')) {
-            setdisplayNotifications(profileData.displayNotifications);
+            setDisplayNotifications(profileData.displayNotifications);
             console.log("NotificationsApp: displayNotifications loaded from Firestore:", profileData.displayNotifications);
           }
         }
@@ -251,63 +251,6 @@ function NotificationsApp() {
   }, [db, user]);
 
 
-  // Effect for fetching notifications
-  React.useEffect(() => {
-    let unsubscribeNotifications;
-
-    // Only fetch if user is an approved admin, and we have their UID
-    if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true && user) {
-      console.log("NotificationsApp: Logged-in user is an approved administrator. Loading notifications.");
-      try {
-        const notificationsCollectionRef = collection(db, 'notifications');
-        
-        unsubscribeNotifications = onSnapshot(notificationsCollectionRef, snapshot => {
-          const fetchedNotifications = [];
-          snapshot.forEach(document => {
-            const data = document.data();
-            const isDeletedForCurrentUser = data.deletedBy && data.deletedBy.includes(user.uid);
-            
-            // Notifikácia sa načíta, aj keď je "vymazaná" pre aktuálneho používateľa,
-            // aby sa dala zobraziť možnosť obnovenia.
-            fetchedNotifications.push({
-                id: document.id,
-                ...data,
-                // Notifikácia je "prečítaná" ak je user.uid v seenBy poli
-                read: data.seenBy && data.seenBy.includes(user.uid), 
-                // Pridáme stav, či je vymazaná pre aktuálneho používateľa
-                deletedByMe: isDeletedForCurrentUser,
-                timestamp: data.timestamp ? data.timestamp.toDate() : null // Convert Timestamp to Date object
-            });
-          });
-          // Sort notifications from newest to oldest
-          fetchedNotifications.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
-          setNotifications(fetchedNotifications);
-          setError('');
-          console.log("NotificationsApp: Notifications updated from onSnapshot.");
-        }, error => {
-          console.error("NotificationsApp: Error loading notifications from Firestore (onSnapshot error):", error);
-          setError(`Chyba pri načítaní upozornení: ${error.message}`);
-        });
-      } catch (e) {
-        console.error("NotificationsApp: Error setting up onSnapshot for notifications (try-catch):", e);
-        setError(`Chyba pri nastavení poslucháča pre upozornenia: ${e.message}`);
-      }
-    } else {
-        setNotifications([]); // Clear notifications if not admin or data is not ready
-        if (window.isGlobalAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
-            setLoading(false);
-        }
-    }
-
-    return () => {
-      if (unsubscribeNotifications) {
-        console.log("NotificationsApp: Unsubscribing onSnapshot for notifications.");
-        unsubscribeNotifications();
-      }
-    };
-  }, [db, userProfileData, user, window.isGlobalAuthReady]);
-
-
   // NOVÁ FUNKCIA: Prepínanie displayNotifications a aktualizácia v DB
   const handleToggleMenu = async () => {
     if (!db || !user || !user.uid) {
@@ -317,7 +260,7 @@ function NotificationsApp() {
     }
     
     const newValue = !displayNotifications;
-    setdisplayNotifications(newValue); // Optimistic update
+    setDisplayNotifications(newValue); // Optimistic update
     
     try {
         const userRef = doc(db, 'users', user.uid);
@@ -325,7 +268,7 @@ function NotificationsApp() {
         console.log("NotificationsApp: displayNotifications updated to", newValue);
     } catch (e) {
         console.error("NotificationsApp: Error updating displayNotifications:", e);
-        setdisplayNotifications(!newValue); // Rollback on error
+        setDisplayNotifications(!newValue); // Rollback on error
         setUserNotificationMessage(`Chyba pri aktualizácii prepínača: ${e.message}`);
         setUserNotificationType('error');
     }
@@ -721,7 +664,7 @@ function NotificationsApp() {
         React.createElement(
             'div',
             { className: 'flex items-center justify-center space-x-2 mb-6' },
-            React.createElement('span', { className: 'text-gray-700' }, 'Zapnúť/Vypnúť menu'),
+            React.createElement('span', { className: 'text-gray-700' }, 'Zapnúť/Vypnúť upozornenia'),
             React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
                 React.createElement('input', {
                     type: 'checkbox',
