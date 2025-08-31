@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOH 2025 - Upozornenia</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Použitie Tailwind CSS pre jednoduché a pekné štýly -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React a ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -19,99 +23,137 @@
             min-height: 100vh; /* Minimálna výška stránky */
         }
     </style>
-    <!-- React and ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Globálne konštanty pre Firebase - už ich nedeclarujeme, sú z authentication.js -->
 </head>
-<body class="bg-gray-100">
-    <!-- Hlavička sa načíta dynamicky -->
+<body>
     <div id="header-placeholder"></div>
-
-    <div class="flex flex-grow"> <!-- ZMENA: Použitie flex-grow na main kontajneri -->
-        <!-- Ľavé menu sa načíta dynamicky -->
-        <div id="menu-placeholder"></div>
-
-        <!-- Hlavná oblasť obsahu pre React aplikáciu -->
-        <main id="main-content-area" class="flex-grow flex"> <!-- Pridané triedy 'flex-grow flex' pre správne usporiadanie -->
-            <!-- Tento div vytvára priestor pre zbalené/rozbalené menu, podobne ako v logged-in-my-data.html -->
-            <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
-            <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <!-- Obsah aplikácie bude vykreslený tu, s počiatočným loaderom -->
-                <div class="flex justify-center pt-16">
-                    <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
-                </div>
+    <div id="menu-placeholder"></div>
+    <main id="main-content-area" class="flex-grow flex">
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex justify-center pt-16">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
-    <!-- Načítanie súborov pre autentifikáciu, hlavičku a ľavé menu (v tomto poradí!) -->
-    <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script>
-    <script type="module" src="logged-in-left-menu.js"></script>
-    <!-- Načítanie hlavného React komponentu pre túto stránku -->
-    <script type="module" src="logged-in-notifications.js"></script>
+    <!-- Načítanie súborov pre autentifikáciu, hlavičku a React komponent -->
+    <script type="module" src="loader.js"></script>
 
-    <script type="module">
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
-            try {
-                const response = await fetch('header.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const NotificationApp = () => {
+            const [notifications, setNotifications] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                const getAuth = window.firebase.auth.getAuth;
+                const getFirestore = window.firebase.firestore.getFirestore;
+                const doc = window.firebase.firestore.doc;
+                const onSnapshot = window.firebase.firestore.onSnapshot;
+
+                const db = getFirestore();
+                const auth = getAuth();
+                const userId = auth.currentUser?.uid;
+
+                if (!userId) {
+                    console.log("Používateľ nie je prihlásený, nemôžem načítať notifikácie.");
+                    setLoading(false);
+                    return;
                 }
-                const headerHtml = await response.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml;
-                // Logika hlavičky je teraz spustená priamo v header.js (window.loadHeaderAndScripts)
-                // a reaguje na globalDataUpdated event.
-            } catch (error) {
-                console.error("Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+
+                // Cesta k dokumentu, ktorý obsahuje notifikácie pre tohto používateľa
+                const notificationsDocRef = doc(db, 'artifacts', window.appId, 'users', userId, 'user_data', 'notifications');
+
+                const unsubscribe = onSnapshot(notificationsDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        setNotifications(data.messages || []);
+                    } else {
+                        console.log("Dokument s notifikáciami neexistuje.");
+                        setNotifications([]);
+                    }
+                    setLoading(false);
+                }, (err) => {
+                    console.error("Chyba pri načítaní notifikácií:", err);
+                    setError("Nepodarilo sa načítať notifikácie.");
+                    setLoading(false);
+                });
+
+                // Odhlásenie z listenera pri unmount komponentu
+                return () => unsubscribe();
+            }, []);
+
+            if (loading) {
+                return (
+                    <div className="flex justify-center items-center h-full">
+                        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
+                    </div>
+                );
             }
-        }
 
-        // Spustíme načítanie hlavičky po načítaní DOM
-        window.addEventListener('DOMContentLoaded', async () => {
-            await loadHeader(); // Načíta HTML hlavičky, logika sa spustí cez header.js
+            if (error) {
+                return <div className="text-red-500 text-center">{error}</div>;
+            }
 
-            const renderApp = () => {
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
-                if (typeof NotificationsApp === 'undefined') {
-                    console.error("Chyba: Komponent NotificationsApp nie je definovaný. Skontrolujte logged-in-notifications.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
+            return (
+                <div className="max-w-4xl mx-auto p-4 md:p-8">
+                    <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800 border-b-2 border-blue-500 pb-2">Upozornenia</h1>
+                    <div className="space-y-6">
+                        {notifications.length > 0 ? (
+                            notifications.map((notif, index) => (
+                                <div key={index} className="bg-white rounded-lg shadow-lg p-6 border border-gray-200 transition-transform duration-300 hover:scale-[1.01]">
+                                    <div className="flex items-start">
+                                        <svg className="w-6 h-6 text-blue-500 mr-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 2a8 8 0 100 16A8 8 0 0010 2zM9 11a1 1 0 112 0v2a1 1 0 11-2 0v-2zm1-7a1 1 0 00-1 1v4a1 1 0 102 0V5a1 1 0 00-1-1z" clipRule="evenodd"></path>
+                                        </svg>
+                                        <div className="flex-grow">
+                                            <h3 className="text-xl font-semibold text-gray-900 mb-1">{notif.title}</h3>
+                                            <p className="text-sm text-gray-600 mb-2">{new Date(notif.timestamp).toLocaleString('sk-SK')}</p>
+                                            <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{notif.message}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="bg-white rounded-lg shadow-lg p-6 text-center text-gray-500">
+                                Nemáš žiadne nové upozornenia.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
 
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(NotificationsApp, null));
+        // Funkcia na vykreslenie React aplikácie
+        const renderApp = () => {
+            const rootElement = document.getElementById('root');
+            if (rootElement) {
+                ReactDOM.render(<NotificationApp />, rootElement);
                 console.log("logged-in-notifications.html: React App vykreslená.");
-            };
+            }
+        };
 
-            // Počkáme na globalDataUpdated, ktorá signalizuje, že authentication.js dokončil svoju prácu
-            // a globalUserProfileData je k dispozícii.
-            window.addEventListener('globalDataUpdated', (event) => {
-                console.log("logged-in-notifications.html: Prijatá udalosť 'globalDataUpdated'. Pripravujem vykreslenie React aplikácie.");
-                if (event.detail) { // Ak sú dáta používateľa k dispozícii
-                    renderApp();
-                } else {
-                    console.log("logged-in-notifications.html: GlobalUserProfileData je null, používateľ nie je prihlásený. Presmerovanie už mala spracovať authentication.js.");
-                }
-            });
-
-            // Ak už sú globálne dáta k dispozícii (napr. po rýchlom refresh-i, kde authentication.js prebehne skôr),
-            // vykreslíme aplikáciu ihneď.
-            if (window.isGlobalAuthReady && window.globalUserProfileData) {
-                console.log("logged-in-notifications.html: GlobalData už pripravená pri DOMContentLoaded. Vykresľujem React aplikáciu.");
+        // Počkáme na globalDataUpdated, ktorá signalizuje, že authentication.js dokončil svoju prácu
+        // a globalUserProfileData je k dispozícii.
+        window.addEventListener('globalDataUpdated', (event) => {
+            console.log("logged-in-notifications.html: Prijatá udalosť 'globalDataUpdated'. Pripravujem vykreslenie React aplikácie.");
+            if (event.detail) { // Ak sú dáta používateľa k dispozícii
                 renderApp();
-            } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
-                console.log("logged-in-notifications.html: Auth ready, but no user data. Redirecting to login.");
-                window.location.href = 'login.html';
+            } else {
+                console.log("logged-in-notifications.html: GlobalUserProfileData je null, používateľ nie je prihlásený. Presmerovanie už mala spracovať authentication.js.");
             }
         });
+
+        // Ak už sú globálne dáta k dispozícii (napr. po rýchlom refresh-i, kde authentication.js prebehne skôr),
+        // vykreslíme aplikáciu ihneď.
+        if (window.isGlobalAuthReady && window.globalUserProfileData) {
+            console.log("logged-in-notifications.html: GlobalData už pripravená pri DOMContentLoaded. Vykresľujem React aplikáciu.");
+            renderApp();
+        } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
+            console.log("logged-in-notifications.html: Auth ready, but no user data. Redirecting to login.");
+            window.location.href = 'login.html';
+        }
     </script>
 </body>
 </html>
