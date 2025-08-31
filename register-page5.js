@@ -757,11 +757,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     const totalCount = menCount + womenCount + maleDriversCount + femaleDriversCount;
                                     
                                     teamsDataForTable.push({
-                                        teamName: team.teamName || '0', 
-                                        accommodationType: team.accommodation?.type || '0', 
-                                        players: team.players || '0', 
-                                        menTeamMembers: team.menTeamMembers || '0', 
-                                        womenTeamMembers: team.womenTeamMembers || '0', 
+                                        teamName: team.teamName || 0, 
+                                        accommodationType: team.accommodation?.type || 0, 
+                                        players: team.players || 0, 
+                                        menTeamMembers: team.menTeamMembers || 0, 
+                                        womenTeamMembers: team.womenTeamMembers || 0, 
                                         driverDetailsMale: maleDriversCount, 
                                         driverDetailsFemale: femaleDriversCount,
                                         totalMembers: totalCount // Nový stĺpec s celkovým počtom
@@ -1205,7 +1205,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const generateTimeOptions = (limit) => {
         const options = [React.createElement('option', { key: "placeholder", value: "" }, "--")];
         for (let i = 0; i < limit; i++) {
-            const value = i.toString().padStart(2, '0');
+            const value = i.toString().padStart(2, 0);
             options.push(React.createElement('option', { key: value, value: value }, value));
         }
         return options;
