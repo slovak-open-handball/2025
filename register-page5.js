@@ -641,7 +641,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let currentDate = new Date(start);
         while (currentDate <= end) {
             dates.push(currentDate.toISOString().split('T')[0]);
-            currentDate.setDate(currentDate.getDate() + 1);
+            currentDate.setDate(currentCDate.getDate() + 1);
         }
         return dates;
     };
@@ -732,13 +732,30 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         if (querySnapshot.empty) {
                             console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
                         } else {
-                            console.log(`Nájdene dokumenty: ${querySnapshot.size}`);
+                            const teamsDataForTable = [];
                             querySnapshot.forEach((doc) => {
-                                console.log(`  - ID dokumentu: ${doc.id}`);
-                                console.log('    Dáta:', doc.data());
+                                const data = doc.data();
+                                const teams = data.teams || {};
+                                
+                                Object.values(teams).forEach(teamsArray => {
+                                    teamsArray.forEach(team => {
+                                        teamsDataForTable.push({
+                                            teamName: team.teamName || 'Nezadané',
+                                            players: team.players || 'Nezadané',
+                                            menTeamMembers: team.menTeamMembers || 'Nezadané',
+                                            womenTeamMembers: team.womenTeamMembers || 'Nezadané',
+                                            driverDetailsMale: (team.driverDetailsMale && team.driverDetailsMale.length > 0) ? JSON.stringify(team.driverDetailsMale) : 'Nezadané',
+                                            driverDetailsFemale: (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) ? JSON.stringify(team.driverDetailsFemale) : 'Nezadané',
+                                        });
+                                    });
+                                });
                             });
+                            
+                            console.log("--- Dáta tímov ---");
+                            console.table(teamsDataForTable);
+                            console.log("------------------------");
                         }
-                        console.log("-----------------------------------------");
+                        
                     } catch (e) {
                         console.error("Chyba pri načítaní a výpise dát z '/users/':", e);
                     }
