@@ -23,7 +23,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const addGroupsLink = document.getElementById('add-groups-link'); // NOVINKA: Získanie odkazu na skupiny
     const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
-    const mySettingsLink = document.getElementById('my-settings-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     const allUsersLink = document.getElementById('all-users-link'); // NOVINKA: Získanie odkazu na moje nastavenia
     const notificationsLink = document.getElementById('notifications-link'); // NOVINKA: Získanie odkazu na upozornenia
     const notificationsTextWithCount = document.getElementById('notifications-text-with-count'); // NOVINKA: Získanie elementu pre text Upozornenia s počtom
@@ -113,7 +112,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             addGroupsLink.classList.remove('hidden');
             tournamentSettingsLink.classList.remove('hidden');    
             allRegistrationsLink.classList.remove('hidden');
-            mySettingsLink.classList.remove('hidden');
             allUsersLink.classList.remove('hidden');
             notificationsLink.classList.remove('hidden');
             teamRostersLink.classList.add('hidden'); // Admin nemá vidieť súpisku tímov
@@ -142,7 +140,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             addGroupsLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
             allRegistrationsLink.classList.add('hidden');
-            mySettingsLink.classList.add('hidden');
             allUsersLink.classList.add('hidden');
             notificationsLink.classList.add('hidden');
             teamRostersLink.classList.remove('hidden'); // Používateľ vidí súpisku tímov
@@ -160,7 +157,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             addGroupsLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
             allRegistrationsLink.classList.add('hidden');
-            mySettingsLink.classList.add('hidden');
             allUsersLink.classList.add('hidden');
             notificationsLink.classList.add('hidden');
             teamRostersLink.classList.add('hidden'); // Skryť aj súpisku tímov
