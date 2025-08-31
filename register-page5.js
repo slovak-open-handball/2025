@@ -664,8 +664,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         let unsubscribePackages;
         let unsubscribeRegistrationSettings; // NOVINKA: pre registrácia settings
 
-        // ZMENA: Vytvorenie funkcie, ktorá sa volá, keď je `isGlobalAuthReady` true
+        // NOVINKA: Jednoduchšia a robustnejšia kontrola pripravenosti Firebase
         const startListeners = () => {
+            if (!window.db || !window.auth) {
+                console.log("Čakám na inicializáciu Firebase...");
+                setTimeout(startListeners, 200);
+                return;
+            }
+
             try {
                 const accommodationDocRef = doc(window.db, 'settings', 'accommodation');
                 unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
@@ -732,21 +738,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        const handleGlobalDataUpdated = () => {
-             // Skontrolujeme, či je 'window.db' a 'window.auth' definované
-            if (window.db && window.auth) {
-                console.log("Firebase inicializované, spúšťam poslucháče pre dáta.");
-                startListeners();
-                window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated); // Odstránenie poslucháča po spustení
-            }
-        };
-
-        if (window.db && window.auth) {
-            startListeners();
-        } else {
-            console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
-            window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
-        }
+        startListeners();
 
         return () => {
             if (unsubscribeAccommodation) {
@@ -758,7 +750,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (unsubscribeRegistrationSettings) { // NOVINKA: clean-up pre registration settings
                 unsubscribeRegistrationSettings();
             }
-             window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
         };
     }, []); // Prázdne pole závislostí zabezpečuje, že sa useEffect spustí len raz
 
@@ -1156,10 +1147,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // NOVÁ FUNKCIA: Načítanie a vypísanie dát o ubytovaní z databázy pre všetkých používateľov
     React.useEffect(() => {
-        // ZMENA: Vytvorenie funkcie, ktorá sa volá, keď je `isGlobalAuthReady` true
+        // NOVINKA: Robustnejšia a spoľahlivejšia kontrola pripravenosti Firebase
         const fetchAllUserAccommodationData = async () => {
             if (!window.db || !window.__app_id) {
                 console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
+                setTimeout(fetchAllUserAccommodationData, 200);
                 return;
             }
              try {
@@ -1202,21 +1194,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         };
 
-        const handleGlobalDataUpdated = () => {
-             // Skontrolujeme, či je 'window.db' a 'window.auth' definované
-            if (window.db && window.auth) {
-                console.log("Firebase inicializované, spúšťam fetchAllUserAccommodationData.");
-                fetchAllUserAccommodationData();
-                window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated); // Odstránenie poslucháča po spustení
-            }
-        };
-
-        if (window.db && window.auth) {
-            fetchAllUserAccommodationData();
-        } else {
-            console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
-            window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
-        }
+        fetchAllUserAccommodationData();
     }, []); // Spustí sa len raz
 
 
