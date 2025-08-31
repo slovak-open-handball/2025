@@ -1,4 +1,4 @@
-import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Komponent pre zobrazenie notifikácií
 function NotificationModal({ message, onClose, type = 'info' }) {
@@ -1131,6 +1131,67 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
         return options;
     };
+
+
+    // NOVÁ FUNKCIA: Načítanie a vypísanie dát o ubytovaní z databázy pre všetkých používateľov
+    React.useEffect(() => {
+        const fetchAllUserAccommodationData = async () => {
+            if (!window.db || !window.__app_id) {
+                // Skontrolujeme, či je Firebase inicializovaný a máme ID aplikácie
+                console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
+                return;
+            }
+
+            try {
+                // Kolekcia 'users' pre danú aplikáciu
+                const usersCollectionRef = collection(window.db, 'artifacts', window.__app_id, 'users');
+                console.log("Sťahujem dáta všetkých používateľov z databázy...");
+
+                const usersSnapshot = await getDocs(usersCollectionRef);
+
+                if (usersSnapshot.empty) {
+                    console.log("Nenašli sa žiadne používateľské dokumenty.");
+                    return;
+                }
+
+                usersSnapshot.forEach(async (userDoc) => {
+                    const userId = userDoc.id;
+                    // Predpokladáme, že tímové dáta sú v subkolekcii 'teams'
+                    const teamsCollectionRef = collection(window.db, 'artifacts', window.__app_id, 'users', userId, 'teams');
+                    const teamsSnapshot = await getDocs(teamsCollectionRef);
+
+                    console.group(`--- Dáta pre používateľa: ${userId} ---`);
+
+                    if (teamsSnapshot.empty) {
+                        console.log("Žiadne dáta tímu pre tohto používateľa.");
+                    } else {
+                        teamsSnapshot.forEach(teamDoc => {
+                            const teamsData = teamDoc.data()?.teamsData;
+                            if (teamsData) {
+                                for (const categoryName in teamsData) {
+                                    if (teamsData.hasOwnProperty(categoryName) && Array.isArray(teamsData[categoryName])) {
+                                        teamsData[categoryName].forEach((team, teamIndex) => {
+                                            if (team && team.accommodation) {
+                                                console.log(`Kategória: ${categoryName}, Tím: ${team.teamName}, Ubytovanie:`, team.accommodation);
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    console.groupEnd();
+                });
+
+            } catch (error) {
+                console.error("Chyba pri načítaní a vypisovaní dát používateľov:", error);
+            }
+        };
+
+        // Spustíme funkciu po inicializácii komponentu
+        fetchAllUserAccommodationData();
+    }, []); // Spustí sa len raz
 
 
     return React.createElement(
