@@ -684,7 +684,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
                 unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
                     const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    fetchedPackages.sort((a, b) => a.name.locale('sk').localeCompare(b.name.locale('sk'))); // Používame locale pre správne triedenie
+                    
+                    // OPRAVA: Overenie, či a.name a b.name sú reťazce, aby sa predišlo chybe `.locale is not a function`
+                    fetchedPackages.sort((a, b) => {
+                        const aName = typeof a.name === 'string' ? a.name : '';
+                        const bName = typeof b.name === 'string' ? b.name : '';
+                        return aName.localeCompare(bName, 'sk'); 
+                    });
+                    
                     setPackages(fetchedPackages);
                 }, (error) => {
                     console.error("Chyba pri načítaní balíčkov:", error);
