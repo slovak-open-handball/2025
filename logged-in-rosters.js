@@ -1,6 +1,5 @@
 import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
 function showLocalNotification(message, type = 'success') {
@@ -11,7 +10,6 @@ function showLocalNotification(message, type = 'success') {
         notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
-
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
@@ -27,14 +25,11 @@ function showLocalNotification(message, type = 'success') {
         default:
             typeClasses = 'bg-gray-700 text-white';
     }
-
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
-
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
     }, 10);
-
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
@@ -49,15 +44,16 @@ const formatDateToDMMYYYY = (dateString) => {
     return dateString;
 };
 
+// Pridajte do globálneho scope
+window.formatDateToDMMYYYY = formatDateToDMMYYYY;
+
 const mealTypeLabels = {
     breakfast: 'raňajky',
     lunch: 'obed',
     dinner: 'večera',
     refreshment: 'občerstvenie'
 };
-
 const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
-
 const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
 
 const getRoleColor = (role) => {
@@ -75,11 +71,8 @@ const getRoleColor = (role) => {
 
 function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData, isDataEditDeadlinePassed }) {
     const [selectedType, setSelectedType] = useState('');
-
     if (!show) return null;
-
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
-
     const handleAdd = () => {
         if (selectedType) {
             onSelectMemberType(selectedType);
@@ -89,7 +82,6 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
             showLocalNotification('Prosím, vyberte typ člena.', 'error');
         }
     };
-
     const isButtonDisabled = isDataEditDeadlinePassed;
     const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
         isButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
@@ -100,7 +92,6 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
         borderColor: isButtonDisabled ? roleColor : 'transparent',
         cursor: isButtonDisabled ? 'not-allowed' : 'pointer'
     };
-
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center' },
@@ -169,7 +160,19 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
     );
 }
 
-function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfileData, teamAccommodationType, memberData, isEditMode, isRosterEditDeadlinePassed, isDataEditDeadlinePassed }) {
+function MemberDetailsModal({
+    show,
+    onClose,
+    onSaveMember,
+    memberType,
+    userProfileData,
+    teamAccommodationType,
+    memberData,
+    isEditMode,
+    isRosterEditDeadlinePassed,
+    isDataEditDeadlinePassed,
+    teamCategoryName // Pridané
+}) {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
@@ -180,6 +183,7 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
     const [postalCode, setPostalCode] = useState('');
     const [city, setCity] = useState('');
     const [country, setCountry] = useState('');
+    const [dateOfBirthError, setDateOfBirthError] = useState(''); // Pridané
 
     useEffect(() => {
         if (show) {
@@ -213,8 +217,72 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
 
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
     const showAddressFields = teamAccommodationType !== 'bez ubytovania';
-
     const isButtonDisabled = isEditMode ? isRosterEditDeadlinePassed : isDataEditDeadlinePassed;
+
+    // Validácia dátumu narodenia
+    const validateDateOfBirth = (dateString, categoryName) => {
+        if (!dateString) {
+            setDateOfBirthError('Dátum narodenia je povinný.');
+            return false;
+        }
+        const birthDate = new Date(dateString);
+        const today = new Date();
+        if (birthDate > today) {
+            setDateOfBirthError('Dátum narodenia nemôže byť v budúcnosti.');
+            return false;
+        }
+        if (window.categoriesWithDates && window.categoriesWithDates[categoryName]) {
+            const { dateFrom, dateTo } = window.categoriesWithDates[categoryName];
+            if (dateFrom || dateTo) {
+                const dateFromObj = dateFrom ? new Date(dateFrom) : null;
+                const dateToObj = dateTo ? new Date(dateTo) : null;
+                if (dateFromObj && birthDate < dateFromObj) {
+                    setDateOfBirthError(`Dátum narodenia musí byť neskôr ako ${formatDateToDMMYYYY(dateFrom)}.`);
+                    return false;
+                }
+                if (dateToObj && birthDate > dateToObj) {
+                    setDateOfBirthError(`Dátum narodenia musí byť skôr ako ${formatDateToDMMYYYY(dateTo)}.`);
+                    return false;
+                }
+            }
+        }
+        setDateOfBirthError('');
+        return true;
+    };
+
+    const handleDateOfBirthChange = (e) => {
+        const newDate = e.target.value;
+        setDateOfBirth(newDate);
+        if (memberType === 'player') {
+            validateDateOfBirth(newDate, teamCategoryName);
+        }
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (isButtonDisabled) return;
+        if (memberType === 'player' && !validateDateOfBirth(dateOfBirth, teamCategoryName)) {
+            return;
+        }
+        const memberDetails = {
+            firstName,
+            lastName,
+            dateOfBirth,
+            ...(memberType === 'player' && { jerseyNumber: parseInt(jerseyNumber, 10) || null }),
+            ...(memberType === 'player' && { registrationNumber }),
+        };
+        if (showAddressFields) {
+            memberDetails.address = {
+                street,
+                houseNumber,
+                postalCode,
+                city,
+                country
+            };
+        }
+        onSaveMember(memberDetails);
+        onClose();
+    };
 
     const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
         isButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
@@ -226,40 +294,6 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
         cursor: isButtonDisabled ? 'not-allowed' : 'pointer'
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (isButtonDisabled) return;
-
-        const memberDetails = {
-            firstName,
-            lastName,
-            dateOfBirth,
-            ...(memberType === 'player' && { jerseyNumber: parseInt(jerseyNumber, 10) || null }),
-            ...(memberType === 'player' && { registrationNumber }),
-        };
-
-        if (showAddressFields) {
-            memberDetails.address = {
-                street,
-                houseNumber,
-                postalCode,
-                city,
-                country
-            };
-        }
-
-        onSaveMember(memberDetails);
-        onClose();
-    };
-
-    const modalTitlePrefix = isEditMode ? 'Upraviť' : 'Pridať';
-    const modalTitleMemberType =
-        memberType === 'player' ? 'hráča' :
-        memberType === 'womenTeamMember' ? 'členku realizačného tímu' :
-        memberType === 'menTeamMember' ? 'člena realizačného tímu' :
-        memberType === 'driverFemale' ? 'šoférku' :
-        memberType === 'driverMale' ? 'šoféra' : 'člena';
-
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center' },
@@ -269,7 +303,7 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
             React.createElement(
                 'div',
                 { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
-                React.createElement('h3', { className: 'text-xl font-semibold' }, `${modalTitlePrefix} ${modalTitleMemberType}`),
+                React.createElement('h3', { className: 'text-xl font-semibold' }, `${isEditMode ? 'Upraviť' : 'Pridať'} ${memberType === 'player' ? 'hráča' : memberType === 'womenTeamMember' ? 'členku realizačného tímu' : memberType === 'menTeamMember' ? 'člena realizačného tímu' : memberType === 'driverFemale' ? 'šoférku' : memberType === 'driverMale' ? 'šoféra' : 'člena'}`),
                 React.createElement(
                     'button',
                     { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
@@ -289,7 +323,15 @@ function MemberDetailsModal({ show, onClose, onSaveMember, memberType, userProfi
                 ),
                 React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'dateOfBirth', className: 'block text-sm font-medium text-gray-700' }, 'Dátum narodenia'),
-                    React.createElement('input', { type: 'date', id: 'dateOfBirth', className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', value: dateOfBirth, onChange: (e) => setDateOfBirth(e.target.value), disabled: isButtonDisabled })
+                    React.createElement('input', {
+                        type: 'date',
+                        id: 'dateOfBirth',
+                        className: `mt-1 block w-full border rounded-md shadow-sm p-2 ${dateOfBirthError ? 'border-red-500' : 'border-gray-300'}`,
+                        value: dateOfBirth,
+                        onChange: handleDateOfBirthChange,
+                        disabled: isButtonDisabled
+                    }),
+                    dateOfBirthError && React.createElement('p', { className: 'mt-1 text-sm text-red-600' }, dateOfBirthError)
                 ),
                 (memberType === 'player') && React.createElement('div', null,
                     React.createElement('label', { htmlFor: 'jerseyNumber', className: 'block text-sm font-medium text-gray-700' }, 'Číslo dresu'),
@@ -1085,7 +1127,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 function RostersApp() {
   const auth = getAuth();
   const db = getFirestore();
-
   const [user, setUser] = useState(null);
   const [userProfileData, setUserProfileData] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -1102,17 +1143,15 @@ function RostersApp() {
   const [teamAccommodationTypeToAddMemberTo, setTeamAccommodationTypeToAddMemberTo] = useState('');
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
   const [availableCategoriesFromSettings, setAvailableCategoriesFromSettings] = useState([]);
-
   const [isMemberEditMode, setIsMemberEditMode] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState(null);
   const [teamOfMemberToEdit, setTeamOfMemberToEdit] = useState(null);
-
   const [rosterEditDeadline, setRosterEditDeadline] = useState(null);
   const [dataEditDeadline, setDataEditDeadline] = useState(null);
   const [isRosterEditDeadlinePassed, setIsRosterEditDeadlinePassed] = useState(false);
   const [isDataEditDeadlinePassed, setIsDataEditDeadlinePassed] = useState(false);
-
   const [loading, setLoading] = useState(true);
+  const [categoriesWithDates, setCategoriesWithDates] = useState({}); // Pridané
 
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
@@ -1341,35 +1380,44 @@ useEffect(() => {
     if (db) {
         try {
             const categoriesDocRef = doc(db, 'settings', 'categories');
-            unsubscribeCategories = onSnapshot(categoriesDocRef, (docSnapshot) => {
-                if (docSnapshot.exists()) {
-                    const data = docSnapshot.data();
-                    const categoriesList = [];
-                    for (const fieldName in data) {
-                        if (Object.prototype.hasOwnProperty.call(data, fieldName)) {
-                            const categoryObject = data[fieldName];
-                            if (categoryObject && typeof categoryObject === 'object' && categoryObject.name) {
-                                categoriesList.push(categoryObject.name);
+                unsubscribeCategories = onSnapshot(categoriesDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const data = docSnapshot.data();
+                        const categoriesList = [];
+                        const categoriesWithDates = {};
+                        for (const fieldName in data) {
+                            if (Object.prototype.hasOwnProperty.call(data, fieldName)) {
+                                const categoryObject = data[fieldName];
+                                if (categoryObject && typeof categoryObject === 'object' && categoryObject.name) {
+                                    categoriesList.push(categoryObject.name);
+                                    categoriesWithDates[categoryObject.name] = {
+                                        dateFrom: categoryObject.dateFrom,
+                                        dateTo: categoryObject.dateTo,
+                                    };
+                                }
                             }
                         }
+                        setAvailableCategoriesFromSettings(categoriesList);
+                        setCategoriesWithDates(categoriesWithDates);
+                        window.categoriesWithDates = categoriesWithDates; // Pridané
+                    } else {
+                        setAvailableCategoriesFromSettings([]);
+                        setCategoriesWithDates({});
+                        window.categoriesWithDates = {};
                     }
-                    setAvailableCategoriesFromSettings(categoriesList);
-                } else {
-                    setAvailableCategoriesFromSettings([]);
-                }
-            }, (error) => {
-                console.error("RostersApp: Error fetching categories from settings:", error);
-            });
-        } catch (e) {
-            console.error("RostersApp: Error setting up onSnapshot for categories from settings:", e);
+                }, (error) => {
+                    console.error("RostersApp: Error fetching categories from settings:", error);
+                });
+            } catch (e) {
+                console.error("RostersApp: Error setting up onSnapshot for categories from settings:", e);
+            }
         }
-    }
-    return () => {
-        if (unsubscribeCategories) {
-            unsubscribeCategories();
-        }
-    };
-}, [db]);
+        return () => {
+            if (unsubscribeCategories) {
+                unsubscribeCategories();
+            }
+        };
+    }, [db]);
 
   useEffect(() => {
     let unsubscribeUserDoc;
@@ -1743,6 +1791,15 @@ const handleOpenAddMemberTypeModal = (team) => {
     setIsMemberEditMode(false);
     setMemberToEdit(null);
     setShowAddMemberTypeModal(true);
+};
+
+const handleOpenEditMemberDetailsModal = (team, member) => {
+    setTeamOfMemberToEdit(team);
+    setMemberToEdit(member);
+    setMemberTypeToAdd(member.originalType);
+    setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || 'bez ubytovania');
+    setIsMemberEditMode(true);
+    setShowMemberDetailsModal(true);
 };
 
 const handleSelectMemberType = (type) => {
@@ -2213,24 +2270,26 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         }
       ),
       React.createElement(
-        MemberDetailsModal,
-        {
-          show: showMemberDetailsModal,
-          onClose: () => {
-            setShowMemberDetailsModal(false);
-            setMemberToEdit(null);
-            setIsMemberEditMode(false);
-          },
-          onSaveMember: isMemberEditMode ? handleSaveEditedMember : handleSaveNewMember,
-          memberType: memberTypeToAdd,
-          userProfileData: userProfileData,
-          teamAccommodationType: teamAccommodationTypeToAddMemberTo,
-          memberData: memberToEdit,
-          isEditMode: isMemberEditMode,
-          isRosterEditDeadlinePassed: isRosterEditDeadlinePassed,
-          isDataEditDeadlinePassed: isDataEditDeadlinePassed
-        }
+          MemberDetailsModal,
+          {
+              show: showMemberDetailsModal,
+              onClose: () => {
+                  setShowMemberDetailsModal(false);
+                  setMemberToEdit(null);
+                  setIsMemberEditMode(false);
+              },
+              onSaveMember: isMemberEditMode ? handleSaveEditedMember : handleSaveNewMember,
+              memberType: memberTypeToAdd,
+              userProfileData: userProfileData,
+              teamAccommodationType: teamAccommodationTypeToAddMemberTo,
+              memberData: memberToEdit,
+              isEditMode: isMemberEditMode,
+              isRosterEditDeadlinePassed: isRosterEditDeadlinePassed,
+              isDataEditDeadlinePassed: isDataEditDeadlinePassed,
+              teamCategoryName: isMemberEditMode ? teamOfMemberToEdit?.categoryName : teamToAddMemberTo?.categoryName, // Pridané
+          }
       ),
+    
       React.createElement(
         AddTeamModal,
         {
