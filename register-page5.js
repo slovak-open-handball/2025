@@ -667,7 +667,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         // NOVINKA: Jednoduchšia a robustnejšia kontrola pripravenosti Firebase
         const startListeners = () => {
             if (!window.db || !window.auth) {
-                console.log("Čakám na inicializáciu Firebase...");
                 setTimeout(startListeners, 200);
                 return;
             }
@@ -1147,16 +1146,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // NOVÁ FUNKCIA: Načítanie a vypísanie dát o ubytovaní z databázy pre všetkých používateľov
     React.useEffect(() => {
-        // NOVINKA: Robustnejšia a spoľahlivejšia kontrola pripravenosti Firebase
         const fetchAllUserAccommodationData = async () => {
-            if (!window.db || !window.__app_id) {
-                console.log("Čakám na inicializáciu Firebase a dostupné __app_id...");
+            if (!window.db || typeof __app_id === 'undefined') {
                 setTimeout(fetchAllUserAccommodationData, 200);
                 return;
             }
              try {
-                // ZMENA: Správna cesta podľa vašej požiadavky
-                const usersCollectionRef = collection(window.db, `artifacts/${__app_id}/public/data/users`);
+                // ZMENA: Cesta bola zmenená na 'users' podľa tvojej požiadavky.
+                const usersCollectionRef = collection(window.db, 'users');
                 console.log("Sťahujem dáta o ubytovaní pre všetkých používateľov...");
 
                 const usersSnapshot = await getDocs(usersCollectionRef);
