@@ -207,7 +207,7 @@ const handleLogout = async () => {
         const auth = getAuth();
         await signOut(auth);
         console.log("header.js: Používateľ bol úspešne odhlásený.");
-        window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
+//        window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
