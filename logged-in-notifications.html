@@ -6,7 +6,6 @@
     <title>SOH 2025 - Upozornenia</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -19,25 +18,18 @@
             min-height: 100vh; /* Minimálna výška stránky */
         }
     </style>
-    <!-- React and ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Globálne konštanty pre Firebase - už ich nedeclarujeme, sú z authentication.js -->
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react.production.min.js"></script>
 </head>
 <body class="bg-gray-100">
-    <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
-    <div class="flex flex-grow"> <!-- ZMENA: Použitie flex-grow na main kontajneri -->
-        <!-- Ľavé menu sa načíta dynamicky -->
+    <div class="flex flex-grow">
         <div id="menu-placeholder"></div>
 
-        <!-- Hlavná oblasť obsahu pre React aplikáciu -->
-        <main id="main-content-area" class="flex-grow flex"> <!-- Pridané triedy 'flex-grow flex' pre správne usporiadanie -->
-            <!-- Tento div vytvára priestor pre zbalené/rozbalené menu, podobne ako v logged-in-my-data.html -->
+        <main id="main-content-area" class="flex-grow flex">
             <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
             <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <!-- Obsah aplikácie bude vykreslený tu, s počiatočným loaderom -->
                 <div class="flex justify-center pt-16">
                     <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
                 </div>
@@ -45,43 +37,19 @@
         </main>
     </div>
 
-    <!-- Načítanie súborov pre autentifikáciu, hlavičku a ľavé menu (v tomto poradí!) -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
-    <!-- Načítanie hlavného React komponentu pre túto stránku -->
     <script type="module" src="logged-in-notifications.js"></script>
 
     <script type="module">
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
-            const headerPlaceholder = document.getElementById('header-placeholder');
-            if (headerPlaceholder) {
-                try {
-                    const response = await fetch('header.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const headerHtml = await response.text();
-                    headerPlaceholder.innerHTML = headerHtml;
-
-                    const headerScript = document.createElement('script');
-                    headerScript.src = 'header.js';
-                    headerScript.type = 'module';
-                    headerScript.onload = () => {
-                        console.log("header.js načítaný a spustený.");
-                    };
-                    headerScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní header.js:", e);
-                    };
-                    document.body.appendChild(headerScript);
-                } catch (error) {
-                    console.error("Chyba pri načítaní hlavičky:", error);
-                }
-            }
-        }
-    
         // Spustíme načítanie hlavičky po načítaní DOM
         window.addEventListener('DOMContentLoaded', async () => {
-            await loadHeader();
+            const response = await fetch('header.html');
+            if (!response.ok) throw new Error('Network response was not ok.');
+            const headerHtml = await response.text();
+            document.getElementById('header-placeholder').innerHTML = headerHtml;
+
             const renderApp = () => {
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                     console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
