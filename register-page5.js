@@ -745,8 +745,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             menTeamMembers: team.menTeamMembers || 'Nezadané',
                                             womenTeamMembers: team.womenTeamMembers || 'Nezadané',
                                             // Počítanie veľkosti poľa pre vypísanie do konzoly
-                                            driverDetailsMale: (team.driverDetailsMale && team.driverDetailsMale.length > 0) ? team.driverDetailsMale.length : 'Nezadané',
-                                            driverDetailsFemale: (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) ? team.driverDetailsFemale.length : 'Nezadané',
+                                            driverDetailsMale: (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 'Nezadané',
+                                            driverDetailsFemale: (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 'Nezadané',
+                                            // NOVINKA: Pridanie typu ubytovania do tabuľky
+                                            accommodationType: team.accommodation?.type || 'Nezadané'
                                         });
                                     });
                                 });
