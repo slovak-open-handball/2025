@@ -16,6 +16,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
+    const menuIcon = document.querySelector('#menu-toggle-button svg'); // NOVINKA: Získanie SVG ikony
+    const menuText = document.querySelector('#menu-toggle-button .whitespace-nowrap'); // NOVINKA: Získanie textu "Menu"
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     const addGroupsLink = document.getElementById('add-groups-link'); // NOVINKA: Získanie odkazu na skupiny
@@ -37,20 +39,51 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
+    // NOVINKA: Funkcia na získanie farby podľa roly
+    const getColorForRole = (role) => {
+        switch (role) {
+            case 'admin':
+                return '#47b3ff';
+            case 'hall':
+                return '#b06835';
+            case 'user':
+                return '#9333EA';
+            default:
+                return '#1D4ED8';
+        }
+    };
+
     /**
      * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
      */
     const applyMenuState = () => {
+        const role = userProfileData?.role || 'default';
+        const roleColor = getColorForRole(role);
+
         if (isMenuToggled) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
+            // NOVINKA: Nastavenie farby ikony a textu v rozbalenom stave
+            if (menuIcon) {
+                menuIcon.style.color = roleColor;
+            }
+            if (menuText) {
+                menuText.style.color = roleColor;
+            }
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
+            // NOVINKA: Reset farby v zbalenom stave
+            if (menuIcon) {
+                menuIcon.style.color = ''; // Reset na pôvodnú farbu
+            }
+            if (menuText) {
+                menuText.style.color = ''; // Reset na pôvodnú farbu
+            }
         }
         menuTexts.forEach(span => {
             if (isMenuToggled) {
@@ -186,6 +219,10 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
+            // NOVINKA: Zmena farby textu "Menu" pri mouseenter, keď je zbalené
+            if (menuText) {
+                menuText.style.color = getColorForRole(userProfileData?.role || 'default');
+            }
         }
     });
 
@@ -196,6 +233,10 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
+            // NOVINKA: Reset farby textu "Menu" pri mouseleave, keď je zbalené
+            if (menuText) {
+                menuText.style.color = '';
+            }
         }
     });
 };
