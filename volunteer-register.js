@@ -5,6 +5,8 @@
 // Importy pre potrebné Firebase funkcie
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Import zoznamu predvolieb pre telefónne čísla
+import { countryDialCodes } from "./countryDialCodes.js";
 
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
@@ -38,6 +40,7 @@ function App() {
         confirmPassword: '',
         phone: '',
     });
+    const [selectedDialCode, setSelectedDialCode] = React.useState('+421');
     const [formErrors, setFormErrors] = React.useState({});
     const [isFormValid, setIsFormValid] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -49,6 +52,7 @@ function App() {
         const errors = {};
         if (!formData.name) errors.name = 'Meno je povinné.';
         if (!formData.surname) errors.surname = 'Priezvisko je povinné.';
+        if (!formData.phone) errors.phone = 'Telefónne číslo je povinné.';
         if (formData.email && !isValidEmail(formData.email)) errors.email = 'Zadajte platnú e-mailovú adresu.';
         
         const passwordChecks = passwordStrengthCheck(formData.password);
@@ -65,6 +69,7 @@ function App() {
             !!formData.email &&
             !!formData.password &&
             !!formData.confirmPassword &&
+            !!formData.phone && // Telefónne číslo je teraz povinné
             Object.keys(errors).length === 0
         );
     }, [formData]);
@@ -75,9 +80,13 @@ function App() {
     };
 
     const handlePhoneChange = (e) => {
-        // Jednoduché odstránenie všetkých nečíslic
+        // Odstránenie všetkých nečíslic
         const formattedPhone = e.target.value.replace(/[^0-9+]/g, '');
         setFormData(prev => ({ ...prev, phone: formattedPhone }));
+    };
+
+    const handleDialCodeChange = (e) => {
+        setSelectedDialCode(e.target.value);
     };
 
     const handleSubmit = async (e) => {
@@ -102,13 +111,16 @@ function App() {
 
             // 2. Uloženie profilu používateľa do Firestore v súkromnej kolekcii
             const userProfileRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`, user.uid);
+            
+            // Kombinácia predvoľby a telefónneho čísla
+            const fullPhoneNumber = `${selectedDialCode}${formData.phone.startsWith('+') ? formData.phone.slice(1) : formData.phone}`;
 
             const userProfileData = {
                 uid: user.uid,
                 email: formData.email,
                 name: formData.name,
                 surname: formData.surname,
-                phone: formData.phone,
+                phone: fullPhoneNumber,
                 role: 'volunteer', // Priradená rola 'volunteer'
                 createdAt: serverTimestamp(),
             };
@@ -117,6 +129,7 @@ function App() {
 
             setSuccessMessage("Registrácia dobrovoľníka bola úspešná! Môžete sa prihlásiť.");
             setFormData({ name: '', surname: '', email: '', password: '', confirmPassword: '', phone: '' });
+            setSelectedDialCode('+421');
 
         } catch (error) {
             console.error("Chyba pri registrácii:", error);
@@ -259,7 +272,7 @@ function App() {
                     { className: 'mt-2 text-sm italic text-gray-500' },
                     React.createElement(
                         'p',
-                        { className: 'mb-1' },
+                        { className: 'mb-1 text-gray-700' },
                         'Heslo musí obsahovať:'
                     ),
                     React.createElement(
@@ -319,24 +332,49 @@ function App() {
                     'Heslá sa nezhodujú'
                 )
             ),
-            // Telefónne číslo
+            // Telefónne číslo s predvoľbou
             React.createElement(
                 'div',
                 null,
                 React.createElement(
                     'label',
                     { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'phone' },
-                    'Telefónne číslo (voliteľné)'
+                    'Telefónne číslo'
                 ),
-                React.createElement('input', {
-                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-                    id: 'phone',
-                    type: 'tel',
-                    name: 'phone',
-                    placeholder: '+421 9xx xxx xxx',
-                    value: formData.phone,
-                    onChange: handlePhoneChange,
-                })
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center space-x-2' },
+                    React.createElement(
+                        'select',
+                        {
+                            className: 'shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                            value: selectedDialCode,
+                            onChange: handleDialCodeChange,
+                        },
+                        countryDialCodes.map((country, index) =>
+                            React.createElement(
+                                'option',
+                                { key: index, value: country.dialCode },
+                                `${country.name} (${country.dialCode})`
+                            )
+                        )
+                    ),
+                    React.createElement('input', {
+                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                        id: 'phone',
+                        type: 'tel',
+                        name: 'phone',
+                        placeholder: 'xxx xxx xxx',
+                        value: formData.phone,
+                        onChange: handlePhoneChange,
+                        required: true,
+                    })
+                ),
+                formErrors.phone && React.createElement(
+                    'p',
+                    { className: 'text-red-500 text-xs italic mt-1' },
+                    formErrors.phone
+                )
             ),
             // Tlačidlo na odoslanie
             React.createElement(
