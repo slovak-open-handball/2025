@@ -99,7 +99,7 @@ function App() {
   // NOVINKA: Stav pre globálnu poznámku
   const [globalNote, setGlobalNote] = React.useState('');
 
-  const [userRole, setUserRole] = React.useState('user');
+  const [userRole, setUserRole] = React.useState('club');
   const [loading, setLoading] = React.useState(false);
 
   const [notificationMessage, setNotificationMessage] = React.useState('');
