@@ -256,6 +256,8 @@ const App = () => {
                 lastName: formData.lastName,
                 email: formData.email,
                 fullPhoneNumber: fullPhoneNumber,
+                role: 'volunteer',
+                approved: true,
                 gender: formData.gender,
                 birthDate: formData.birthDate,
                 tshirtSize: formData.tshirtSize,
