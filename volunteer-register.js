@@ -304,10 +304,11 @@ const App = () => {
         formData.gender &&
         formData.birthDate &&
         formData.tshirtSize &&
-        formData.acceptTerms;
+        formData.acceptTerms &&
+        formData.volunteerRoles.length > 0;
 
     const unlockedButtonColor = 'bg-blue-600 hover:bg-blue-700 text-white';
-    const lockedButtonColor = 'bg-gray-400 text-gray-700 cursor-not-allowed';
+    const lockedButtonColor = 'bg-white text-blue-600 border border-blue-600 cursor-not-allowed';
     const buttonClasses = `mt-6 font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition-all duration-300 ${isFormValid ? unlockedButtonColor : lockedButtonColor}`;
     
     // Zistite správny popisok na základe vybraného pohlavia
