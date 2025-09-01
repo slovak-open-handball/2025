@@ -99,6 +99,7 @@ const App = () => {
         lastName: '',
         email: '',
         password: '',
+        confirmPassword: '', // Nové pole pre potvrdenie hesla
         phone: '',
         gender: '',
         birthDate: '',
@@ -165,6 +166,7 @@ const App = () => {
                 lastName: '',
                 email: '',
                 password: '',
+                confirmPassword: '',
                 phone: '',
                 gender: '',
                 birthDate: '',
@@ -188,13 +190,13 @@ const App = () => {
 
     // Live validation
     const passwordChecks = passwordStrengthCheck(formData.password);
-    const isPasswordValid = Object.values(passwordChecks).every(Boolean);
+    const isPasswordValid = Object.values(passwordChecks).every(Boolean) && formData.password === formData.confirmPassword;
     const isFormValid =
         formData.firstName &&
         formData.lastName &&
         isValidEmail(formData.email) &&
         isPasswordValid &&
-        formData.phone.length >= 9 && // Simple check for phone length
+        formData.phone.replace(/\s/g, '').length >= 9 && // Simple check for phone length
         formData.gender &&
         formData.birthDate &&
         formData.acceptTerms;
@@ -235,7 +237,7 @@ const App = () => {
                 id: 'firstName',
                 type: 'text',
                 name: 'firstName',
-                placeholder: 'Ján',
+                placeholder: 'Zadajte svoje meno',
                 value: formData.firstName,
                 onChange: handleInputChange,
             }),
@@ -250,7 +252,7 @@ const App = () => {
                 id: 'lastName',
                 type: 'text',
                 name: 'lastName',
-                placeholder: 'Novák',
+                placeholder: 'Zadajte svoje priezvisko',
                 value: formData.lastName,
                 onChange: handleInputChange,
             }),
@@ -259,13 +261,13 @@ const App = () => {
         React.createElement(
             'div',
             { className: 'mb-4' },
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' }, 'E-mail'),
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' }, 'E-mailová adresa'),
             React.createElement('input', {
                 className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${isValidEmail(formData.email) || formData.email === '' ? '' : 'border-red-500'}`,
                 id: 'email',
                 type: 'email',
                 name: 'email',
-                placeholder: 'jan.novak@example.com',
+                placeholder: 'Zadajte svoju e-mailovú adresu',
                 value: formData.email,
                 onChange: handleInputChange,
             }),
@@ -285,7 +287,7 @@ const App = () => {
                 id: 'password',
                 type: 'password',
                 name: 'password',
-                placeholder: '********',
+                placeholder: 'Zvoľte si heslo',
                 value: formData.password,
                 onChange: handleInputChange,
             }),
@@ -304,6 +306,26 @@ const App = () => {
                 React.createElement('p', { className: `flex items-center ${passwordChecks.number ? 'text-green-500' : 'text-red-500'}` },
                     React.createElement('span', { className: 'mr-1' }, passwordChecks.number ? '✓' : '✗'), ' Číslica'
                 )
+            )
+        ),
+        // Confirm Password
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'confirmPassword' }, 'Potvrdiť heslo'),
+            React.createElement('input', {
+                className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${formData.password === formData.confirmPassword && formData.confirmPassword !== '' ? '' : 'border-red-500'}`,
+                id: 'confirmPassword',
+                type: 'password',
+                name: 'confirmPassword',
+                placeholder: 'Potvrďte heslo',
+                value: formData.confirmPassword,
+                onChange: handleInputChange,
+            }),
+            (formData.password !== formData.confirmPassword && formData.confirmPassword !== '') && React.createElement(
+                'p',
+                { className: 'text-red-500 text-xs italic mt-1' },
+                'Heslá sa nezhodujú.'
             )
         ),
         // Gender and Birth Date
