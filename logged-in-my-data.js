@@ -107,6 +107,10 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 return '#b06835';
             case 'club':
                 return '#9333EA';
+            case 'referee':
+                return '#007800';
+            case 'volunteer':
+                return '#FFAC1C';
             default:
                 return '#1D4ED8';
         }
@@ -123,6 +127,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 return 'Klub';
             case 'referee':
                 return 'Rozhodca';
+            case 'volunteer':
+                return 'Dobrovoľník';
             case 'hall':
                 return 'Športová hala';
             default:
@@ -188,11 +194,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, phoneLabel),
                 React.createElement('div', { className: 'font-normal' }, formatPhoneNumber(userProfileData.contactPhoneNumber))
-            ),
-            userProfileData.role === 'referee' &&
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Licencia Rozhodcu'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.refereeLicense)
             ),
             userProfileData.club && userProfileData.club !== '' &&
             React.createElement('div', null,
