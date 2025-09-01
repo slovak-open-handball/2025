@@ -1,4 +1,3 @@
-import './authentication.js';
 // volunteer-register.js
 // Obsahuje logiku pre registráciu dobrovoľníkov
 
