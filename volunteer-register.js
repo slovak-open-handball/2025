@@ -30,6 +30,72 @@ const isValidEmail = (email) => {
     return emailRegex.test(email);
 };
 
+// Komponent pre modálne okno s predvoľbami
+const DialCodeModal = ({ isOpen, onClose, onSelect }) => {
+    const [filter, setFilter] = React.useState('');
+
+    const filteredCodes = countryDialCodes.filter(country =>
+        country.name.toLowerCase().includes(filter.toLowerCase()) ||
+        country.dialCode.includes(filter) ||
+        country.code.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col' },
+            React.createElement(
+                'div',
+                { className: 'p-4 border-b flex justify-between items-center' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Vybrať predvoľbu'),
+                React.createElement(
+                    'button',
+                    { onClick: onClose, className: 'text-gray-500 hover:text-gray-700' },
+                    React.createElement('span', { className: 'text-2xl' }, '×')
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'p-4 border-b' },
+                React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'Hľadať krajinu alebo kód...',
+                    className: 'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]',
+                    value: filter,
+                    onChange: (e) => setFilter(e.target.value),
+                })
+            ),
+            React.createElement(
+                'div',
+                { className: 'overflow-y-auto flex-grow' },
+                React.createElement(
+                    'ul',
+                    { className: 'divide-y divide-gray-200' },
+                    filteredCodes.map((country, index) =>
+                        React.createElement(
+                            'li',
+                            {
+                                key: index,
+                                className: 'py-2 px-4 hover:bg-gray-100 cursor-pointer transition-colors duration-150',
+                                onClick: () => {
+                                    onSelect(country.dialCode);
+                                    onClose();
+                                }
+                            },
+                            React.createElement('span', { className: 'font-semibold text-gray-800' }, country.name),
+                            React.createElement('span', { className: 'ml-2 text-gray-500' }, `(${country.dialCode})`)
+                        )
+                    )
+                )
+            )
+        )
+    );
+};
+
 // Hlavný komponent React aplikácie
 function App() {
     const [formData, setFormData] = React.useState({
@@ -41,6 +107,7 @@ function App() {
         phone: '',
     });
     const [selectedDialCode, setSelectedDialCode] = React.useState('+421');
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [formErrors, setFormErrors] = React.useState({});
     const [isFormValid, setIsFormValid] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -85,8 +152,8 @@ function App() {
         setFormData(prev => ({ ...prev, phone: formattedPhone }));
     };
 
-    const handleDialCodeChange = (e) => {
-        setSelectedDialCode(e.target.value);
+    const handleDialCodeSelect = (dialCode) => {
+        setSelectedDialCode(dialCode);
     };
 
     const handleSubmit = async (e) => {
@@ -266,13 +333,13 @@ function App() {
                     required: true,
                     autoComplete: 'new-password'
                 }),
-                // Nový textový indikátor sily hesla
+                // Indikátor sily hesla
                 React.createElement(
                     'div',
                     { className: 'mt-2 text-sm italic text-gray-500' },
                     React.createElement(
                         'p',
-                        { className: 'mb-1 text-gray-700' },
+                        { className: 'mb-1 text-gray-700 font-bold' },
                         'Heslo musí obsahovať:'
                     ),
                     React.createElement(
@@ -332,7 +399,7 @@ function App() {
                     'Heslá sa nezhodujú'
                 )
             ),
-            // Telefónne číslo s predvoľbou
+            // Telefónne číslo s tlačidlom pre predvoľbu
             React.createElement(
                 'div',
                 null,
@@ -345,19 +412,13 @@ function App() {
                     'div',
                     { className: 'flex items-center space-x-2' },
                     React.createElement(
-                        'select',
+                        'button',
                         {
-                            className: 'shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-                            value: selectedDialCode,
-                            onChange: handleDialCodeChange,
+                            type: 'button',
+                            onClick: () => setIsModalOpen(true),
+                            className: 'flex-shrink-0 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out'
                         },
-                        countryDialCodes.map((country, index) =>
-                            React.createElement(
-                                'option',
-                                { key: index, value: country.dialCode },
-                                `${country.name} (${country.dialCode})`
-                            )
-                        )
+                        selectedDialCode
                     ),
                     React.createElement('input', {
                         className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
@@ -390,6 +451,14 @@ function App() {
                     isSubmitting ? 'Registrujem...' : 'Registrovať sa'
                 )
             )
+        ),
+        React.createElement(
+            DialCodeModal,
+            {
+                isOpen: isModalOpen,
+                onClose: () => setIsModalOpen(false),
+                onSelect: handleDialCodeSelect
+            }
         )
     );
 }
