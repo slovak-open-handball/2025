@@ -132,7 +132,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
       { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
       React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, `Zmeniť rolu pre ${user.firstName} ${user.lastName}`),
       React.createElement('div', { className: 'mb-4' },
-        ['admin', 'user', 'hall'].map(role =>
+        ['admin', 'club', 'hall'].map(role =>
           React.createElement('div', { key: role, className: 'flex items-center mb-2' },
             React.createElement('input', {
               type: 'radio',
@@ -224,12 +224,12 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
                 React.createElement('div', { className: 'flex items-center mb-2' },
                     React.createElement('input', {
                         type: 'checkbox',
-                        id: 'filter-user',
-                        checked: selectedRoles.includes('user'),
-                        onChange: () => handleRoleChange('user'),
+                        id: 'filter-club',
+                        checked: selectedRoles.includes('club'),
+                        onChange: () => handleRoleChange('ckub'),
                         className: 'form-checkbox h-4 w-4 text-indigo-600'
                     }),
-                    React.createElement('label', { htmlFor: 'filter-user', className: 'ml-2 text-gray-700' }, 'Používateľ')
+                    React.createElement('label', { htmlFor: 'filter-club', className: 'ml-2 text-gray-700' }, 'Klub')
                 )
             ),
             React.createElement('div', { className: 'flex justify-end' },
@@ -371,8 +371,8 @@ function UsersManagementApp() {
     switch (role) {
       case 'admin':
         return 'Administrátor';
-      case 'user':
-        return 'Používateľ';
+      case 'club':
+        return 'Klub';
       case 'hall':
         return 'Športová hala';
       default:
@@ -452,7 +452,7 @@ function UsersManagementApp() {
                 if (Object.keys(docToUpdate).length > 0) {
                     await updateDoc(doc(db, `users`, userData.id), docToUpdate);
                 }
-            } else if (userData.role === 'user') {
+            } else if (userData.role === 'club') {
                 let needsUpdate = false;
                 if (!userData.dataEditDeadline) {
                     userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
@@ -540,7 +540,7 @@ function UsersManagementApp() {
       if (newRole === 'admin' || newRole === 'hall') {
           updateData.dataEditDeadline = deleteField();
           updateData.rosterEditDeadline = deleteField();
-      } else if (newRole === 'user') {
+      } else if (newRole === 'club') {
            updateData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
            updateData.rosterEditDeadline = DEFAULT_ROSTER_EDIT_DEADLINE;
       }
@@ -682,7 +682,7 @@ function UsersManagementApp() {
               return '#47b3ff';
           case 'hall':
               return '#b06835';
-          case 'user':
+          case 'club':
               return '#9333EA';
           default:
               return '#1D4ED8';
@@ -698,8 +698,8 @@ function UsersManagementApp() {
               return 'Administrátor';
           case 'hall':
               return 'Športová hala';
-              case 'user':
-              return 'Používateľ';
+          case 'club':
+              return 'Klub';
           default:
               return role;
       }
@@ -857,9 +857,9 @@ function UsersManagementApp() {
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
                 {
-                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${user.role === 'user' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${user.role === 'club' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
                   onClick: () => {
-                    if (user.role === 'user') {
+                    if (user.role === 'club') {
                       handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline);
                     }
                   }
@@ -869,9 +869,9 @@ function UsersManagementApp() {
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
                 {
-                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${user.role === 'user' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${user.role === 'club' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
                   onClick: () => {
-                    if (user.role === 'user') {
+                    if (user.role === 'club') {
                       handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline);
                     }
                   }
