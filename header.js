@@ -220,18 +220,13 @@ const handleLogout = async () => {
     }
 };
 
-/**
- * Funkcia, ktorá vráti farbu hlavičky na základe role používateľa.
- * @param {string} role - Rola používateľa ('admin', 'hall', 'user').
- * @returns {string} Hex kód farby.
- */
 const getHeaderColorByRole = (role) => {
     switch (role) {
         case 'admin':
             return '#47b3ff';
         case 'hall':
             return '#b06835';
-        case 'user':
+        case 'club':
             return '#9333EA';
         default:
             return '#1D4ED8';
