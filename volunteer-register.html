@@ -47,7 +47,7 @@
 </head>
 <body class="bg-gray-100">
 
-    <!-- Zástupný element, kam header.js načíta obsah hlavičky -->
+    <!-- Zástupný element, kam header.js načíta obsah z header.html -->
     <div id="header-placeholder"></div>
 
     <!-- Hlavný kontajner aplikácie -->
@@ -129,8 +129,10 @@
         }
 
     </script>
-    <script type="module" src="volunteer-register.js"></script>
+
+    <!-- Načítanie hlavných JavaScript súborov ako modulov -->
     <script type="module" src="header.js"></script>
+    <script type="module" src="volunteer-register.js"></script>
     <script>
         // Spustenie aplikácie po načítaní DOM
         window.onload = function() {
