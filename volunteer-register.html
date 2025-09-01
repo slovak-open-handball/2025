@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrácia dobrovoľníkov SOH 2025</title>
+    <title>SOH 2025 - Registrácia dobrovoľníka</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <!-- Použitie Tailwind CSS pre pekné a rýchle štýly -->
+    <!-- Použitie Tailwind CSS pre jednoduché a pekné štýly -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -27,45 +27,46 @@
     <!-- Hlavný kontajner pre React aplikáciu -->
     <div id="root"></div>
 
-    <!-- Načítanie hlavných JavaScript knižníc -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Dôležité: Načítanie globálnych Firebase premenných -->
+    <script>
+        const __app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const __firebase_config = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const __initial_auth_token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    </script>
+    
+    <!-- Načítanie knižníc React a ReactDOM z CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Dôležité: authentication.js sa musí načítať ako prvý, aby nastavil globálne premenné -->
+    <!-- Načítanie súboru pre globálnu autentifikáciu a inicializáciu Firebase -->
     <script type="module" src="authentication.js"></script>
-
+    
     <!--
-        Tento skript zabezpečí, že sa volunteer-register.js načíta AŽ po tom,
-        ako je Firebase inicializovaný a pripravený na použitie.
+    Kľúčová zmena: Načítanie a vykreslenie React komponenty.
+    Používame 'type="module"' na import komponenty 'App'
+    a následne ju vykreslíme do elementu s id 'root'.
     -->
     <script type="module">
-        window.addEventListener('load', function() {
-            // Počkáme, kým globálna autentifikácia bude pripravená
-            const renderApp = () => {
-                // Skontrolujeme, či je globálny stav autentifikácie pripravený
-                if (typeof window.isGlobalAuthReady === 'undefined' || !window.isGlobalAuthReady) {
-                    // Ak nie je pripravený, skúsime to znova o chvíľu
-                    console.log("Čakám na pripravenosť globálnej autentifikácie...");
-                    setTimeout(renderApp, 100);
-                    return;
-                }
+        import { App } from './volunteer-register.js';
+        
+        // Funkcia na renderovanie aplikácie po inicializácii autentifikácie
+        const renderApp = () => {
+            if (window.isGlobalAuthReady) {
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            } else {
+                setTimeout(renderApp, 100); // Skúšame znova, kým nie je auth ready
+            }
+        };
 
-                // Ak je pripravený, dynamicky načítať modul a vykresliť aplikáciu
-                import('./volunteer-register.js')
-                    .then(module => {
-                        const root = ReactDOM.createRoot(document.getElementById('root'));
-                        root.render(React.createElement(module.App, null));
-                        console.log("volunteer-register.js bol úspešne načítaný a aplikácia vykreslená.");
-                    })
-                    .catch(error => {
-                        console.error("Chyba pri dynamickom načítaní volunteer-register.js:", error);
-                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Nastala chyba pri načítavaní aplikácie. Skúste to prosím neskôr.</div>';
-                    });
-            };
+        // Čakáme na udalosť z authentication.js, ktorá signalizuje, že je všetko pripravené
+        window.addEventListener('globalDataUpdated', renderApp);
 
-            // Spustíme proces vykresľovania
+        // Ak už je pripravené, spustíme renderovanie hneď
+        if (window.isGlobalAuthReady) {
             renderApp();
-        });
+        }
     </script>
+
 </body>
 </html>
