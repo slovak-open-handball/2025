@@ -5,8 +5,20 @@
 // Importy pre potrebné Firebase funkcie
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Import zoznamu predvolieb pre telefónne čísla
-import { countryDialCodes } from "./countryDialCodes.js";
+
+// Zoznam predvolieb pre telefónne čísla (presunuté do tohto súboru)
+const countryDialCodes = [
+    { "name": "Slovensko", "dialCode": "+421", "code": "SK" },
+    { "name": "Česká republika", "dialCode": "+420", "code": "CZ" },
+    { "name": "Poľsko", "dialCode": "+48", "code": "PL" },
+    { "name": "Maďarsko", "dialCode": "+36", "code": "HU" },
+    { "name": "Rakúsko", "dialCode": "+43", "code": "AT" },
+    { "name": "Nemecko", "dialCode": "+49", "code": "DE" },
+    { "name": "Spojené kráľovstvo", "dialCode": "+44", "code": "GB" },
+    { "name": "Spojené štáty", "dialCode": "+1", "code": "US" },
+    { "name": "Ukrajina", "dialCode": "+380", "code": "UA" },
+    { "name": "Srbsko", "dialCode": "+381", "code": "RS" },
+];
 
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
@@ -21,11 +33,6 @@ const passwordStrengthCheck = (password) => {
 
 // Pomocná funkcia na validáciu emailu podľa špecifických požiadaviek
 const isValidEmail = (email) => {
-    // Regex, ktorý spĺňa požiadavky:
-    // 1. Musí obsahovať znak "@"
-    // 2. Za "@" nasleduje aspoň jeden znak
-    // 3. Potom nasleduje znak "."
-    // 4. Za "." nasledujú aspoň dva znaky
     const emailRegex = /^[^@]+@[^@]+\.[^@]{2,}$/;
     return emailRegex.test(email);
 };
@@ -136,7 +143,7 @@ function App() {
             !!formData.email &&
             !!formData.password &&
             !!formData.confirmPassword &&
-            !!formData.phone && // Telefónne číslo je teraz povinné
+            !!formData.phone &&
             Object.keys(errors).length === 0
         );
     }, [formData]);
@@ -147,7 +154,6 @@ function App() {
     };
 
     const handlePhoneChange = (e) => {
-        // Odstránenie všetkých nečíslic
         const formattedPhone = e.target.value.replace(/[^0-9+]/g, '');
         setFormData(prev => ({ ...prev, phone: formattedPhone }));
     };
@@ -163,7 +169,6 @@ function App() {
         setIsSubmitting(true);
 
         try {
-            // Použijeme globálne `auth` a `db` z `authentication.js`
             const auth = window.auth;
             const db = window.db;
 
@@ -171,15 +176,12 @@ function App() {
                 throw new Error("Služby Firebase nie sú inicializované. Skúste obnoviť stránku.");
             }
 
-            // 1. Vytvorenie používateľa v Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
             const user = userCredential.user;
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-            // 2. Uloženie profilu používateľa do Firestore v súkromnej kolekcii
             const userProfileRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`, user.uid);
             
-            // Kombinácia predvoľby a telefónneho čísla
             const fullPhoneNumber = `${selectedDialCode}${formData.phone.startsWith('+') ? formData.phone.slice(1) : formData.phone}`;
 
             const userProfileData = {
@@ -188,7 +190,7 @@ function App() {
                 name: formData.name,
                 surname: formData.surname,
                 phone: fullPhoneNumber,
-                role: 'volunteer', // Priradená rola 'volunteer'
+                role: 'volunteer',
                 createdAt: serverTimestamp(),
             };
 
@@ -214,7 +216,6 @@ function App() {
         }
     };
 
-    // Dynamické triedy pre tlačidlo na základe stavu
     const buttonClasses = isSubmitting || !isFormValid ?
         'w-full sm:w-auto bg-white text-[#1D4ED8] border border-[#1D4ED8] font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline cursor-not-allowed' :
         'w-full sm:w-auto bg-[#1D4ED8] text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-105';
