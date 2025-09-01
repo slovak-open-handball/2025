@@ -144,7 +144,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
             React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' },
-              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Klub'
+              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : role === 'club' ? 'Klub' : role === 'referee' ? 'Rozhodca' : role === 'volunteer' ? 'Dobrovoľník'
             )
           )
         )
