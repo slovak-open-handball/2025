@@ -311,6 +311,12 @@ function App() {
                     'p',
                     { className: 'text-red-500 text-xs italic mt-1' },
                     'Zadajte platnú e-mailovú adresu.'
+                ),
+                // Pridaný text pod e-mailovým políčkom
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-gray-500 mt-2 italic' },
+                    'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.'
                 )
             ),
             // Heslo
