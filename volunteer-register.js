@@ -2,11 +2,20 @@
 // Zahŕňa formulár, validáciu a ukladanie dát do Firestore.
 
 // Importy pre potrebné Firebase funkcie
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, setDoc, serverTimestamp, getFirestore, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb z externého súboru
 import { countryDialCodes } from "./countryDialCodes.js";
+
+// Inicializácia Firebase pomocou globálnych premenných, ak ešte nebola vykonaná
+if (!window.firebaseApp) {
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    window.firebaseApp = initializeApp(firebaseConfig);
+    window.db = getFirestore(window.firebaseApp);
+    window.auth = getAuth(window.firebaseApp);
+}
 
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
@@ -99,11 +108,11 @@ const App = () => {
         lastName: '',
         email: '',
         password: '',
-        confirmPassword: '', // Nové pole pre potvrdenie hesla
+        confirmPassword: '',
         phone: '',
         gender: '',
         birthDate: '',
-        tshirtSize: '', // Nové pole pre veľkosť trička
+        tshirtSize: '',
         acceptTerms: false,
     });
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -113,12 +122,31 @@ const App = () => {
     const [selectedDialCode, setSelectedDialCode] = React.useState({ name: 'Slovenská republika', code: 'SK', dialCode: '+421' });
     const [tshirtSizes, setTshirtSizes] = React.useState([]);
     const [isSizesLoading, setIsSizesLoading] = React.useState(true);
+    const [isAuthReady, setIsAuthReady] = React.useState(false);
 
-    // Načítanie veľkostí tričiek z Firestore po prvom načítaní komponentu
+    // Inicializácia Firebase a overenie prihlásenia používateľa
     React.useEffect(() => {
-        const fetchTshirtSizes = async () => {
-            const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
-            const db = getFirestore(window.firebaseApp);
+        const initFirebaseAndFetchSizes = async () => {
+            const auth = window.auth;
+            const db = window.db;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+            try {
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                setIsAuthReady(true);
+                console.log("Používateľ úspešne prihlásený. Začínam načítavať veľkosti tričiek.");
+            } catch (error) {
+                console.error("Chyba pri overovaní používateľa:", error);
+                setIsAuthReady(false);
+                setIsSizesLoading(false);
+                return;
+            }
+
+            // Načítanie veľkostí tričiek až po overení používateľa
             const docRef = doc(db, `artifacts/${appId}/public/data/settings/sizeTshirts`);
 
             const unsubscribe = onSnapshot(docRef, (docSnap) => {
@@ -140,9 +168,8 @@ const App = () => {
             return () => unsubscribe();
         };
 
-        fetchTshirtSizes();
+        initFirebaseAndFetchSizes();
     }, []);
-
 
     // Function to handle form input changes
     const handleInputChange = (e) => {
@@ -156,7 +183,6 @@ const App = () => {
     // Function to handle phone number changes
     const handlePhoneChange = (e) => {
         const { value } = e.target;
-        // Allows only digits and spaces, formats into blocks of 3
         const formatted = value.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 ');
         setFormData(prev => ({ ...prev, phone: formatted }));
     };
@@ -173,16 +199,13 @@ const App = () => {
         setSuccessMessage(null);
         setIsSubmitting(true);
 
-        // Concatenate full phone number
         const fullPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
 
         try {
-            // Create user with email and password
             const authResult = await createUserWithEmailAndPassword(window.auth, formData.email, formData.password);
             const user = authResult.user;
             console.log("Používateľ úspešne vytvorený:", user.uid);
 
-            // Save form data to Firestore
             await setDoc(doc(window.db, `artifacts/${window.appId}/users/${user.uid}/volunteer-data/registration`), {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
@@ -210,7 +233,6 @@ const App = () => {
 
         } catch (error) {
             console.error("Chyba pri registrácii:", error);
-            // Translate common Firebase errors for user
             let errorMessage = "Chyba pri registrácii. Skúste to prosím znova.";
             if (error.code === 'auth/email-already-in-use') {
                 errorMessage = "Tento e-mail už je použitý. Prosím, použite iný.";
@@ -231,7 +253,7 @@ const App = () => {
         formData.lastName &&
         isValidEmail(formData.email) &&
         isPasswordValid &&
-        formData.phone.replace(/\s/g, '').length >= 9 && // Simple check for phone length
+        formData.phone.replace(/\s/g, '').length >= 9 &&
         formData.gender &&
         formData.birthDate &&
         formData.tshirtSize &&
