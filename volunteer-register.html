@@ -24,10 +24,16 @@
 </head>
 <body>
 
+    <!-- Zástupný element, kam header.js načíta obsah header.html -->
+    <div id="header-placeholder"></div>
+
     <!-- Hlavný kontajner pre React aplikáciu -->
     <div id="root"></div>
 
-    <!-- Dôležité: Načítanie globálnych Firebase premenných -->
+    <!--
+        Dôležité: Načítanie globálnych Firebase premenných
+        Tento skript musí byť úplne prvý, aby boli premenné dostupné pre všetky ostatné moduly.
+    -->
     <script>
         const __app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const __firebase_config = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
@@ -38,14 +44,14 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
+    <!-- Načítanie súborov pre hlavičku -->
+    <script type="text/javascript" src="header.js"></script>
+    <div id="header-placeholder" style="display: none;"></div>
+
     <!-- Načítanie súboru pre globálnu autentifikáciu a inicializáciu Firebase -->
     <script type="module" src="authentication.js"></script>
     
-    <!--
-    Kľúčová zmena: Načítanie a vykreslenie React komponenty.
-    Používame 'type="module"' na import komponenty 'App'
-    a následne ju vykreslíme do elementu s id 'root'.
-    -->
+    <!-- Načítanie a vykreslenie React komponenty -->
     <script type="module">
         import { App } from './volunteer-register.js';
         
@@ -67,6 +73,5 @@
             renderApp();
         }
     </script>
-
 </body>
 </html>
