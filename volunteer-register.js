@@ -309,8 +309,19 @@ const App = () => {
     const unlockedButtonColor = 'bg-blue-600 hover:bg-blue-700 text-white';
     const lockedButtonColor = 'bg-gray-400 text-gray-700 cursor-not-allowed';
     const buttonClasses = `mt-6 font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition-all duration-300 ${isFormValid ? unlockedButtonColor : lockedButtonColor}`;
-
-    const volunteerLabel = formData.gender === 'female' ? 'Môžem byť nápomocná' : 'Môžem byť nápomocný';
+    
+    // Zistite správny popisok na základe vybraného pohlavia
+    const getVolunteerLabel = () => {
+        if (formData.gender === 'female') {
+            return 'Môžem byť nápomocná';
+        } else if (formData.gender === 'male') {
+            return 'Môžem byť nápomocný';
+        } else {
+            return 'Môžem byť nápomocná/ý';
+        }
+    };
+    
+    const volunteerLabel = getVolunteerLabel();
 
     // Main component rendering
     return React.createElement(
@@ -480,7 +491,7 @@ const App = () => {
             )
         ),
         // Volunteer Roles
-        formData.gender !== '' && React.createElement(
+        React.createElement(
             'div',
             { className: 'mb-4' },
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, volunteerLabel),
