@@ -180,6 +180,11 @@ function App() {
         }
     };
 
+    // Dynamické triedy pre tlačidlo na základe stavu
+    const buttonClasses = isSubmitting || !isFormValid ?
+        'w-full sm:w-auto bg-white text-[#1D4ED8] border border-[#1D4ED8] font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline cursor-not-allowed' :
+        'w-full sm:w-auto bg-[#1D4ED8] text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-105';
+
     // UI pre registračný formulár
     return React.createElement(
         'div',
@@ -256,7 +261,7 @@ function App() {
                 React.createElement(
                     'label',
                     { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' },
-                    'Email'
+                    'E-mailová adresa'
                 ),
                 React.createElement('input', {
                     className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${formData.email && !isValidEmail(formData.email) ? 'border-red-500' : ''}`,
@@ -344,7 +349,7 @@ function App() {
                     'button',
                     {
                         type: 'submit',
-                        className: `w-full sm:w-auto bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform ${isSubmitting || !isFormValid ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`,
+                        className: buttonClasses,
                         disabled: isSubmitting || !isFormValid
                     },
                     isSubmitting ? 'Registrujem...' : 'Registrovať sa'
