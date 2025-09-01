@@ -132,7 +132,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
       { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
       React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, `Zmeniť rolu pre ${user.firstName} ${user.lastName}`),
       React.createElement('div', { className: 'mb-4' },
-        ['admin', 'club', 'hall'].map(role =>
+        ['admin', 'hall', 'club', 'referee', 'volunteer'].map(role =>
           React.createElement('div', { key: role, className: 'flex items-center mb-2' },
             React.createElement('input', {
               type: 'radio',
