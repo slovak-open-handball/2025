@@ -22,10 +22,15 @@ const passwordStrengthCheck = (password) => {
     return { ...checks, strength };
 };
 
-// Pomocná funkcia na validáciu emailu
+// Pomocná funkcia na validáciu emailu podľa špecifických požiadaviek
 const isValidEmail = (email) => {
-    // Regex pre overenie platného formátu emailu
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    // Regex, ktorý spĺňa požiadavky:
+    // 1. Musí obsahovať znak "@"
+    // 2. Za "@" nasleduje aspoň jeden znak
+    // 3. Potom nasleduje znak "."
+    // 4. Za "." nasledujú aspoň dva znaky
+    const emailRegex = /^[^@]+@[^@]+\.[^@]{2,}$/;
+    return emailRegex.test(email);
 };
 
 // Komponent pre zobrazenie sily hesla
@@ -78,7 +83,7 @@ function PasswordStrengthIndicator({ password }) {
 function App() {
     const [formData, setFormData] = React.useState({
         name: '',
-        surname: '', // Pridané pole pre priezvisko
+        surname: '',
         email: '',
         password: '',
         confirmPassword: '',
@@ -95,12 +100,19 @@ function App() {
         const errors = {};
         if (!formData.name) errors.name = 'Meno je povinné.';
         if (!formData.surname) errors.surname = 'Priezvisko je povinné.';
-        if (!isValidEmail(formData.email)) errors.email = 'Zadajte platný email.';
-        if (passwordStrengthCheck(formData.password).strength < 3) errors.password = 'Heslo je príliš slabé.';
-        if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Heslá sa nezhodujú.';
-        
+        if (formData.email && !isValidEmail(formData.email)) errors.email = 'Zadajte platnú e-mailovú adresu.';
+        if (formData.password && passwordStrengthCheck(formData.password).strength < 3) errors.password = 'Heslo je príliš slabé.';
+        if (formData.confirmPassword && formData.password !== formData.confirmPassword) errors.confirmPassword = 'Heslá sa nezhodujú.';
+
         setFormErrors(errors);
-        setIsFormValid(Object.keys(errors).length === 0 && formData.name && formData.surname && formData.email && formData.password && formData.confirmPassword);
+        setIsFormValid(
+            !!formData.name &&
+            !!formData.surname &&
+            !!formData.email &&
+            !!formData.password &&
+            !!formData.confirmPassword &&
+            Object.keys(errors).length === 0
+        );
     }, [formData]);
 
     const handleInputChange = (e) => {
@@ -128,7 +140,7 @@ function App() {
             if (!auth || !db) {
                 throw new Error("Služby Firebase nie sú inicializované. Skúste obnoviť stránku.");
             }
-            
+
             // 1. Vytvorenie používateľa v Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
             const user = userCredential.user;
@@ -247,7 +259,7 @@ function App() {
                     'Email'
                 ),
                 React.createElement('input', {
-                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                    className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${formData.email && !isValidEmail(formData.email) ? 'border-red-500' : ''}`,
                     id: 'email',
                     type: 'email',
                     name: 'email',
@@ -255,7 +267,12 @@ function App() {
                     value: formData.email,
                     onChange: handleInputChange,
                     required: true,
-                })
+                }),
+                formData.email && !isValidEmail(formData.email) && React.createElement(
+                    'p',
+                    { className: 'text-red-500 text-xs italic mt-1' },
+                    'Zadajte platnú e-mailovú adresu.'
+                )
             ),
             // Heslo
             React.createElement(
