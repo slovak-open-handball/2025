@@ -3,7 +3,7 @@
 
 // Importy pre potrebné Firebase funkcie
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp, getFirestore, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb z externého súboru
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -103,6 +103,7 @@ const App = () => {
         phone: '',
         gender: '',
         birthDate: '',
+        tshirtSize: '', // Nové pole pre veľkosť trička
         acceptTerms: false,
     });
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -110,6 +111,38 @@ const App = () => {
     const [successMessage, setSuccessMessage] = React.useState(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [selectedDialCode, setSelectedDialCode] = React.useState({ name: 'Slovenská republika', code: 'SK', dialCode: '+421' });
+    const [tshirtSizes, setTshirtSizes] = React.useState([]);
+    const [isSizesLoading, setIsSizesLoading] = React.useState(true);
+
+    // Načítanie veľkostí tričiek z Firestore po prvom načítaní komponentu
+    React.useEffect(() => {
+        const fetchTshirtSizes = async () => {
+            const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
+            const db = getFirestore(window.firebaseApp);
+            const docRef = doc(db, `artifacts/${appId}/public/data/settings/sizeTshirts`);
+
+            const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data && data.sizes && Array.isArray(data.sizes)) {
+                        setTshirtSizes(data.sizes);
+                    } else {
+                        console.error("Dokument veľkostí tričiek neobsahuje pole 'sizes' alebo má nesprávny formát.");
+                    }
+                } else {
+                    console.log("Dokument veľkostí tričiek nebol nájdený!");
+                }
+                setIsSizesLoading(false);
+            }, (error) => {
+                console.error("Chyba pri načítavaní veľkostí tričiek:", error);
+                setIsSizesLoading(false);
+            });
+            return () => unsubscribe();
+        };
+
+        fetchTshirtSizes();
+    }, []);
+
 
     // Function to handle form input changes
     const handleInputChange = (e) => {
@@ -157,6 +190,7 @@ const App = () => {
                 fullPhoneNumber: fullPhoneNumber,
                 gender: formData.gender,
                 birthDate: formData.birthDate,
+                tshirtSize: formData.tshirtSize,
                 registrationDate: serverTimestamp(),
             });
 
@@ -170,6 +204,7 @@ const App = () => {
                 phone: '',
                 gender: '',
                 birthDate: '',
+                tshirtSize: '',
                 acceptTerms: false,
             });
 
@@ -199,6 +234,7 @@ const App = () => {
         formData.phone.replace(/\s/g, '').length >= 9 && // Simple check for phone length
         formData.gender &&
         formData.birthDate &&
+        formData.tshirtSize &&
         formData.acceptTerms;
 
     const unlockedButtonColor = 'bg-blue-600 hover:bg-blue-700 text-white';
@@ -370,6 +406,29 @@ const App = () => {
                     value: formData.birthDate,
                     onChange: handleInputChange,
                 }),
+            )
+        ),
+        // T-shirt size
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'tshirtSize' }, 'Veľkosť trička'),
+            React.createElement(
+                'select',
+                {
+                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                    id: 'tshirtSize',
+                    name: 'tshirtSize',
+                    value: formData.tshirtSize,
+                    onChange: handleInputChange,
+                    disabled: isSizesLoading,
+                },
+                isSizesLoading
+                    ? React.createElement('option', { value: '' }, 'Načítavam veľkosti...')
+                    : React.createElement('option', { value: '' }, 'Vyberte veľkosť...'),
+                tshirtSizes.map(size =>
+                    React.createElement('option', { key: size, value: size }, size)
+                )
             )
         ),
         // Phone
