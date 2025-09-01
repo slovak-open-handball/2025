@@ -132,7 +132,7 @@ const App = () => {
         const fetchTshirtSizes = () => {
             const db = window.db;
             const appId = window.__app_id || 'default-app-id';
-            const docRef = doc(db, `artifacts/${appId}/public/data/settings/sizeTshirts`);
+            const docRef = doc(db, `/settings/sizeTshirts`);
 
             const unsubscribe = onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
