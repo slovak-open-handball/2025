@@ -123,7 +123,7 @@ const App = () => {
     });
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [authError, setAuthError] = React.useState(null);
-    const [successMessage, setSuccessMessage] = React.useState(null);
+    const [success, setSuccess] = React.useState(false);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [selectedDialCode, setSelectedDialCode] = React.useState({ name: 'Slovenská republika', code: 'SK', dialCode: '+421' });
     const [tshirtSizes, setTshirtSizes] = React.useState([]);
@@ -237,7 +237,6 @@ const App = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setAuthError(null);
-        setSuccessMessage(null);
         setIsSubmitting(true);
 
         const fullPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
@@ -265,7 +264,7 @@ const App = () => {
                 registrationDate: serverTimestamp(),
             });
 
-            setSuccessMessage("Registrácia bola úspešná! Ďakujeme.");
+            setSuccess(true);
             setFormData({
                 firstName: '',
                 lastName: '',
@@ -309,7 +308,7 @@ const App = () => {
         formData.acceptTerms;
 
     const unlockedButtonColor = 'bg-blue-600 hover:bg-blue-700 text-white';
-    const lockedButtonColor = 'bg-white text-blue-600 border border-blue-600 cursor-not-allowed'
+    const lockedButtonColor = 'bg-white text-blue-600 border border-blue-600 cursor-not-allowed';
     const buttonClasses = `mt-6 font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition-all duration-300 ${isFormValid ? unlockedButtonColor : lockedButtonColor}`;
     
     // Zistite správny popisok na základe vybraného pohlavia
@@ -324,6 +323,23 @@ const App = () => {
     };
     
     const volunteerLabel = getVolunteerLabel();
+    
+    // Render
+    if (success) {
+        return React.createElement(
+            'div',
+            {
+                className: 'bg-green-500 text-white p-8 rounded-lg shadow-lg w-full max-w-xl mx-auto flex items-center justify-center h-96'
+            },
+            React.createElement(
+                'p',
+                {
+                    className: 'text-2xl font-bold text-center'
+                },
+                'Ďakujeme za vyplnenie prihlášky dobrovoľníka. Budeme Vás pred turnajom kontaktovať :)'
+            )
+        );
+    }
 
     // Main component rendering
     return React.createElement(
@@ -338,12 +354,6 @@ const App = () => {
             { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg', role: 'alert' },
             React.createElement('p', { className: 'font-bold' }, 'Chyba'),
             React.createElement('p', null, authError)
-        ),
-        successMessage && React.createElement(
-            'div',
-            { className: 'bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-lg', role: 'alert' },
-            React.createElement('p', { className: 'font-bold' }, 'Úspešné!'),
-            React.createElement('p', null, successMessage)
         ),
         // Heading
         React.createElement('h2', { className: 'text-2xl font-bold mb-6 text-center text-gray-800' }, 'Registrácia dobrovoľníka'),
