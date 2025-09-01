@@ -116,10 +116,12 @@ const callGoogleAppsScript = async (data) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          action: "sendVolunteerRegistrationEmail",
+          ...data,
+        }),
       }
     );
-    // V režime no-cors nemôžete čítať odpoveď, takže sa tu len uistite, že volanie prebehlo
     console.log("Request sent successfully");
   } catch (error) {
     console.error("Error calling Google Apps Script:", error);
@@ -258,14 +260,12 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   setAuthError(null);
   setIsSubmitting(true);
-
   const fullPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
 
   try {
     const auth = window.auth;
     const db = window.db;
     const appId = window.__app_id || 'default-app-id';
-
     const authResult = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
     const user = authResult.user;
 
@@ -284,9 +284,8 @@ const handleSubmit = async (e) => {
       volunteerRoles: formData.volunteerRoles,
       registrationDate: serverTimestamp(),
     });
-
+      
     setSuccess(true);
-
     setFormData({
       firstName: '',
       lastName: '',
@@ -306,11 +305,9 @@ const handleSubmit = async (e) => {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
-      fullPhoneNumber: fullPhoneNumber,
-      gender: formData.gender,
-      birthDate: formData.birthDate,
-      tshirtSize: formData.tshirtSize,
-      volunteerRoles: formData.volunteerRoles,
+      contactPhoneNumber: fullPhoneNumber,
+      dateOfBirth: formData.birthDate,
+      skills: formData.volunteerRoles,
     });
       
   } catch (error) {
