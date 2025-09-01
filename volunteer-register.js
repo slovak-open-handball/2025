@@ -131,8 +131,7 @@ const App = () => {
 
         const fetchTshirtSizes = () => {
             const db = window.db;
-            const appId = window.__app_id || 'default-app-id';
-            const docRef = doc(db, `/settings/sizeTshirts`);
+            const docRef = doc(db, 'settings/sizeTshirts');
 
             const unsubscribe = onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -459,9 +458,19 @@ const App = () => {
                     {
                         type: 'button',
                         onClick: () => setIsModalOpen(true),
-                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-3 rounded-l-lg border-t border-b border-l border-gray-300 focus:outline-none transition-all duration-300'
+                        className: 'bg-white hover:bg-gray-100 text-gray-700 font-semibold py-2 px-3 rounded-l-lg border-t border-b border-l border-gray-300 focus:outline-none transition-all duration-300 flex items-center justify-between gap-2'
                     },
-                    selectedDialCode.dialCode
+                    React.createElement('span', null, selectedDialCode.dialCode),
+                    React.createElement('svg', {
+                        xmlns: "http://www.w3.org/2000/svg",
+                        className: "h-4 w-4 text-gray-500",
+                        viewBox: "0 0 20 20",
+                        fill: "currentColor"
+                    }, React.createElement('path', {
+                        fillRule: "evenodd",
+                        d: "M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z",
+                        clipRule: "evenodd"
+                    }))
                 ),
                 React.createElement('input', {
                     className: 'shadow appearance-none border rounded-r-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
