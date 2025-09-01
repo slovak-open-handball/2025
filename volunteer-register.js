@@ -258,6 +258,11 @@ function App() {
                     'div',
                     { className: 'mt-2 text-sm italic text-gray-500' },
                     React.createElement(
+                        'p',
+                        { className: 'mb-1' },
+                        'Heslo musí obsahovať:'
+                    ),
+                    React.createElement(
                         'ul',
                         { className: 'list-none p-0 m-0 space-y-1' },
                         React.createElement(
