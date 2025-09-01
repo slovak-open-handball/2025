@@ -14,15 +14,15 @@
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
             margin: 0;
-            padding: 2rem;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            box-sizing: border-box;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            flex-direction: column;
             min-height: 100vh;
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- Zástupný element, kam header.js načíta obsah header.html -->
     <div id="header-placeholder"></div>
@@ -46,8 +46,7 @@
 
     <!-- Načítanie súborov pre hlavičku -->
     <script type="text/javascript" src="header.js"></script>
-    <div id="header-placeholder" style="display: none;"></div>
-
+    
     <!-- Načítanie súboru pre globálnu autentifikáciu a inicializáciu Firebase -->
     <script type="module" src="authentication.js"></script>
     
