@@ -182,11 +182,29 @@ const App = () => {
         }));
     };
 
-    // Function to handle phone number changes
+    // Function to handle phone number changes and maintain cursor position
     const handlePhoneChange = (e) => {
-        const { value } = e.target;
-        const formatted = value.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 ');
-        setFormData(prev => ({ ...prev, phone: formatted }));
+        const input = e.target;
+        const { value, selectionStart } = input;
+        
+        // Remove all non-digit characters from the new value
+        const cleanedValue = value.replace(/\D/g, '');
+        
+        // Format the new value with spaces
+        const formattedValue = cleanedValue.replace(/(\d{3})(?=\d)/g, '$1 ');
+        
+        // Calculate the number of spaces removed or added
+        const spacesBefore = (value.slice(0, selectionStart).match(/\s/g) || []).length;
+        const spacesAfter = (formattedValue.slice(0, selectionStart).match(/\s/g) || []).length;
+        const spaceDiff = spacesAfter - spacesBefore;
+        
+        setFormData(prev => ({ ...prev, phone: formattedValue }));
+        
+        // Use a small delay to allow the state to update before setting the cursor
+        setTimeout(() => {
+            input.selectionStart = selectionStart + spaceDiff;
+            input.selectionEnd = selectionStart + spaceDiff;
+        }, 0);
     };
 
     // Function to handle dial code selection from modal
