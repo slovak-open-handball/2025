@@ -1,386 +1,70 @@
-// volunteer-register.js (upravený, teraz používa globálne Firebase inštancie a je modul)
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-const RECAPTCHA_SITE_KEY = "6LekXLgrAAAAAB6HYeGZG-tu_N42DER2fh1aVBjF";
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
-
-// Funkcia na overenie sily hesla
-const validatePassword = (password) => {
-    const minLength = password.length >= 8;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    return {
-        minLength,
-        hasUpperCase,
-        hasLowerCase,
-        hasNumber,
-        hasSpecialChar,
-        isValid: minLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar
-    };
-};
-
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) {
-    const [passwordFocused, setPasswordFocused] = React.useState(false);
-
-    const isPasswordValid = validationStatus.isValid;
-    const inputClasses = `
-        mt-1 block w-full px-4 py-2 border rounded-md shadow-sm
-        ${isPasswordValid ? 'border-green-400 focus:ring-green-500 focus:border-green-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}
-        ${disabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white'}
-    `;
-
-    return React.createElement(
-        'div',
-        { className: 'mb-4' },
-        React.createElement(
-            'label',
-            { htmlFor: id, className: 'block text-sm font-medium text-gray-700' },
-            label
-        ),
-        React.createElement(
-            'div',
-            { className: 'relative' },
-            React.createElement('input', {
-                type: showPassword ? 'text' : 'password',
-                id: id,
-                name: id,
-                value: value,
-                onChange: onChange,
-                placeholder: placeholder,
-                autoComplete: autoComplete,
-                onCopy: onCopy,
-                onPaste: onPaste,
-                onCut: onCut,
-                disabled: disabled,
-                className: inputClasses,
-                onFocus: () => { setPasswordFocused(true); onFocus(); },
-                onBlur: () => setPasswordFocused(false)
-            }),
-            React.createElement('span',
-                {
-                    className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 cursor-pointer',
-                    onClick: toggleShowPassword
-                },
-                React.createElement('svg', {
-                    xmlns: 'http://www.w3.org/2000/svg',
-                    className: 'h-5 w-5 text-gray-400 hover:text-gray-600',
-                    fill: 'none',
-                    viewBox: '0 0 24 24',
-                    stroke: 'currentColor'
-                },
-                    React.createElement('path', {
-                        strokeLinecap: 'round',
-                        strokeLinejoin: 'round',
-                        strokeWidth: '2',
-                        d: showPassword ? 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' : 'M15 12a3 3 0 11-6 0 3 3 0 016 0z'
-                    }),
-                    React.createElement('path', {
-                        strokeLinecap: 'round',
-                        strokeLinejoin: 'round',
-                        strokeWidth: '2',
-                        d: showPassword ? 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-.417 1.157-.935 2.223-1.55 3.203' : 'M15 12a3 3 0 11-6 0 3 3 0 016 0z'
-                    }),
-                    React.createElement('path', {
-                        strokeLinecap: 'round',
-                        strokeLinejoin: 'round',
-                        strokeWidth: '2',
-                        d: showPassword ? 'M12 17c-4.478 0-8.268-2.943-9.542-7 .417-1.157.935-2.223 1.55-3.203' : 'M12 17c-4.478 0-8.268-2.943-9.542-7 .417-1.157.935-2.223 1.55-3.203'
-                    }),
-                    React.createElement('path', {
-                        strokeLinecap: 'round',
-                        strokeLinejoin: 'round',
-                        strokeWidth: '2',
-                        d: showPassword ? 'M13 14h-2M13 10h-2M16 12h-2M10 12h-2' : 'M13 14h-2M13 10h-2M16 12h-2M10 12h-2'
-                    }),
-                    React.createElement('path', {
-                        strokeLinecap: 'round',
-                        strokeLinejoin: 'round',
-                        strokeWidth: '2',
-                        d: showPassword ? 'M9.542 12C8.268 16.057 4.477 19 0 19' : 'M9.542 12C8.268 16.057 4.477 19 0 19'
-                    })
-                )
-            )
-        ),
-        passwordFocused && React.createElement(
-            'div',
-            { className: 'mt-2 text-sm text-gray-600 space-y-1 p-2 rounded-md bg-gray-50' },
-            React.createElement('p', { className: `flex items-center ${validationStatus.minLength ? 'text-green-500' : 'text-red-500'}` },
-                React.createElement('svg', { className: 'h-4 w-4 mr-2', fill: 'currentColor', viewBox: '0 0 20 20' }, React.createElement('path', { d: validationStatus.minLength ? "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" : "M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" })),
-                'Minimálne 8 znakov'
-            ),
-            React.createElement('p', { className: `flex items-center ${validationStatus.hasUpperCase ? 'text-green-500' : 'text-red-500'}` },
-                React.createElement('svg', { className: 'h-4 w-4 mr-2', fill: 'currentColor', viewBox: '0 0 20 20' }, React.createElement('path', { d: validationStatus.hasUpperCase ? "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" : "M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" })),
-                'Veľké písmeno'
-            ),
-            React.createElement('p', { className: `flex items-center ${validationStatus.hasLowerCase ? 'text-green-500' : 'text-red-500'}` },
-                React.createElement('svg', { className: 'h-4 w-4 mr-2', fill: 'currentColor', viewBox: '0 0 20 20' }, React.createElement('path', { d: validationStatus.hasLowerCase ? "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" : "M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" })),
-                'Malé písmeno'
-            ),
-            React.createElement('p', { className: `flex items-center ${validationStatus.hasNumber ? 'text-green-500' : 'text-red-500'}` },
-                React.createElement('svg', { className: 'h-4 w-4 mr-2', fill: 'currentColor', viewBox: '0 0 20 20' }, React.createElement('path', { d: validationStatus.hasNumber ? "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" : "M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" })),
-                'Číslica'
-            ),
-            React.createElement('p', { className: `flex items-center ${validationStatus.hasSpecialChar ? 'text-green-500' : 'text-red-500'}` },
-                React.createElement('svg', { className: 'h-4 w-4 mr-2', fill: 'currentColor', viewBox: '0 0 20 20' }, React.createElement('path', { d: validationStatus.hasSpecialChar ? "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" : "M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" })),
-                'Špeciálny znak (!@#$...)'
-            )
-        )
-    );
-}
-
-// Hlavná App komponenta pre registračný formulár
-export function App() {
-    const [email, setEmail] = React.useState('');
-    const [password, setPassword] = React.useState('');
-    const [confirmPassword, setConfirmPassword] = React.useState('');
-    const [firstName, setFirstName] = React.useState('');
-    const [lastName, setLastName] = React.useState('');
-    const [showPassword, setShowPassword] = React.useState(false);
-    const [formError, setFormError] = React.useState('');
-    const [successMessage, setSuccessMessage] = React.useState('');
-    const [formSubmitting, setFormSubmitting] = React.useState(false);
-    const [passwordTouched, setPasswordTouched] = React.useState(false);
-
-    // Validácia hesla
-    const passwordValidation = validatePassword(password);
-    const passwordsMatch = password === confirmPassword;
-    const isFormValid = (
-        email.length > 0 &&
-        firstName.length > 0 &&
-        lastName.length > 0 &&
-        passwordValidation.isValid &&
-        passwordsMatch
-    );
-
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
-        setFormSubmitting(true);
-        setFormError('');
-        setSuccessMessage('');
-
-        if (!window.auth || !window.db) {
-            setFormError('Firebase nie je inicializovaný. Skúste obnoviť stránku.');
-            setFormSubmitting(false);
-            return;
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Registrácia dobrovoľníka</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Načítanie Tailwind CSS pre jednoduché a pekné štýly -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
         }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center p-4">
+    <div id="root" class="w-full max-w-2xl bg-white p-8 rounded-lg shadow-xl">
+        <!-- Aplikácia sa načíta sem -->
+        <div class="text-center text-gray-500">
+            <div class="animate-spin inline-block h-8 w-8 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
+            <p class="mt-4">Načítavam aplikáciu...</p>
+        </div>
+    </div>
 
-        if (!isFormValid) {
-            setFormError('Prosím, vyplňte všetky polia a overte heslo.');
-            setFormSubmitting(false);
-            return;
-        }
+    <!-- Externé knižnice - musíme ich načítať pred naším kódom -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 
-        try {
-            // Vytvorenie používateľa vo Firebase Auth
-            const userCredential = await createUserWithEmailAndPassword(window.auth, email, password);
-            const user = userCredential.user;
+    <!--
+        Poradie skriptov je kľúčové!
+        1. Najprv načítajte `authentication.js`, ktorý nastaví globálny stav.
+        2. Až potom načítajte `volunteer-register.js`, ktorý na tento stav čaká.
+    -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="volunteer-register.js"></script>
 
-            // Uloženie profilu dobrovoľníka do Firestore
-            await setDoc(doc(window.db, "artifacts", window.__app_id, "users", user.uid), {
-                email: user.email,
-                firstName: firstName,
-                lastName: lastName,
-                role: 'volunteer', // Nastavujeme rolu na 'volunteer'
-                approved: true, // Nastavujeme 'approved' na true
-                registrationDate: serverTimestamp(),
-                lastLogin: serverTimestamp(),
-            });
-
-            // Odoslanie údajov do Google Apps Script
-            const formData = new FormData();
-            formData.append('email', email);
-            formData.append('firstName', firstName);
-            formData.append('lastName', lastName);
-            formData.append('role', 'volunteer');
-
-            await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                method: 'POST',
-                body: formData
-            });
-
-            setSuccessMessage("Registrácia bola úspešná! Budete automaticky presmerovaný.");
-            setFormSubmitting(false);
-
-            setTimeout(() => {
-                window.location.href = "index.html";
-            }, 3000);
-
-        } catch (error) {
-            setFormSubmitting(false);
-            switch (error.code) {
-                case 'auth/email-already-in-use':
-                    setFormError('E-mail je už používaný. Prosím, použite iný.');
-                    break;
-                case 'auth/weak-password':
-                    setFormError('Heslo je príliš slabé. Použite silnejšie heslo.');
-                    break;
-                case 'auth/invalid-email':
-                    setFormError('Neplatný formát e-mailu.');
-                    break;
-                default:
-                    console.error("Registračná chyba:", error);
-                    setFormError('Registrácia zlyhala. Skúste to prosím znova.');
-                    break;
+    <script type="module">
+        // Tento skript čaká na globálny stav z `authentication.js`, kým nenačíta hlavnú aplikáciu
+        const renderApp = () => {
+            // Kontrola, či sú React a ReactDOM k dispozícii
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: Knižnice React alebo ReactDOM sa nenačítali. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
             }
-        }
-    };
+            // Kontrola, či je hlavný komponent aplikácie definovaný
+            if (typeof App === 'undefined') {
+                console.error("Chyba: Komponent App nie je definovaný. Skontrolujte súbor volunteer-register.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+            // Hlavná podmienka: čakáme, kým bude globálna autentifikácia pripravená
+            if (!window.isGlobalAuthReady) {
+                console.log("Čakám na globálnu autentifikáciu...");
+                setTimeout(renderApp, 100); // Opakovať kontrolu po 100ms
+                return;
+            }
 
-    const buttonClasses = `
-        w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white
-        transition-all duration-300 ease-in-out
-        ${isFormValid ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : 'bg-gray-400 cursor-not-allowed'}
-    `;
+            // Ak sú React komponenty aj globálna autentifikácia pripravené, načíta sa aplikácia
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(App, null));
+        };
 
-    return React.createElement(
-        'div',
-        { className: "min-h-screen bg-gray-100 flex items-center justify-center" },
-        React.createElement(
-            'div',
-            { className: "bg-white p-8 rounded-lg shadow-xl w-full max-w-md mx-4" },
-            React.createElement(
-                'h2',
-                { className: "text-2xl font-bold text-center text-gray-800 mb-6" },
-                'Registrácia dobrovoľníka'
-            ),
-            formError && React.createElement(
-                'div',
-                { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
-                React.createElement('span', { className: 'block sm:inline' }, formError)
-            ),
-            successMessage && React.createElement(
-                'div',
-                { className: 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
-                React.createElement('span', { className: 'block sm:inline' }, successMessage)
-            ),
-            React.createElement(
-                'form',
-                { onSubmit: handleFormSubmit, noValidate: true },
-                // Meno
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'label',
-                        { htmlFor: 'firstName', className: 'block text-sm font-medium text-gray-700' },
-                        'Meno'
-                    ),
-                    React.createElement('input', {
-                        type: 'text',
-                        id: 'firstName',
-                        name: 'firstName',
-                        value: firstName,
-                        onChange: (e) => setFirstName(e.target.value),
-                        placeholder: 'Ján',
-                        autoComplete: 'given-name',
-                        disabled: formSubmitting || successMessage,
-                        className: 'mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
-                    })
-                ),
-                // Priezvisko
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'label',
-                        { htmlFor: 'lastName', className: 'block text-sm font-medium text-gray-700' },
-                        'Priezvisko'
-                    ),
-                    React.createElement('input', {
-                        type: 'text',
-                        id: 'lastName',
-                        name: 'lastName',
-                        value: lastName,
-                        onChange: (e) => setLastName(e.target.value),
-                        placeholder: 'Novák',
-                        autoComplete: 'family-name',
-                        disabled: formSubmitting || successMessage,
-                        className: 'mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
-                    })
-                ),
-                // E-mail
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'label',
-                        { htmlFor: 'email', className: 'block text-sm font-medium text-gray-700' },
-                        'E-mail'
-                    ),
-                    React.createElement('input', {
-                        type: 'email',
-                        id: 'email',
-                        name: 'email',
-                        value: email,
-                        onChange: (e) => setEmail(e.target.value),
-                        placeholder: 'vasa.emailova.adresa@priklad.sk',
-                        autoComplete: 'email',
-                        disabled: formSubmitting || successMessage,
-                        className: 'mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
-                    })
-                ),
-                // Heslo
-                React.createElement(
-                    PasswordInput,
-                    {
-                        id: 'password',
-                        label: 'Heslo',
-                        value: password,
-                        onChange: (e) => {
-                            setPassword(e.target.value);
-                            setPasswordTouched(true);
-                        },
-                        placeholder: '••••••••',
-                        autoComplete: 'new-password',
-                        showPassword: showPassword,
-                        toggleShowPassword: () => setShowPassword(!showPassword),
-                        disabled: formSubmitting || successMessage,
-                        validationStatus: passwordValidation,
-                        onFocus: () => { }
-                    }
-                ),
-                // Potvrdenie hesla
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'label',
-                        { htmlFor: 'confirmPassword', className: 'block text-sm font-medium text-gray-700' },
-                        'Potvrdenie hesla'
-                    ),
-                    React.createElement('input', {
-                        type: showPassword ? 'text' : 'password',
-                        id: 'confirmPassword',
-                        name: 'confirmPassword',
-                        value: confirmPassword,
-                        onChange: (e) => setConfirmPassword(e.target.value),
-                        placeholder: '••••••••',
-                        autoComplete: 'new-password',
-                        disabled: formSubmitting || successMessage,
-                        className: `mt-1 block w-full px-4 py-2 border rounded-md shadow-sm
-                            ${(confirmPassword.length > 0 && !passwordsMatch) ? 'border-red-500' : 'border-gray-300'}
-                            focus:ring-blue-500 focus:border-blue-500 sm:text-sm`
-                    }),
-                    (confirmPassword.length > 0 && !passwordsMatch) && React.createElement(
-                        'p',
-                        { className: 'mt-2 text-sm text-red-600' },
-                        'Heslá sa nezhodujú.'
-                    )
-                ),
-                // Tlačidlo odoslať
-                React.createElement(
-                    'button',
-                    {
-                        type: 'submit',
-                        disabled: !isFormValid || formSubmitting || successMessage,
-                        className: buttonClasses,
-                    },
-                    formSubmitting ? 'Registrujem...' : 'Registrovať sa'
-                )
-            )
-        )
-    );
-}
+        // Počiatočné volanie na načítanie aplikácie
+        window.addEventListener('load', renderApp);
+    </script>
+</body>
+</html>
