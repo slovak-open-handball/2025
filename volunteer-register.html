@@ -44,11 +44,11 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Načítanie súborov, ktoré MUSIA byť v globálnom rozsahu. -->
-    <script type="text/javascript" src="authentication.js"></script>
-    <script type="text/javascript" src="header.js"></script>
+    <!-- Načítanie súborov pre hlavičku a autentifikáciu ako moduly -->
+    <script type="module" src="header.js"></script>
+    <script type="module" src="authentication.js"></script>
 
-    <!-- Načítanie a vykreslenie React komponenty -->
-    <script type="text/javascript" src="volunteer-register.js"></script>
+    <!-- Načítanie a vykreslenie React komponenty, musí byť tiež modul -->
+    <script type="module" src="volunteer-register.js"></script>
 </body>
 </html>
