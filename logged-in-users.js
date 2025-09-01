@@ -132,7 +132,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
       { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
       React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, `Zmeniť rolu pre ${user.firstName} ${user.lastName}`),
       React.createElement('div', { className: 'mb-4' },
-        ['admin', 'hall', 'club', 'referee', 'volunteer'].map(role =>
+        ['admin', 'club', 'hall'].map(role =>
           React.createElement('div', { key: role, className: 'flex items-center mb-2' },
             React.createElement('input', {
               type: 'radio',
@@ -144,7 +144,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
             React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' },
-              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : role === 'club' ? 'Klub' : role === 'referee' ? 'Rozhodca' : role === 'volunteer' ? 'Dobrovoľník' : null
+              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Klub'
             )
           )
         )
@@ -226,30 +226,10 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
                         type: 'checkbox',
                         id: 'filter-club',
                         checked: selectedRoles.includes('club'),
-                        onChange: () => handleRoleChange('club'),
+                        onChange: () => handleRoleChange('ckub'),
                         className: 'form-checkbox h-4 w-4 text-indigo-600'
                     }),
                     React.createElement('label', { htmlFor: 'filter-club', className: 'ml-2 text-gray-700' }, 'Klub')
-                ),
-                React.createElement('div', { className: 'flex items-center mb-2' },
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        id: 'filter-club',
-                        checked: selectedRoles.includes('referee'),
-                        onChange: () => handleRoleChange('referee'),
-                        className: 'form-checkbox h-4 w-4 text-indigo-600'
-                    }),
-                    React.createElement('label', { htmlFor: 'filter-club', className: 'ml-2 text-gray-700' }, 'Rozhodca')
-                ),
-                React.createElement('div', { className: 'flex items-center mb-2' },
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        id: 'filter-club',
-                        checked: selectedRoles.includes('volunteer'),
-                        onChange: () => handleRoleChange('volunteer'),
-                        className: 'form-checkbox h-4 w-4 text-indigo-600'
-                    }),
-                    React.createElement('label', { htmlFor: 'filter-club', className: 'ml-2 text-gray-700' }, 'Dobrovoľník')
                 )
             ),
             React.createElement('div', { className: 'flex justify-end' },
@@ -395,10 +375,6 @@ function UsersManagementApp() {
         return 'Klub';
       case 'hall':
         return 'Športová hala';
-      case 'referee':
-        return 'Rozhodca';
-      case 'volunteer':
-        return 'Dobrovoľník';
       default:
         return role;
     }
@@ -708,10 +684,6 @@ function UsersManagementApp() {
               return '#b06835';
           case 'club':
               return '#9333EA';
-          case 'referee':
-              return '#007800';
-          case 'volunteer':
-              return '#FFAC1C';
           default:
               return '#1D4ED8';
       }
@@ -728,10 +700,6 @@ function UsersManagementApp() {
               return 'Športová hala';
           case 'club':
               return 'Klub';
-          case 'referee':
-              return 'Rozhodca';
-          case 'volunteer':
-              return 'Dobrovoľník';
           default:
               return role;
       }
