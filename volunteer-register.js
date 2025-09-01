@@ -283,7 +283,7 @@ const App = () => {
             { className: 'mb-4' },
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'password' }, 'Heslo'),
             React.createElement('input', {
-                className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${isPasswordValid || formData.password === '' ? '' : 'border-red-500'}`,
+                className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`,
                 id: 'password',
                 type: 'password',
                 name: 'password',
@@ -315,7 +315,7 @@ const App = () => {
             { className: 'mb-4' },
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'confirmPassword' }, 'Potvrdiť heslo'),
             React.createElement('input', {
-                className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${formData.password === formData.confirmPassword && formData.confirmPassword !== '' ? '' : 'border-red-500'}`,
+                className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${formData.confirmPassword !== '' && formData.password !== formData.confirmPassword ? 'border-red-500' : ''}`,
                 id: 'confirmPassword',
                 type: 'password',
                 name: 'confirmPassword',
@@ -323,7 +323,7 @@ const App = () => {
                 value: formData.confirmPassword,
                 onChange: handleInputChange,
             }),
-            (formData.password !== formData.confirmPassword && formData.confirmPassword !== '') && React.createElement(
+            (formData.confirmPassword !== '' && formData.password !== formData.confirmPassword) && React.createElement(
                 'p',
                 { className: 'text-red-500 text-xs italic mt-1' },
                 'Heslá sa nezhodujú.'
