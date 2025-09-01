@@ -326,7 +326,7 @@ function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
         React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl max-w-fit' },
-            React.createElement('h2', { className: 'text-2xl font-bold mb-4 whitespace-nowrap' }, title),
+            React.createElement('h2', { className: 'text-2xl font-bold mb-4 whitespace-nowade' }, title),
             React.createElement('p', { className: 'mb-4' }, `Používateľ: ${user.firstName} ${user.lastName}`),
             React.createElement('div', { className: 'mb-4' },
                 React.createElement('label', { htmlFor: 'date-input', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Vyberte dátum a čas:'),
@@ -476,7 +476,7 @@ function UsersManagementApp() {
                 if (Object.keys(docToUpdate).length > 0) {
                     await updateDoc(doc(db, `users`, userData.id), docToUpdate);
                 }
-            } else if (userData.role === 'club' || userData.role === 'referee' || userData.role === 'volunteer') {
+            } else if (userData.role === 'club') {
                 let needsUpdate = false;
                 if (!userData.dataEditDeadline) {
                     userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
@@ -491,6 +491,25 @@ function UsersManagementApp() {
                         dataEditDeadline: userData.dataEditDeadline,
                         rosterEditDeadline: userData.rosterEditDeadline
                     });
+                }
+            } else if (userData.role === 'referee' || userData.role === 'volunteer') {
+                 let needsUpdate = false;
+                if (!userData.dataEditDeadline) {
+                    userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
+                    needsUpdate = true;
+                }
+                if (userData.rosterEditDeadline) {
+                    userData.rosterEditDeadline = deleteField();
+                    needsUpdate = true;
+                }
+                if (needsUpdate) {
+                    const docToUpdate = {
+                        dataEditDeadline: userData.dataEditDeadline
+                    };
+                    if (!userData.rosterEditDeadline) {
+                        docToUpdate.rosterEditDeadline = deleteField();
+                    }
+                    await updateDoc(doc(db, `users`, userData.id), docToUpdate);
                 }
             }
             return userData;
@@ -556,19 +575,20 @@ function UsersManagementApp() {
         });
       }
 
-      // 3. Nová logika na odstránenie dátumov pre admin a hall
+      // 3. Nová logika na odstránenie dátumov pre admin, hall, referee a volunteer a nastavenie pre club
       const updateData = {
           role: newRole,
           approved: isApproved
       };
-      if (newRole === 'admin' || newRole === 'hall') {
+      
+      if (newRole === 'admin' || newRole === 'hall' || newRole === 'referee' || newRole === 'volunteer') {
           updateData.dataEditDeadline = deleteField();
           updateData.rosterEditDeadline = deleteField();
-      } else if (newRole === 'club' || newRole === 'referee' || newRole === 'volunteer') {
+      } else if (newRole === 'club') {
            updateData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
            updateData.rosterEditDeadline = DEFAULT_ROSTER_EDIT_DEADLINE;
       }
-
+      
       await updateDoc(userDocRef, updateData);
       
       setNotification({ message: `Rola používateľa bola úspešne zmenená na ${getTranslatedRole(newRole)}.`, type: 'success' });
@@ -702,19 +722,19 @@ function UsersManagementApp() {
 
   const getRoleColor = (role) => {
       switch (role) {
-          case 'admin':
-              return '#47b3ff';
-          case 'hall':
-              return '#b06835';
-          case 'club':
-              return '#9333EA';
-          case 'referee':
-              return '#FF4500'; // OrangeRed
-          case 'volunteer':
-              return '#008000'; // Green
-          default:
-              return '#1D4ED8';
-      }
+        case 'admin':
+          return '#47b3ff';
+        case 'hall':
+          return '#b06835';
+        case 'club':
+          return '#9333EA';
+        case 'referee':
+          return '#007800';
+        case 'volunteer':
+          return '#FFAC1C';
+        default:
+          return '#1D4ED8';
+        }
   };
 
   const getTranslatedRoleForDisplay = (role, isUserOldestAdmin, isCurrentUserOldestAdmin) => {
@@ -866,7 +886,8 @@ function UsersManagementApp() {
             const isNotCurrentUser = user.id !== window.currentUserId;
             const isUserOldestAdmin = user.id === oldestAdminId;
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
-            const hasDeadlines = ['club', 'referee', 'volunteer'].includes(user.role);
+            const canEditDataDeadline = ['club', 'referee', 'volunteer'].includes(user.role);
+            const canEditRosterDeadline = ['club'].includes(user.role);
             
             // Logika na skrytie riadku pre ostatných používateľov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
@@ -890,26 +911,26 @@ function UsersManagementApp() {
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
                 {
-                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${hasDeadlines ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditDataDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
                   onClick: () => {
-                    if (hasDeadlines) {
+                    if (canEditDataDeadline) {
                       handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline);
                     }
                   }
                 },
-                hasDeadlines ? formatDate(user.dataEditDeadline) : '-'
+                canEditDataDeadline ? formatDate(user.dataEditDeadline) : '-'
               ),
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
                 {
-                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${hasDeadlines ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditRosterDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
                   onClick: () => {
-                    if (hasDeadlines) {
+                    if (canEditRosterDeadline) {
                       handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline);
                     }
                   }
                 },
-                hasDeadlines ? formatDate(user.rosterEditDeadline) : '-'
+                canEditRosterDeadline ? formatDate(user.rosterEditDeadline) : '-'
               ),
               React.createElement(
                 'td',
