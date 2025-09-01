@@ -105,7 +105,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 return '#47b3ff';
             case 'hall':
                 return '#b06835';
-            case 'user':
+            case 'club':
                 return '#9333EA';
             default:
                 return '#1D4ED8';
@@ -118,32 +118,30 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             case 'admin':
                 return 'Administrátor';
             case 'super-admin':
-                return 'Super Administrátor';
+                return 'Super administrátor';
+            case 'club':
+                return 'Klub';
             case 'referee':
                 return 'Rozhodca';
-            case 'athlete':
-                return 'Športovec';
-            case 'coach':
-                return 'Tréner';
             case 'hall':
-                return 'Správca haly';
+                return 'Športová hala';
             default:
                 return 'Používateľ';
         }
     };
 
     // Dynamicky nastavíme názov karty podľa roly
-    const profileCardTitle = userProfileData?.role === 'user' ? 'Kontaktná osoba' : 'Moje údaje';
+    const profileCardTitle = userProfileData?.role === 'club' ? 'Kontaktná osoba' : 'Moje údaje';
 
     // Dynamicky nastavíme popisky polí
-    const nameLabel = userProfileData?.role === 'user' ? 'Meno a priezvisko kontaktnej osoby' : 'Meno a priezvisko';
-    const emailLabel = userProfileData?.role === 'user' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
-    const phoneLabel = userProfileData?.role === 'user' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
+    const nameLabel = userProfileData?.role === 'club' ? 'Meno a priezvisko kontaktnej osoby' : 'Meno a priezvisko';
+    const emailLabel = userProfileData?.role === 'club' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
+    const phoneLabel = userProfileData?.role === 'club' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
 
     // Logika pre zobrazenie tlačidla Upraviť pre profil
     // Tlačidlo je viditeľné, ak je canEdit true (všetky úpravy sú povolené)
-    // ALEBO ak je canEdit false, ale používateľ je typu 'user' a je povolený len režim zmeny hesla.
-    const showProfilePencil = canEdit || (userProfileData.role === 'user' && isPasswordChangeOnlyMode);
+    // ALEBO ak je canEdit false, ale používateľ je typu 'club' a je povolený len režim zmeny hesla.
+    const showProfilePencil = canEdit || (userProfileData.role === 'club' && isPasswordChangeOnlyMode);
     
     // Tlačidlo pre fakturačné údaje je viditeľné len ak je canEdit true.
     const showBillingPencil = canEdit;
@@ -335,7 +333,7 @@ const MyDataApp = ({ userProfileData }) => {
     const [canEdit, setCanEdit] = useState(false);
     // NOVINKA: Lokálny stav pre registrationDates (z /settings/registration)
     const [settingsRegistrationDates, setSettingsRegistrationDates] = useState(null);
-    // NOVINKA: Stav pre indikáciu režimu zmeny hesla (true, ak je po deadline a používateľ je 'user')
+    // NOVINKA: Stav pre indikáciu režimu zmeny hesla (true, ak je po deadline a používateľ je 'club')
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
 
 
@@ -431,22 +429,22 @@ const MyDataApp = ({ userProfileData }) => {
                     if (deadlineMillis - nowMillis > 0) {
                         timer = setTimeout(() => {
                             setCanEdit(false);
-                            // NOVINKA: Ak uplynie termín, ale používateľ je typu 'user', prepni na režim zmeny hesla
-                            if (userProfileData.role === 'user') {
+                            // NOVINKA: Ak uplynie termín, ale používateľ je typu 'club', prepni na režim zmeny hesla
+                            if (userProfileData.role === 'club') {
                                 setIsPasswordChangeOnlyMode(true);
-                                console.log("logged-in-my-data.js: Termín úprav uplynul pre používateľa typu 'user', prepínam na režim zmeny hesla.");
+                                console.log("logged-in-my-data.js: Termín úprav uplynul pre používateľa typu 'club', prepínam na režim zmeny hesla.");
                             } else {
                                 setIsPasswordChangeOnlyMode(false); // Pre ostatné roly vypni všetko
                             }
-                            console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy (okrem zmeny hesla pre 'user').");
+                            console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy (okrem zmeny hesla pre 'club').");
                         }, deadlineMillis - nowMillis + 100); // Pridáme malé oneskorenie pre istotu
                     }
                 } else {
                     setCanEdit(false);
-                    // NOVINKA: Ak je už po termíne, ale používateľ je typu 'user', povoľ režim zmeny hesla
-                    if (userProfileData.role === 'user') {
+                    // NOVINKA: Ak je už po termíne, ale používateľ je typu 'club', povoľ režim zmeny hesla
+                    if (userProfileData.role === 'club') {
                         setIsPasswordChangeOnlyMode(true);
-                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline, ALE povolená zmena hesla pre 'user'.");
+                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline, ALE povolená zmena hesla pre 'club'.");
                     } else {
                         setIsPasswordChangeOnlyMode(false); // Pre ostatné roly vypni všetko
                         console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
@@ -477,7 +475,7 @@ const MyDataApp = ({ userProfileData }) => {
                 return '#47b3ff';
             case 'hall':
                 return '#b06835';
-            case 'user':
+            case 'club':
                 return '#9333EA';
             default:
                 return '#1D4ED8';
