@@ -251,7 +251,7 @@ const App = () => {
             const user = authResult.user;
             console.log("Používateľ úspešne vytvorený:", user.uid);
 
-            await setDoc(doc(db, `/users/${user.uid}/`), {
+            await setDoc(doc(db, `artifacts/${appId}/users/${user.uid}/volunteer-data/registration`), {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
