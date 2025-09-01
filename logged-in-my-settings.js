@@ -49,8 +49,8 @@ function MySettingsApp() {
         console.log(`MySettingsApp: Spracovávam profilové dáta pre UID: ${globalUser.uid}`);
         
         // Logika pre presmerovanie 'user' role
-        if (globalProfileData.role === 'user') {
-            console.log("MySettingsApp: Používateľ má rolu 'user'. Presmerovávam na logged-in-my-data.html.");
+        if (globalProfileData.role === 'club') {
+            console.log("MySettingsApp: Používateľ má rolu 'club'. Presmerovávam na logged-in-my-data.html.");
             window.location.href = 'logged-in-my-data.html';
             return;
         }
