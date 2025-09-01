@@ -26,27 +26,60 @@
     <div id="header-placeholder"></div>
 
     <main class="flex-grow flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg space-y-6">
-            <!-- Koreňový element pre React aplikáciu -->
-            <div id="root"></div>
-        </div>
+        <div id="root"></div>
     </main>
-    
-    <!-- Globálny element pre notifikácie -->
-    <div id="global-notification"></div>
 
-    <!-- Načítanie hlavných JavaScript súborov ako modulov. -->
-    <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
-    <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script>
-    <script type="module" src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script type="module" src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script type="module" src="volunteer-register.js"></script>
-    
+    <!-- Načítanie Firebase a ďalších potrebných knižníc -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+
+    <!-- Skripty React a ReactDOM z CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Tvoj hlavný aplikačný skript -->
     <script type="module">
-        // Tento skript čaká, kým sa načíta globálna autentifikácia a potom renderuje React aplikáciu.
-        document.body.onload = function() {
-            // Počkáme, kým je globálna autentifikácia pripravená
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { App } from "./volunteer-register.js";
+
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        window.onload = async () => {
+            console.log("Aplikácia sa začala inicializovať.");
+
+            // Inicializácia Firebase
+            const app = initializeApp(firebaseConfig);
+            window.auth = getAuth(app);
+            window.db = getFirestore(app);
+            setLogLevel('debug');
+
+            // Autentifikácia používateľa
+            try {
+                if (authToken) {
+                    await signInWithCustomToken(window.auth, authToken);
+                    console.log("Používateľ úspešne prihlásený pomocou vlastného tokenu.");
+                } else {
+                    await signInAnonymously(window.auth);
+                    console.log("Používateľ úspešne prihlásený anonymne.");
+                }
+            } catch (error) {
+                console.error("Chyba pri autentifikácii:", error);
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri autentifikácii. Skúste to prosím znova.</div>';
+                return;
+            }
+
+            // Nastavenie globálneho príznaku pripravenosti
+            window.isGlobalAuthReady = true;
+            console.log("Globálna autentifikácia je pripravená.");
+
+            // Funkcia na renderovanie aplikácie
+            // Čakáme, kým je globálna autentifikácia pripravená
             const renderApp = () => {
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                     console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
