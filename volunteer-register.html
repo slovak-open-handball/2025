@@ -44,33 +44,11 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Načítanie súborov pre hlavičku -->
+    <!-- Načítanie súborov, ktoré MUSIA byť v globálnom rozsahu. -->
+    <script type="text/javascript" src="authentication.js"></script>
     <script type="text/javascript" src="header.js"></script>
-    
-    <!-- Načítanie súboru pre globálnu autentifikáciu a inicializáciu Firebase -->
-    <script type="module" src="authentication.js"></script>
-    
+
     <!-- Načítanie a vykreslenie React komponenty -->
-    <script type="module">
-        import { App } from './volunteer-register.js';
-        
-        // Funkcia na renderovanie aplikácie po inicializácii autentifikácie
-        const renderApp = () => {
-            if (window.isGlobalAuthReady) {
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(App, null));
-            } else {
-                setTimeout(renderApp, 100); // Skúšame znova, kým nie je auth ready
-            }
-        };
-
-        // Čakáme na udalosť z authentication.js, ktorá signalizuje, že je všetko pripravené
-        window.addEventListener('globalDataUpdated', renderApp);
-
-        // Ak už je pripravené, spustíme renderovanie hneď
-        if (window.isGlobalAuthReady) {
-            renderApp();
-        }
-    </script>
+    <script type="text/javascript" src="volunteer-register.js"></script>
 </body>
 </html>
