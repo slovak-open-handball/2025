@@ -275,6 +275,11 @@ const App = () => {
                 'p',
                 { className: 'text-red-500 text-xs italic mt-1' },
                 'Prosím, zadajte platnú e-mailovú adresu.'
+            ),
+            React.createElement(
+                'p',
+                { className: 'text-xs text-gray-500 mt-1' },
+                'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.'
             )
         ),
         // Password
