@@ -2,20 +2,11 @@
 // Zahŕňa formulár, validáciu a ukladanie dát do Firestore.
 
 // Importy pre potrebné Firebase funkcie
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb z externého súboru
 import { countryDialCodes } from "./countryDialCodes.js";
-
-// Inicializácia Firebase pomocou globálnych premenných, ak ešte nebola vykonaná
-if (!window.firebaseApp) {
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    window.firebaseApp = initializeApp(firebaseConfig);
-    window.db = getFirestore(window.firebaseApp);
-    window.auth = getAuth(window.firebaseApp);
-}
 
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
@@ -30,7 +21,7 @@ const passwordStrengthCheck = (password) => {
 
 // Pomocná funkcia na validáciu emailu podľa špecifických požiadaviek
 const isValidEmail = (email) => {
-    const emailRegex = /^[^@]+@[^@]+\.[^@]{2,}$/;;
+    const emailRegex = /^[^@]+@[^@]+\.[^@]{2,}$/;
     return emailRegex.test(email);
 };
 
@@ -123,30 +114,24 @@ const App = () => {
     const [tshirtSizes, setTshirtSizes] = React.useState([]);
     const [isSizesLoading, setIsSizesLoading] = React.useState(true);
     const [isAuthReady, setIsAuthReady] = React.useState(false);
+    const [timeoutId, setTimeoutId] = React.useState(null);
 
-    // Inicializácia Firebase a overenie prihlásenia používateľa
+    // Počká, kým bude globálna autentifikácia pripravená, a potom načíta veľkosti tričiek
     React.useEffect(() => {
-        const initFirebaseAndFetchSizes = async () => {
-            const auth = window.auth;
-            const db = window.db;
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-            try {
-                if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+        const waitForAuth = () => {
+            if (window.isGlobalAuthReady) {
                 setIsAuthReady(true);
-                console.log("Používateľ úspešne prihlásený. Začínam načítavať veľkosti tričiek.");
-            } catch (error) {
-                console.error("Chyba pri overovaní používateľa:", error);
-                setIsAuthReady(false);
-                setIsSizesLoading(false);
-                return;
+                fetchTshirtSizes();
+                if (timeoutId) clearTimeout(timeoutId);
+            } else {
+                const id = setTimeout(waitForAuth, 100);
+                setTimeoutId(id);
             }
+        };
 
-            // Načítanie veľkostí tričiek až po overení používateľa
+        const fetchTshirtSizes = () => {
+            const db = window.db;
+            const appId = window.__app_id || 'default-app-id';
             const docRef = doc(db, `artifacts/${appId}/public/data/settings/sizeTshirts`);
 
             const unsubscribe = onSnapshot(docRef, (docSnap) => {
@@ -168,7 +153,11 @@ const App = () => {
             return () => unsubscribe();
         };
 
-        initFirebaseAndFetchSizes();
+        waitForAuth();
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+        };
     }, []);
 
     // Function to handle form input changes
@@ -202,11 +191,15 @@ const App = () => {
         const fullPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
 
         try {
-            const authResult = await createUserWithEmailAndPassword(window.auth, formData.email, formData.password);
+            const auth = window.auth;
+            const db = window.db;
+            const appId = window.__app_id || 'default-app-id';
+
+            const authResult = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
             const user = authResult.user;
             console.log("Používateľ úspešne vytvorený:", user.uid);
 
-            await setDoc(doc(window.db, `artifacts/${window.appId}/users/${user.uid}/volunteer-data/registration`), {
+            await setDoc(doc(db, `artifacts/${appId}/users/${user.uid}/volunteer-data/registration`), {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
@@ -506,7 +499,7 @@ const App = () => {
                 {
                     type: 'submit',
                     className: buttonClasses,
-                    disabled: isSubmitting || !isFormValid,
+                    disabled: isSubmitting || !isFormValid || !isAuthReady,
                 },
                 isSubmitting ? 'Registrujem...' : 'Registrovať sa'
             ),
