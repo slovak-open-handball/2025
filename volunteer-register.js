@@ -294,7 +294,7 @@ const App = () => {
             React.createElement(
                 'div',
                 { className: 'mt-2 text-xs text-gray-600 italic' },
-                React.createElement('p', { className: 'text-gray-900 font-bold' }, 'Heslo musí obsahovať:'),
+                React.createElement('p', { className: 'text-gray-900' }, 'Heslo musí obsahovať:'),
                 React.createElement('p', { className: `flex items-center ${passwordChecks.length ? 'text-green-500' : 'text-gray-500'}` },
                     React.createElement('span', { className: 'mr-1' }, passwordChecks.length ? '✔' : '•'), ' aspoň 10 znakov,'
                 ),
