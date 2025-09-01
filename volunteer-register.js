@@ -293,18 +293,19 @@ const App = () => {
             }),
             React.createElement(
                 'div',
-                { className: 'mt-2 text-xs text-gray-600' },
-                React.createElement('p', { className: `flex items-center ${passwordChecks.length ? 'text-green-500' : 'text-red-500'}` },
-                    React.createElement('span', { className: 'mr-1' }, passwordChecks.length ? '✓' : '✗'), ' Minimálne 10 znakov'
+                { className: 'mt-2 text-xs text-gray-600 italic' },
+                React.createElement('p', { className: 'text-gray-900 font-bold' }, 'Heslo musí obsahovať:'),
+                React.createElement('p', { className: `flex items-center ${passwordChecks.length ? 'text-green-500' : 'text-gray-500'}` },
+                    React.createElement('span', { className: 'mr-1' }, passwordChecks.length ? '✔' : '•'), ' aspoň 10 znakov,'
                 ),
-                React.createElement('p', { className: `flex items-center ${passwordChecks.lowercase ? 'text-green-500' : 'text-red-500'}` },
-                    React.createElement('span', { className: 'mr-1' }, passwordChecks.lowercase ? '✓' : '✗'), ' Malé písmeno'
+                React.createElement('p', { className: `flex items-center ${passwordChecks.lowercase ? 'text-green-500' : 'text-gray-500'}` },
+                    React.createElement('span', { className: 'mr-1' }, passwordChecks.lowercase ? '✔' : '•'), ' aspoň jedno veľké písmeno,'
                 ),
-                React.createElement('p', { className: `flex items-center ${passwordChecks.uppercase ? 'text-green-500' : 'text-red-500'}` },
-                    React.createElement('span', { className: 'mr-1' }, passwordChecks.uppercase ? '✓' : '✗'), ' Veľké písmeno'
+                React.createElement('p', { className: `flex items-center ${passwordChecks.uppercase ? 'text-green-500' : 'text-gray-500'}` },
+                    React.createElement('span', { className: 'mr-1' }, passwordChecks.uppercase ? '✔' : '•'), ' aspoň jedno malé písmeno,'
                 ),
-                React.createElement('p', { className: `flex items-center ${passwordChecks.number ? 'text-green-500' : 'text-red-500'}` },
-                    React.createElement('span', { className: 'mr-1' }, passwordChecks.number ? '✓' : '✗'), ' Číslica'
+                React.createElement('p', { className: `flex items-center ${passwordChecks.number ? 'text-green-500' : 'text-gray-500'}` },
+                    React.createElement('span', { className: 'mr-1' }, passwordChecks.number ? '✔' : '•'), ' aspoň jednu číslicu.'
                 )
             )
         ),
