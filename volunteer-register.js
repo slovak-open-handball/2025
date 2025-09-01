@@ -38,7 +38,7 @@ const isValidEmail = (email) => {
 };
 
 // Komponent pre modálne okno s predvoľbami
-const DialCodeModal = ({ isOpen, onClose, onSelect }) => {
+const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode }) => {
     const [filter, setFilter] = React.useState('');
 
     const filteredCodes = countryDialCodes.filter(country =>
@@ -87,14 +87,23 @@ const DialCodeModal = ({ isOpen, onClose, onSelect }) => {
                             'li',
                             {
                                 key: index,
-                                className: 'py-2 px-4 hover:bg-gray-100 cursor-pointer transition-colors duration-150',
+                                className: `py-2 px-4 hover:bg-gray-100 cursor-pointer transition-colors duration-150 flex justify-between items-center ${country.dialCode === selectedDialCode ? 'bg-blue-100' : ''}`,
                                 onClick: () => {
                                     onSelect(country.dialCode);
                                     onClose();
                                 }
                             },
                             React.createElement('span', { className: 'font-semibold text-gray-800' }, country.name),
-                            React.createElement('span', { className: 'ml-2 text-gray-500' }, `(${country.dialCode})`)
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center space-x-2' },
+                                React.createElement('span', { className: 'ml-2 text-gray-500' }, `(${country.dialCode})`),
+                                country.dialCode === selectedDialCode && React.createElement(
+                                    'span',
+                                    { className: 'text-[#1D4ED8] font-bold text-lg' },
+                                    '✔'
+                                )
+                            )
                         )
                     )
                 )
@@ -464,7 +473,8 @@ function App() {
             {
                 isOpen: isModalOpen,
                 onClose: () => setIsModalOpen(false),
-                onSelect: handleDialCodeSelect
+                onSelect: handleDialCodeSelect,
+                selectedDialCode: selectedDialCode
             }
         )
     );
