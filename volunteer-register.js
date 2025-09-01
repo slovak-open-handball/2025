@@ -39,7 +39,7 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedBu
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => {
-            document.removeEventListener("mousedown", handleClick-Outside);
+            document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [onClose, modalRef]);
 
@@ -323,18 +323,6 @@ const App = () => {
     
     const volunteerLabel = getVolunteerLabel();
 
-    // SVG pre šípku, ktorá sa vkladá do selectboxov
-    const arrowSVG = React.createElement('svg', {
-        xmlns: "http://www.w3.org/2000/svg",
-        className: "h-4 w-4 text-gray-500",
-        viewBox: "0 0 20 20",
-        fill: "currentColor"
-    }, React.createElement('path', {
-        fillRule: "evenodd",
-        d: "M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z",
-        clipRule: "evenodd"
-    }));
-
     // Main component rendering
     return React.createElement(
         'form',
@@ -471,12 +459,12 @@ const App = () => {
             // Gender
             React.createElement(
                 'div',
-                { className: 'w-1/2 relative' },
+                { className: 'w-1/2' },
                 React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'gender' }, 'Pohlavie'),
                 React.createElement(
                     'select',
                     {
-                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline pr-8',
+                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
                         id: 'gender',
                         name: 'gender',
                         value: formData.gender,
@@ -485,8 +473,7 @@ const App = () => {
                     React.createElement('option', { value: '' }, 'Vyberte...'),
                     React.createElement('option', { value: 'male' }, 'Muž'),
                     React.createElement('option', { value: 'female' }, 'Žena'),
-                ),
-                React.createElement('div', { className: 'pointer-events-none absolute inset-y-0 right-0 top-6 flex items-center px-2 text-gray-700' }, arrowSVG)
+                )
             ),
             // Birth Date
             React.createElement(
@@ -532,12 +519,12 @@ const App = () => {
         // T-shirt size
         React.createElement(
             'div',
-            { className: 'mb-4 relative' },
+            { className: 'mb-4' },
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'tshirtSize' }, 'Veľkosť trička'),
             React.createElement(
                 'select',
                 {
-                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline pr-8',
+                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
                     id: 'tshirtSize',
                     name: 'tshirtSize',
                     value: formData.tshirtSize,
@@ -550,8 +537,7 @@ const App = () => {
                 tshirtSizes.map(size =>
                     React.createElement('option', { key: size, value: size }, size)
                 )
-            ),
-            React.createElement('div', { className: 'pointer-events-none absolute inset-y-0 right-0 top-6 flex items-center px-2 text-gray-700' }, arrowSVG)
+            )
         ),
         // Phone
         React.createElement(
