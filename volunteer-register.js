@@ -151,7 +151,7 @@ function App() {
         React.createElement(
             'p',
             { className: 'text-center text-gray-600 mb-8' },
-            'Vyplňte, prosím, formulár na registráciu ako dobrovoľník.'
+            'Prídi nás podporiť a pomôcť pri organizácii turnaja, prihlás sa ako dobrovoľník. Prosím vyplň formulár. Ďakujeme :)'
         ),
         successMessage && React.createElement(
             'div',
