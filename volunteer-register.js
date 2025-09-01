@@ -1,16 +1,16 @@
-// volunteer-register.js (now uses global Firebase instances from authentication.js)
-// Explicitly import functions for Firebase Auth and Firestore for modular access (SDK v11)
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, setDoc, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Pridaný onSnapshot pre sledovanie zmien
-import { updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // NEW: Pridané updateDoc a increment
+// volunteer-register.js
+// Obsahuje logiku pre registráciu dobrovoľníkov
 
-const RECAPTCHA_SITE_KEY = "6LekXLgrAAAAAB6HYeGZG-tu_N42DER2fh1aVBjF";
+// Explicitne importujte funkcie pre Firebase Auth a Firestore pre modulárny prístup (SDK v11)
+import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Google Apps Script URL pre synchronizáciu dát
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
-// Added 'validationStatus' prop for detailed visual indication of password validity
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Added onFocus prop
-    // Corrected SVG icons for eye (show password) and eye-slash (hide password)
+// React komponenta pre zadávanie hesla
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) {
+    // Ikony pre zobrazenie/skrytie hesla
     const eyeIcon = React.createElement(
         'svg',
         {
@@ -69,7 +69,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
                 name: id,
                 value: value,
                 onChange: onChange,
-                onCut: onCut, // Added event handlers
+                onCut: onCut,
                 onCopy: onCopy,
                 onPaste: onPaste,
                 onFocus: onFocus,
@@ -92,7 +92,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     );
 }
 
-// Main App component (now uses React.createElement)
+// Hlavný komponent aplikácie
 function App() {
     const [firstName, setFirstName] = React.useState('');
     const [lastName, setLastName] = React.useState('');
@@ -103,16 +103,16 @@ function App() {
     const [errorMessage, setErrorMessage] = React.useState('');
     const [formSubmitting, setFormSubmitting] = React.useState(false);
 
-    // State pre validáciu
+    // Stavy pre validáciu hesla
     const [passwordFocused, setPasswordFocused] = React.useState(false);
     const [passwordValid, setPasswordValid] = React.useState(false);
     const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
 
-    // State pre zobrazenie/skrytie hesla
+    // Stavy pre zobrazenie/skrytie hesla
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
-    // Regex pre validáciu hesla
+    // Regulárne výrazy pre validáciu hesla
     const hasNumber = /[0-9]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasUppercase = /[A-Z]/.test(password);
@@ -130,7 +130,6 @@ function App() {
     const handlePasswordChange = (e) => {
         const newPassword = e.target.value;
         setPassword(newPassword);
-        // Ak je potvrdzovacie pole už zmenené, skontroluj zhodu
         if (confirmPasswordTouched) {
             setConfirmPasswordTouched(true);
         }
@@ -145,12 +144,6 @@ function App() {
     const toggleShowPassword = () => setShowPassword(!showPassword);
     const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
 
-    // Funkcia na zabránenie vloženia a vystrihnutia/kopírovania
-    const handlePasteCutCopy = (e) => {
-        e.preventDefault();
-        setErrorMessage('Pre bezpečnosť nie je možné vkladať ani kopírovať text.');
-    };
-
     // Obsluha formulára
     const handleRegister = async (event) => {
         event.preventDefault();
@@ -158,7 +151,6 @@ function App() {
         setErrorMessage('');
         setSuccessMessage('');
 
-        // Reakcia na neplatný formulár (dvojitá kontrola)
         if (!isFormValid) {
             setErrorMessage('Prosím, vyplňte všetky polia správne.');
             setFormSubmitting(false);
@@ -166,29 +158,27 @@ function App() {
         }
 
         try {
-            // Skús vytvoriť používateľa s e-mailom a heslom
             const auth = window.auth;
             const db = window.db;
 
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // Zápis používateľských údajov do Firestore
             await setDoc(doc(db, "artifacts", window.appId, "users", user.uid, "userProfile", "profile"), {
                 firstName: firstName.trim(),
                 lastName: lastName.trim(),
                 email: email.trim(),
                 role: 'volunteer',
-                approved: true, // Zmena na 'true'
+                approved: true,
                 registrationDate: serverTimestamp(),
             });
 
-            // Odoslanie dát do Google Apps Script
+            // Odoslanie dát do Google Apps Script pre synchronizáciu
             const formData = new FormData();
             formData.append('firstName', firstName.trim());
             formData.append('lastName', lastName.trim());
             formData.append('email', email.trim());
-            formData.append('role', 'volunteer'); // Zmena na 'volunteer'
+            formData.append('role', 'volunteer');
             formData.append('timestamp', new Date().toISOString());
 
             const scriptResponse = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -201,7 +191,6 @@ function App() {
                 setErrorMessage('Registrácia bola úspešná, ale nastala chyba pri synchronizácii dát. Skúste to neskôr.');
             } else {
                 setSuccessMessage('Registrácia bola úspešná! Vitajte v tíme dobrovoľníkov.');
-                // Vyčistiť formulár
                 setFirstName('');
                 setLastName('');
                 setEmail('');
@@ -363,9 +352,6 @@ function App() {
                     autoComplete: 'new-password',
                     showPassword: showConfirmPassword,
                     toggleShowPassword: toggleShowConfirmPassword,
-                    onCopy: handlePasteCutCopy,
-                    onPaste: handlePasteCutCopy,
-                    onCut: handlePasteCutCopy,
                     disabled: formSubmitting || successMessage,
                     validationStatus: confirmPasswordTouched && confirmPassword.length > 0 ? (isConfirmPasswordMatching ? 'valid' : 'invalid') : ''
                 }),
@@ -380,10 +366,10 @@ function App() {
                 'button',
                 {
                     type: 'submit',
-                    className: buttonClasses, // Use dynamic classes
-                    disabled: formSubmitting || successMessage || !isFormValid, // CHANGE: Use isFormValid
+                    className: buttonClasses,
+                    disabled: formSubmitting || successMessage || !isFormValid,
                 },
-                formSubmitting ? ( // Use formSubmitting
+                formSubmitting ? (
                     React.createElement(
                         'svg',
                         { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
