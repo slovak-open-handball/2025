@@ -1,10 +1,12 @@
 // Tento súbor definuje hlavný React komponent pre registráciu dobrovoľníkov.
 // Zahŕňa formulár, validáciu a ukladanie dát do Firestore.
 
-// Importy pre potrebné Firebase funkcie a zoznam predvolieb
+// Importy pre potrebné Firebase funkcie
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// countryDialCodes sa už načítavajú priamo z HTML, nie je potrebné ich importovať.
+
+// Import zoznamu predvolieb z externého súboru
+import { countryDialCodes } from "./countryDialCodes.js";
 
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
@@ -31,8 +33,8 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedBu
     const selectedRowBgColor = `${unlockedButtonColor}B3`; // 70% opacity
     const selectedCheckColor = unlockedButtonColor;
 
-    // Načítanie dát z globálnej premennej 'countryDialCodes'
-    const filteredCodes = window.countryDialCodes.filter(country =>
+    // Načítanie a filtrovanie dát z importovaného zoznamu
+    const filteredCodes = countryDialCodes.filter(country =>
         country.name.toLowerCase().includes(filter.toLowerCase()) ||
         country.dialCode.includes(filter) ||
         country.code.toLowerCase().includes(filter.toLowerCase())
