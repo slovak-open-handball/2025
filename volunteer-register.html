@@ -44,11 +44,32 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Načítanie súborov pre hlavičku a autentifikáciu ako moduly -->
-    <script type="module" src="header.js"></script>
-    <script type="module" src="authentication.js"></script>
+    <!--
+        Načítanie všetkých súborov s logikou.
+        Dôležité: Súbory sa načítavajú v správnom poradí, aby sa predišlo chybám.
+    -->
+    <script type="text/javascript" src="authentication.js"></script>
+    <script type="text/javascript" src="header.js"></script>
+    <script type="text/javascript" src="volunteer-register.js"></script>
 
-    <!-- Načítanie a vykreslenie React komponenty, musí byť tiež modul -->
-    <script type="module" src="volunteer-register.js"></script>
+    <!-- Vykreslenie React aplikácie až po načítaní všetkých závislostí -->
+    <script type="text/javascript">
+        // Počkáme, kým sa okno úplne načíta a až potom spustíme renderovanie.
+        window.onload = function() {
+            // Funkcia, ktorá sa pokúša vykresliť aplikáciu, kým nie je všetko pripravené.
+            const renderApp = () => {
+                // Ak je Firebase autentifikácia pripravená, vykreslíme App komponentu.
+                if (window.isGlobalAuthReady) {
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(App, null));
+                } else {
+                    // Ak nie je, skúšame znova každých 100 milisekúnd.
+                    setTimeout(renderApp, 100);
+                }
+            };
+            // Spustíme inicializačné vykreslenie.
+            renderApp();
+        };
+    </script>
 </body>
 </html>
