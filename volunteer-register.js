@@ -119,6 +119,7 @@ const App = () => {
         birthDate: '',
         tshirtSize: '',
         acceptTerms: false,
+        volunteerRoles: [],
     });
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [authError, setAuthError] = React.useState(null);
@@ -129,6 +130,15 @@ const App = () => {
     const [isSizesLoading, setIsSizesLoading] = React.useState(true);
     const [isAuthReady, setIsAuthReady] = React.useState(false);
     const [timeoutId, setTimeoutId] = React.useState(null);
+
+    const volunteerOptions = [
+        'Registrácia',
+        'Organizácia v hale',
+        'VIP občerstvenie',
+        'Fan shop',
+        'Stolík/zápisy stretnutí',
+        'Občerstvenie pre deti'
+    ];
 
     // Počká, kým bude globálna autentifikácia pripravená, a potom načíta veľkosti tričiek
     React.useEffect(() => {
@@ -180,6 +190,17 @@ const App = () => {
             ...prev,
             [name]: type === 'checkbox' ? checked : value,
         }));
+    };
+    
+    // Funkcia na spracovanie zmien v checkboxoch pre dobrovoľnícke roly
+    const handleVolunteerRoleChange = (e) => {
+        const { value, checked } = e.target;
+        setFormData(prev => {
+            const newRoles = checked
+                ? [...prev.volunteerRoles, value]
+                : prev.volunteerRoles.filter(role => role !== value);
+            return { ...prev, volunteerRoles: newRoles };
+        });
     };
 
     // Function to handle phone number changes and maintain cursor position
@@ -238,6 +259,7 @@ const App = () => {
                 gender: formData.gender,
                 birthDate: formData.birthDate,
                 tshirtSize: formData.tshirtSize,
+                volunteerRoles: formData.volunteerRoles,
                 registrationDate: serverTimestamp(),
             });
 
@@ -253,6 +275,7 @@ const App = () => {
                 birthDate: '',
                 tshirtSize: '',
                 acceptTerms: false,
+                volunteerRoles: [],
             });
 
         } catch (error) {
@@ -286,6 +309,8 @@ const App = () => {
     const unlockedButtonColor = 'bg-blue-600 hover:bg-blue-700 text-white';
     const lockedButtonColor = 'bg-gray-400 text-gray-700 cursor-not-allowed';
     const buttonClasses = `mt-6 font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition-all duration-300 ${isFormValid ? unlockedButtonColor : lockedButtonColor}`;
+
+    const volunteerLabel = formData.gender === 'female' ? 'Môžem byť nápomocná' : 'Môžem byť nápomocný';
 
     // Main component rendering
     return React.createElement(
@@ -452,6 +477,32 @@ const App = () => {
                     value: formData.birthDate,
                     onChange: handleInputChange,
                 }),
+            )
+        ),
+        // Volunteer Roles
+        formData.gender !== '' && React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, volunteerLabel),
+            React.createElement(
+                'div',
+                { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2' },
+                volunteerOptions.map(option => React.createElement(
+                    'label',
+                    {
+                        key: option,
+                        className: 'flex items-center bg-gray-100 p-2 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors duration-200'
+                    },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        name: 'volunteerRoles',
+                        value: option,
+                        checked: formData.volunteerRoles.includes(option),
+                        onChange: handleVolunteerRoleChange,
+                        className: 'form-checkbox h-4 w-4 text-blue-600'
+                    }),
+                    React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, option)
+                ))
             )
         ),
         // T-shirt size
