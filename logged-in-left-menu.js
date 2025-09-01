@@ -45,7 +45,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 return '#47b3ff';
             case 'hall':
                 return '#b06835';
-            case 'user':
+            case 'club':
                 return '#9333EA';
             default:
                 return '#1D4ED8';
@@ -97,7 +97,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const updateMenuText = () => {
         const myDataLinkSpan = document.querySelector('a[href="logged-in-my-data.html"] .whitespace-nowrap');
         if (myDataLinkSpan) {
-            if (userProfileData.role === 'user') {
+            if (userProfileData.role === 'club') {
                 myDataLinkSpan.textContent = 'Kontaktná osoba';
             } else {
                 myDataLinkSpan.textContent = 'Moje údaje';
@@ -135,7 +135,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 }
             }
 
-        } else if (userProfileData.role === 'user') {
+        } else if (userProfileData.role === 'club') {
             addCategoriesLink.classList.add('hidden');
             addGroupsLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
