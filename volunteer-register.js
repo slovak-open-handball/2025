@@ -8,18 +8,13 @@ import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs
 
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
-    let strength = 0;
     const checks = {
-        length: password.length >= 8,
+        length: password.length >= 10,
         lowercase: /[a-z]/.test(password),
         uppercase: /[A-Z]/.test(password),
         number: /[0-9]/.test(password),
-        specialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
     };
-    Object.values(checks).forEach(check => {
-        if (check) strength++;
-    });
-    return { ...checks, strength };
+    return checks;
 };
 
 // Pomocná funkcia na validáciu emailu podľa špecifických požiadaviek
@@ -32,52 +27,6 @@ const isValidEmail = (email) => {
     const emailRegex = /^[^@]+@[^@]+\.[^@]{2,}$/;
     return emailRegex.test(email);
 };
-
-// Komponent pre zobrazenie sily hesla
-function PasswordStrengthIndicator({ password }) {
-    const { length, lowercase, uppercase, number, specialChar, strength } = passwordStrengthCheck(password);
-    const getBarColor = (s) => {
-        if (s <= 1) return 'bg-red-500';
-        if (s <= 3) return 'bg-orange-400';
-        return 'bg-green-500';
-    };
-    const getStrengthText = (s) => {
-        if (s === 0) return 'Veľmi slabé';
-        if (s === 1) return 'Slabé';
-        if (s === 2) return 'Stredné';
-        if (s === 3) return 'Silné';
-        return 'Veľmi silné';
-    };
-
-    if (password.length === 0) return null;
-
-    return React.createElement(
-        'div',
-        { className: 'mt-2' },
-        React.createElement(
-            'div',
-            { className: 'flex gap-1 h-2 rounded-full overflow-hidden' },
-            React.createElement('div', { className: `w-1/5 h-full ${strength >= 1 ? getBarColor(strength) : 'bg-gray-200'}` }),
-            React.createElement('div', { className: `w-1/5 h-full ${strength >= 2 ? getBarColor(strength) : 'bg-gray-200'}` }),
-            React.createElement('div', { className: `w-1/5 h-full ${strength >= 3 ? getBarColor(strength) : 'bg-gray-200'}` }),
-            React.createElement('div', { className: `w-1/5 h-full ${strength >= 4 ? getBarColor(strength) : 'bg-gray-200'}` }),
-            React.createElement('div', { className: `w-1/5 h-full ${strength >= 5 ? getBarColor(strength) : 'bg-gray-200'}` })
-        ),
-        React.createElement(
-            'p',
-            { className: `text-xs mt-1 ${getBarColor(strength)} font-medium` },
-            getStrengthText(strength)
-        ),
-        React.createElement(
-            'ul',
-            { className: 'text-xs text-gray-500 mt-2 list-disc list-inside space-y-1' },
-            React.createElement('li', { className: `text-${length ? 'green' : 'red'}-500` }, 'Minimálne 8 znakov'),
-            React.createElement('li', { className: `text-${uppercase && lowercase ? 'green' : 'red'}-500` }, 'Veľké a malé písmená'),
-            React.createElement('li', { className: `text-${number ? 'green' : 'red'}-500` }, 'Číslo'),
-            React.createElement('li', { className: `text-${specialChar ? 'green' : 'red'}-500` }, 'Špeciálny znak')
-        )
-    );
-}
 
 // Hlavný komponent React aplikácie
 function App() {
@@ -101,7 +50,12 @@ function App() {
         if (!formData.name) errors.name = 'Meno je povinné.';
         if (!formData.surname) errors.surname = 'Priezvisko je povinné.';
         if (formData.email && !isValidEmail(formData.email)) errors.email = 'Zadajte platnú e-mailovú adresu.';
-        if (formData.password && passwordStrengthCheck(formData.password).strength < 3) errors.password = 'Heslo je príliš slabé.';
+        
+        const passwordChecks = passwordStrengthCheck(formData.password);
+        if (!passwordChecks.length || !passwordChecks.lowercase || !passwordChecks.uppercase || !passwordChecks.number) {
+            errors.password = 'Heslo nespĺňa všetky podmienky.';
+        }
+        
         if (formData.confirmPassword && formData.password !== formData.confirmPassword) errors.confirmPassword = 'Heslá sa nezhodujú.';
 
         setFormErrors(errors);
@@ -299,7 +253,39 @@ function App() {
                     required: true,
                     autoComplete: 'new-password'
                 }),
-                React.createElement(PasswordStrengthIndicator, { password: formData.password })
+                // Nový textový indikátor sily hesla
+                React.createElement(
+                    'div',
+                    { className: 'mt-2 text-sm italic text-gray-500' },
+                    React.createElement(
+                        'ul',
+                        { className: 'list-none p-0 m-0 space-y-1' },
+                        React.createElement(
+                            'li',
+                            { className: `flex items-center space-x-2 ${passwordStrengthCheck(formData.password).length ? 'text-green-500' : 'text-gray-500'}` },
+                            React.createElement('span', { className: 'text-lg leading-none' }, passwordStrengthCheck(formData.password).length ? '✔' : '•'),
+                            React.createElement('span', null, 'aspoň 10 znakov')
+                        ),
+                        React.createElement(
+                            'li',
+                            { className: `flex items-center space-x-2 ${passwordStrengthCheck(formData.password).uppercase ? 'text-green-500' : 'text-gray-500'}` },
+                            React.createElement('span', { className: 'text-lg leading-none' }, passwordStrengthCheck(formData.password).uppercase ? '✔' : '•'),
+                            React.createElement('span', null, 'aspoň jedno veľké písmeno')
+                        ),
+                        React.createElement(
+                            'li',
+                            { className: `flex items-center space-x-2 ${passwordStrengthCheck(formData.password).lowercase ? 'text-green-500' : 'text-gray-500'}` },
+                            React.createElement('span', { className: 'text-lg leading-none' }, passwordStrengthCheck(formData.password).lowercase ? '✔' : '•'),
+                            React.createElement('span', null, 'aspoň jedno malé písmeno')
+                        ),
+                        React.createElement(
+                            'li',
+                            { className: `flex items-center space-x-2 ${passwordStrengthCheck(formData.password).number ? 'text-green-500' : 'text-gray-500'}` },
+                            React.createElement('span', { className: 'text-lg leading-none' }, passwordStrengthCheck(formData.password).number ? '✔' : '•'),
+                            React.createElement('span', null, 'aspoň jednu číslicu')
+                        )
+                    )
+                )
             ),
             // Potvrdenie hesla
             React.createElement(
@@ -320,7 +306,13 @@ function App() {
                     onChange: handleInputChange,
                     required: true,
                     autoComplete: 'new-password'
-                })
+                }),
+                // Zobrazenie chyby, ak sa heslá nezhodujú
+                (formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword) && React.createElement(
+                    'p',
+                    { className: 'text-red-500 text-xs italic mt-1' },
+                    'Heslá sa nezhodujú'
+                )
             ),
             // Telefónne číslo
             React.createElement(
