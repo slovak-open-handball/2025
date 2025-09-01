@@ -420,7 +420,7 @@ const MyDataApp = ({ userProfileData }) => {
                 console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
                 console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
 
-                if (nowMillis <= deadlineMillis) { 
+                if (nowMillis <= deadlineMillis || userProfileData.role === 'referee' || userProfileData.role === 'volunteer') { 
                     setCanEdit(true); 
                     console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
 
