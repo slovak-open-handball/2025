@@ -29,6 +29,20 @@ const isValidEmail = (email) => {
 const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedButtonColor }) => {
     const [filter, setFilter] = React.useState('');
 
+    const modalRef = React.useRef();
+
+    React.useEffect(() => {
+        function handleClickOutside(event) {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                onClose();
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [onClose, modalRef]);
+
     // Získanie farby pre podsvietenie a zaškrtávacie políčko
     const filteredCodes = countryDialCodes.filter(c =>
         c.name.toLowerCase().includes(filter.toLowerCase()) ||
@@ -48,7 +62,7 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedBu
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center p-4 z-50' },
         React.createElement(
             'div',
-            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
+            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm', ref: modalRef },
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
