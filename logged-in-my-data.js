@@ -203,7 +203,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         )
     );
 
-    const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall' userProfileData.role === 'referee' || userProfileData.role === 'volunteer') ? null : React.createElement(
+    const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall' || userProfileData.role === 'referee' || userProfileData.role === 'volunteer') ? null : React.createElement(
         'div',
         { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]`' },
         React.createElement(
