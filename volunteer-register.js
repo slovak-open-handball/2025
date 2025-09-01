@@ -285,18 +285,6 @@ const handleSubmit = async (e) => {
       registrationDate: serverTimestamp(),
     });
 
-    // Volanie Google Apps Scriptu
-    await callGoogleAppsScript({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      fullPhoneNumber: fullPhoneNumber,
-      gender: formData.gender,
-      birthDate: formData.birthDate,
-      tshirtSize: formData.tshirtSize,
-      volunteerRoles: formData.volunteerRoles,
-    });
-
     setSuccess(true);
 
     setFormData({
@@ -312,6 +300,19 @@ const handleSubmit = async (e) => {
       acceptTerms: false,
       volunteerRoles: [],
     });
+
+    // Volanie Google Apps Scriptu
+    await callGoogleAppsScript({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      fullPhoneNumber: fullPhoneNumber,
+      gender: formData.gender,
+      birthDate: formData.birthDate,
+      tshirtSize: formData.tshirtSize,
+      volunteerRoles: formData.volunteerRoles,
+    });
+      
   } catch (error) {
     console.error("Chyba pri registrácii:", error);
     let errorMessage = "Chyba pri registrácii. Skúste to prosím znova.";
