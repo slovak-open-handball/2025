@@ -132,7 +132,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
       { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
       React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, `Zmeniť rolu pre ${user.firstName} ${user.lastName}`),
       React.createElement('div', { className: 'mb-4' },
-        ['admin', 'club', 'hall'].map(role =>
+        ['admin', 'club', 'hall', 'referee', 'volunteer'].map(role =>
           React.createElement('div', { key: role, className: 'flex items-center mb-2' },
             React.createElement('input', {
               type: 'radio',
@@ -144,7 +144,7 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
               className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
             }),
             React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' },
-              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : 'Klub'
+              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : role === 'referee' ? 'Rozhodca' : role === 'volunteer' ? 'Dobrovoľník' : 'Klub'
             )
           )
         )
@@ -230,6 +230,26 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
                         className: 'form-checkbox h-4 w-4 text-indigo-600'
                     }),
                     React.createElement('label', { htmlFor: 'filter-club', className: 'ml-2 text-gray-700' }, 'Klub')
+                ),
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-referee',
+                        checked: selectedRoles.includes('referee'),
+                        onChange: () => handleRoleChange('referee'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-referee', className: 'ml-2 text-gray-700' }, 'Rozhodca')
+                ),
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-volunteer',
+                        checked: selectedRoles.includes('volunteer'),
+                        onChange: () => handleRoleChange('volunteer'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-volunteer', className: 'ml-2 text-gray-700' }, 'Dobrovoľník')
                 )
             ),
             React.createElement('div', { className: 'flex justify-end' },
@@ -375,6 +395,10 @@ function UsersManagementApp() {
         return 'Klub';
       case 'hall':
         return 'Športová hala';
+      case 'referee':
+        return 'Rozhodca';
+      case 'volunteer':
+        return 'Dobrovoľník';
       default:
         return role;
     }
@@ -452,7 +476,7 @@ function UsersManagementApp() {
                 if (Object.keys(docToUpdate).length > 0) {
                     await updateDoc(doc(db, `users`, userData.id), docToUpdate);
                 }
-            } else if (userData.role === 'club') {
+            } else if (userData.role === 'club' || userData.role === 'referee' || userData.role === 'volunteer') {
                 let needsUpdate = false;
                 if (!userData.dataEditDeadline) {
                     userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
@@ -540,7 +564,7 @@ function UsersManagementApp() {
       if (newRole === 'admin' || newRole === 'hall') {
           updateData.dataEditDeadline = deleteField();
           updateData.rosterEditDeadline = deleteField();
-      } else if (newRole === 'club') {
+      } else if (newRole === 'club' || newRole === 'referee' || newRole === 'volunteer') {
            updateData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
            updateData.rosterEditDeadline = DEFAULT_ROSTER_EDIT_DEADLINE;
       }
@@ -684,6 +708,10 @@ function UsersManagementApp() {
               return '#b06835';
           case 'club':
               return '#9333EA';
+          case 'referee':
+              return '#FF4500'; // OrangeRed
+          case 'volunteer':
+              return '#008000'; // Green
           default:
               return '#1D4ED8';
       }
@@ -700,6 +728,10 @@ function UsersManagementApp() {
               return 'Športová hala';
           case 'club':
               return 'Klub';
+          case 'referee':
+              return 'Rozhodca';
+          case 'volunteer':
+              return 'Dobrovoľník';
           default:
               return role;
       }
@@ -834,6 +866,7 @@ function UsersManagementApp() {
             const isNotCurrentUser = user.id !== window.currentUserId;
             const isUserOldestAdmin = user.id === oldestAdminId;
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
+            const hasDeadlines = ['club', 'referee', 'volunteer'].includes(user.role);
             
             // Logika na skrytie riadku pre ostatných používateľov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
@@ -857,26 +890,26 @@ function UsersManagementApp() {
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
                 {
-                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${user.role === 'club' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${hasDeadlines ? 'cursor-pointer hover:bg-gray-50' : ''}`,
                   onClick: () => {
-                    if (user.role === 'club') {
+                    if (hasDeadlines) {
                       handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline);
                     }
                   }
                 },
-                user.role === 'admin' || user.role === 'hall' ? '-' : formatDate(user.dataEditDeadline)
+                hasDeadlines ? formatDate(user.dataEditDeadline) : '-'
               ),
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
                 {
-                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${user.role === 'club' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${hasDeadlines ? 'cursor-pointer hover:bg-gray-50' : ''}`,
                   onClick: () => {
-                    if (user.role === 'club') {
+                    if (hasDeadlines) {
                       handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline);
                     }
                   }
                 },
-                user.role === 'admin' || user.role === 'hall' ? '-' : formatDate(user.rosterEditDeadline)
+                hasDeadlines ? formatDate(user.rosterEditDeadline) : '-'
               ),
               React.createElement(
                 'td',
