@@ -106,6 +106,27 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedBu
     );
 };
 
+const callGoogleAppsScript = async (data) => {
+  try {
+    const response = await fetch(
+      "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec",
+      {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }
+    );
+    // V režime no-cors nemôžete čítať odpoveď, takže sa tu len uistite, že volanie prebehlo
+    console.log("Request sent successfully");
+  } catch (error) {
+    console.error("Error calling Google Apps Script:", error);
+  }
+};
+
+
 // The main registration form component
 const App = () => {
     const [formData, setFormData] = React.useState({
@@ -233,65 +254,78 @@ const App = () => {
         setSelectedDialCode(code);
     };
 
-    // Form submission handler
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setAuthError(null);
-        setIsSubmitting(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setAuthError(null);
+  setIsSubmitting(true);
 
-        const fullPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
+  const fullPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
 
-        try {
-            const auth = window.auth;
-            const db = window.db;
-            const appId = window.__app_id || 'default-app-id';
+  try {
+    const auth = window.auth;
+    const db = window.db;
+    const appId = window.__app_id || 'default-app-id';
 
-            const authResult = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-            const user = authResult.user;
-            console.log("Používateľ úspešne vytvorený:", user.uid);
+    const authResult = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+    const user = authResult.user;
 
-            await setDoc(doc(db, `users/${user.uid}`), {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                fullPhoneNumber: fullPhoneNumber,
-                role: 'volunteer',
-                approved: true,
-                gender: formData.gender,
-                birthDate: formData.birthDate,
-                tshirtSize: formData.tshirtSize,
-                volunteerRoles: formData.volunteerRoles,
-                registrationDate: serverTimestamp(),
-            });
+    console.log("Používateľ úspešne vytvorený:", user.uid);
 
-            setSuccess(true);
-            setFormData({
-                firstName: '',
-                lastName: '',
-                email: '',
-                password: '',
-                confirmPassword: '',
-                phone: '',
-                gender: '',
-                birthDate: '',
-                tshirtSize: '',
-                acceptTerms: false,
-                volunteerRoles: [],
-            });
+    await setDoc(doc(db, `users/${user.uid}`), {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      fullPhoneNumber: fullPhoneNumber,
+      role: 'volunteer',
+      approved: true,
+      gender: formData.gender,
+      birthDate: formData.birthDate,
+      tshirtSize: formData.tshirtSize,
+      volunteerRoles: formData.volunteerRoles,
+      registrationDate: serverTimestamp(),
+    });
 
-        } catch (error) {
-            console.error("Chyba pri registrácii:", error);
-            let errorMessage = "Chyba pri registrácii. Skúste to prosím znova.";
-            if (error.code === 'auth/email-already-in-use') {
-                errorMessage = "Tento e-mail už je použitý. Prosím, použite iný.";
-            } else if (error.code === 'auth/weak-password') {
-                errorMessage = "Heslo je príliš slabé. Prosím, použite silnejšie.";
-            }
-            setAuthError(errorMessage);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+    // Volanie Google Apps Scriptu
+    await callGoogleAppsScript({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      fullPhoneNumber: fullPhoneNumber,
+      gender: formData.gender,
+      birthDate: formData.birthDate,
+      tshirtSize: formData.tshirtSize,
+      volunteerRoles: formData.volunteerRoles,
+    });
+
+    setSuccess(true);
+
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      phone: '',
+      gender: '',
+      birthDate: '',
+      tshirtSize: '',
+      acceptTerms: false,
+      volunteerRoles: [],
+    });
+  } catch (error) {
+    console.error("Chyba pri registrácii:", error);
+    let errorMessage = "Chyba pri registrácii. Skúste to prosím znova.";
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = "Tento e-mail už je použitý. Prosím, použite iný.";
+    } else if (error.code === 'auth/weak-password') {
+      errorMessage = "Heslo je príliš slabé. Prosím, použite silnejšie.";
+    }
+    setAuthError(errorMessage);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
     // Live validation
     const passwordChecks = passwordStrengthCheck(formData.password);
@@ -336,7 +370,7 @@ const App = () => {
                 {
                     className: 'text-2xl font-bold text-center'
                 },
-                'Ďakujeme za vyplnenie prihlášky dobrovoľníka. Budeme Vás pred turnajom kontaktovať :)'
+                'Ďakujeme za vyplnenie prihlášky dobrovoľníka. Budeme Vás pred turnajom kontaktovať.'
             )
         );
     }
