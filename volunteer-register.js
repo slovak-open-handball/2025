@@ -130,7 +130,6 @@ function App() {
         const errors = {};
         if (!formData.name) errors.name = 'Meno je povinné.';
         if (!formData.surname) errors.surname = 'Priezvisko je povinné.';
-        if (!formData.phone) errors.phone = 'Telefónne číslo je povinné.';
         if (formData.email && !isValidEmail(formData.email)) errors.email = 'Zadajte platnú e-mailovú adresu.';
         
         const passwordChecks = passwordStrengthCheck(formData.password);
@@ -147,7 +146,6 @@ function App() {
             !!formData.email &&
             !!formData.password &&
             !!formData.confirmPassword &&
-            !!formData.phone &&
             Object.keys(errors).length === 0
         );
     }, [formData]);
@@ -439,14 +437,8 @@ function App() {
                         placeholder: 'xxx xxx xxx',
                         value: formData.phone,
                         onChange: handlePhoneChange,
-                        required: true,
                     })
                 ),
-                formErrors.phone && React.createElement(
-                    'p',
-                    { className: 'text-red-500 text-xs italic mt-1' },
-                    formErrors.phone
-                )
             ),
             // Tlačidlo na odoslanie
             React.createElement(
