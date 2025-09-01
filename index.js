@@ -186,11 +186,6 @@ const updateLoginButton = (isLoggedIn) => {
     }
 };
 
-/**
- * Pomocná funkcia, ktorá vráti farbu na základe roly používateľa.
- * @param {string} role - Rola používateľa ('admin', 'hall', 'user', atď.).
- * @returns {string} - Hex kód farby.
- */
 const getRoleColor = (role) => {
     const defaultColor = '#4299E1'; // Modrá pre bežného používateľa
 
@@ -199,7 +194,7 @@ const getRoleColor = (role) => {
             return '#47b3ff'; // Tvoja farba pre admina
         case 'hall':
             return '#b06835'; // Tvoja farba pre halu
-        case 'user':
+        case 'club':
             return '#9333EA'; // Tvoja farba pre bežného používateľa
         default:
             return defaultColor; // Predvolená farba, ak rola nie je definovaná
