@@ -146,22 +146,17 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
             React.createElement(
               'label',
                 { htmlFor: role, className: 'ml-2 text-gray-700' },
-                (() => {
-                  switch (role) {
-                    case 'admin':
-                      return 'Administrátor';
-                    case 'hall':
-                      return 'Športová hala';
-                    case 'club':
-                      return 'Klub';
-                    case 'referee':
-                      return 'Rozhodca';
-                    case 'volunteer':
-                      return 'Dobrovoľník';
-                    default:
-                      return null;
-                  }
-                })()
+                role === 'admin' ?
+                'Administrátor' :
+                role === 'hall' ?
+                'Športová hala' :
+                role === 'club' ?
+                'Klub' :
+                role === 'referee' ?
+                'Rozhodca' :
+                role === 'volunteer' ?
+                'Dobrovoľník' :
+                null
               );
           )
         )
