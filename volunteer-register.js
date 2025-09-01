@@ -6,19 +6,8 @@
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Zoznam predvolieb pre telefónne čísla (presunuté do tohto súboru)
-const countryDialCodes = [
-    { "name": "Slovensko", "dialCode": "+421", "code": "SK" },
-    { "name": "Česká republika", "dialCode": "+420", "code": "CZ" },
-    { "name": "Poľsko", "dialCode": "+48", "code": "PL" },
-    { "name": "Maďarsko", "dialCode": "+36", "code": "HU" },
-    { "name": "Rakúsko", "dialCode": "+43", "code": "AT" },
-    { "name": "Nemecko", "dialCode": "+49", "code": "DE" },
-    { "name": "Spojené kráľovstvo", "dialCode": "+44", "code": "GB" },
-    { "name": "Spojené štáty", "dialCode": "+1", "code": "US" },
-    { "name": "Ukrajina", "dialCode": "+380", "code": "UA" },
-    { "name": "Srbsko", "dialCode": "+381", "code": "RS" },
-];
+// Import zoznamu predvolieb z externého súboru countryDialCodes.js
+import { countryDialCodes } from "./countryDialCodes.js";
 
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
@@ -38,8 +27,12 @@ const isValidEmail = (email) => {
 };
 
 // Komponent pre modálne okno s predvoľbami
-const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode }) => {
+const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedButtonColor }) => {
     const [filter, setFilter] = React.useState('');
+
+    // Získanie farby pre podsvietenie a zaškrtávacie políčko
+    const selectedRowBgColor = `${unlockedButtonColor}B3`; // 70% opacity
+    const selectedCheckColor = unlockedButtonColor;
 
     const filteredCodes = countryDialCodes.filter(country =>
         country.name.toLowerCase().includes(filter.toLowerCase()) ||
@@ -87,7 +80,8 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode }) => {
                             'li',
                             {
                                 key: index,
-                                className: `py-2 px-4 hover:bg-gray-100 cursor-pointer transition-colors duration-150 flex justify-between items-center ${country.dialCode === selectedDialCode ? 'bg-blue-100' : ''}`,
+                                className: `py-2 px-4 hover:bg-gray-100 cursor-pointer transition-colors duration-150 flex justify-between items-center ${country.dialCode === selectedDialCode ? 'bg-opacity-70' : ''}`,
+                                style: { backgroundColor: country.dialCode === selectedDialCode ? selectedRowBgColor : '' },
                                 onClick: () => {
                                     onSelect(country.dialCode);
                                     onClose();
@@ -100,7 +94,7 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode }) => {
                                 React.createElement('span', { className: 'ml-2 text-gray-500' }, `(${country.dialCode})`),
                                 country.dialCode === selectedDialCode && React.createElement(
                                     'span',
-                                    { className: 'text-[#1D4ED8] font-bold text-lg' },
+                                    { className: 'font-bold text-lg', style: { color: selectedCheckColor } },
                                     '✔'
                                 )
                             )
@@ -129,6 +123,9 @@ function App() {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [successMessage, setSuccessMessage] = React.useState('');
     const [errorMessage, setErrorMessage] = React.useState('');
+
+    // Farba odblokovaného tlačidla
+    const unlockedButtonColor = '#1D4ED8';
 
     // Validácia formulára
     React.useEffect(() => {
@@ -474,7 +471,8 @@ function App() {
                 isOpen: isModalOpen,
                 onClose: () => setIsModalOpen(false),
                 onSelect: handleDialCodeSelect,
-                selectedDialCode: selectedDialCode
+                selectedDialCode: selectedDialCode,
+                unlockedButtonColor: unlockedButtonColor
             }
         )
     );
