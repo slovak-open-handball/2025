@@ -221,15 +221,19 @@ const handleLogout = async () => {
 };
 
 const getHeaderColorByRole = (role) => {
-    switch (role) {
-        case 'admin':
-            return '#47b3ff';
-        case 'hall':
-            return '#b06835';
-        case 'club':
-            return '#9333EA';
-        default:
-            return '#1D4ED8';
+  switch (role) {
+    case 'admin':
+      return '#47b3ff';
+    case 'hall':
+      return '#b06835';
+    case 'club':
+      return '#9333EA';
+    case 'referee':
+      return '#007800';
+    case 'volunteer':
+      return '#FFAC1C';
+    default:
+      return '#1D4ED8';
     }
 }
 
