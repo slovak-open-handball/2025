@@ -62,7 +62,7 @@ const getRoleColor = (role) => {
             return '#47b3ff';
         case 'hall':
             return '#b06835';
-        case 'user':
+        case 'club':
             return '#9333EA';
         default:
             return '#1D4ED8';
