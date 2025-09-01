@@ -78,11 +78,11 @@ function PasswordStrengthIndicator({ password }) {
 function App() {
     const [formData, setFormData] = React.useState({
         name: '',
+        surname: '', // Pridané pole pre priezvisko
         email: '',
         password: '',
         confirmPassword: '',
         phone: '',
-        category: 'player',
     });
     const [formErrors, setFormErrors] = React.useState({});
     const [isFormValid, setIsFormValid] = React.useState(false);
@@ -94,13 +94,13 @@ function App() {
     React.useEffect(() => {
         const errors = {};
         if (!formData.name) errors.name = 'Meno je povinné.';
+        if (!formData.surname) errors.surname = 'Priezvisko je povinné.';
         if (!isValidEmail(formData.email)) errors.email = 'Zadajte platný email.';
         if (passwordStrengthCheck(formData.password).strength < 3) errors.password = 'Heslo je príliš slabé.';
         if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Heslá sa nezhodujú.';
-        // Telefónne číslo je voliteľné, validácia zatiaľ nie je potrebná
         
         setFormErrors(errors);
-        setIsFormValid(Object.keys(errors).length === 0 && formData.name && formData.email && formData.password && formData.confirmPassword);
+        setIsFormValid(Object.keys(errors).length === 0 && formData.name && formData.surname && formData.email && formData.password && formData.confirmPassword);
     }, [formData]);
 
     const handleInputChange = (e) => {
@@ -141,16 +141,16 @@ function App() {
                 uid: user.uid,
                 email: formData.email,
                 name: formData.name,
+                surname: formData.surname,
                 phone: formData.phone,
                 role: 'volunteer', // Priradená rola 'volunteer'
-                category: formData.category,
                 createdAt: serverTimestamp(),
             };
 
             await setDoc(userProfileRef, userProfileData);
 
             setSuccessMessage("Registrácia dobrovoľníka bola úspešná! Môžete sa prihlásiť.");
-            setFormData({ name: '', email: '', password: '', confirmPassword: '', phone: '', category: 'player' });
+            setFormData({ name: '', surname: '', email: '', password: '', confirmPassword: '', phone: '' });
 
         } catch (error) {
             console.error("Chyba pri registrácii:", error);
@@ -204,23 +204,38 @@ function App() {
                 React.createElement(
                     'label',
                     { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'name' },
-                    'Celé meno'
+                    'Meno'
                 ),
                 React.createElement('input', {
                     className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
                     id: 'name',
                     type: 'text',
                     name: 'name',
-                    placeholder: 'Ján Novák',
+                    placeholder: 'Ján',
                     value: formData.name,
                     onChange: handleInputChange,
                     required: true,
-                }),
-                formErrors.name && React.createElement(
-                    'p',
-                    { className: 'text-red-500 text-xs italic mt-1' },
-                    formErrors.name
-                )
+                })
+            ),
+            // Priezvisko
+            React.createElement(
+                'div',
+                null,
+                React.createElement(
+                    'label',
+                    { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'surname' },
+                    'Priezvisko'
+                ),
+                React.createElement('input', {
+                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                    id: 'surname',
+                    type: 'text',
+                    name: 'surname',
+                    placeholder: 'Novák',
+                    value: formData.surname,
+                    onChange: handleInputChange,
+                    required: true,
+                })
             ),
             // Email
             React.createElement(
@@ -240,12 +255,7 @@ function App() {
                     value: formData.email,
                     onChange: handleInputChange,
                     required: true,
-                }),
-                formErrors.email && React.createElement(
-                    'p',
-                    { className: 'text-red-500 text-xs italic mt-1' },
-                    formErrors.email
-                )
+                })
             ),
             // Heslo
             React.createElement(
@@ -267,12 +277,7 @@ function App() {
                     required: true,
                     autoComplete: 'new-password'
                 }),
-                React.createElement(PasswordStrengthIndicator, { password: formData.password }),
-                formErrors.password && React.createElement(
-                    'p',
-                    { className: 'text-red-500 text-xs italic mt-1' },
-                    formErrors.password
-                )
+                React.createElement(PasswordStrengthIndicator, { password: formData.password })
             ),
             // Potvrdenie hesla
             React.createElement(
@@ -293,12 +298,7 @@ function App() {
                     onChange: handleInputChange,
                     required: true,
                     autoComplete: 'new-password'
-                }),
-                formErrors.confirmPassword && React.createElement(
-                    'p',
-                    { className: 'text-red-500 text-xs italic mt-1' },
-                    formErrors.confirmPassword
-                )
+                })
             ),
             // Telefónne číslo
             React.createElement(
@@ -318,29 +318,6 @@ function App() {
                     value: formData.phone,
                     onChange: handlePhoneChange,
                 })
-            ),
-            // Kategória dobrovoľníka
-            React.createElement(
-                'div',
-                null,
-                React.createElement(
-                    'label',
-                    { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'category' },
-                    'Vyberte kategóriu'
-                ),
-                React.createElement(
-                    'select',
-                    {
-                        className: 'shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-                        id: 'category',
-                        name: 'category',
-                        value: formData.category,
-                        onChange: handleInputChange,
-                    },
-                    React.createElement('option', { value: 'player' }, 'Hráč'),
-                    React.createElement('option', { value: 'coach' }, 'Tréner'),
-                    React.createElement('option', { value: 'volunteer' }, 'Dobrovoľník'),
-                )
             ),
             // Tlačidlo na odoslanie
             React.createElement(
