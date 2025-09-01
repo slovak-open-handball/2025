@@ -190,7 +190,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', { className: 'font-normal' }, userProfileData.email)
             ),
             // Podmienka pre zobrazenie telefónneho čísla
-            userProfileData.role !== 'admin' && userProfileData.role !== 'hall' &&
+            userProfileData.role !== 'admin' && userProfileData.role !== 'hall' && 
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, phoneLabel),
                 React.createElement('div', { className: 'font-normal' }, formatPhoneNumber(userProfileData.contactPhoneNumber))
@@ -203,7 +203,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         )
     );
 
-    const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall') ? null : React.createElement(
+    const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall' userProfileData.role === 'referee' || userProfileData.role === 'volunteer') ? null : React.createElement(
         'div',
         { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]`' },
         React.createElement(
@@ -478,6 +478,10 @@ const MyDataApp = ({ userProfileData }) => {
                 return '#b06835';
             case 'club':
                 return '#9333EA';
+            case 'referee':
+                return: '#007800';
+            case 'volunteer':
+                return: '#FFAC1C';
             default:
                 return '#1D4ED8';
         }
