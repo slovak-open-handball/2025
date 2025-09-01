@@ -8,7 +8,7 @@ const { useState, useEffect, useRef } = React;
  */
 export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }) => {
     // Ak je rola používateľa 'admin' alebo 'hall', nezobrazíme modál.
-    if (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') {
+    if (userProfileData?.role === 'admin' || userProfileData?.role === 'hall' || userProfileData?.role === 'referee' || userProfileData?.role === 'volunteer') {
         return null;
     }
     
