@@ -47,6 +47,10 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 return '#b06835';
             case 'club':
                 return '#9333EA';
+            case 'referee':
+                return '#007800';
+            case 'volunteer':
+                return '#FFAC1C';
             default:
                 return '#1D4ED8';
         }
