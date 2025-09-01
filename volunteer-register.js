@@ -350,7 +350,6 @@ const App = () => {
                     React.createElement('option', { value: '' }, 'Vyberte...'),
                     React.createElement('option', { value: 'male' }, 'Muž'),
                     React.createElement('option', { value: 'female' }, 'Žena'),
-                    React.createElement('option', { value: 'other' }, 'Iné')
                 )
             ),
             // Birth Date
