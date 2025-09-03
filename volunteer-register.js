@@ -386,7 +386,9 @@ const App = () => {
         formData.gender &&
         formData.birthDate &&
         formData.tshirtSize &&
-        formData.acceptTerms;
+        formData.acceptTerms &&
+        formData.volunteerRoles.length > 0 &&
+        formData.selectedDates.length > 0;
 
     const unlockedButtonColor = 'bg-blue-600 hover:bg-blue-700 text-white';
     const lockedButtonColor = 'bg-white text-blue-600 border border-blue-600 cursor-not-allowed';
