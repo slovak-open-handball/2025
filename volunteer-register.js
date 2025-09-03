@@ -816,11 +816,11 @@ const App = () => {
                 htmlFor: 'note'
             }, 'Poznámka (voliteľné)'),
             React.createElement('textarea', {
-                className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline min-h-[104px]',
                 id: 'note',
                 name: 'note',
                 placeholder: 'Sem môžete napísať dodatočné informácie...',
-                rows: 4,
+                style: { resize: 'vertical' },
                 value: formData.note || '',
                 onChange: handleInputChange,
             })
