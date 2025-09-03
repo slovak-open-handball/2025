@@ -333,11 +333,13 @@ const handleSubmit = async (e) => {
       lastName: formData.lastName,
       email: formData.email,
       contactPhoneNumber: fullPhoneNumber,
-      street: formData.street,
-      houseNumber: formData.houseNumber,
-      city: formData.city,
-      postalCode: formData.postalCode,
-      country: formData.country,
+      address: {
+        street: formData.street,
+        houseNumber: formData.houseNumber,
+        city: formData.city,
+        postalCode: formData.postalCode,
+        country: formData.country,
+      },
       dateOfBirth: formData.birthDate,
       skills: formData.volunteerRoles,
     });
