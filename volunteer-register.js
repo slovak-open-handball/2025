@@ -704,24 +704,25 @@ const App = () => {
             React.createElement(
                 'div',
                 { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2' },
-                volunteerOptions.map(option =>
-                    React.createElement(
+                volunteerOptions.map(option => {
+                    const isSelected = formData.volunteerRoles.includes(option);
+                    return React.createElement(
                         'label',
                         {
                             key: option,
-                            className: 'flex items-center bg-gray-100 p-2 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors duration-200'
+                            className: `flex items-center bg-gray-100 p-2 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors duration-200 ${isSelected ? 'bg-blue-200' : ''}`
                         },
                         React.createElement('input', {
                             type: 'checkbox',
                             name: 'volunteerRoles',
                             value: option,
-                            checked: formData.volunteerRoles.includes(option),
+                            checked: isSelected,
                             onChange: handleVolunteerRoleChange,
                             className: 'form-checkbox h-4 w-4 text-blue-600'
                         }),
                         React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, option)
-                    )
-                )
+                    );
+                })
             )
         ),
 
