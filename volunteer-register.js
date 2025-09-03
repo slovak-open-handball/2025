@@ -816,7 +816,7 @@ const App = () => {
                 className: 'form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out'
             }),
             React.createElement('label', { className: 'ml-2 block text-gray-900 text-sm', htmlFor: 'acceptTerms' },
-                'Súhlasím so spracovaním osobných údajov na účely prípravy dobrovoľníckej zmluvy'
+                'Súhlasím so spracovaním osobných údajov na účely prípravy dobrovoľníckej zmluvy.'
             )
         ),
 
