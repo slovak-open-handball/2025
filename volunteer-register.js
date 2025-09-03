@@ -365,11 +365,11 @@ const handleSubmit = async (e) => {
       dateOfBirth: formData.birthDate,
       skills: formData.volunteerRoles,
       // Pridanie údajov o adrese do objektu
+      country: formData.country,
+      city: formData.city,
+      postalCode: formData.postalCode,
       street: formData.street,
       houseNumber: formData.houseNumber,
-      city: formData.city,
-      zipCode: formData.zipCode,
-      country: formData.country,
     });
       
   } catch (error) {
