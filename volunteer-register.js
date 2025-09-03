@@ -438,7 +438,7 @@ const App = () => {
             React.createElement(
                 'p',
                 { className: 'text-2xl font-bold text-center' },
-                'Ďakujeme za vyplnenie prihlášky dobrovoľníka. Budeme Vás pred turnajom kontaktovať.'
+                'Ďakujeme za vyplnenie prihlášky dobrovoľníka. Budeme vás pred turnajom kontaktovať.'
             )
         );
     }
