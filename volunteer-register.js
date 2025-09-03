@@ -9,7 +9,7 @@ import { doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.co
 import { countryDialCodes } from "./countryDialCodes.js";
 
 // Placeholder URL pre tvoj Google Apps Script
-const APPS_SCRIPT_URL = "VLOŽ SEM URL ADRESU SVOJHO GOOGLE APPS SCRIPT";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
