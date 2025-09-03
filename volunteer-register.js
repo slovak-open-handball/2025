@@ -414,7 +414,7 @@ const App = () => {
         } else if (formData.gender === 'male') {
             return 'Môžem byť nápomocný';
         } else {
-            return 'Môžem byť nápomocný/á';
+            return 'Môžem byť nápomocný/-á';
         }
     };
 
