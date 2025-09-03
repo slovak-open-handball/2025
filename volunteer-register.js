@@ -359,9 +359,9 @@ const App = () => {
             console.error("Chyba pri registrácii:", error);
             let errorMessage = "Chyba pri registrácii. Skúste to prosím znova.";
             if (error.code === 'auth/email-already-in-use') {
-                errorMessage = "Tento e-mail už je použitý. Prosím, použite iný.";
+                errorMessage = "Tento e-mail už je použitý. Prosím, zadajte iný.";
             } else if (error.code === 'auth/weak-password') {
-                errorMessage = "Heslo je príliš slabé. Prosím, použite silnejšie.";
+                errorMessage = "Heslo je príliš slabé. Prosím, zadajte silnejšie.";
             }
             setAuthError(errorMessage);
         } finally {
@@ -425,7 +425,7 @@ const App = () => {
             React.createElement(
                 'p',
                 { className: 'text-2xl font-bold text-center' },
-                'Ďakujeme za vyplnenie prihlášky dobrovoľníka. Budeme vás pred turnajom kontaktovať.'
+                'Ďakujeme za vyplnenie prihlášky dobrovoľníka. Na zadanú e-mailovú adresu bola odoslaná kópia údajov poskytnutých v registračnom formulári. V prípade potreby vás budeme pred turnajom kontaktovať.'
             )
         );
     }
