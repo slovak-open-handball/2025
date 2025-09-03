@@ -431,7 +431,7 @@ const App = () => {
     return React.createElement(
         'form',
         {
-            className: 'bg-white p-8 rounded-lg shadow-lg w-full max-w-xl mx-auto',
+            className: 'bg-white p-8 rounded-lg w-full max-w-xl mx-auto',
             onSubmit: handleSubmit,
         },
         // Nadpis
