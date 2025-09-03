@@ -576,7 +576,7 @@ const App = () => {
         React.createElement(
             'div',
             { className: 'mb-4' },
-            React.createElement('h3', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Adresa trvalého bydliska'),
+            React.createElement('h3', { className: 'block text-gray-700 text-lg font-bold mb-2' }, 'Adresa trvalého bydliska'),
         ),
 
         // Ulica
