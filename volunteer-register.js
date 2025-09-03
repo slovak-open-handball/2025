@@ -414,7 +414,7 @@ const App = () => {
         } else if (formData.gender === 'male') {
             return 'Môžem byť nápomocný';
         } else {
-            return 'Môžem byť nápomocná/ý';
+            return 'Môžem byť nápomocný/á';
         }
     };
 
@@ -730,7 +730,7 @@ const App = () => {
         React.createElement(
             'div',
             { className: 'mb-4' },
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Vyberte dátumy, keď môžete pomôcť'),
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Vyberte dátumy, kedy môžete pomôcť'),
             React.createElement(
                 'div',
                 { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2' },
