@@ -106,6 +106,23 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedBu
     );
 };
 
+const formatPostalCode = (value) => {
+    // Odstráni všetky nečíselné znaky
+    const cleanedValue = value.replace(/\D/g, '');
+    // Obmedz na 5 číslic
+    const limitedValue = cleanedValue.slice(0, 5);
+    // Po treťom znaku pridaj medzeru
+    if (limitedValue.length > 3) {
+        return `${limitedValue.slice(0, 3)} ${limitedValue.slice(3)}`;
+    }
+    return limitedValue;
+};
+
+const handlePostalCodeChange = (e) => {
+    const formattedValue = formatPostalCode(e.target.value);
+    setFormData(prev => ({ ...prev, postalCode: formattedValue }));
+};
+
 const callGoogleAppsScript = async (data) => {
   try {
     const response = await fetch(
@@ -140,6 +157,11 @@ const App = () => {
         phone: '',
         gender: '',
         birthDate: '',
+        street: '',
+        houseNumber: '',
+        city: '',
+        postalCode: '',
+        country: '',
         tshirtSize: '',
         acceptTerms: false,
         volunteerRoles: [],
@@ -278,6 +300,11 @@ const handleSubmit = async (e) => {
       fullPhoneNumber: fullPhoneNumber,
       role: 'volunteer',
       approved: true,
+      street: formData.street,
+      houseNumber: formData.houseNumber,
+      city: formData.city,
+      postalCode: formData.postalCode,
+      country: formData.country,
       gender: formData.gender,
       birthDate: formData.birthDate,
       tshirtSize: formData.tshirtSize,
@@ -306,6 +333,11 @@ const handleSubmit = async (e) => {
       lastName: formData.lastName,
       email: formData.email,
       contactPhoneNumber: fullPhoneNumber,
+      street: formData.street,
+      houseNumber: formData.houseNumber,
+      city: formData.city,
+      postalCode: formData.postalCode,
+      country: formData.country,
       dateOfBirth: formData.birthDate,
       skills: formData.volunteerRoles,
     });
@@ -334,6 +366,11 @@ const handleSubmit = async (e) => {
         isValidEmail(formData.email) &&
         isPasswordValid &&
         formData.phone.replace(/\s/g, '').length >= 9 &&
+        formData.street &&
+        formData.houseNumber &&
+        formData.city &&
+        formData.postalCode.replace(/\s/g, '').length === 5 &&
+        formData.country &&
         formData.gender &&
         formData.birthDate &&
         formData.tshirtSize &&
@@ -496,6 +533,88 @@ const handleSubmit = async (e) => {
                 'Heslá sa nezhodujú.'
             )
         ),
+        // Adresa trvalého bydliska
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('h3', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Adresa trvalého bydliska'),
+        ),
+        // Ulica
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' }, 'Ulica'),
+            React.createElement('input', {
+                className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                id: 'street',
+                type: 'text',
+                name: 'street',
+                placeholder: 'Zadajte ulicu',
+                value: formData.street,
+                onChange: handleInputChange,
+            }),
+        ),
+        // Popisné číslo
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' }, 'Popisné číslo'),
+            React.createElement('input', {
+                className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                id: 'houseNumber',
+                type: 'text',
+                name: 'houseNumber',
+                placeholder: 'Zadajte popisné číslo',
+                value: formData.houseNumber,
+                onChange: handleInputChange,
+            }),
+        ),
+        // Mesto/obec
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { className: 'block text-gray-707 text-sm font-bold mb-2', htmlFor: 'city' }, 'Mesto/obec'),
+            React.createElement('input', {
+                className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                id: 'city',
+                type: 'text',
+                name: 'city',
+                placeholder: 'Zadajte mesto alebo obec',
+                value: formData.city,
+                onChange: handleInputChange,
+            }),
+        ),
+        // PSČ
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' }, 'PSČ'),
+            React.createElement('input', {
+                className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                id: 'postalCode',
+                type: 'text',
+                name: 'postalCode',
+                placeholder: 'xxx xx',
+                value: formData.postalCode,
+                onChange: handlePostalCodeChange,
+            }),
+        ),
+        // Krajina
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' }, 'Krajina'),
+            React.createElement('input', {
+                className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                id: 'country',
+                type: 'text',
+                name: 'country',
+                placeholder: 'Zadajte krajinu',
+                value: formData.country,
+                onChange: handleInputChange,
+            }),
+        ),
+        
         // Gender and Birth Date
         React.createElement(
             'div',
