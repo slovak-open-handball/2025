@@ -118,11 +118,6 @@ const formatPostalCode = (value) => {
     return limitedValue;
 };
 
-const handlePostalCodeChange = (e) => {
-    const formattedValue = formatPostalCode(e.target.value);
-    setFormData(prev => ({ ...prev, postalCode: formattedValue }));
-};
-
 const callGoogleAppsScript = async (data) => {
   try {
     const response = await fetch(
@@ -175,6 +170,11 @@ const App = () => {
     const [isSizesLoading, setIsSizesLoading] = React.useState(true);
     const [isAuthReady, setIsAuthReady] = React.useState(false);
     const [timeoutId, setTimeoutId] = React.useState(null);
+
+    const handlePostalCodeChange = (e) => {
+        const formattedValue = formatPostalCode(e.target.value);
+        setFormData(prev => ({ ...prev, postalCode: formattedValue }));
+    };
 
     const volunteerOptions = [
         'Registrácia',
