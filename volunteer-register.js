@@ -1,10 +1,8 @@
 // Tento súbor definuje hlavný React komponent pre registráciu dobrovoľníkov.
 // Zahŕňa formulár, validáciu a ukladanie dát do Firestore.
-
 // Importy pre potrebné Firebase funkcie
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
 // Import zoznamu predvolieb z externého súboru
 import { countryDialCodes } from "./countryDialCodes.js";
 
@@ -29,7 +27,6 @@ const isValidEmail = (email) => {
 const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedButtonColor }) => {
     const [filter, setFilter] = React.useState('');
     const modalRef = React.useRef();
-
     React.useEffect(() => {
         function handleClickOutside(event) {
             if (modalRef.current && !modalRef.current.contains(event.target)) {
@@ -41,18 +38,14 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedBu
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [onClose, modalRef]);
-
     const filteredCodes = countryDialCodes.filter(c =>
         c.name.toLowerCase().includes(filter.toLowerCase()) ||
         c.dialCode.includes(filter)
     ).slice(0, 50);
-
     const getDialCodeClasses = (code) => {
         return `py-2 px-4 cursor-pointer hover:bg-gray-100 flex justify-between items-center rounded-lg ${selectedDialCode.dialCode === code.dialCode ? `bg-blue-100 ${unlockedButtonColor} ` : ''}`;
     };
-
     if (!isOpen) return null;
-
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center p-4 z-50' },
@@ -135,12 +128,10 @@ const generateDatesBetween = (startDate, endDate) => {
     const dates = [];
     const currentDate = new Date(startDate);
     const lastDate = new Date(endDate);
-
     while (currentDate <= lastDate) {
         dates.push(new Date(currentDate));
         currentDate.setDate(currentDate.getDate() + 1);
     }
-
     return dates;
 };
 
@@ -165,7 +156,6 @@ const App = () => {
         volunteerRoles: [],
         selectedDates: [],
     });
-
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [authError, setAuthError] = React.useState(null);
     const [success, setSuccess] = React.useState(false);
@@ -190,7 +180,6 @@ const App = () => {
                 setTimeoutId(id);
             }
         };
-
         const fetchTshirtSizes = () => {
             const db = window.db;
             const docRef = doc(db, 'settings/sizeTshirts');
@@ -212,7 +201,6 @@ const App = () => {
             });
             return () => unsubscribe();
         };
-
         waitForAuth();
         return () => {
             if (timeoutId) clearTimeout(timeoutId);
@@ -239,7 +227,6 @@ const App = () => {
             });
             return () => unsubscribe();
         };
-
         fetchTournamentDates();
     }, []);
 
@@ -332,7 +319,6 @@ const App = () => {
                 selectedDates: formData.selectedDates,
                 registrationDate: serverTimestamp(),
             });
-
             setSuccess(true);
             setFormData({
                 firstName: '',
@@ -353,7 +339,6 @@ const App = () => {
                 volunteerRoles: [],
                 selectedDates: [],
             });
-
             await callGoogleAppsScript({
                 firstName: formData.firstName,
                 lastName: formData.lastName,
@@ -442,7 +427,13 @@ const App = () => {
             )
         );
     }
-    
+
+    return React.createElement(
+        'form',
+        {
+            className: 'bg-white p-8 rounded-lg shadow-lg w-full max-w-xl mx-auto',
+            onSubmit: handleSubmit,
+        },
         // Nadpis
         React.createElement('h2', { className: 'text-2xl font-bold mb-6 text-center text-gray-800' }, 'Registrácia dobrovoľníka'),
 
@@ -810,43 +801,46 @@ const App = () => {
             ),
         ),
 
-       // Súhlas so spracovaním údajov
-    React.createElement(
-        'div',
-        { className: 'mb-6 flex items-center' },
-        React.createElement('input', {
-            type: 'checkbox',
-            id: 'acceptTerms',
-            name: 'acceptTerms',
-            checked: formData.acceptTerms,
-            onChange: handleInputChange,
-            className: 'form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out'
-        }),
-        React.createElement('label', { className: 'ml-2 block text-gray-900 text-sm', htmlFor: 'acceptTerms' },
-            'Súhlasím so spracovaním osobných údajov na účely prípravy dobrovoľníckej zmluvy'
-        )
-    ),
-    // Zobrazenie chybových hlášok
-    authError && React.createElement(
-        'div',
-        { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg', role: 'alert' },
-        React.createElement('p', { className: 'font-bold' }, 'Chyba'),
-        React.createElement('p', null, authError)
-    ),
-    // Tlačidlo na odoslanie
-    React.createElement(
-        'div',
-        { className: 'flex justify-center' },
+        // Súhlas so spracovaním údajov
         React.createElement(
-            'button',
-            {
-                type: 'submit',
-                className: buttonClasses,
-                disabled: isSubmitting || !isFormValid || !isAuthReady,
-            },
-            isSubmitting ? 'Registrujem...' : 'Registrovať sa'
+            'div',
+            { className: 'mb-6 flex items-center' },
+            React.createElement('input', {
+                type: 'checkbox',
+                id: 'acceptTerms',
+                name: 'acceptTerms',
+                checked: formData.acceptTerms,
+                onChange: handleInputChange,
+                className: 'form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out'
+            }),
+            React.createElement('label', { className: 'ml-2 block text-gray-900 text-sm', htmlFor: 'acceptTerms' },
+                'Súhlasím so spracovaním osobných údajov na účely prípravy dobrovoľníckej zmluvy'
+            )
         ),
-    ),
+
+        // Zobrazenie chybových hlášok
+        authError && React.createElement(
+            'div',
+            { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg', role: 'alert' },
+            React.createElement('p', { className: 'font-bold' }, 'Chyba'),
+            React.createElement('p', null, authError)
+        ),
+
+        // Tlačidlo na odoslanie
+        React.createElement(
+            'div',
+            { className: 'flex justify-center' },
+            React.createElement(
+                'button',
+                {
+                    type: 'submit',
+                    className: buttonClasses,
+                    disabled: isSubmitting || !isFormValid || !isAuthReady,
+                },
+                isSubmitting ? 'Registrujem...' : 'Registrovať sa'
+            ),
+        ),
+
         // Modálne okno pre výber predvoľby
         React.createElement(DialCodeModal, {
             isOpen: isModalOpen,
