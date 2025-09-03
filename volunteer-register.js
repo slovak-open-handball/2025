@@ -158,6 +158,8 @@ const App = () => {
     const [isSizesLoading, setIsSizesLoading] = React.useState(true);
     const [isAuthReady, setIsAuthReady] = React.useState(false);
     const [timeoutId, setTimeoutId] = React.useState(null);
+    const zipCodeInputRef = React.useRef(null);
+    const lastZipCodeValueRef = React.useRef('');
 
     const volunteerOptions = [
         'Registrácia',
@@ -233,18 +235,39 @@ const App = () => {
 
     // Funkcia na spracovanie zmeny PSČ
     const handleZipCodeChange = (e) => {
-        const { value } = e.target;
-        // Odstráni všetky nečíselné znaky
-        let cleanedValue = value.replace(/\D/g, '');
-        // Obmedzí na 5 číslic
-        cleanedValue = cleanedValue.slice(0, 5);
+        const { value, selectionStart } = e.target;
+        const lastValue = lastZipCodeValueRef.current;
+        let newCursorPos = selectionStart;
 
-        // Vloží medzeru po 3. číslici, ak je to možné
+        // Odstrániť všetky nečíselné znaky a obmedziť na 5 číslic
+        let cleanedValue = value.replace(/\D/g, '').slice(0, 5);
+        let formattedValue = cleanedValue;
+
+        // Vložiť medzeru po tretej číslici
         if (cleanedValue.length > 3) {
-            cleanedValue = cleanedValue.slice(0, 3) + ' ' + cleanedValue.slice(3, 5);
+            formattedValue = cleanedValue.slice(0, 3) + ' ' + cleanedValue.slice(3, 5);
         }
 
-        setFormData(prev => ({ ...prev, zipCode: cleanedValue }));
+        // Ak bola medzera odstránená, upraviť pozíciu kurzora
+        if (lastValue.length > formattedValue.length && lastValue.charAt(selectionStart) === ' ') {
+            newCursorPos--;
+        }
+
+        // Ak bola medzera pridaná, upraviť pozíciu kurzora
+        if (formattedValue.length > lastValue.length && formattedValue.charAt(selectionStart - 1) === ' ') {
+            newCursorPos++;
+        }
+
+        setFormData(prev => ({ ...prev, zipCode: formattedValue }));
+        lastZipCodeValueRef.current = formattedValue;
+
+        // Nastaviť pozíciu kurzora po aktualizácii stavu
+        setTimeout(() => {
+            if (zipCodeInputRef.current) {
+                zipCodeInputRef.current.selectionStart = newCursorPos;
+                zipCodeInputRef.current.selectionEnd = newCursorPos;
+            }
+        }, 0);
     };
 
     // Function to handle phone number changes and maintain cursor position
@@ -593,7 +616,7 @@ const handleSubmit = async (e) => {
                 { className: 'w-1/3' },
                 React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'zipCode' }, 'PSČ'),
                 React.createElement('input', {
-                    className: `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${formData.zipCode.length > 0 && formData.zipCode.replace(/\s/g, '').length !== 5 ? 'border-red-500' : ''}`,
+                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
                     id: 'zipCode',
                     type: 'text',
                     name: 'zipCode',
@@ -601,12 +624,8 @@ const handleSubmit = async (e) => {
                     maxLength: 6,
                     value: formData.zipCode,
                     onChange: handleZipCodeChange,
+                    ref: zipCodeInputRef,
                 }),
-                (formData.zipCode.length > 0 && formData.zipCode.replace(/\s/g, '').length !== 5) && React.createElement(
-                    'p',
-                    { className: 'text-red-500 text-xs italic mt-1' },
-                    'PSČ musí mať 5 číslic.'
-                )
             ),
         ),
         // Country
