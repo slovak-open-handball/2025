@@ -155,6 +155,7 @@ const App = () => {
         acceptTerms: false,
         volunteerRoles: [],
         selectedDates: [],
+        note: '',
     });
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [authError, setAuthError] = React.useState(null);
@@ -317,6 +318,7 @@ const App = () => {
                 tshirtSize: formData.tshirtSize,
                 volunteerRoles: formData.volunteerRoles,
                 selectedDates: formData.selectedDates,
+                note: formData.note,
                 registrationDate: serverTimestamp(),
             });
             setSuccess(true);
@@ -338,6 +340,7 @@ const App = () => {
                 acceptTerms: false,
                 volunteerRoles: [],
                 selectedDates: [],
+                note: '',
             });
             await callGoogleAppsScript({
                 firstName: formData.firstName,
@@ -354,6 +357,7 @@ const App = () => {
                 dateOfBirth: formData.birthDate,
                 skills: formData.volunteerRoles,
                 selectedDates: formData.selectedDates,
+                note: formData.note,
             });
         } catch (error) {
             console.error("Chyba pri registrácii:", error);
@@ -801,6 +805,25 @@ const App = () => {
                     onChange: handlePhoneChange,
                 }),
             ),
+        ),
+
+        // Poznámka
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', {
+                className: 'block text-gray-700 text-sm font-bold mb-2',
+                htmlFor: 'note'
+            }, 'Poznámka (voliteľné)'),
+            React.createElement('textarea', {
+                className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                id: 'note',
+                name: 'note',
+                placeholder: 'Sem môžete napísať dodatočné informácie...',
+                rows: 4,
+                value: formData.note || '',
+                onChange: handleInputChange,
+            })
         ),
 
         // Súhlas so spracovaním údajov
