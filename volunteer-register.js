@@ -442,21 +442,7 @@ const App = () => {
             )
         );
     }
-
-    return React.createElement(
-        'form',
-        {
-            className: 'bg-white p-8 rounded-lg shadow-lg w-full max-w-xl mx-auto',
-            onSubmit: handleSubmit,
-        },
-        // Zobrazenie chybových hlášok
-        authError && React.createElement(
-            'div',
-            { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg', role: 'alert' },
-            React.createElement('p', { className: 'font-bold' }, 'Chyba'),
-            React.createElement('p', null, authError)
-        ),
-
+    
         // Nadpis
         React.createElement('h2', { className: 'text-2xl font-bold mb-6 text-center text-gray-800' }, 'Registrácia dobrovoľníka'),
 
@@ -824,38 +810,43 @@ const App = () => {
             ),
         ),
 
-        // Súhlas so spracovaním údajov
+       // Súhlas so spracovaním údajov
+    React.createElement(
+        'div',
+        { className: 'mb-6 flex items-center' },
+        React.createElement('input', {
+            type: 'checkbox',
+            id: 'acceptTerms',
+            name: 'acceptTerms',
+            checked: formData.acceptTerms,
+            onChange: handleInputChange,
+            className: 'form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out'
+        }),
+        React.createElement('label', { className: 'ml-2 block text-gray-900 text-sm', htmlFor: 'acceptTerms' },
+            'Súhlasím so spracovaním osobných údajov na účely prípravy dobrovoľníckej zmluvy'
+        )
+    ),
+    // Zobrazenie chybových hlášok
+    authError && React.createElement(
+        'div',
+        { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg', role: 'alert' },
+        React.createElement('p', { className: 'font-bold' }, 'Chyba'),
+        React.createElement('p', null, authError)
+    ),
+    // Tlačidlo na odoslanie
+    React.createElement(
+        'div',
+        { className: 'flex justify-center' },
         React.createElement(
-            'div',
-            { className: 'mb-6 flex items-center' },
-            React.createElement('input', {
-                type: 'checkbox',
-                id: 'acceptTerms',
-                name: 'acceptTerms',
-                checked: formData.acceptTerms,
-                onChange: handleInputChange,
-                className: 'form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out'
-            }),
-            React.createElement('label', { className: 'ml-2 block text-gray-900 text-sm', htmlFor: 'acceptTerms' },
-                'Súhlasím so spracovaním osobných údajov na účely prípravy dobrovoľníckej zmluvy'
-            )
+            'button',
+            {
+                type: 'submit',
+                className: buttonClasses,
+                disabled: isSubmitting || !isFormValid || !isAuthReady,
+            },
+            isSubmitting ? 'Registrujem...' : 'Registrovať sa'
         ),
-
-        // Tlačidlo na odoslanie
-        React.createElement(
-            'div',
-            { className: 'flex justify-center' },
-            React.createElement(
-                'button',
-                {
-                    type: 'submit',
-                    className: buttonClasses,
-                    disabled: isSubmitting || !isFormValid || !isAuthReady,
-                },
-                isSubmitting ? 'Registrujem...' : 'Registrovať sa'
-            ),
-        ),
-
+    ),
         // Modálne okno pre výber predvoľby
         React.createElement(DialCodeModal, {
             isOpen: isModalOpen,
