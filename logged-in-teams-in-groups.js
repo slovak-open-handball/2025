@@ -53,7 +53,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
-    const [dragOverData, setDragOverData] = useState({ index: null, groupId: null, isBetween: false });
+    const [dragOverData, setDragOverData] = useState({ index: null, groupId: null });
     
     // Používame useRef na uloženie dát presúvaného tímu, vrátane jeho poradia
     const draggedItem = useRef(null);
@@ -419,14 +419,23 @@ const AddGroupsApp = ({ userProfileData }) => {
             return a.teamName.localeCompare(b.teamName);
         });
     
-        const items = sortedTeams.map((team, index) => (
-            React.createElement(React.Fragment, { key: `${team.uid}-${team.teamName}` },
-                dragOverData.index === index && dragOverData.groupId === targetGroupId && (
-                    React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
-                ),
+        const items = [];
+
+        // Pridanie čiary na začiatok, ak sa kurzor presúva nad prázdnym zoznamom
+        if (sortedTeams.length === 0 && dragOverData.groupId === targetGroupId) {
+            items.push(React.createElement('div', { key: 'empty-line', className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }));
+        }
+
+        // Prejdi cez tímy a pridaj ich s čiarami medzi nimi, ak je to potrebné
+        sortedTeams.forEach((team, index) => {
+            if (dragOverData.index === index && dragOverData.groupId === targetGroupId) {
+                items.push(React.createElement('div', { key: `line-before-${index}`, className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }));
+            }
+            items.push(
                 React.createElement(
                     'li',
-                    { 
+                    {
+                        key: `${team.uid}-${team.teamName}`,
                         className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 cursor-grab',
                         draggable: "true",
                         onDragStart: (e) => handleDragStart(e, team),
@@ -436,15 +445,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                     },
                     `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
                 )
-            )
-        ));
-    
-        // Pridanie čiary na koniec zoznamu
-        if (dragOverData.index === sortedTeams.length && dragOverData.groupId === targetGroupId) {
-            items.push(React.createElement('div', { key: 'end-line', className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }));
-        }
+            );
+        });
 
-        const isDraggingOverEmptyList = sortedTeams.length === 0 && dragOverData.groupId === targetGroupId;
+        // Pridanie čiary na koniec zoznamu, ak sa kurzor presúva za posledný prvok
+        if (dragOverData.index === sortedTeams.length && sortedTeams.length > 0 && dragOverData.groupId === targetGroupId) {
+            items.push(React.createElement('div', { key: 'line-after-last', className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }));
+        }
     
         return React.createElement(
             'ul',
@@ -453,13 +460,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                 onDragOver: (e) => handleDragOver(e, undefined, targetGroupId, targetCategoryId),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId)
             },
-            isDraggingOverEmptyList && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }),
             items.length > 0 ? items : (
-                !isDraggingOverEmptyList && React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne tímy neboli nájdené.')
+                React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne tímy neboli nájdené.')
             )
         );
     };
-
+    
     const renderGroupedCategories = () => {
         if (Object.keys(allGroupsByCategoryId).length === 0) {
             return React.createElement(
@@ -533,33 +539,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'ul',
                                         { className: 'mt-2 space-y-1' },
-                                        teamsInThisCategory.filter(team => team.groupName === group.name).sort((a,b) => a.order - b.order).map((team, teamIndex) => {
-                                            const isDraggedOver = dragOverData.groupId === group.name && dragOverData.index === teamIndex;
-                                            const isDraggedOverEnd = dragOverData.groupId === group.name && dragOverData.index === teamIndex + 1;
-                                            
-                                            return React.createElement(
-                                                React.Fragment,
-                                                { key: `${team.uid}-${team.teamName}` },
-                                                isDraggedOver && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }),
-                                                React.createElement(
-                                                    'li',
-                                                    { 
-                                                        className: 'px-2 py-1 bg-white rounded-md text-gray-800 cursor-grab',
-                                                        draggable: "true",
-                                                        onDragStart: (e) => handleDragStart(e, team),
-                                                        onDragOver: (e) => handleDragOver(e, team, group.name, categoryId),
-                                                        onDrop: (e) => handleDrop(e, group.name, categoryId),
-                                                        onDragEnd: handleDragEnd
-                                                    },
-                                                    team.teamName
-                                                ),
-                                                isDraggedOverEnd && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
-                                            );
-                                        }),
-                                        // Vykreslí prázdnu správu, ak nie sú tímy a ani sa nič nepresúva
-                                        teamsInThisCategory.filter(team => team.groupName === group.name).length === 0 && (
-                                            dragOverData.groupId === group.name && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
-                                        )
+                                        renderTeamList(teamsInThisCategory.filter(team => team.groupName === group.name), group.name, categoryId)
                                     )
                                 )
                             )
@@ -622,32 +602,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             React.createElement(
                                 'ul',
                                 { className: 'mt-2 space-y-1' },
-                                teamsInGroups.filter(team => team.groupName === group.name).sort((a,b) => a.order - b.order).map((team, teamIndex) => {
-                                    const isDraggedOver = dragOverData.groupId === group.name && dragOverData.index === teamIndex;
-                                    const isDraggedOverEnd = dragOverData.groupId === group.name && dragOverData.index === teamIndex + 1;
-                                    
-                                    return React.createElement(
-                                        React.Fragment,
-                                        { key: `${team.uid}-${team.teamName}` },
-                                        isDraggedOver && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }),
-                                        React.createElement(
-                                            'li',
-                                            { 
-                                                className: 'px-2 py-1 bg-white rounded-md text-gray-800 cursor-grab',
-                                                draggable: "true",
-                                                onDragStart: (e) => handleDragStart(e, team),
-                                                onDragOver: (e) => handleDragOver(e, team, group.name, selectedCategoryId),
-                                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
-                                                onDragEnd: handleDragEnd
-                                            },
-                                            team.teamName
-                                        ),
-                                        isDraggedOverEnd && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
-                                    );
-                                }),
-                                teamsInGroups.filter(team => team.groupName === group.name).length === 0 && (
-                                    dragOverData.groupId === group.name && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
-                                )
+                                renderTeamList(teamsInGroups.filter(team => team.groupName === group.name), group.name, selectedCategoryId)
                             )
                         )
                     )
