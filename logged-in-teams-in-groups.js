@@ -410,7 +410,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 updatedTeams = [...teamsNotInGroup, ...reorderedTeams];
 
                 updateTeamOrderInDb(teamData.category, reorderedTeams);
-                window.showGlobalNotification(`Poradie tímu '${teamData.teamName}' bolo zmenené.`, 'success');
+                window.showGlobalNotification(`Poradie tímu '${teamData.teamName}' bolo zmenené.', 'success');
             }
             return updatedTeams;
         });
@@ -423,22 +423,21 @@ const AddGroupsApp = ({ userProfileData }) => {
     }
 
     const renderTeamList = (teamsToRender, title, targetGroupId, targetCategoryId) => {
-        const isDragOverEmptyList = teamsToRender.length === 0 && dragOverGroupId === targetGroupId;
-
-        if (teamsToRender.length === 0 && !isDragOverEmptyList) {
-            return React.createElement(
-                'p',
-                { className: 'text-center text-gray-500' },
-                'Žiadne tímy neboli nájdené.'
-            );
-        }
-        
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             if (a.groupName && b.groupName) {
                 return a.order - b.order;
             }
             return a.teamName.localeCompare(b.teamName);
         });
+
+        // Vykreslí prázdnu správu, ak nie sú tímy a ani sa nič nepresúva
+        if (sortedTeams.length === 0 && (dragOverGroupId !== targetGroupId || dragOverIndex === null)) {
+             return React.createElement(
+                'p',
+                { className: 'text-center text-gray-500' },
+                'Žiadne tímy neboli nájdené.'
+            );
+        }
 
         return React.createElement(
             'ul',
@@ -447,13 +446,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                 onDragOver: (e) => handleDragOver(e, undefined, targetGroupId, targetCategoryId),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId)
             },
+            // Pridanie modrej čiary pred prvý prvok, ak je dragOverIndex 0
+            (dragOverIndex === 0 && dragOverGroupId === targetGroupId) && (
+                React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
+            ),
             sortedTeams.map((team, index) =>
                 React.createElement(
                     'div',
                     { key: `${team.uid}-${team.teamName}` },
-                    (dragOverIndex === index && dragOverGroupId === targetGroupId) && (
-                        React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
-                    ),
                     React.createElement(
                         'li',
                         { 
@@ -465,11 +465,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                             onDragEnd: handleDragEnd
                         },
                         `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
+                    ),
+                    // Pridanie modrej čiary za každý prvok, okrem prvého, ak je dragOverIndex väčší ako 0
+                    (dragOverIndex === index + 1 && dragOverGroupId === targetGroupId) && (
+                        React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                     )
                 )
-            ),
-            isDragOverEmptyList && (
-                React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
             )
         );
     };
@@ -547,6 +548,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'ul',
                                         { className: 'mt-2 space-y-1' },
+                                        teamsInThisCategory.filter(team => team.groupName === group.name).sort((a,b) => a.order - b.order).length === 0 && dragOverGroupId === group.name && (
+                                            React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
+                                        ),
                                         teamsInThisCategory.filter(team => team.groupName === group.name).sort((a,b) => a.order - b.order).map((team, teamIndex) => 
                                             React.createElement(
                                                 'div',
@@ -565,11 +569,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         onDragEnd: handleDragEnd
                                                     },
                                                     team.teamName
+                                                ),
+                                                (dragOverIndex === teamIndex + 1 && dragOverGroupId === group.name) && (
+                                                    React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                                 )
                                             )
-                                        ),
-                                        teamsInThisCategory.filter(team => team.groupName === group.name).length === 0 && dragOverGroupId === group.name && (
-                                            React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                         )
                                     )
                                 )
@@ -610,15 +614,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     { className: 'text-2xl font-semibold mb-4 text-center' },
                     `Tímy v kategórii: ${categoryName}`
                 ),
-                teamsWithoutGroup.length > 0 ? (
-                    renderTeamList(teamsWithoutGroup, `Tímy v kategórii: ${categoryName}`, null, selectedCategoryId)
-                ) : (
-                    React.createElement(
-                        'p',
-                        { className: 'text-center text-gray-500' },
-                        'Žiadne tímy na priradenie.'
-                    )
-                )
+                renderTeamList(teamsWithoutGroup, `Tímy v kategórii: ${categoryName}`, null, selectedCategoryId)
             ),
             React.createElement(
                 'div',
@@ -641,6 +637,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                             React.createElement(
                                 'ul',
                                 { className: 'mt-2 space-y-1' },
+                                teamsInGroups.filter(team => team.groupName === group.name).length === 0 && dragOverGroupId === group.name && (
+                                    React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
+                                ),
                                 teamsInGroups.filter(team => team.groupName === group.name).sort((a,b) => a.order - b.order).map((team, teamIndex) => 
                                     React.createElement(
                                         'div',
@@ -659,11 +658,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 onDragEnd: handleDragEnd
                                             },
                                             team.teamName
+                                        ),
+                                        (dragOverIndex === teamIndex + 1 && dragOverGroupId === group.name) && (
+                                            React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                         )
                                     )
-                                ),
-                                teamsInGroups.filter(team => team.groupName === group.name).length === 0 && dragOverGroupId === group.name && (
-                                    React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                 )
                             )
                         )
