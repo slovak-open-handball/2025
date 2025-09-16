@@ -92,7 +92,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         if (Array.isArray(teamArray)) {
                             teamArray.forEach(team => {
                                 if (team.teamName) {
-                                    teamsList.push({ category: categoryName, teamName: team.teamName });
+                                    teamsList.push({ uid: doc.id, category: categoryName, teamName: team.teamName });
                                 }
                             });
                         }
@@ -175,6 +175,69 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
+    /**
+     * Uloží názov skupiny k tímu v databáze.
+     * @param {string} uid ID používateľa, ku ktorému tím patrí.
+     * @param {string} category Kategória tímu.
+     * @param {string} teamName Názov tímu, ktorý sa aktualizuje.
+     * @param {string} groupName Názov skupiny, do ktorej sa tím presunul.
+     */
+    const assignTeamToGroup = async (uid, category, teamName, groupName) => {
+        if (!uid || !category || !teamName || !groupName) {
+            console.error("Nedostatočné údaje pre priradenie tímu do skupiny.");
+            window.showGlobalNotification("Nastala chyba: Chýbajú dáta pre priradenie tímu.", 'error');
+            return;
+        }
+
+        try {
+            const userRef = doc(window.db, 'users', uid);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const teamsForCategory = userData.teams[category] || [];
+                
+                const updatedTeams = teamsForCategory.map(team => 
+                    team.teamName === teamName ? { ...team, groupName } : team
+                );
+
+                await updateDoc(userRef, {
+                    [`teams.${category}`]: updatedTeams
+                });
+
+                console.log(`Tím '${teamName}' bol úspešne priradený do skupiny '${groupName}'.`);
+                window.showGlobalNotification(`Tím '${teamName}' bol úspešne priradený do skupiny '${groupName}'.`, 'success');
+            } else {
+                console.error("Dokument používateľa nebol nájdený!");
+                window.showGlobalNotification("Nastala chyba: Používateľský záznam nebol nájdený.", 'error');
+            }
+        } catch (error) {
+            console.error("Chyba pri aktualizácii databázy:", error);
+            window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+        }
+    };
+
+    const handleDragStart = (e, team) => {
+        e.dataTransfer.setData("text/plain", JSON.stringify(team));
+        console.log("Začiatok presúvania tímu:", team.teamName);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault(); // Umožní pustenie
+    };
+
+    const handleDrop = (e, groupName) => {
+        e.preventDefault();
+        try {
+            const teamData = JSON.parse(e.dataTransfer.getData("text/plain"));
+            console.log(`Tím '${teamData.teamName}' bol pustený do skupiny '${groupName}'.`);
+            assignTeamToGroup(teamData.uid, teamData.category, teamData.teamName, groupName);
+        } catch (error) {
+            console.error("Chyba pri spracovaní pustenia:", error);
+            window.showGlobalNotification("Nastala chyba pri spracovaní akcie.", 'error');
+        }
+    };
+
     const renderTeamList = (teamsToRender, title) => {
         if (teamsToRender.length === 0) {
             return React.createElement(
@@ -193,7 +256,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             sortedTeams.map((team, index) =>
                 React.createElement(
                     'li',
-                    { key: index, className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700' },
+                    { 
+                        key: index, 
+                        className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 cursor-grab',
+                        draggable: "true",
+                        onDragStart: (e) => handleDragStart(e, team)
+                    },
                     `${title === 'Zoznam všetkých tímov' ? `${team.category}: ` : ''}${team.teamName}`
                 )
             )
@@ -320,7 +388,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                     sortedGroups.map((group, groupIndex) =>
                         React.createElement(
                             'div',
-                            { key: groupIndex, className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}` },
+                            { 
+                                key: groupIndex, 
+                                className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
+                                onDragOver: handleDragOver,
+                                onDrop: (e) => handleDrop(e, group.name)
+                            },
                             React.createElement(
                                 'h3',
                                 { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
