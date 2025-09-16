@@ -239,50 +239,40 @@ const AddGroupsApp = ({ userProfileData }) => {
                     throw "Dokument používateľa nebol nájdený!";
                 }
 
-                const userData = userDoc.data();
-                const teamsInCategory = userData.teams[categoryName] || [];
+                const teamsInCategory = userDoc.data().teams[categoryName] || [];
+                
+                // Nájdenie a odstránenie presúvaného tímu z pôvodnej pozície v jednom kroku
+                const teamsWithoutDragged = teamsInCategory.filter(t => t.teamName !== teamData.teamName);
+                const draggedTeamFromDb = teamsInCategory.find(t => t.teamName === teamData.teamName);
 
-                // Nájdeme tím, ktorý presúvame
-                const draggedTeamIndex = teamsInCategory.findIndex(t => t.teamName === teamData.teamName);
-                if (draggedTeamIndex === -1) {
+                if (!draggedTeamFromDb) {
                     throw "Presúvaný tím nebol nájdený v databáze!";
                 }
 
-                const draggedTeamFromDb = teamsInCategory[draggedTeamIndex];
-
-                // Vytvoríme nový zoznam tímov pre aktualizáciu
-                let updatedTeams = [...teamsInCategory];
-
-                // Odstránime tím z pôvodnej pozície
-                updatedTeams.splice(draggedTeamIndex, 1);
-
-                const teamsInTargetGroup = updatedTeams.filter(t => t.groupName === targetGroup);
-                const teamsNotInTargetGroup = updatedTeams.filter(t => t.groupName !== targetGroup);
+                // Vytvorenie nového objektu tímu s aktualizovanou skupinou
+                const updatedDraggedTeam = { ...draggedTeamFromDb, groupName: targetGroup };
                 
-                // Určenie nového poradia. Ak je targetIndex null, tím sa pridá na koniec.
-                const newOrder = targetIndex !== null ? targetIndex : teamsInTargetGroup.length;
-
-                const updatedDraggedTeam = { ...draggedTeamFromDb, groupName: targetGroup, order: newOrder };
-                
-                teamsInTargetGroup.splice(newOrder, 0, updatedDraggedTeam);
-                
-                // Prepočítame poradia v cieľovej skupine
-                const reorderedTargetTeams = teamsInTargetGroup.map((t, idx) => ({ ...t, order: idx }));
-                
-                // Prepočítame poradia v pôvodnej skupine, ak sa líšia
-                let reorderedSourceTeams;
-                if (sourceGroup !== targetGroup) {
-                    const teamsInSourceGroup = teamsNotInTargetGroup.filter(t => t.groupName === sourceGroup);
-                    const teamsNotInSourceAndTarget = teamsNotInTargetGroup.filter(t => t.groupName !== sourceGroup);
-                    reorderedSourceTeams = teamsInSourceGroup.map((t, idx) => ({ ...t, order: idx }));
-                    updatedTeams = [...teamsNotInSourceAndTarget, ...reorderedSourceTeams, ...reorderedTargetTeams];
+                // Určenie správneho indexu na vloženie.
+                // Ak je targetIndex null, tím sa pridá na koniec existujúceho zoznamu v skupine.
+                let newInsertIndex;
+                if (targetIndex !== null) {
+                    newInsertIndex = targetIndex;
                 } else {
-                    updatedTeams = [...teamsNotInTargetGroup, ...reorderedTargetTeams];
+                    const teamsInTargetGroup = teamsWithoutDragged.filter(t => t.groupName === targetGroup);
+                    newInsertIndex = teamsInTargetGroup.length;
                 }
 
-                // Aktualizujeme celý zoznam tímov pre danú kategóriu
+                // Vloženie tímu do poľa na novú pozíciu
+                const newTeamArray = [...teamsWithoutDragged];
+                newTeamArray.splice(newInsertIndex, 0, updatedDraggedTeam);
+                
+                // Prepočítanie a aktualizácia poradia pre všetky tímy v zozname.
+                // Toto zabezpečí, že poradie bude vždy správne, bez ohľadu na zmeny.
+                const reorderedFinalList = newTeamArray.map((t, idx) => ({ ...t, order: idx }));
+                
+                // Aktualizácia celého zoznamu tímov pre danú kategóriu
                 transaction.update(userRef, {
-                    [`teams.${categoryName}`]: updatedTeams
+                    [`teams.${categoryName}`]: reorderedFinalList
                 });
             });
 
