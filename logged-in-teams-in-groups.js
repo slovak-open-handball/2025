@@ -198,7 +198,7 @@ const AddGroupsApp = ({ userProfileData }) => {
      * Aktualizuje stav a databázu po presune tímu.
      * @param {string} draggedTeamData Tím, ktorý sa presúva.
      * @param {string|null} targetGroup Názov cieľovej skupiny alebo null pre zoznam nepriradených tímov.
-     * @param {number|null} targetIndex Index, kam sa má tím vložiť.
+     * @param {number|null} targetIndex Index, kam sa má tím vložiť. Ak je null, pridá sa na koniec skupiny.
      */
     const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex = null) => {
         e.preventDefault();
@@ -256,13 +256,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 // Odstránime tím z pôvodnej pozície
                 updatedTeams.splice(draggedTeamIndex, 1);
 
-                // Zmeníme groupName a order presúvaného tímu
-                const newOrder = targetIndex !== null ? targetIndex : updatedTeams.filter(t => t.groupName === targetGroup).length;
-                const updatedDraggedTeam = { ...draggedTeamFromDb, groupName: targetGroup, order: newOrder };
-
-                // Vložíme tím na novú pozíciu a prepočítame poradia
                 const teamsInTargetGroup = updatedTeams.filter(t => t.groupName === targetGroup);
                 const teamsNotInTargetGroup = updatedTeams.filter(t => t.groupName !== targetGroup);
+                
+                // Určenie nového poradia. Ak je targetIndex null, tím sa pridá na koniec.
+                const newOrder = targetIndex !== null ? targetIndex : teamsInTargetGroup.length;
+
+                const updatedDraggedTeam = { ...draggedTeamFromDb, groupName: targetGroup, order: newOrder };
                 
                 teamsInTargetGroup.splice(newOrder, 0, updatedDraggedTeam);
                 
@@ -440,7 +440,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { 
                           className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap cursor-pointer',
                           onDragOver: (e) => e.preventDefault(),
-                          onDrop: (e) => handleDrop(e, groups[groupIndex].name, categoryId, null) // Pass null to signify dropping on the group title
+                          // Pustenie na názov kategórie (všetky tímy sa vrátia do zoznamu bez skupiny)
+                          onDrop: (e) => handleDrop(e, null, categoryId, null) 
                         },
                         categoryName
                     ),
@@ -457,7 +458,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         e.preventDefault();
                                         setDragOverData({ index: null, groupId: group.name, isOverTopHalf: false });
                                     },
-                                    onDrop: (e) => handleDrop(e, group.name, categoryId),
+                                    // Pustenie na názov skupiny: tím sa pridá na koniec skupiny (index: null)
+                                    onDrop: (e) => handleDrop(e, group.name, categoryId, null),
                                     onDragLeave: () => setDragOverData({ index: null, groupId: null, isOverTopHalf: false })
                                 },
                                 React.createElement(
@@ -536,7 +538,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     e.preventDefault();
                                     setDragOverData({ index: null, groupId: group.name, isOverTopHalf: false });
                                 },
-                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
+                                // Pustenie na názov skupiny: tím sa pridá na koniec skupiny (index: null)
+                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId, null),
                                 onDragLeave: () => setDragOverData({ index: null, groupId: null, isOverTopHalf: false })
                             },
                             React.createElement(
