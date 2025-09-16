@@ -54,7 +54,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     
-    // Používame useRef na uloženie dát presúvaného tímu, vrátane jeho poradia
+    // Používame useRef na uloženie dát presúvaného tímu
     const draggedItem = useRef(null);
 
     // Načítanie kategórie z URL hashu pri prvom renderovaní
@@ -80,6 +80,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
 
+        // POZNÁMKA K CHYBÁM 429:
+        // Načítavanie celej kolekcie 'users' pomocou onSnapshot môže viesť k chybám
+        // 'Too Many Requests' (429), ak je kolekcia príliš veľká alebo sa často mení.
+        // Pre malé aplikácie je to akceptovateľné, no pre rozsiahle systémy by bolo lepšie
+        // zvážiť iný dátový model (napr. mať samostatnú verejnú kolekciu 'teams').
+        // Súčasný prístup je nutný, aby bolo možné zobraziť tímy od všetkých používateľov.
+        
         // Listener pre tímy
         const usersRef = collection(window.db, 'users');
         const unsubscribeTeams = onSnapshot(usersRef, (querySnapshot) => {
@@ -164,7 +171,6 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     }, []);
 
-    // Filtered teams based on selected category and if they are not yet assigned to a group
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName)
         : allTeams.filter(team => !team.groupName);
@@ -173,15 +179,15 @@ const AddGroupsApp = ({ userProfileData }) => {
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && team.groupName)
         : allTeams.filter(team => team.groupName);
 
-    // Helper function to get the correct background color class based on group type
+    // Helper funkcia na získanie správnej triedy farby pozadia na základe typu skupiny
     const getGroupColorClass = (type) => {
         switch (type) {
             case 'základná skupina':
-                return 'bg-gray-100'; // Corresponds to 0xF3F4F6
+                return 'bg-gray-100';
             case 'nadstavbová skupina':
-                return 'bg-blue-100'; // Corresponds to 0xDBEAFE
+                return 'bg-blue-100';
             default:
-                return 'bg-white'; // Default fallback color
+                return 'bg-white';
         }
     };
     
@@ -222,30 +228,29 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const userData = userDoc.data();
                 const teamsInCategory = userData.teams?.[categoryName] || [];
                 
-                // Odstránenie presúvaného tímu z pôvodnej pozície a nájdenie jeho indexu
-                let originalTeamIndex = -1;
-                const teamsWithoutDragged = teamsInCategory.filter((t, index) => {
-                    const isDragged = t.teamName === teamData.teamName && t.groupName === teamData.groupName;
-                    if (isDragged) {
-                        originalTeamIndex = index;
+                // Nájdenie presúvaného tímu a jeho aktualizácia.
+                // POZNÁMKA: Firestore nedokáže aktualizovať len jeden objekt v poli.
+                // Preto je potrebné celé pole načítať, upraviť a zapísať späť.
+                const updatedTeams = teamsInCategory.map((t, idx) => {
+                    // Ak sa názov tímu a kategória zhodujú, aktualizujeme jeho skupinu a poradie.
+                    // V opačnom prípade vrátime tím bez zmeny.
+                    if (t.teamName === teamData.teamName && t.category === teamData.category) {
+                        return { ...t, groupName: targetGroup, order: -1 }; // Dočasne nastavíme poradie na -1
                     }
-                    return !isDragged;
+                    return t;
                 });
                 
-                if (originalTeamIndex === -1) {
-                    console.warn("Presúvaný tím sa nenašiel v pôvodnej skupine. Transakcia zlyhala.");
-                    return;
+                // Odstránenie tímu z pôvodnej pozície a vloženie na koniec zoznamu
+                const teamToMove = updatedTeams.find(t => t.teamName === teamData.teamName);
+                const teamsWithoutDragged = updatedTeams.filter(t => t.teamName !== teamData.teamName);
+                
+                const finalTeamList = [...teamsWithoutDragged];
+                if (teamToMove) {
+                    finalTeamList.push({ ...teamToMove, groupName: targetGroup });
                 }
-                
-                // Vytvorenie nového objektu tímu s aktualizovanou skupinou
-                const updatedDraggedTeam = { ...teamsInCategory[originalTeamIndex], groupName: targetGroup };
-                
-                // Vloženie tímu do poľa na novú pozíciu (vždy na koniec)
-                const newTeamArray = [...teamsWithoutDragged];
-                newTeamArray.push(updatedDraggedTeam);
-                
-                // Prepočítanie a aktualizácia poradia pre všetky tímy
-                const reorderedFinalList = newTeamArray.map((t, idx) => ({ ...t, order: idx }));
+
+                // Prepočítanie a aktualizácia poradia pre všetky tímy v novom zozname
+                const reorderedFinalList = finalTeamList.map((t, idx) => ({ ...t, order: idx }));
                 
                 // Aktualizácia transakcie s novým poľom tímov
                 const newTeamsData = {
@@ -253,6 +258,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                     [categoryName]: reorderedFinalList
                 };
                 
+                // Týmto sa aktualizujú len hodnoty groupName a order, ale prepisuje sa
+                // celé pole, čo je v tomto prípade nevyhnutné.
                 transaction.update(userRef, {
                     teams: newTeamsData
                 });
@@ -305,28 +312,26 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
             return a.teamName.localeCompare(b.teamName);
         });
-
-        const isOverEmptyGroup = sortedTeams.length === 0;
-
-        // Vytvorenie elementu na pustenie pre prázdne skupiny
-        const emptyDropZone = React.createElement(
-            'div',
-            {
-                className: `min-h-[50px] p-2`,
-                onDragOver: (e) => handleDragOver(e, null, targetGroupId, targetCategoryId),
-                onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
-            },
-            !isOverEmptyGroup && React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne tímy neboli nájdené.')
-        );
+        
+        // Ak zoznam tímov neobsahuje žiadne tímy, vytvoríme drop-zónu.
+        if (sortedTeams.length === 0) {
+            return React.createElement(
+                'div',
+                {
+                    className: `min-h-[50px] p-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center`,
+                    onDragOver: (e) => handleDragOver(e, null, targetGroupId, targetCategoryId),
+                    onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
+                },
+                React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
+            );
+        }
         
         return React.createElement(
             'ul',
             { 
-                className: 'space-y-2',
-                onDragOver: (e) => handleDragOver(e, null, targetGroupId, targetCategoryId),
-                onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
+                className: 'space-y-2'
             },
-            sortedTeams.length > 0 ? sortedTeams.map((team, index) => {
+            sortedTeams.map((team, index) => {
                 return React.createElement(
                     'li',
                     {
@@ -338,9 +343,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     },
                     `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
                 );
-            }) : (
-                emptyDropZone
-            )
+            })
         );
     };
     
