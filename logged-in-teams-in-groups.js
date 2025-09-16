@@ -219,6 +219,14 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
+        
+        // Zastavenie operácie, ak je pôvodná skupina rovnaká ako cieľová
+        if (sourceGroup === targetGroup && (targetIndex === null || teamData.order === targetIndex || teamData.order + 1 === targetIndex)) {
+            // Ak je targetIndex null (pustenie na názov skupiny), alebo tím už je na danej pozícii, nerobíme nič
+            console.log("Presun v rámci rovnakej skupiny, operácia zrušená.");
+            return;
+        }
+
 
         const categoryName = categoryIdToNameMap[teamCategoryId];
         
