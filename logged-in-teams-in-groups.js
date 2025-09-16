@@ -210,6 +210,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
+        const sourceGroup = teamData.groupName;
         
         setDragOverData({ index: null, groupId: null, isOverTopHalf: false });
 
@@ -220,17 +221,14 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
 
         const categoryName = categoryIdToNameMap[teamCategoryId];
-        const allTeamsForCategory = allTeams.filter(t => t.category === categoryName);
         
         // Vytvorenie dočasnej kópie zoznamu tímov
-        let newTeamsList = [...allTeamsForCategory];
+        const teamsInSource = allTeams.filter(t => t.category === categoryName && t.groupName === sourceGroup);
+        const teamsInTarget = allTeams.filter(t => t.category === categoryName && t.groupName === targetGroup);
         
-        // Odstránenie presúvaného tímu z pôvodnej pozície
-        const draggedTeamIndex = newTeamsList.findIndex(t => t.uid === teamData.uid && t.teamName === teamData.teamName);
-        if (draggedTeamIndex !== -1) {
-            newTeamsList.splice(draggedTeamIndex, 1);
-        }
-
+        // Odstránenie presúvaného tímu z jeho pôvodného zoznamu
+        const updatedSourceTeams = teamsInSource.filter(t => !(t.uid === teamData.uid && t.teamName === teamData.teamName));
+        
         // Vytvorenie nového objektu pre presúvaný tím s novou skupinou
         const movedTeam = { 
             ...teamData, 
@@ -238,36 +236,39 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
         
         // Vloženie tímu na správnu pozíciu
-        let finalIndex = targetIndex;
+        let finalIndex;
         if (targetIndex === null) {
-            // Ak nebol poskytnutý index, vloží sa na koniec
-            finalIndex = newTeamsList.filter(t => t.groupName === targetGroup).length;
+            // Ak bol pustený na hlavičku skupiny, vlož ho na koniec zoznamu
+            finalIndex = teamsInTarget.length;
+        } else {
+            // Ak bol pustený na iný tím, vlož ho na daný index
+            finalIndex = targetIndex;
         }
         
-        newTeamsList.splice(finalIndex, 0, movedTeam);
+        teamsInTarget.splice(finalIndex, 0, movedTeam);
         
-        // Aktualizácia poradia pre všetky tímy v zmenených zoznamoch
-        const reorderedTeams = newTeamsList.map((t, idx) => ({ ...t, order: idx }));
+        // Prepočítame poradia všetkých tímov v zmenených zoznamoch
+        const reorderedSourceTeams = updatedSourceTeams.map((t, idx) => ({ ...t, order: idx }));
+        const reorderedTargetTeams = teamsInTarget.map((t, idx) => ({ ...t, order: idx }));
         
-        // Aktualizujeme stav všetkých tímov
-        const otherTeams = allTeams.filter(t => t.category !== categoryName);
-        const updatedAllTeams = [...otherTeams, ...reorderedTeams];
-        
+        const otherTeams = allTeams.filter(t => t.category !== categoryName || (t.groupName !== sourceGroup && t.groupName !== targetGroup));
+        const updatedAllTeams = [...otherTeams, ...reorderedSourceTeams, ...reorderedTargetTeams];
+
         // Optimistická aktualizácia stavu
         setAllTeams(updatedAllTeams);
         
         // Uložíme zmeny do databázy
         try {
-            const updates = {};
             const userRefsToUpdate = new Set();
             updatedAllTeams.forEach(t => userRefsToUpdate.add(t.uid));
             
             for (const uid of userRefsToUpdate) {
                 const teamsForUser = updatedAllTeams.filter(t => t.uid === uid && t.category === categoryName);
                 if (teamsForUser.length > 0) {
-                    updates[`teams.${categoryName}`] = teamsForUser;
                     const userRef = doc(window.db, 'users', uid);
-                    await updateDoc(userRef, updates);
+                    await updateDoc(userRef, {
+                        [`teams.${categoryName}`]: teamsForUser
+                    });
                 }
             }
             
@@ -422,7 +423,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                     { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0' },
                     React.createElement(
                         'h3',
-                        { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' },
+                        { 
+                          className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap cursor-pointer',
+                          onDragOver: (e) => e.preventDefault(),
+                          onDrop: (e) => handleDrop(e, groups[groupIndex].name, categoryId, null) // Pass null to signify dropping on the group title
+                        },
                         categoryName
                     ),
                     React.createElement(
