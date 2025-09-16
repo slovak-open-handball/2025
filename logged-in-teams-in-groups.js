@@ -180,15 +180,15 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     /**
-     * Uloží názov skupiny k tímu v databáze.
+     * Uloží alebo odstráni názov skupiny k tímu v databáze.
      * @param {string} uid ID používateľa, ku ktorému tím patrí.
      * @param {string} category Kategória tímu.
      * @param {string} teamName Názov tímu, ktorý sa aktualizuje.
-     * @param {string} groupName Názov skupiny, do ktorej sa tím presunul.
+     * @param {string|null} groupName Názov skupiny, do ktorej sa tím presunul, alebo null ak sa odstraňuje.
      */
-    const assignTeamToGroup = async (uid, category, teamName, groupName) => {
-        if (!uid || !category || !teamName || !groupName) {
-            console.error("Nedostatočné údaje pre priradenie tímu do skupiny.");
+    const updateTeamGroup = async (uid, category, teamName, groupName) => {
+        if (!uid || !category || !teamName) {
+            console.error("Nedostatočné údaje pre priradenie/odstránenie tímu zo skupiny.");
             window.showGlobalNotification("Nastala chyba: Chýbajú dáta pre priradenie tímu.", 'error');
             return;
         }
@@ -209,8 +209,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                     [`teams.${category}`]: updatedTeams
                 });
 
-                console.log(`Tím '${teamName}' bol úspešne priradený do skupiny '${groupName}'.`);
-                window.showGlobalNotification(`Tím '${teamName}' bol úspešne priradený do skupiny '${groupName}'.`, 'success');
+                if (groupName) {
+                    console.log(`Tím '${teamName}' bol úspešne priradený do skupiny '${groupName}'.`);
+                    window.showGlobalNotification(`Tím '${teamName}' bol úspešne priradený do skupiny '${groupName}'.`, 'success');
+                } else {
+                    console.log(`Tím '${teamName}' bol úspešne odstránený zo skupiny.`);
+                    window.showGlobalNotification(`Tím '${teamName}' bol úspešne vrátený do zoznamu tímov.`, 'success');
+                }
             } else {
                 console.error("Dokument používateľa nebol nájdený!");
                 window.showGlobalNotification("Nastala chyba: Používateľský záznam nebol nájdený.", 'error');
@@ -228,7 +233,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
         console.log("Začiatok presúvania tímu:", team.teamName, "ID kategórie:", teamCategoryId);
     };
-
+    
     const handleDragOver = (e, targetCategoryId) => {
         e.preventDefault(); // Umožní pustenie
         
@@ -236,11 +241,9 @@ const AddGroupsApp = ({ userProfileData }) => {
             const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
             const teamCategoryId = dragData.teamCategoryId;
 
-            if (selectedCategoryId === '' && teamCategoryId !== targetCategoryId) {
-                // Ak nie je vybraná žiadna kategória, overíme, či sa kategórie zhodujú.
+            if (targetCategoryId && teamCategoryId !== targetCategoryId) {
                 e.dataTransfer.dropEffect = "none";
             } else {
-                // Ak je kategória vybraná alebo sa zhodujú, umožníme presun.
                 e.dataTransfer.dropEffect = "move";
             }
         } catch (error) {
@@ -248,7 +251,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             e.dataTransfer.dropEffect = "none";
         }
     };
-    
+
     const handleDrop = (e, groupName, targetCategoryId) => {
         e.preventDefault();
         try {
@@ -256,14 +259,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             const teamData = dragData.team;
             const teamCategoryId = dragData.teamCategoryId;
 
-            // Opakované overenie pre istotu
-            if (!selectedCategoryId && teamCategoryId !== targetCategoryId) {
+            if (targetCategoryId && teamCategoryId !== targetCategoryId) {
                 window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
                 return;
             }
 
             console.log(`Tím '${teamData.teamName}' bol pustený do skupiny '${groupName}'.`);
-            assignTeamToGroup(teamData.uid, teamData.category, teamData.teamName, groupName);
+            updateTeamGroup(teamData.uid, teamData.category, teamData.teamName, groupName);
         } catch (error) {
             console.error("Chyba pri spracovaní pustenia:", error);
             window.showGlobalNotification("Nastala chyba pri spracovaní akcie.", 'error');
@@ -380,7 +382,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         teamsInThisCategory.filter(team => team.groupName === group.name).sort((a,b) => a.teamName.localeCompare(b.teamName)).map(team => 
                                             React.createElement(
                                                 'li',
-                                                { key: team.uid, className: 'px-2 py-1 bg-white rounded-md text-gray-800' },
+                                                { 
+                                                    key: team.uid, 
+                                                    className: 'px-2 py-1 bg-white rounded-md text-gray-800 cursor-grab',
+                                                    draggable: "true",
+                                                    onDragStart: (e) => handleDragStart(e, team) 
+                                                },
                                                 team.teamName
                                             )
                                         )
@@ -414,7 +421,11 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
             React.createElement(
                 'div',
-                { className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0" },
+                { 
+                    className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
+                    onDragOver: (e) => handleDragOver(e, selectedCategoryId),
+                    onDrop: (e) => handleDrop(e, null, selectedCategoryId)
+                },
                 React.createElement(
                     'h3',
                     { className: 'text-2xl font-semibold mb-4 text-center' },
@@ -473,7 +484,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             teamsInGroups.filter(team => team.groupName === group.name).sort((a,b) => a.teamName.localeCompare(b.teamName)).map(team => 
                                                 React.createElement(
                                                     'li',
-                                                    { key: team.uid, className: 'px-2 py-1 bg-gray-100 rounded-md text-gray-800' },
+                                                    { 
+                                                        key: team.uid, 
+                                                        className: 'px-2 py-1 bg-gray-100 rounded-md text-gray-800 cursor-grab',
+                                                        draggable: "true",
+                                                        onDragStart: (e) => handleDragStart(e, team) 
+                                                    },
                                                     team.teamName
                                                 )
                                             )
@@ -537,7 +553,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                 { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
                 React.createElement(
                     'div',
-                    { className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0` },
+                    { 
+                        className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
+                        onDragOver: (e) => handleDragOver(e, null),
+                        onDrop: (e) => handleDrop(e, null, null) 
+                    },
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold mb-4 text-center' },
