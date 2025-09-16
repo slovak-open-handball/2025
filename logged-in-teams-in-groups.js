@@ -312,17 +312,28 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         // Vizuálna indikácia pri presúvaní v rámci skupiny
         if (targetGroupId) {
-            const teamsInTargetGroup = allTeams
-                .filter(t => t.groupName === targetGroupId && t.category === categoryIdToNameMap[targetCategoryId])
-                .sort((a, b) => a.order - b.order);
+            let targetIndex = null;
+            
+            // Fix: Kontrola, či je targetTeam definovaný, predtým ako sa pokúsi získať teamName
+            if (targetTeam) {
+                const teamsInTargetGroup = allTeams
+                    .filter(t => t.groupName === targetGroupId && t.category === categoryIdToNameMap[targetCategoryId])
+                    .sort((a, b) => a.order - b.order);
                 
-            const targetIndex = teamsInTargetGroup.findIndex(t => t.teamName === targetTeam.teamName);
-            
-            // Set drag over index only if the target is not the same as the dragged item
-            if (dragData.team.teamName !== targetTeam.teamName || dragData.team.groupName !== targetGroupId) {
-                 setDragOverIndex(targetIndex);
+                targetIndex = teamsInTargetGroup.findIndex(t => t.teamName === targetTeam.teamName);
+                
+                if (dragData.team.teamName !== targetTeam.teamName || dragData.team.groupName !== targetGroupId) {
+                    setDragOverIndex(targetIndex);
+                }
+            } else {
+                 // Ak sa presúva nad kontajner skupiny (nie nad konkrétny tím), nastavíme index na koniec zoznamu
+                const teamsInTargetGroup = allTeams
+                    .filter(t => t.groupName === targetGroupId && t.category === categoryIdToNameMap[targetCategoryId])
+                    .sort((a, b) => a.order - b.order);
+                targetIndex = teamsInTargetGroup.length;
+                setDragOverIndex(targetIndex);
             }
-            
+
             setDragOverGroupId(targetGroupId);
         } else {
             setDragOverIndex(null);
