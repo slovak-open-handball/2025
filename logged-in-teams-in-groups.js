@@ -97,6 +97,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         category: categoryName, 
                                         ...team
                                     });
+                                in_groups.js:207 teamData = {
+                                    ...
+                                    teamName: "Slovensko",
+                                    groupName: "Skupina A",
+                                    order: 0,
+                                };
+                                in_groups.js:208 targetGroup = "Skupina C"
+                                in_groups.js:209 targetCategoryId = "futsal-24-25"
                                 }
                             });
                         }
@@ -503,7 +511,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
     
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(b_1_3));
 
     return React.createElement(
         'div',
