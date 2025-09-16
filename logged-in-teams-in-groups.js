@@ -285,17 +285,17 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
     
-    const handleDragStart = (e, team, index) => {
+    const handleDragStart = (e, team) => {
         const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === team.category);
-        draggedItem.current = { team, teamCategoryId, sourceIndex: index };
+        draggedItem.current = { team, teamCategoryId };
         
-        e.dataTransfer.setData("text/plain", "valid");
+        e.dataTransfer.setData("text/plain", JSON.stringify(team));
         e.dataTransfer.effectAllowed = "move";
         
-        console.log(`Začiatok presúvania: Tím '${team.teamName}' z indexu ${index}.`);
+        console.log(`Začiatok presúvania: Tím '${team.teamName}'.`);
     };
     
-    const handleDragOver = (e, targetIndex, targetGroupId, targetCategoryId) => {
+    const handleDragOver = (e, targetTeam, targetGroupId, targetCategoryId) => {
         e.preventDefault();
         
         const dragData = draggedItem.current;
@@ -311,8 +311,18 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
         
         // Vizuálna indikácia pri presúvaní v rámci skupiny
-        if (targetGroupId && dragData.team.groupName === targetGroupId) {
-            setDragOverIndex(targetIndex);
+        if (targetGroupId) {
+            const teamsInTargetGroup = allTeams
+                .filter(t => t.groupName === targetGroupId && t.category === categoryIdToNameMap[targetCategoryId])
+                .sort((a, b) => a.order - b.order);
+                
+            const targetIndex = teamsInTargetGroup.findIndex(t => t.teamName === targetTeam.teamName);
+            
+            // Set drag over index only if the target is not the same as the dragged item
+            if (dragData.team.teamName !== targetTeam.teamName || dragData.team.groupName !== targetGroupId) {
+                 setDragOverIndex(targetIndex);
+            }
+            
             setDragOverGroupId(targetGroupId);
         } else {
             setDragOverIndex(null);
@@ -332,7 +342,6 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
-        const sourceIndex = dragData.sourceIndex;
 
         setDragOverIndex(null);
         setDragOverGroupId(null);
@@ -346,28 +355,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         // Optimistická aktualizácia lokálneho stavu
         setAllTeams(prevTeams => {
             let updatedTeams;
-            const teamsInSameCategory = prevTeams.filter(t => t.category === teamData.category);
 
-            // Reorder v rámci tej istej skupiny
-            if (teamData.groupName === targetGroup && dragOverIndex !== null) {
-                const teamsInTargetGroup = teamsInSameCategory.filter(t => t.groupName === targetGroup).sort((a, b) => a.order - b.order);
-                const draggedTeam = teamsInTargetGroup.splice(sourceIndex, 1)[0];
-                teamsInTargetGroup.splice(dragOverIndex, 0, draggedTeam);
-
-                const reorderedTeams = teamsInTargetGroup.map((team, index) => ({
-                    ...team,
-                    order: index
-                }));
-
-                updatedTeams = prevTeams.map(team => {
-                    const reordered = reorderedTeams.find(t => t.teamName === team.teamName && t.uid === team.uid);
-                    return reordered ? reordered : team;
-                });
-                
-                updateTeamOrderInDb(teamData.category, reorderedTeams);
-                window.showGlobalNotification(`Poradie tímu '${teamData.teamName}' bolo zmenené.`, 'success');
-                
-            } else { // Presun do novej skupiny alebo zrušenie priradenia
+            // Presun do novej skupiny alebo zrušenie priradenia
+            if (teamData.groupName !== targetGroup) {
                 updatedTeams = prevTeams.map(team => {
                     if (team.uid === teamData.uid && team.category === teamData.category && team.teamName === teamData.teamName) {
                         return { ...team, groupName: targetGroup, order: targetGroup ? 0 : -1 };
@@ -375,6 +365,40 @@ const AddGroupsApp = ({ userProfileData }) => {
                     return team;
                 });
                 updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, targetGroup, targetGroup ? 0 : -1);
+
+            } else { // Reorder v rámci tej istej skupiny
+                const teamsInTargetGroup = prevTeams
+                    .filter(t => t.groupName === targetGroup && t.category === teamData.category)
+                    .sort((a, b) => a.order - b.order);
+
+                const draggedTeam = teamsInTargetGroup.find(t => t.uid === teamData.uid && t.teamName === teamData.teamName);
+                if (!draggedTeam) return prevTeams;
+                
+                const sourceIndex = teamsInTargetGroup.findIndex(t => t.uid === draggedTeam.uid && t.teamName === draggedTeam.teamName);
+                const targetIndex = dragOverIndex;
+
+                if (sourceIndex === targetIndex || targetIndex === null) {
+                    return prevTeams; // Zmena pozície je rovnaká alebo neplatná
+                }
+
+                // Odstránime tím z pôvodnej pozície
+                teamsInTargetGroup.splice(sourceIndex, 1);
+                
+                // Vložíme tím na novú pozíciu
+                teamsInTargetGroup.splice(targetIndex, 0, draggedTeam);
+
+                // Aktualizujeme poradie a prefiltrujeme duplikáty
+                const reorderedTeams = teamsInTargetGroup.map((team, index) => ({
+                    ...team,
+                    order: index
+                }));
+                
+                // Vytvoríme nový, čistý stav pre všetky tímy
+                const teamsNotInGroup = prevTeams.filter(t => t.groupName !== targetGroup || t.category !== teamData.category);
+                updatedTeams = [...teamsNotInGroup, ...reorderedTeams];
+
+                updateTeamOrderInDb(teamData.category, reorderedTeams);
+                window.showGlobalNotification(`Poradie tímu '${teamData.teamName}' bolo zmenené.`, 'success');
             }
             return updatedTeams;
         });
@@ -421,8 +445,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { 
                             className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 cursor-grab',
                             draggable: "true",
-                            onDragStart: (e) => handleDragStart(e, team, index),
-                            onDragOver: (e) => handleDragOver(e, index, targetGroupId, targetCategoryId),
+                            onDragStart: (e) => handleDragStart(e, team),
+                            onDragOver: (e) => handleDragOver(e, team, targetGroupId, targetCategoryId),
                             onDrop: (e) => handleDrop(e, team.groupName, targetCategoryId),
                             onDragEnd: handleDragEnd
                         },
@@ -518,8 +542,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     { 
                                                         className: 'px-2 py-1 bg-white rounded-md text-gray-800 cursor-grab',
                                                         draggable: "true",
-                                                        onDragStart: (e) => handleDragStart(e, team, teamIndex),
-                                                        onDragOver: (e) => handleDragOver(e, teamIndex, group.name, categoryId),
+                                                        onDragStart: (e) => handleDragStart(e, team),
+                                                        onDragOver: (e) => handleDragOver(e, team, group.name, categoryId),
                                                         onDrop: (e) => handleDrop(e, group.name, categoryId),
                                                         onDragEnd: handleDragEnd
                                                     },
@@ -609,9 +633,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             { 
                                                 className: 'px-2 py-1 bg-white rounded-md text-gray-800 cursor-grab',
                                                 draggable: "true",
-                                                onDragStart: (e) => handleDragStart(e, team, teamIndex),
-                                                onDragOver: (e) => handleDragOver(e, teamIndex, group.name, selectedCategoryId),
-                                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
+                                                onDragStart: (e) => handleDragStart(e, team),
+                                                onDragOver: (e) => handleDragOver(e, team, group.name, categoryId),
+                                                onDrop: (e) => handleDrop(e, group.name, categoryId),
                                                 onDragEnd: handleDragEnd
                                             },
                                             team.teamName
