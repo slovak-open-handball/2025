@@ -276,7 +276,21 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
 
+        // Optimistická aktualizácia lokálneho stavu pred volaním databázy
+        setAllTeams(prevTeams => {
+            const updatedTeams = prevTeams.map(team => {
+                // Hľadáme tím, ktorý presúvame na základe jeho ID, kategórie a názvu
+                if (team.uid === teamData.uid && team.category === teamData.category && team.teamName === teamData.teamName) {
+                    // Vytvoríme novú inštanciu tímu s aktualizovaným názvom skupiny
+                    return { ...team, groupName: groupName };
+                }
+                return team;
+            });
+            return updatedTeams;
+        });
+
         console.log(`Tím '${teamData.teamName}' bol pustený do skupiny '${groupName}'.`);
+        // Teraz voláme funkciu, ktorá aktualizuje databázu
         updateTeamGroup(teamData.uid, teamData.category, teamData.teamName, groupName);
     };
 
