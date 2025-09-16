@@ -361,7 +361,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             draggable: "true",
                             onDragStart: (e) => handleDragStart(e, team),
                             onDragOver: (e) => handleDragOver(e, team, targetGroupId, targetCategoryId, index),
-                            onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, index),
+                            onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, dragOverData.isOverTopHalf ? index : index + 1),
                             onDragEnd: handleDragEnd
                         },
                         `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
