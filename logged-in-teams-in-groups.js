@@ -267,25 +267,15 @@ const AddGroupsApp = ({ userProfileData }) => {
                     return acc;
                 }, {});
 
-                // Všetky čítania musia byť na začiatku transakcie
-                const userDocsToUpdate = {};
-                for (const userUid in teamsByUser) {
-                    const userRef = doc(window.db, 'users', userUid);
-                    userDocsToUpdate[userUid] = await transaction.get(userRef);
-                }
-
                 // Až po načítaní všetkých dokumentov môžeme začať s aktualizáciami
                 for (const userUid in teamsByUser) {
                     const userRef = doc(window.db, 'users', userUid);
-                    const userDoc = userDocsToUpdate[userUid];
-                    if (userDoc.exists()) {
-                        const teamsForCategory = teamsByUser[userUid].map(({ uid, ...rest }) => rest);
-                        
-                        // Aktualizácia transakcie
-                        transaction.update(userRef, {
-                            [`teams.${categoryName}`]: teamsForCategory
-                        });
-                    }
+                    const teamsForCategory = teamsByUser[userUid].map(({ uid, ...rest }) => rest);
+                    
+                    // Aktualizácia transakcie
+                    transaction.update(userRef, {
+                        [`teams.${categoryName}`]: teamsForCategory
+                    });
                 }
             });
 
