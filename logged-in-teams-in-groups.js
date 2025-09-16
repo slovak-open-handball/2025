@@ -54,6 +54,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState(''); // Pridaný stav pre vybranú kategóriu
     
+    // Používame useRef na uloženie dát presúvaného tímu, čo je spoľahlivejšie ako dataTransfer.getData() počas dragOver
+    const draggedItem = useRef(null);
+
     // Načítanie kategórie z URL hashu pri prvom renderovaní
     useEffect(() => {
         const hash = window.location.hash.substring(1);
@@ -227,50 +230,60 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleDragStart = (e, team) => {
-        // Ukladáme teamData aj ID kategórie do dataTransfer pre overenie počas dragOver
+        // Uložíme dáta do ref, ktoré budeme neskôr overovať
         const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === team.category);
-        const dragData = { team, teamCategoryId };
-        e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
+        draggedItem.current = { team, teamCategoryId };
+        
+        // Nastavíme aj dataTransfer pre kompatibilitu, ale už ho nebudeme parsovať
+        e.dataTransfer.setData("text/plain", "valid");
         console.log("Začiatok presúvania tímu:", team.teamName, "ID kategórie:", teamCategoryId);
     };
     
     const handleDragOver = (e, targetCategoryId) => {
         e.preventDefault(); // Umožní pustenie
         
-        try {
-            const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
-            const teamCategoryId = dragData.teamCategoryId;
+        const dragData = draggedItem.current;
 
-            if (targetCategoryId && teamCategoryId !== targetCategoryId) {
-                e.dataTransfer.dropEffect = "none";
-            } else {
-                e.dataTransfer.dropEffect = "move";
-            }
-        } catch (error) {
-            console.error("Chyba pri spracovaní dragOver:", error);
+        if (!dragData) {
+            // Ak nemáme uložené žiadne dáta, pravdepodobne ide o externý drag & drop
             e.dataTransfer.dropEffect = "none";
+            return;
+        }
+
+        const teamCategoryId = dragData.teamCategoryId;
+
+        if (targetCategoryId && teamCategoryId !== targetCategoryId) {
+            e.dataTransfer.dropEffect = "none";
+        } else {
+            e.dataTransfer.dropEffect = "move";
         }
     };
-
+    
     const handleDrop = (e, groupName, targetCategoryId) => {
         e.preventDefault();
-        try {
-            const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
-            const teamData = dragData.team;
-            const teamCategoryId = dragData.teamCategoryId;
-
-            if (targetCategoryId && teamCategoryId !== targetCategoryId) {
-                window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
-                return;
-            }
-
-            console.log(`Tím '${teamData.teamName}' bol pustený do skupiny '${groupName}'.`);
-            updateTeamGroup(teamData.uid, teamData.category, teamData.teamName, groupName);
-        } catch (error) {
-            console.error("Chyba pri spracovaní pustenia:", error);
-            window.showGlobalNotification("Nastala chyba pri spracovaní akcie.", 'error');
+        const dragData = draggedItem.current;
+        
+        if (!dragData) {
+            console.error("Žiadne dáta na pustenie.");
+            return;
         }
+
+        const teamData = dragData.team;
+        const teamCategoryId = dragData.teamCategoryId;
+        
+        if (targetCategoryId && teamCategoryId !== targetCategoryId) {
+            window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            return;
+        }
+
+        console.log(`Tím '${teamData.teamName}' bol pustený do skupiny '${groupName}'.`);
+        updateTeamGroup(teamData.uid, teamData.category, teamData.teamName, groupName);
     };
+
+    // Funkcia na vyčistenie referencie po skončení drag & drop
+    const handleDragEnd = () => {
+        draggedItem.current = null;
+    }
 
     const renderTeamList = (teamsToRender, title) => {
         if (teamsToRender.length === 0) {
@@ -294,7 +307,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                         key: index, 
                         className: 'px-4 py-2 bg-gray-100 rounded-lg text-gray-700 cursor-grab',
                         draggable: "true",
-                        onDragStart: (e) => handleDragStart(e, team)
+                        onDragStart: (e) => handleDragStart(e, team),
+                        onDragEnd: handleDragEnd
                     },
                     `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
                 )
@@ -386,7 +400,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     key: team.uid, 
                                                     className: 'px-2 py-1 bg-white rounded-md text-gray-800 cursor-grab',
                                                     draggable: "true",
-                                                    onDragStart: (e) => handleDragStart(e, team) 
+                                                    onDragStart: (e) => handleDragStart(e, team),
+                                                    onDragEnd: handleDragEnd
                                                 },
                                                 team.teamName
                                             )
@@ -488,7 +503,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         key: team.uid, 
                                                         className: 'px-2 py-1 bg-gray-100 rounded-md text-gray-800 cursor-grab',
                                                         draggable: "true",
-                                                        onDragStart: (e) => handleDragStart(e, team) 
+                                                        onDragStart: (e) => handleDragStart(e, team),
+                                                        onDragEnd: handleDragEnd
                                                     },
                                                     team.teamName
                                                 )
