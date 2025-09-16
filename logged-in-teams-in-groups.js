@@ -53,7 +53,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
-    const [dragOverData, setDragOverData] = useState({ index: null, groupId: null });
+    const [dragOverData, setDragOverData] = useState({ index: null, groupId: null, isBetween: false });
     
     // Používame useRef na uloženie dát presúvaného tímu, vrátane jeho poradia
     const draggedItem = useRef(null);
@@ -310,6 +310,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
 
         let newIndex = null;
+        let isBetween = false;
         
         if (targetTeam) {
             const rect = e.target.getBoundingClientRect();
@@ -327,12 +328,14 @@ const AddGroupsApp = ({ userProfileData }) => {
             } else {
                 newIndex = targetIndex + 1;
             }
+            isBetween = true;
         } else {
             // Presúvanie nad prázdny kontajner alebo zoznam bez tímov
             newIndex = 0;
+            isBetween = true;
         }
-
-        setDragOverData({ index: newIndex, groupId: targetGroupId });
+        
+        setDragOverData({ index: newIndex, groupId: targetGroupId, isBetween });
         e.dataTransfer.dropEffect = "move";
     };
     
@@ -347,7 +350,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
 
-        setDragOverData({ index: null, groupId: null });
+        setDragOverData({ index: null, groupId: null, isBetween: false });
 
         // Kontrola, či sa presúva v rámci rovnakej kategórie
         if (targetCategoryId && teamCategoryId !== targetCategoryId) {
@@ -408,7 +411,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const handleDragEnd = () => {
         draggedItem.current = null;
-        setDragOverData({ index: null, groupId: null });
+        setDragOverData({ index: null, groupId: null, isBetween: false });
     }
 
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
@@ -421,7 +424,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     
         const items = sortedTeams.map((team, index) => (
             React.createElement(React.Fragment, { key: `${team.uid}-${team.teamName}` },
-                dragOverData.index === index && dragOverData.groupId === targetGroupId && (
+                dragOverData.index === index && dragOverData.groupId === targetGroupId && dragOverData.isBetween && (
                     React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                 ),
                 React.createElement(
@@ -439,8 +442,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
         ));
     
-        // Pridanie čiary na koniec zoznamu
-        if (dragOverData.index === sortedTeams.length && dragOverData.groupId === targetGroupId) {
+        // Pridanie čiary na koniec zoznamu, ak sa presúva na koniec a zoznam nie je prázdny
+        if (dragOverData.index === sortedTeams.length && dragOverData.groupId === targetGroupId && dragOverData.isBetween) {
             items.push(React.createElement('div', { key: 'end-line', className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }));
         }
 
