@@ -631,7 +631,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             ),
                             React.createElement(
                                 'ul',
-                                { className: 'space-y-2' },
+                                { className: 'mt-2 space-y-1' },
                                 teamsInGroups.filter(team => team.groupName === group.name).sort((a,b) => a.order - b.order).map((team, teamIndex) => 
                                     React.createElement(
                                         'div',
@@ -645,8 +645,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 className: 'px-2 py-1 bg-white rounded-md text-gray-800 cursor-grab',
                                                 draggable: "true",
                                                 onDragStart: (e) => handleDragStart(e, team),
-                                                onDragOver: (e) => handleDragOver(e, team, group.name, categoryId),
-                                                onDrop: (e) => handleDrop(e, group.name, categoryId),
+                                                onDragOver: (e) => handleDragOver(e, team, group.name, selectedCategoryId),
+                                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
                                                 onDragEnd: handleDragEnd
                                             },
                                             team.teamName
