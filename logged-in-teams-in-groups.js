@@ -204,7 +204,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
-        const sourceGroup = teamData.groupName;
         
         setDragOverData({ index: null, groupId: null, isOverTopHalf: false });
 
@@ -217,45 +216,47 @@ const AddGroupsApp = ({ userProfileData }) => {
         const categoryName = categoryIdToNameMap[teamCategoryId];
 
         try {
-            // Použijeme transakciu pre operáciu s viacerými dokumentami
-            await runTransaction(window.db, async (transaction) => {
-                // Získanie všetkých tímov pre danú kategóriu
-                const usersRef = collection(window.db, 'users');
-                const usersQuery = query(usersRef, where(`teams.${categoryName}`, '!=', null));
-                const usersSnapshot = await getDocs(usersQuery);
-                
-                const allTeamsInCategory = [];
-                usersSnapshot.forEach(docSnap => {
-                    const userData = docSnap.data();
-                    if (userData.teams && userData.teams[categoryName]) {
-                        userData.teams[categoryName].forEach(team => {
-                            allTeamsInCategory.push({ ...team, uid: docSnap.id });
-                        });
-                    }
-                });
-
-                // Odstránenie presúvaného tímu z pôvodnej pozície
-                const teamsWithoutDragged = allTeamsInCategory.filter(t => t.uid !== teamData.uid || t.teamName !== teamData.teamName);
-
-                // Vytvorenie nového objektu tímu s aktualizovanou skupinou
-                const updatedDraggedTeam = { ...teamData, groupName: targetGroup, order: 0 };
-                
-                // Určenie správneho indexu na vloženie.
-                let newInsertIndex;
-                if (targetIndex !== null) {
-                    newInsertIndex = targetIndex;
-                } else {
-                    const teamsInTargetGroup = teamsWithoutDragged.filter(t => t.groupName === targetGroup);
-                    newInsertIndex = teamsInTargetGroup.length;
+            // Získanie všetkých tímov pre danú kategóriu
+            const usersRef = collection(window.db, 'users');
+            const usersQuery = query(usersRef, where(`teams.${categoryName}`, '!=', null));
+            const usersSnapshot = await getDocs(usersQuery);
+            
+            const allTeamsInCategory = [];
+            usersSnapshot.forEach(docSnap => {
+                const userData = docSnap.data();
+                if (userData.teams && userData.teams[categoryName]) {
+                    userData.teams[categoryName].forEach(team => {
+                        allTeamsInCategory.push({ ...team, uid: docSnap.id });
+                    });
                 }
+            });
 
-                // Vloženie tímu do poľa na novú pozíciu
-                const newTeamArray = [...teamsWithoutDragged];
-                newTeamArray.splice(newInsertIndex, 0, updatedDraggedTeam);
-                
-                // Prepočítanie a aktualizácia poradia pre všetky tímy
-                const reorderedFinalList = newTeamArray.map((t, idx) => ({ ...t, order: idx }));
-                
+            // Odstránenie presúvaného tímu z pôvodnej pozície
+            const teamsWithoutDragged = allTeamsInCategory.filter(t => t.uid !== teamData.uid || t.teamName !== teamData.teamName);
+
+            // Vytvorenie nového objektu tímu s aktualizovanou skupinou
+            const updatedDraggedTeam = { ...teamData, groupName: targetGroup };
+            
+            // Určenie správneho indexu na vloženie.
+            let newInsertIndex;
+            if (targetIndex !== null) {
+                newInsertIndex = targetIndex;
+            } else {
+                const teamsInTargetGroup = teamsWithoutDragged.filter(t => t.groupName === targetGroup);
+                newInsertIndex = teamsInTargetGroup.length;
+            }
+
+            // Vloženie tímu do poľa na novú pozíciu
+            const newTeamArray = [...teamsWithoutDragged];
+            newTeamArray.splice(newInsertIndex, 0, updatedDraggedTeam);
+            
+            // Prepočítanie a aktualizácia poradia pre všetky tímy
+            const reorderedFinalList = newTeamArray.map((t, idx) => ({ ...t, order: idx }));
+            
+            // Optimistická aktualizácia UI
+            setAllTeams(reorderedFinalList);
+
+            await runTransaction(window.db, async (transaction) => {
                 // Zoskupenie tímov podľa používateľov
                 const teamsByUser = reorderedFinalList.reduce((acc, team) => {
                     const userUid = team.uid;
