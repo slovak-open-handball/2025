@@ -345,35 +345,55 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
-
-        const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroup && t.category === teamData.category);
-        const teamsInSourceGroup = allTeams.filter(t => t.groupName === teamData.groupName && t.category === teamData.category);
-
-        const newIndex = dragOverData.isOverTopHalf ? dragOverData.index : dragOverData.index + 1;
         
-        // Ak je presúvaný tím v zozname zdrojových tímov, odstránime ho
-        const sourceTeamsAfterRemoval = teamsInSourceGroup.filter(t => t.teamName !== teamData.teamName);
-        
-        const newTargetTeams = [...teamsInTargetGroup];
-        newTargetTeams.splice(newIndex, 0, { ...teamData, groupName: targetGroup });
+        const sourceTeams = allTeams.filter(t => t.groupName === teamData.groupName && t.category === teamData.category);
+        const targetTeams = allTeams.filter(t => t.groupName === targetGroup && t.category === teamData.category);
 
-        const reorderedSource = sourceTeamsAfterRemoval.map((t, idx) => ({ ...t, order: idx }));
-        const reorderedTarget = newTargetTeams.map((t, idx) => ({ ...t, order: idx }));
-        
-        // Aktualizujeme stav optimisticky
-        setAllTeams(prevTeams => {
-            const teamsToFilterOut = [...teamsInSourceGroup.map(t => t.teamName), ...teamsInTargetGroup.map(t => t.teamName)];
-            const otherTeams = prevTeams.filter(t => !teamsToFilterOut.includes(t.teamName));
-            return [...otherTeams, ...reorderedSource, ...reorderedTarget];
-        });
+        const isReordering = teamData.groupName === targetGroup;
+        let teamsToUpdate;
 
-        // Uložíme zmeny do DB
-        if (teamData.groupName !== targetGroup) {
-            // Presun do novej skupiny
-            updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, targetGroup, newIndex);
-        } else {
+        if (isReordering) {
             // Reorder v rovnakej skupine
-            updateTeamOrderInDb(teamData.category, reorderedTarget);
+            const teamToMove = sourceTeams.find(t => t.teamName === teamData.teamName);
+            const teamsAfterRemoval = sourceTeams.filter(t => t.teamName !== teamData.teamName);
+            
+            const newIndex = dragOverData.isOverTopHalf ? dragOverData.index : dragOverData.index + 1;
+            
+            teamsAfterRemoval.splice(newIndex, 0, teamToMove);
+            teamsToUpdate = teamsAfterRemoval.map((t, idx) => ({ ...t, order: idx }));
+            
+            // Optimistická aktualizácia stavu
+            setAllTeams(prevTeams => {
+                const otherTeams = prevTeams.filter(t => t.groupName !== teamData.groupName || t.category !== teamData.category);
+                return [...otherTeams, ...teamsToUpdate];
+            });
+
+            // Uloženie zmien do DB
+            updateTeamOrderInDb(teamData.category, teamsToUpdate);
+
+        } else {
+            // Presun do novej skupiny
+            const newIndex = dragOverData.isOverTopHalf ? dragOverData.index : dragOverData.index + 1;
+            
+            const teamsInTargetGroupAfterDrop = [...targetTeams];
+            teamsInTargetGroupAfterDrop.splice(newIndex, 0, { ...teamData, groupName: targetGroup });
+            
+            // Reorder zdrojovej skupiny
+            const teamsInSourceAfterRemoval = sourceTeams.filter(t => t.teamName !== teamData.teamName);
+            const reorderedSourceTeams = teamsInSourceAfterRemoval.map((t, idx) => ({ ...t, order: idx }));
+            
+            // Reorder cieľovej skupiny
+            const reorderedTargetTeams = teamsInTargetGroupAfterDrop.map((t, idx) => ({ ...t, order: idx }));
+            
+            // Optimistická aktualizácia stavu
+            setAllTeams(prevTeams => {
+                const teamsToFilterOut = [...sourceTeams.map(t => t.teamName), ...targetTeams.map(t => t.teamName)];
+                const otherTeams = prevTeams.filter(t => !teamsToFilterOut.includes(t.teamName));
+                return [...otherTeams, ...reorderedSourceTeams, ...reorderedTargetTeams];
+            });
+
+            // Uloženie zmien do DB
+            updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, targetGroup, newIndex);
         }
     };
 
