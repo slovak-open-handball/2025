@@ -222,24 +222,41 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleDragStart = (e, team) => {
-        e.dataTransfer.setData("text/plain", JSON.stringify(team));
-        console.log("Začiatok presúvania tímu:", team.teamName);
+        // Ukladáme teamData aj ID kategórie do dataTransfer pre overenie počas dragOver
+        const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === team.category);
+        const dragData = { team, teamCategoryId };
+        e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
+        console.log("Začiatok presúvania tímu:", team.teamName, "ID kategórie:", teamCategoryId);
     };
 
-    const handleDragOver = (e) => {
+    const handleDragOver = (e, targetCategoryId) => {
         e.preventDefault(); // Umožní pustenie
-    };
+        
+        try {
+            const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
+            const teamCategoryId = dragData.teamCategoryId;
 
+            if (selectedCategoryId === '' && teamCategoryId !== targetCategoryId) {
+                // Ak nie je vybraná žiadna kategória, overíme, či sa kategórie zhodujú.
+                e.dataTransfer.dropEffect = "none";
+            } else {
+                // Ak je kategória vybraná alebo sa zhodujú, umožníme presun.
+                e.dataTransfer.dropEffect = "move";
+            }
+        } catch (error) {
+            console.error("Chyba pri spracovaní dragOver:", error);
+            e.dataTransfer.dropEffect = "none";
+        }
+    };
+    
     const handleDrop = (e, groupName, targetCategoryId) => {
         e.preventDefault();
         try {
-            const teamData = JSON.parse(e.dataTransfer.getData("text/plain"));
-            const teamCategoryName = teamData.category;
-            
-            // Nájdeme ID kategórie tímu podľa jeho názvu
-            const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === teamCategoryName);
+            const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
+            const teamData = dragData.team;
+            const teamCategoryId = dragData.teamCategoryId;
 
-            // Ak nie je vybratá žiadna kategória, overíme, či sa kategórie zhodujú
+            // Opakované overenie pre istotu
             if (!selectedCategoryId && teamCategoryId !== targetCategoryId) {
                 window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
                 return;
@@ -341,7 +358,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 { 
                                     key: groupIndex, 
                                     className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}`,
-                                    onDragOver: handleDragOver,
+                                    onDragOver: (e) => handleDragOver(e, categoryId),
                                     onDrop: (e) => handleDrop(e, group.name, categoryId) // Odovzdanie ID kategórie pre validáciu
                                 },
                                 React.createElement(
@@ -423,7 +440,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             { 
                                 key: groupIndex, 
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
-                                onDragOver: handleDragOver,
+                                onDragOver: (e) => handleDragOver(e, selectedCategoryId),
                                 onDrop: (e) => handleDrop(e, group.name, selectedCategoryId)
                             },
                             React.createElement(
