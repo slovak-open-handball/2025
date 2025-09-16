@@ -216,7 +216,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const categoryName = categoryIdToNameMap[teamCategoryId];
 
         try {
-            // Získanie všetkých tímov pre danú kategóriu
+            // Pred začiatkom transakcie prečítajte všetky potrebné dáta.
             const usersRef = collection(window.db, 'users');
             const usersQuery = query(usersRef, where(`teams.${categoryName}`, '!=', null));
             const usersSnapshot = await getDocs(usersQuery);
