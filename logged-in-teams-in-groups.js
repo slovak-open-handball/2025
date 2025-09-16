@@ -309,14 +309,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             setDragOverData({ index: null, groupId: null, isOverTopHalf: false });
             return;
         }
-
-        // Ak nie je cieľový tím, znamená to, že sme nad prázdnym priestorom.
-        if (!targetTeam) {
-            setDragOverData({ index: 0, groupId: targetGroupId, isOverTopHalf: false });
-            return;
-        }
-
-        const rect = e.target.getBoundingClientRect();
+        
+        const rect = e.currentTarget.getBoundingClientRect();
         const y = e.clientY - rect.top; // y pozícia myši v rámci prvku
         const isOverTopHalf = y < rect.height / 2;
         
@@ -343,45 +337,54 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
         
+        const isReordering = teamData.groupName === targetGroup;
+
+        // Získame pôvodný zoznam tímov pre obe skupiny
         const sourceTeams = allTeams.filter(t => t.groupName === teamData.groupName && t.category === teamData.category);
         const targetTeams = allTeams.filter(t => t.groupName === targetGroup && t.category === teamData.category);
-
-        const isReordering = teamData.groupName === targetGroup;
         
-        // Získanie správneho indexu na vloženie tímu do cieľovej skupiny
+        let newTeamList = [...targetTeams];
+        let oldTeamList = [...sourceTeams];
         const newIndex = dragOverData.isOverTopHalf ? dragOverData.index : dragOverData.index + 1;
         
-        // Vytvorenie aktualizovaného zoznamu tímov pre cieľovú skupinu
-        const teamsInTargetGroupAfterDrop = [...targetTeams];
-        // Ak sa nejedná o presun v rámci rovnakej skupiny, odstránime tím zo zdrojovej skupiny
+        // Ak sa nejedná o reordering v tej istej skupine
         if (!isReordering) {
-            const movedTeam = sourceTeams.find(t => t.teamName === teamData.teamName);
-            teamsInTargetGroupAfterDrop.splice(newIndex, 0, { ...movedTeam, groupName: targetGroup });
+            // Odstránime tím z pôvodnej skupiny
+            const sourceTeamIndex = oldTeamList.findIndex(t => t.teamName === teamData.teamName);
+            const movedTeam = oldTeamList.splice(sourceTeamIndex, 1)[0];
+            
+            // Vložíme tím do novej skupiny
+            newTeamList.splice(newIndex, 0, { ...movedTeam, groupName: targetGroup });
         } else {
-             // Pri reorderingu v rovnakej skupine najprv odstránime tím z pôvodnej pozície
-            const movedTeam = teamsInTargetGroupAfterDrop.find(t => t.teamName === teamData.teamName);
-            const originalIndex = teamsInTargetGroupAfterDrop.indexOf(movedTeam);
-            teamsInTargetGroupAfterDrop.splice(originalIndex, 1);
-            teamsInTargetGroupAfterDrop.splice(newIndex > originalIndex ? newIndex -1 : newIndex, 0, movedTeam);
+            // Ak sa jedná o reordering v rovnakej skupine
+            const movedTeam = newTeamList.find(t => t.teamName === teamData.teamName);
+            const originalIndex = newTeamList.findIndex(t => t.teamName === teamData.teamName);
+            
+            // Odstránime tím z pôvodnej pozície a vložíme ho na novú
+            newTeamList.splice(originalIndex, 1);
+            newTeamList.splice(newIndex > originalIndex ? newIndex - 1 : newIndex, 0, movedTeam);
         }
         
         // Re-indexovanie oboch zoznamov tímov
-        const reorderedSourceTeams = sourceTeams.filter(t => t.teamName !== teamData.teamName).map((t, idx) => ({ ...t, order: idx }));
-        const reorderedTargetTeams = teamsInTargetGroupAfterDrop.map((t, idx) => ({ ...t, order: idx }));
-
+        const reorderedSourceTeams = oldTeamList.map((t, idx) => ({ ...t, order: idx }));
+        const reorderedTargetTeams = newTeamList.map((t, idx) => ({ ...t, order: idx }));
+        
         // Optimistická aktualizácia stavu
         setAllTeams(prevTeams => {
-            const teamsToFilterOut = [...sourceTeams.map(t => t.teamName), ...targetTeams.map(t => t.teamName)];
-            const otherTeams = prevTeams.filter(t => !teamsToFilterOut.includes(t.teamName));
-            return [...otherTeams, ...reorderedSourceTeams, ...reorderedTargetTeams];
+            const allOtherTeams = prevTeams.filter(t => {
+                const isSourceTeam = sourceTeams.some(st => st.uid === t.uid && st.teamName === t.teamName);
+                const isTargetTeam = targetTeams.some(tt => tt.uid === t.uid && tt.teamName === t.teamName);
+                return !isSourceTeam && !isTargetTeam;
+            });
+            return [...allOtherTeams, ...reorderedSourceTeams, ...reorderedTargetTeams];
         });
 
         // Uloženie zmien do DB
         if (!isReordering) {
              updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, targetGroup, newIndex);
+             updateTeamOrderInDb(teamData.category, reorderedSourceTeams);
         }
         updateTeamOrderInDb(teamData.category, reorderedTargetTeams);
-        updateTeamOrderInDb(teamData.category, reorderedSourceTeams);
     };
 
     const handleDragEnd = () => {
@@ -399,13 +402,21 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         const isOverEmptyGroup = dragOverData.groupId === targetGroupId && sortedTeams.length === 0;
 
-        return React.createElement(
-            'ul',
-            { 
-                className: 'space-y-2',
-                onDragOver: (e) => handleDragOver(e, undefined, targetGroupId, targetCategoryId, sortedTeams.length),
+        // Vytvorenie elementu na pustenie pre prázdne skupiny
+        const emptyDropZone = React.createElement(
+            'div',
+            {
+                className: `min-h-[50px] p-2`,
+                onDragOver: (e) => handleDragOver(e, undefined, targetGroupId, targetCategoryId, 0),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId)
             },
+            isOverEmptyGroup && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }),
+            !isOverEmptyGroup && React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne tímy neboli nájdené.')
+        );
+        
+        return React.createElement(
+            'ul',
+            { className: 'space-y-2' },
             sortedTeams.length > 0 ? sortedTeams.map((team, index) => {
                 const isOverItem = dragOverData.groupId === targetGroupId && dragOverData.index === index;
                 const showTopLine = isOverItem && dragOverData.isOverTopHalf;
@@ -430,16 +441,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     showBottomLine && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                 );
             }) : (
-                React.createElement(
-                    'div',
-                    {
-                        className: `min-h-[50px] p-2`,
-                        onDragOver: (e) => handleDragOver(e, undefined, targetGroupId, targetCategoryId, 0),
-                        onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId)
-                    },
-                    isOverEmptyGroup && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }),
-                    !isOverEmptyGroup && React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne tímy neboli nájdené.')
-                )
+                emptyDropZone
             )
         );
     };
