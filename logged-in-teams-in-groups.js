@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -227,60 +227,65 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
 
-
         const categoryName = categoryIdToNameMap[teamCategoryId];
-        
-        // Vytvorenie dočasnej kópie zoznamu tímov
-        const teamsInSource = allTeams.filter(t => t.category === categoryName && t.groupName === sourceGroup);
-        const teamsInTarget = allTeams.filter(t => t.category === categoryName && t.groupName === targetGroup);
-        
-        // Odstránenie presúvaného tímu z jeho pôvodného zoznamu
-        const updatedSourceTeams = teamsInSource.filter(t => !(t.uid === teamData.uid && t.teamName === teamData.teamName));
-        
-        // Vytvorenie nového objektu pre presúvaný tím s novou skupinou
-        const movedTeam = { 
-            ...teamData, 
-            groupName: targetGroup,
-        };
-        
-        // Vloženie tímu na správnu pozíciu
-        let finalIndex;
-        if (targetIndex === null) {
-            // Ak bol pustený na hlavičku skupiny, vlož ho na koniec zoznamu
-            finalIndex = teamsInTarget.length;
-        } else {
-            // Ak bol pustený na iný tím, vlož ho na daný index
-            finalIndex = targetIndex;
-        }
-        
-        const updatedTargetTeams = [...teamsInTarget];
-        updatedTargetTeams.splice(finalIndex, 0, movedTeam);
-        
-        // Prepočítame poradia len pre zmenené zoznamy
-        const reorderedSourceTeams = updatedSourceTeams.map((t, idx) => ({ ...t, order: idx }));
-        const reorderedTargetTeams = updatedTargetTeams.map((t, idx) => ({ ...t, order: idx }));
-        
-        const otherTeams = allTeams.filter(t => t.category !== categoryName || (t.groupName !== sourceGroup && t.groupName !== targetGroup));
-        const updatedAllTeams = [...otherTeams, ...reorderedSourceTeams, ...reorderedTargetTeams];
 
-        // Optimistická aktualizácia stavu
-        setAllTeams(updatedAllTeams);
-        
-        // Uložíme zmeny do databázy
         try {
-            const userRefsToUpdate = new Set();
-            updatedAllTeams.forEach(t => userRefsToUpdate.add(t.uid));
-            
-            for (const uid of userRefsToUpdate) {
-                const teamsForUser = updatedAllTeams.filter(t => t.uid === uid && t.category === categoryName);
-                if (teamsForUser.length > 0) {
-                    const userRef = doc(window.db, 'users', uid);
-                    await updateDoc(userRef, {
-                        [`teams.${categoryName}`]: teamsForUser
-                    });
+            // Spustíme transakciu, aby sme zabezpečili atomickosť operácií
+            await runTransaction(window.db, async (transaction) => {
+                const userRef = doc(window.db, 'users', teamData.uid);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists()) {
+                    throw "Dokument používateľa nebol nájdený!";
                 }
-            }
-            
+
+                const userData = userDoc.data();
+                const teamsInCategory = userData.teams[categoryName] || [];
+
+                // Nájdeme tím, ktorý presúvame
+                const draggedTeamIndex = teamsInCategory.findIndex(t => t.teamName === teamData.teamName);
+                if (draggedTeamIndex === -1) {
+                    throw "Presúvaný tím nebol nájdený v databáze!";
+                }
+
+                const draggedTeamFromDb = teamsInCategory[draggedTeamIndex];
+
+                // Vytvoríme nový zoznam tímov pre aktualizáciu
+                let updatedTeams = [...teamsInCategory];
+
+                // Odstránime tím z pôvodnej pozície
+                updatedTeams.splice(draggedTeamIndex, 1);
+
+                // Zmeníme groupName a order presúvaného tímu
+                const newOrder = targetIndex !== null ? targetIndex : updatedTeams.filter(t => t.groupName === targetGroup).length;
+                const updatedDraggedTeam = { ...draggedTeamFromDb, groupName: targetGroup, order: newOrder };
+
+                // Vložíme tím na novú pozíciu a prepočítame poradia
+                const teamsInTargetGroup = updatedTeams.filter(t => t.groupName === targetGroup);
+                const teamsNotInTargetGroup = updatedTeams.filter(t => t.groupName !== targetGroup);
+                
+                teamsInTargetGroup.splice(newOrder, 0, updatedDraggedTeam);
+                
+                // Prepočítame poradia v cieľovej skupine
+                const reorderedTargetTeams = teamsInTargetGroup.map((t, idx) => ({ ...t, order: idx }));
+                
+                // Prepočítame poradia v pôvodnej skupine, ak sa líšia
+                let reorderedSourceTeams;
+                if (sourceGroup !== targetGroup) {
+                    const teamsInSourceGroup = teamsNotInTargetGroup.filter(t => t.groupName === sourceGroup);
+                    const teamsNotInSourceAndTarget = teamsNotInTargetGroup.filter(t => t.groupName !== sourceGroup);
+                    reorderedSourceTeams = teamsInSourceGroup.map((t, idx) => ({ ...t, order: idx }));
+                    updatedTeams = [...teamsNotInSourceAndTarget, ...reorderedSourceTeams, ...reorderedTargetTeams];
+                } else {
+                    updatedTeams = [...teamsNotInTargetGroup, ...reorderedTargetTeams];
+                }
+
+                // Aktualizujeme celý zoznam tímov pre danú kategóriu
+                transaction.update(userRef, {
+                    [`teams.${categoryName}`]: updatedTeams
+                });
+            });
+
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
