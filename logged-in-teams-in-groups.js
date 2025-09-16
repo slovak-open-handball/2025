@@ -245,11 +245,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             finalIndex = targetIndex;
         }
         
-        teamsInTarget.splice(finalIndex, 0, movedTeam);
+        const updatedTargetTeams = [...teamsInTarget];
+        updatedTargetTeams.splice(finalIndex, 0, movedTeam);
         
-        // Prepočítame poradia všetkých tímov v zmenených zoznamoch
+        // Prepočítame poradia len pre zmenené zoznamy
         const reorderedSourceTeams = updatedSourceTeams.map((t, idx) => ({ ...t, order: idx }));
-        const reorderedTargetTeams = teamsInTarget.map((t, idx) => ({ ...t, order: idx }));
+        const reorderedTargetTeams = updatedTargetTeams.map((t, idx) => ({ ...t, order: idx }));
         
         const otherTeams = allTeams.filter(t => t.category !== categoryName || (t.groupName !== sourceGroup && t.groupName !== targetGroup));
         const updatedAllTeams = [...otherTeams, ...reorderedSourceTeams, ...reorderedTargetTeams];
