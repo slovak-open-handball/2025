@@ -228,19 +228,26 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const userData = userDoc.data();
                 const teamsInCategory = userData.teams?.[categoryName] || [];
                 
-                // Nájdenie presúvaného tímu a jeho aktualizácia.
-                // POZNÁMKA: Firestore nedokáže aktualizovať len jeden objekt v poli.
-                // Preto je potrebné celé pole načítať, upraviť a zapísať späť.
-                const updatedTeams = teamsInCategory.map((t, idx) => {
+                // POZNÁMKA: Nasledujúca logika je nevyhnutná, pretože Firestore neumožňuje
+                // priamu aktualizáciu jedného objektu v poli.
+                // Celé pole je potrebné prečítať, upraviť a zapísať späť, aby bola zmena
+                // konzistentná.
+                
+                // Nájdenie a úprava konkrétneho tímu v poli.
+                const updatedTeams = teamsInCategory.map(t => {
                     // Ak sa názov tímu a kategória zhodujú, aktualizujeme jeho skupinu a poradie.
                     // V opačnom prípade vrátime tím bez zmeny.
                     if (t.teamName === teamData.teamName && t.category === teamData.category) {
-                        return { ...t, groupName: targetGroup, order: -1 }; // Dočasne nastavíme poradie na -1
+                        return { 
+                            ...t, 
+                            groupName: targetGroup, 
+                            order: -1 // Dočasne nastavíme poradie, aby sa prepočítalo neskôr.
+                        };
                     }
                     return t;
                 });
                 
-                // Odstránenie tímu z pôvodnej pozície a vloženie na koniec zoznamu
+                // Odstránenie tímu z pôvodnej pozície a vloženie na koniec zoznamu.
                 const teamToMove = updatedTeams.find(t => t.teamName === teamData.teamName);
                 const teamsWithoutDragged = updatedTeams.filter(t => t.teamName !== teamData.teamName);
                 
@@ -250,18 +257,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
 
                 // Prepočítanie a aktualizácia poradia pre všetky tímy v novom zozname
+                // Toto je dôležité, aby poradie v databáze vždy zodpovedalo poradiu v UI.
                 const reorderedFinalList = finalTeamList.map((t, idx) => ({ ...t, order: idx }));
                 
-                // Aktualizácia transakcie s novým poľom tímov
-                const newTeamsData = {
-                    ...userData.teams,
-                    [categoryName]: reorderedFinalList
-                };
-                
                 // Týmto sa aktualizujú len hodnoty groupName a order, ale prepisuje sa
-                // celé pole, čo je v tomto prípade nevyhnutné.
+                // celé pole 'teams', čo je v tomto prípade nevyhnutné.
                 transaction.update(userRef, {
-                    teams: newTeamsData
+                    teams: {
+                        ...userData.teams,
+                        [categoryName]: reorderedFinalList
+                    }
                 });
 
                 window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
