@@ -161,11 +161,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Filtered teams based on selected category and if they are not yet assigned to a group
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName)
-        : [];
+        : allTeams.filter(team => !team.groupName);
 
     const teamsInGroups = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && team.groupName)
-        : [];
+        : allTeams.filter(team => team.groupName);
 
     // Helper function to get the correct background color class based on group type
     const getGroupColorClass = (type) => {
@@ -230,10 +230,21 @@ const AddGroupsApp = ({ userProfileData }) => {
         e.preventDefault(); // Umožní pustenie
     };
 
-    const handleDrop = (e, groupName) => {
+    const handleDrop = (e, groupName, targetCategoryId) => {
         e.preventDefault();
         try {
             const teamData = JSON.parse(e.dataTransfer.getData("text/plain"));
+            const teamCategoryName = teamData.category;
+            
+            // Nájdeme ID kategórie tímu podľa jeho názvu
+            const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === teamCategoryName);
+
+            // Ak nie je vybratá žiadna kategória, overíme, či sa kategórie zhodujú
+            if (!selectedCategoryId && teamCategoryId !== targetCategoryId) {
+                window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+                return;
+            }
+
             console.log(`Tím '${teamData.teamName}' bol pustený do skupiny '${groupName}'.`);
             assignTeamToGroup(teamData.uid, teamData.category, teamData.teamName, groupName);
         } catch (error) {
@@ -251,7 +262,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             );
         }
         
-        // Zoradíme tímy podľa názvu kategórie
+        // Zoradíme tímy podľa názvu tímu
         const sortedTeams = [...teamsToRender].sort((a, b) => a.teamName.localeCompare(b.teamName));
         
         return React.createElement(
@@ -266,7 +277,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         draggable: "true",
                         onDragStart: (e) => handleDragStart(e, team)
                     },
-                    `${title === 'Zoznam všetkých tímov' ? `${team.category}: ` : ''}${team.teamName}`
+                    `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
                 )
             )
         );
@@ -297,8 +308,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: 'flex flex-wrap gap-4 justify-center' },
             sortedCategoryIds.map((categoryId, index) => {
                 const groups = allGroupsByCategoryId[categoryId];
-                const teamsInThisCategory = allTeams.filter(team => team.category === categoryIdToNameMap[categoryId]);
                 const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
+                const teamsInThisCategory = allTeams.filter(team => team.category === categoryIdToNameMap[categoryId]);
                 
                 const sortedGroups = [...groups].sort((a, b) => {
                     // Typ "základná skupina" má prednosť
@@ -331,7 +342,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     key: groupIndex, 
                                     className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}`,
                                     onDragOver: handleDragOver,
-                                    onDrop: (e) => handleDrop(e, group.name)
+                                    onDrop: (e) => handleDrop(e, group.name, categoryId) // Odovzdanie ID kategórie pre validáciu
                                 },
                                 React.createElement(
                                     'div',
@@ -413,7 +424,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 key: groupIndex, 
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
                                 onDragOver: handleDragOver,
-                                onDrop: (e) => handleDrop(e, group.name)
+                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId)
                             },
                             React.createElement(
                                 'h3',
@@ -515,7 +526,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { className: 'text-2xl font-semibold mb-4 text-center' },
                         'Zoznam všetkých tímov'
                     ),
-                    renderTeamList(allTeams, 'Zoznam všetkých tímov')
+                    renderTeamList(teamsWithoutGroup, 'Zoznam všetkých tímov')
                 ),
                 React.createElement(
                     'div',
