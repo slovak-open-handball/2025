@@ -222,10 +222,22 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         const categoryName = categoryIdToNameMap[teamCategoryId];
         
-        let updatedTeamsForCategory = allTeams.filter(t => t.category === categoryName);
+        let teamsToUpdate;
         
+        // Ak je presun interný (v rámci skupiny), aktualizujeme len túto skupinu
+        if (isInternalMove) {
+            teamsToUpdate = allTeams.filter(t => t.groupName === targetGroup);
+        } else {
+            // Ak je presun medzi rôznymi skupinami alebo do/zo zoznamu bez skupín,
+            // aktualizujeme oba dotknuté zoznamy
+            const sourceGroup = teamData.groupName;
+            const teamsInSource = allTeams.filter(t => t.groupName === sourceGroup);
+            const teamsInTarget = allTeams.filter(t => t.groupName === targetGroup);
+            teamsToUpdate = [...teamsInSource, ...teamsInTarget];
+        }
+
         // Odstránime presúvaný tím z jeho pôvodnej pozície
-        updatedTeamsForCategory = updatedTeamsForCategory.filter(t => t.uid !== teamData.uid || t.teamName !== teamData.teamName);
+        teamsToUpdate = teamsToUpdate.filter(t => t.uid !== teamData.uid || t.teamName !== teamData.teamName);
 
         // Vytvoríme nový objekt pre presúvaný tím
         const movedTeam = { 
@@ -234,47 +246,29 @@ const AddGroupsApp = ({ userProfileData }) => {
             order: targetGroup ? targetIndex : -1 // Poradie nastavíme len ak sa presúva do skupiny
         };
         
-        // Ak je presun interný (v rámci skupiny), vkladáme na nový index, inak ho presúvame
-        let reorderedTeams = [];
-        if (isInternalMove) {
-            // Ak je presun v rámci rovnakej skupiny, aktualizujeme len poradie v tejto skupine
-            const teamsInSameGroup = updatedTeamsForCategory.filter(t => t.groupName === targetGroup);
-            teamsInSameGroup.splice(targetIndex, 0, movedTeam);
-            reorderedTeams = teamsInSameGroup.map((t, idx) => ({ ...t, order: idx }));
+        // Vložíme tím na správnu pozíciu
+        teamsToUpdate.splice(targetIndex, 0, movedTeam);
 
-            // Skombinujeme s tímami z iných skupín
-            const otherGroupsTeams = allTeams.filter(t => t.groupName !== targetGroup);
-            updatedTeamsForCategory = [...otherGroupsTeams, ...reorderedTeams];
-
-        } else {
-            // Ak je presun medzi rôznymi skupinami, prepočítame obe
-            const targetTeams = updatedTeamsForCategory.filter(t => t.groupName === targetGroup);
-            const sourceTeams = updatedTeamsForCategory.filter(t => t.groupName === teamData.groupName);
-            
-            targetTeams.splice(targetIndex, 0, movedTeam);
-            
-            const reorderedTargetTeams = targetTeams.map((t, idx) => ({ ...t, order: idx }));
-            const reorderedSourceTeams = sourceTeams.map((t, idx) => ({ ...t, order: idx }));
-            
-            const otherTeams = allTeams.filter(t => t.groupName !== targetGroup && t.groupName !== teamData.groupName);
-            updatedTeamsForCategory = [...otherTeams, ...reorderedTargetTeams, ...reorderedSourceTeams];
-        }
-
+        // Prepočítame poradia všetkých tímov v zmenených zoznamoch
+        const reorderedTeams = teamsToUpdate.map((t, idx) => ({ ...t, order: idx }));
+        
+        // Aktualizujeme stav všetkých tímov
+        const otherTeams = allTeams.filter(t => !teamsToUpdate.some(updatedT => updatedT.uid === t.uid && updatedT.teamName === t.teamName));
+        const updatedAllTeams = [...otherTeams, ...reorderedTeams];
+        
         // Optimistická aktualizácia stavu
-        setAllTeams(updatedTeamsForCategory);
+        setAllTeams(updatedAllTeams);
         
         // Uložíme zmeny do databázy
         try {
             const updates = {};
             const userRefsToUpdate = new Set();
-            userRefsToUpdate.add(teamData.uid);
-            
-            updatedTeamsForCategory.forEach(t => userRefsToUpdate.add(t.uid));
+            updatedAllTeams.forEach(t => userRefsToUpdate.add(t.uid));
             
             for (const uid of userRefsToUpdate) {
-                const teamsToUpdate = updatedTeamsForCategory.filter(t => t.uid === uid && t.category === categoryName);
-                if (teamsToUpdate.length > 0) {
-                    updates[`teams.${categoryName}`] = teamsToUpdate;
+                const teamsForUser = updatedAllTeams.filter(t => t.uid === uid && t.category === categoryName);
+                if (teamsForUser.length > 0) {
+                    updates[`teams.${categoryName}`] = teamsForUser;
                     const userRef = doc(window.db, 'users', uid);
                     await updateDoc(userRef, updates);
                 }
