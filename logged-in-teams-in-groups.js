@@ -336,7 +336,8 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             setDragOverGroupId(targetGroupId);
         } else {
-            setDragOverIndex(null);
+            // Presun do hlavného zoznamu
+            setDragOverIndex(teamsWithoutGroup.length);
             setDragOverGroupId(null);
         }
 
@@ -422,7 +423,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     }
 
     const renderTeamList = (teamsToRender, title, targetGroupId, targetCategoryId) => {
-        if (teamsToRender.length === 0) {
+        const isDragOverEmptyList = teamsToRender.length === 0 && dragOverGroupId === targetGroupId;
+
+        if (teamsToRender.length === 0 && !isDragOverEmptyList) {
             return React.createElement(
                 'p',
                 { className: 'text-center text-gray-500' },
@@ -464,6 +467,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                         `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
                     )
                 )
+            ),
+            isDragOverEmptyList && (
+                React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
             )
         );
     };
@@ -561,6 +567,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     team.teamName
                                                 )
                                             )
+                                        ),
+                                        teamsInThisCategory.filter(team => team.groupName === group.name).length === 0 && dragOverGroupId === group.name && (
+                                            React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                         )
                                     )
                                 )
@@ -652,6 +661,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             team.teamName
                                         )
                                     )
+                                ),
+                                teamsInGroups.filter(team => team.groupName === group.name).length === 0 && dragOverGroupId === group.name && (
+                                    React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                 )
                             )
                         )
