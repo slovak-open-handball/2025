@@ -210,6 +210,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
+        const isInternalMove = teamData.groupName === targetGroup;
         
         setDragOverData({ index: null, groupId: null, isOverTopHalf: false });
 
@@ -221,11 +222,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         const categoryName = categoryIdToNameMap[teamCategoryId];
         
-        // Získame všetky tímy pre danú kategóriu
-        const allTeamsForCategory = allTeams.filter(t => t.category === categoryName);
+        let updatedTeamsForCategory = allTeams.filter(t => t.category === categoryName);
         
         // Odstránime presúvaný tím z jeho pôvodnej pozície
-        const teamsExcludingDragged = allTeamsForCategory.filter(t => t.uid !== teamData.uid || t.teamName !== teamData.teamName);
+        updatedTeamsForCategory = updatedTeamsForCategory.filter(t => t.uid !== teamData.uid || t.teamName !== teamData.teamName);
 
         // Vytvoríme nový objekt pre presúvaný tím
         const movedTeam = { 
@@ -234,39 +234,45 @@ const AddGroupsApp = ({ userProfileData }) => {
             order: targetGroup ? targetIndex : -1 // Poradie nastavíme len ak sa presúva do skupiny
         };
         
-        // Získame tímy v cieľovej skupine a vložíme do nich presúvaný tím
-        const targetTeams = teamsExcludingDragged.filter(t => t.groupName === targetGroup);
-        if (targetGroup) {
-             // Ak sa presúva do skupiny, vložíme ho na správny index
-            targetTeams.splice(targetIndex, 0, movedTeam);
-        } else {
-             // Ak sa presúva do zoznamu bez skupín, pridáme ho na koniec
-            targetTeams.push(movedTeam);
-        }
-        
-        // Skombinujeme všetky tímy v kategórii
-        const otherTeamsInGroup = teamsExcludingDragged.filter(t => t.groupName && t.groupName !== targetGroup);
-        const otherTeamsWithoutGroup = teamsExcludingDragged.filter(t => !t.groupName && targetGroup);
-        const reorderedTeamsForCategory = [...targetTeams, ...otherTeamsInGroup, ...otherTeamsWithoutGroup].map((t, idx) => ({ ...t, order: idx }));
-        
-        // Skombinujeme s tímami z iných kategórií
-        const otherCategoriesTeams = allTeams.filter(t => t.category !== categoryName);
-        const updatedAllTeams = [...otherCategoriesTeams, ...reorderedTeamsForCategory];
-        
-        // Optimistická aktualizácia stavu
-        setAllTeams(updatedAllTeams);
+        // Ak je presun interný (v rámci skupiny), vkladáme na nový index, inak ho presúvame
+        let reorderedTeams = [];
+        if (isInternalMove) {
+            // Ak je presun v rámci rovnakej skupiny, aktualizujeme len poradie v tejto skupine
+            const teamsInSameGroup = updatedTeamsForCategory.filter(t => t.groupName === targetGroup);
+            teamsInSameGroup.splice(targetIndex, 0, movedTeam);
+            reorderedTeams = teamsInSameGroup.map((t, idx) => ({ ...t, order: idx }));
 
+            // Skombinujeme s tímami z iných skupín
+            const otherGroupsTeams = allTeams.filter(t => t.groupName !== targetGroup);
+            updatedTeamsForCategory = [...otherGroupsTeams, ...reorderedTeams];
+
+        } else {
+            // Ak je presun medzi rôznymi skupinami, prepočítame obe
+            const targetTeams = updatedTeamsForCategory.filter(t => t.groupName === targetGroup);
+            const sourceTeams = updatedTeamsForCategory.filter(t => t.groupName === teamData.groupName);
+            
+            targetTeams.splice(targetIndex, 0, movedTeam);
+            
+            const reorderedTargetTeams = targetTeams.map((t, idx) => ({ ...t, order: idx }));
+            const reorderedSourceTeams = sourceTeams.map((t, idx) => ({ ...t, order: idx }));
+            
+            const otherTeams = allTeams.filter(t => t.groupName !== targetGroup && t.groupName !== teamData.groupName);
+            updatedTeamsForCategory = [...otherTeams, ...reorderedTargetTeams, ...reorderedSourceTeams];
+        }
+
+        // Optimistická aktualizácia stavu
+        setAllTeams(updatedTeamsForCategory);
+        
         // Uložíme zmeny do databázy
         try {
             const updates = {};
             const userRefsToUpdate = new Set();
             userRefsToUpdate.add(teamData.uid);
             
-            // Zistíme všetkých používateľov, ktorých sa zmena dotkla
-            reorderedTeamsForCategory.forEach(t => userRefsToUpdate.add(t.uid));
+            updatedTeamsForCategory.forEach(t => userRefsToUpdate.add(t.uid));
             
             for (const uid of userRefsToUpdate) {
-                const teamsToUpdate = updatedAllTeams.filter(t => t.uid === uid && t.category === categoryName);
+                const teamsToUpdate = updatedTeamsForCategory.filter(t => t.uid === uid && t.category === categoryName);
                 if (teamsToUpdate.length > 0) {
                     updates[`teams.${categoryName}`] = teamsToUpdate;
                     const userRef = doc(window.db, 'users', uid);
