@@ -200,7 +200,7 @@ const AddGroupsApp = ({ userProfileData }) => {
      * @param {string|null} targetGroup Názov cieľovej skupiny alebo null pre zoznam nepriradených tímov.
      * @param {number|null} targetIndex Index, kam sa má tím vložiť.
      */
-    const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex = 0) => {
+    const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex = null) => {
         e.preventDefault();
         const dragData = draggedItem.current;
         if (!dragData) {
@@ -210,7 +210,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
-        const isInternalMove = teamData.groupName === targetGroup;
         
         setDragOverData({ index: null, groupId: null, isOverTopHalf: false });
 
@@ -221,39 +220,37 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
 
         const categoryName = categoryIdToNameMap[teamCategoryId];
+        const allTeamsForCategory = allTeams.filter(t => t.category === categoryName);
         
-        let teamsToUpdate;
+        // Vytvorenie dočasnej kópie zoznamu tímov
+        let newTeamsList = [...allTeamsForCategory];
         
-        // Ak je presun interný (v rámci skupiny), aktualizujeme len túto skupinu
-        if (isInternalMove) {
-            teamsToUpdate = allTeams.filter(t => t.groupName === targetGroup);
-        } else {
-            // Ak je presun medzi rôznymi skupinami alebo do/zo zoznamu bez skupín,
-            // aktualizujeme oba dotknuté zoznamy
-            const sourceGroup = teamData.groupName;
-            const teamsInSource = allTeams.filter(t => t.groupName === sourceGroup);
-            const teamsInTarget = allTeams.filter(t => t.groupName === targetGroup);
-            teamsToUpdate = [...teamsInSource, ...teamsInTarget];
+        // Odstránenie presúvaného tímu z pôvodnej pozície
+        const draggedTeamIndex = newTeamsList.findIndex(t => t.uid === teamData.uid && t.teamName === teamData.teamName);
+        if (draggedTeamIndex !== -1) {
+            newTeamsList.splice(draggedTeamIndex, 1);
         }
 
-        // Odstránime presúvaný tím z jeho pôvodnej pozície
-        teamsToUpdate = teamsToUpdate.filter(t => t.uid !== teamData.uid || t.teamName !== teamData.teamName);
-
-        // Vytvoríme nový objekt pre presúvaný tím
+        // Vytvorenie nového objektu pre presúvaný tím s novou skupinou
         const movedTeam = { 
             ...teamData, 
             groupName: targetGroup,
-            order: targetGroup ? targetIndex : -1 // Poradie nastavíme len ak sa presúva do skupiny
         };
         
-        // Vložíme tím na správnu pozíciu
-        teamsToUpdate.splice(targetIndex, 0, movedTeam);
-
-        // Prepočítame poradia všetkých tímov v zmenených zoznamoch
-        const reorderedTeams = teamsToUpdate.map((t, idx) => ({ ...t, order: idx }));
+        // Vloženie tímu na správnu pozíciu
+        let finalIndex = targetIndex;
+        if (targetIndex === null) {
+            // Ak nebol poskytnutý index, vloží sa na koniec
+            finalIndex = newTeamsList.filter(t => t.groupName === targetGroup).length;
+        }
+        
+        newTeamsList.splice(finalIndex, 0, movedTeam);
+        
+        // Aktualizácia poradia pre všetky tímy v zmenených zoznamoch
+        const reorderedTeams = newTeamsList.map((t, idx) => ({ ...t, order: idx }));
         
         // Aktualizujeme stav všetkých tímov
-        const otherTeams = allTeams.filter(t => !teamsToUpdate.some(updatedT => updatedT.uid === t.uid && updatedT.teamName === t.teamName));
+        const otherTeams = allTeams.filter(t => t.category !== categoryName);
         const updatedAllTeams = [...otherTeams, ...reorderedTeams];
         
         // Optimistická aktualizácia stavu
@@ -335,8 +332,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             'div',
             {
                 className: `min-h-[50px] p-2`,
-                onDragOver: (e) => handleDragOver(e, undefined, targetGroupId, targetCategoryId, 0),
-                onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, 0)
+                onDragOver: (e) => {
+                    e.preventDefault();
+                    setDragOverData({ index: 0, groupId: targetGroupId, isOverTopHalf: false });
+                },
+                onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, 0),
+                onDragLeave: () => setDragOverData({ index: null, groupId: null, isOverTopHalf: false })
             },
             isOverEmptyGroup && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }),
             !isOverEmptyGroup && React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne tímy neboli nájdené.')
@@ -361,7 +362,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                             draggable: "true",
                             onDragStart: (e) => handleDragStart(e, team),
                             onDragOver: (e) => handleDragOver(e, team, targetGroupId, targetCategoryId, index),
-                            onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, dragOverData.isOverTopHalf ? index : index + 1),
+                            onDrop: (e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const y = e.clientY - rect.top;
+                                const isOverTopHalf = y < rect.height / 2;
+                                handleDrop(e, targetGroupId, targetCategoryId, isOverTopHalf ? index : index + 1);
+                            },
                             onDragEnd: handleDragEnd
                         },
                         `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
@@ -428,8 +434,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 { 
                                     key: groupIndex, 
                                     className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}`,
-                                    onDragOver: (e) => handleDragOver(e, undefined, group.name, categoryId, teamsInThisCategory.filter(team => team.groupName === group.name).length),
-                                    onDrop: (e) => handleDrop(e, group.name, categoryId)
+                                    onDragOver: (e) => {
+                                        e.preventDefault();
+                                        setDragOverData({ index: null, groupId: group.name, isOverTopHalf: false });
+                                    },
+                                    onDrop: (e) => handleDrop(e, group.name, categoryId),
+                                    onDragLeave: () => setDragOverData({ index: null, groupId: null, isOverTopHalf: false })
                                 },
                                 React.createElement(
                                     'div',
@@ -479,8 +489,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 { 
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
-                    onDragOver: (e) => handleDragOver(e, undefined, null, selectedCategoryId, teamsWithoutGroup.length),
-                    onDrop: (e) => handleDrop(e, null, selectedCategoryId, teamsWithoutGroup.length)
+                    onDragOver: (e) => {
+                        e.preventDefault();
+                        setDragOverData({ index: null, groupId: null, isOverTopHalf: false });
+                    },
+                    onDrop: (e) => handleDrop(e, null, selectedCategoryId, teamsWithoutGroup.length),
+                    onDragLeave: () => setDragOverData({ index: null, groupId: null, isOverTopHalf: false })
                 },
                 React.createElement(
                     'h3',
@@ -499,8 +513,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                             { 
                                 key: groupIndex, 
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
-                                onDragOver: (e) => handleDragOver(e, undefined, group.name, selectedCategoryId, teamsInGroups.filter(team => team.groupName === group.name).length),
-                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId)
+                                onDragOver: (e) => {
+                                    e.preventDefault();
+                                    setDragOverData({ index: null, groupId: group.name, isOverTopHalf: false });
+                                },
+                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
+                                onDragLeave: () => setDragOverData({ index: null, groupId: null, isOverTopHalf: false })
                             },
                             React.createElement(
                                 'h3',
@@ -569,8 +587,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                     'div',
                     { 
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
-                        onDragOver: (e) => handleDragOver(e, undefined, null, null, teamsWithoutGroup.length),
-                        onDrop: (e) => handleDrop(e, null, null, teamsWithoutGroup.length) 
+                        onDragOver: (e) => {
+                             e.preventDefault();
+                             setDragOverData({ index: null, groupId: null, isOverTopHalf: false });
+                        },
+                        onDrop: (e) => handleDrop(e, null, null, teamsWithoutGroup.length),
+                        onDragLeave: () => setDragOverData({ index: null, groupId: null, isOverTopHalf: false })
                     },
                     React.createElement(
                         'h3',
