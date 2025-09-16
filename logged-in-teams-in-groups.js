@@ -53,8 +53,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
-    const [dragOverIndex, setDragOverIndex] = useState(null);
-    const [dragOverGroupId, setDragOverGroupId] = useState(null);
+    const [dragOverData, setDragOverData] = useState({ index: null, groupId: null, position: null });
     
     // Používame useRef na uloženie dát presúvaného tímu, vrátane jeho poradia
     const draggedItem = useRef(null);
@@ -310,41 +309,33 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
 
-        // Vizuálna indikácia pri presúvaní v rámci skupiny
-        if (targetGroupId) {
+        let newIndex = null;
+        let newPosition = null;
+
+        if (targetTeam) {
+            const rect = e.target.getBoundingClientRect();
+            const offset = e.clientY - rect.top;
+            const isTopHalf = offset < rect.height / 2;
             const teamsInTargetGroup = allTeams
                 .filter(t => t.groupName === targetGroupId && t.category === categoryIdToNameMap[targetCategoryId])
                 .sort((a, b) => a.order - b.order);
             
-            let targetIndex = teamsInTargetGroup.findIndex(t => t.teamName === targetTeam?.teamName);
-            
-            // Ak presúvame na začiatok alebo koniec skupiny (nad/pod prvý/posledný prvok)
-            if (targetTeam && targetIndex !== -1) {
-                const rect = e.target.getBoundingClientRect();
-                const offsetY = e.clientY - rect.top;
-                if (offsetY > rect.height / 2) {
-                    targetIndex++;
-                }
+            const targetIndex = teamsInTargetGroup.findIndex(t => t.teamName === targetTeam.teamName);
+
+            if (isTopHalf) {
+                newIndex = targetIndex;
+                newPosition = 'top';
             } else {
-                 // Ak sa presúva nad kontajner skupiny (nie nad konkrétny tím), nastavíme index na koniec zoznamu
-                targetIndex = teamsInTargetGroup.length;
+                newIndex = targetIndex + 1;
+                newPosition = 'bottom';
             }
-            
-            if (dragData.team.groupName === targetGroupId) {
-                const sourceIndex = teamsInTargetGroup.findIndex(t => t.teamName === dragData.team.teamName);
-                if (sourceIndex !== -1 && sourceIndex < targetIndex) {
-                    targetIndex--;
-                }
-            }
-
-            setDragOverIndex(targetIndex);
-            setDragOverGroupId(targetGroupId);
         } else {
-            // Presun do hlavného zoznamu
-            setDragOverIndex(teamsWithoutGroup.length);
-            setDragOverGroupId(null);
+            // Presúvanie nad prázdny kontajner alebo zoznam bez tímov
+            newIndex = 0;
+            newPosition = 'top';
         }
-
+        
+        setDragOverData({ index: newIndex, groupId: targetGroupId, position: newPosition });
         e.dataTransfer.dropEffect = "move";
     };
     
@@ -359,8 +350,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
 
-        setDragOverIndex(null);
-        setDragOverGroupId(null);
+        setDragOverData({ index: null, groupId: null, position: null });
 
         // Kontrola, či sa presúva v rámci rovnakej kategórie
         if (targetCategoryId && teamCategoryId !== targetCategoryId) {
@@ -371,7 +361,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         // Optimistická aktualizácia lokálneho stavu
         setAllTeams(prevTeams => {
             let updatedTeams;
-            const currentTeamsInGroup = prevTeams
+            const currentTeamsInSourceGroup = prevTeams
                 .filter(t => t.groupName === teamData.groupName && t.category === teamData.category)
                 .sort((a, b) => a.order - b.order);
             
@@ -383,14 +373,14 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             // Presun do novej skupiny alebo zrušenie priradenia
             if (teamData.groupName !== targetGroup) {
-                let reorderedSourceTeams = currentTeamsInGroup.filter(t => t.teamName !== teamData.teamName);
+                let reorderedSourceTeams = currentTeamsInSourceGroup.filter(t => t.teamName !== teamData.teamName);
                 reorderedSourceTeams = reorderedSourceTeams.map((t, index) => ({...t, order: index}));
 
                 let reorderedTargetTeams = [...currentTeamsInTargetGroup];
                 if(targetGroup) {
-                    reorderedTargetTeams.splice(dragOverIndex, 0, {...draggedTeam, groupName: targetGroup});
+                    reorderedTargetTeams.splice(dragOverData.index, 0, {...draggedTeam, groupName: targetGroup});
                     reorderedTargetTeams = reorderedTargetTeams.map((t, index) => ({...t, order: index}));
-                    updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, targetGroup, dragOverIndex);
+                    updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, targetGroup, dragOverData.index);
                 } else {
                     updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, null, -1);
                 }
@@ -402,10 +392,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                 window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne priradený do skupiny '${targetGroup || "žiadna skupina"}'.`, 'success');
 
             } else { // Reorder v rámci tej istej skupiny
-                const reorderedTeams = [...currentTeamsInGroup];
+                const reorderedTeams = [...currentTeamsInTargetGroup];
                 const sourceIndex = reorderedTeams.findIndex(t => t.teamName === teamData.teamName);
                 const [removed] = reorderedTeams.splice(sourceIndex, 1);
-                reorderedTeams.splice(dragOverIndex, 0, removed);
+                reorderedTeams.splice(dragOverData.index > sourceIndex ? dragOverData.index - 1 : dragOverData.index, 0, removed);
                 
                 const finalReordered = reorderedTeams.map((t, index) => ({...t, order: index}));
                 
@@ -421,8 +411,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const handleDragEnd = () => {
         draggedItem.current = null;
-        setDragOverIndex(null);
-        setDragOverGroupId(null);
+        setDragOverData({ index: null, groupId: null, position: null });
     }
 
     const renderTeamList = (teamsToRender, title, targetGroupId, targetCategoryId) => {
@@ -432,12 +421,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
             return a.teamName.localeCompare(b.teamName);
         });
-
-        const listItems = sortedTeams.map((team, index) => {
-            return React.createElement(
-                'div',
-                { key: `${team.uid}-${team.teamName}` },
-                dragOverIndex === index && dragOverGroupId === targetGroupId && (
+    
+        const items = sortedTeams.map((team, index) => (
+            React.createElement(React.Fragment, { key: `${team.uid}-${team.teamName}` },
+                dragOverData.index === index && dragOverData.groupId === targetGroupId && dragOverData.position === 'top' && (
                     React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                 ),
                 React.createElement(
@@ -452,17 +439,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                     },
                     `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
                 ),
-                dragOverIndex === sortedTeams.length && index === sortedTeams.length - 1 && dragOverGroupId === targetGroupId && (
+                dragOverData.index === index + 1 && dragOverData.groupId === targetGroupId && dragOverData.position === 'bottom' && (
                     React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                 )
-            );
-        });
-
-        // Pridanie čiarky na začiatok, ak zoznam nie je prázdny a presúva sa nad neho
-        if (dragOverIndex === 0 && dragOverGroupId === targetGroupId && sortedTeams.length > 0) {
-            listItems.unshift(React.createElement('div', { key: 'top-line', className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }));
-        }
-
+            )
+        ));
+    
+        const isDraggingOverEmptyList = sortedTeams.length === 0 && dragOverData.groupId === targetGroupId;
+    
         return React.createElement(
             'ul',
             { 
@@ -470,12 +454,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                 onDragOver: (e) => handleDragOver(e, undefined, targetGroupId, targetCategoryId),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId)
             },
-            listItems.length > 0 ? listItems : (
-                dragOverGroupId === targetGroupId ? (
-                    React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
-                ) : (
-                    React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne tímy neboli nájdené.')
-                )
+            isDraggingOverEmptyList && React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' }),
+            items.length > 0 ? items : (
+                !isDraggingOverEmptyList && React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne tímy neboli nájdené.')
             )
         );
     };
@@ -555,9 +536,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         { className: 'mt-2 space-y-1' },
                                         teamsInThisCategory.filter(team => team.groupName === group.name).sort((a,b) => a.order - b.order).map((team, teamIndex) => {
                                             return React.createElement(
-                                                'div',
+                                                React.Fragment,
                                                 { key: `${team.uid}-${team.teamName}` },
-                                                dragOverIndex === teamIndex && dragOverGroupId === group.name && (
+                                                dragOverData.index === teamIndex && dragOverData.groupId === group.name && dragOverData.position === 'top' && (
                                                     React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                                 ),
                                                 React.createElement(
@@ -572,14 +553,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     },
                                                     team.teamName
                                                 ),
-                                                dragOverIndex === teamsInThisCategory.filter(t => t.groupName === group.name).length && teamIndex === teamsInThisCategory.filter(t => t.groupName === group.name).length - 1 && dragOverGroupId === group.name && (
+                                                dragOverData.index === teamIndex + 1 && dragOverData.groupId === group.name && dragOverData.position === 'bottom' && (
                                                     React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                                 )
                                             );
                                         }),
                                         // Vykreslí prázdnu správu, ak nie sú tímy a ani sa nič nepresúva
                                         teamsInThisCategory.filter(team => team.groupName === group.name).length === 0 && (
-                                            dragOverGroupId === group.name ? (
+                                            dragOverData.groupId === group.name ? (
                                                 React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                             ) : (
                                                 React.createElement('p', { className: 'text-center text-gray-500 text-sm' }, 'Žiadne tímy v tejto skupine.')
@@ -649,9 +630,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 { className: 'mt-2 space-y-1' },
                                 teamsInGroups.filter(team => team.groupName === group.name).sort((a,b) => a.order - b.order).map((team, teamIndex) => {
                                     return React.createElement(
-                                        'div',
+                                        React.Fragment,
                                         { key: `${team.uid}-${team.teamName}` },
-                                        dragOverIndex === teamIndex && dragOverGroupId === group.name && (
+                                        dragOverData.index === teamIndex && dragOverData.groupId === group.name && dragOverData.position === 'top' && (
                                             React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                         ),
                                         React.createElement(
@@ -666,13 +647,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             },
                                             team.teamName
                                         ),
-                                        dragOverIndex === teamsInGroups.filter(t => t.groupName === group.name).length && teamIndex === teamsInGroups.filter(t => t.groupName === group.name).length - 1 && dragOverGroupId === group.name && (
+                                        dragOverData.index === teamIndex + 1 && dragOverData.groupId === group.name && dragOverData.position === 'bottom' && (
                                             React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                         )
                                     );
                                 }),
                                 teamsInGroups.filter(team => team.groupName === group.name).length === 0 && (
-                                    dragOverGroupId === group.name ? (
+                                    dragOverData.groupId === group.name ? (
                                         React.createElement('div', { className: 'h-1 bg-blue-500 rounded-full my-2 animate-pulse' })
                                     ) : (
                                         React.createElement('p', { className: 'text-center text-gray-500 text-sm' }, 'Žiadne tímy v tejto skupine.')
