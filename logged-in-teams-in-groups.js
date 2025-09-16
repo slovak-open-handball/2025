@@ -92,7 +92,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         if (Array.isArray(teamArray)) {
                             teamArray.forEach(team => {
                                 if (team.teamName) {
-                                    teamsList.push({ uid: doc.id, category: categoryName, teamName: team.teamName });
+                                    teamsList.push({ uid: doc.id, category: categoryName, teamName: team.teamName, groupName: team.groupName || null });
                                 }
                             });
                         }
@@ -158,10 +158,14 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     }, []);
 
-    // Filtered teams based on selected category
-    const filteredTeams = selectedCategoryId
-        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId])
-        : allTeams;
+    // Filtered teams based on selected category and if they are not yet assigned to a group
+    const teamsWithoutGroup = selectedCategoryId
+        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName)
+        : [];
+
+    const teamsInGroups = selectedCategoryId
+        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && team.groupName)
+        : [];
 
     // Helper function to get the correct background color class based on group type
     const getGroupColorClass = (type) => {
@@ -248,7 +252,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
         
         // Zoradíme tímy podľa názvu kategórie
-        const sortedTeams = [...teamsToRender].sort((a, b) => a.category.localeCompare(b.category));
+        const sortedTeams = [...teamsToRender].sort((a, b) => a.teamName.localeCompare(b.teamName));
         
         return React.createElement(
             'ul',
@@ -293,6 +297,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: 'flex flex-wrap gap-4 justify-center' },
             sortedCategoryIds.map((categoryId, index) => {
                 const groups = allGroupsByCategoryId[categoryId];
+                const teamsInThisCategory = allTeams.filter(team => team.category === categoryIdToNameMap[categoryId]);
                 const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
                 
                 const sortedGroups = [...groups].sort((a, b) => {
@@ -322,7 +327,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                         sortedGroups.map((group, groupIndex) =>
                             React.createElement(
                                 'li',
-                                { key: groupIndex, className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}` },
+                                { 
+                                    key: groupIndex, 
+                                    className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}`,
+                                    onDragOver: handleDragOver,
+                                    onDrop: (e) => handleDrop(e, group.name)
+                                },
                                 React.createElement(
                                     'div',
                                     null,
@@ -335,6 +345,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         'p',
                                         { className: 'text-sm text-gray-500 whitespace-nowrap' },
                                         group.type
+                                    ),
+                                    React.createElement(
+                                        'ul',
+                                        { className: 'mt-2 space-y-1' },
+                                        teamsInThisCategory.filter(team => team.groupName === group.name).sort((a,b) => a.teamName.localeCompare(b.teamName)).map(team => 
+                                            React.createElement(
+                                                'li',
+                                                { key: team.uid, className: 'px-2 py-1 bg-white rounded-md text-gray-800' },
+                                                team.teamName
+                                            )
+                                        )
                                     )
                                 )
                             )
@@ -371,13 +392,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                     { className: 'text-2xl font-semibold mb-4 text-center' },
                     `Tímy v kategórii: ${categoryName}`
                 ),
-                filteredTeams.length > 0 ? (
-                    renderTeamList(filteredTeams, `Tímy v kategórii: ${categoryName}`)
+                teamsWithoutGroup.length > 0 ? (
+                    renderTeamList(teamsWithoutGroup, `Tímy v kategórii: ${categoryName}`)
                 ) : (
                     React.createElement(
                         'p',
                         { className: 'text-center text-gray-500' },
-                        'Žiadne tímy v tejto kategórii.'
+                        'Žiadne tímy na priradenie.'
                     )
                 )
             ),
@@ -417,6 +438,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             'p',
                                             { className: 'text-sm text-gray-500 whitespace-nowrap' },
                                             group.type
+                                        ),
+                                        React.createElement(
+                                            'ul',
+                                            { className: 'mt-2 space-y-1' },
+                                            teamsInGroups.filter(team => team.groupName === group.name).sort((a,b) => a.teamName.localeCompare(b.teamName)).map(team => 
+                                                React.createElement(
+                                                    'li',
+                                                    { key: team.uid, className: 'px-2 py-1 bg-gray-100 rounded-md text-gray-800' },
+                                                    team.teamName
+                                                )
+                                            )
                                         )
                                     )
                                 )
@@ -483,7 +515,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { className: 'text-2xl font-semibold mb-4 text-center' },
                         'Zoznam všetkých tímov'
                     ),
-                    renderTeamList(filteredTeams, 'Zoznam všetkých tímov')
+                    renderTeamList(allTeams, 'Zoznam všetkých tímov')
                 ),
                 React.createElement(
                     'div',
