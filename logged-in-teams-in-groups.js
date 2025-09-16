@@ -1,9 +1,9 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, runTransaction, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
-const { useState, useEffect, useRef, useSyncExternalStore } = React;
+const { useState, useEffect, useRef } = React;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -217,35 +217,34 @@ const AddGroupsApp = ({ userProfileData }) => {
         const categoryName = categoryIdToNameMap[teamCategoryId];
 
         try {
-            // Spustíme transakciu, aby sme zabezpečili atomickosť operácií
+            // Použijeme transakciu pre operáciu s viacerými dokumentami
             await runTransaction(window.db, async (transaction) => {
-                const userRef = doc(window.db, 'users', teamData.uid);
-                const userDoc = await transaction.get(userRef);
-
-                if (!userDoc.exists()) {
-                    throw "Dokument používateľa nebol nájdený!";
-                }
-
-                const teamsInCategory = userDoc.data().teams[categoryName] || [];
+                // Získanie všetkých tímov pre danú kategóriu
+                const usersRef = collection(window.db, 'users');
+                const usersQuery = query(usersRef, where(`teams.${categoryName}`, '!=', null));
+                const usersSnapshot = await getDocs(usersQuery);
                 
-                // Nájdenie a odstránenie presúvaného tímu z pôvodnej pozície v jednom kroku
-                const teamsWithoutDragged = teamsInCategory.filter(t => t.teamName !== teamData.teamName);
-                const draggedTeamFromDb = teamsInCategory.find(t => t.teamName === teamData.teamName);
+                const allTeamsInCategory = [];
+                usersSnapshot.forEach(docSnap => {
+                    const userData = docSnap.data();
+                    if (userData.teams && userData.teams[categoryName]) {
+                        userData.teams[categoryName].forEach(team => {
+                            allTeamsInCategory.push({ ...team, uid: docSnap.id });
+                        });
+                    }
+                });
 
-                if (!draggedTeamFromDb) {
-                    throw "Presúvaný tím nebol nájdený v databáze!";
-                }
+                // Odstránenie presúvaného tímu z pôvodnej pozície
+                const teamsWithoutDragged = allTeamsInCategory.filter(t => t.uid !== teamData.uid || t.teamName !== teamData.teamName);
 
-                // Vytvorenie nového objektu tímu s aktualizovanou skupinou a poradim
-                const updatedDraggedTeam = { ...draggedTeamFromDb, groupName: targetGroup };
+                // Vytvorenie nového objektu tímu s aktualizovanou skupinou
+                const updatedDraggedTeam = { ...teamData, groupName: targetGroup, order: 0 };
                 
                 // Určenie správneho indexu na vloženie.
                 let newInsertIndex;
                 if (targetIndex !== null) {
-                    // Ak je zadaný index, použijeme ho
                     newInsertIndex = targetIndex;
                 } else {
-                    // Ak je index null (pustenie na názov skupiny), pridáme ho na koniec
                     const teamsInTargetGroup = teamsWithoutDragged.filter(t => t.groupName === targetGroup);
                     newInsertIndex = teamsInTargetGroup.length;
                 }
@@ -254,13 +253,34 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const newTeamArray = [...teamsWithoutDragged];
                 newTeamArray.splice(newInsertIndex, 0, updatedDraggedTeam);
                 
-                // Prepočítanie a aktualizácia poradia pre všetky tímy v zozname.
+                // Prepočítanie a aktualizácia poradia pre všetky tímy
                 const reorderedFinalList = newTeamArray.map((t, idx) => ({ ...t, order: idx }));
                 
-                // Aktualizácia celého zoznamu tímov pre danú kategóriu
-                transaction.update(userRef, {
-                    [`teams.${categoryName}`]: reorderedFinalList
-                });
+                // Zoskupenie tímov podľa používateľov
+                const teamsByUser = reorderedFinalList.reduce((acc, team) => {
+                    const userUid = team.uid;
+                    if (!acc[userUid]) {
+                        acc[userUid] = [];
+                    }
+                    acc[userUid].push(team);
+                    return acc;
+                }, {});
+
+                // Aktualizácia všetkých dotknutých používateľských dokumentov
+                for (const userUid in teamsByUser) {
+                    const userRef = doc(window.db, 'users', userUid);
+                    // Získanie pôvodného dokumentu používateľa, aby sa neprepísali iné dáta
+                    const userDoc = await transaction.get(userRef);
+                    if (userDoc.exists()) {
+                        const originalTeams = userDoc.data().teams || {};
+                        const teamsForCategory = teamsByUser[userUid].map(({ uid, ...rest }) => rest);
+                        
+                        // Aktualizácia transakcie
+                        transaction.update(userRef, {
+                            [`teams.${categoryName}`]: teamsForCategory
+                        });
+                    }
+                }
             });
 
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
