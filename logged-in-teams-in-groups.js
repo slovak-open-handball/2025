@@ -328,7 +328,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
-
+        
         setDragOverData({ index: null, groupId: null, isOverTopHalf: false });
 
         // Kontrola, či sa presúva v rámci rovnakej kategórie
@@ -337,34 +337,40 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
         
-        const isReordering = teamData.groupName === targetGroup;
+        // Zistíme, či sa tím presúva do zoznamu bez skupiny (targetGroup === null)
+        const isMovingToUngrouped = targetGroup === null;
 
-        // Získame pôvodný zoznam tímov pre obe skupiny
-        const sourceTeams = allTeams.filter(t => t.groupName === teamData.groupName && t.category === teamData.category);
-        const targetTeams = allTeams.filter(t => t.groupName === targetGroup && t.category === teamData.category);
+        // Pôvodné poradie a skupina
+        const originalGroup = teamData.groupName;
         
+        // Získame pôvodný zoznam tímov z oboch skupín
+        const sourceTeams = allTeams.filter(t => t.groupName === originalGroup && t.category === teamData.category);
+        const targetTeams = isMovingToUngrouped 
+            ? allTeams.filter(t => !t.groupName && t.category === teamData.category)
+            : allTeams.filter(t => t.groupName === targetGroup && t.category === teamData.category);
+        
+        // Vytvoríme pracovné kópie
         let newTeamList = [...targetTeams];
         let oldTeamList = [...sourceTeams];
+        
+        // Ak tím pochádza zo skupiny, odstránime ho z nej
+        if (originalGroup !== null) {
+            const sourceTeamIndex = oldTeamList.findIndex(t => t.teamName === teamData.teamName);
+            oldTeamList.splice(sourceTeamIndex, 1);
+        }
+
+        // Vypočítame nový index na vloženie
         const newIndex = dragOverData.isOverTopHalf ? dragOverData.index : dragOverData.index + 1;
         
-        // Ak sa nejedná o reordering v tej istej skupine
-        if (!isReordering) {
-            // Odstránime tím z pôvodnej skupiny
-            const sourceTeamIndex = oldTeamList.findIndex(t => t.teamName === teamData.teamName);
-            const movedTeam = oldTeamList.splice(sourceTeamIndex, 1)[0];
-            
-            // Vložíme tím do novej skupiny
-            newTeamList.splice(newIndex, 0, { ...movedTeam, groupName: targetGroup });
+        const movedTeam = { ...teamData, groupName: targetGroup };
+
+        // Vložíme tím do cieľového zoznamu
+        if (isMovingToUngrouped) {
+             newTeamList.push(movedTeam); // Pridáme na koniec zoznamu
         } else {
-            // Ak sa jedná o reordering v rovnakej skupine
-            const movedTeam = newTeamList.find(t => t.teamName === teamData.teamName);
-            const originalIndex = newTeamList.findIndex(t => t.teamName === teamData.teamName);
-            
-            // Odstránime tím z pôvodnej pozície a vložíme ho na novú
-            newTeamList.splice(originalIndex, 1);
-            newTeamList.splice(newIndex > originalIndex ? newIndex - 1 : newIndex, 0, movedTeam);
+            newTeamList.splice(newIndex, 0, movedTeam);
         }
-        
+
         // Re-indexovanie oboch zoznamov tímov
         const reorderedSourceTeams = oldTeamList.map((t, idx) => ({ ...t, order: idx }));
         const reorderedTargetTeams = newTeamList.map((t, idx) => ({ ...t, order: idx }));
@@ -380,10 +386,14 @@ const AddGroupsApp = ({ userProfileData }) => {
         });
 
         // Uloženie zmien do DB
-        if (!isReordering) {
-             updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, targetGroup, newIndex);
-             updateTeamOrderInDb(teamData.category, reorderedSourceTeams);
+        updateTeamInDb(teamData.uid, teamData.category, teamData.teamName, targetGroup, isMovingToUngrouped ? null : newIndex);
+        
+        // Aktualizujeme aj poradie tímov v pôvodnej skupine, ak sa presúvalo z nej
+        if (originalGroup !== null) {
+            updateTeamOrderInDb(teamData.category, reorderedSourceTeams);
         }
+        
+        // Aktualizujeme poradie v novej skupine/zozname
         updateTeamOrderInDb(teamData.category, reorderedTargetTeams);
     };
 
