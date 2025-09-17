@@ -231,29 +231,21 @@ const AddGroupsApp = ({ userProfileData }) => {
                 throw new Error("Presúvaný tím sa nenašiel v databáze.");
             }
             
-            // Zmeníme skupinu pre tím, ktorý sa presúva
-            teamsInCategory[teamIndex].groupName = targetGroup;
+            // Získame aktuálny počet tímov v cieľovej skupine
+            const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
             
-            // Vypočítame nové poradie
+            // Pridelíme tímu nové poradie na základe počtu tímov v skupine
+            const newOrder = teamsInTargetGroup.length;
+            
+            // Uložíme zmeny do lokálnej premennej
+            teamsInCategory[teamIndex].groupName = targetGroup;
             if (targetGroup !== null) {
-                const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
-                const newOrder = teamsInTargetGroup.length - 1; // Nový tím bude mať posledné poradie
                 teamsInCategory[teamIndex].order = newOrder;
             } else {
                 delete teamsInCategory[teamIndex].order; // Ak sa tím presúva mimo skupiny, odstránime poradie
             }
 
-            // Prečíslovanie všetkých skupín (pre istotu)
-            // Urobíme to tak, že prejdeme skupiny a prečislujeme ich
-            const allGroupsInThisCategory = [...new Set(teamsInCategory.map(t => t.groupName).filter(g => g !== null))];
-            allGroupsInThisCategory.forEach(group => {
-                const teamsInGroup = teamsInCategory.filter(t => t.groupName === group).sort((a,b) => a.order - b.order);
-                teamsInGroup.forEach((team, index) => {
-                    const originalIndex = teamsInCategory.findIndex(t => t.teamName === team.teamName && t.category === team.category);
-                    teamsInCategory[originalIndex].order = index;
-                });
-            });
-
+            // Aktualizácia databázy
             await updateDoc(userRef, {
                 teams: {
                     ...userData.teams,
