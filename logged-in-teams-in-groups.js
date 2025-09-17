@@ -210,19 +210,25 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
             throw new Error("Presúvaný tím sa nenašiel v databáze.");
         }
         movedTeam.groupName = targetGroup;
-        // Rozdelíme zostávajúce tímy na tie v cieľovej skupine a ostatné
-        let teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
-        const otherTeams = remainingTeams.filter(t => t.groupName !== targetGroup);
-        // Vytvoríme nový zoznam tímov pre cieľovú skupinu
-        const newTeamsInTargetGroup = [...teamsInTargetGroup];
-        // Vložíme presunutý tím na koniec
-        newTeamsInTargetGroup.push(movedTeam);
-        // Nájdeme najväčšie existujúce order v skupine
-        const maxOrder = newTeamsInTargetGroup.reduce((max, team) => Math.max(max, team.order !== undefined ? team.order : -1), -1);
-        // Nastavíme order pre nový tím
-        movedTeam.order = maxOrder + 1;
+        // Ak je groupName null/undefined (t.j. presúvame do zoznamu nepriradených tímov), vymažeme order
+        if (!targetGroup) {
+            delete movedTeam.order;
+        } else {
+            // Rozdelíme zostávajúce tímy na tie v cieľovej skupine a ostatné
+            let teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
+            const newTeamsInTargetGroup = [...teamsInTargetGroup];
+            // Vložíme presunutý tím na koniec
+            newTeamsInTargetGroup.push(movedTeam);
+            // Nájdeme najväčšie existujúce order v skupine
+            const maxOrder = newTeamsInTargetGroup.reduce(
+                (max, team) => Math.max(max, team.order !== undefined ? team.order : -1),
+                -1
+            );
+            // Nastavíme order pre nový tím
+            movedTeam.order = maxOrder + 1;
+        }
         // Spojíme zoznamy späť do jedného poľa pre uloženie
-        const finalTeams = [...newTeamsInTargetGroup, ...otherTeams];
+        const finalTeams = [...remainingTeams, movedTeam];
         // Aktualizácia databázy
         await updateDoc(userRef, {
             teams: {
@@ -238,7 +244,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         setDropIndicator({ groupName: null, categoryId: null, index: null, position: null });
     }
 };
-
 
     const handleDragStart = (e, team) => {
         const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === team.category);
