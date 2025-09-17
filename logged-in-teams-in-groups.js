@@ -91,7 +91,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
             });
             setAllTeams(teamsList);
-            
+
             // Logovanie do konzoly v novom prehľadnom formáte
             const teamsByCategoryAndGroup = teamsList.reduce((acc, team) => {
                 const category = team.category;
@@ -194,8 +194,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.error("Žiadne dáta na presunutie.");
             return;
         }
+
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
+        const originalGroup = teamData.groupName;
 
         console.log("----- Začiatok operácie Drag & Drop -----");
         console.log("Dáta presúvaného tímu:", teamData);
@@ -235,6 +237,21 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.log("Maximálne poradie v cieľovej skupine:", maxOrder);
             console.log("Vypočítané nové poradie pre tím:", newOrder);
 
+            let updatedTeamsInOldGroup = [];
+
+            if (originalGroup && originalGroup !== targetGroup) {
+                // Tím bol presunutý z jednej skupiny do druhej.
+                // Prečísľujeme pôvodnú skupinu.
+                const teamsLeftInOldGroup = allTeams
+                    .filter(t => t.groupName === originalGroup && t.uid !== teamData.uid)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                updatedTeamsInOldGroup = teamsLeftInOldGroup.map((t, index) => ({
+                    ...t,
+                    order: index + 1
+                }));
+            }
+
             const updatedTeam = {
                 ...teamData,
                 groupName: targetGroup,
@@ -246,13 +263,34 @@ const AddGroupsApp = ({ userProfileData }) => {
                     console.log("Nájdený tím na aktualizáciu:", team);
                     return updatedTeam;
                 }
+                // Ak tím ostal v pôvodnej skupine a bol prečíslovaný
+                const renumberedTeam = updatedTeamsInOldGroup.find(t => t.uid === team.uid && t.teamName === team.teamName);
+                if (renumberedTeam) {
+                    return renumberedTeam;
+                }
                 return team;
             });
+            
+            // Filter out old team from the list if it was moved to a new group
+            const teamsToSave = finalTeams.filter(team => team.groupName === targetGroup || team.groupName !== originalGroup);
 
+            // The code above had a bug where the team that was moved was not removed from the original group, which caused a duplication.
+            // The fix below correctly removes the old team from the original group's list and adds it to the new one.
+            const teamsToUpdate = teamsByCategory[categoryName].filter(team => team.uid !== teamData.uid);
+            
+            const teamsToUpdateWithNew = [...teamsToUpdate, updatedTeam];
+
+            const sortedTeams = teamsToUpdateWithNew.sort((a, b) => {
+                if(a.groupName === targetGroup && b.groupName === targetGroup) {
+                    return (a.order || 0) - (b.order || 0);
+                }
+                return 0; // Don't reorder other groups
+            });
+            
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
-                    [categoryName]: finalTeams
+                    [categoryName]: sortedTeams
                 }
             });
 
