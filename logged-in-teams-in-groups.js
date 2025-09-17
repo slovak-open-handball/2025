@@ -209,7 +209,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             let newOrder = null;
             if (targetGroup) {
-                // Nájdenie maximálneho poradia všetkých tímov v cieľovej skupine zo všetkých načítaných tímov
+                // Vyhľadanie všetkých tímov v cieľovej skupine v rámci aktuálnej kategórie.
                 const teamsInTargetGroup = allTeams.filter(team =>
                     team.groupName === targetGroup && team.category === categoryName
                 );
