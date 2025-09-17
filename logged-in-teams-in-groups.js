@@ -114,14 +114,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                     if (groupName === 'Tímy bez skupiny') {
                         // Tímy bez skupiny abecedne
                         const sortedTeams = teams.sort((a, b) => a.teamName.localeCompare(b.teamName));
-                        console.log(`\n-- ${groupName} --`);
+                        console.log(`\n-- ${groupName} (Počet tímov: ${teams.length}) --`);
                         console.table(sortedTeams.map(team => ({
                             'Názov tímu': team.teamName,
                         })));
                     } else {
                         // Tímy v skupine podla poradia
                         const sortedTeams = teams.sort((a, b) => a.order - b.order);
-                        console.log(`\n-- Skupina: ${groupName} --`);
+                        console.log(`\n-- Skupina: ${groupName} (Počet tímov: ${teams.length}) --`);
                         console.table(sortedTeams.map((team) => ({
                             'Názov tímu': team.teamName,
                             'Poradie v skupine': team.order
