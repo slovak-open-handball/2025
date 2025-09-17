@@ -79,13 +79,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.error("Firebase Firestore nie je inicializovaný.");
             return;
         }
-
-        // POZNÁMKA K CHYBÁM 429:
-        // Načítavanie celej kolekcie 'users' pomocou onSnapshot môže viesť k chybám
-        // 'Too Many Requests' (429), ak je kolekcia príliš veľká alebo sa často mení.
-        // Pre malé aplikácie je to akceptovateľné, no pre rozsiahle systémy by bolo lepšie
-        // zvážiť iný dátový model (napr. mať samostatnú verejnú kolekciu 'teams').
-        // Súčasný prístup je nutný, aby bolo možné zobraziť tímy od všetkých používateľov.
         
         // Listener pre tímy
         const usersRef = collection(window.db, 'users');
@@ -292,12 +285,19 @@ const AddGroupsApp = ({ userProfileData }) => {
     }
     
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
-        const sortedTeams = [...teamsToRender].sort((a, b) => {
-            if (a.groupName && b.groupName) {
-                return a.order - b.order;
-            }
-            return a.teamName.localeCompare(b.teamName);
-        });
+        
+        // Rozdelíme tímy na tie s poradim a tie bez
+        const teamsWithOrder = teamsToRender.filter(team => team.order !== undefined);
+        const teamsWithoutOrder = teamsToRender.filter(team => team.order === undefined);
+        
+        // Zoradíme tímy, ktoré majú poradie
+        const sortedTeamsWithOrder = teamsWithOrder.sort((a, b) => a.order - b.order);
+        
+        // Zvyšné tímy zoradíme abecedne
+        const sortedTeamsWithoutOrder = teamsWithoutOrder.sort((a, b) => a.teamName.localeCompare(b.teamName));
+        
+        // Spojíme oba zoznamy
+        const sortedTeams = [...sortedTeamsWithOrder, ...sortedTeamsWithoutOrder];
         
         // Ak zoznam tímov neobsahuje žiadne tímy, vytvoríme drop-zónu.
         if (sortedTeams.length === 0) {
