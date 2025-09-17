@@ -99,6 +99,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                     });
                 }
             });
+
+            // Vypíše stav tímov do konzoly
+            console.log("Stav tímov po načítaní:");
+            teamsList.forEach(team => {
+                if (team.groupName) {
+                    console.log(`Tím '${team.teamName}' je v skupine '${team.groupName}' v kategórii '${team.category}'.`);
+                } else {
+                    console.log(`Tím '${team.teamName}' nie je zaradený do žiadnej skupiny v kategórii '${team.category}'.`);
+                }
+            });
+
             setAllTeams(teamsList);
         });
 
