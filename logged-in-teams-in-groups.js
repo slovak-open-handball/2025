@@ -224,18 +224,18 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Rozdelíme zostávajúce tímy na tie v cieľovej skupine a ostatné
             let teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
             const otherTeams = remainingTeams.filter(t => t.groupName !== targetGroup);
-
+            
             // Vložíme presunutý tím na správnu pozíciu v rámci cieľovej skupiny
-            teamsInTargetGroup.splice(targetIndex, 0, movedTeam);
+            const newTeamsInTargetGroup = [...teamsInTargetGroup];
+            newTeamsInTargetGroup.splice(targetIndex, 0, movedTeam);
 
             // Prepočítame poradie pre všetky tímy v cieľovej skupine.
-            // Poradie vždy začína od 0, čo je očakávané správanie.
-            teamsInTargetGroup.forEach((team, index) => {
+            newTeamsInTargetGroup.forEach((team, index) => {
                 team.order = index;
             });
 
             // Spojíme zoznamy späť do jedného poľa pre uloženie
-            const finalTeams = [...teamsInTargetGroup, ...otherTeams];
+            const finalTeams = [...newTeamsInTargetGroup, ...otherTeams];
 
             // Aktualizácia databázy
             await updateDoc(userRef, {
