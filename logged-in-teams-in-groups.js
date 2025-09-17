@@ -224,10 +224,22 @@ const AddGroupsApp = ({ userProfileData }) => {
             const currentCategoryTeams = teamsByCategory[categoryName] || [];
 
             console.log("Aktuálne tímy v kategórii pred aktualizáciou:", currentCategoryTeams);
+            
+            // Nájdeme tímy, ktoré ostali v pôvodnej skupine, ak sa tím presunul z nejakej skupiny
+            let teamsLeftInOldGroup = [];
+            if (originalGroup) {
+                teamsLeftInOldGroup = currentCategoryTeams
+                    .filter(t => t.groupName === originalGroup && t.teamName !== teamData.teamName);
+            }
 
-            // Získaj všetky tímy, ktoré patria do cieľovej skupiny
-            const teamsInTargetGroup = allTeams.filter(team => team.category === categoryName && team.groupName === targetGroup);
+            // Prečíslovanie tímov v pôvodnej skupine
+            const updatedTeamsInOldGroup = teamsLeftInOldGroup.map((t, index) => ({
+                ...t,
+                order: index + 1
+            }));
 
+            // Získame tímy v cieľovej skupine na výpočet nového poradia
+            const teamsInTargetGroup = currentCategoryTeams.filter(team => team.groupName === targetGroup);
             const maxOrder = teamsInTargetGroup.length > 0
                 ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                 : 0;
@@ -237,64 +249,28 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.log("Maximálne poradie v cieľovej skupine:", maxOrder);
             console.log("Vypočítané nové poradie pre tím:", newOrder);
 
-            let updatedTeamsInOldGroup = [];
-
-            if (originalGroup && originalGroup !== targetGroup) {
-                // Tím bol presunutý z jednej skupiny do druhej.
-                // Prečísľujeme pôvodnú skupinu.
-                const teamsLeftInOldGroup = allTeams
-                    .filter(t => t.groupName === originalGroup && t.uid !== teamData.uid)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-                updatedTeamsInOldGroup = teamsLeftInOldGroup.map((t, index) => ({
-                    ...t,
-                    order: index + 1
-                }));
-            }
-
+            // Aktualizovaný tím
             const updatedTeam = {
                 ...teamData,
                 groupName: targetGroup,
-                order: newOrder,
+                order: targetGroup ? newOrder : null,
             };
 
-            const finalTeams = currentCategoryTeams.map(team => {
-                if (team.uid === teamData.uid && team.teamName === teamData.teamName) {
-                    console.log("Nájdený tím na aktualizáciu:", team);
-                    return updatedTeam;
-                }
-                // Ak tím ostal v pôvodnej skupine a bol prečíslovaný
-                const renumberedTeam = updatedTeamsInOldGroup.find(t => t.uid === team.uid && t.teamName === team.teamName);
-                if (renumberedTeam) {
-                    return renumberedTeam;
-                }
-                return team;
-            });
-            
-            // Filter out old team from the list if it was moved to a new group
-            const teamsToSave = finalTeams.filter(team => team.groupName === targetGroup || team.groupName !== originalGroup);
+            // Vytvorenie nového poľa tímov
+            const otherTeams = currentCategoryTeams.filter(
+                t => t.teamName !== teamData.teamName && t.groupName !== originalGroup
+            );
 
-            // The code above had a bug where the team that was moved was not removed from the original group, which caused a duplication.
-            // The fix below correctly removes the old team from the original group's list and adds it to the new one.
-            const teamsToUpdate = teamsByCategory[categoryName].filter(team => team.uid !== teamData.uid);
-            
-            const teamsToUpdateWithNew = [...teamsToUpdate, updatedTeam];
+            const teamsToSave = [...otherTeams, updatedTeam, ...updatedTeamsInOldGroup];
 
-            const sortedTeams = teamsToUpdateWithNew.sort((a, b) => {
-                if(a.groupName === targetGroup && b.groupName === targetGroup) {
-                    return (a.order || 0) - (b.order || 0);
-                }
-                return 0; // Don't reorder other groups
-            });
-            
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
-                    [categoryName]: sortedTeams
+                    [categoryName]: teamsToSave
                 }
             });
 
-            window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne pridaný do skupiny '${targetGroup}'.`, 'success');
+            window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne pridaný do skupiny '${targetGroup || "bez skupiny"}'.`, 'success');
             console.log("Úspešná aktualizácia databázy.");
 
         } catch (error) {
