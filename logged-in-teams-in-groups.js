@@ -287,7 +287,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
     
     const handleDragEnd = () => {
-g        draggedItem.current = null;
+        draggedItem.current = null;
     }
     
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
@@ -317,6 +317,8 @@ g        draggedItem.current = null;
                 className: 'space-y-2'
             },
             sortedTeams.map((team, index) => {
+                const teamText = team.groupName != null ? `${team.order + 1}. ${team.teamName}` : team.teamName;
+                
                 return React.createElement(
                     'li',
                     {
@@ -326,7 +328,7 @@ g        draggedItem.current = null;
                         onDragStart: (e) => handleDragStart(e, team),
                         onDragEnd: handleDragEnd
                     },
-                    `${!selectedCategoryId ? `${team.category}: ` : ''}${team.teamName}`
+                    `${!selectedCategoryId ? `${team.category}: ` : ''}${teamText}`
                 );
             })
         );
@@ -631,7 +633,7 @@ const handleDataUpdateAndRender = (event) => {
 
 console.log("logged-in-teams-in-groups.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-s
+
 console.log("logged-in-teams-in-groups.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
     console.log("logged-in-teams-in-groups.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
