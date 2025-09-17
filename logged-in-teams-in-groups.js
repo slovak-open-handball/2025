@@ -214,11 +214,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             const userData = userDocSnap.data();
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
             
+            // Zistíme najvyššie poradie v cieľovej skupine
             const teamsInTargetGroup = teamsInCategory.filter(team => team.groupName === targetGroup);
             const maxOrder = teamsInTargetGroup.length > 0
                 ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                 : 0;
-
+            
             const newOrder = maxOrder + 1;
             
             // Vytvoríme nový tím s aktualizovaným poradím a názvom skupiny
