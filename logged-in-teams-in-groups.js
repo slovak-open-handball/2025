@@ -224,39 +224,53 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
             const userData = userDocSnap.data();
             const teamsInCategory = userData.teams?.[categoryName] || [];
-            const updatedTeams = [...teamsInCategory];
             
             // Nájdeme index tímu, ktorý presúvame
-            const teamIndex = updatedTeams.findIndex(t => t.teamName === teamData.teamName);
+            const teamIndex = teamsInCategory.findIndex(t => t.teamName === teamData.teamName);
             if (teamIndex === -1) {
                 throw new Error("Presúvaný tím sa nenašiel v databáze.");
             }
-
-            // Uložíme si starú skupinu a poradie pred zmenou
-            const oldGroup = updatedTeams[teamIndex].groupName;
             
-            // Aktualizujeme presúvaný tím novými údajmi
-            updatedTeams[teamIndex].groupName = targetGroup;
-            if (targetGroup === null) {
-                delete updatedTeams[teamIndex].order;
-            } else {
-                // Ak presúvame tím do skupiny, priradíme mu poradie na koniec
-                const teamsInTargetGroup = teamsInGroups.filter(t => t.groupName === targetGroup);
-                updatedTeams[teamIndex].order = teamsInTargetGroup.length;
-            }
+            // Určíme pôvodnú a novú skupinu a poradie
+            const oldGroup = teamsInCategory[teamIndex].groupName;
             
-            // Ak tím presúvame zo skupiny (odstránenie), prečíslujeme starú skupinu
-            if (oldGroup !== null && targetGroup === null) {
-                const teamsInOldGroup = updatedTeams
-                    .filter(t => t.groupName === oldGroup)
-                    .sort((a, b) => a.order - b.order); // Uistíme sa, že poradie je správne
-                
-                teamsInOldGroup.forEach((team, index) => {
-                    team.order = index; // Prečíslujeme od 0
-                });
-            }
+            // Urobíme zmeny lokálne
+            teamsInCategory[teamIndex].groupName = targetGroup;
+            
+            // Prečíslovanie všetkých skupín
+            const updatedTeams = teamsInCategory.map(team => {
+                // Odstránime poradie pre tímy bez skupiny
+                if (team.groupName === null) {
+                    delete team.order;
+                }
+                return team;
+            });
+            
+            // Vytvoríme mapu tímov podľa ich nových skupín
+            const teamsByGroup = updatedTeams.reduce((acc, team) => {
+                if (team.groupName !== null) {
+                    if (!acc[team.groupName]) {
+                        acc[team.groupName] = [];
+                    }
+                    acc[team.groupName].push(team);
+                }
+                return acc;
+            }, {});
 
-            // Aktualizujeme len príslušnú kategóriu v databáze
+            // Prečíslujeme tímy v každej skupine, ktorá bola dotknutá
+            const groupsToReorder = new Set();
+            if (oldGroup !== null) groupsToReorder.add(oldGroup);
+            if (targetGroup !== null) groupsToReorder.add(targetGroup);
+            
+            groupsToReorder.forEach(groupName => {
+                if (teamsByGroup[groupName]) {
+                    teamsByGroup[groupName].sort((a, b) => a.order - b.order); // Udržíme existujúce poradie
+                    teamsByGroup[groupName].forEach((team, index) => {
+                        team.order = index;
+                    });
+                }
+            });
+
             await updateDoc(userRef, {
                 teams: {
                     ...userData.teams,
