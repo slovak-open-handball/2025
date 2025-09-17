@@ -240,10 +240,9 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
             });
 
             // Nájdeme najväčšie existujúce order v skupine
-            const maxOrder = teamsInTargetGroup.reduce(
-                (max, team) => Math.max(max, team.order !== undefined ? team.order : -1),
-                -1
-            );
+            const maxOrder = teamsInTargetGroup.length > 0
+                ? Math.max(...teamsInTargetGroup.map(team => team.order !== undefined ? team.order : -1))
+                : -1;
             console.log("Najväčšie order v skupine:", maxOrder);
 
             // Nastavíme order pre nový tím
