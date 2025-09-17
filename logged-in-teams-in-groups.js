@@ -200,7 +200,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const userRef = doc(window.db, 'users', teamData.uid);
 
         try {
-            // Pred aktualizáciou vždy načítať najnovšie údaje
+            // Načítanie najnovších údajov dokumentu používateľa
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
                 throw new Error("Dokument používateľa neexistuje!");
@@ -211,7 +211,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             let newOrder = null;
             if (targetGroup) {
                 // Vyhľadanie všetkých tímov v cieľovej skupine v rámci aktuálnej kategórie.
-                // Na výpočet poradia sa používa pole z čerstvo načítaných dát používateľa.
                 const teamsInTargetGroupForOrdering = teamsInCategory.filter(team =>
                     team.groupName === targetGroup
                 );
