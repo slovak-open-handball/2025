@@ -297,18 +297,19 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
-        // Rozdelíme tímy na tie s poradím a tie bez
-        const teamsWithOrder = teamsToRender.filter(team => team.order !== undefined && team.order !== null);
-        const teamsWithoutOrder = teamsToRender.filter(team => team.order === undefined || team.order === null);
-    
-        // Zoradíme tímy, ktoré majú poradie
-        const sortedTeamsWithOrder = teamsWithOrder.sort((a, b) => a.order - b.order);
-    
-        // Zvyšné tímy zoradíme abecedne
-        const sortedTeamsWithoutOrder = teamsWithoutOrder.sort((a, b) => a.teamName.localeCompare(b.teamName));
-    
-        // Spojíme oba zoznamy
-        const sortedTeams = [...sortedTeamsWithOrder, ...sortedTeamsWithoutOrder];
+        // Zoradíme tímy, ktoré majú poradie a tie bez poradia
+        const sortedTeams = [...teamsToRender].sort((a, b) => {
+            const orderA = a.order !== undefined && a.order !== null ? a.order : Infinity;
+            const orderB = b.order !== undefined && b.order !== null ? b.order : Infinity;
+
+            if (orderA !== Infinity && orderB !== Infinity) {
+                return orderA - orderB;
+            } else if (orderA === Infinity && orderB === Infinity) {
+                return a.teamName.localeCompare(b.teamName);
+            } else {
+                return orderA - orderB;
+            }
+        });
     
         // Ak zoznam tímov neobsahuje žiadne tímy, vytvoríme drop-zónu.
         if (sortedTeams.length === 0) {
