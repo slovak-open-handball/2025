@@ -187,7 +187,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
-    // Opravená funkcia pre spracovanie presunu
+    // Opravená a robustnejšia funkcia pre spracovanie presunu
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
@@ -207,42 +207,41 @@ const AddGroupsApp = ({ userProfileData }) => {
         const userRef = doc(window.db, 'users', teamData.uid);
 
         try {
-            // Získame najaktuálnejšie tímy priamo zo stavu, nie z nového getDoc()
-            const teamsInTargetUserAndCategory = allTeams.filter(team => team.uid === teamData.uid && team.category === categoryName);
-            
-            // Zistíme najvyššie poradie v cieľovej skupine
-            const teamsInTargetGroup = teamsInTargetUserAndCategory.filter(team => team.groupName === targetGroup);
+            // Získame najaktuálnejšie údaje priamo z databázy
+            const userDocSnap = await getDoc(userRef);
+            if (!userDocSnap.exists()) {
+                throw new Error("Dokument používateľa neexistuje!");
+            }
+            const userData = userDocSnap.data();
+            const teamsByCategory = userData.teams;
+            const currentCategoryTeams = teamsByCategory[categoryName] || [];
+
+            // Získame tímy, ktoré sú už v cieľovej skupine
+            const teamsInTargetGroup = currentCategoryTeams.filter(team => team.groupName === targetGroup);
             const maxOrder = teamsInTargetGroup.length > 0
                 ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                 : 0;
-            
             const newOrder = maxOrder + 1;
-            
-            // Vytvoríme nový tím s aktualizovaným poradím a názvom skupiny
+
+            // Vytvoríme aktualizovaný objekt tímu
             const updatedTeam = {
                 ...teamData,
                 groupName: targetGroup,
                 order: newOrder,
             };
 
-            // Vytvoríme nový zoznam tímov pre kategóriu
-            const finalTeams = teamsInTargetUserAndCategory.map(team => {
-                if (team.teamName === updatedTeam.teamName && team.uid === updatedTeam.uid) {
+            // Vytvoríme nový zoznam tímov, v ktorom je pôvodný tím nahradený aktualizovaným
+            const finalTeams = currentCategoryTeams.map(team => {
+                if (team.uid === teamData.uid && team.teamName === teamData.teamName) {
                     return updatedTeam;
                 }
                 return team;
             });
             
-            // Získame celý objekt userData
-            const userDocSnap = await getDoc(userRef);
-            if (!userDocSnap.exists()) {
-                throw new Error("Dokument používateľa neexistuje!");
-            }
-            const userData = userDocSnap.data();
-
+            // Aktualizujeme celý dokument
             await updateDoc(userRef, {
                 teams: {
-                    ...userData.teams,
+                    ...teamsByCategory,
                     [categoryName]: finalTeams
                 }
             });
