@@ -101,40 +101,39 @@ const AddGroupsApp = ({ userProfileData }) => {
             });
             setAllTeams(teamsList);
             
-            // Logovanie do konzoly v prehľadnejšom formáte
-            const teamsByCategory = teamsList.reduce((acc, team) => {
-                if (!acc[team.category]) {
-                    acc[team.category] = { teamsInGroups: [], teamsWithoutGroup: [] };
+            // Logovanie do konzoly v novom prehľadnom formáte
+            const teamsByCategoryAndGroup = teamsList.reduce((acc, team) => {
+                const category = team.category;
+                const group = team.groupName || 'Tímy bez skupiny';
+                if (!acc[category]) {
+                    acc[category] = {};
                 }
-                if (team.groupName) {
-                    acc[team.category].teamsInGroups.push(team);
-                } else {
-                    acc[team.category].teamsWithoutGroup.push(team);
+                if (!acc[category][group]) {
+                    acc[category][group] = [];
                 }
+                acc[category][group].push(team);
                 return acc;
             }, {});
 
             console.log("Stav tímov po načítaní:");
             console.log("-----------------------------------------");
-
-            Object.entries(teamsByCategory).forEach(([category, data]) => {
-                console.log(`Kategória: ${category}`);
-                
-                if (data.teamsInGroups.length > 0) {
-                    const sortedTeams = data.teamsInGroups.sort((a, b) => a.groupName.localeCompare(b.groupName) || a.order - b.order);
-                    console.table(sortedTeams.map(team => ({
-                        'Názov tímu': team.teamName,
-                        'Skupina': team.groupName,
-                        'Poradie v skupine': team.order !== undefined && team.order !== null ? team.order + 1 : 'Nezaradené'
-                    })));
-                }
-
-                if (data.teamsWithoutGroup.length > 0) {
-                    console.log("Tímy bez skupiny:");
-                    console.table(data.teamsWithoutGroup.map(team => ({
-                        'Názov tímu': team.teamName
-                    })));
-                }
+            Object.entries(teamsByCategoryAndGroup).forEach(([category, groups]) => {
+                console.log(`\nKategória: ${category}`);
+                Object.entries(groups).forEach(([groupName, teams]) => {
+                    if (groupName === 'Tímy bez skupiny') {
+                        console.log(`\n-- ${groupName} --`);
+                        console.table(teams.map(team => ({
+                            'Názov tímu': team.teamName,
+                        })));
+                    } else {
+                        const sortedTeams = teams.sort((a, b) => a.order - b.order);
+                        console.log(`\n-- Skupina: ${groupName} --`);
+                        console.table(sortedTeams.map(team => ({
+                            'Názov tímu': team.teamName,
+                            'Poradie v skupine': team.order !== undefined && team.order !== null ? team.order + 1 : 'Nezaradené'
+                        })));
+                    }
+                });
                 console.log("-----------------------------------------");
             });
         });
