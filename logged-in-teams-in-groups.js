@@ -121,7 +121,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                     } else {
                         // Tímy v skupine podla poradia
                         const sortedTeams = teams.sort((a, b) => (a.order || 0) - (b.order || 0));
-                        console.log(`\n-- Skupina: ${groupName} (Počet tímov: ${teams.length}) --`);
+                        const nextOrder = teams.length > 0 ? Math.max(...teams.map(t => t.order || 0)) + 1 : 1;
+                        console.log(`\n-- Skupina: ${groupName} (Počet tímov: ${teams.length}, Ďalšie poradie: ${nextOrder}) --`);
                         console.table(sortedTeams.map((team) => ({
                             'Názov tímu': team.teamName,
                             'Poradie v skupine': team.order
