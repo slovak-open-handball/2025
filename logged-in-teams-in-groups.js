@@ -207,15 +207,11 @@ const AddGroupsApp = ({ userProfileData }) => {
         const userRef = doc(window.db, 'users', teamData.uid);
 
         try {
-            const userDocSnap = await getDoc(userRef);
-            if (!userDocSnap.exists()) {
-                throw new Error("Dokument používateľa neexistuje!");
-            }
-            const userData = userDocSnap.data();
-            const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
+            // Získame najaktuálnejšie tímy priamo zo stavu, nie z nového getDoc()
+            const teamsInTargetUserAndCategory = allTeams.filter(team => team.uid === teamData.uid && team.category === categoryName);
             
             // Zistíme najvyššie poradie v cieľovej skupine
-            const teamsInTargetGroup = teamsInCategory.filter(team => team.groupName === targetGroup);
+            const teamsInTargetGroup = teamsInTargetUserAndCategory.filter(team => team.groupName === targetGroup);
             const maxOrder = teamsInTargetGroup.length > 0
                 ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                 : 0;
@@ -230,12 +226,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             };
 
             // Vytvoríme nový zoznam tímov pre kategóriu
-            const finalTeams = teamsInCategory.map(team => {
+            const finalTeams = teamsInTargetUserAndCategory.map(team => {
                 if (team.teamName === updatedTeam.teamName && team.uid === updatedTeam.uid) {
                     return updatedTeam;
                 }
                 return team;
             });
+            
+            // Získame celý objekt userData
+            const userDocSnap = await getDoc(userRef);
+            if (!userDocSnap.exists()) {
+                throw new Error("Dokument používateľa neexistuje!");
+            }
+            const userData = userDocSnap.data();
 
             await updateDoc(userRef, {
                 teams: {
