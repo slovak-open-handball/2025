@@ -129,7 +129,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                         const sortedTeams = teams.sort((a, b) => a.order - b.order);
                         console.log(`\n-- Skupina: ${groupName} --`);
                         console.table(sortedTeams.map(team => ({
-                            'index': team.order,
                             'Názov tímu': team.teamName,
                             'Poradie v skupine': team.order !== undefined && team.order !== null ? team.order + 1 : 'Nezaradené'
                         })));
