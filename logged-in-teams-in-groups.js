@@ -207,7 +207,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         }
 
         const userData = userDocSnap.data();
-        const teamsInCategory = userData.teams?.[categoryName] || [];
+        let teamsInCategory = [...(userData.teams?.[categoryName] || [])];
 
         // Nájdeme index tímu, ktorý presúvame
         const teamIndex = teamsInCategory.findIndex(t => t.teamName === teamData.teamName);
@@ -216,17 +216,18 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         }
 
         // Odstránime tím z pôvodnej pozície
-        const movedTeam = teamsInCategory.splice(teamIndex, 1)[0];
+        const [movedTeam] = teamsInCategory.splice(teamIndex, 1);
 
         // Pridelíme tímu novú skupinu
         if (targetGroup !== null) {
             movedTeam.groupName = targetGroup;
         } else {
             delete movedTeam.groupName;
+            delete movedTeam.order; // Odstránime order, ak tím nie je v žiadnej skupine
         }
 
         // Nájdeme tímy v cieľovej skupine
-        const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
+        let teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
 
         // Určíme, kam vložíme presunutý tím
         const newIndexInGroup = targetIndex !== undefined ? targetIndex : teamsInTargetGroup.length;
