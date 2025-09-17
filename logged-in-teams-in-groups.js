@@ -215,8 +215,26 @@ const AddGroupsApp = ({ userProfileData }) => {
                 );
                 const maxOrder = teamsInTargetGroup.reduce((max, team) => Math.max(max, team.order || -1), -1);
                 newOrder = maxOrder + 1;
-            }
+                
+                // Logging pre debugging
+                console.log("-----------------------------------------");
+                console.log("Pripravujem presunutie tímu do skupiny.");
+                console.log("Drag & Drop Data:", dragData);
+                console.log("Cieľová skupina:", targetGroup, "ID kategórie:", targetCategoryId);
+                console.log("Tímy v cieľovej skupine (na výpočet poradia):", teamsInTargetGroup);
+                console.log("Maximálne existujúce poradie (maxOrder):", maxOrder);
+                console.log("Novovygenerované poradie (newOrder):", newOrder);
+                console.log("-----------------------------------------");
 
+            } else {
+                // Logging pre debugging
+                console.log("-----------------------------------------");
+                console.log("Pripravujem presunutie tímu mimo skupiny.");
+                console.log("Drag & Drop Data:", dragData);
+                console.log("Tím bude odstránený zo skupiny.");
+                console.log("-----------------------------------------");
+            }
+            
             const newTeamsArray = teamsInCategory.map(team => {
                 if (team.teamName === teamData.teamName) {
                     return {
@@ -227,6 +245,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
                 return team;
             });
+
+            console.log("Nové pole tímov pred aktualizáciou:", newTeamsArray);
     
             await updateDoc(userRef, {
                 teams: {
