@@ -2,7 +2,6 @@
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, runTransaction, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-
 const { useState, useEffect, useRef } = React;
 
 /**
@@ -47,42 +46,6 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const [dropIndicator, setDropIndicator] = useState({
-    groupName: null,
-    categoryId: null,
-    index: null,
-    position: null, // 'top' alebo 'bottom'
-});
-
-const handleDragOver = (e, targetTeam, targetGroupId, targetCategoryId, index) => {
-    e.preventDefault();
-    const dragData = draggedItem.current;
-    if (!dragData) {
-        e.dataTransfer.dropEffect = "none";
-        return;
-    }
-    const teamCategoryId = dragData.teamCategoryId;
-    if (targetCategoryId && teamCategoryId !== targetCategoryId) {
-        e.dataTransfer.dropEffect = "none";
-        return;
-    }
-
-    e.dataTransfer.dropEffect = "move";
-
-    // Získame pozíciu kurzora v rámci elementu
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const isTopHalf = y < rect.height / 2;
-
-    // Aktualizujeme indikátor
-    setDropIndicator({
-        groupName: targetGroupId,
-        categoryId: targetCategoryId,
-        index: index,
-        position: isTopHalf ? 'top' : 'bottom',
-    });
-};
-
 const AddGroupsApp = ({ userProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
@@ -91,6 +54,37 @@ const AddGroupsApp = ({ userProfileData }) => {
     
     // Používame useRef na uloženie dát presúvaného tímu
     const draggedItem = useRef(null);
+
+    const [dropIndicator, setDropIndicator] = useState({
+        groupName: null,
+        categoryId: null,
+        index: null,
+        position: null,
+    });
+
+        const handleDragOver = (e, targetTeam, targetGroupId, targetCategoryId, index) => {
+        e.preventDefault();
+        const dragData = draggedItem.current;
+        if (!dragData) {
+            e.dataTransfer.dropEffect = "none";
+            return;
+        }
+        const teamCategoryId = dragData.teamCategoryId;
+        if (targetCategoryId && teamCategoryId !== targetCategoryId) {
+            e.dataTransfer.dropEffect = "none";
+            return;
+        }
+        e.dataTransfer.dropEffect = "move";
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const isTopHalf = y < rect.height / 2;
+        setDropIndicator({
+            groupName: targetGroupId,
+            categoryId: targetCategoryId,
+            index: index,
+            position: isTopHalf ? 'top' : 'bottom',
+        });
+    };
 
     // Načítanie kategórie z URL hashu pri prvom renderovaní
     useEffect(() => {
@@ -314,24 +308,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         e.dataTransfer.effectAllowed = "move";
         
         console.log(`Začiatok presúvania: Tím '${team.teamName}'.`);
-    };
-    
-    const handleDragOver = (e, targetTeam, targetGroupId, targetCategoryId) => {
-        e.preventDefault();
-        
-        const dragData = draggedItem.current;
-        if (!dragData) {
-            e.dataTransfer.dropEffect = "none";
-            return;
-        }
-
-        const teamCategoryId = dragData.teamCategoryId;
-        if (targetCategoryId && teamCategoryId !== targetCategoryId) {
-            e.dataTransfer.dropEffect = "none";
-            return;
-        }
-        
-        e.dataTransfer.dropEffect = "move";
     };
     
 const handleDragEnd = () => {
