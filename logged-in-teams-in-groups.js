@@ -29,11 +29,8 @@ window.showGlobalNotification = (message, type = 'success') => {
         default:
             typeClasses = 'bg-gray-700 text-white';
     }
-    notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
+    notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
     notificationElement.textContent = message;
-    setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
-    }, 10);
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
@@ -189,7 +186,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
-    // Nová funkcia pre spracovanie presunu
+    // Opravená funkcia pre spracovanie presunu
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
@@ -216,10 +213,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             const userData = userDocSnap.data();
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
             
-            // Nájdeme tímy v cieľovej skupine
             const teamsInTargetGroup = teamsInCategory.filter(team => team.groupName === targetGroup);
-            // Počet tímov v skupine + 1 pre nový order
-            const newOrder = teamsInTargetGroup.length + 1;
+            const maxOrder = teamsInTargetGroup.length > 0
+                ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
+                : 0;
+
+            const newOrder = maxOrder + 1;
             
             // Vytvoríme nový tím s aktualizovaným poradím a názvom skupiny
             const updatedTeam = {
