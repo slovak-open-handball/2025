@@ -99,19 +99,44 @@ const AddGroupsApp = ({ userProfileData }) => {
                     });
                 }
             });
-
-            // Vypíše stav tímov do konzoly vrátane poradia
-            console.log("Stav tímov po načítaní:");
-            teamsList.forEach(team => {
-                if (team.groupName) {
-                    const orderText = team.order !== undefined && team.order !== null ? ` (Poradie: ${team.order + 1})` : '';
-                    console.log(`Tím '${team.teamName}' je v skupine '${team.groupName}' v kategórii '${team.category}'.${orderText}`);
-                } else {
-                    console.log(`Tím '${team.teamName}' nie je zaradený do žiadnej skupiny v kategórii '${team.category}'.`);
-                }
-            });
-
             setAllTeams(teamsList);
+            
+            // Logovanie do konzoly v prehľadnejšom formáte
+            const teamsByCategory = teamsList.reduce((acc, team) => {
+                if (!acc[team.category]) {
+                    acc[team.category] = { teamsInGroups: [], teamsWithoutGroup: [] };
+                }
+                if (team.groupName) {
+                    acc[team.category].teamsInGroups.push(team);
+                } else {
+                    acc[team.category].teamsWithoutGroup.push(team);
+                }
+                return acc;
+            }, {});
+
+            console.log("Stav tímov po načítaní:");
+            console.log("-----------------------------------------");
+
+            Object.entries(teamsByCategory).forEach(([category, data]) => {
+                console.log(`Kategória: ${category}`);
+                
+                if (data.teamsInGroups.length > 0) {
+                    const sortedTeams = data.teamsInGroups.sort((a, b) => a.groupName.localeCompare(b.groupName) || a.order - b.order);
+                    console.table(sortedTeams.map(team => ({
+                        'Názov tímu': team.teamName,
+                        'Skupina': team.groupName,
+                        'Poradie v skupine': team.order !== undefined && team.order !== null ? team.order + 1 : 'Nezaradené'
+                    })));
+                }
+
+                if (data.teamsWithoutGroup.length > 0) {
+                    console.log("Tímy bez skupiny:");
+                    console.table(data.teamsWithoutGroup.map(team => ({
+                        'Názov tímu': team.teamName
+                    })));
+                }
+                console.log("-----------------------------------------");
+            });
         });
 
         const categoriesRef = doc(window.db, 'settings', 'categories');
@@ -230,23 +255,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const maxOrder = teamsInTargetGroupForOrdering.reduce((max, team) => Math.max(max, team.order || -1), -1);
                 newOrder = maxOrder + 1;
                 
-                // Logging pre debugging
-                console.log("-----------------------------------------");
-                console.log("Pripravujem presunutie tímu do skupiny.");
-                console.log("Drag & Drop Data:", dragData);
-                console.log("Cieľová skupina:", targetGroup, "ID kategórie:", targetCategoryId);
-                console.log("Tímy v cieľovej skupine (na výpočet poradia):", teamsInTargetGroupForOrdering);
-                console.log("Maximálne existujúce poradie (maxOrder):", maxOrder);
-                console.log("Novovygenerované poradie (newOrder):", newOrder);
-                console.log("-----------------------------------------");
-
-            } else {
-                // Logging pre debugging
-                console.log("-----------------------------------------");
-                console.log("Pripravujem presunutie tímu mimo skupiny.");
-                console.log("Drag & Drop Data:", dragData);
-                console.log("Tím bude odstránený zo skupiny.");
-                console.log("-----------------------------------------");
             }
             
             // Nájdeme a aktualizujeme presúvaný tím v novom poli
@@ -260,8 +268,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
                 return team;
             });
-
-            console.log("Nové pole tímov pred aktualizáciou:", newTeamsArray);
     
             await updateDoc(userRef, {
                 teams: {
