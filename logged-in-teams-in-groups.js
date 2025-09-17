@@ -47,12 +47,6 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
-    const [dropIndicator, setDropIndicator] = useState({
-        groupName: null,
-        categoryId: null,
-        index: null,
-        position: null,
-    });
 
     // Načítanie kategórie z URL hashu
     useEffect(() => {
@@ -100,7 +94,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
             });
             setAllTeams(teamsList);
-
+            
             // Logovanie do konzoly v novom prehľadnom formáte
             const teamsByCategoryAndGroup = teamsList.reduce((acc, team) => {
                 const category = team.category;
@@ -121,11 +115,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                 console.log(`\nKategória: ${category}`);
                 Object.entries(groups).forEach(([groupName, teams]) => {
                     if (groupName === 'Tímy bez skupiny') {
+                        // Tímy bez skupiny abecedne
+                        const sortedTeams = teams.sort((a, b) => a.teamName.localeCompare(b.teamName));
                         console.log(`\n-- ${groupName} --`);
-                        console.table(teams.map(team => ({
+                        console.table(sortedTeams.map(team => ({
                             'Názov tímu': team.teamName,
                         })));
                     } else {
+                        // Tímy v skupine podla poradia
                         const sortedTeams = teams.sort((a, b) => a.order - b.order);
                         console.log(`\n-- Skupina: ${groupName} --`);
                         console.table(sortedTeams.map((team, index) => ({
@@ -219,13 +216,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             const userData = userDocSnap.data();
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
             
-            // Nájdeme tímy v cieľovej skupine a zoradíme ich podľa poradia
-            const teamsInTargetGroup = teamsInCategory
-                .filter(team => team.groupName === targetGroup)
-                .sort((a, b) => a.order - b.order);
+            // Nájdeme tímy v cieľovej skupine a určíme najvyššie poradové číslo
+            const teamsInTargetGroup = teamsInCategory.filter(team => team.groupName === targetGroup);
+            const maxOrder = teamsInTargetGroup.length > 0
+                ? Math.max(...teamsInTargetGroup.map(team => team.order || 0))
+                : 0;
 
-            // Nastavíme nové poradie na koniec zoznamu
-            const newOrder = teamsInTargetGroup.length + 1;
+            const newOrder = maxOrder + 1;
             
             // Vytvoríme nový tím s aktualizovaným poradím a názvom skupiny
             const updatedTeam = {
@@ -255,7 +252,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.error("Chyba pri aktualizácii databázy:", error);
             window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
         } finally {
-            setDropIndicator({ groupName: null, categoryId: null, index: null, position: null });
+            // Nemáme dropIndicator, takže nie je potrebné ho resetovať
         }
     };
 
@@ -268,20 +265,15 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const handleDragEnd = () => {
         draggedItem.current = null;
-        setDropIndicator({ groupName: null, categoryId: null, index: null, position: null });
     };
 
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
-            const orderA = a.order !== undefined && a.order !== null ? a.order : Infinity;
-            const orderB = b.order !== undefined && b.order !== null ? b.order : Infinity;
-
-            if (orderA !== Infinity && orderB !== Infinity) {
-                return orderA - orderB;
-            } else if (orderA === Infinity && orderB === Infinity) {
-                return a.teamName.localeCompare(b.teamName);
+            // Tímy v skupine zoradíme len podľa poradia, tímy bez skupiny abecedne
+            if (a.groupName && b.groupName) {
+                return (a.order || 0) - (b.order || 0);
             } else {
-                return orderA - orderB;
+                return a.teamName.localeCompare(b.teamName);
             }
         });
 
@@ -314,7 +306,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         onDragStart: (e) => handleDragStart(e, team),
                         onDragEnd: handleDragEnd,
                     },
-                    `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${index + 1}. ${team.teamName}` : team.teamName}`
+                    `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${team.order || index + 1}. ${team.teamName}` : team.teamName}`
                 );
             })
         );
