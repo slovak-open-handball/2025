@@ -219,7 +219,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     return {
                         ...team,
                         groupName: targetGroup,
-                        order: targetGroup ? maxOrder + 1 : undefined
+                        order: targetGroup ? maxOrder + 1 : null
                     };
                 }
                 return team;
@@ -256,8 +256,8 @@ const AddGroupsApp = ({ userProfileData }) => {
 
 const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
     // Rozdelíme tímy na tie s poradím a tie bez
-    const teamsWithOrder = teamsToRender.filter(team => team.order !== undefined);
-    const teamsWithoutOrder = teamsToRender.filter(team => team.order === undefined);
+    const teamsWithOrder = teamsToRender.filter(team => team.order !== undefined && team.order !== null);
+    const teamsWithoutOrder = teamsToRender.filter(team => team.order === undefined || team.order === null);
 
     // Zoradíme tímy, ktoré majú poradie
     const sortedTeamsWithOrder = teamsWithOrder.sort((a, b) => a.order - b.order);
