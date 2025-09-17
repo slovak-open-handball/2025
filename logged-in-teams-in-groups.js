@@ -257,6 +257,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             });
     
             // Preusporiadanie a aktualizácia poradia tímov v cieľovej skupine
+            // Toto je miesto, kde sa hodnota "order" aktualizuje pred uložením do databázy
             const newTeamsInTargetGroup = teamsInTargetGroup.map((team, idx) => ({
                 ...team,
                 order: idx
@@ -360,7 +361,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             onDragOver: (e) => handleDragOver(e, team, targetGroupId, targetCategoryId, index),
                             onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, index),
                         },
-                        // Opravený riadok, ktorý zobrazí poradie z indexu poľa
+                        // Zobrazenie poradia z indexu poľa, ktoré je už zoradené
                         `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${index + 1}. ${team.teamName}` : team.teamName}`
                     ),
                     // Indikátor pod prvkom
