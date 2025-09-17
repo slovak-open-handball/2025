@@ -280,67 +280,87 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         setDropIndicator({ groupName: null, categoryId: null, index: null, position: null });
     };
 
-    const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
-        const teamsWithOrder = teamsToRender.filter(team => team.order !== undefined);
-        const teamsWithoutOrder = teamsToRender.filter(team => team.order === undefined);
-        const sortedTeamsWithOrder = teamsWithOrder.sort((a, b) => a.order - b.order);
-        const sortedTeamsWithoutOrder = teamsWithoutOrder.sort((a, b) => a.teamName.localeCompare(b.teamName));
-        const sortedTeams = [...sortedTeamsWithOrder, ...sortedTeamsWithoutOrder];
+const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
+    // Rozdelíme tímy na tie s poradím a tie bez
+    const teamsWithOrder = teamsToRender.filter(team => team.order !== undefined);
+    const teamsWithoutOrder = teamsToRender.filter(team => team.order === undefined);
 
-        if (sortedTeams.length === 0) {
-            return React.createElement(
-                'div',
-                {
-                    className: `min-h-[50px] p-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center`,
-                    onDragOver: (e) => handleDragOver(e, null, targetGroupId, targetCategoryId, 0),
-                    onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, 0),
-                },
-                React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
-            );
-        }
+    // Zoradíme tímy, ktoré majú poradie
+    const sortedTeamsWithOrder = teamsWithOrder.sort((a, b) => a.order - b.order);
 
+    // Zvyšné tímy zoradíme abecedne
+    const sortedTeamsWithoutOrder = teamsWithoutOrder.sort((a, b) => a.teamName.localeCompare(b.teamName));
+
+    // Spojíme oba zoznamy
+    const sortedTeams = [...sortedTeamsWithOrder, ...sortedTeamsWithoutOrder];
+
+    // Ak zoznam tímov neobsahuje žiadne tímy, vytvoríme drop-zónu.
+    if (sortedTeams.length === 0) {
         return React.createElement(
-            'ul',
-            { className: 'space-y-2 relative' },
-            sortedTeams.map((team, index) => {
-                const showTopIndicator =
-                    dropIndicator.groupName === targetGroupId &&
-                    dropIndicator.categoryId === targetCategoryId &&
-                    dropIndicator.index === index &&
-                    dropIndicator.position === 'top';
-
-                const showBottomIndicator =
-                    dropIndicator.groupName === targetGroupId &&
-                    dropIndicator.categoryId === targetCategoryId &&
-                    dropIndicator.index === index &&
-                    dropIndicator.position === 'bottom';
-
-                return React.createElement(
-                    React.Fragment,
-                    { key: `${team.uid}-${team.teamName}-${team.groupName}-${index}` },
-                    showTopIndicator && React.createElement('div', { className: 'h-1 bg-blue-500 w-full my-1 rounded-full' }),
-                    React.createElement(
-                        'li',
-                        {
-                            className: `px-4 py-2 bg-gray-100 rounded-lg text-gray-700 cursor-grab`,
-                            draggable: "true",
-                            onDragStart: (e) => handleDragStart(e, team),
-                            onDragEnd: handleDragEnd,
-                            onDragOver: (e) => handleDragOver(e, team, targetGroupId, targetCategoryId, index),
-                            onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, index),
-                        },
-                        `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${team.order + 1}. ${team.teamName}` : team.teamName}`
-                    ),
-                    showBottomIndicator && React.createElement('div', { className: 'h-1 bg-blue-500 w-full my-1 rounded-full' }),
-                );
-            }),
-            dropIndicator.groupName === targetGroupId &&
-            dropIndicator.categoryId === targetCategoryId &&
-            dropIndicator.index === sortedTeams.length &&
-            dropIndicator.position === 'bottom' &&
-            React.createElement('div', { className: 'h-1 bg-blue-500 w-full my-1 rounded-full' }),
+            'div',
+            {
+                className: `min-h-[50px] p-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center`,
+                onDragOver: (e) => handleDragOver(e, null, targetGroupId, targetCategoryId, 0),
+                onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, 0),
+            },
+            React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
         );
-    };
+    }
+
+    return React.createElement(
+        'ul',
+        { className: 'space-y-2 relative' },
+        sortedTeams.map((team, index) => {
+            // Indikátor nad týmto prvkom
+            const showTopIndicator =
+                dropIndicator.groupName === targetGroupId &&
+                dropIndicator.categoryId === targetCategoryId &&
+                dropIndicator.index === index &&
+                dropIndicator.position === 'top';
+
+            // Indikátor pod týmto prvkom
+            const showBottomIndicator =
+                dropIndicator.groupName === targetGroupId &&
+                dropIndicator.categoryId === targetCategoryId &&
+                dropIndicator.index === index &&
+                dropIndicator.position === 'bottom';
+
+            return React.createElement(
+                React.Fragment,
+                { key: `${team.uid}-${team.teamName}-${team.groupName}-${index}` },
+                // Indikátor nad prvkom
+                showTopIndicator && React.createElement('div', {
+                    className: 'h-1 bg-blue-500 w-full my-1 rounded-full',
+                }),
+                // Samotný tím
+                React.createElement(
+                    'li',
+                    {
+                        className: `px-4 py-2 bg-gray-100 rounded-lg text-gray-700 cursor-grab`,
+                        draggable: "true",
+                        onDragStart: (e) => handleDragStart(e, team),
+                        onDragEnd: handleDragEnd,
+                        onDragOver: (e) => handleDragOver(e, team, targetGroupId, targetCategoryId, index),
+                        onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, index),
+                    },
+                    `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${team.order + 1}. ${team.teamName}` : team.teamName}`
+                ),
+                // Indikátor pod prvkom
+                showBottomIndicator && React.createElement('div', {
+                    className: 'h-1 bg-blue-500 w-full my-1 rounded-full',
+                }),
+            );
+        }),
+        // Indikátor na konci zoznamu
+        dropIndicator.groupName === targetGroupId &&
+        dropIndicator.categoryId === targetCategoryId &&
+        dropIndicator.index === sortedTeams.length &&
+        dropIndicator.position === 'bottom' &&
+        React.createElement('div', {
+            className: 'h-1 bg-blue-500 w-full my-1 rounded-full',
+        }),
+    );
+};
 
     const renderGroupedCategories = () => {
         if (Object.keys(allGroupsByCategoryId).length === 0) {
