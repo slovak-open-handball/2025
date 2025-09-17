@@ -207,9 +207,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
 
             const userData = userDocSnap.data();
-            // Vytvoríme kópiu poľa tímov, s ktorou budeme pracovať
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-
+            
             // Nájdeme a odstránime presúvaný tím z pôvodného zoznamu
             const remainingTeams = teamsInCategory.filter(t => t.teamName !== teamData.teamName);
             const movedTeam = teamsInCategory.find(t => t.teamName === teamData.teamName);
@@ -218,18 +217,19 @@ const AddGroupsApp = ({ userProfileData }) => {
                 throw new Error("Presúvaný tím sa nenašiel v databáze.");
             }
 
-            // Aktualizujeme skupinu pre presúvaný tím
             movedTeam.groupName = targetGroup;
 
             // Rozdelíme zostávajúce tímy na tie v cieľovej skupine a ostatné
             let teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
             const otherTeams = remainingTeams.filter(t => t.groupName !== targetGroup);
             
-            // Vložíme presunutý tím na správnu pozíciu v rámci cieľovej skupiny
+            // Vytvoríme nový zoznam tímov pre cieľovú skupinu
             const newTeamsInTargetGroup = [...teamsInTargetGroup];
+            
+            // Vložíme presunutý tím na správnu pozíciu
             newTeamsInTargetGroup.splice(targetIndex, 0, movedTeam);
-
-            // Prepočítame poradie pre všetky tímy v cieľovej skupine.
+            
+            // Prepočítame poradie pre všetky tímy v cieľovej skupine
             newTeamsInTargetGroup.forEach((team, index) => {
                 team.order = index;
             });
