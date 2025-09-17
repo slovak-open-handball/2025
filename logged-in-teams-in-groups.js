@@ -226,6 +226,9 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Vytvoríme nový zoznam tímov pre cieľovú skupinu
             const newTeamsInTargetGroup = [...teamsInTargetGroup];
             
+            // Nastavíme order pre presúvaný tím
+            movedTeam.order = targetIndex;
+            
             // Vložíme presunutý tím na správnu pozíciu
             newTeamsInTargetGroup.splice(targetIndex, 0, movedTeam);
             
