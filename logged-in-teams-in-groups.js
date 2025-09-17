@@ -129,8 +129,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                         const sortedTeams = teams.sort((a, b) => a.order - b.order);
                         console.log(`\n-- Skupina: ${groupName} --`);
                         console.table(sortedTeams.map(team => ({
+                            'index': team.order,
                             'Názov tímu': team.teamName,
-                            'Poradie v skupine': team.order !== undefined && team.order !== null ? team.order : 'Nezaradené'
+                            'Poradie v skupine': team.order !== undefined && team.order !== null ? team.order + 1 : 'Nezaradené'
                         })));
                     }
                 });
@@ -359,7 +360,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             onDragOver: (e) => handleDragOver(e, team, targetGroupId, targetCategoryId, index),
                             onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, index),
                         },
-                        `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${team.order}. ${team.teamName}` : team.teamName}`
+                        `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${index + 1}. ${team.teamName}` : team.teamName}`
                     ),
                     // Indikátor pod prvkom
                     showBottomIndicator && React.createElement('div', {
