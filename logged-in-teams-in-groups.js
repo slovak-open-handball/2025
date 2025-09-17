@@ -214,13 +214,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         if (!targetGroup) {
             delete movedTeam.order;
         } else {
-            // Rozdelíme zostávajúce tímy na tie v cieľovej skupine a ostatné
-            let teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
-            const newTeamsInTargetGroup = [...teamsInTargetGroup];
-            // Vložíme presunutý tím na koniec
-            newTeamsInTargetGroup.push(movedTeam);
-            // Nájdeme najväčšie existujúce order v skupine
-            const maxOrder = newTeamsInTargetGroup.reduce(
+            // Získame všetky tímy v cieľovej skupine (vrátane tých, ktoré už majú order)
+            const teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
+            // Ak sú v skupine existujúce tímy, nájdeme najväčšie order
+            const maxOrder = teamsInTargetGroup.reduce(
                 (max, team) => Math.max(max, team.order !== undefined ? team.order : -1),
                 -1
             );
