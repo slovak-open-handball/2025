@@ -187,7 +187,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
-    // Opravená a robustnejšia funkcia pre spracovanie presunu
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
@@ -198,8 +197,15 @@ const AddGroupsApp = ({ userProfileData }) => {
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
 
+        console.log("----- Začiatok operácie Drag & Drop -----");
+        console.log("Dáta presúvaného tímu:", teamData);
+        console.log("Cieľová skupina:", targetGroup);
+        console.log("Cieľová kategória ID:", targetCategoryId);
+
         if (targetCategoryId && teamCategoryId !== targetCategoryId) {
             window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            console.warn("Kategórie sa nezhodujú, operácia zrušená.");
+            console.log("----- Koniec operácie Drag & Drop (s chybou) -----");
             return;
         }
 
@@ -207,7 +213,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         const userRef = doc(window.db, 'users', teamData.uid);
 
         try {
-            // Získame najaktuálnejšie údaje priamo z databázy
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
                 throw new Error("Dokument používateľa neexistuje!");
@@ -216,29 +221,32 @@ const AddGroupsApp = ({ userProfileData }) => {
             const teamsByCategory = userData.teams;
             const currentCategoryTeams = teamsByCategory[categoryName] || [];
 
-            // Získame tímy, ktoré sú už v cieľovej skupine
+            console.log("Aktuálne tímy v kategórii pred aktualizáciou:", currentCategoryTeams);
+
             const teamsInTargetGroup = currentCategoryTeams.filter(team => team.groupName === targetGroup);
             const maxOrder = teamsInTargetGroup.length > 0
                 ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                 : 0;
             const newOrder = maxOrder + 1;
 
-            // Vytvoríme aktualizovaný objekt tímu
+            console.log(`Tímy v cieľovej skupine '${targetGroup}':`, teamsInTargetGroup);
+            console.log("Maximálne poradie v cieľovej skupine:", maxOrder);
+            console.log("Vypočítané nové poradie pre tím:", newOrder);
+
             const updatedTeam = {
                 ...teamData,
                 groupName: targetGroup,
                 order: newOrder,
             };
 
-            // Vytvoríme nový zoznam tímov, v ktorom je pôvodný tím nahradený aktualizovaným
             const finalTeams = currentCategoryTeams.map(team => {
                 if (team.uid === teamData.uid && team.teamName === teamData.teamName) {
+                    console.log("Nájdený tím na aktualizáciu:", team);
                     return updatedTeam;
                 }
                 return team;
             });
-            
-            // Aktualizujeme celý dokument
+
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
@@ -247,12 +255,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             });
 
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne pridaný do skupiny '${targetGroup}'.`, 'success');
+            console.log("Úspešná aktualizácia databázy.");
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
         } finally {
-            // Nemáme dropIndicator, takže nie je potrebné ho resetovať
+            console.log("----- Koniec operácie Drag & Drop -----");
         }
     };
 
@@ -439,7 +448,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(b.name));
 
     return React.createElement(
         'div',
