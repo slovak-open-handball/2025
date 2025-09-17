@@ -204,6 +204,14 @@ const AddGroupsApp = ({ userProfileData }) => {
         console.log("Cieľová skupina:", targetGroup);
         console.log("Cieľová kategória ID:", targetCategoryId);
 
+        // Kontrola, či sa pôvodná a cieľová skupina zhodujú
+        if (originalGroup === targetGroup) {
+            console.log("-----------------------------------------");
+            console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
+            console.log("----- Koniec operácie Drag & Drop (s chybou) -----");
+            return;
+        }
+
         if (targetCategoryId && teamCategoryId !== targetCategoryId) {
             window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             console.warn("Kategórie sa nezhodujú, operácia zrušená.");
