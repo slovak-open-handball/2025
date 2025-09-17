@@ -229,7 +229,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
             delete movedTeam.order;
         } else {
             // Získame všetky tímy v cieľovej skupine (vrátane tých, ktoré už tam boli)
-            const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
+            let teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
+
+            // Ak sa presúva tím do skupiny, kde už je, treba ho pridať do zoznamu
+            if (movedTeam.groupName === targetGroup) {
+                teamsInTargetGroup.push(movedTeam);
+            }
+
             console.log("Tímy v cieľovej skupine:", teamsInTargetGroup);
 
             // Prepočítame order pre všetky tímy v skupine, ak nie sú nastavené
