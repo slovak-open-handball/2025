@@ -187,6 +187,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         console.error("Žiadne dáta na pustenie.");
         return;
     }
+
     const teamData = dragData.team;
     const teamCategoryId = dragData.teamCategoryId;
 
@@ -204,6 +205,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         if (!userDocSnap.exists()) {
             throw new Error("Dokument používateľa neexistuje!");
         }
+
         const userData = userDocSnap.data();
         const teamsInCategory = userData.teams?.[categoryName] || [];
 
@@ -229,13 +231,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         // Určíme, kam vložíme presunutý tím
         const newIndexInGroup = targetIndex !== undefined ? targetIndex : teamsInTargetGroup.length;
 
-        // Prepočítame poradie pre všetky tímy v cieľovej skupine
-        teamsInTargetGroup.forEach((team, index) => {
-            team.order = index;
-        });
-
-        // Nastavíme order pre nový tím
-        movedTeam.order = newIndexInGroup;
+        // Prepočítame poradie pre pôvodnú skupinu, ak tím odchádza zo skupiny
+        if (movedTeam.groupName && !targetGroup) {
+            const originalGroupTeams = teamsInCategory.filter(t => t.groupName === movedTeam.groupName);
+            originalGroupTeams.forEach((team, index) => {
+                team.order = index;
+            });
+        }
 
         // Vložíme tím na novú pozíciu v rámci cieľovej skupiny
         teamsInTargetGroup.splice(newIndexInGroup, 0, movedTeam);
@@ -256,6 +258,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
                 [categoryName]: finalTeams
             }
         });
+
         window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
     } catch (error) {
         console.error("Chyba pri aktualizácii databázy:", error);
