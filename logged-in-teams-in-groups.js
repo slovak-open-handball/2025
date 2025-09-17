@@ -232,6 +232,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
             const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
             console.log("Tímy v cieľovej skupine:", teamsInTargetGroup);
 
+            // Prepočítame order pre všetky tímy v skupine, ak nie sú nastavené
+            teamsInTargetGroup.forEach((team, index) => {
+                if (team.order === undefined) {
+                    team.order = index;
+                }
+            });
+
             // Nájdeme najväčšie existujúce order v skupine
             const maxOrder = teamsInTargetGroup.reduce(
                 (max, team) => Math.max(max, team.order !== undefined ? team.order : -1),
