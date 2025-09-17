@@ -128,9 +128,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                     } else {
                         const sortedTeams = teams.sort((a, b) => a.order - b.order);
                         console.log(`\n-- Skupina: ${groupName} --`);
-                        console.table(sortedTeams.map(team => ({
+                        // Zmena v logovaní: poradie sa vypočítava z aktuálneho indexu poľa
+                        console.table(sortedTeams.map((team, index) => ({
                             'Názov tímu': team.teamName,
-                            'Poradie v skupine': team.order !== undefined && team.order !== null ? team.order + 1 : 'Nezaradené'
+                            'Poradie v skupine': index + 1
                         })));
                     }
                 });
@@ -260,7 +261,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Toto je miesto, kde sa hodnota "order" aktualizuje pred uložením do databázy
             const newTeamsInTargetGroup = teamsInTargetGroup.map((team, idx) => ({
                 ...team,
-                order: idx
+                order: idx + 1 // Hodnota "order" sa nastaví na index + 1
             }));
     
             // Spojenie aktualizovaných tímov z cieľovej skupiny so zvyšnými tímami
