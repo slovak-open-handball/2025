@@ -213,44 +213,56 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
-
+        
         const categoryName = categoryIdToNameMap[teamCategoryId];
         const userRef = doc(window.db, 'users', teamData.uid);
-
+        
         try {
-            // Získame tímy, ktoré sú už v cieľovej skupine, aby sme zistili ich počet.
-            const teamsInTargetGroup = allTeams.filter(t => t.category === categoryName && t.groupName === targetGroup);
-            const newOrder = teamsInTargetGroup.length;
-
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
                 throw new Error("Dokument používateľa neexistuje!");
             }
-            
             const userData = userDocSnap.data();
             const teamsInCategory = userData.teams?.[categoryName] || [];
+            const updatedTeams = [...teamsInCategory];
             
-            // Vytvoríme novú kópiu poľa, ktorá bude aktualizovaná
-            const updatedTeams = teamsInCategory.map(t => {
-                // Ak nájdeme presúvaný tím, aktualizujeme jeho groupName a order
-                if (t.teamName === teamData.teamName) {
-                    return { 
-                        ...t, 
-                        groupName: targetGroup, 
-                        order: newOrder
-                    };
-                }
-                return t;
-            });
+            // Nájdeme index tímu, ktorý presúvame
+            const teamIndex = updatedTeams.findIndex(t => t.teamName === teamData.teamName);
+            if (teamIndex === -1) {
+                throw new Error("Presúvaný tím sa nenašiel v databáze.");
+            }
+
+            // Uložíme si starú skupinu a poradie pred zmenou
+            const oldGroup = updatedTeams[teamIndex].groupName;
             
-            // Aktualizujeme len príslušnú kategóriu v dokumente používateľa
+            // Aktualizujeme presúvaný tím novými údajmi
+            updatedTeams[teamIndex].groupName = targetGroup;
+            if (targetGroup === null) {
+                delete updatedTeams[teamIndex].order;
+            } else {
+                // Ak presúvame tím do skupiny, priradíme mu poradie na koniec
+                const teamsInTargetGroup = teamsInGroups.filter(t => t.groupName === targetGroup);
+                updatedTeams[teamIndex].order = teamsInTargetGroup.length;
+            }
+            
+            // Ak tím presúvame zo skupiny (odstránenie), prečíslujeme starú skupinu
+            if (oldGroup !== null && targetGroup === null) {
+                const teamsInOldGroup = updatedTeams
+                    .filter(t => t.groupName === oldGroup)
+                    .sort((a, b) => a.order - b.order); // Uistíme sa, že poradie je správne
+                
+                teamsInOldGroup.forEach((team, index) => {
+                    team.order = index; // Prečíslujeme od 0
+                });
+            }
+
+            // Aktualizujeme len príslušnú kategóriu v databáze
             await updateDoc(userRef, {
                 teams: {
                     ...userData.teams,
                     [categoryName]: updatedTeams
                 }
             });
-
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
