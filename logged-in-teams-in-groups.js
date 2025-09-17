@@ -239,22 +239,24 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         // Určíme, kam vložíme presunutý tím
         const newIndexInGroup = targetIndex !== undefined ? targetIndex : teamsInTargetGroup.length;
 
+        // **OPRAVA: Nastavíme order pre všetky tímy v skupine**
+        // Ak vkladáme na konkrétnu pozíciu, všetky tímy od tejto pozície musia posunúť order o +1
+        teamsInTargetGroup.forEach((team, index) => {
+            if (index >= newIndexInGroup) {
+                team.order = index + 1;
+            }
+        });
+
         // **OPRAVA: Nastavíme order pre nový tím**
         movedTeam.order = newIndexInGroup;
 
         // Vložíme tím na novú pozíciu v rámci cieľovej skupiny
         teamsInTargetGroup.splice(newIndexInGroup, 0, movedTeam);
 
-        // Prepočíta a aktualizuje poradie všetkých tímov v cieľovej skupine
-        teamsInTargetGroup.forEach((team, index) => {
-            team.order = index;
-        });
-
-        // Spojíme zoznamy späť: tímy v cieľovej skupine a tímy mimo nej
+        // Aktualizácia databázy
         const otherTeams = teamsInCategory.filter(t => t.groupName !== targetGroup);
         const finalTeams = [...teamsInTargetGroup, ...otherTeams];
 
-        // Aktualizácia databázy
         await updateDoc(userRef, {
             teams: {
                 ...userData.teams,
