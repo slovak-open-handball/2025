@@ -228,8 +228,8 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
             console.log("Vymazem order, pretože ide do zoznamu nepriradených tímov.");
             delete movedTeam.order;
         } else {
-            // Získame všetky tímy v cieľovej skupine
-            const teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
+            // Získame všetky tímy v cieľovej skupine (vrátane tých, ktoré už tam boli)
+            const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
             console.log("Tímy v cieľovej skupine:", teamsInTargetGroup);
 
             // Nájdeme najväčšie existujúce order v skupine
