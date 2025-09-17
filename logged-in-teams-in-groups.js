@@ -207,19 +207,22 @@ const AddGroupsApp = ({ userProfileData }) => {
             const userData = userDocSnap.data();
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
     
-            let maxOrder = -1;
-            teamsInCategory.forEach(team => {
-                if (team.groupName === targetGroup && team.order !== undefined && team.order > maxOrder) {
-                    maxOrder = team.order;
-                }
-            });
-    
+            let newOrder = null;
+            if (targetGroup) {
+                // Nájdenie maximálneho poradia všetkých tímov v cieľovej skupine zo všetkých načítaných tímov
+                const teamsInTargetGroup = allTeams.filter(team =>
+                    team.groupName === targetGroup && team.category === categoryName
+                );
+                const maxOrder = teamsInTargetGroup.reduce((max, team) => Math.max(max, team.order || -1), -1);
+                newOrder = maxOrder + 1;
+            }
+
             const newTeamsArray = teamsInCategory.map(team => {
                 if (team.teamName === teamData.teamName) {
                     return {
                         ...team,
                         groupName: targetGroup,
-                        order: targetGroup ? maxOrder + 1 : null
+                        order: newOrder
                     };
                 }
                 return team;
