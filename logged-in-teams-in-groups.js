@@ -184,48 +184,69 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
     e.preventDefault();
     const dragData = draggedItem.current;
     if (!dragData) {
-        console.error("Žiadne dáta na pustenie.");
+        console.error("Žiadne dáta na presunutie.");
         return;
     }
     const teamData = dragData.team;
     const teamCategoryId = dragData.teamCategoryId;
+
     // Kontrola, či sa presúva v rámci rovnakej kategórie
     if (targetCategoryId && teamCategoryId !== targetCategoryId) {
         window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
         return;
     }
+
     const categoryName = categoryIdToNameMap[teamCategoryId];
     const userRef = doc(window.db, 'users', teamData.uid);
+
     try {
         const userDocSnap = await getDoc(userRef);
         if (!userDocSnap.exists()) {
             throw new Error("Dokument používateľa neexistuje!");
         }
+
         const userData = userDocSnap.data();
         const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
+
         // Nájdeme a odstránime presúvaný tím z pôvodného zoznamu
         const remainingTeams = teamsInCategory.filter(t => t.teamName !== teamData.teamName);
         const movedTeam = teamsInCategory.find(t => t.teamName === teamData.teamName);
+
         if (!movedTeam) {
             throw new Error("Presúvaný tím sa nenašiel v databáze.");
         }
+
+        // Nastavíme groupName pre presúvaný tím
         movedTeam.groupName = targetGroup;
+
+        // Debug logy pred nastavením order
+        console.log("Presúvam tím:", movedTeam.teamName);
+        console.log("Do skupiny:", targetGroup);
+
         // Ak je groupName null/undefined (t.j. presúvame do zoznamu nepriradených tímov), vymažeme order
         if (!targetGroup) {
+            console.log("Vymazem order, pretože ide do zoznamu nepriradených tímov.");
             delete movedTeam.order;
         } else {
             // Získame všetky tímy v cieľovej skupine
             const teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
+            console.log("Tímy v cieľovej skupine:", teamsInTargetGroup);
+
             // Nájdeme najväčšie existujúce order v skupine
             const maxOrder = teamsInTargetGroup.reduce(
                 (max, team) => Math.max(max, team.order !== undefined ? team.order : -1),
                 -1
             );
+            console.log("Najväčšie order v skupine:", maxOrder);
+
             // Nastavíme order pre nový tím
             movedTeam.order = maxOrder + 1;
+            console.log("Nastavujem order pre nový tím na:", movedTeam.order);
         }
+
         // Spojíme zoznamy späť do jedného poľa pre uloženie
         const finalTeams = [...remainingTeams, movedTeam];
+
         // Aktualizácia databázy
         await updateDoc(userRef, {
             teams: {
@@ -233,6 +254,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
                 [categoryName]: finalTeams
             }
         });
+
         window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
     } catch (error) {
         console.error("Chyba pri aktualizácii databázy:", error);
