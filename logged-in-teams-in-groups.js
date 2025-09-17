@@ -246,15 +246,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                 order: index + 1
             }));
 
-            // Získame tímy v cieľovej skupine na výpočet nového poradia
+            // Získame tímy v cieľovej skupine a vypočítame nové poradie
+            // Toto je opravená časť, ktorá by mala riešiť problém s priraďovaním "1"
             const teamsInTargetGroup = currentCategoryTeams.filter(team => team.groupName === targetGroup);
-            const maxOrder = teamsInTargetGroup.length > 0
-                ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
-                : 0;
-            const newOrder = targetGroup ? maxOrder + 1 : null;
+            const newOrder = targetGroup ? teamsInTargetGroup.length + 1 : null;
 
             console.log(`Tímy v cieľovej skupine '${targetGroup}':`, teamsInTargetGroup);
-            console.log("Maximálne poradie v cieľovej skupine:", maxOrder);
             console.log("Vypočítané nové poradie pre tím:", newOrder);
 
             // Aktualizovaný tím
