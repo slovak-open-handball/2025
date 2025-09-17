@@ -223,19 +223,15 @@ const AddGroupsApp = ({ userProfileData }) => {
             let teamsInTargetGroup = remainingTeams.filter(t => t.groupName === targetGroup);
             const otherTeams = remainingTeams.filter(t => t.groupName !== targetGroup);
             
-            // Vytvoríme nový zoznam tímov pre cieľovú skupinu
             const newTeamsInTargetGroup = [...teamsInTargetGroup];
-
-            // Nastavíme order pre presúvaný tím na koniec zoznamu
-            movedTeam.order = newTeamsInTargetGroup.length;
-
+            
             // Vložíme presunutý tím na koniec
             newTeamsInTargetGroup.push(movedTeam);
-
-            // Prepočítame poradie pre všetky tímy v cieľovej skupine (voliteľné, lebo už je zoradené)
+            
+            // Prepočítame poradie pre všetky tímy v cieľovej skupine
             newTeamsInTargetGroup.forEach((team, index) => {
                 team.order = index;
-            });
+            });    
 
             // Spojíme zoznamy späť do jedného poľa pre uloženie
             const finalTeams = [...newTeamsInTargetGroup, ...otherTeams];
