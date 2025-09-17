@@ -229,29 +229,18 @@ const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         // Určíme, kam vložíme presunutý tím
         const newIndexInGroup = targetIndex !== undefined ? targetIndex : teamsInTargetGroup.length;
 
-        // **OPRAVA: Prepočítame poradie pre pôvodnú skupinu (ak tím odchádza zo skupiny)**
-        if (movedTeam.groupName && !targetGroup) {
-            const originalGroupTeams = teamsInCategory.filter(t => t.groupName === movedTeam.groupName);
-            originalGroupTeams.forEach((team, index) => {
-                team.order = index;
-            });
-        }
-
-
-        // **OPRAVA: Prepočítame poradie pre cieľovú skupinu**
+        // Prepočítame poradie pre všetky tímy v cieľovej skupine
         teamsInTargetGroup.forEach((team, index) => {
-            if (index >= newIndexInGroup) {
-                team.order = index + 1;
-            }
+            team.order = index;
         });
 
-        // **OPRAVA: Nastavíme order pre nový tím**
+        // Nastavíme order pre nový tím
         movedTeam.order = newIndexInGroup;
 
         // Vložíme tím na novú pozíciu v rámci cieľovej skupiny
         teamsInTargetGroup.splice(newIndexInGroup, 0, movedTeam);
 
-        // **OPRAVA: Prepočítame poradie všetkých tímov v cieľovej skupine**
+        // Prepočítame poradie všetkých tímov v cieľovej skupine
         teamsInTargetGroup.forEach((team, index) => {
             team.order = index;
         });
