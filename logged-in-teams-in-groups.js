@@ -209,11 +209,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             let newOrder = null;
             if (targetGroup) {
-                // Vyhľadanie všetkých tímov v cieľovej skupine v rámci aktuálnej kategórie.
-                const teamsInTargetGroup = allTeams.filter(team =>
-                    team.groupName === targetGroup && team.category === categoryName
+                // Opravené: Vypočítame poradie z čerstvo načítaných tímov používateľa
+                const teamsInTargetGroupForOrdering = teamsInCategory.filter(team =>
+                    team.groupName === targetGroup
                 );
-                const maxOrder = teamsInTargetGroup.reduce((max, team) => Math.max(max, team.order || -1), -1);
+                const maxOrder = teamsInTargetGroupForOrdering.reduce((max, team) => Math.max(max, team.order || -1), -1);
                 newOrder = maxOrder + 1;
                 
                 // Logging pre debugging
@@ -221,7 +221,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 console.log("Pripravujem presunutie tímu do skupiny.");
                 console.log("Drag & Drop Data:", dragData);
                 console.log("Cieľová skupina:", targetGroup, "ID kategórie:", targetCategoryId);
-                console.log("Tímy v cieľovej skupine (na výpočet poradia):", teamsInTargetGroup);
+                console.log("Tímy v cieľovej skupine (na výpočet poradia):", teamsInTargetGroupForOrdering);
                 console.log("Maximálne existujúce poradie (maxOrder):", maxOrder);
                 console.log("Novovygenerované poradie (newOrder):", newOrder);
                 console.log("-----------------------------------------");
@@ -394,7 +394,7 @@ const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
                         {
                           className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap cursor-pointer',
                           onDragOver: (e) => handleDragOver(e, null, null, categoryId, 0),
-                          onDrop: (e) => handleDrop(e, null, categoryId, 0)
+                          onDrop: (e) => handleDrop(e, null, null, categoryId, 0)
                         },
                         categoryName
                     ),
@@ -446,7 +446,7 @@ const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
                 {
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
                     onDragOver: (e) => handleDragOver(e, null, null, selectedCategoryId, 0),
-                    onDrop: (e) => handleDrop(e, null, selectedCategoryId, 0),
+                    onDrop: (e) => handleDrop(e, null, null, selectedCategoryId, 0),
                 },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy v kategórii: ${categoryName}`),
                 renderTeamList(teamsWithoutGroup, null, selectedCategoryId)
