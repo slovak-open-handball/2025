@@ -223,7 +223,9 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             console.log("Aktuálne tímy v kategórii pred aktualizáciou:", currentCategoryTeams);
 
-            const teamsInTargetGroup = currentCategoryTeams.filter(team => team.groupName === targetGroup);
+            // Získaj všetky tímy, ktoré patria do cieľovej skupiny
+            const teamsInTargetGroup = allTeams.filter(team => team.category === categoryName && team.groupName === targetGroup);
+
             const maxOrder = teamsInTargetGroup.length > 0
                 ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                 : 0;
