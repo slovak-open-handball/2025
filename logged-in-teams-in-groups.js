@@ -251,7 +251,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             const maxOrder = teamsInTargetGroup.length > 0
                 ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                 : 0;
-            const newOrder = maxOrder + 1;
+            const newOrder = targetGroup ? maxOrder + 1 : null;
 
             console.log(`Tímy v cieľovej skupine '${targetGroup}':`, teamsInTargetGroup);
             console.log("Maximálne poradie v cieľovej skupine:", maxOrder);
@@ -261,7 +261,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             const updatedTeam = {
                 ...teamData,
                 groupName: targetGroup,
-                order: targetGroup ? newOrder : null,
+                order: newOrder,
             };
 
             // Vytvorenie nového poľa tímov
