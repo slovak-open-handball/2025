@@ -177,8 +177,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, []);
 
     const teamsWithoutGroup = selectedCategoryId
-        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName)
-        : allTeams.filter(team => !team.groupName);
+        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
+        : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
 
     const teamsInGroups = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && team.groupName)
