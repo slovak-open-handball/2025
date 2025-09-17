@@ -231,23 +231,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                 throw new Error("Presúvaný tím sa nenašiel v databáze.");
             }
             
-            // Určíme pôvodnú a novú skupinu a poradie
-            const oldGroup = teamsInCategory[teamIndex].groupName;
-            
             // Urobíme zmeny lokálne
             teamsInCategory[teamIndex].groupName = targetGroup;
             
-            // Prečíslovanie všetkých skupín
-            const updatedTeams = teamsInCategory.map(team => {
-                // Odstránime poradie pre tímy bez skupiny
-                if (team.groupName === null) {
-                    delete team.order;
-                }
-                return team;
-            });
-            
             // Vytvoríme mapu tímov podľa ich nových skupín
-            const teamsByGroup = updatedTeams.reduce((acc, team) => {
+            const teamsByGroup = teamsInCategory.reduce((acc, team) => {
                 if (team.groupName !== null) {
                     if (!acc[team.groupName]) {
                         acc[team.groupName] = [];
@@ -257,18 +245,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                 return acc;
             }, {});
 
-            // Prečíslujeme tímy v každej skupine, ktorá bola dotknutá
-            const groupsToReorder = new Set();
-            if (oldGroup !== null) groupsToReorder.add(oldGroup);
-            if (targetGroup !== null) groupsToReorder.add(targetGroup);
-            
-            groupsToReorder.forEach(groupName => {
-                if (teamsByGroup[groupName]) {
-                    teamsByGroup[groupName].sort((a, b) => a.order - b.order); // Udržíme existujúce poradie
-                    teamsByGroup[groupName].forEach((team, index) => {
-                        team.order = index;
-                    });
+            // Prečíslovanie všetkých skupín
+            const updatedTeams = teamsInCategory.map(team => {
+                if (team.groupName !== null) {
+                    const groupTeams = teamsByGroup[team.groupName];
+                    const newIndex = groupTeams.findIndex(t => t.teamName === team.teamName);
+                    team.order = newIndex;
+                } else {
+                    delete team.order;
                 }
+                return team;
             });
 
             await updateDoc(userRef, {
