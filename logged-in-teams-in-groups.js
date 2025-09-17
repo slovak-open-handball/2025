@@ -204,7 +204,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.error("Žiadne dáta na pustenie.");
             return;
         }
-        
+
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
         
@@ -215,22 +215,21 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
 
         const categoryName = categoryIdToNameMap[teamCategoryId];
+        const userRef = doc(window.db, 'users', teamData.uid);
 
         try {
-            const userRef = doc(window.db, 'users', teamData.uid);
-            const userDoc = await getDoc(userRef);
+            // Získame tímy, ktoré sú už v cieľovej skupine, aby sme zistili ich počet.
+            const teamsInTargetGroup = allTeams.filter(t => t.category === categoryName && t.groupName === targetGroup);
+            const newOrder = teamsInTargetGroup.length;
 
-            if (!userDoc.exists()) {
+            const userDocSnap = await getDoc(userRef);
+            if (!userDocSnap.exists()) {
                 throw new Error("Dokument používateľa neexistuje!");
             }
             
-            const userData = userDoc.data();
+            const userData = userDocSnap.data();
             const teamsInCategory = userData.teams?.[categoryName] || [];
             
-            // Získame tímy, ktoré sú už v cieľovej skupine, aby sme zistili ich počet.
-            const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
-            const newOrder = teamsInTargetGroup.length;
-
             // Vytvoríme novú kópiu poľa, ktorá bude aktualizovaná
             const updatedTeams = teamsInCategory.map(t => {
                 // Ak nájdeme presúvaný tím, aktualizujeme jeho groupName a order
@@ -244,7 +243,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 return t;
             });
             
-            // Nakoniec aktualizujeme len príslušnú kategóriu v dokumente používateľa.
+            // Aktualizujeme len príslušnú kategóriu v dokumente používateľa
             await updateDoc(userRef, {
                 teams: {
                     ...userData.teams,
@@ -288,7 +287,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
     
     const handleDragEnd = () => {
-        draggedItem.current = null;
+g        draggedItem.current = null;
     }
     
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
@@ -632,7 +631,7 @@ const handleDataUpdateAndRender = (event) => {
 
 console.log("logged-in-teams-in-groups.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
+s
 console.log("logged-in-teams-in-groups.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
     console.log("logged-in-teams-in-groups.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
