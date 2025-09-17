@@ -360,7 +360,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             onDragOver: (e) => handleDragOver(e, team, targetGroupId, targetCategoryId, index),
                             onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, index),
                         },
-                        `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${index + 1}. ${team.teamName}` : team.teamName}`
+                        `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${team.order != null ? team.order + 1 : ''}. ${team.teamName}` : team.teamName}`
                     ),
                     // Indikátor pod prvkom
                     showBottomIndicator && React.createElement('div', {
