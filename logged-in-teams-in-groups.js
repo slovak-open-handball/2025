@@ -227,30 +227,28 @@ const AddGroupsApp = ({ userProfileData }) => {
             const userData = userDoc.data();
             const teamsInCategory = userData.teams?.[categoryName] || [];
             
-            // Vytvoríme novú kópiu poľa, aby sa predišlo strate dát.
+            // Získame tímy, ktoré sú už v cieľovej skupine, aby sme zistili ich počet.
+            const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
+            const newOrder = teamsInTargetGroup.length;
+
+            // Vytvoríme novú kópiu poľa, ktorá bude aktualizovaná
             const updatedTeams = teamsInCategory.map(t => {
-                // Ak nájdeme presúvaný tím, vytvoríme nový objekt s aktualizovanými vlastnosťami
-                // a ostatné vlastnosti skopírujeme pomocou operátora šírenia.
+                // Ak nájdeme presúvaný tím, aktualizujeme jeho groupName a order
                 if (t.teamName === teamData.teamName) {
                     return { 
                         ...t, 
                         groupName: targetGroup, 
-                        order: -1 // Dočasne nastavíme poradie, aby sa prepočítalo neskôr.
+                        order: newOrder
                     };
                 }
                 return t;
             });
             
-            // Vytvoríme finálny zoznam s prepočítaným poradím.
-            // Toto zabezpečí, že každý tím má správny index.
-            const reorderedFinalList = updatedTeams.map((t, idx) => ({ ...t, order: idx }));
-            
-            // A nakoniec aktualizujeme len príslušnú kategóriu v dokumente používateľa.
-            // Tento prístup by mal zabrániť strate dát.
+            // Nakoniec aktualizujeme len príslušnú kategóriu v dokumente používateľa.
             await updateDoc(userRef, {
                 teams: {
                     ...userData.teams,
-                    [categoryName]: reorderedFinalList
+                    [categoryName]: updatedTeams
                 }
             });
 
