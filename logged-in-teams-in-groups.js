@@ -120,7 +120,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         })));
                     } else {
                         // Tímy v skupine podla poradia
-                        const sortedTeams = teams.sort((a, b) => a.order - b.order);
+                        const sortedTeams = teams.sort((a, b) => (a.order || 0) - (b.order || 0));
                         console.log(`\n-- Skupina: ${groupName} (Počet tímov: ${teams.length}) --`);
                         console.table(sortedTeams.map((team) => ({
                             'Názov tímu': team.teamName,
