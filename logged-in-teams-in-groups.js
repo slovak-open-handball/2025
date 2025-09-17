@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, runTransaction, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
@@ -155,7 +155,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             default: return 'bg-white';
         }
     };
-
+    
     const handleDragOver = (e, targetTeam, targetGroupId, targetCategoryId, index) => {
         e.preventDefault();
         const dragData = draggedItem.current;
@@ -180,101 +180,67 @@ const AddGroupsApp = ({ userProfileData }) => {
         });
     };
 
-const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
-    e.preventDefault();
-    const dragData = draggedItem.current;
-    if (!dragData) {
-        console.error("Žiadne dáta na presunutie.");
-        return;
-    }
-    const teamData = dragData.team;
-    const teamCategoryId = dragData.teamCategoryId;
-
-    // Kontrola, či sa presúva v rámci rovnakej kategórie
-    if (targetCategoryId && teamCategoryId !== targetCategoryId) {
-        window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
-        return;
-    }
-
-    const categoryName = categoryIdToNameMap[teamCategoryId];
-    const userRef = doc(window.db, 'users', teamData.uid);
-
-    try {
-        const userDocSnap = await getDoc(userRef);
-        if (!userDocSnap.exists()) {
-            throw new Error("Dokument používateľa neexistuje!");
+    const handleDrop = async (e, targetGroup, targetCategoryId) => {
+        e.preventDefault();
+        const dragData = draggedItem.current;
+        if (!dragData) {
+            console.error("Žiadne dáta na presunutie.");
+            return;
         }
+        const teamData = dragData.team;
+        const teamCategoryId = dragData.teamCategoryId;
 
-        const userData = userDocSnap.data();
-        const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-
-        // Nájdeme a odstránime presúvaný tím z pôvodného zoznamu
-        const remainingTeams = teamsInCategory.filter(t => t.teamName !== teamData.teamName);
-        const movedTeam = teamsInCategory.find(t => t.teamName === teamData.teamName);
-
-        if (!movedTeam) {
-            throw new Error("Presúvaný tím sa nenašiel v databáze.");
+        // Kontrola, či sa presúva v rámci rovnakej kategórie
+        if (targetCategoryId && teamCategoryId !== targetCategoryId) {
+            window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            return;
         }
+        
+        const categoryName = categoryIdToNameMap[teamCategoryId];
+        const userRef = doc(window.db, 'users', teamData.uid);
 
-        // Nastavíme groupName pre presúvaný tím
-        movedTeam.groupName = targetGroup;
-
-        // Debug logy pred nastavením order
-        console.log("Presúvam tím:", movedTeam.teamName);
-        console.log("Do skupiny:", targetGroup);
-
-        // Ak je groupName null/undefined (t.j. presúvame do zoznamu nepriradených tímov), vymažeme order
-        if (!targetGroup) {
-            console.log("Vymazem order, pretože ide do zoznamu nepriradených tímov.");
-            delete movedTeam.order;
-        } else {
-            // Získame všetky tímy v cieľovej skupine (vrátane tých, ktoré už tam boli)
-            let teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
-
-            // Ak sa presúva tím do skupiny, kde už je, treba ho pridať do zoznamu
-            if (movedTeam.groupName === targetGroup) {
-                teamsInTargetGroup.push(movedTeam);
+        try {
+            const userDocSnap = await getDoc(userRef);
+            if (!userDocSnap.exists()) {
+                throw new Error("Dokument používateľa neexistuje!");
             }
-
-            console.log("Tímy v cieľovej skupine:", teamsInTargetGroup);
-
-            // Prepočítame order pre všetky tímy v skupine, ak nie sú nastavené
-            teamsInTargetGroup.forEach((team, index) => {
-                if (team.order === undefined) {
-                    team.order = index;
+            const userData = userDocSnap.data();
+            const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
+    
+            let maxOrder = -1;
+            teamsInCategory.forEach(team => {
+                if (team.groupName === targetGroup && team.order !== undefined && team.order > maxOrder) {
+                    maxOrder = team.order;
                 }
             });
-
-            // Nájdeme najväčšie existujúce order v skupine
-            const maxOrder = teamsInTargetGroup.length > 0
-                ? Math.max(...teamsInTargetGroup.map(team => team.order !== undefined ? team.order : -1))
-                : -1;
-            console.log("Najväčšie order v skupine:", maxOrder);
-
-            // Nastavíme order pre nový tím
-            movedTeam.order = maxOrder + 1;
-            console.log("Nastavujem order pre nový tím na:", movedTeam.order);
+    
+            const newTeamsArray = teamsInCategory.map(team => {
+                if (team.teamName === teamData.teamName) {
+                    return {
+                        ...team,
+                        groupName: targetGroup,
+                        order: targetGroup ? maxOrder + 1 : undefined
+                    };
+                }
+                return team;
+            });
+    
+            await updateDoc(userRef, {
+                teams: {
+                    ...userData.teams,
+                    [categoryName]: newTeamsArray
+                }
+            });
+            
+            window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
+        } catch (error) {
+            console.error("Chyba pri aktualizácii databázy:", error);
+            window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+        } finally {
+            setDropIndicator({ groupName: null, categoryId: null, index: null, position: null });
         }
+    };
 
-        // Spojíme zoznamy späť do jedného poľa pre uloženie
-        const finalTeams = [...remainingTeams, movedTeam];
-
-        // Aktualizácia databázy
-        await updateDoc(userRef, {
-            teams: {
-                ...userData.teams,
-                [categoryName]: finalTeams
-            }
-        });
-
-        window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
-    } catch (error) {
-        console.error("Chyba pri aktualizácii databázy:", error);
-        window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
-    } finally {
-        setDropIndicator({ groupName: null, categoryId: null, index: null, position: null });
-    }
-};
 
     const handleDragStart = (e, team) => {
         const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === team.category);
@@ -491,7 +457,7 @@ const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB) => nameA.localeCompare(nameB));
 
     return React.createElement(
         'div',
