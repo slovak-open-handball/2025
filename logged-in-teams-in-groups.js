@@ -190,7 +190,7 @@ const AddGroupsApp = ({ userProfileData }) => {
      * @param {string|null} targetGroup Názov cieľovej skupiny alebo null pre zoznam nepriradených tímov.
      * @param {number|null} targetIndex Index, kam sa má tím vložiť. Ak je null, pridá sa na koniec zoznamu.
      */
-    const handleDrop = async (e, targetGroup, targetCategoryId) => {
+    const handleDrop = async (e, targetGroup, targetCategoryId, targetIndex) => {
         e.preventDefault();
         const dragData = draggedItem.current;
         if (!dragData) {
@@ -224,25 +224,39 @@ const AddGroupsApp = ({ userProfileData }) => {
                 throw new Error("Presúvaný tím sa nenašiel v databáze.");
             }
             
-            // Získame aktuálny počet tímov v cieľovej skupine
+            // Odstránime tím z pôvodnej pozície
+            const movedTeam = teamsInCategory.splice(teamIndex, 1)[0];
+            
+            // Pridelíme tímu novú skupinu
+            if (targetGroup !== null) {
+                movedTeam.groupName = targetGroup;
+            } else {
+                delete movedTeam.groupName;
+            }
+
+            // Nájdeme tímy v cieľovej skupine
             const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
             
-            // Pridelíme tímu nové poradie na základe počtu tímov v skupine
-            const newOrder = teamsInTargetGroup.length;
+            // Určíme, kam vložíme presunutý tím
+            const newIndexInGroup = targetIndex !== undefined ? targetIndex : teamsInTargetGroup.length;
             
-            // Uložíme zmeny do lokálnej premennej
-            teamsInCategory[teamIndex].groupName = targetGroup;
-            if (targetGroup !== null) {
-                teamsInCategory[teamIndex].order = newOrder;
-            } else {
-                delete teamsInCategory[teamIndex].order; // Ak sa tím presúva mimo skupiny, odstránime poradie
-            }
+            // Vložíme tím na novú pozíciu v rámci cieľovej skupiny
+            teamsInTargetGroup.splice(newIndexInGroup, 0, movedTeam);
+            
+            // Prepočíta a aktualizuje poradie všetkých tímov v cieľovej skupine
+            teamsInTargetGroup.forEach((team, index) => {
+                team.order = index;
+            });
+            
+            // Spojíme zoznamy späť: tímy v cieľovej skupine a tímy mimo nej
+            const otherTeams = teamsInCategory.filter(t => t.groupName !== targetGroup);
+            const finalTeams = [...teamsInTargetGroup, ...otherTeams];
 
             // Aktualizácia databázy
             await updateDoc(userRef, {
                 teams: {
                     ...userData.teams,
-                    [categoryName]: teamsInCategory
+                    [categoryName]: finalTeams
                 }
             });
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
@@ -306,7 +320,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 {
                     className: `min-h-[50px] p-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center`,
                     onDragOver: (e) => handleDragOver(e, null, targetGroupId, targetCategoryId),
-                    onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
+                    onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, 0), // Pustiť na index 0, ak je prázdna
                 },
                 React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
             );
@@ -327,7 +341,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                         className: `px-4 py-2 bg-gray-100 rounded-lg text-gray-700 cursor-grab`,
                         draggable: "true",
                         onDragStart: (e) => handleDragStart(e, team),
-                        onDragEnd: handleDragEnd
+                        onDragEnd: handleDragEnd,
+                        onDragOver: (e) => { e.preventDefault(); e.stopPropagation(); },
+                        onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId, index),
                     },
                     `${!selectedCategoryId ? `${team.category}: ` : ''}${teamText}`
                 );
@@ -396,7 +412,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}`,
                                     onDragOver: (e) => handleDragOver(e, null, group.name, categoryId),
                                     // Pustenie na názov skupiny: tím sa pridá na koniec skupiny (index: null)
-                                    onDrop: (e) => handleDrop(e, group.name, categoryId),
+                                    onDrop: (e) => handleDrop(e, group.name, categoryId, teamsInGroups.filter(team => team.groupName === group.name).length),
                                 },
                                 React.createElement(
                                     'div',
@@ -468,7 +484,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
                                 onDragOver: (e) => handleDragOver(e, null, group.name, selectedCategoryId),
                                 // Pustenie na názov skupiny: tím sa pridá na koniec skupiny (index: null)
-                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
+                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId, teamsInGroups.filter(team => team.groupName === group.name).length),
                             },
                             React.createElement(
                                 'h3',
