@@ -125,9 +125,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                         // Tímy v skupine podla poradia
                         const sortedTeams = teams.sort((a, b) => a.order - b.order);
                         console.log(`\n-- Skupina: ${groupName} --`);
-                        console.table(sortedTeams.map((team, index) => ({
+                        console.table(sortedTeams.map((team) => ({
                             'Názov tímu': team.teamName,
-                            'Poradie v skupine': index + 1
+                            'Poradie v skupine': team.order
                         })));
                     }
                 });
@@ -297,6 +297,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             'ul',
             { className: 'space-y-2 relative' },
             sortedTeams.map((team, index) => {
+                const teamNameWithOrder = team.groupName != null ? `${team.order}. ${team.teamName}` : team.teamName;
                 return React.createElement(
                     'li',
                     {
@@ -306,7 +307,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         onDragStart: (e) => handleDragStart(e, team),
                         onDragEnd: handleDragEnd,
                     },
-                    `${!selectedCategoryId ? `${team.category}: ` : ''}${team.groupName != null ? `${team.order || index + 1}. ${team.teamName}` : team.teamName}`
+                    `${!selectedCategoryId ? `${team.category}: ` : ''}${teamNameWithOrder}`
                 );
             })
         );
