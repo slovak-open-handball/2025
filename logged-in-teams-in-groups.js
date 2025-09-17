@@ -200,6 +200,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const userRef = doc(window.db, 'users', teamData.uid);
 
         try {
+            // Pred aktualizáciou vždy načítať najnovšie údaje
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
                 throw new Error("Dokument používateľa neexistuje!");
@@ -209,10 +210,12 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             let newOrder = null;
             if (targetGroup) {
-                // Opravené: Vypočítame poradie z čerstvo načítaných tímov používateľa
+                // Vyhľadanie všetkých tímov v cieľovej skupine v rámci aktuálnej kategórie.
+                // Na výpočet poradia sa používa pole z čerstvo načítaných dát používateľa.
                 const teamsInTargetGroupForOrdering = teamsInCategory.filter(team =>
                     team.groupName === targetGroup
                 );
+                // Výpočet maximálneho existujúceho poradia (ak poradie neexistuje, použije sa -1)
                 const maxOrder = teamsInTargetGroupForOrdering.reduce((max, team) => Math.max(max, team.order || -1), -1);
                 newOrder = maxOrder + 1;
                 
@@ -235,6 +238,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 console.log("-----------------------------------------");
             }
             
+            // Nájdeme a aktualizujeme presúvaný tím v novom poli
             const newTeamsArray = teamsInCategory.map(team => {
                 if (team.teamName === teamData.teamName) {
                     return {
