@@ -231,36 +231,33 @@ const AddGroupsApp = ({ userProfileData }) => {
                 throw new Error("Presúvaný tím sa nenašiel v databáze.");
             }
             
-            // Urobíme zmeny lokálne
+            // Zmeníme skupinu pre tím, ktorý sa presúva
             teamsInCategory[teamIndex].groupName = targetGroup;
             
-            // Vytvoríme mapu tímov podľa ich nových skupín
-            const teamsByGroup = teamsInCategory.reduce((acc, team) => {
-                if (team.groupName !== null) {
-                    if (!acc[team.groupName]) {
-                        acc[team.groupName] = [];
-                    }
-                    acc[team.groupName].push(team);
-                }
-                return acc;
-            }, {});
+            // Vypočítame nové poradie
+            if (targetGroup !== null) {
+                const teamsInTargetGroup = teamsInCategory.filter(t => t.groupName === targetGroup);
+                const newOrder = teamsInTargetGroup.length - 1; // Nový tím bude mať posledné poradie
+                teamsInCategory[teamIndex].order = newOrder;
+            } else {
+                delete teamsInCategory[teamIndex].order; // Ak sa tím presúva mimo skupiny, odstránime poradie
+            }
 
-            // Prečíslovanie všetkých skupín
-            const updatedTeams = teamsInCategory.map(team => {
-                if (team.groupName !== null) {
-                    const groupTeams = teamsByGroup[team.groupName];
-                    const newIndex = groupTeams.findIndex(t => t.teamName === team.teamName);
-                    team.order = newIndex;
-                } else {
-                    delete team.order;
-                }
-                return team;
+            // Prečíslovanie všetkých skupín (pre istotu)
+            // Urobíme to tak, že prejdeme skupiny a prečislujeme ich
+            const allGroupsInThisCategory = [...new Set(teamsInCategory.map(t => t.groupName).filter(g => g !== null))];
+            allGroupsInThisCategory.forEach(group => {
+                const teamsInGroup = teamsInCategory.filter(t => t.groupName === group).sort((a,b) => a.order - b.order);
+                teamsInGroup.forEach((team, index) => {
+                    const originalIndex = teamsInCategory.findIndex(t => t.teamName === team.teamName && t.category === team.category);
+                    teamsInCategory[originalIndex].order = index;
+                });
             });
 
             await updateDoc(userRef, {
                 teams: {
                     ...userData.teams,
-                    [categoryName]: updatedTeams
+                    [categoryName]: teamsInCategory
                 }
             });
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne presunutý.`, 'success');
