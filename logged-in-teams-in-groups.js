@@ -448,7 +448,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(b.name));
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
 
     return React.createElement(
         'div',
