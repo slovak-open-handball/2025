@@ -208,7 +208,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (lastDragOverGroup.current !== targetGroup) {
             lastDragOverGroup.current = targetGroup;
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroup);
-            const nextOrder = nextOrderMap[`${categoryIdToNameMap[targetCategoryId]}-${targetGroup}`] || 1;
+            const nextOrder = teamsInTargetGroup.length + 1; // Opravený výpočet poradia
 
             console.log("--- Drag & Drop Informácie ---");
             console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
@@ -255,16 +255,32 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             // Logika pre presun do skupiny
             if (targetGroup) {
-                const nextOrder = nextOrderMap[`${categoryName}-${targetGroup}`] || 1;
+                const teamsInTargetGroup = currentCategoryTeams.filter(t => t.groupName === targetGroup);
+                const nextOrder = teamsInTargetGroup.length + 1; // Opravený výpočet poradia
                 console.log(`Vypočítané nové poradie pre tím '${teamData.teamName}': ${nextOrder}`);
                 updatedTeamData = {
                     ...teamData,
                     groupName: targetGroup,
                     order: nextOrder
                 };
-                updatedTeams = currentCategoryTeams.map(team =>
-                    team.teamName === updatedTeamData.teamName ? updatedTeamData : team
-                );
+                
+                // Odstránime tím z pôvodnej skupiny
+                const teamsWithoutOriginal = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
+                
+                // Preusporiadanie tímov v pôvodnej skupine
+                const teamsInOriginalGroup = teamsWithoutOriginal
+                    .filter(t => t.groupName === originalGroup)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                const reorderedTeamsInOriginalGroup = teamsInOriginalGroup.map((team, index) => ({
+                    ...team,
+                    order: index + 1
+                }));
+                
+                // Spojíme znova všetky tímy
+                const otherTeams = teamsWithoutOriginal.filter(t => t.groupName !== originalGroup);
+                updatedTeams = [...otherTeams, updatedTeamData, ...reorderedTeamsInOriginalGroup];
+
             } else { // Logika pre presun mimo skupiny
                 updatedTeamData = {
                     ...teamData,
@@ -295,15 +311,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
             });
 
-            // Aktualizácia lokálneho stavu nextOrderMap po úspešnom zápise
-            if (targetGroup) {
-                const key = `${categoryName}-${targetGroup}`;
-                setNextOrderMap(prevMap => ({
-                    ...prevMap,
-                    [key]: (prevMap[key] || 0) + 1
-                }));
-            }
-    
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne pridaný do skupiny '${targetGroup || "bez skupiny"}'.`, 'success');
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
