@@ -396,7 +396,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             'ul',
             { className: 'space-y-2 relative' },
             sortedTeams.map((team, index) => {
-                const teamNameWithOrder = team.groupName != null ? `${team.teamName} (${team.order})` : team.teamName;
+                const teamNameWithOrder = team.groupName != null ? `${index + 1}. ${team.teamName} (${team.order})` : team.teamName;
                 return React.createElement(
                     'li',
                     {
