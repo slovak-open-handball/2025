@@ -45,78 +45,6 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Stav pre drag & drop
     const draggedItem = useRef(null);
 
-    // Funkcia na prečíslovanie tímov v skupinách a aktualizáciu databázy
-    const reorderTeamsIfNecessary = async (teamsList) => {
-        const updates = new Map();
-        
-        const groupedTeams = teamsList.reduce((acc, team) => {
-            if (team.groupName) {
-                const key = `${team.uid}-${team.category}-${team.groupName}`;
-                if (!acc[key]) {
-                    acc[key] = {
-                        uid: team.uid,
-                        category: team.category,
-                        groupName: team.groupName,
-                        teams: []
-                    };
-                }
-                acc[key].teams.push(team);
-            }
-            return acc;
-        }, {});
-
-        for (const key in groupedTeams) {
-            const groupData = groupedTeams[key];
-            const sortedTeams = groupData.teams.sort((a, b) => (a.order || 0) - (b.order || 0));
-            
-            let needsUpdate = false;
-            sortedTeams.forEach((team, index) => {
-                const newOrder = index + 1;
-                if (team.order !== newOrder) {
-                    needsUpdate = true;
-                    // Priamy zápis do databázy je neefektívny, radšej pripravíme hromadnú aktualizáciu
-                    // Získame celý zoznam tímov pre daného užívateľa a kategóriu
-                    if (!updates.has(groupData.uid)) {
-                        updates.set(groupData.uid, {
-                            teams: {}
-                        });
-                    }
-                    const userUpdates = updates.get(groupData.uid).teams;
-                    if (!userUpdates[groupData.category]) {
-                        userUpdates[groupData.category] = [...teamsList.filter(t => t.uid === groupData.uid && t.category === groupData.category)];
-                    }
-                    const userTeamsToUpdate = userUpdates[groupData.category];
-                    const teamToUpdate = userTeamsToUpdate.find(t => t.teamName === team.teamName);
-                    if (teamToUpdate) {
-                        teamToUpdate.order = newOrder;
-                    }
-                }
-            });
-        }
-        
-        if (updates.size > 0) {
-            console.log("Detekovaná nekonzistencia v poradí, aktualizujem databázu.");
-            for (const [uid, data] of updates.entries()) {
-                const userRef = doc(window.db, 'users', uid);
-                try {
-                    const userDocSnap = await getDoc(userRef);
-                    if (userDocSnap.exists()) {
-                        const existingTeams = userDocSnap.data().teams;
-                        await updateDoc(userRef, {
-                            teams: {
-                                ...existingTeams,
-                                ...data.teams
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.error("Chyba pri hromadnej aktualizácii databázy:", error);
-                }
-            }
-        }
-    };
-
-
     // Načítanie kategórie z URL hashu
     useEffect(() => {
         const hash = window.location.hash.substring(1);
@@ -163,7 +91,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
             });
             setAllTeams(teamsList);
-            reorderTeamsIfNecessary(teamsList);
             // Logovanie do konzoly v novom prehľadnom formáte
             const teamsByCategoryAndGroup = teamsList.reduce((acc, team) => {
                 const category = team.category;
@@ -305,37 +232,23 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             console.log("Aktuálne tímy v kategórii pred aktualizáciou:", currentCategoryTeams);
             
-            // Nájdeme tímy, ktoré ostali v pôvodnej skupine
-            const teamsLeftInOldGroup = originalGroup ? 
-                currentCategoryTeams.filter(t => t.groupName === originalGroup && t.teamName !== teamData.teamName) : [];
-
-            // Prečíslovanie tímov v pôvodnej skupine
-            const updatedTeamsInOldGroup = teamsLeftInOldGroup
-                .sort((a, b) => (a.order || 0) - (b.order || 0))
-                .map((t, index) => ({
-                    ...t,
-                    order: index + 1
-                }));
-
-            // Získame tímy v cieľovej skupine a vypočítame nové poradie
-            const teamsInTargetGroup = currentCategoryTeams.filter(team => team.groupName === targetGroup);
-            const newOrder = targetGroup ? teamsInTargetGroup.length + 1 : null;
-
-            console.log(`Tímy v cieľovej skupine '${targetGroup}':`, teamsInTargetGroup);
-            console.log("Vypočítané nové poradie pre tím:", newOrder);
-
-            // Aktualizovaný tím
-            const updatedTeam = {
-                ...teamData,
-                groupName: targetGroup,
-                order: newOrder,
-            };
-
-            // Vytvorenie nového poľa tímov na uloženie
-            const otherTeams = currentCategoryTeams.filter(
-                t => t.teamName !== teamData.teamName && t.groupName !== originalGroup
-            );
-            const teamsToSave = [...otherTeams, updatedTeam, ...updatedTeamsInOldGroup];
+            // Odstránenie tímu z pôvodného zoznamu
+            const teamsToSave = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
+            
+            // Pridanie tímu do nového zoznamu, ak má cieľovú skupinu
+            if (targetGroup) {
+                teamsToSave.push({
+                    ...teamData,
+                    groupName: targetGroup,
+                    order: null, // Uistíme sa, že hodnota "order" sa nenastaví.
+                });
+            } else {
+                teamsToSave.push({
+                    ...teamData,
+                    groupName: null,
+                    order: null,
+                });
+            }
 
             await updateDoc(userRef, {
                 teams: {
