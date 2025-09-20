@@ -240,39 +240,51 @@ const AddGroupsApp = ({ userProfileData }) => {
             let currentCategoryTeams = teamsByCategory[categoryName] || [];
     
             // Odstránenie tímu z pôvodného zoznamu
-            const otherTeamsInGroup = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
+            const otherTeams = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
     
             let teamsToSave = [];
+            let newOrder = null;
+    
             // Ak presúvame do skupiny
             if (targetGroup) {
-                // Tímy, ktoré už sú v cieľovej skupine
-                const teamsInTargetGroup = otherTeamsInGroup.filter(t => t.groupName === targetGroup);
+                // Tímy, ktoré už sú v cieľovej skupine (na základe čerstvo načítaných dát)
+                const teamsInTargetGroup = otherTeams.filter(t => t.groupName === targetGroup);
                 
-                // Vypočítame poradie pre nový tím na základe najvyššieho existujúceho poradia v skupine.
-                // Toto zodpovedá hodnote "Ďalšie poradie" v konzole.
+                // Vypočítame poradie pre nový tím
                 const maxOrderInGroup = teamsInTargetGroup.length > 0
                     ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                     : 0;
+                newOrder = maxOrderInGroup + 1;
     
-                // Pridanie presúvaného tímu s order = maxOrderInGroup + 1
+                // Pridanie presúvaného tímu s vypočítaným poradím
                 const updatedTeamsInTargetGroup = [
                     ...teamsInTargetGroup,
                     {
                         ...teamData,
                         groupName: targetGroup,
-                        order: maxOrderInGroup + 1,
+                        order: newOrder,
                     }
                 ];
     
                 // Spojenie zoznamov
-                teamsToSave = [...otherTeamsInGroup.filter(t => t.groupName !== targetGroup), ...updatedTeamsInTargetGroup];
+                teamsToSave = [...otherTeams.filter(t => t.groupName !== targetGroup), ...updatedTeamsInTargetGroup];
             } else { // Ak presúvame mimo skupiny
-                teamsToSave = [...otherTeamsInGroup, {
+                teamsToSave = [...otherTeams, {
                     ...teamData,
                     groupName: null,
                     order: null,
                 }];
             }
+            
+            // Logging pre detailné sledovanie
+            console.log("--- Drag & Drop: Ukladanie dát ---");
+            console.log(`Dragovaný tím: ${teamData.teamName}`);
+            console.log(`Cieľová skupina: ${targetGroup}`);
+            console.log(`Vypočítané nové poradie: ${newOrder}`);
+            console.log("-----------------------------------");
+            console.log("Zoznam tímov pred uložením:");
+            console.table(teamsToSave);
+            console.log("-----------------------------------");
     
             // Vytvorenie finálneho zoznamu pre uloženie
             const finalTeamsToSave = [...new Set(teamsToSave)];
