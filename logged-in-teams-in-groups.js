@@ -237,10 +237,14 @@ const AddGroupsApp = ({ userProfileData }) => {
             
             // Pridanie tímu do nového zoznamu, ak má cieľovú skupinu
             if (targetGroup) {
+                // Nájdeme všetky tímy, ktoré už sú v cieľovej skupine
+                const teamsInTargetGroup = teamsToSave.filter(t => t.groupName === targetGroup);
+                // Nastavíme nové poradové číslo
+                const newOrder = teamsInTargetGroup.length + 1;
                 teamsToSave.push({
                     ...teamData,
                     groupName: targetGroup,
-                    order: null, // Uistíme sa, že hodnota "order" sa nenastaví.
+                    order: newOrder,
                 });
             } else {
                 teamsToSave.push({
