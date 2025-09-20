@@ -41,6 +41,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
+    const [nextOrderMap, setNextOrderMap] = useState({});
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -73,6 +74,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const usersRef = collection(window.db, 'users');
         const unsubscribeTeams = onSnapshot(usersRef, (querySnapshot) => {
             const teamsList = [];
+            const newNextOrderMap = {};
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
                 if (userData && userData.teams) {
@@ -92,6 +94,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
             });
             setAllTeams(teamsList);
+            // Vypočítanie nextOrderMap na základe aktuálnych dát
+            teamsList.forEach(team => {
+                if (team.groupName) {
+                    const key = `${team.category}-${team.groupName}`;
+                    if (!newNextOrderMap[key] || team.order >= newNextOrderMap[key]) {
+                        newNextOrderMap[key] = (team.order || 0) + 1;
+                    }
+                }
+            });
+            setNextOrderMap(newNextOrderMap);
             // Logovanie do konzoly v novom prehľadnom formáte
             const teamsByCategoryAndGroup = teamsList.reduce((acc, team) => {
                 const category = team.category;
@@ -121,7 +133,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     } else {
                         // Tímy v skupine podla poradia
                         const sortedTeams = teams.sort((a, b) => (a.order || 0) - (b.order || 0));
-                        const nextOrder = teams.length > 0 ? Math.max(...teams.map(t => t.order || 0)) + 1 : 1;
+                        const nextOrder = newNextOrderMap[`${category}-${groupName}`] || 1;
                         console.log(`\n-- Skupina: ${groupName} (Počet tímov: ${teams.length}, Ďalšie poradie: ${nextOrder}) --`);
                         console.table(sortedTeams.map((team) => ({
                             'Názov tímu': team.teamName,
@@ -190,14 +202,12 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleDragOver = (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-
+        
         // Kontrola, či sa kurzor presunul nad novú skupinu
         if (lastDragOverGroup.current !== targetGroup) {
             lastDragOverGroup.current = targetGroup;
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroup);
-            const nextOrder = teamsInTargetGroup.length > 0
-                ? Math.max(...teamsInTargetGroup.map(t => t.order || 0)) + 1
-                : 1;
+            const nextOrder = nextOrderMap[`${categoryIdToNameMap[targetCategoryId]}-${targetGroup}`] || 1;
 
             console.log("--- Drag & Drop Informácie ---");
             console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
@@ -239,67 +249,45 @@ const AddGroupsApp = ({ userProfileData }) => {
             const teamsByCategory = userData.teams;
             let currentCategoryTeams = teamsByCategory[categoryName] || [];
     
-            // Odstránenie presúvaného tímu z pôvodného zoznamu
-            const otherTeams = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
-    
-            let teamsToSave = [];
-    
-            // Ak presúvame do skupiny
+            let updatedTeamData;
+            
+            // Logika pre presun do skupiny
             if (targetGroup) {
-                // Nájdeme všetky tímy v cieľovej skupine (vrátane presúvaného, ale bez jeho pôvodného miesta)
-                let teamsInTargetGroup = otherTeams.filter(t => t.groupName === targetGroup);
-    
-                // Pridáme presúvaný tím s dočasným poradím, aby sa správne zoradil
-                const teamWithNewGroup = {
+                const nextOrder = nextOrderMap[`${categoryName}-${targetGroup}`] || 1;
+                console.log(`Vypočítané nové poradie pre tím '${teamData.teamName}': ${nextOrder}`);
+                updatedTeamData = {
                     ...teamData,
                     groupName: targetGroup,
-                    // Dáme mu dočasné poradie
-                    order: teamsInTargetGroup.length + 1,
+                    order: nextOrder
                 };
-    
-                teamsInTargetGroup.push(teamWithNewGroup);
-    
-                // Zoradíme všetky tímy v cieľovej skupine (podľa ich starého poradia)
-                teamsInTargetGroup.sort((a, b) => (a.order || 0) - (b.order || 0));
-    
-                // Nanovo preindexujeme celú skupinu
-                const reindexedTeams = teamsInTargetGroup.map((team, index) => ({
-                    ...team,
-                    order: index + 1,
-                }));
-    
-                console.log("--- Drag & Drop: Ukladanie dát ---");
-                console.log(`Dragovaný tím: ${teamData.teamName}`);
-                console.log(`Cieľová skupina: ${targetGroup}`);
-                console.log("Zoznam tímov pred uložením (s novým poradím):");
-                console.table(reindexedTeams.map(t => ({
-                    'Názov tímu': t.teamName,
-                    'Poradie v skupine': t.order,
-                })));
-                console.log("-----------------------------------");
-    
-                // Spojíme zoznamy
-                teamsToSave = [
-                    ...otherTeams.filter(t => t.groupName !== targetGroup),
-                    ...reindexedTeams
-                ];
-    
-            } else { // Ak presúvame mimo skupiny
-                teamsToSave = [...otherTeams, {
+            } else { // Logika pre presun mimo skupiny
+                updatedTeamData = {
                     ...teamData,
                     groupName: null,
-                    order: null,
-                }];
+                    order: null
+                };
             }
             
-            // Vytvorenie finálneho zoznamu pre uloženie
-            const finalTeamsToSave = [...new Set(teamsToSave)];
+            const updatedTeams = currentCategoryTeams.map(team =>
+                team.teamName === updatedTeamData.teamName ? updatedTeamData : team
+            );
+            
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
-                    [categoryName]: finalTeamsToSave
+                    [categoryName]: updatedTeams
                 }
             });
+
+            // Aktualizácia lokálneho stavu nextOrderMap po úspešnom zápise
+            if (targetGroup) {
+                const key = `${categoryName}-${targetGroup}`;
+                setNextOrderMap(prevMap => ({
+                    ...prevMap,
+                    [key]: (prevMap[key] || 0) + 1
+                }));
+            }
+    
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne pridaný do skupiny '${targetGroup || "bez skupiny"}'.`, 'success');
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
@@ -332,7 +320,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         });
 
         // Ak zoznam tímov neobsahuje žiadne tímy, zobrazíme drop-zónu.
-        if (sortedTeams.length === 0) {
+        if (sortedTeams.length === 0 && targetGroupId) {
             return React.createElement(
                 'div',
                 {
@@ -348,7 +336,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             'ul',
             { className: 'space-y-2 relative' },
             sortedTeams.map((team, index) => {
-                const teamNameWithOrder = team.groupName != null ? `${index + 1}. ${team.teamName} (${team.order})` : team.teamName;
+                const teamNameWithOrder = team.groupName != null ? `${team.order}. ${team.teamName}` : team.teamName;
                 return React.createElement(
                     'li',
                     {
