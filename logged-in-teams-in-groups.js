@@ -76,14 +76,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                     needsUpdate = true;
                     // Priamy zápis do databázy je neefektívny, radšej pripravíme hromadnú aktualizáciu
                     // Získame celý zoznam tímov pre daného užívateľa a kategóriu
-                    if (!updates.has(team.uid)) {
-                        updates.set(team.uid, {
-                            teams: {
-                                [groupData.category]: [...teamsList.filter(t => t.uid === team.uid && t.category === groupData.category)]
-                            }
+                    if (!updates.has(groupData.uid)) {
+                        updates.set(groupData.uid, {
+                            teams: {}
                         });
                     }
-                    const userTeamsToUpdate = updates.get(team.uid).teams[groupData.category];
+                    const userUpdates = updates.get(groupData.uid).teams;
+                    if (!userUpdates[groupData.category]) {
+                        userUpdates[groupData.category] = [...teamsList.filter(t => t.uid === groupData.uid && t.category === groupData.category)];
+                    }
+                    const userTeamsToUpdate = userUpdates[groupData.category];
                     const teamToUpdate = userTeamsToUpdate.find(t => t.teamName === team.teamName);
                     if (teamToUpdate) {
                         teamToUpdate.order = newOrder;
@@ -303,21 +305,19 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             console.log("Aktuálne tímy v kategórii pred aktualizáciou:", currentCategoryTeams);
             
-            // Nájdeme tímy, ktoré ostali v pôvodnej skupine, ak sa tím presunul z nejakej skupiny
-            let teamsLeftInOldGroup = [];
-            if (originalGroup) {
-                teamsLeftInOldGroup = currentCategoryTeams
-                    .filter(t => t.groupName === originalGroup && t.teamName !== teamData.teamName);
-            }
+            // Nájdeme tímy, ktoré ostali v pôvodnej skupine
+            const teamsLeftInOldGroup = originalGroup ? 
+                currentCategoryTeams.filter(t => t.groupName === originalGroup && t.teamName !== teamData.teamName) : [];
 
             // Prečíslovanie tímov v pôvodnej skupine
-            const updatedTeamsInOldGroup = teamsLeftInOldGroup.map((t, index) => ({
-                ...t,
-                order: index + 1
-            }));
+            const updatedTeamsInOldGroup = teamsLeftInOldGroup
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                .map((t, index) => ({
+                    ...t,
+                    order: index + 1
+                }));
 
             // Získame tímy v cieľovej skupine a vypočítame nové poradie
-            // Toto je opravená časť, ktorá by mala riešiť problém s priraďovaním "1"
             const teamsInTargetGroup = currentCategoryTeams.filter(team => team.groupName === targetGroup);
             const newOrder = targetGroup ? teamsInTargetGroup.length + 1 : null;
 
@@ -331,11 +331,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                 order: newOrder,
             };
 
-            // Vytvorenie nového poľa tímov
+            // Vytvorenie nového poľa tímov na uloženie
             const otherTeams = currentCategoryTeams.filter(
                 t => t.teamName !== teamData.teamName && t.groupName !== originalGroup
             );
-
             const teamsToSave = [...otherTeams, updatedTeam, ...updatedTeamsInOldGroup];
 
             await updateDoc(userRef, {
@@ -397,7 +396,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             'ul',
             { className: 'space-y-2 relative' },
             sortedTeams.map((team, index) => {
-                const teamNameWithOrder = team.groupName != null ? `${index + 1}. ${team.teamName} (${team.order})` : team.teamName;
+                const teamNameWithOrder = team.groupName != null ? `${index + 1}. ${team.teamName}` : team.teamName;
                 return React.createElement(
                     'li',
                     {
