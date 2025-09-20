@@ -270,21 +270,21 @@ const AddGroupsApp = ({ userProfileData }) => {
                     groupName: null,
                     order: null
                 };
-
-                // Získanie tímov v pôvodnej skupine, ktoré zostávajú
-                const teamsInOriginalGroup = currentCategoryTeams.filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
-                
+            
+                // Získanie tímov, ktoré zostávajú v pôvodnej skupine
+                const teamsInOriginalGroup = currentCategoryTeams
+                    .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+            
                 // Preusporiadanie a aktualizácia poradia pre zostávajúce tímy
-                const reorderedTeams = teamsInOriginalGroup
-                    .sort((a, b) => (a.order || 0) - (b.order || 0))
-                    .map((team, index) => ({
-                        ...team,
-                        order: index + 1
-                    }));
-
+                const reorderedTeams = teamsInOriginalGroup.map((team, index) => ({
+                    ...team,
+                    order: index + 1
+                }));
+            
                 // Spojenie všetkých upravených tímov do jedného poľa
-                const otherTeams = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
-                updatedTeams = [...otherTeams, updatedTeamData, ...reorderedTeams];
+                const teamsNotInOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
+                updatedTeams = [...teamsNotInOriginalGroup, updatedTeamData, ...reorderedTeams];
             }
             
             await updateDoc(userRef, {
