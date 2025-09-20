@@ -44,6 +44,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
+    const lastDragOverGroup = useRef(null); // Ref na uloženie poslednej skupiny, nad ktorou bol kurzor
 
     // Načítanie kategórie z URL hashu
     useEffect(() => {
@@ -186,6 +187,26 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
+    const handleDragOver = (e, targetGroup, targetCategoryId) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+
+        // Kontrola, či sa kurzor presunul nad novú skupinu
+        if (lastDragOverGroup.current !== targetGroup) {
+            lastDragOverGroup.current = targetGroup;
+            const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroup);
+            const nextOrder = teamsInTargetGroup.length > 0
+                ? Math.max(...teamsInTargetGroup.map(t => t.order || 0)) + 1
+                : 1;
+
+            console.log("--- Drag & Drop Informácie ---");
+            console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
+            console.log(`Počet tímov v skupine: ${teamsInTargetGroup.length}`);
+            console.log(`Nasledujúce poradie pre nový tím: ${nextOrder}`);
+            console.log("-------------------------------");
+        }
+    };
+
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
@@ -279,6 +300,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const handleDragEnd = () => {
         draggedItem.current = null;
+        lastDragOverGroup.current = null;
     };
 
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
@@ -297,10 +319,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 {
                     className: `min-h-[50px] p-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center`,
-                    onDragOver: (e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                    },
+                    onDragOver: (e) => handleDragOver(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
                 },
                 React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
@@ -371,10 +390,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 {
                                     key: groupIndex,
                                     className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}`,
-                                    onDragOver: (e) => {
-                                        e.preventDefault();
-                                        e.dataTransfer.dropEffect = "move";
-                                    },
+                                    onDragOver: (e) => handleDragOver(e, group.name, categoryId),
                                     onDrop: (e) => handleDrop(e, group.name, categoryId),
                                 },
                                 React.createElement(
@@ -412,10 +428,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 {
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
-                    onDragOver: (e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                    },
+                    onDragOver: (e) => handleDragOver(e, null, selectedCategoryId),
                     onDrop: (e) => handleDrop(e, null, selectedCategoryId),
                 },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy v kategórii: ${categoryName}`),
@@ -431,10 +444,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             {
                                 key: groupIndex,
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
-                                onDragOver: (e) => {
-                                    e.preventDefault();
-                                    e.dataTransfer.dropEffect = "move";
-                                },
+                                onDragOver: (e) => handleDragOver(e, group.name, selectedCategoryId),
                                 onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
                             },
                             React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' }, group.name),
@@ -484,10 +494,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     'div',
                     {
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
-                        onDragOver: (e) => {
-                            e.preventDefault();
-                            e.dataTransfer.dropEffect = "move";
-                        },
+                        onDragOver: (e) => handleDragOver(e, null, null),
                         onDrop: (e) => handleDrop(e, null, null),
                     },
                     React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
