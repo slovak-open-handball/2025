@@ -45,6 +45,76 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Stav pre drag & drop
     const draggedItem = useRef(null);
 
+    // Funkcia na prečíslovanie tímov v skupinách a aktualizáciu databázy
+    const reorderTeamsIfNecessary = async (teamsList) => {
+        const updates = new Map();
+        
+        const groupedTeams = teamsList.reduce((acc, team) => {
+            if (team.groupName) {
+                const key = `${team.uid}-${team.category}-${team.groupName}`;
+                if (!acc[key]) {
+                    acc[key] = {
+                        uid: team.uid,
+                        category: team.category,
+                        groupName: team.groupName,
+                        teams: []
+                    };
+                }
+                acc[key].teams.push(team);
+            }
+            return acc;
+        }, {});
+
+        for (const key in groupedTeams) {
+            const groupData = groupedTeams[key];
+            const sortedTeams = groupData.teams.sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            let needsUpdate = false;
+            sortedTeams.forEach((team, index) => {
+                const newOrder = index + 1;
+                if (team.order !== newOrder) {
+                    needsUpdate = true;
+                    // Priamy zápis do databázy je neefektívny, radšej pripravíme hromadnú aktualizáciu
+                    // Získame celý zoznam tímov pre daného užívateľa a kategóriu
+                    if (!updates.has(team.uid)) {
+                        updates.set(team.uid, {
+                            teams: {
+                                [groupData.category]: [...teamsList.filter(t => t.uid === team.uid && t.category === groupData.category)]
+                            }
+                        });
+                    }
+                    const userTeamsToUpdate = updates.get(team.uid).teams[groupData.category];
+                    const teamToUpdate = userTeamsToUpdate.find(t => t.teamName === team.teamName);
+                    if (teamToUpdate) {
+                        teamToUpdate.order = newOrder;
+                    }
+                }
+            });
+        }
+        
+        if (updates.size > 0) {
+            console.log("Detekovaná nekonzistencia v poradí, aktualizujem databázu.");
+            for (const [uid, data] of updates.entries()) {
+                const userRef = doc(window.db, 'users', uid);
+                try {
+                    const userDocSnap = await getDoc(userRef);
+                    if (userDocSnap.exists()) {
+                        const existingTeams = userDocSnap.data().teams;
+                        await updateDoc(userRef, {
+                            teams: {
+                                ...existingTeams,
+                                ...data.teams
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error("Chyba pri hromadnej aktualizácii databázy:", error);
+                }
+            }
+        }
+    };
+
+
     // Načítanie kategórie z URL hashu
     useEffect(() => {
         const hash = window.location.hash.substring(1);
@@ -91,7 +161,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
             });
             setAllTeams(teamsList);
-
+            reorderTeamsIfNecessary(teamsList);
             // Logovanie do konzoly v novom prehľadnom formáte
             const teamsByCategoryAndGroup = teamsList.reduce((acc, team) => {
                 const category = team.category;
