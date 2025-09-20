@@ -352,7 +352,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             'ul',
             { className: 'space-y-2 relative' },
             sortedTeams.map((team, index) => {
-                const teamNameWithOrder = team.groupName != null ? `${team.order}. ${team.teamName}` : team.teamName;
+                const teamNameWithOrder = team.groupName && team.order != null ? `${team.teamName} (${team.order})` : team.teamName;
                 return React.createElement(
                     'li',
                     {
@@ -362,7 +362,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         onDragStart: (e) => handleDragStart(e, team),
                         onDragEnd: handleDragEnd,
                     },
-                    `${!selectedCategoryId ? `${team.category}: ` : ''}${teamNameWithOrder}`
+                    `${!selectedCategoryId && team.category ? `${team.category}: ` : ''}${teamNameWithOrder}`
                 );
             })
         );
@@ -485,7 +485,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB) => nameA.localeCompare(nameB));
 
     return React.createElement(
         'div',
