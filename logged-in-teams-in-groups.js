@@ -129,6 +129,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         console.log(`\n-- ${groupName} (Počet tímov: ${teams.length}) --`);
                         console.table(sortedTeams.map(team => ({
                             'Názov tímu': team.teamName,
+                            'Poradie v databáze': team.order || null,
                         })));
                     } else {
                         // Tímy v skupine podla poradia
