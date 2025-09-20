@@ -266,8 +266,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
-        }
-    };
         } finally {
             console.log("----- Koniec operácie Drag & Drop -----");
         }
