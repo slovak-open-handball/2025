@@ -228,36 +228,48 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
             const userData = userDocSnap.data();
             const teamsByCategory = userData.teams;
-            const currentCategoryTeams = teamsByCategory[categoryName] || [];
+            let currentCategoryTeams = teamsByCategory[categoryName] || [];
 
             console.log("Aktuálne tímy v kategórii pred aktualizáciou:", currentCategoryTeams);
             
             // Odstránenie tímu z pôvodného zoznamu
-            const teamsToSave = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
+            currentCategoryTeams = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
             
             // Pridanie tímu do nového zoznamu, ak má cieľovú skupinu
             if (targetGroup) {
-                // Nájdeme všetky tímy, ktoré už sú v cieľovej skupine
-                const teamsInTargetGroup = teamsToSave.filter(t => t.groupName === targetGroup);
-                // Nastavíme nové poradové číslo
-                const newOrder = teamsInTargetGroup.length + 1;
-                teamsToSave.push({
+                currentCategoryTeams.push({
                     ...teamData,
                     groupName: targetGroup,
-                    order: newOrder,
+                    order: null, // Dočasne nastavíme null, aby sa re-indexovalo
                 });
             } else {
-                teamsToSave.push({
+                currentCategoryTeams.push({
                     ...teamData,
                     groupName: null,
                     order: null,
                 });
             }
 
+            // Aktualizácia poradia pre všetky tímy v cieľovej skupine
+            const teamsInTargetGroup = currentCategoryTeams.filter(t => t.groupName === targetGroup);
+            teamsInTargetGroup.sort((a, b) => (a.order || 0) - (b.order || 0)); // Zoradiť pre konzistentné poradie
+            teamsInTargetGroup.forEach((team, index) => {
+                team.order = index + 1;
+            });
+            
+            // Preloženie tímu do databázy
+            const updatedTeamsToSave = currentCategoryTeams.map(team => {
+                const teamToUpdate = teamsInTargetGroup.find(t => t.teamName === team.teamName);
+                if (teamToUpdate) {
+                    return teamToUpdate;
+                }
+                return team;
+            });
+
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
-                    [categoryName]: teamsToSave
+                    [categoryName]: updatedTeamsToSave
                 }
             });
 
