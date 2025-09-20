@@ -193,34 +193,22 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.error("Žiadne dáta na presunutie.");
             return;
         }
-
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
         const originalGroup = teamData.groupName;
-
-        console.log("----- Začiatok operácie Drag & Drop -----");
-        console.log("Dáta presúvaného tímu:", teamData);
-        console.log("Cieľová skupina:", targetGroup);
-        console.log("Cieľová kategória ID:", targetCategoryId);
-
-        // Kontrola, či sa pôvodná a cieľová skupina zhodujú
+    
         if (originalGroup === targetGroup) {
-            console.log("-----------------------------------------");
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
-            console.log("----- Koniec operácie Drag & Drop (s chybou) -----");
             return;
         }
-
         if (targetCategoryId && teamCategoryId !== targetCategoryId) {
             window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
-            console.warn("Kategórie sa nezhodujú, operácia zrušená.");
-            console.log("----- Koniec operácie Drag & Drop (s chybou) -----");
             return;
         }
-
+    
         const categoryName = categoryIdToNameMap[teamCategoryId];
         const userRef = doc(window.db, 'users', teamData.uid);
-
+    
         try {
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
@@ -229,12 +217,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             const userData = userDocSnap.data();
             const teamsByCategory = userData.teams;
             let currentCategoryTeams = teamsByCategory[categoryName] || [];
-
-            console.log("Aktuálne tímy v kategórii pred aktualizáciou:", currentCategoryTeams);
-            
+    
             // Odstránenie tímu z pôvodného zoznamu
             const otherTeamsInGroup = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
-            
+    
             let teamsToSave = [];
             // Ak presúvame do skupiny
             if (targetGroup) {
@@ -242,43 +228,38 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const teamsInTargetGroup = otherTeamsInGroup.filter(t => t.groupName === targetGroup);
                 // Ostatné tímy, ktoré nie sú v cieľovej skupine
                 const remainingTeams = otherTeamsInGroup.filter(t => t.groupName !== targetGroup);
-
+    
+                // Najväčšie existujúce order v skupine
+                const maxOrderInGroup = teamsInTargetGroup.length > 0
+                    ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
+                    : 0;
+    
                 // Pridanie presúvaného tímu na koniec zoznamu
                 teamsInTargetGroup.push({
                     ...teamData,
                     groupName: targetGroup,
-                    order: null, // dočasne null
+                    order: maxOrderInGroup + 1, // <-- tu je kľúčová zmena
                 });
-                
-                // Preindexovanie všetkých tímov v cieľovej skupine
-                teamsInTargetGroup.forEach((team, index) => {
-                    team.order = index + 1;
-                });
-                
-                // Spojenie zoznamov
+    
+                // Ostatné tímy ostávajú nezmenené
                 teamsToSave = [...remainingTeams, ...teamsInTargetGroup];
-
             } else { // Ak presúvame mimo skupiny
-                 teamsToSave = [...otherTeamsInGroup, {
+                teamsToSave = [...otherTeamsInGroup, {
                     ...teamData,
                     groupName: null,
                     order: null,
                 }];
             }
-            
+    
             // Vytvorenie finálneho zoznamu pre uloženie
             const finalTeamsToSave = [...new Set(teamsToSave)];
-
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
                     [categoryName]: finalTeamsToSave
                 }
             });
-
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne pridaný do skupiny '${targetGroup || "bez skupiny"}'.`, 'success');
-            console.log("Úspešná aktualizácia databázy.");
-
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
