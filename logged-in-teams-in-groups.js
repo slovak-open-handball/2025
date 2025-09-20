@@ -234,15 +234,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                     ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                     : 0;
     
-                // Pridanie presúvaného tímu na koniec zoznamu
-                teamsInTargetGroup.push({
-                    ...teamData,
-                    groupName: targetGroup,
-                    order: maxOrderInGroup + 1, // <-- tu je kľúčová zmena
-                });
+                // Pridanie presúvaného tímu s order = maxOrderInGroup + 1
+                const updatedTeamsInTargetGroup = [
+                    ...teamsInTargetGroup,
+                    {
+                        ...teamData,
+                        groupName: targetGroup,
+                        order: maxOrderInGroup + 1,
+                    }
+                ];
     
-                // Ostatné tímy ostávajú nezmenené
-                teamsToSave = [...remainingTeams, ...teamsInTargetGroup];
+                // Spojenie zoznamov
+                teamsToSave = [...remainingTeams, ...updatedTeamsInTargetGroup];
             } else { // Ak presúvame mimo skupiny
                 teamsToSave = [...otherTeamsInGroup, {
                     ...teamData,
@@ -263,6 +266,8 @@ const AddGroupsApp = ({ userProfileData }) => {
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+        }
+    };
         } finally {
             console.log("----- Koniec operácie Drag & Drop -----");
         }
