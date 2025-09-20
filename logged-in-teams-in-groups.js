@@ -226,10 +226,9 @@ const AddGroupsApp = ({ userProfileData }) => {
             if (targetGroup) {
                 // Tímy, ktoré už sú v cieľovej skupine
                 const teamsInTargetGroup = otherTeamsInGroup.filter(t => t.groupName === targetGroup);
-                // Ostatné tímy, ktoré nie sú v cieľovej skupine
-                const remainingTeams = otherTeamsInGroup.filter(t => t.groupName !== targetGroup);
-    
-                // Najväčšie existujúce order v skupine
+                
+                // Vypočítame poradie pre nový tím na základe najvyššieho existujúceho poradia v skupine.
+                // Toto zodpovedá hodnote "Ďalšie poradie" v konzole.
                 const maxOrderInGroup = teamsInTargetGroup.length > 0
                     ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
                     : 0;
