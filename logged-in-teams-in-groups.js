@@ -233,43 +233,46 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.log("Aktuálne tímy v kategórii pred aktualizáciou:", currentCategoryTeams);
             
             // Odstránenie tímu z pôvodného zoznamu
-            currentCategoryTeams = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
+            const otherTeamsInGroup = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
             
-            // Pridanie tímu do nového zoznamu, ak má cieľovú skupinu
+            let teamsToSave = [];
+            // Ak presúvame do skupiny
             if (targetGroup) {
-                currentCategoryTeams.push({
+                // Tímy, ktoré už sú v cieľovej skupine
+                const teamsInTargetGroup = otherTeamsInGroup.filter(t => t.groupName === targetGroup);
+                // Ostatné tímy, ktoré nie sú v cieľovej skupine
+                const remainingTeams = otherTeamsInGroup.filter(t => t.groupName !== targetGroup);
+
+                // Pridanie presúvaného tímu na koniec zoznamu
+                teamsInTargetGroup.push({
                     ...teamData,
                     groupName: targetGroup,
-                    order: null, // Dočasne nastavíme null, aby sa re-indexovalo
+                    order: null, // dočasne null
                 });
-            } else {
-                currentCategoryTeams.push({
+                
+                // Preindexovanie všetkých tímov v cieľovej skupine
+                teamsInTargetGroup.forEach((team, index) => {
+                    team.order = index + 1;
+                });
+                
+                // Spojenie zoznamov
+                teamsToSave = [...remainingTeams, ...teamsInTargetGroup];
+
+            } else { // Ak presúvame mimo skupiny
+                 teamsToSave = [...otherTeamsInGroup, {
                     ...teamData,
                     groupName: null,
                     order: null,
-                });
+                }];
             }
-
-            // Aktualizácia poradia pre všetky tímy v cieľovej skupine
-            const teamsInTargetGroup = currentCategoryTeams.filter(t => t.groupName === targetGroup);
-            teamsInTargetGroup.sort((a, b) => (a.order || 0) - (b.order || 0)); // Zoradiť pre konzistentné poradie
-            teamsInTargetGroup.forEach((team, index) => {
-                team.order = index + 1;
-            });
             
-            // Preloženie tímu do databázy
-            const updatedTeamsToSave = currentCategoryTeams.map(team => {
-                const teamToUpdate = teamsInTargetGroup.find(t => t.teamName === team.teamName);
-                if (teamToUpdate) {
-                    return teamToUpdate;
-                }
-                return team;
-            });
+            // Vytvorenie finálneho zoznamu pre uloženie
+            const finalTeamsToSave = [...new Set(teamsToSave)];
 
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
-                    [categoryName]: updatedTeamsToSave
+                    [categoryName]: finalTeamsToSave
                 }
             });
 
