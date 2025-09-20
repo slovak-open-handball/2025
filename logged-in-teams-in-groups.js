@@ -250,7 +250,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             let currentCategoryTeams = teamsByCategory[categoryName] || [];
     
             let updatedTeamData;
-            
+            let updatedTeams = [];
+
             // Logika pre presun do skupiny
             if (targetGroup) {
                 const nextOrder = nextOrderMap[`${categoryName}-${targetGroup}`] || 1;
@@ -260,17 +261,31 @@ const AddGroupsApp = ({ userProfileData }) => {
                     groupName: targetGroup,
                     order: nextOrder
                 };
+                updatedTeams = currentCategoryTeams.map(team =>
+                    team.teamName === updatedTeamData.teamName ? updatedTeamData : team
+                );
             } else { // Logika pre presun mimo skupiny
                 updatedTeamData = {
                     ...teamData,
                     groupName: null,
                     order: null
                 };
+
+                // Získanie tímov v pôvodnej skupine, ktoré zostávajú
+                const teamsInOriginalGroup = currentCategoryTeams.filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
+                
+                // Preusporiadanie a aktualizácia poradia pre zostávajúce tímy
+                const reorderedTeams = teamsInOriginalGroup
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map((team, index) => ({
+                        ...team,
+                        order: index + 1
+                    }));
+
+                // Spojenie všetkých upravených tímov do jedného poľa
+                const otherTeams = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
+                updatedTeams = [...otherTeams, updatedTeamData, ...reorderedTeams];
             }
-            
-            const updatedTeams = currentCategoryTeams.map(team =>
-                team.teamName === updatedTeamData.teamName ? updatedTeamData : team
-            );
             
             await updateDoc(userRef, {
                 teams: {
