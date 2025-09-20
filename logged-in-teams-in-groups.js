@@ -244,7 +244,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 ];
     
                 // Spojenie zoznamov
-                teamsToSave = [...remainingTeams, ...updatedTeamsInTargetGroup];
+                teamsToSave = [...otherTeamsInGroup.filter(t => t.groupName !== targetGroup), ...updatedTeamsInTargetGroup];
             } else { // Ak presúvame mimo skupiny
                 teamsToSave = [...otherTeamsInGroup, {
                     ...teamData,
