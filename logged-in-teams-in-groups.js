@@ -227,6 +227,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const originalGroup = teamData.groupName;
         const teamCategoryName = categoryIdToNameMap[dragData.teamCategoryId];
         const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+        const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
 
         console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
         console.log(`Pôvodná kategória: ${teamCategoryName}`);
@@ -308,7 +309,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Vytvorenie a uloženie notifikácie do databázy
             const auth = window.auth;
             const currentUser = auth.currentUser;
-            const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
 
             await addDoc(collection(window.db, `notifications`), {
                 changes: [notificationMessage],
@@ -318,10 +318,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                 timestamp: Timestamp.now(),
             });
 
-            showLocalNotification(
-                `Tím ${teamData.teamName} bol úspešne ${targetGroup ? `pridaný do skupiny ${targetGroup}` : `odstránený zo skupiny`}.`,
-                'success'
-            );
+            showLocalNotification(notificationMessage, 'success');
+
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
@@ -502,7 +500,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
     // Dynamické triedy pre notifikáciu
-    const notificationClasses = `notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform 
+    const notificationClasses = `notification absolute top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
                   ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     let typeClasses = '';
     switch (notification.type) {
