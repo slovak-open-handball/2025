@@ -317,17 +317,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             await Promise.all(batchPromises);
             
-            // Uloženie notifikácie do databázy
-            try {
-                const notificationsCollectionRef = collection(window.db, 'notifications');
-                await addDoc(notificationsCollectionRef, {
-                    changes: [notificationMessage],
-                    timestamp: Timestamp.now()
-                });
-            } catch (notificationError) {
-                console.error("Chyba pri ukladaní notifikácie:", notificationError);
-            }
-
             // Nastavenie notifikácie, ktorá sa zobrazí po re-renderi
             setPendingNotification(notificationMessage);
 
