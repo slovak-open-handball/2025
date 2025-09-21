@@ -224,6 +224,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const dragData = draggedItem.current;
         if (!dragData) {
             console.error("Žiadne dáta na presunutie.");
+            setNotification({ id: Date.now(), message: "Žiadne dáta na presunutie.", type: 'error' });
             return;
         }
 
@@ -262,53 +263,43 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     // Nájdeme tím, ktorý sa má presunúť, v rámci daného používateľa
                     const teamToUpdate = teams.find(t => t.teamName === teamData.teamName);
 
-                    // Skupiny tímov, ktoré zostanú v pôvodnej skupine
-                    const teamsRemainingInOriginalGroup = teams.filter(t => t.groupName === originalGroup && t.teamName !== teamData.teamName);
-                    
-                    // Príprava presunutého tímu s novým poradím a skupinou
+                    // Ak sa tím nenašiel, preskočíme tohto používateľa, ale pre ostatných prebehne aktualizácia
+                    if (!teamToUpdate) {
+                        console.log(`Tím ${teamData.teamName} nebol nájdený u používateľa ${userDoc.id}. Pokračujem s ostatnými.`);
+                        return;
+                    }
+
+                    // Poradie pre presunutý tím
                     const nextOrder = targetGroup ? (nextOrderMap[`${targetCategoryName}-${targetGroup}`] || 1) : null;
                     const movedTeam = { ...teamToUpdate, groupName: targetGroup, order: nextOrder };
 
-                    // Aktualizovaný zoznam tímov pre používateľa, ktorý vlastnil presúvaný tím
+                    // Aktualizovaný zoznam tímov pre daného používateľa
                     const updatedUserTeams = teams.map(t => {
+                        // Ak je to presunutý tím, vrátime upravený objekt
                         if (t.teamName === teamData.teamName) {
                             return movedTeam;
                         }
-
-                        // Ak tím zostal v pôvodnej skupine a má vyššie poradie ako tím, ktorý sa odstránil
-                        if (t.groupName === originalGroup && t.order > teamData.order) {
-                            return { ...t, order: t.order - 1 };
+                        // Ak je to tím v pôvodnej skupine a má vyššie poradie, dekrementujeme poradie
+                        if (t.groupName === originalGroup && (t.order || 0) > (teamData.order || 0)) {
+                            return { ...t, order: (t.order || 0) - 1 };
                         }
-                        
+                        // Inak vrátime tím bez zmeny
                         return t;
-                    }).filter(t => t); // Odstránenie null/undefined
+                    });
                     
-                    // Ak používateľ nevlastní presúvaný tím, len aktualizujeme poradie ostatných tímov
-                    if (userDoc.id !== teamData.uid) {
-                        const otherUsersTeams = teams.map(t => {
-                            if (t.groupName === originalGroup && t.order > teamData.order) {
-                                return { ...t, order: t.order - 1 };
-                            }
-                            return t;
-                        });
-                        batchPromises.push(
-                            updateDoc(userDoc.ref, {
-                                [`teams.${teamCategoryName}`]: otherUsersTeams
-                            })
-                        );
-                    } else {
-                        // Ak používateľ vlastní presúvaný tím
-                         batchPromises.push(
-                            updateDoc(userDoc.ref, {
-                                [`teams.${teamCategoryName}`]: updatedUserTeams
-                            })
-                        );
-                    }
+                    // Pridáme operáciu aktualizácie do fronty
+                    batchPromises.push(
+                        updateDoc(userDoc.ref, {
+                            [`teams.${teamCategoryName}`]: updatedUserTeams
+                        })
+                    );
                 }
             });
 
+            console.log("Pripravené na vykonanie hromadnej aktualizácie.");
             await Promise.all(batchPromises);
-            
+            console.log("Hromadná aktualizácia úspešne dokončená.");
+
             // Zápis záznamu o notifikácii do databázy
             if (window.db && window.auth && window.auth.currentUser) {
                 try {
@@ -319,13 +310,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
                     });
+                    console.log("Notifikácia o zmene bola úspešne uložená v databáze.");
                 } catch (dbError) {
                     console.error("Chyba pri ukladaní notifikácie do databázy:", dbError);
                 }
             }
             
             // Notifikácia sa zobrazí bez obnovenia stránky
-            const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
+            const notificationMessage = `Tím ${teamData.teamName} bol presunutý do skupiny '${targetGroup || 'bez skupiny'}' v kategórii ${teamCategoryName}.`;
+            console.log("Notifikácia sa má zobraziť...");
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
