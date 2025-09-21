@@ -1,6 +1,6 @@
-// Importy pre Firebase funkcie
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
 const { useState, useEffect, useRef } = React;
 
 const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
@@ -17,29 +17,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
 
-    // Zobrazenie lokálnej notifikácie a jej uloženie do databázy
-    const showLocalNotificationAndSave = async (message, type) => {
+    // Zobrazenie lokálnej notifikácie
+    const showLocalNotification = (message, type) => {
         setNotification({ message, type, isVisible: true, updateOnHide: false });
 
         setTimeout(() => {
             setNotification(prev => ({ ...prev, isVisible: false }));
         }, 5000);
-
-        try {
-            const user = window.auth.currentUser;
-            if (user && window.db) {
-                const notificationsCollectionRef = collection(window.db, 'notifications');
-                await addDoc(notificationsCollectionRef, {
-                    changes: [message],
-                    timestamp: Timestamp.now(),
-                    userEmail: user.email,
-                    recipientId: "all_admins"
-                });
-                console.log("Notifikácia úspešne uložená do databázy.");
-            }
-        } catch (error) {
-            console.error("Chyba pri ukladaní notifikácie do databázy:", error);
-        }
     };
 
     // Efekt pre načítanie dát z Firebase
@@ -162,10 +146,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         };
     }, []);
 
-    // Efekt na zobrazenie notifikácie po re-renderi
+    // Nový useEffect na zobrazenie notifikácie po re-renderi
     useEffect(() => {
         if (pendingNotification) {
-            showLocalNotificationAndSave(pendingNotification, 'success');
+            showLocalNotification(pendingNotification, 'success');
             setPendingNotification(null);
         }
     }, [allTeams, pendingNotification]);
@@ -264,12 +248,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         if (originalGroup === targetGroup) {
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
-            showLocalNotificationAndSave("Tím sa už nachádza v tejto skupine.", 'info');
+            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info');
             return;
         }
 
         if (targetCategoryId && teamCategoryName !== targetCategoryName) {
-            showLocalNotificationAndSave("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
 
@@ -333,12 +317,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             await Promise.all(batchPromises);
             
+            // Ulozenie notifikacie do databazy po uspesnom presune
+            await addDoc(collection(window.db, 'notifications'), {
+                changes: [notificationMessage],
+                timestamp: Timestamp.now(),
+                userEmail: userProfileData.email,
+                recipientId: 'all_admins'
+            });
+
             // Nastavenie notifikácie, ktorá sa zobrazí po re-renderi
             setPendingNotification(notificationMessage);
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            showLocalNotificationAndSave("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
         }
     };
 
@@ -516,8 +508,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
     // Dynamické triedy pre notifikáciu
-    const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
-                  ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
+    const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center  
+                    ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     let typeClasses = '';
     switch (notification.type) {
         case 'success':
