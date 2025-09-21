@@ -9,9 +9,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
-    const [notification, setNotification] = useState({ message: '', type: '', isVisible: false, updateOnHide: false });
-    const [userProfileData, setUserProfileData] = useState(initialUserProfileData);
-    const [pendingNotification, setPendingNotification] = useState(null);
+    const [notification, setNotification] = useState({ message: '', type: '', isVisible: false });
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -19,7 +17,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     // Zobrazenie lokálnej notifikácie
     const showLocalNotification = (message, type) => {
-        setNotification({ message, type, isVisible: true, updateOnHide: false });
+        setNotification({ message, type, isVisible: true });
 
         setTimeout(() => {
             setNotification(prev => ({ ...prev, isVisible: false }));
@@ -145,14 +143,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             unsubscribeGroups();
         };
     }, []);
-
-    // Nový useEffect na zobrazenie notifikácie po re-renderi
-    useEffect(() => {
-        if (pendingNotification) {
-            showLocalNotification(pendingNotification, 'success');
-            setPendingNotification(null);
-        }
-    }, [allTeams, pendingNotification]);
 
     // Načítanie kategórie z URL hashu
     useEffect(() => {
@@ -317,15 +307,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             await Promise.all(batchPromises);
             
-            // Nastavenie notifikácie, ktorá sa zobrazí po re-renderi
-            setPendingNotification(notificationMessage);
+            // Zobrazenie lokálnej notifikácie po úspešnom presune
+            showLocalNotification(notificationMessage, 'success');
 
             // Zápis záznamu o notifikácii do databázy
             if (window.db && window.auth && window.auth.currentUser) {
                 try {
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        message: [notificationMessage],
+                        changes: [notificationMessage],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
