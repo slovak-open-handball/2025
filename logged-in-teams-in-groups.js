@@ -319,7 +319,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             });
 
             showLocalNotification(
-                `Tím ${teamData.teamName} bol úspešne ${targetGroup ? `pridaný do skupiny ${targetGroup}` : 'odstránený zo skupiny'}.`,
+                `Tím ${teamData.teamName} bol úspešne ${targetGroup ? `pridaný do skupiny ${targetGroup}` : `odstránený zo skupiny`}.`,
                 'success'
             );
         } catch (error) {
@@ -502,20 +502,21 @@ const AddGroupsApp = ({ userProfileData }) => {
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
     // Dynamické triedy pre notifikáciu
-    const notificationClasses = `absolute top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-opacity duration-300 transform ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
+    const notificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform 
+                  ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     let typeClasses = '';
     switch (notification.type) {
         case 'success':
-            typeClasses = 'bg-green-500 text-white';
+            typeClasses = 'bg-green-500';
             break;
         case 'error':
-            typeClasses = 'bg-red-500 text-white';
+            typeClasses = 'bg-red-500';
             break;
         case 'info':
-            typeClasses = 'bg-blue-500 text-white';
+            typeClasses = 'bg-blue-500';
             break;
         default:
-            typeClasses = 'bg-gray-700 text-white';
+            typeClasses = 'bg-gray-700';
     }
 
     return React.createElement(
