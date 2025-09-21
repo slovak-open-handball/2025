@@ -9,7 +9,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
-    const [notification, setNotification] = useState({ message: '', type: '', isVisible: false });
+    const [notification, setNotification] = useState({ message: '', type: '', isVisible: false, updateOnHide: false });
     const [userProfileData, setUserProfileData] = useState(initialUserProfileData);
 
     // Stav pre drag & drop
@@ -17,12 +17,29 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const lastDragOverGroup = useRef(null);
 
     // Zobrazenie lokálnej notifikácie
-    const showLocalNotification = (message, type) => {
-        setNotification({ message, type, isVisible: true });
-        setTimeout(() => {
-            setNotification(prev => ({ ...prev, isVisible: false }));
-        }, 5000);
+    const showLocalNotification = (message, type, updateAfterTimeout = false) => {
+        setNotification({ message, type, isVisible: true, updateOnHide: updateAfterTimeout });
+        if (!updateAfterTimeout) {
+            setTimeout(() => {
+                setNotification(prev => ({ ...prev, isVisible: false }));
+            }, 5000);
+        }
     };
+
+    // Efekt pre notifikácie
+    useEffect(() => {
+        if (notification.isVisible && notification.updateOnHide) {
+            const timer = setTimeout(() => {
+                setNotification(prev => ({ ...prev, isVisible: false }));
+                // Trigger an update after the notification disappears
+                // We'll use a simple state change to force a re-render
+                // This is a simple way to achieve this without complex logic
+                console.log("Notifikácia zmizla. Aktualizujem stav aplikácie...");
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification.isVisible, notification.updateOnHide]);
+
 
     // Načítanie kategórie z URL hashu
     useEffect(() => {
@@ -238,12 +255,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         if (originalGroup === targetGroup) {
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
-            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info');
+            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info', true);
             return;
         }
 
         if (targetCategoryId && teamCategoryName !== targetCategoryName) {
-            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error', true);
             return;
         }
 
@@ -322,11 +339,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 timestamp: Timestamp.now(),
             });
 
-            showLocalNotification(notificationMessage, 'success');
+            showLocalNotification(notificationMessage, 'success', true);
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error', true);
         }
     };
 
