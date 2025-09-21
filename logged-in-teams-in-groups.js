@@ -242,7 +242,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         const userRef = doc(window.db, 'users', teamData.uid);
 
         try {
-            // Používame aktuálny stav zo state (onSnapshot)
             const nextOrder = nextOrderMap[`${categoryName}-${targetGroup}`] || 1;
             console.log(`Používam poradie z onSnapshot: ${nextOrder}`);
 
@@ -252,40 +251,43 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
             const userData = userDocSnap.data();
             const teamsByCategory = userData.teams;
-            let currentCategoryTeams = teamsByCategory[categoryName] || [];
+            const currentCategoryTeams = teamsByCategory[categoryName] || [];
 
-            // Vytvoríme novú sadu tímov s aktualizovaným poradím a skupinou
+            // Vytvoríme novú sadu tímov a prečíslovanie pôvodnej skupiny
             let updatedTeams = [];
-            const teamsToReorder = [];
+            let teamsInOriginalGroup = [];
+            let movedTeamData = null;
 
-            // Preiterujeme všetky tímy v kategórii
+            // Roztriedenie tímov
             currentCategoryTeams.forEach(team => {
-                // Ak je to presúvaný tím, aktualizujeme jeho dáta
                 if (team.teamName === teamData.teamName) {
-                    const newTeamData = targetGroup
+                    // Presunutý tím
+                    movedTeamData = targetGroup
                         ? { ...team, groupName: targetGroup, order: nextOrder }
                         : { ...team, groupName: null, order: null };
-                    updatedTeams.push(newTeamData);
                 } else if (team.groupName === originalGroup) {
-                    // Ak je tím z pôvodnej skupiny (a nie je to presúvaný tím),
-                    // pridáme ho do dočasného poľa na prečíslovanie
-                    teamsToReorder.push(team);
+                    // Tímy, ktoré zostali v pôvodnej skupine
+                    teamsInOriginalGroup.push(team);
                 } else {
-                    // Ostatné tímy sa nemenia
+                    // Tímy, ktoré nepatria ani do pôvodnej ani do novej skupiny
                     updatedTeams.push(team);
                 }
             });
 
-            // Prečíslovanie tímov v pôvodnej skupine po odchode tímu
-            teamsToReorder.sort((a, b) => (a.order || 0) - (b.order || 0));
-            const reorderedOriginalTeams = teamsToReorder.map((team, index) => ({
+            // Prečíslovanie zostávajúcich tímov v pôvodnej skupine
+            teamsInOriginalGroup.sort((a, b) => (a.order || 0) - (b.order || 0));
+            const reorderedOriginalTeams = teamsInOriginalGroup.map((team, index) => ({
                 ...team,
                 order: index + 1
             }));
 
-            // Spojíme re-usporiadané tímy späť do hlavného poľa
+            // Spojenie všetkých tímov do jedného poľa
+            if (movedTeamData) {
+                updatedTeams.push(movedTeamData);
+            }
             updatedTeams = [...updatedTeams, ...reorderedOriginalTeams];
 
+            // Aktualizácia dokumentu
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
