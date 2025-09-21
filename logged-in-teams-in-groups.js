@@ -10,7 +10,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
     const [notification, setNotification] = useState({ message: '', type: '', isVisible: false });
-    const [pendingNotification, setPendingNotification] = useState(null);
+    const [lastMovedTeam, setLastMovedTeam] = useState(null);
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -105,6 +105,19 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 });
                 console.log("-----------------------------------------");
             });
+
+            // Logika na zobrazenie notifikácie po potvrdení z databázy
+            if (lastMovedTeam) {
+                const teamExistsInTargetGroup = teamsList.some(
+                    t => t.teamName === lastMovedTeam.teamName && t.groupName === lastMovedTeam.targetGroup
+                );
+                
+                if (teamExistsInTargetGroup) {
+                    const notificationMessage = `Tím ${lastMovedTeam.teamName} v kategórii ${lastMovedTeam.category} bol presunutý zo skupiny '${lastMovedTeam.originalGroup || 'bez skupiny'}' do skupiny '${lastMovedTeam.targetGroup || 'bez skupiny'}'.`;
+                    showLocalNotification(notificationMessage, 'success');
+                    setLastMovedTeam(null); // Resetujeme, aby sa notifikácia nezobrazovala opakovane
+                }
+            }
         });
 
         const categoriesRef = doc(window.db, 'settings', 'categories');
@@ -143,15 +156,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             unsubscribeCategories();
             unsubscribeGroups();
         };
-    }, []);
-
-    // Nový useEffect na zobrazenie notifikácie po re-renderi
-    useEffect(() => {
-        if (pendingNotification) {
-            showLocalNotification(pendingNotification, 'success');
-            setPendingNotification(null);
-        }
-    }, [allTeams, pendingNotification]);
+    }, [lastMovedTeam]);
 
     // Načítanie kategórie z URL hashu
     useEffect(() => {
@@ -237,7 +242,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalGroup = teamData.groupName;
         const teamCategoryName = categoryIdToNameMap[dragData.teamCategoryId];
         const targetCategoryName = categoryIdToNameMap[targetCategoryId];
-        const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
 
         console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
         console.log(`Pôvodná kategória: ${teamCategoryName}`);
@@ -316,15 +320,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             await Promise.all(batchPromises);
             
-            // Nastavenie notifikácie, ktorá sa zobrazí po re-renderi
-            setPendingNotification(notificationMessage);
+            // Nastavenie dočasnej premennej po úspešnom uložení
+            setLastMovedTeam({
+                teamName: teamData.teamName,
+                originalGroup: originalGroup,
+                targetGroup: targetGroup,
+                category: teamCategoryName
+            });
 
             // Zápis záznamu o notifikácii do databázy
             if (window.db && window.auth && window.auth.currentUser) {
                 try {
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        changes: [notificationMessage],
+                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
