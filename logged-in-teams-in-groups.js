@@ -268,94 +268,95 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         return;
     }
 
+    // Namiesto `getDoc` použijeme dáta z lokálneho stavu, ktorý je aktualizovaný `onSnapshot`.
+    // Toto je kľúčový krok na vyriešenie problému so zastaranými dátami bez použitia transakcií.
     const userRef = doc(window.db, 'users', teamData.uid);
+    const currentCategoryTeams = allTeams.filter(team => team.category === teamCategoryName);
+
+    console.log("Všetky tímy v kategórii z lokálneho stavu:", currentCategoryTeams);
 
     try {
-        await runTransaction(window.db, async (transaction) => {
-            const userDocSnap = await transaction.get(userRef);
-            if (!userDocSnap.exists()) {
-                throw new Error("Dokument používateľa neexistuje!");
-            }
-            const userData = userDocSnap.data();
-            const teamsByCategory = { ...userData.teams };
-            const currentCategoryTeams = teamsByCategory[teamCategoryName] || [];
+        if (originalGroup) {
+            // Odfiltrovanie tímu, ktorý presúvame
+            const teamsRemainingInOriginalGroup = currentCategoryTeams
+                .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
 
-            console.log("Všetky tímy v kategórii pred filtrom (v transakcii):", currentCategoryTeams);
+            console.log(`\nKontrola poradia po odchode tímu '${teamData.teamName}' zo skupiny '${originalGroup}'.`);
+            console.log("Poradie tímov pred prečíslovaním:", teamsRemainingInOriginalGroup);
 
-            if (originalGroup) {
-                const teamsRemainingInOriginalGroup = currentCategoryTeams
-                    .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
-
-                console.log(`\nKontrola poradia po odchode tímu '${teamData.teamName}' zo skupiny '${originalGroup}'.`);
-                console.log("Poradie tímov pred prečíslovaním:", teamsRemainingInOriginalGroup);
-
-                let reorderedOriginalTeams = [];
-                if (teamsRemainingInOriginalGroup.length > 0) {
-                    reorderedOriginalTeams = teamsRemainingInOriginalGroup
-                        .sort((a, b) => (a.order || 0) - (b.order || 0))
-                        .map((team, index) => ({
-                            ...team,
-                            order: index + 1
-                        }));
-                    console.log("Poradie tímov po prečíslovaní:", reorderedOriginalTeams);
-                }
-
-                const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
-                const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
-                const movedTeamData = { ...teamData, groupName: targetGroup, order: nextOrder };
-
-                const updatedTeams = [
-                    ...teamsOutsideOriginalGroup,
-                    ...reorderedOriginalTeams,
-                    movedTeamData
-                ].filter((team, index, self) =>
-                    index === self.findIndex(t => t.teamName === team.teamName && t.uid === team.uid)
-                );
-
-                transaction.update(userRef, {
-                    teams: {
-                        ...teamsByCategory,
-                        [teamCategoryName]: updatedTeams
-                    }
-                });
-
-                if (teamsRemainingInOriginalGroup.length === 0) {
-                     setNextOrderMap(prev => ({
-                        ...prev,
-                        [`${teamCategoryName}-${originalGroup}`]: 1
+            let reorderedOriginalTeams = [];
+            if (teamsRemainingInOriginalGroup.length > 0) {
+                reorderedOriginalTeams = teamsRemainingInOriginalGroup
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map((team, index) => ({
+                        ...team,
+                        order: index + 1
                     }));
+                console.log("Poradie tímov po prečíslovaní:", reorderedOriginalTeams);
+            }
+
+            // Ostatné tímy v kategórii, ktoré nie sú v pôvodnej skupine
+            const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
+            
+            // Získanie nasledujúceho poradia pre cieľovú skupinu
+            const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
+            const movedTeamData = { ...teamData, groupName: targetGroup, order: nextOrder };
+            
+            // Vytvorenie finálneho poľa všetkých tímov v kategórii
+            const updatedTeams = [
+                ...teamsOutsideOriginalGroup,
+                ...reorderedOriginalTeams,
+                movedTeamData
+            ].filter((team, index, self) =>
+                index === self.findIndex(t => t.teamName === team.teamName && t.uid === team.uid)
+            );
+
+            // Aktualizácia databázy
+            await updateDoc(userRef, {
+                teams: {
+                    [teamCategoryName]: updatedTeams
                 }
-            } else {
-                const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
-                const updatedTeam = { ...teamData, groupName: targetGroup, order: nextOrder };
-                const updatedTeams = currentCategoryTeams.map(t =>
-                    t.teamName === teamData.teamName ? updatedTeam : t
-                );
+            }, { merge: true });
 
-                transaction.update(userRef, {
-                    teams: {
-                        ...teamsByCategory,
-                        [teamCategoryName]: updatedTeams
-                    }
-                });
+            if (teamsRemainingInOriginalGroup.length === 0) {
+                 setNextOrderMap(prev => ({
+                    ...prev,
+                    [`${teamCategoryName}-${originalGroup}`]: 1
+                }));
             }
 
-            if (targetGroup) {
-                 setNextOrderMap(prev => {
-                     const newMap = { ...prev };
-                     const key = `${teamCategoryName}-${targetGroup}`;
-                     newMap[key] = (newMap[key] || 1) + 1;
-                     return newMap;
-                 });
-            }
-        });
+        } else {
+            // Prípad presunu tímu zo zoznamu bez skupiny do nejakej skupiny
+            const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
+            const updatedTeam = { ...teamData, groupName: targetGroup, order: nextOrder };
+
+            const updatedTeams = currentCategoryTeams.map(t =>
+                t.teamName === teamData.teamName && t.uid === teamData.uid ? updatedTeam : t
+            );
+
+            await updateDoc(userRef, {
+                teams: {
+                    [teamCategoryName]: updatedTeams
+                }
+            }, { merge: true });
+        }
+        
+        // Akcia bola úspešná, aktualizujeme lokálny stav pre poradie
+        if (targetGroup) {
+             setNextOrderMap(prev => {
+                 const newMap = { ...prev };
+                 const key = `${teamCategoryName}-${targetGroup}`;
+                 newMap[key] = (newMap[key] || 1) + 1;
+                 return newMap;
+             });
+        }
 
         window.showGlobalNotification(
             `Tím '${teamData.teamName}' bol úspešne ${targetGroup ? `pridaný do skupiny '${targetGroup}'` : 'odstránený zo skupiny'}.`,
             'success'
         );
     } catch (error) {
-        console.error("Chyba pri aktualizácii databázy v transakcii:", error);
+        console.error("Chyba pri aktualizácii databázy:", error);
         window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
     }
 };
