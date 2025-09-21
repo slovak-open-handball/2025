@@ -346,6 +346,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             sessionStorage.setItem('notificationMessage', notificationMessage);
             sessionStorage.setItem('notificationType', 'success');
 
+            // Okamžité zobrazenie notifikácie po úspešnom uložení
+            showLocalNotification(notificationMessage, 'success');
+
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
@@ -414,17 +417,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne skupiny neboli nájdené.')
             );
         }
-        const sortedCategoryIds = Object.keys(allGroupsByCategoryId).sort((a, b) => {
-            const nameA = categoryIdToNameMap[a] || '';
-            const nameB = categoryIdToNameMap[b] || '';
-            return nameA.localeCompare(nameB);
-        });
+        const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
+            .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        
         return React.createElement(
             'div',
             { className: 'flex flex-wrap gap-4 justify-center' },
-            sortedCategoryIds.map((categoryId, index) => {
+            sortedCategoryEntries.map(([categoryId, categoryName], index) => {
                 const groups = allGroupsByCategoryId[categoryId];
-                const categoryName = categoryIdToNameMap[categoryId] || "Neznáma kategória";
                 const teamsInThisCategory = allTeams.filter(team => team.category === categoryIdToNameMap[categoryId]);
 
                 const sortedGroups = [...groups].sort((a, b) => {
@@ -522,6 +522,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         );
     };
 
+    // Opravená syntaktická chyba
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
