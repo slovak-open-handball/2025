@@ -10,6 +10,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
     const [notification, setNotification] = useState({ message: '', type: '', isVisible: false });
+    const [pendingNotification, setPendingNotification] = useState(null);
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -143,6 +144,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             unsubscribeGroups();
         };
     }, []);
+
+    // Nový useEffect na zobrazenie notifikácie po re-renderi
+    useEffect(() => {
+        if (pendingNotification) {
+            showLocalNotification(pendingNotification, 'success');
+            setPendingNotification(null);
+        }
+    }, [allTeams, pendingNotification]);
 
     // Načítanie kategórie z URL hashu
     useEffect(() => {
@@ -307,8 +316,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             await Promise.all(batchPromises);
             
-            // Zobrazenie lokálnej notifikácie po úspešnom presune
-            showLocalNotification(notificationMessage, 'success');
+            // Nastavenie notifikácie, ktorá sa zobrazí po re-renderi
+            setPendingNotification(notificationMessage);
 
             // Zápis záznamu o notifikácii do databázy
             if (window.db && window.auth && window.auth.currentUser) {
