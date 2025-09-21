@@ -284,16 +284,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
         const userData = userDocSnap.data();
         const teamsByCategory = { ...userData.teams };
-        // !!! OPRAVENÁ LÓGIKA FILTROVANIA !!!
-        // Namiesto filtrovania iba podľa kategórie, pracujeme so všetkými tímami používateľa,
-        // aby sme správne prečíslovali bez ohľadu na kategóriu.
-        const allUserTeams = Object.values(teamsByCategory).flat();
+        const currentCategoryTeams = teamsByCategory[teamCategoryName] || [];
 
         // ----- Kontrola a odstránenie číselnej medzery v poradí po presune -----
         // Táto logika sa spustí iba vtedy, ak sa tím presúva z nejakej skupiny.
         if (originalGroup) {
             // 1. Získame zoznam tímov, ktoré ostali v pôvodnej skupine po odobratí tímu.
-            const teamsRemainingInOriginalGroup = allUserTeams
+            const teamsRemainingInOriginalGroup = currentCategoryTeams
                 .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
 
             // 2. Zoradíme ich podľa aktuálneho poradia a prečíslujeme, aby sme odstránili medzeru.
@@ -310,7 +307,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             console.log("Poradie tímov po prečíslovaní:", reorderedOriginalTeams.map(t => ({ meno: t.teamName, novePoradie: t.order })));
 
             // Získame tímy, ktoré neboli v pôvodnej skupine a spojíme s prečíslovanými tímami
-            const teamsOutsideOriginalGroup = allUserTeams.filter(team => team.groupName !== originalGroup);
+            const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
             
             // 3. Príprava nového poradia pre presúvaný tím
             const nextOrder = targetGroup
@@ -327,21 +324,15 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             // 5. Vytvorenie finálneho zoznamu tímov v kategórii
             const updatedTeams = [...teamsOutsideOriginalGroup, ...reorderedOriginalTeams, movedTeamData];
 
-            // 6. Vytvorenie nového objektu teamsByCategory na základe nového poradia
-            const newTeamsByCategory = {};
-            updatedTeams.forEach(team => {
-                if (!newTeamsByCategory[team.category]) {
-                    newTeamsByCategory[team.category] = [];
-                }
-                newTeamsByCategory[team.category].push(team);
-            });
-
-            // 7. Uloženie zmenených dát do Firebase
+            // 6. Uloženie zmenených dát do Firebase
             await updateDoc(userRef, {
-                teams: newTeamsByCategory
+                teams: {
+                    ...teamsByCategory,
+                    [teamCategoryName]: updatedTeams
+                }
             });
 
-            // 8. Aktualizácia nextOrderMap pre UI
+            // 7. Aktualizácia nextOrderMap pre UI
             setNextOrderMap(prev => {
                 const newMap = { ...prev };
                 if (originalGroup) {
@@ -367,18 +358,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 order: nextOrder
             };
 
-            const updatedTeams = allUserTeams.map(t => t.teamName === teamData.teamName ? updatedTeam : t);
-
-            const newTeamsByCategory = {};
-            updatedTeams.forEach(team => {
-                if (!newTeamsByCategory[team.category]) {
-                    newTeamsByCategory[team.category] = [];
-                }
-                newTeamsByCategory[team.category].push(team);
-            });
-
+            const updatedTeams = currentCategoryTeams.map(t => t.teamName === teamData.teamName ? updatedTeam : t);
+            
             await updateDoc(userRef, {
-                teams: newTeamsByCategory
+                teams: {
+                    ...teamsByCategory,
+                    [teamCategoryName]: updatedTeams
+                }
             });
 
             setNextOrderMap(prev => {
