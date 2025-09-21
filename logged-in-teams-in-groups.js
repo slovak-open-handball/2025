@@ -26,13 +26,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Efekt pre manažovanie notifikácií a vymazanie notifikácie po 5 sekundách
     useEffect(() => {
         if (notifications.length > 0) {
-            // NOVINKA: Časovač spustený pre prvú notifikáciu v zozname
             const timer = setTimeout(() => {
-                // Po 5 sekundách vymažeme prvú notifikáciu a tiež premenné zo sessionStorage
                 setNotifications(prev => prev.slice(1));
                 sessionStorage.removeItem('notificationMessage');
                 sessionStorage.removeItem('notificationType');
-            }, 5000); // Zobrazenie notifikácie na 5 sekúnd
+            }, 5000);
             return () => clearTimeout(timer);
         }
     }, [notifications]);
@@ -125,8 +123,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             if (message && type) {
                 // Zobrazíme notifikáciu zo sessionStorage
                 showLocalNotification(message, type);
-                // Predošlý kód vymazával notifikáciu tu, čo je chyba.
-                // Teraz sa vymazanie deje až v useEffectu s časovačom.
             }
         });
 
@@ -527,7 +523,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB) => nameA.localeCompare(nameB));
     
     // Dynamické triedy pre notifikáciu
     const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
