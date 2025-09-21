@@ -243,7 +243,6 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         try {
             const nextOrder = nextOrderMap[`${categoryName}-${targetGroup}`] || 1;
-            console.log(`Používam poradie z onSnapshot: ${nextOrder}`);
 
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
@@ -253,41 +252,33 @@ const AddGroupsApp = ({ userProfileData }) => {
             const teamsByCategory = userData.teams;
             const currentCategoryTeams = teamsByCategory[categoryName] || [];
 
-            // Vytvoríme novú sadu tímov a prečíslovanie pôvodnej skupiny
+            // Úplne prepracovaná logika pre aktualizáciu poradia
             let updatedTeams = [];
-            let teamsInOriginalGroup = [];
-            let movedTeamData = null;
 
-            // Roztriedenie tímov
-            currentCategoryTeams.forEach(team => {
-                if (team.teamName === teamData.teamName) {
-                    // Presunutý tím
-                    movedTeamData = targetGroup
-                        ? { ...team, groupName: targetGroup, order: nextOrder }
-                        : { ...team, groupName: null, order: null };
-                } else if (team.groupName === originalGroup) {
-                    // Tímy, ktoré zostali v pôvodnej skupine
-                    teamsInOriginalGroup.push(team);
-                } else {
-                    // Tímy, ktoré nepatria ani do pôvodnej ani do novej skupiny
-                    updatedTeams.push(team);
-                }
-            });
+            // 1. Spracovanie pôvodnej skupiny (ak existovala)
+            if (originalGroup) {
+                const teamsInOriginalGroup = currentCategoryTeams
+                    .filter(t => t.groupName === originalGroup && t.teamName !== teamData.teamName)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-            // Prečíslovanie zostávajúcich tímov v pôvodnej skupine
-            teamsInOriginalGroup.sort((a, b) => (a.order || 0) - (b.order || 0));
-            const reorderedOriginalTeams = teamsInOriginalGroup.map((team, index) => ({
-                ...team,
-                order: index + 1
-            }));
-
-            // Spojenie všetkých tímov do jedného poľa
-            if (movedTeamData) {
-                updatedTeams.push(movedTeamData);
+                const reorderedOriginalTeams = teamsInOriginalGroup.map((team, index) => ({
+                    ...team,
+                    order: index + 1
+                }));
+                updatedTeams.push(...reorderedOriginalTeams);
             }
-            updatedTeams = [...updatedTeams, ...reorderedOriginalTeams];
 
-            // Aktualizácia dokumentu
+            // 2. Spracovanie nového tímu
+            const newTeamData = targetGroup
+                ? { ...teamData, groupName: targetGroup, order: nextOrder }
+                : { ...teamData, groupName: null, order: null };
+            updatedTeams.push(newTeamData);
+
+            // 3. Pridanie ostatných tímov
+            const otherTeams = currentCategoryTeams.filter(t => t.groupName !== originalGroup && t.teamName !== teamData.teamName);
+            updatedTeams.push(...otherTeams);
+
+            // Uloženie aktualizovaného poľa do databázy
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
