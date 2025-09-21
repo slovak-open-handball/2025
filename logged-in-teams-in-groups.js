@@ -17,8 +17,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const lastDragOverGroup = useRef(null);
 
     // Zobrazenie lokálnej notifikácie
-    const showLocalNotification = (message, type, updateAfterTimeout = false) => {
+    const showLocalNotification = (message, type, notificationId = null, updateAfterTimeout = false) => {
+        // Ak sa notifikácia už zobrazila v aktuálnej relácii, nebudeme ju zobrazovať znova
+        if (notificationId && sessionStorage.getItem(`notification-${notificationId}`) === 'displayed') {
+            console.log("Notifikácia už bola zobrazená v tejto relácii. Preskakujem...");
+            return;
+        }
+
         setNotification({ message, type, isVisible: true, updateOnHide: updateAfterTimeout });
+
+        // Uloženie notifikácie do sessionStorage
+        if (notificationId) {
+            sessionStorage.setItem(`notification-${notificationId}`, 'displayed');
+        }
+
         if (!updateAfterTimeout) {
             setTimeout(() => {
                 setNotification(prev => ({ ...prev, isVisible: false }));
@@ -199,9 +211,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Pripojenie onSnapshot poslucháča
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             if (!querySnapshot.empty) {
+                const docId = querySnapshot.docs[0].id; // Získanie ID dokumentu
                 const latestNotification = querySnapshot.docs[0].data();
+
+                // Kontrola, či sa notifikácia už zobrazila v tejto relácii
+                if (sessionStorage.getItem(`notification-${docId}`) === 'displayed') {
+                    console.log(`Notifikácia s ID ${docId} už bola zobrazená. Preskakujem...`);
+                    return;
+                }
+
                 if (latestNotification && latestNotification.changes && latestNotification.changes.length > 0) {
-                    showLocalNotification(latestNotification.changes[0], 'success', false);
+                    showLocalNotification(latestNotification.changes[0], 'success', docId, false);
                 }
             }
         }, (error) => {
