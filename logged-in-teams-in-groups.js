@@ -17,13 +17,29 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
 
-    // Zobrazenie lokálnej notifikácie
-    const showLocalNotification = (message, type) => {
+    // Zobrazenie lokálnej notifikácie a jej uloženie do databázy
+    const showLocalNotificationAndSave = async (message, type) => {
         setNotification({ message, type, isVisible: true, updateOnHide: false });
 
         setTimeout(() => {
             setNotification(prev => ({ ...prev, isVisible: false }));
         }, 5000);
+
+        try {
+            const user = window.auth.currentUser;
+            if (user && window.db) {
+                const notificationsCollectionRef = collection(window.db, 'notifications');
+                await addDoc(notificationsCollectionRef, {
+                    changes: [message],
+                    timestamp: Timestamp.now(),
+                    userEmail: user.email,
+                    recipientId: "all_admins"
+                });
+                console.log("Notifikácia úspešne uložená do databázy.");
+            }
+        } catch (error) {
+            console.error("Chyba pri ukladaní notifikácie do databázy:", error);
+        }
     };
 
     // Efekt pre načítanie dát z Firebase
@@ -146,10 +162,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         };
     }, []);
 
-    // Nový useEffect na zobrazenie notifikácie po re-renderi
+    // Efekt na zobrazenie notifikácie po re-renderi
     useEffect(() => {
         if (pendingNotification) {
-            showLocalNotification(pendingNotification, 'success');
+            showLocalNotificationAndSave(pendingNotification, 'success');
             setPendingNotification(null);
         }
     }, [allTeams, pendingNotification]);
@@ -248,12 +264,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         if (originalGroup === targetGroup) {
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
-            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info');
+            showLocalNotificationAndSave("Tím sa už nachádza v tejto skupine.", 'info');
             return;
         }
 
         if (targetCategoryId && teamCategoryName !== targetCategoryName) {
-            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            showLocalNotificationAndSave("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
 
@@ -322,7 +338,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+            showLocalNotificationAndSave("Nastala chyba pri ukladaní údajov do databázy.", 'error');
         }
     };
 
