@@ -203,7 +203,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleDragOver = (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        
+
         // Kontrola, či sa kurzor presunul nad novú skupinu
         if (lastDragOverGroup.current !== targetGroup) {
             lastDragOverGroup.current = targetGroup;
@@ -253,57 +253,43 @@ const AddGroupsApp = ({ userProfileData }) => {
             let updatedTeamData;
             let updatedTeams = [];
 
+            // Opravená logika: Získame tímy z cieľovej skupiny a určíme nové poradie
+            const teamsInTargetGroup = currentCategoryTeams.filter(t => t.groupName === targetGroup);
+            const nextOrder = teamsInTargetGroup.length + 1; 
+
             // Logika pre presun do skupiny
             if (targetGroup) {
-                const teamsInTargetGroup = currentCategoryTeams.filter(t => t.groupName === targetGroup);
-                const nextOrder = teamsInTargetGroup.length + 1; // Opravený výpočet poradia
-                console.log(`Vypočítané nové poradie pre tím '${teamData.teamName}': ${nextOrder}`);
                 updatedTeamData = {
                     ...teamData,
                     groupName: targetGroup,
                     order: nextOrder
                 };
-                
-                // Odstránime tím z pôvodnej skupiny
-                const teamsWithoutOriginal = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
-                
-                // Preusporiadanie tímov v pôvodnej skupine
-                const teamsInOriginalGroup = teamsWithoutOriginal
-                    .filter(t => t.groupName === originalGroup)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-                const reorderedTeamsInOriginalGroup = teamsInOriginalGroup.map((team, index) => ({
-                    ...team,
-                    order: index + 1
-                }));
-                
-                // Spojíme znova všetky tímy
-                const otherTeams = teamsWithoutOriginal.filter(t => t.groupName !== originalGroup);
-                updatedTeams = [...otherTeams, updatedTeamData, ...reorderedTeamsInOriginalGroup];
-
             } else { // Logika pre presun mimo skupiny
-                updatedTeamData = {
+                 updatedTeamData = {
                     ...teamData,
                     groupName: null,
                     order: null
                 };
-            
-                // Získanie tímov, ktoré zostávajú v pôvodnej skupine
-                const teamsInOriginalGroup = currentCategoryTeams
-                    .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0));
-            
-                // Preusporiadanie a aktualizácia poradia pre zostávajúce tímy
-                const reorderedTeams = teamsInOriginalGroup.map((team, index) => ({
-                    ...team,
-                    order: index + 1
-                }));
-            
-                // Spojenie všetkých upravených tímov do jedného poľa
-                const teamsNotInOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
-                updatedTeams = [...teamsNotInOriginalGroup, updatedTeamData, ...reorderedTeams];
             }
             
+            // Odstránime pôvodný tím zo zoznamu
+            const teamsWithoutOriginal = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
+            
+            // Preusporiadanie tímov v pôvodnej skupine po odchode tímu
+            const teamsInOriginalGroup = teamsWithoutOriginal
+                .filter(t => t.groupName === originalGroup)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            const reorderedTeamsInOriginalGroup = teamsInOriginalGroup.map((team, index) => ({
+                ...team,
+                order: index + 1
+            }));
+            
+            // Spojíme znova všetky tímy
+            const otherTeams = teamsWithoutOriginal.filter(t => t.groupName !== originalGroup);
+            updatedTeams = [...otherTeams, updatedTeamData, ...reorderedTeamsInOriginalGroup];
+
+
             await updateDoc(userRef, {
                 teams: {
                     ...teamsByCategory,
