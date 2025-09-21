@@ -330,10 +330,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     console.error("Chyba pri ukladaní notifikácie do databázy:", dbError);
                 }
             }
-
+            
             // Zobrazenie úspešnej notifikácie až po dokončení všetkých operácií
             const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
-            showLocalNotification(notificationMessage, 'success');
+            
+            // Použijeme setTimeout s oneskorením 0, aby sa notifikácia zobrazila po nasledujúcom re-renderi.
+            setTimeout(() => {
+                showLocalNotification(notificationMessage, 'success');
+            }, 0);
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
