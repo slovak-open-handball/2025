@@ -32,6 +32,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return () => clearTimeout(timer);
         }
     }, [notifications]);
+    
+    // NOVÁ LOGIKA: Kontrola sessionStorage pre notifikácie
+    useEffect(() => {
+        const message = sessionStorage.getItem('notificationMessage');
+        const type = sessionStorage.getItem('notificationType');
+
+        if (message && type) {
+            // Zobrazíme notifikáciu zo sessionStorage
+            showLocalNotification(message, type);
+            // Okamžite vymažeme údaje, aby sa nezobrazovala znova
+            sessionStorage.removeItem('notificationMessage');
+            sessionStorage.removeItem('notificationType');
+        }
+    }, []);
 
     // Efekt pre načítanie dát z Firebase
     useEffect(() => {
@@ -321,7 +335,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 try {
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
+                        message: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
@@ -331,13 +345,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             }
             
-            // Zobrazenie úspešnej notifikácie až po dokončení všetkých operácií
+            // Uložíme notifikáciu do sessionStorage pre zobrazenie po nasledujúcom re-renderi
             const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
-            
-            // Použijeme setTimeout s oneskorením 0, aby sa notifikácia zobrazila po nasledujúcom re-renderi.
-            setTimeout(() => {
-                showLocalNotification(notificationMessage, 'success');
-            }, 0);
+            sessionStorage.setItem('notificationMessage', notificationMessage);
+            sessionStorage.setItem('notificationType', 'success');
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
