@@ -239,130 +239,102 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
-const handleDrop = async (e, targetGroup, targetCategoryId) => {
-    e.preventDefault();
-    const dragData = draggedItem.current;
-    if (!dragData) {
-        console.error("Žiadne dáta na presunutie.");
-        return;
-    }
-    const teamData = dragData.team;
-    const teamCategoryId = dragData.teamCategoryId;
-    const originalGroup = teamData.groupName;
-    const teamCategoryName = categoryIdToNameMap[teamCategoryId];
-    const targetCategoryName = categoryIdToNameMap[targetCategoryId];
-
-    console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
-    console.log(`Pôvodná kategória: ${teamCategoryName}`);
-    console.log(`Pôvodná skupina: ${originalGroup || 'bez skupiny'}`);
-    console.log(`Cieľová kategória: ${targetCategoryName}`);
-    console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
-
-    if (originalGroup === targetGroup) {
-        console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
-        return;
-    }
-
-    if (targetCategoryId && teamCategoryId !== targetCategoryId) {
-        window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
-        return;
-    }
-
-    const userRef = doc(window.db, 'users', teamData.uid);
-    try {
-        const userDocSnap = await getDoc(userRef);
-        if (!userDocSnap.exists()) {
-            throw new Error("Dokument používateľa neexistuje!");
-        }
-        const userData = userDocSnap.data();
-        const teamsByCategory = { ...userData.teams };
-        const currentCategoryTeams = teamsByCategory[teamCategoryName] || [];
-
-        console.log("Všetky tímy v kategórii pred filtrom:", currentCategoryTeams);
-
-        if (originalGroup) {
-            const teamsRemainingInOriginalGroup = currentCategoryTeams
-                .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
-
-            console.log(`\nKontrola poradia po odchode tímu '${teamData.teamName}' zo skupiny '${originalGroup}'.`);
-            console.log("Poradie tímov pred prečíslovaním:", teamsRemainingInOriginalGroup);
-
-            let reorderedOriginalTeams = [];
-            if (teamsRemainingInOriginalGroup.length > 0) {
-                reorderedOriginalTeams = teamsRemainingInOriginalGroup
-                    .sort((a, b) => (a.order || 0) - (b.order || 0))
-                    .map((team, index) => ({
-                        ...team,
-                        order: index + 1
-                    }));
-                console.log("Poradie tímov po prečíslovaní:", reorderedOriginalTeams);
-            } else {
-                setNextOrderMap(prev => ({
-                    ...prev,
-                    [`${teamCategoryName}-${originalGroup}`]: 1
-                }));
-            }
-
-            const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
-            const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
-            const movedTeamData = { ...teamData, groupName: targetGroup, order: nextOrder };
-
-            const updatedTeams = [
-                ...teamsOutsideOriginalGroup,
-                ...reorderedOriginalTeams,
-                movedTeamData
-            ].filter((team, index, self) =>
-                index === self.findIndex(t => t.teamName === team.teamName && t.uid === team.uid)
-            );
-
-            await updateDoc(userRef, {
-                teams: {
-                    ...teamsByCategory,
-                    [teamCategoryName]: updatedTeams
-                }
-            });
-
-            setNextOrderMap(prev => {
-                const newMap = { ...prev };
-                if (targetGroup) {
-                    const key = `${teamCategoryName}-${targetGroup}`;
-                    newMap[key] = (nextOrderMap[key] || 1) + 1;
-                }
-                return newMap;
-            });
-        } else {
-            const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
-            const updatedTeam = { ...teamData, groupName: targetGroup, order: nextOrder };
-            const updatedTeams = currentCategoryTeams.map(t =>
-                t.teamName === teamData.teamName ? updatedTeam : t
-            );
-
-            await updateDoc(userRef, {
-                teams: {
-                    ...teamsByCategory,
-                    [teamCategoryName]: updatedTeams
-                }
-            });
-
-            setNextOrderMap(prev => {
-                const newMap = { ...prev };
-                if (targetGroup) {
-                    const key = `${teamCategoryName}-${targetGroup}`;
-                    newMap[key] = (nextOrderMap[key] || 1) + 1;
-                }
-                return newMap;
-            });
+    const handleDrop = async (e, targetGroup, targetCategoryId) => {
+        e.preventDefault();
+        const dragData = draggedItem.current;
+        if (!dragData) {
+            console.error("Žiadne dáta na presunutie.");
+            return;
         }
 
-        window.showGlobalNotification(
-            `Tím '${teamData.teamName}' bol úspešne ${targetGroup ? `pridaný do skupiny '${targetGroup}'` : 'odstránený zo skupiny'}.`,
-            'success'
-        );
-    } catch (error) {
-        console.error("Chyba pri aktualizácii databázy:", error);
-        window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
-    }
-};
+        const teamData = dragData.team;
+        const originalGroup = teamData.groupName;
+        const teamCategoryName = categoryIdToNameMap[dragData.teamCategoryId];
+        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+
+        console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
+        console.log(`Pôvodná kategória: ${teamCategoryName}`);
+        console.log(`Pôvodná skupina: ${originalGroup || 'bez skupiny'}`);
+        console.log(`Cieľová kategória: ${targetCategoryName}`);
+        console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
+
+        if (originalGroup === targetGroup) {
+            console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
+            return;
+        }
+
+        if (targetCategoryId && teamCategoryName !== targetCategoryName) {
+            window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            return;
+        }
+
+        try {
+            // Použijeme Promise.all a map na hromadné spracovanie viacerých asynchrónnych operácií.
+            // Získame všetky tímy vo Firestoru, ktoré patria do rovnakej kategórie ako presúvaný tím.
+            const usersRef = collection(window.db, 'users');
+            const userDocs = await getDocs(usersRef);
+
+            const updatePromises = [];
+
+            userDocs.forEach(userDoc => {
+                const userData = userDoc.data();
+                if (userData.teams?.[teamCategoryName]) {
+                    const teams = userData.teams[teamCategoryName];
+
+                    // Klonovanie tímu na aktualizáciu
+                    const teamToUpdate = teams.find(t => t.teamName === teamData.teamName);
+
+                    // Skupina tímov, ktoré zostanú v pôvodnej skupine, bez presúvaného tímu.
+                    const remainingTeamsInOriginalGroup = teams.filter(t =>
+                        t.groupName === originalGroup &&
+                        t.teamName !== teamData.teamName
+                    );
+
+                    // Aktualizovaný zoznam tímov pre aktuálneho používateľa.
+                    const updatedTeams = teams.map(t => {
+                        // Aktualizácia poradia tímov v pôvodnej skupine, ktoré tam zostali.
+                        if (t.groupName === originalGroup && t.teamName !== teamData.teamName) {
+                            const newOrder = remainingTeamsInOriginalGroup.findIndex(rt => rt.teamName === t.teamName) + 1;
+                            return { ...t, order: newOrder };
+                        }
+                        // Presúvaný tím: aktualizácia skupiny a poradia.
+                        if (teamToUpdate && t.teamName === teamToUpdate.teamName) {
+                             const nextOrder = targetGroup ? nextOrderMap[`${targetCategoryName}-${targetGroup}`] || 1 : null;
+                             return { ...t, groupName: targetGroup, order: nextOrder };
+                        }
+                        // Ostatné tímy sa nemenia.
+                        return t;
+                    });
+                    
+                    // Ak sa presúvaný tím nenachádza v zozname tímov aktuálneho používateľa, ale mal by tam byť.
+                    if (userDoc.id === teamData.uid && !updatedTeams.some(t => t.teamName === teamData.teamName)) {
+                        const nextOrder = targetGroup ? nextOrderMap[`${targetCategoryName}-${targetGroup}`] || 1 : null;
+                        updatedTeams.push({ ...teamData, groupName: targetGroup, order: nextOrder });
+                    }
+
+
+                    const newTeams = [...new Set(updatedTeams)];
+
+                    // Aktualizácia dokumentu
+                    updatePromises.push(
+                        updateDoc(userDoc.ref, {
+                            [`teams.${teamCategoryName}`]: newTeams
+                        })
+                    );
+                }
+            });
+
+            await Promise.all(updatePromises);
+
+            window.showGlobalNotification(
+                `Tím '${teamData.teamName}' bol úspešne ${targetGroup ? `pridaný do skupiny '${targetGroup}'` : 'odstránený zo skupiny'}.`,
+                'success'
+            );
+        } catch (error) {
+            console.error("Chyba pri aktualizácii databázy:", error);
+            window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+        }
+    };
 
     const handleDragStart = (e, team) => {
         const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === team.category);
