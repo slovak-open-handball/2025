@@ -284,9 +284,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                     // Skupiny tímov, ktoré zostanú v pôvodnej skupine
                     const teamsRemainingInOriginalGroup = teams.filter(t => t.groupName === originalGroup && t.teamName !== teamData.teamName);
                     
-                    // Upravené tímy v pôvodnej skupine (prečíslujeme ich)
-                    const reorderedTeams = teamsRemainingInOriginalGroup.map((t, index) => ({ ...t, order: index + 1 }));
-
                     // Príprava presunutého tímu s novým poradím a skupinou
                     const nextOrder = targetGroup ? (nextOrderMap[`${targetCategoryName}-${targetGroup}`] || 1) : null;
                     const movedTeam = { ...teamToUpdate, groupName: targetGroup, order: nextOrder };
@@ -296,19 +293,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                         if (t.teamName === teamData.teamName) {
                             return movedTeam;
                         }
-                        const reordered = reorderedTeams.find(rt => rt.teamName === t.teamName);
-                        if (reordered) {
-                            return reordered;
+
+                        // Ak tím zostal v pôvodnej skupine a má vyššie poradie ako tím, ktorý sa odstránil
+                        if (t.groupName === originalGroup && t.order > teamData.order) {
+                            return { ...t, order: t.order - 1 };
                         }
+                        
                         return t;
                     }).filter(t => t); // Odstránenie null/undefined
                     
                     // Ak používateľ nevlastní presúvaný tím, len aktualizujeme poradie ostatných tímov
-                    if (userDoc.id !== teamData.uid && reorderedTeams.length > 0) {
+                    if (userDoc.id !== teamData.uid) {
                         const otherUsersTeams = teams.map(t => {
-                            const reordered = reorderedTeams.find(rt => rt.teamName === t.teamName);
-                            if (reordered) {
-                                return reordered;
+                            if (t.groupName === originalGroup && t.order > teamData.order) {
+                                return { ...t, order: t.order - 1 };
                             }
                             return t;
                         });
