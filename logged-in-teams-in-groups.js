@@ -276,56 +276,97 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         const teamsByCategory = { ...userData.teams };
         const currentCategoryTeams = teamsByCategory[teamCategoryName] || [];
 
-        // 1. Získanie tímov, ktoré neboli v pôvodnej skupine
-        const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
+        // ----- Kontrola a odstránenie číselnej medzery v poradí po presune -----
+        // Táto logika sa spustí iba vtedy, ak sa tím presúva z nejakej skupiny.
+        if (originalGroup) {
+            // 1. Získame zoznam tímov, ktoré ostali v pôvodnej skupine po odobratí tímu.
+            const teamsRemainingInOriginalGroup = currentCategoryTeams
+                .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
 
-        // 2. Prečíslovanie tímov v pôvodnej skupine po odobratí tímu
-        const reorderedOriginalTeams = currentCategoryTeams
-            .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName)
-            .sort((a, b) => (a.order || 0) - (b.order || 0))
-            .map((team, index) => ({
-                ...team,
-                order: index + 1
-            }));
+            // 2. Zoradíme ich podľa aktuálneho poradia a prečíslujeme, aby sme odstránili medzeru.
+            console.log(`\nKontrola poradia po odchode tímu '${teamData.teamName}' zo skupiny '${originalGroup}'.`);
+            console.log("Poradie tímov pred prečíslovaním:", teamsRemainingInOriginalGroup.map(t => ({ meno: t.teamName, poradie: t.order })));
+            
+            const reorderedOriginalTeams = teamsRemainingInOriginalGroup
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                .map((team, index) => ({
+                    ...team,
+                    order: index + 1
+                }));
 
-        // 3. Príprava nového poradia pre presúvaný tím
-        const nextOrder = targetGroup
-            ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1
-            : null;
+            console.log("Poradie tímov po prečíslovaní:", reorderedOriginalTeams.map(t => ({ meno: t.teamName, novePoradie: t.order })));
 
-        // 4. Aktualizácia presúvaného tímu s novým poradím a skupinou
-        const movedTeamData = {
-            ...teamData,
-            groupName: targetGroup,
-            order: nextOrder
-        };
+            // Získame tímy, ktoré neboli v pôvodnej skupine a spojíme s prečíslovanými tímami
+            const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
+            
+            // 3. Príprava nového poradia pre presúvaný tím
+            const nextOrder = targetGroup
+                ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1
+                : null;
+                
+            // 4. Aktualizácia presúvaného tímu s novým poradím a skupinou
+            const movedTeamData = {
+                ...teamData,
+                groupName: targetGroup,
+                order: nextOrder
+            };
 
-        // 5. Vytvorenie finálneho zoznamu tímov v kategórii
-        // Spojenie tímov, ktoré ostali, s prečíslovanými tímami z pôvodnej skupiny a s presunutým tímom
-        const updatedTeams = [...teamsOutsideOriginalGroup, ...reorderedOriginalTeams, movedTeamData];
+            // 5. Vytvorenie finálneho zoznamu tímov v kategórii
+            const updatedTeams = [...teamsOutsideOriginalGroup, ...reorderedOriginalTeams, movedTeamData];
 
-        // 6. Uloženie zmenených dát do Firebase
-        await updateDoc(userRef, {
-            teams: {
-                ...teamsByCategory,
-                [teamCategoryName]: updatedTeams
-            }
-        });
+            // 6. Uloženie zmenených dát do Firebase
+            await updateDoc(userRef, {
+                teams: {
+                    ...teamsByCategory,
+                    [teamCategoryName]: updatedTeams
+                }
+            });
 
-        // 7. Aktualizácia nextOrderMap pre UI
-        setNextOrderMap(prev => {
-            const newMap = { ...prev };
-            if (originalGroup) {
-                const key = `${teamCategoryName}-${originalGroup}`;
-                newMap[key] = reorderedOriginalTeams.length + 1;
-            }
-            if (targetGroup) {
-                const key = `${teamCategoryName}-${targetGroup}`;
-                newMap[key] = (nextOrderMap[key] || 1) + 1;
-            }
-            return newMap;
-        });
+            // 7. Aktualizácia nextOrderMap pre UI
+            setNextOrderMap(prev => {
+                const newMap = { ...prev };
+                if (originalGroup) {
+                    const key = `${teamCategoryName}-${originalGroup}`;
+                    newMap[key] = reorderedOriginalTeams.length + 1;
+                }
+                if (targetGroup) {
+                    const key = `${teamCategoryName}-${targetGroup}`;
+                    newMap[key] = (nextOrderMap[key] || 1) + 1;
+                }
+                return newMap;
+            });
 
+        } else {
+            // Ak sa tím presúva zo zoznamu "bez skupiny" do skupiny, len aktualizujeme jeho dáta.
+            const nextOrder = targetGroup
+                ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1
+                : null;
+            
+            const updatedTeam = {
+                ...teamData,
+                groupName: targetGroup,
+                order: nextOrder
+            };
+
+            const updatedTeams = currentCategoryTeams.map(t => t.teamName === teamData.teamName ? updatedTeam : t);
+            
+            await updateDoc(userRef, {
+                teams: {
+                    ...teamsByCategory,
+                    [teamCategoryName]: updatedTeams
+                }
+            });
+
+            setNextOrderMap(prev => {
+                const newMap = { ...prev };
+                if (targetGroup) {
+                    const key = `${teamCategoryName}-${targetGroup}`;
+                    newMap[key] = (nextOrderMap[key] || 1) + 1;
+                }
+                return newMap;
+            });
+        }
+        
         window.showGlobalNotification(
             `Tím '${teamData.teamName}' bol úspešne ${targetGroup ? `pridaný do skupiny '${targetGroup}'` : 'odstránený zo skupiny'}.`,
             'success'
