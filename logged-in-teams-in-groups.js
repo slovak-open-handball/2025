@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
@@ -178,6 +178,41 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         };
     }, []);
 
+    // Nový useEffect pre načítanie notifikácií
+    useEffect(() => {
+        const auth = window.auth;
+        const db = window.db;
+        const currentUser = auth.currentUser;
+
+        if (!currentUser || !db) {
+            return;
+        }
+
+        // Vytvorenie dotazu pre najnovšiu notifikáciu od aktuálneho používateľa
+        const q = query(
+            collection(db, 'notifications'),
+            where('userId', '==', currentUser.uid),
+            orderBy('timestamp', 'desc'),
+            limit(1)
+        );
+
+        // Pripojenie onSnapshot poslucháča
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            if (!querySnapshot.empty) {
+                const latestNotification = querySnapshot.docs[0].data();
+                if (latestNotification && latestNotification.changes && latestNotification.changes.length > 0) {
+                    showLocalNotification(latestNotification.changes[0], 'success', false);
+                }
+            }
+        }, (error) => {
+            console.error("Chyba pri načítaní notifikácií:", error);
+        });
+
+        // Odhlásenie poslucháča pri zničení komponentu
+        return () => unsubscribe();
+    }, [userProfileData]);
+
+
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
         : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
@@ -338,8 +373,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 userId: currentUser.uid,
                 timestamp: Timestamp.now(),
             });
-
-            showLocalNotification(notificationMessage, 'success', true);
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
