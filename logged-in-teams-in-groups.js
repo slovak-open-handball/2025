@@ -253,7 +253,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             let updatedTeamData;
             let updatedTeams = [];
 
-            // Opravená logika: Získame tímy z cieľovej skupiny a určíme nové poradie
+            // Hodnota nextOrder sa vypočíta priamo pri dropu na základe aktuálnych tímov v skupine
+            // aby sa predišlo chybám v poradí, ak by sa medzičasom zmenil stav v DB.
             const teamsInTargetGroup = currentCategoryTeams.filter(t => t.groupName === targetGroup);
             const nextOrder = teamsInTargetGroup.length + 1; 
 
