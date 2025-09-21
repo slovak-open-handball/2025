@@ -376,11 +376,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             { className: 'space-y-2 relative' },
             sortedTeams.map((team, index) => {
                 const teamNameWithOrder = team.groupName && team.order != null ? `${team.order}. ${team.teamName}` : team.teamName;
+                const teamBgClass = team.groupName ? 'bg-white' : 'bg-gray-100';
                 return React.createElement(
                     'li',
                     {
                         key: `${team.uid}-${team.teamName}-${team.groupName}-${index}`,
-                        className: `px-4 py-2 bg-gray-100 rounded-lg text-gray-700 cursor-grab`,
+                        className: `px-4 py-2 ${teamBgClass} rounded-lg text-gray-700 cursor-grab`,
                         draggable: "true",
                         onDragStart: (e) => handleDragStart(e, team),
                         onDragEnd: handleDragEnd,
