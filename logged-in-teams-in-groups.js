@@ -208,7 +208,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (lastDragOverGroup.current !== targetGroup) {
             lastDragOverGroup.current = targetGroup;
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroup);
-            const nextOrder = teamsInTargetGroup.length + 1;
+            const nextOrder = nextOrderMap[`${categoryIdToNameMap[targetCategoryId]}-${targetGroup}`] || 1;
 
             console.log("--- Drag & Drop Informácie ---");
             console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
@@ -242,7 +242,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         const userRef = doc(window.db, 'users', teamData.uid);
 
         try {
-            // Načítanie najaktuálnejších dát priamo z databázy
+            const nextOrder = nextOrderMap[`${categoryName}-${targetGroup}`] || 1;
+            console.log(`Používam poradie z onSnapshot: ${nextOrder}`);
+
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
                 throw new Error("Dokument používateľa neexistuje!");
@@ -250,30 +252,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             const userData = userDocSnap.data();
             const teamsByCategory = userData.teams;
             let currentCategoryTeams = teamsByCategory[categoryName] || [];
-            
-            // Nájdeme tímy v cieľovej skupine a vypočítame najvyššie existujúce poradie
-            const teamsInTargetGroup = currentCategoryTeams.filter(t => t.groupName === targetGroup);
-            const maxOrderInTargetGroup = teamsInTargetGroup.length > 0
-                ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
-                : 0;
-            const nextOrder = maxOrderInTargetGroup + 1;
 
-            console.log(`Vypočítané nové poradie pre vklad: ${nextOrder}`);
-
-            let updatedTeamData;
-            if (targetGroup) {
-                updatedTeamData = {
-                    ...teamData,
-                    groupName: targetGroup,
-                    order: nextOrder
-                };
-            } else {
-                updatedTeamData = {
-                    ...teamData,
-                    groupName: null,
-                    order: null
-                };
-            }
+            const updatedTeamData = targetGroup
+                ? { ...teamData, groupName: targetGroup, order: nextOrder }
+                : { ...teamData, groupName: null, order: null };
 
             const teamsWithoutOriginal = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
             const teamsInOriginalGroup = teamsWithoutOriginal
