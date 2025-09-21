@@ -15,21 +15,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
     
-    // Nový, opravený useEffect. Spustí sa iba raz pri načítaní komponentu.
-    useEffect(() => {
-        const message = sessionStorage.getItem('notificationMessage');
-        const type = sessionStorage.getItem('notificationType');
-        
-        if (message && type) {
-            // Zobrazíme notifikáciu zo sessionStorage
-            setNotification({ id: Date.now(), message, type });
-            // Okamžite vyčistíme sessionStorage, aby sa notifikácia znova nezobrazila pri ručnom obnovení
-            sessionStorage.removeItem('notificationMessage');
-            sessionStorage.removeItem('notificationType');
-        }
-    }, []); // Prázdne pole závislostí zabezpečí, že sa efekt spustí len raz
-
-    // Existujúci useEffect pre manažovanie notifikácií a vymazanie po 5 sekundách
+    // Efekt pre manažovanie notifikácií a vymazanie po 5 sekundách
     // Spúšťa sa len vtedy, keď sa zmení stav notifikácie (notification)
     useEffect(() => {
         if (notification) {
@@ -39,7 +25,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return () => clearTimeout(timer);
         }
     }, [notification]);
-
 
     // Efekt pre načítanie dát z Firebase
     useEffect(() => {
@@ -339,13 +324,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             }
             
-            // Kľúčová zmena: Uložíme notifikáciu a znovunačítame stránku,
-            // aby sa notifikácia zobrazila po čistom načítaní.
+            // Notifikácia sa zobrazí bez obnovenia stránky
             const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
-            sessionStorage.setItem('notificationMessage', notificationMessage);
-            sessionStorage.setItem('notificationType', 'success');
-//            window.location.reload();
-
+            setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
