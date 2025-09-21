@@ -255,12 +255,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Úplne prepracovaná logika pre aktualizáciu poradia
             let updatedTeams = [];
 
-            // 1. Spracovanie pôvodnej skupiny (ak existovala)
+            // 1. Získame tímy, ktoré ostávajú v pôvodnej skupine
             if (originalGroup) {
                 const teamsInOriginalGroup = currentCategoryTeams
                     .filter(t => t.groupName === originalGroup && t.teamName !== teamData.teamName)
                     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
+                // Prečíslovanie zostávajúcich tímov v pôvodnej skupine
                 const reorderedOriginalTeams = teamsInOriginalGroup.map((team, index) => ({
                     ...team,
                     order: index + 1
@@ -268,15 +269,27 @@ const AddGroupsApp = ({ userProfileData }) => {
                 updatedTeams.push(...reorderedOriginalTeams);
             }
 
-            // 2. Spracovanie nového tímu
+            // 2. Spracovanie nového tímu a jeho pridanie do cieľovej skupiny
             const newTeamData = targetGroup
                 ? { ...teamData, groupName: targetGroup, order: nextOrder }
                 : { ...teamData, groupName: null, order: null };
+
+            // Získame tímy, ktoré zostali v iných skupinách
+            const teamsInOtherGroups = currentCategoryTeams.filter(t => t.groupName !== originalGroup && t.groupName !== targetGroup);
+            updatedTeams.push(...teamsInOtherGroups);
+
+            // Získame tímy, ktoré už boli v cieľovej skupine
+            const teamsInTargetGroup = currentCategoryTeams
+                .filter(t => t.groupName === targetGroup)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            const reorderedTargetTeams = teamsInTargetGroup.map((team, index) => ({
+                ...team,
+                order: index + 1
+            }));
+            updatedTeams.push(...reorderedTargetTeams);
             updatedTeams.push(newTeamData);
 
-            // 3. Pridanie ostatných tímov
-            const otherTeams = currentCategoryTeams.filter(t => t.groupName !== originalGroup && t.teamName !== teamData.teamName);
-            updatedTeams.push(...otherTeams);
 
             // Uloženie aktualizovaného poľa do databázy
             await updateDoc(userRef, {
@@ -447,7 +460,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 key: groupIndex,
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
                                 onDragOver: (e) => handleDragOver(e, group.name, selectedCategoryId),
-                                onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
+                                onDrop: (e) => handleDrop(e, group.name, categoryId),
                             },
                             React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' }, group.name),
                             React.createElement(
