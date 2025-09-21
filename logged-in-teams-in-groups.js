@@ -94,6 +94,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
             });
             setAllTeams(teamsList);
+            console.log("Všetky tímy po načítaní z Firebase:", teamsList);
             // Vypočítanie nextOrderMap na základe aktuálnych dát
             teamsList.forEach(team => {
                 if (team.groupName) {
@@ -290,7 +291,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         // Táto logika sa spustí iba vtedy, ak sa tím presúva z nejakej skupiny.
         if (originalGroup) {
 
-            console.log("Všetky tímy v kategórii pred filtrom:", currentCategoryTeams);
+            console.log("Všetky tímy v kategórii pred filtrom:");
+                currentCategoryTeams.forEach(team => {
+                console.log(`- ${team.teamName}, skupina: ${team.groupName}, uid: ${team.uid}`);
+            });
             console.log("Presúvaný tím:", teamData);
             console.log("Pôvodná skupina:", originalGroup);
             
