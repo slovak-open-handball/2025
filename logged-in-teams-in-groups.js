@@ -228,71 +228,72 @@ const AddGroupsApp = ({ userProfileData }) => {
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
         const originalGroup = teamData.groupName;
-        const originalCategoryName = categoryIdToNameMap[teamCategoryId];
-        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
 
         if (originalGroup === targetGroup) {
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
             return;
         }
+        if (targetCategoryId && teamCategoryId !== targetCategoryId) {
+            window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            return;
+        }
 
+        const categoryName = categoryIdToNameMap[teamCategoryId];
         const userRef = doc(window.db, 'users', teamData.uid);
+
         try {
+            const nextOrder = nextOrderMap[`${categoryName}-${targetGroup}`] || 1;
+            console.log(`Používam poradie z onSnapshot: ${nextOrder}`);
+
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
                 throw new Error("Dokument používateľa neexistuje!");
             }
             const userData = userDocSnap.data();
-            const teamsByCategory = { ...userData.teams };
+            const teamsByCategory = userData.teams;
+            const currentCategoryTeams = teamsByCategory[categoryName] || [];
 
-            // Získanie a aktualizácia pôvodného zoznamu tímov
-            let teamsInOriginalCategory = teamsByCategory[originalCategoryName] || [];
-            
-            // Odstránenie presunutého tímu z pôvodnej skupiny
-            teamsInOriginalCategory = teamsInOriginalCategory.filter(t => t.teamName !== teamData.teamName);
+            // Vytvoríme novú sadu tímov a prečíslovanie pôvodnej skupiny
+            let updatedTeams = [];
+            let teamsInOriginalGroup = [];
+            let movedTeamData = null;
 
-            // Zistenie a rečíslovanie tímov, ktoré ostali v pôvodnej skupine
-            const renumberedOriginalTeams = teamsInOriginalCategory.filter(t => t.groupName === originalGroup).map((team, index) => ({
+            // Roztriedenie tímov
+            currentCategoryTeams.forEach(team => {
+                if (team.teamName === teamData.teamName) {
+                    // Presunutý tím
+                    movedTeamData = targetGroup
+                        ? { ...team, groupName: targetGroup, order: nextOrder }
+                        : { ...team, groupName: null, order: null };
+                } else if (team.groupName === originalGroup) {
+                    // Tímy, ktoré zostali v pôvodnej skupine
+                    teamsInOriginalGroup.push(team);
+                } else {
+                    // Tímy, ktoré nepatria ani do pôvodnej ani do novej skupiny
+                    updatedTeams.push(team);
+                }
+            });
+
+            // Prečíslovanie zostávajúcich tímov v pôvodnej skupine
+            teamsInOriginalGroup.sort((a, b) => (a.order || 0) - (b.order || 0));
+            const reorderedOriginalTeams = teamsInOriginalGroup.map((team, index) => ({
                 ...team,
                 order: index + 1
             }));
 
-            // Zistenie tímov, ktoré ostali v iných skupinách v pôvodnej kategórii
-            const otherTeamsInOriginalCategory = teamsInOriginalCategory.filter(t => t.groupName !== originalGroup);
-
-            // Aktualizácia pôvodnej kategórie (iba ak je pôvodná a cieľová kategória rovnaká)
-            if (originalCategoryName === targetCategoryName) {
-                const teamsInTargetGroup = teamsInOriginalCategory.filter(t => t.groupName === targetGroup);
-                const nextOrder = teamsInTargetGroup.length > 0 ? Math.max(...teamsInTargetGroup.map(t => t.order || 0)) + 1 : 1;
-
-                const updatedTeam = { ...teamData, groupName: targetGroup, order: nextOrder };
-                teamsInOriginalCategory.push(updatedTeam);
-
-                // Uloženie aktualizovaného poľa do databázy
-                await updateDoc(userRef, {
-                    teams: {
-                        ...teamsByCategory,
-                        [originalCategoryName]: teamsInOriginalCategory
-                    }
-                });
-
-            } else { // Ak sa tím presúva do inej kategórie
-                const updatedTeam = { ...teamData, groupName: targetGroup, order: null, category: targetCategoryName };
-                
-                // Odstránenie tímu z pôvodnej kategórie
-                teamsByCategory[originalCategoryName] = [...renumberedOriginalTeams, ...otherTeamsInOriginalCategory];
-                
-                // Pridanie tímu do cieľovej kategórie
-                const teamsInTargetCategory = teamsByCategory[targetCategoryName] || [];
-                const nextOrder = teamsInTargetCategory.filter(t => t.groupName === targetGroup).length > 0 ? Math.max(...teamsInTargetCategory.filter(t => t.groupName === targetGroup).map(t => t.order || 0)) + 1 : 1;
-                
-                const updatedTeamWithOrder = { ...updatedTeam, order: nextOrder };
-                teamsByCategory[targetCategoryName] = [...teamsInTargetCategory, updatedTeamWithOrder];
-                
-                await updateDoc(userRef, {
-                    teams: teamsByCategory
-                });
+            // Spojenie všetkých tímov do jedného poľa
+            if (movedTeamData) {
+                updatedTeams.push(movedTeamData);
             }
+            updatedTeams = [...updatedTeams, ...reorderedOriginalTeams];
+
+            // Aktualizácia dokumentu
+            await updateDoc(userRef, {
+                teams: {
+                    ...teamsByCategory,
+                    [categoryName]: updatedTeams
+                }
+            });
 
             window.showGlobalNotification(`Tím '${teamData.teamName}' bol úspešne pridaný do skupiny '${targetGroup || "bez skupiny"}'.`, 'success');
         } catch (error) {
