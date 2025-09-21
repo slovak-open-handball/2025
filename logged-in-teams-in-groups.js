@@ -276,7 +276,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         const teamsByCategory = { ...userData.teams };
         const currentCategoryTeams = teamsByCategory[teamCategoryName] || [];
 
-        // 1. Prečíslovanie tímov v pôvodnej skupine po odobratí tímu
+        // 1. Získanie tímov, ktoré neboli v pôvodnej skupine
+        const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
+
+        // 2. Prečíslovanie tímov v pôvodnej skupine po odobratí tímu
         const reorderedOriginalTeams = currentCategoryTeams
             .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName)
             .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -285,24 +288,23 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 order: index + 1
             }));
 
-        // 2. Príprava nového poradia pre presúvaný tím
+        // 3. Príprava nového poradia pre presúvaný tím
         const nextOrder = targetGroup
             ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1
             : null;
 
-        // 3. Aktualizácia presúvaného tímu
+        // 4. Aktualizácia presúvaného tímu s novým poradím a skupinou
         const movedTeamData = {
             ...teamData,
             groupName: targetGroup,
             order: nextOrder
         };
 
-        // 4. Vytvorenie finálneho zoznamu tímov v kategórii
-        const updatedTeams = currentCategoryTeams.filter(team => team.groupName !== originalGroup && team.teamName !== teamData.teamName);
-        updatedTeams.push(...reorderedOriginalTeams, movedTeamData);
+        // 5. Vytvorenie finálneho zoznamu tímov v kategórii
+        // Spojenie tímov, ktoré ostali, s prečíslovanými tímami z pôvodnej skupiny a s presunutým tímom
+        const updatedTeams = [...teamsOutsideOriginalGroup, ...reorderedOriginalTeams, movedTeamData];
 
-
-        // 5. Uloženie zmenených dát do Firebase
+        // 6. Uloženie zmenených dát do Firebase
         await updateDoc(userRef, {
             teams: {
                 ...teamsByCategory,
@@ -310,7 +312,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             }
         });
 
-        // 6. Aktualizácia nextOrderMap pre UI
+        // 7. Aktualizácia nextOrderMap pre UI
         setNextOrderMap(prev => {
             const newMap = { ...prev };
             if (originalGroup) {
