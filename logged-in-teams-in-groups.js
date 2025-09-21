@@ -18,18 +18,22 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     // Zobrazenie lokálnej notifikácie
     const showLocalNotification = (message, type, notificationId = null, updateAfterTimeout = false) => {
-        // Ak sa notifikácia už zobrazila v aktuálnej relácii, nebudeme ju zobrazovať znova
-        if (notificationId && sessionStorage.getItem(`notification-${notificationId}`) === 'displayed') {
-            console.log("Notifikácia už bola zobrazená v tejto relácii. Preskakujem...");
-            return;
+        // Použitie počítadla pre zobrazenia notifikácie
+        if (notificationId) {
+            let displayCount = parseInt(sessionStorage.getItem(`notification-count-${notificationId}`) || '0', 10);
+            
+            // Ak sa notifikácia už zobrazila 2-krát, nebudeme ju zobrazovať znova
+            if (displayCount >= 2) {
+                console.log(`Notifikácia s ID ${notificationId} už bola zobrazená 2-krát. Preskakujem...`);
+                return;
+            }
+
+            // Inkrementácia počítadla a uloženie do sessionStorage
+            displayCount++;
+            sessionStorage.setItem(`notification-count-${notificationId}`, displayCount.toString());
         }
 
         setNotification({ message, type, isVisible: true, updateOnHide: updateAfterTimeout });
-
-        // Uloženie notifikácie do sessionStorage
-        if (notificationId) {
-            sessionStorage.setItem(`notification-${notificationId}`, 'displayed');
-        }
 
         if (!updateAfterTimeout) {
             setTimeout(() => {
@@ -213,12 +217,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             if (!querySnapshot.empty) {
                 const docId = querySnapshot.docs[0].id; // Získanie ID dokumentu
                 const latestNotification = querySnapshot.docs[0].data();
-
-                // Kontrola, či sa notifikácia už zobrazila v tejto relácii
-                if (sessionStorage.getItem(`notification-${docId}`) === 'displayed') {
-                    console.log(`Notifikácia s ID ${docId} už bola zobrazená. Preskakujem...`);
-                    return;
-                }
 
                 if (latestNotification && latestNotification.changes && latestNotification.changes.length > 0) {
                     showLocalNotification(latestNotification.changes[0], 'success', docId, false);
