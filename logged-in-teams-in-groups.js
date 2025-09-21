@@ -11,70 +11,22 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [nextOrderMap, setNextOrderMap] = useState({});
     const [notification, setNotification] = useState({ message: '', type: '', isVisible: false, updateOnHide: false });
     const [userProfileData, setUserProfileData] = useState(initialUserProfileData);
+    const [pendingNotification, setPendingNotification] = useState(null);
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
 
     // Zobrazenie lokálnej notifikácie
-    const showLocalNotification = (message, type, notificationId = null, updateAfterTimeout = false) => {
-        // Použitie počítadla pre zobrazenia notifikácie
-        if (notificationId) {
-            let displayCount = parseInt(sessionStorage.getItem(`notification-count-${notificationId}`) || '0', 10);
-            
-            // Ak sa notifikácia už zobrazila 2-krát, nebudeme ju zobrazovať znova
-            if (displayCount >= 2) {
-                console.log(`Notifikácia s ID ${notificationId} už bola zobrazená 2-krát. Preskakujem...`);
-                return;
-            }
+    const showLocalNotification = (message, type) => {
+        setNotification({ message, type, isVisible: true, updateOnHide: false });
 
-            // Inkrementácia počítadla a uloženie do sessionStorage
-            displayCount++;
-            sessionStorage.setItem(`notification-count-${notificationId}`, displayCount.toString());
-        }
-
-        setNotification({ message, type, isVisible: true, updateOnHide: updateAfterTimeout });
-
-        if (!updateAfterTimeout) {
-            setTimeout(() => {
-                setNotification(prev => ({ ...prev, isVisible: false }));
-            }, 5000);
-        }
+        setTimeout(() => {
+            setNotification(prev => ({ ...prev, isVisible: false }));
+        }, 5000);
     };
 
-    // Efekt pre notifikácie
-    useEffect(() => {
-        if (notification.isVisible && notification.updateOnHide) {
-            const timer = setTimeout(() => {
-                setNotification(prev => ({ ...prev, isVisible: false }));
-                // Trigger an update after the notification disappears
-                // We'll use a simple state change to force a re-render
-                // This is a simple way to achieve this without complex logic
-                console.log("Notifikácia zmizla. Aktualizujem stav aplikácie...");
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [notification.isVisible, notification.updateOnHide]);
-
-
-    // Načítanie kategórie z URL hashu
-    useEffect(() => {
-        const hash = window.location.hash.substring(1);
-        if (hash) {
-            setSelectedCategoryId(hash);
-        }
-    }, []);
-
-    // Synchronizácia URL hashu
-    useEffect(() => {
-        if (selectedCategoryId) {
-            window.location.hash = selectedCategoryId;
-        } else {
-            window.location.hash = '';
-        }
-    }, [selectedCategoryId]);
-
-    // Načítanie dát z Firebase
+    // Efekt pre načítanie dát z Firebase
     useEffect(() => {
         if (!window.db) {
             console.error("Firebase Firestore nie je inicializovaný.");
@@ -194,42 +146,30 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         };
     }, []);
 
-    // Nový useEffect pre načítanie notifikácií
+    // Nový useEffect na zobrazenie notifikácie po re-renderi
     useEffect(() => {
-        const auth = window.auth;
-        const db = window.db;
-        const currentUser = auth.currentUser;
-
-        if (!currentUser || !db) {
-            return;
+        if (pendingNotification) {
+            showLocalNotification(pendingNotification, 'success');
+            setPendingNotification(null);
         }
+    }, [allTeams, pendingNotification]);
 
-        // Vytvorenie dotazu pre najnovšiu notifikáciu od aktuálneho používateľa
-        const q = query(
-            collection(db, 'notifications'),
-            where('userId', '==', currentUser.uid),
-            orderBy('timestamp', 'desc'),
-            limit(1)
-        );
+    // Načítanie kategórie z URL hashu
+    useEffect(() => {
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            setSelectedCategoryId(hash);
+        }
+    }, []);
 
-        // Pripojenie onSnapshot poslucháča
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            if (!querySnapshot.empty) {
-                const docId = querySnapshot.docs[0].id; // Získanie ID dokumentu
-                const latestNotification = querySnapshot.docs[0].data();
-
-                if (latestNotification && latestNotification.changes && latestNotification.changes.length > 0) {
-                    showLocalNotification(latestNotification.changes[0], 'success', docId, false);
-                }
-            }
-        }, (error) => {
-            console.error("Chyba pri načítaní notifikácií:", error);
-        });
-
-        // Odhlásenie poslucháča pri zničení komponentu
-        return () => unsubscribe();
-    }, [userProfileData]);
-
+    // Synchronizácia URL hashu
+    useEffect(() => {
+        if (selectedCategoryId) {
+            window.location.hash = selectedCategoryId;
+        } else {
+            window.location.hash = '';
+        }
+    }, [selectedCategoryId]);
 
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
@@ -308,12 +248,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         if (originalGroup === targetGroup) {
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
-            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info', true);
+            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info');
             return;
         }
 
         if (targetCategoryId && teamCategoryName !== targetCategoryName) {
-            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error', true);
+            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
 
@@ -377,24 +317,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             await Promise.all(batchPromises);
             
-            // Vytvorenie a uloženie notifikácie do databázy
-            const auth = window.auth;
-            const currentUser = auth.currentUser;
-            
-            // Vypíše text upozornenia do konzoly
-            console.log("Upozornenie, ktoré sa ukladá do databázy:", notificationMessage);
-
-            await addDoc(collection(window.db, `notifications`), {
-                changes: [notificationMessage],
-                userEmail: currentUser.email,
-                userName: userProfileData?.name || currentUser.email,
-                userId: currentUser.uid,
-                timestamp: Timestamp.now(),
-            });
+            // Nastavenie notifikácie, ktorá sa zobrazí po re-renderi
+            setPendingNotification(notificationMessage);
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error', true);
+            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
         }
     };
 
