@@ -336,7 +336,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             await addDoc(collection(window.db, `notifications`), {
                 changes: [notificationMessage],
                 userEmail: currentUser.email,
-                userName: userProfileData.name,
+                userName: userProfileData?.name || currentUser.email,
                 userId: currentUser.uid,
                 timestamp: Timestamp.now(),
             });
