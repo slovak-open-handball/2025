@@ -11,21 +11,24 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [nextOrderMap, setNextOrderMap] = useState({});
     const [notification, setNotification] = useState(null);
     
-    // Nový stav, ktorý slúži ako "spúšťač" notifikácie po re-renderi
-    const [showNotif, setShowNotif] = useState(false);
-
     // Stav pre drag & drop
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
-
-    // Funkcia na zobrazenie notifikácie (jednoducho nastaví stav)
-    const showLocalNotification = (message, type) => {
-        setNotification({ id: Date.now(), message, type });
-    };
     
-    // Efekt pre manažovanie notifikácií a vymazanie po 5 sekundách
-    // Spúšťa sa len vtedy, keď sa zmení stav notifikácie (notification)
+    // Kľúčový a opravený useEffect na správu notifikácií.
+    // Spúšťa sa pri načítaní stránky a kontroluje sessionStorage.
     useEffect(() => {
+        const message = sessionStorage.getItem('notificationMessage');
+        const type = sessionStorage.getItem('notificationType');
+        
+        if (message && type) {
+            // Ak notifikácia existuje, nastavíme stav a okamžite ju vymažeme.
+            setNotification({ id: Date.now(), message, type });
+            sessionStorage.removeItem('notificationMessage');
+            sessionStorage.removeItem('notificationType');
+        }
+
+        // Efekt, ktorý po 5 sekundách vymaže notifikáciu zo stavu.
         if (notification) {
             const timer = setTimeout(() => {
                 setNotification(null);
@@ -33,24 +36,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return () => clearTimeout(timer);
         }
     }, [notification]);
-    
-    // Kľúčový a opravený useEffect. Spúšťa sa vždy, keď sa showNotif zmení na true.
-    useEffect(() => {
-        if (showNotif) {
-            const message = sessionStorage.getItem('notificationMessage');
-            const type = sessionStorage.getItem('notificationType');
-            
-            if (message && type) {
-                // Zobrazíme notifikáciu zo sessionStorage
-                showLocalNotification(message, type);
-            }
-
-            // Vyčistíme sessionStorage a resetujeme stav
-            sessionStorage.removeItem('notificationMessage');
-            sessionStorage.removeItem('notificationType');
-            setShowNotif(false);
-        }
-    }, [showNotif]);
 
     // Efekt pre načítanie dát z Firebase
     useEffect(() => {
@@ -266,12 +251,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         if (originalGroup === targetGroup) {
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
-            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info');
+            setNotification({ id: Date.now(), message: "Tím sa už nachádza v tejto skupine.", type: 'info' });
             return;
         }
 
         if (targetCategoryId && teamCategoryName !== targetCategoryName) {
-            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím.", type: 'error' });
             return;
         }
 
@@ -350,17 +335,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             }
             
-            // Uložíme notifikáciu do sessionStorage pre zobrazenie po nasledujúcom re-renderi
+            // Kľúčová zmena: Uložíme notifikáciu a znovunačítame stránku,
+            // aby sa notifikácia zobrazila po čistom načítaní.
             const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
             sessionStorage.setItem('notificationMessage', notificationMessage);
             sessionStorage.setItem('notificationType', 'success');
-            
-            // Nová zmena: Spustíme re-render, ktorý následne zobrazí notifikáciu
-            setShowNotif(true);
+            window.location.reload();
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+            setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
         }
     };
 
