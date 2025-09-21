@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
@@ -269,97 +269,93 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     }
 
     const userRef = doc(window.db, 'users', teamData.uid);
+
     try {
-        const userDocSnap = await getDoc(userRef);
-        if (!userDocSnap.exists()) {
-            throw new Error("Dokument používateľa neexistuje!");
-        }
-        const userData = userDocSnap.data();
-        const teamsByCategory = { ...userData.teams };
-        const currentCategoryTeams = teamsByCategory[teamCategoryName] || [];
+        await runTransaction(window.db, async (transaction) => {
+            const userDocSnap = await transaction.get(userRef);
+            if (!userDocSnap.exists()) {
+                throw new Error("Dokument používateľa neexistuje!");
+            }
+            const userData = userDocSnap.data();
+            const teamsByCategory = { ...userData.teams };
+            const currentCategoryTeams = teamsByCategory[teamCategoryName] || [];
 
-        console.log("Všetky tímy v kategórii pred filtrom:", currentCategoryTeams);
+            console.log("Všetky tímy v kategórii pred filtrom (v transakcii):", currentCategoryTeams);
 
-        if (originalGroup) {
-            const teamsRemainingInOriginalGroup = currentCategoryTeams
-                .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
+            if (originalGroup) {
+                const teamsRemainingInOriginalGroup = currentCategoryTeams
+                    .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
 
-            console.log(`\nKontrola poradia po odchode tímu '${teamData.teamName}' zo skupiny '${originalGroup}'.`);
-            console.log("Poradie tímov pred prečíslovaním:", teamsRemainingInOriginalGroup);
+                console.log(`\nKontrola poradia po odchode tímu '${teamData.teamName}' zo skupiny '${originalGroup}'.`);
+                console.log("Poradie tímov pred prečíslovaním:", teamsRemainingInOriginalGroup);
 
-            let reorderedOriginalTeams = [];
-            if (teamsRemainingInOriginalGroup.length > 0) {
-                reorderedOriginalTeams = teamsRemainingInOriginalGroup
-                    .sort((a, b) => (a.order || 0) - (b.order || 0))
-                    .map((team, index) => ({
-                        ...team,
-                        order: index + 1
+                let reorderedOriginalTeams = [];
+                if (teamsRemainingInOriginalGroup.length > 0) {
+                    reorderedOriginalTeams = teamsRemainingInOriginalGroup
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .map((team, index) => ({
+                            ...team,
+                            order: index + 1
+                        }));
+                    console.log("Poradie tímov po prečíslovaní:", reorderedOriginalTeams);
+                }
+
+                const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
+                const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
+                const movedTeamData = { ...teamData, groupName: targetGroup, order: nextOrder };
+
+                const updatedTeams = [
+                    ...teamsOutsideOriginalGroup,
+                    ...reorderedOriginalTeams,
+                    movedTeamData
+                ].filter((team, index, self) =>
+                    index === self.findIndex(t => t.teamName === team.teamName && t.uid === team.uid)
+                );
+
+                transaction.update(userRef, {
+                    teams: {
+                        ...teamsByCategory,
+                        [teamCategoryName]: updatedTeams
+                    }
+                });
+
+                if (teamsRemainingInOriginalGroup.length === 0) {
+                     setNextOrderMap(prev => ({
+                        ...prev,
+                        [`${teamCategoryName}-${originalGroup}`]: 1
                     }));
-                console.log("Poradie tímov po prečíslovaní:", reorderedOriginalTeams);
+                }
             } else {
-                setNextOrderMap(prev => ({
-                    ...prev,
-                    [`${teamCategoryName}-${originalGroup}`]: 1
-                }));
+                const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
+                const updatedTeam = { ...teamData, groupName: targetGroup, order: nextOrder };
+                const updatedTeams = currentCategoryTeams.map(t =>
+                    t.teamName === teamData.teamName ? updatedTeam : t
+                );
+
+                transaction.update(userRef, {
+                    teams: {
+                        ...teamsByCategory,
+                        [teamCategoryName]: updatedTeams
+                    }
+                });
             }
 
-            const teamsOutsideOriginalGroup = currentCategoryTeams.filter(team => team.groupName !== originalGroup);
-            const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
-            const movedTeamData = { ...teamData, groupName: targetGroup, order: nextOrder };
-
-            const updatedTeams = [
-                ...teamsOutsideOriginalGroup,
-                ...reorderedOriginalTeams,
-                movedTeamData
-            ].filter((team, index, self) =>
-                index === self.findIndex(t => t.teamName === team.teamName && t.uid === team.uid)
-            );
-
-            await updateDoc(userRef, {
-                teams: {
-                    ...teamsByCategory,
-                    [teamCategoryName]: updatedTeams
-                }
-            });
-
-            setNextOrderMap(prev => {
-                const newMap = { ...prev };
-                if (targetGroup) {
-                    const key = `${teamCategoryName}-${targetGroup}`;
-                    newMap[key] = (nextOrderMap[key] || 1) + 1;
-                }
-                return newMap;
-            });
-        } else {
-            const nextOrder = targetGroup ? nextOrderMap[`${teamCategoryName}-${targetGroup}`] || 1 : null;
-            const updatedTeam = { ...teamData, groupName: targetGroup, order: nextOrder };
-            const updatedTeams = currentCategoryTeams.map(t =>
-                t.teamName === teamData.teamName ? updatedTeam : t
-            );
-
-            await updateDoc(userRef, {
-                teams: {
-                    ...teamsByCategory,
-                    [teamCategoryName]: updatedTeams
-                }
-            });
-
-            setNextOrderMap(prev => {
-                const newMap = { ...prev };
-                if (targetGroup) {
-                    const key = `${teamCategoryName}-${targetGroup}`;
-                    newMap[key] = (nextOrderMap[key] || 1) + 1;
-                }
-                return newMap;
-            });
-        }
+            if (targetGroup) {
+                 setNextOrderMap(prev => {
+                     const newMap = { ...prev };
+                     const key = `${teamCategoryName}-${targetGroup}`;
+                     newMap[key] = (newMap[key] || 1) + 1;
+                     return newMap;
+                 });
+            }
+        });
 
         window.showGlobalNotification(
             `Tím '${teamData.teamName}' bol úspešne ${targetGroup ? `pridaný do skupiny '${targetGroup}'` : 'odstránený zo skupiny'}.`,
             'success'
         );
     } catch (error) {
-        console.error("Chyba pri aktualizácii databázy:", error);
+        console.error("Chyba pri aktualizácii databázy v transakcii:", error);
         window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
     }
 };
