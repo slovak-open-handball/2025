@@ -23,27 +23,28 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         setNotifications(prev => [...prev, newNotification]);
     };
     
-    // Efekt pre manažovanie notifikácií
+    // Efekt pre manažovanie notifikácií a vymazanie sessionStorage po ich zobrazení
     useEffect(() => {
         if (notifications.length > 0) {
             const timer = setTimeout(() => {
                 setNotifications(prev => prev.slice(1));
+                // **NOVINKA:** Vymažeme premenné zo sessionStorage až po 5 sekundách
+                sessionStorage.removeItem('notificationMessage');
+                sessionStorage.removeItem('notificationType');
             }, 5000); // Zobrazenie notifikácie na 5 sekúnd
             return () => clearTimeout(timer);
         }
     }, [notifications]);
     
-    // NOVÁ LOGIKA: Kontrola sessionStorage pre notifikácie
+    // Načítanie notifikácie zo sessionStorage pri načítaní komponentu
     useEffect(() => {
         const message = sessionStorage.getItem('notificationMessage');
         const type = sessionStorage.getItem('notificationType');
 
         if (message && type) {
-            // Zobrazíme notifikáciu zo sessionStorage
+            // Zobrazíme notifikáciu zo sessionStorage.
             showLocalNotification(message, type);
-            // Okamžite vymažeme údaje, aby sa nezobrazovala znova
-            sessionStorage.removeItem('notificationMessage');
-            sessionStorage.removeItem('notificationType');
+            // Kód pre vymazanie sme presunuli do useEffectu, ktorý manažuje časovač.
         }
     }, []);
 
@@ -335,7 +336,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 try {
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
+                        message: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
