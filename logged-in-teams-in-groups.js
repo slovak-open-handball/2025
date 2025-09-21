@@ -290,8 +290,9 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         // Táto logika sa spustí iba vtedy, ak sa tím presúva z nejakej skupiny.
         if (originalGroup) {
             // 1. Získame zoznam tímov, ktoré ostali v pôvodnej skupine po odobratí tímu.
+            console.log("Všetky tímy v kategórii pred filtrom:", currentCategoryTeams);
             const teamsRemainingInOriginalGroup = currentCategoryTeams
-                .filter(team => team.groupName === originalGroup && !(team.uid === teamData.uid && team.teamName === teamData.teamName));
+                .filter(team => team.groupName === originalGroup && team.teamName !== teamData.teamName);
 
             // 2. Zoradíme ich podľa aktuálneho poradia a prečíslujeme, aby sme odstránili medzeru.
             console.log(`\nKontrola poradia po odchode tímu '${teamData.teamName}' zo skupiny '${originalGroup}'.`);
