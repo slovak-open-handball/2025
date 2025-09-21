@@ -1,7 +1,17 @@
-// Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc, addDoc, collection, Timestamp, query, getDocs, where, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Global variables for Firebase configuration
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
@@ -9,37 +19,34 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
-    const [notification, setNotification] = useState({ message: '', type: '', isVisible: false, updateOnHide: false });
+    const [notification, setNotification] = useState({ message: '', type: '', isVisible: false });
     const [userProfileData, setUserProfileData] = useState(initialUserProfileData);
+    // NOVÝ STAV: slúži na dočasné ignorovanie aktualizácií z Firestore
+    const [ignoreUpdates, setIgnoreUpdates] = useState(false);
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
 
     // Zobrazenie lokálnej notifikácie
-    const showLocalNotification = (message, type, updateAfterTimeout = false) => {
-        setNotification({ message, type, isVisible: true, updateOnHide: updateAfterTimeout });
-        if (!updateAfterTimeout) {
-            setTimeout(() => {
-                setNotification(prev => ({ ...prev, isVisible: false }));
-            }, 5000);
-        }
+    const showLocalNotification = (message, type) => {
+        setNotification({ message, type, isVisible: true });
+        setTimeout(() => {
+            setNotification(prev => ({ ...prev, isVisible: false }));
+        }, 5000);
     };
 
-    // Efekt pre notifikácie
+    // Efekt pre notifikácie a dočasné ignorovanie aktualizácií
     useEffect(() => {
-        if (notification.isVisible && notification.updateOnHide) {
+        if (ignoreUpdates) {
+            // Po 5 sekundách opäť povolíme aktualizácie
             const timer = setTimeout(() => {
-                setNotification(prev => ({ ...prev, isVisible: false }));
-                // Trigger an update after the notification disappears
-                // We'll use a simple state change to force a re-render
-                // This is a simple way to achieve this without complex logic
-                console.log("Notifikácia zmizla. Aktualizujem stav aplikácie...");
+                setIgnoreUpdates(false);
+                console.log("Notifikácia zmizla. Povoľujem aktualizácie z databázy.");
             }, 5000);
             return () => clearTimeout(timer);
         }
-    }, [notification.isVisible, notification.updateOnHide]);
-
+    }, [ignoreUpdates]);
 
     // Načítanie kategórie z URL hashu
     useEffect(() => {
@@ -60,13 +67,19 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     // Načítanie dát z Firebase
     useEffect(() => {
-        if (!window.db) {
+        if (!db) {
             console.error("Firebase Firestore nie je inicializovaný.");
             return;
         }
 
-        const usersRef = collection(window.db, 'users');
+        const usersRef = collection(db, 'users');
         const unsubscribeTeams = onSnapshot(usersRef, (querySnapshot) => {
+            // NOVÁ KONTROLA: Ak ignorujeme aktualizácie, okamžite sa vrátime
+            if (ignoreUpdates) {
+                console.log("Ignorujem aktualizáciu z databázy, notifikácia je aktívna.");
+                return;
+            }
+
             const teamsList = [];
             const newNextOrderMap = {};
             querySnapshot.forEach((doc) => {
@@ -140,7 +153,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             });
         });
 
-        const categoriesRef = doc(window.db, 'settings', 'categories');
+        const categoriesRef = doc(db, 'settings', 'categories');
         const unsubscribeCategories = onSnapshot(categoriesRef, (docSnap) => {
             const categoryIdToName = {};
             if (docSnap.exists()) {
@@ -154,7 +167,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             setCategoryIdToNameMap(categoryIdToName);
         });
 
-        const groupsRef = doc(window.db, 'settings', 'groups');
+        const groupsRef = doc(db, 'settings', 'groups');
         const unsubscribeGroups = onSnapshot(groupsRef, (docSnap) => {
             const groupsByCategoryId = {};
             if (docSnap.exists()) {
@@ -176,7 +189,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             unsubscribeCategories();
             unsubscribeGroups();
         };
-    }, []);
+    }, [ignoreUpdates]); // Efekt sa spustí aj pri zmene ignoreUpdates
 
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
@@ -246,7 +259,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const teamCategoryName = categoryIdToNameMap[dragData.teamCategoryId];
         const targetCategoryName = categoryIdToNameMap[targetCategoryId];
         const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
-
+        
         console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
         console.log(`Pôvodná kategória: ${teamCategoryName}`);
         console.log(`Pôvodná skupina: ${originalGroup || 'bez skupiny'}`);
@@ -255,17 +268,21 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         if (originalGroup === targetGroup) {
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
-            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info', true);
+            showLocalNotification("Tím sa už nachádza v tejto skupine.", 'info');
             return;
         }
 
         if (targetCategoryId && teamCategoryName !== targetCategoryName) {
-            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error', true);
+            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
 
         try {
-            const usersRef = collection(window.db, 'users');
+            // Pred spustením aktualizácie databázy, nastavíme ignoreUpdates na true.
+            // Tým zabezpečíme, že sa zobrazenie neaktualizuje, kým notifikácia nezmizne.
+            setIgnoreUpdates(true);
+
+            const usersRef = collection(db, 'users');
             const userDocs = await getDocs(usersRef);
             const batchPromises = [];
 
@@ -325,13 +342,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             await Promise.all(batchPromises);
             
             // Vytvorenie a uloženie notifikácie do databázy
-            const auth = window.auth;
             const currentUser = auth.currentUser;
             
             // Vypíše text upozornenia do konzoly
             console.log("Upozornenie, ktoré sa ukladá do databázy:", notificationMessage);
 
-            await addDoc(collection(window.db, `notifications`), {
+            await addDoc(collection(db, `notifications`), {
                 changes: [notificationMessage],
                 userEmail: currentUser.email,
                 userName: userProfileData?.name || currentUser.email,
@@ -339,11 +355,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 timestamp: Timestamp.now(),
             });
 
-            showLocalNotification(notificationMessage, 'success', true);
+            // Až po úspešnej aktualizácii databázy, zobrazíme notifikáciu
+            showLocalNotification(notificationMessage, 'success');
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error', true);
+            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
         }
     };
 
@@ -597,17 +614,17 @@ const handleDataUpdateAndRender = (event) => {
         const root = ReactDOM.createRoot(rootElement);
         if (userProfileData) {
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
-            if (window.auth && window.db && !isEmailSyncListenerSetup) {
-                onAuthStateChanged(window.auth, async (user) => {
+            if (auth && db && !isEmailSyncListenerSetup) {
+                onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         try {
-                            const userProfileRef = doc(window.db, 'users', user.uid);
+                            const userProfileRef = doc(db, 'users', user.uid);
                             const docSnap = await getDoc(userProfileRef);
                             if (docSnap.exists()) {
                                 const firestoreEmail = docSnap.data().email;
                                 if (user.email !== firestoreEmail) {
                                     await updateDoc(userProfileRef, { email: user.email });
-                                    const notificationsCollectionRef = collection(window.db, 'notifications');
+                                    const notificationsCollectionRef = collection(db, 'notifications');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail: user.email,
                                         changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
