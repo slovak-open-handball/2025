@@ -309,6 +309,9 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Vytvorenie a uloženie notifikácie do databázy
             const auth = window.auth;
             const currentUser = auth.currentUser;
+            
+            // Vypíše text upozornenia do konzoly
+            console.log("Upozornenie, ktoré sa ukladá do databázy:", notificationMessage);
 
             await addDoc(collection(window.db, `notifications`), {
                 changes: [notificationMessage],
