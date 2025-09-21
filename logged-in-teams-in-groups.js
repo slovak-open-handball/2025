@@ -3,49 +3,25 @@ import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, quer
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
-/**
- * Globálna funkcia pre zobrazenie notifikácií
- */
-window.showGlobalNotification = (message, type = 'success') => {
-    let notificationElement = document.getElementById('global-notification');
-    if (!notificationElement) {
-        notificationElement = document.createElement('div');
-        notificationElement.id = 'global-notification';
-        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
-        document.body.appendChild(notificationElement);
-    }
-    const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
-    let typeClasses = '';
-    switch (type) {
-        case 'success':
-            typeClasses = 'bg-green-500 text-white';
-            break;
-        case 'error':
-            typeClasses = 'bg-red-500 text-white';
-            break;
-        case 'info':
-            typeClasses = 'bg-blue-500 text-white';
-            break;
-        default:
-            typeClasses = 'bg-gray-700 text-white';
-    }
-    notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
-    notificationElement.textContent = message;
-    setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
-    }, 5000);
-};
-
 const AddGroupsApp = ({ userProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
+    const [notification, setNotification] = useState({ message: '', type: '', isVisible: false });
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
-    const lastDragOverGroup = useRef(null); // Ref na uloženie poslednej skupiny, nad ktorou bol kurzor
+    const lastDragOverGroup = useRef(null);
+
+    // Zobrazenie lokálnej notifikácie
+    const showLocalNotification = (message, type) => {
+        setNotification({ message, type, isVisible: true });
+        setTimeout(() => {
+            setNotification(prev => ({ ...prev, isVisible: false }));
+        }, 5000);
+    };
 
     // Načítanie kategórie z URL hashu
     useEffect(() => {
@@ -264,7 +240,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
 
         if (targetCategoryId && teamCategoryName !== targetCategoryName) {
-            window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
+            showLocalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
 
@@ -341,13 +317,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 timestamp: Timestamp.now(),
             });
 
-            window.showGlobalNotification(
+            showLocalNotification(
                 `Tím '${teamData.teamName}' bol úspešne ${targetGroup ? `pridaný do skupiny '${targetGroup}'` : 'odstránený zo skupiny'}.`,
                 'success'
             );
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            window.showGlobalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
+            showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
         }
     };
 
@@ -523,10 +499,33 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+    
+    // Dynamické triedy pre notifikáciu
+    const notificationClasses = `absolute top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-opacity duration-300 transform ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
+    let typeClasses = '';
+    switch (notification.type) {
+        case 'success':
+            typeClasses = 'bg-green-500 text-white';
+            break;
+        case 'error':
+            typeClasses = 'bg-red-500 text-white';
+            break;
+        case 'info':
+            typeClasses = 'bg-blue-500 text-white';
+            break;
+        default:
+            typeClasses = 'bg-gray-700 text-white';
+    }
 
     return React.createElement(
         'div',
-        { className: 'flex flex-col w-full' },
+        { className: 'flex flex-col w-full relative' },
+        // Lokálna notifikácia
+        React.createElement(
+            'div',
+            { className: `${notificationClasses} ${typeClasses}`},
+            notification.message
+        ),
         React.createElement(
             'div',
             { className: 'w-full max-w-xs mx-auto mb-8' },
@@ -590,12 +589,10 @@ const handleDataUpdateAndRender = (event) => {
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
                                     timestamp: new Date(),
                                 });
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
                             }
                         }
                     } catch (error) {
                         console.error("Chyba pri synchronizácii e-mailu:", error);
-                        window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
                     }
                 }
             });
