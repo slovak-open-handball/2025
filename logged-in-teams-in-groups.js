@@ -295,6 +295,9 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
             // 2. Zoradíme ich podľa aktuálneho poradia a prečíslujeme, aby sme odstránili medzeru.
             console.log(`\nKontrola poradia po odchode tímu '${teamData.teamName}' zo skupiny '${originalGroup}'.`);
+            console.log("Všetky tímy v kategórii pred filtrom:", currentCategoryTeams);
+            console.log("originalGroup:", originalGroup, "teamData.groupName:", teamData.groupName);
+            console.log("teamData:", teamData);
             console.log("Poradie tímov pred prečíslovaním:", teamsRemainingInOriginalGroup.map(t => ({ meno: t.teamName, poradie: t.order })));
             
             const reorderedOriginalTeams = teamsRemainingInOriginalGroup
