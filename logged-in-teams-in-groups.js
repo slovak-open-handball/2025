@@ -523,7 +523,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
     // Dynamické triedy pre notifikáciu
     const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
