@@ -35,6 +35,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     }, [notifications]);
     
+    // Nový useEffect na spracovanie notifikácie po načítaní stránky
+    useEffect(() => {
+        const message = sessionStorage.getItem('notificationMessage');
+        const type = sessionStorage.getItem('notificationType');
+        
+        if (message && type) {
+            // Zobrazíme notifikáciu zo sessionStorage
+            showLocalNotification(message, type);
+        }
+    }, []); // Prázdne pole závislostí zabezpečí spustenie len raz pri načítaní komponentu.
+
     // Efekt pre načítanie dát z Firebase
     useEffect(() => {
         if (!window.db) {
@@ -116,14 +127,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 console.log("-----------------------------------------");
             });
             
-            // Kontrola a zobrazenie notifikácie priamo po načítaní dát
-            const message = sessionStorage.getItem('notificationMessage');
-            const type = sessionStorage.getItem('notificationType');
-            
-            if (message && type) {
-                // Zobrazíme notifikáciu zo sessionStorage
-                showLocalNotification(message, type);
-            }
         });
 
         const categoriesRef = doc(window.db, 'settings', 'categories');
