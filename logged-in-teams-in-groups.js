@@ -251,6 +251,16 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const teamCategoryId = dragData.teamCategoryId;
     const originalGroup = teamData.groupName;
     const teamCategoryName = categoryIdToNameMap[teamCategoryId];
+    const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+
+    // Logovanie pôvodného a cieľového stavu
+    console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
+    console.log(`Pôvodná kategória: ${teamCategoryName}`);
+    console.log(`Pôvodná skupina: ${originalGroup || 'bez skupiny'}`);
+    console.log(`Cieľová kategória: ${targetCategoryName}`);
+    console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
+    console.log("---------------------------------");
+
 
     // Ak sa presúva do rovnakej skupiny, nič nerob
     if (originalGroup === targetGroup) {
