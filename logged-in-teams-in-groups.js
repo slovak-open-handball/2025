@@ -344,7 +344,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
             sessionStorage.setItem('notificationMessage', notificationMessage);
             sessionStorage.setItem('notificationType', 'success');
-            window.location.reload();
+//            window.location.reload();
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
