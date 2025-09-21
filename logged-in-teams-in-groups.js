@@ -3,13 +3,14 @@ import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, quer
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
-const AddGroupsApp = ({ userProfileData }) => {
+const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
     const [notification, setNotification] = useState({ message: '', type: '', isVisible: false });
+    const [userProfileData, setUserProfileData] = useState(initialUserProfileData);
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -575,39 +576,36 @@ let isEmailSyncListenerSetup = false;
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
-    if (userProfileData) {
-        if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            onAuthStateChanged(window.auth, async (user) => {
-                if (user) {
-                    try {
-                        const userProfileRef = doc(window.db, 'users', user.uid);
-                        const docSnap = await getDoc(userProfileRef);
-                        if (docSnap.exists()) {
-                            const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {
-                                await updateDoc(userProfileRef, { email: user.email });
-                                const notificationsCollectionRef = collection(window.db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email,
-                                    changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(),
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Chyba pri synchronizácii e-mailu:", error);
-                    }
-                }
-            });
-            isEmailSyncListenerSetup = true;
-        }
-        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-            const root = ReactDOM.createRoot(rootElement);
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const root = ReactDOM.createRoot(rootElement);
+        if (userProfileData) {
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
-        }
-    } else {
-        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-            const root = ReactDOM.createRoot(rootElement);
+            if (window.auth && window.db && !isEmailSyncListenerSetup) {
+                onAuthStateChanged(window.auth, async (user) => {
+                    if (user) {
+                        try {
+                            const userProfileRef = doc(window.db, 'users', user.uid);
+                            const docSnap = await getDoc(userProfileRef);
+                            if (docSnap.exists()) {
+                                const firestoreEmail = docSnap.data().email;
+                                if (user.email !== firestoreEmail) {
+                                    await updateDoc(userProfileRef, { email: user.email });
+                                    const notificationsCollectionRef = collection(window.db, 'notifications');
+                                    await addDoc(notificationsCollectionRef, {
+                                        userEmail: user.email,
+                                        changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                        timestamp: new Date(),
+                                    });
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Chyba pri synchronizácii e-mailu:", error);
+                        }
+                    }
+                });
+                isEmailSyncListenerSetup = true;
+            }
+        } else {
             root.render(
                 React.createElement(
                     'div',
