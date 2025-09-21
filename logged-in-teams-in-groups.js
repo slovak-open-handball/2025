@@ -184,6 +184,49 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     }, []);
 
+    // Nová funkcia na opravu medzier v poradí tímov
+    const fixTeamOrderGaps = async (categoryName, groupName) => {
+        if (!window.db) {
+            console.error("Firebase Firestore nie je inicializovaný.");
+            return;
+        }
+
+        try {
+            const q = query(collection(window.db, 'users'), where(`teams.${categoryName}`, '!=', null));
+            const querySnapshot = await getDocs(q);
+
+            querySnapshot.forEach(async (userDoc) => {
+                const userData = userDoc.data();
+                const teams = userData.teams[categoryName] || [];
+                const teamsInGroup = teams
+                    .filter(team => team.groupName === groupName)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                let hasChanged = false;
+                const updatedTeamsInGroup = teamsInGroup.map((team, index) => {
+                    const expectedOrder = index + 1;
+                    if (team.order !== expectedOrder) {
+                        hasChanged = true;
+                        return { ...team, order: expectedOrder };
+                    }
+                    return team;
+                });
+
+                if (hasChanged) {
+                    const otherTeams = teams.filter(team => team.groupName !== groupName);
+                    const updatedTeamsForCategory = [...otherTeams, ...updatedTeamsInGroup];
+                    await updateDoc(userDoc.ref, {
+                        [`teams.${categoryName}`]: updatedTeamsForCategory
+                    });
+                    console.log(`Opravené medzery v poradí pre skupinu: ${groupName} v kategórii: ${categoryName}`);
+                }
+            });
+        } catch (error) {
+            console.error("Chyba pri oprave poradia tímov:", error);
+        }
+    };
+
+
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
         : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
@@ -330,6 +373,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             `Tím '${teamData.teamName}' bol úspešne ${targetGroup ? `pridaný do skupiny '${targetGroup}'` : 'odstránený zo skupiny'}.`,
             'success'
         );
+
+        // Po úspešnom presune a uložení voláme funkciu na opravu medzier
+        if (originalGroup) {
+             await fixTeamOrderGaps(teamCategoryName, originalGroup);
+        }
+        if (targetGroup) {
+             await fixTeamOrderGaps(teamCategoryName, targetGroup);
+        }
 
     } catch (error) {
         console.error("Chyba pri aktualizácii databázy:", error);
