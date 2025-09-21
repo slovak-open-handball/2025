@@ -208,7 +208,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (lastDragOverGroup.current !== targetGroup) {
             lastDragOverGroup.current = targetGroup;
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroup);
-            const nextOrder = teamsInTargetGroup.length + 1; // Opravený výpočet poradia
+            const nextOrder = teamsInTargetGroup.length + 1;
 
             console.log("--- Drag & Drop Informácie ---");
             console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
@@ -228,7 +228,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const teamData = dragData.team;
         const teamCategoryId = dragData.teamCategoryId;
         const originalGroup = teamData.groupName;
-    
+
         if (originalGroup === targetGroup) {
             console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
             return;
@@ -237,11 +237,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification("Skupina nepatrí do rovnakej kategórie ako tím.", 'error');
             return;
         }
-    
+
         const categoryName = categoryIdToNameMap[teamCategoryId];
         const userRef = doc(window.db, 'users', teamData.uid);
-    
+
         try {
+            // Načítanie najaktuálnejších dát priamo z databázy
             const userDocSnap = await getDoc(userRef);
             if (!userDocSnap.exists()) {
                 throw new Error("Dokument používateľa neexistuje!");
@@ -249,34 +250,32 @@ const AddGroupsApp = ({ userProfileData }) => {
             const userData = userDocSnap.data();
             const teamsByCategory = userData.teams;
             let currentCategoryTeams = teamsByCategory[categoryName] || [];
-    
-            let updatedTeamData;
-            let updatedTeams = [];
-
-            // Hodnota nextOrder sa vypočíta priamo pri dropu na základe aktuálnych tímov v skupine
-            // aby sa predišlo chybám v poradí, ak by sa medzičasom zmenil stav v DB.
+            
+            // Nájdeme tímy v cieľovej skupine a vypočítame najvyššie existujúce poradie
             const teamsInTargetGroup = currentCategoryTeams.filter(t => t.groupName === targetGroup);
-            const nextOrder = teamsInTargetGroup.length + 1; 
+            const maxOrderInTargetGroup = teamsInTargetGroup.length > 0
+                ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
+                : 0;
+            const nextOrder = maxOrderInTargetGroup + 1;
 
-            // Logika pre presun do skupiny
+            console.log(`Vypočítané nové poradie pre vklad: ${nextOrder}`);
+
+            let updatedTeamData;
             if (targetGroup) {
                 updatedTeamData = {
                     ...teamData,
                     groupName: targetGroup,
                     order: nextOrder
                 };
-            } else { // Logika pre presun mimo skupiny
-                 updatedTeamData = {
+            } else {
+                updatedTeamData = {
                     ...teamData,
                     groupName: null,
                     order: null
                 };
             }
-            
-            // Odstránime pôvodný tím zo zoznamu
+
             const teamsWithoutOriginal = currentCategoryTeams.filter(t => t.teamName !== teamData.teamName);
-            
-            // Preusporiadanie tímov v pôvodnej skupine po odchode tímu
             const teamsInOriginalGroup = teamsWithoutOriginal
                 .filter(t => t.groupName === originalGroup)
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -285,11 +284,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                 ...team,
                 order: index + 1
             }));
-            
-            // Spojíme znova všetky tímy
-            const otherTeams = teamsWithoutOriginal.filter(t => t.groupName !== originalGroup);
-            updatedTeams = [...otherTeams, updatedTeamData, ...reorderedTeamsInOriginalGroup];
 
+            const otherTeams = teamsWithoutOriginal.filter(t => t.groupName !== originalGroup);
+            const updatedTeams = [...otherTeams, updatedTeamData, ...reorderedTeamsInOriginalGroup];
 
             await updateDoc(userRef, {
                 teams: {
@@ -321,7 +318,6 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
-            // Tímy v skupine zoradíme len podľa poradia, tímy bez skupiny abecedne
             if (a.groupName && b.groupName) {
                 return (a.order || 0) - (b.order || 0);
             } else {
@@ -329,7 +325,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         });
 
-        // Ak zoznam tímov neobsahuje žiadne tímy, zobrazíme drop-zónu.
         if (sortedTeams.length === 0 && targetGroupId) {
             return React.createElement(
                 'div',
