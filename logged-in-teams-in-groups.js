@@ -26,16 +26,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Efekt pre manažovanie notifikácií a vymazanie notifikácie po 5 sekundách
     useEffect(() => {
         if (notifications.length > 0) {
+            // NOVINKA: Časovač spustený pre prvú notifikáciu v zozname
             const timer = setTimeout(() => {
+                // Po 5 sekundách vymažeme prvú notifikáciu a tiež premenné zo sessionStorage
                 setNotifications(prev => prev.slice(1));
+                sessionStorage.removeItem('notificationMessage');
+                sessionStorage.removeItem('notificationType');
             }, 5000); // Zobrazenie notifikácie na 5 sekúnd
             return () => clearTimeout(timer);
         }
     }, [notifications]);
     
-    // Predošlý useEffect pre kontrolu sessionStorage je odstránený
-    // Teraz to rieši onSnapshot handler nižšie.
-
     // Efekt pre načítanie dát z Firebase
     useEffect(() => {
         if (!window.db) {
@@ -117,16 +118,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 console.log("-----------------------------------------");
             });
             
-            // **NOVINKA:** Kontrola a zobrazenie notifikácie priamo po načítaní dát
+            // Kontrola a zobrazenie notifikácie priamo po načítaní dát
             const message = sessionStorage.getItem('notificationMessage');
             const type = sessionStorage.getItem('notificationType');
             
             if (message && type) {
                 // Zobrazíme notifikáciu zo sessionStorage
                 showLocalNotification(message, type);
-                // A okamžite ju vymažeme, aby sa už nezobrazovala
-                sessionStorage.removeItem('notificationMessage');
-                sessionStorage.removeItem('notificationType');
+                // Predošlý kód vymazával notifikáciu tu, čo je chyba.
+                // Teraz sa vymazanie deje až v useEffectu s časovačom.
             }
         });
 
@@ -347,7 +347,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             
             // Uložíme notifikáciu do sessionStorage pre zobrazenie po nasledujúcom re-renderi
             const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
-            sessionStorage.setItem('notificationMessage', notification_message);
+            sessionStorage.setItem('notificationMessage', notificationMessage);
             sessionStorage.setItem('notificationType', 'success');
 
         } catch (error) {
