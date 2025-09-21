@@ -15,20 +15,23 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
     
-    // Kľúčový a opravený useEffect na správu notifikácií.
-    // Spúšťa sa pri načítaní stránky a kontroluje sessionStorage.
+    // Nový, opravený useEffect. Spustí sa iba raz pri načítaní komponentu.
     useEffect(() => {
         const message = sessionStorage.getItem('notificationMessage');
         const type = sessionStorage.getItem('notificationType');
         
         if (message && type) {
-            // Ak notifikácia existuje, nastavíme stav a okamžite ju vymažeme.
+            // Zobrazíme notifikáciu zo sessionStorage
             setNotification({ id: Date.now(), message, type });
+            // Okamžite vyčistíme sessionStorage, aby sa notifikácia znova nezobrazila pri ručnom obnovení
             sessionStorage.removeItem('notificationMessage');
             sessionStorage.removeItem('notificationType');
         }
+    }, []); // Prázdne pole závislostí zabezpečí, že sa efekt spustí len raz
 
-        // Efekt, ktorý po 5 sekundách vymaže notifikáciu zo stavu.
+    // Existujúci useEffect pre manažovanie notifikácií a vymazanie po 5 sekundách
+    // Spúšťa sa len vtedy, keď sa zmení stav notifikácie (notification)
+    useEffect(() => {
         if (notification) {
             const timer = setTimeout(() => {
                 setNotification(null);
@@ -36,6 +39,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return () => clearTimeout(timer);
         }
     }, [notification]);
+
 
     // Efekt pre načítanie dát z Firebase
     useEffect(() => {
