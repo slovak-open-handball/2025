@@ -289,6 +289,11 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         // ----- Kontrola a odstránenie číselnej medzery v poradí po presune -----
         // Táto logika sa spustí iba vtedy, ak sa tím presúva z nejakej skupiny.
         if (originalGroup) {
+
+            console.log("Všetky tímy v kategórii pred filtrom:", currentCategoryTeams);
+            console.log("Presúvaný tím:", teamData);
+            console.log("Pôvodná skupina:", originalGroup);
+            
             // 1. Získame zoznam tímov, ktoré ostali v pôvodnej skupine po odobratí tímu.
             const teamsRemainingInOriginalGroup = currentCategoryTeams
                 .filter(team => team.groupName === originalGroup && !(team.uid === teamData.uid && team.teamName === teamData.teamName));
