@@ -328,23 +328,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             // Nastavenie notifikácie, ktorá sa zobrazí po re-renderi
             setPendingNotification(notificationMessage);
 
-            if (window.auth?.currentUser) {
-                const currentUser = window.auth.currentUser;
-                try {
-                    const notificationsCollectionRef = collection(window.db, 'notifications');
-                    await addDoc(notificationsCollectionRef, {
-                        changes: [notificationMessage], // uložené ako jednorozmerné pole
-                        timestamp: new Date(),
-                        userEmail: currentUser.email || null,
-                        recipientId: "all_admins"
-                    });
-                } catch (error) {
-                    console.error("Chyba pri ukladaní notifikácie do databázy:", error);
-                }
-            }
-
-            
-
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             showLocalNotification("Nastala chyba pri ukladaní údajov do databázy.", 'error');
