@@ -9,20 +9,29 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
-    const [notification, setNotification] = useState({ message: '', type: '', isVisible: false });
+    
+    // Nový stav pre notifikácie
+    const [notifications, setNotifications] = useState([]);
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
 
-    // Zobrazenie lokálnej notifikácie
+    // Funkcia na zobrazenie lokálnej notifikácie
     const showLocalNotification = (message, type) => {
-        setNotification({ message, type, isVisible: true });
-
-        setTimeout(() => {
-            setNotification(prev => ({ ...prev, isVisible: false }));
-        }, 5000);
+        const newNotification = { id: Date.now(), message, type };
+        setNotifications(prev => [...prev, newNotification]);
     };
+    
+    // Efekt pre manažovanie notifikácií
+    useEffect(() => {
+        if (notifications.length > 0) {
+            const timer = setTimeout(() => {
+                setNotifications(prev => prev.slice(1));
+            }, 5000); // Zobrazenie notifikácie na 5 sekúnd
+            return () => clearTimeout(timer);
+        }
+    }, [notifications]);
 
     // Efekt pre načítanie dát z Firebase
     useEffect(() => {
@@ -507,9 +516,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     
     // Dynamické triedy pre notifikáciu
     const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
-                  ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
+                  ${notifications.length > 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
+    const firstNotification = notifications[0] || {};
     let typeClasses = '';
-    switch (notification.type) {
+    switch (firstNotification.type) {
         case 'success':
             typeClasses = 'bg-green-500';
             break;
@@ -530,7 +540,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         React.createElement(
             'div',
             { className: `${notificationClasses} ${typeClasses}`},
-            notification.message
+            firstNotification.message
         ),
         React.createElement(
             'div',
