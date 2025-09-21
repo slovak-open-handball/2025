@@ -9,9 +9,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
-    
-    // Zmenený stav: teraz ukladá jeden objekt notifikácie namiesto poľa
     const [notification, setNotification] = useState(null);
+    
+    // Nový stav, ktorý slúži ako "spúšťač" notifikácie po re-renderi
+    const [showNotif, setShowNotif] = useState(false);
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -28,25 +29,28 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         if (notification) {
             const timer = setTimeout(() => {
                 setNotification(null);
-                sessionStorage.removeItem('notificationMessage');
-                sessionStorage.removeItem('notificationType');
             }, 5000);
             return () => clearTimeout(timer);
         }
     }, [notification]);
     
-    // Úplne nový a kľúčový useEffect na spracovanie notifikácie po načítaní stránky
-    // Zabezpečuje, že notifikácia sa zobrazí vždy po akomkoľvek re-renderi,
-    // ak je správa v sessionStorage
+    // Kľúčový a opravený useEffect. Spúšťa sa vždy, keď sa showNotif zmení na true.
     useEffect(() => {
-        const message = sessionStorage.getItem('notificationMessage');
-        const type = sessionStorage.getItem('notificationType');
-        
-        if (message && type) {
-            // Zobrazíme notifikáciu zo sessionStorage
-            showLocalNotification(message, type);
+        if (showNotif) {
+            const message = sessionStorage.getItem('notificationMessage');
+            const type = sessionStorage.getItem('notificationType');
+            
+            if (message && type) {
+                // Zobrazíme notifikáciu zo sessionStorage
+                showLocalNotification(message, type);
+            }
+
+            // Vyčistíme sessionStorage a resetujeme stav
+            sessionStorage.removeItem('notificationMessage');
+            sessionStorage.removeItem('notificationType');
+            setShowNotif(false);
         }
-    }, []); // Prázdne pole závislostí zabezpečí spustenie len raz pri načítaní komponentu.
+    }, [showNotif]);
 
     // Efekt pre načítanie dát z Firebase
     useEffect(() => {
@@ -336,7 +340,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 try {
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        message: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
+                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
@@ -350,6 +354,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
             sessionStorage.setItem('notificationMessage', notificationMessage);
             sessionStorage.setItem('notificationType', 'success');
+            
+            // Nová zmena: Spustíme re-render, ktorý následne zobrazí notifikáciu
+            setShowNotif(true);
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
