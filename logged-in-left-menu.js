@@ -251,7 +251,7 @@ const loadLeftMenu = async (userProfileData) => {
             }
             const menuHtml = await response.text();
             menuPlaceholder.innerHTML = menuHtml;
-            console.log("left-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
+            console.log("logged-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
             // Po úspešnom vložení HTML hneď nastavíme poslucháčov
             const db = window.db;
