@@ -1,6 +1,6 @@
+// Importy pre Firebase funkcie
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
 const { useState, useEffect, useRef } = React;
 
 const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
@@ -317,14 +317,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             await Promise.all(batchPromises);
             
-            // Ulozenie notifikacie do databazy po uspesnom presune
-            await addDoc(collection(window.db, 'notifications'), {
-                changes: [notificationMessage],
-                timestamp: Timestamp.now(),
-                userEmail: userProfileData.email,
-                recipientId: 'all_admins'
-            });
-
             // Nastavenie notifikácie, ktorá sa zobrazí po re-renderi
             setPendingNotification(notificationMessage);
 
@@ -508,8 +500,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
     // Dynamické triedy pre notifikáciu
-    const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center  
-                    ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
+    const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
+                  ${notification.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     let typeClasses = '';
     switch (notification.type) {
         case 'success':
