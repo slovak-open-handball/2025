@@ -225,6 +225,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         console.error("Žiadne dáta na presunutie.");
         return;
     }
+
     const teamData = dragData.team;
     const teamCategoryId = dragData.teamCategoryId;
     const originalGroup = teamData.groupName;
@@ -259,8 +260,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             .filter(team => team.groupName === originalGroup)
             .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-        const removedTeamOrder = originalGroupTeams.find(team => team.teamName === teamData.teamName)?.order;
-
         // 2. Prečíslovanie tímov v pôvodnej skupine
         const reorderedOriginalTeams = originalGroupTeams
             .filter(team => team.teamName !== teamData.teamName)
@@ -281,14 +280,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
         // 5. Aktualizácia všetkých tímov v kategórii
         const updatedTeams = currentCategoryTeams
-            .filter(team => team.groupName !== originalGroup || team.teamName === teamData.teamName)
             .map(team => {
+                // Ak je to presúvaný tím, vrátime jeho novú verziu
                 if (team.teamName === teamData.teamName) {
                     return movedTeamData;
                 }
+                // Ak patrí do pôvodnej skupiny, použijeme prečíslovanú verziu
+                if (team.groupName === originalGroup) {
+                    const reorderedTeam = reorderedOriginalTeams.find(t => t.teamName === team.teamName);
+                    if (reorderedTeam) {
+                        return reorderedTeam;
+                    }
+                }
+                // Ostatné tímy ostávajú nezmenené
                 return team;
-            })
-            .concat(reorderedOriginalTeams);
+            });
 
         // 6. Uloženie zmenených dát do Firebase
         await updateDoc(userRef, {
