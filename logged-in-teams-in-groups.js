@@ -201,8 +201,29 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleDragOver = (e, targetGroup, targetCategoryId) => {
+        const dragData = draggedItem.current;
+        if (!dragData) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "none";
+            return;
+        }
+
+        const teamCategoryId = dragData.teamCategoryId;
+        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+        const teamCategoryName = categoryIdToNameMap[teamCategoryId];
+
+        // Ak sa kategórie nezhodujú, zabránime presunu a zmeníme kurzor
+        if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "none";
+            e.currentTarget.style.cursor = 'not-allowed';
+            return;
+        } else {
+            e.currentTarget.style.cursor = 'move';
+            e.dataTransfer.dropEffect = "move";
+        }
+
         e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
 
         // Kontrola, či sa kurzor presunul nad novú skupinu
         if (lastDragOverGroup.current !== targetGroup) {
