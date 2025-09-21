@@ -10,32 +10,34 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [nextOrderMap, setNextOrderMap] = useState({});
     
-    // Nový stav pre notifikácie
-    const [notifications, setNotifications] = useState([]);
+    // Zmenený stav: teraz ukladá jeden objekt notifikácie namiesto poľa
+    const [notification, setNotification] = useState(null);
 
     // Stav pre drag & drop
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
 
-    // Funkcia na zobrazenie lokálnej notifikácie
+    // Funkcia na zobrazenie notifikácie (jednoducho nastaví stav)
     const showLocalNotification = (message, type) => {
-        const newNotification = { id: Date.now(), message, type };
-        setNotifications(prev => [...prev, newNotification]);
+        setNotification({ id: Date.now(), message, type });
     };
     
-    // Efekt pre manažovanie notifikácií a vymazanie notifikácie po 5 sekundách
+    // Efekt pre manažovanie notifikácií a vymazanie po 5 sekundách
+    // Spúšťa sa len vtedy, keď sa zmení stav notifikácie (notification)
     useEffect(() => {
-        if (notifications.length > 0) {
+        if (notification) {
             const timer = setTimeout(() => {
-                setNotifications(prev => prev.slice(1));
+                setNotification(null);
                 sessionStorage.removeItem('notificationMessage');
                 sessionStorage.removeItem('notificationType');
             }, 5000);
             return () => clearTimeout(timer);
         }
-    }, [notifications]);
+    }, [notification]);
     
-    // Nový useEffect na spracovanie notifikácie po načítaní stránky
+    // Úplne nový a kľúčový useEffect na spracovanie notifikácie po načítaní stránky
+    // Zabezpečuje, že notifikácia sa zobrazí vždy po akomkoľvek re-renderi,
+    // ak je správa v sessionStorage
     useEffect(() => {
         const message = sessionStorage.getItem('notificationMessage');
         const type = sessionStorage.getItem('notificationType');
@@ -334,7 +336,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 try {
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
+                        message: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
@@ -348,9 +350,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
             sessionStorage.setItem('notificationMessage', notificationMessage);
             sessionStorage.setItem('notificationType', 'success');
-
-            // Okamžité zobrazenie notifikácie po úspešnom uložení
-            showLocalNotification(notificationMessage, 'success');
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
@@ -531,10 +530,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     
     // Dynamické triedy pre notifikáciu
     const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
-                  ${notifications.length > 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
-    const firstNotification = notifications[0] || {};
+                  ${notification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     let typeClasses = '';
-    switch (firstNotification.type) {
+    switch (notification?.type) {
         case 'success':
             typeClasses = 'bg-green-500';
             break;
@@ -555,7 +553,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         React.createElement(
             'div',
             { className: `${notificationClasses} ${typeClasses}`},
-            firstNotification.message
+            notification?.message
         ),
         React.createElement(
             'div',
