@@ -321,7 +321,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 try {
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        message: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
+                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
