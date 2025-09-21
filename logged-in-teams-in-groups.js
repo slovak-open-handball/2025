@@ -307,7 +307,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Vytvorenie a uloženie notifikácie do databázy
             const auth = window.auth;
             const currentUser = auth.currentUser;
-            const notificationMessage = `Tím '${teamData.teamName}' bol presunutý z kategórie '${teamCategoryName}' zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
+            const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
 
             await addDoc(collection(window.db, `notifications`), {
                 changes: [notificationMessage],
