@@ -3955,10 +3955,9 @@ const formatTableCellValue = (value, columnId, userObject) => {
       .join(', ');
   }
   else if (columnId === 'volunteerRoles') {
-    if (typeof value === 'boolean') {
-      return value ? 'Áno' : 'Nie'; // Ak je boolean, zobraz "Áno"/"Nie"
-    }
-    return value || '-'; // Inak zobraz hodnotu alebo pomlčku
+    if (!value || !Array.isArray(value)) return '-';
+    // Ak je to pole, zobrazíme jeho prvky oddelené čiarkou
+    return value.join(', ');
   }
   // --- KONIEC NOVÝCH STāPCOV ---
 
