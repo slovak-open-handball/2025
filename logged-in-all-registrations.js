@@ -2541,6 +2541,11 @@ function AllRegistrationsApp() {
     { id: 'city', label: 'Mesto/Obec', type: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
     { id: 'country', label: 'Krajina', type: 'string', visible: true },
+
+    { id: 'tshirtSize', label: 'Veľkosť trička', type: 'string', visible: true },
+    { id: 'selectedDates', label: 'Dni k dispozícii', type: 'string', visible: true },
+    { id: 'volunteerRoles', label: 'Môžem byť nápomocný', type: 'string', visible: true },
+    
     { id: 'note', label: 'Poznámka', type: 'string', visible: true }, // Pridaný stĺpec "Poznámka"
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder); // Keep columnOrder for definitions
@@ -3877,89 +3882,118 @@ function AllRegistrationsApp() {
   };
 
   // Nová pomocná funkcia na formátovanie hodnôt v bunkách tabuľky
-  const formatTableCellValue = (value, columnId, userObject) => { // Added userObject
-    if (value === null || value === undefined) return '-';
+const formatTableCellValue = (value, columnId, userObject) => {
+  if (value === null || value === undefined) return '-';
 
-    // Špecifické formátovanie na základe ID stĺpca
-    if (columnId === 'registrationDate') {
-        let date;
-        // Ak je to Firebase Timestamp objekt s .toDate() metódou
-        if (value && typeof value.toDate === 'function') {
-            date = value.toDate();
-        } 
-        // Ak je to mapa {seconds, nanoseconds} a nemá .toDate() metódu
-        else if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
-            // Vytvorenie Date objektu zo sekúnd a nanosekúnd
-            date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
-        } else {
-            return '-'; // Vrátiť pomlčku, ak hodnota nie je platný dátumový formát
-        }
+  // Špecifické formátovanie na základe ID stĺpca
+  if (columnId === 'registrationDate') {
+    let date;
+    // Ak je to Firebase Timestamp objekt s .toDate() metódou
+    if (value && typeof value.toDate === 'function') {
+      date = value.toDate();
+    }
+    // Ak je to mapa {seconds, nanoseconds} a nemá .toDate() metódu
+    else if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+      // Vytvorenie Date objektu zo sekúnd a nanosekúnd
+      date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
+    } else {
+      return '-'; // Vrátiť pomlčku, ak hodnota nie je platný dátumový formát
+    }
+    try {
+      // Formát DD. MM. YYYY hh:mm
+      const options = {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false // Použiť 24-hodinový formát
+      };
+      return date.toLocaleString('sk-SK', options);
+    } catch (e) {
+      console.error("Chyba pri formátovaní dátumu v tabuľke:", value, e);
+      return '[Chyba Dátumu]'; // Záložná reťazcová reprezentácia pri chybe
+    }
+  }
+  else if (columnId === 'approved') {
+    return value ? 'Áno' : 'Nie';
+  }
+  else if (columnId === 'postalCode') {
+    if (!value) return '-';
+    const cleaned = String(value).replace(/\s/g, '');
+    if (cleaned.length === 5) {
+      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
+    }
+    return value;
+  }
+  else if (columnId === 'contactPhoneNumber') {
+    const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value, countryDialCodes);
+    const formattedNumber = formatNumberGroups(numberWithoutDialCode);
+    return `${dialCode} ${formattedNumber}`;
+  }
+  // Handle top-level address fields
+  else if (['street', 'houseNumber', 'city', 'country', 'note'].includes(columnId)) {
+    return value;
+  }
+  else if (columnId === 'arrival.type') {
+    const arrivalType = getNestedValue(userObject, 'arrival.type');
+    const arrivalTime = getNestedValue(userObject, 'arrival.time');
+    return formatArrivalTime(arrivalType, arrivalTime);
+  }
+  // --- NOVÉ STĽPCE ---
+  else if (columnId === 'tshirtSize') {
+    return value || '-'; // Zobraziť veľkosť trička alebo pomlčku
+  }
+  else if (columnId === 'selectedDates') {
+    if (!value || !Array.isArray(value)) return '-';
+    // Prevedenie dátumov z "yyyy-mm-dd" na "dd. mm. yyyy"
+    return value
+      .map(dateStr => {
+        const [year, month, day] = dateStr.split('-');
+        return `${day}. ${month}. ${year}`;
+      })
+      .join(', ');
+  }
+  else if (columnId === 'volunteerRoles') {
+    if (typeof value === 'boolean') {
+      return value ? 'Áno' : 'Nie'; // Ak je boolean, zobraz "Áno"/"Nie"
+    }
+    return value || '-'; // Inak zobraz hodnotu alebo pomlčku
+  }
+  // --- KONIEC NOVÝCH STāPCOV ---
 
-        try {
-            // Formát DD. MM. YYYY hh:mm
-            const options = {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false // Použiť 24-hodinový formát
-            };
-            return date.toLocaleString('sk-SK', options);
-        } catch (e) {
-            console.error("Chyba pri formátovaní dátumu v tabuľke:", value, e);
-            return '[Chyba Dátumu]'; // Záložná reťazcová reprezentácia pri chybe
-        }
-    } else if (columnId === 'approved') {
-        return value ? 'Áno' : 'Nie';
-    } else if (columnId === 'postalCode') {
-        return formatPostalCode(value); // Znovu použije existujúcu funkciu formatPostalCode
-    } else if (columnId === 'contactPhoneNumber') {
-        const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value, countryDialCodes);
-        const formattedNumber = formatNumberGroups(numberWithoutDialCode);
-        return `${dialCode} ${formattedNumber}`;
+  // Všeobecné formátovanie pre iné prípady, podobné formatDisplayValue
+  if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
+  if (Array.isArray(value)) {
+    return value.map(item => {
+      if (typeof item === 'object' && item !== null) {
+        // Pre vnorené objekty v poliach poskytnúť súhrn alebo zjednodušený reťazec
+        if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
+        if (item.size) return item.size; // Pre veľkosti tričiek
+        return '[Objekt]'; // Všeobecné pre iné objekty
+      }
+      return String(item);
+    }).join(', ');
+  }
+  if (typeof value === 'object') {
+    // Heuristika pre bežné komplexné objekty
+    // Adresný objekt (len pre vnorené, ak by sa taký našiel)
+    if (value.street || value.city) {
+      return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
     }
-    // Handle top-level address fields
-    else if (['street', 'houseNumber', 'city', 'country', 'note'].includes(columnId)) { // Added 'note'
-        return value;
-    } else if (columnId === 'arrival.type') { // Upraviť zobrazenie pre typ dopravy s časom
-        const arrivalType = getNestedValue(userObject, 'arrival.type');
-        const arrivalTime = getNestedValue(userObject, 'arrival.time');
-        return formatArrivalTime(arrivalType, arrivalTime);
+    if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
+      return value.name || value.type;
     }
-
-    // Všeobecné formátovanie pre iné prípady, podobné formatDisplayValue
-    if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
-    if (Array.isArray(value)) {
-        return value.map(item => {
-            if (typeof item === 'object' && item !== null) {
-                // Pre vnorené objekty v poliach poskytnúť súhrn alebo zjednodušený reťazec
-                if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
-                if (item.size) return item.size; // Pre veľkosti tričiek
-                return '[Objekt]'; // Všeobecné pre iné objekty
-            }
-            return String(item);
-        }).join(', ');
+    // Záložná možnosť pre akýkoľvek iný objekt
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      console.error("Chyba pri prevode objektu na reťazec pre bunku tabuľky:", value, e);
+      return '[Objekt]';
     }
-    if (typeof value === 'object') {
-        // Heuristika pre bežné komplexné objekty
-        // Adresný objekt (len pre vnorené, ak by sa taký našiel)
-        if (value.street || value.city) {
-            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
-        }
-        if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
-            return value.name || value.type;
-        }
-        // Záložná možnosť pre akýkoľvek iný objekt
-        try {
-            return JSON.stringify(value);
-        } catch (e) {
-            console.error("Chyba pri prevode objektu na reťazec pre bunku tabuľky:", value, e);
-            return '[Objekt]';
-        }
-    }
-    return String(value);
-  };
+  }
+  return String(value);
+};
 
 
   return React.createElement(
