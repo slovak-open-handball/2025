@@ -296,7 +296,7 @@ const App = () => {
         e.preventDefault();
         setAuthError(null);
         setIsSubmitting(true);
-        const fullPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
+        const contactPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
         try {
             const auth = window.auth;
             const db = window.db;
@@ -307,7 +307,7 @@ const App = () => {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
-                fullPhoneNumber: fullPhoneNumber,
+                contactPhoneNumber: contactPhoneNumber,
                 role: 'volunteer',
                 approved: true,
                 street: formData.street,
@@ -348,7 +348,7 @@ const App = () => {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
-                contactPhoneNumber: fullPhoneNumber,
+                contactPhoneNumber: contactPhoneNumber,
                 address: {
                     street: formData.street,
                     houseNumber: formData.houseNumber,
