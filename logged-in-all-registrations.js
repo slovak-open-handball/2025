@@ -219,13 +219,13 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
     if (!isOpen) return null;
 
     const handleCheckboxChange = (value) => {
-      setSelectedValues(prev => {
-        if (prev.includes(value)) {
-          return prev.filter(item => item !== value);
-        } else {
-          return [...prev, value];
-        }
-      });
+        setSelectedValues(prev => {
+            if (prev.includes(value)) {
+                return prev.filter(item => item !== value);
+            } else {
+                return [...prev, value];
+            }
+        });
     };
 
     const handleApply = () => {
@@ -249,19 +249,19 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
             React.createElement(
                 'div',
                 { className: 'max-h-60 overflow-y-auto mb-4 border border-gray-200 rounded-md p-2' },
-                uniqueColumnValues.map((value, index) =>
+                uniqueColumnValues.map((item, index) =>
                     React.createElement(
                         'div',
                         { key: index, className: 'flex items-center mb-2' },
                         React.createElement('input', {
                             type: 'checkbox',
                             id: `filter-${columnName}-${index}`,
-                            value: item.value || item, // Ak je `item` objekt, použite `item.value`, inak `item`
-                            checked: selectedValues.includes(item.value || item), // Porovnávame s pôvodnými hodnotami
-                            onChange: () => handleCheckboxChange(item.value || item), // Odosielame pôvodnú hodnotu
+                            value: item.value || item,
+                            checked: selectedValues.includes(item.value || item),
+                            onChange: () => handleCheckboxChange(item.value || item),
                             className: 'mr-2'
                         }),
-                        React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, item.label || item) // Zobrazujeme `label`, ak existuje, inak pôvodnú hodnotu
+                        React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, item.label || item)
                     )
                 )
             ),
