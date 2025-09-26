@@ -4420,7 +4420,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                         'td',
                                         {
                                             className: 'py-2 px-4 text-left',
-                                            colSpan: columnOrder.length
+                                            colSpan: columnOrder.length + 1
                                         },
                                         `${size}: ${count}×`
                                     )
