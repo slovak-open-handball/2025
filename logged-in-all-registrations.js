@@ -2506,13 +2506,13 @@ const recalculateTeamCounts = (teamToUpdate) => {
 const translateRole = (role) => {
   switch (role) {
     case 'club':
-      return 'klub';
+      return 'Klub';
     case 'admin':
-      return 'administrátor';
+      return 'Administrátor';
     case 'volunteer':
-      return 'dobrovoľník';
+      return 'Dobrovoľník';
     case 'referee':
-      return 'rozhodca';
+      return 'Rozhodca';
     default:
       return role;
   }
@@ -3093,51 +3093,55 @@ function AllRegistrationsApp() {
 
 const openFilterModal = (column) => {
     setFilterColumn(column);
-    const values = [...new Set(allUsers.map(u => {
-        let val;
-        if (column === 'registrationDate') {
-            let date;
-            const registrationDateValue = u.registrationDate;
-            if (registrationDateValue && typeof registrationDateValue.toDate === 'function') {
-                date = registrationDateValue.toDate();
-            } else if (registrationDateValue && typeof registrationDateValue === 'object' && registrationDateValue.seconds !== undefined && registrationDateValue.nanoseconds !== undefined) {
-                date = new Date(registrationDateValue.seconds * 1000 + registrationDateValue.nanoseconds / 1000000);
+    // Pre stĺpec "role" generujeme zoznam preložených hodnôt, ale filtrovanie bude prebiehať na pôvodných
+    if (column === 'role') {
+        const roleValues = ['club', 'admin', 'volunteer', 'referee'];
+        const translatedRoleValues = roleValues.map(role => translateRole(role));
+        setUniqueColumnValues(translatedRoleValues);
+    } else {
+        // Pre ostatné stĺpce ostáva pôvodná logika
+        const values = [...new Set(allUsers.map(u => {
+            let val;
+            if (column === 'registrationDate') {
+                let date;
+                const registrationDateValue = u.registrationDate;
+                if (registrationDateValue && typeof registrationDateValue.toDate === 'function') {
+                    date = registrationDateValue.toDate();
+                } else if (registrationDateValue && typeof registrationDateValue === 'object' && registrationDateValue.seconds !== undefined && registrationDateValue.nanoseconds !== undefined) {
+                    date = new Date(registrationDateValue.seconds * 1000 + registrationDateValue.nanoseconds / 1000000);
+                } else {
+                    return '';
+                }
+                const options = {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                };
+                val = date.toLocaleString('sk-SK', options);
+            } else if (column.includes('.')) {
+                const parts = column.split('.');
+                let nestedVal = u;
+                for (const part of parts) {
+                    nestedVal = nestedVal ? nestedVal[part] : undefined;
+                }
+                if (column === 'arrival.type') {
+                    val = formatArrivalTime(nestedVal, getNestedValue(u, 'arrival.time'));
+                } else {
+                    val = nestedVal;
+                }
             } else {
-                return '';
+                val = u[column];
             }
-            const options = {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            };
-            val = date.toLocaleString('sk-SK', options);
-        } else if (column.includes('.')) {
-            const parts = column.split('.');
-            let nestedVal = u;
-            for (const part of parts) {
-                nestedVal = nestedVal ? nestedVal[part] : undefined;
+            if (typeof val === 'boolean') {
+                return val ? 'áno' : 'nie';
             }
-            if (column === 'arrival.type') {
-                val = formatArrivalTime(nestedVal, getNestedValue(u, 'arrival.time'));
-            } else {
-                val = nestedVal;
-            }
-        } else {
-            val = u[column];
-            // Pre stĺpec "role" preložíme hodnotu
-            if (column === 'role') {
-                val = translateRole(String(val || '').toLowerCase());
-            }
-        }
-        if (typeof val === 'boolean') {
-            return val ? 'áno' : 'nie';
-        }
-        return String(val || '').toLowerCase();
-    }))].filter(v => v !== '').sort();
-    setUniqueColumnValues(values);
+            return String(val || '').toLowerCase();
+        }))].filter(v => v !== '').sort();
+        setUniqueColumnValues(values);
+    }
     setFilterModalOpen(true);
 };
 
@@ -3147,17 +3151,31 @@ const openFilterModal = (column) => {
       setUniqueColumnValues([]);
   };
 
-  const applyFilter = (column, values) => {
-      setActiveFilters(prev => ({ ...prev, [column]: values }));
-  };
+const applyFilter = (column, values) => {
+    if (column === 'role') {
+        // Pre stĺpec "role" preložíme späť na pôvodné hodnoty pre filtrovanie
+        const originalRoleValues = values.map(val => {
+            switch (val) {
+                case 'Klub': return 'club';
+                case 'Administrátor': return 'admin';
+                case 'Dobrovoľník': return 'volunteer';
+                case 'Rozhodca': return 'referee';
+                default: return val;
+            }
+        });
+        setActiveFilters(prev => ({ ...prev, [column]: originalRoleValues }));
+    } else {
+        setActiveFilters(prev => ({ ...prev, [column]: values }));
+    }
+};
 
-  const clearFilter = (column) => {
-      setActiveFilters(prev => {
-          const newFilters = { ...prev };
-          delete newFilters[column];
-          return newFilters;
-      });
-  };
+const clearFilter = (column) => {
+    setActiveFilters(prev => {
+        const newFilters = { ...prev };
+        delete newFilters[column];
+        return newFilters;
+    });
+};
 
   React.useEffect(() => {
       let currentFiltered = [...allUsers];
