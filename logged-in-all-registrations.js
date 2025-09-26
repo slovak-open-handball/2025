@@ -2503,6 +2503,21 @@ const recalculateTeamCounts = (teamToUpdate) => {
     return teamToUpdate;
 };
 
+const translateRole = (role) => {
+  switch (role) {
+    case 'club':
+      return 'Klub';
+    case 'admin':
+      return 'Administrátor';
+    case 'volunteer':
+      return 'Dobrovoľník';
+    case 'referee':
+      return 'Rozhodca';
+    default:
+      return role;
+  }
+};
+
 
 // Hlavný React komponent pre stránku logged-in-all-registrations.html
 function AllRegistrationsApp() {
@@ -3076,58 +3091,55 @@ function AllRegistrationsApp() {
       // console.log("handleSort: Prvých 5 zoradených používateľov:", sorted.slice(0, 5).map(u => ({ id: u.id, [columnId]: getNestedValue(u, columnId) })));
   };
 
-  const openFilterModal = (column) => {
-      // console.log("AllRegistrationsApp: openFilterModal volaná pre stĺpec:", column);
-      // console.log("AllRegistrationsApp: Aktuálny stav allUsers:", allUsers);
-
-      setFilterColumn(column);
-      const values = [...new Set(allUsers.map(u => {
-          let val;
-          if (column === 'registrationDate') {
-              let date;
-              const registrationDateValue = u.registrationDate;
-              if (registrationDateValue && typeof registrationDateValue.toDate === 'function') {
-                  date = registrationDateValue.toDate();
-              } else if (registrationDateValue && typeof registrationDateValue === 'object' && registrationDateValue.seconds !== undefined && registrationDateValue.nanoseconds !== undefined) {
-                  date = new Date(registrationDateValue.seconds * 1000 + registrationDateValue.nanoseconds / 1000000);
-              } else {
-                  return ''; // Return empty string for invalid date values
-              }
-
-              // Použiť rovnaký formát ako v tabuľke
-              const options = {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-              };
-              val = date.toLocaleString('sk-SK', options);
-          } else if (column.includes('.')) {
-              const parts = column.split('.');
-              let nestedVal = u;
-              for (const part of parts) {
-                  nestedVal = nestedVal ? nestedVal[part] : undefined;
-              }
-              // Špeciálne spracovanie pre arrival.type a arrival.time
-              if (column === 'arrival.type') {
+const openFilterModal = (column) => {
+    setFilterColumn(column);
+    const values = [...new Set(allUsers.map(u => {
+        let val;
+        if (column === 'registrationDate') {
+            let date;
+            const registrationDateValue = u.registrationDate;
+            if (registrationDateValue && typeof registrationDateValue.toDate === 'function') {
+                date = registrationDateValue.toDate();
+            } else if (registrationDateValue && typeof registrationDateValue === 'object' && registrationDateValue.seconds !== undefined && registrationDateValue.nanoseconds !== undefined) {
+                date = new Date(registrationDateValue.seconds * 1000 + registrationDateValue.nanoseconds / 1000000);
+            } else {
+                return '';
+            }
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            };
+            val = date.toLocaleString('sk-SK', options);
+        } else if (column.includes('.')) {
+            const parts = column.split('.');
+            let nestedVal = u;
+            for (const part of parts) {
+                nestedVal = nestedVal ? nestedVal[part] : undefined;
+            }
+            if (column === 'arrival.type') {
                 val = formatArrivalTime(nestedVal, getNestedValue(u, 'arrival.time'));
-              } else {
+            } else {
                 val = nestedVal;
-              }
-          } else {
-              // Access top-level address fields directly for filtering
-              val = u[column];
-          }
-          if (typeof val === 'boolean') {
-              return val ? 'áno' : 'nie';
-          }
-          return String(val || '').toLowerCase();
-      }))].filter(v => v !== '').sort();
-      setUniqueColumnValues(values);
-      setFilterModalOpen(true);
-  };
+            }
+        } else {
+            val = u[column];
+            // Pre stĺpec "role" preložíme hodnotu
+            if (column === 'role') {
+                val = translateRole(String(val || '').toLowerCase());
+            }
+        }
+        if (typeof val === 'boolean') {
+            return val ? 'áno' : 'nie';
+        }
+        return String(val || '').toLowerCase();
+    }))].filter(v => v !== '').sort();
+    setUniqueColumnValues(values);
+    setFilterModalOpen(true);
+};
 
   const closeFilterModal = () => {
       setFilterModalOpen(false);
