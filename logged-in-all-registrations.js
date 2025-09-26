@@ -256,12 +256,12 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
                         React.createElement('input', {
                             type: 'checkbox',
                             id: `filter-${columnName}-${index}`,
-                            value: item.value || item,
-                            checked: selectedValues.includes(item.value || item),
-                            onChange: () => handleCheckboxChange(item.value || item),
+                            value: item.value || item, // Ak je item objekt, použite item.value, inak item
+                            checked: selectedValues.includes(item.value || item), // Porovnávame s pôvodnými hodnotami
+                            onChange: () => handleCheckboxChange(item.value || item), // Odosielame pôvodnú hodnotu
                             className: 'mr-2'
                         }),
-                        React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, value || '(Prázdne)')
+                        React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, item.label || item) // Zobrazujeme label, ak existuje, inak pôvodnú hodnotu
                     )
                 )
             ),
