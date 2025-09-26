@@ -2710,6 +2710,24 @@ function AllRegistrationsApp() {
     return [];
   }, [filteredUsers, showUsers, showTeams]);
 
+const calculateVolunteerTshirtSummary = () => {
+    const tshirtSizeCounts = new Map();
+    // Predvolené veľkosti tričiek
+    const defaultSizes = availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    // Inicializácia mapy pre všetky veľkosti
+    defaultSizes.forEach(size => tshirtSizeCounts.set(size, 0));
+    // Prechádzať len dobrovoľníkov
+    filteredUsers
+        .filter(user => user.role === 'volunteer')
+        .forEach(user => {
+            const tshirtSize = user.tshirtSize;
+            if (tshirtSize && tshirtSizeCounts.has(tshirtSize)) {
+                tshirtSizeCounts.set(tshirtSize, tshirtSizeCounts.get(tshirtSize) + 1);
+            }
+        });
+    return tshirtSizeCounts;
+};
+  
   // Nové useMemo pre výpočty súhrnu, ktoré závisia od allTeamsFlattened
   const teamSummary = React.useMemo(() => {
       let totalPlayers = 0;
@@ -4195,7 +4213,6 @@ const formatTableCellValue = (value, columnId, userObject) => {
                             React.createElement(React.Fragment, null,
                                 allTeamsFlattened.map(team => {
                                     const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
-                                    
                                     return React.createElement(
                                         React.Fragment,
                                         { key: teamUniqueId },
@@ -4203,7 +4220,6 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                             'tr',
                                             {
                                                 className: `bg-white border-b hover:bg-gray-50`,
-                                                // Removed onClick handler from here to prevent row click expansion
                                             },
                                             React.createElement('td', {
                                                 className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center',
@@ -4221,7 +4237,6 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                         const targetDocRefForTeam = doc(db, 'users', team._userId);
                                                         const teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
                                                         const resolvedTitle = `Upraviť tím: ${team.teamName}`;
-
                                                         openEditModal(
                                                             team,
                                                             resolvedTitle,
@@ -4237,7 +4252,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenTeamMembersCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menTeamMembersCount),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenDriversCount), 
+                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenDriversCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menDriversCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players + team._womenTeamMembersCount + team._menTeamMembersCount + team._womenDriversCount + team._menDriversCount || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
@@ -4260,13 +4275,12 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                     openEditModal: openEditModal,
                                                     db: db,
                                                     setUserNotificationMessage: setUserNotificationMessage,
-                                                    onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
+                                                    onAddMember: handleOpenAddMemberTypeModal
                                                 })
                                             )
                                         )
                                     );
                                 }),
-                                // Súhrnný riadok pre režim "iba tímy"
                                 (allTeamsFlattened.length > 0 && !showUsers && showTeams) && React.createElement(
                                     'tr',
                                     { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
@@ -4274,9 +4288,9 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers),
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenTeamMembers),
                                     React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenTeamMembers),
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenDrivers), 
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenDrivers), 
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers + teamSummary.totalWomenTeamMembers + teamSummary.totalMenTeamMembers + teamSummary.totalWomenDrivers + teamSummary.totalMenDrivers), 
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenDrivers),
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenDrivers),
+                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers + teamSummary.totalWomenTeamMembers + teamSummary.totalMenTeamMembers + teamSummary.totalWomenDrivers + teamSummary.totalMenDrivers),
                                     React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Tričká:'),
                                     (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
                                         React.createElement('td', { key: `summary-tshirt-${size}`, className: 'py-3 px-2 text-center' }, teamSummary.totalTshirtQuantities.get(size) || 0)
@@ -4313,7 +4327,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                         `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
                                                         doc(db, 'users', u.id),
                                                         '',
-                                                        false // not a new entry
+                                                        false
                                                     );
                                                 },
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
@@ -4329,31 +4343,25 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                         'tr',
                                         { key: `${u.id}-details`, className: 'bg-gray-100' },
                                         React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
-                                            // Tlačidlo na pridanie nového tímu pre používateľa, ak sú rozbalené riadky používateľov
-                                            // TOTO JE TLAČIDLO, KTORÉ SA BUDE ZOBRAZOVAŤ LEN AK SÚ OBE MOŽNOSTI ZAPNUTÉ
                                             showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
                                                 React.createElement('button', {
                                                     className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        // Tu potrebujeme použiť ID aktuálneho používateľa, ku ktorému sa má tím pridať
-                                                        handleOpenAddTeamModal(u.id); 
+                                                        handleOpenAddTeamModal(u.id);
                                                     }
                                                 }, '+')
                                             ),
-                                            Object.entries(u.teams || {}).map(([category, teamListRaw]) => // Renamed to teamListRaw
-                                                (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => { // Defensive check
+                                            Object.entries(u.teams || {}).map(([category, teamListRaw]) =>
+                                                (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => {
                                                     let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
                                                     let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
-                                                    let menDriversCount = team.driverDetailsMale?.length || 0; 
-                                                    let womenDriversCount = team.driverDetailsFemale?.length || 0; 
+                                                    let menDriversCount = team.driverDetailsMale?.length || 0;
+                                                    let womenDriversCount = team.driverDetailsFemale?.length || 0;
                                                     let playersCount = team.playerDetails?.length || 0;
-
-
                                                     const teamTshirtsMap = new Map(
                                                         (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
                                                     );
-
                                                     return React.createElement(TeamDetailsContent, {
                                                         key: `${u.id}-${category}-${teamIndex}-details-content`,
                                                         team: {
@@ -4364,8 +4372,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                             _teamIndex: teamIndex,
                                                             _menTeamMembersCount: menTeamMembersCount,
                                                             _womenTeamMembersCount: womenTeamMembersCount,
-                                                            _menDriversCount: menDriversCount, 
-                                                            _womenDriversCount: womenDriversCount, 
+                                                            _menDriversCount: menDriversCount,
+                                                            _womenDriversCount: womenDriversCount,
                                                             _players: playersCount,
                                                             _teamTshirtsMap: teamTshirtsMap
                                                         },
@@ -4376,7 +4384,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                         openEditModal: openEditModal,
                                                         db: db,
                                                         setUserNotificationMessage: setUserNotificationMessage,
-                                                        onAddMember: handleOpenAddMemberTypeModal // Odovzdať handler
+                                                        onAddMember: handleOpenAddMemberTypeModal
                                                     })
                                                 })
                                             )
@@ -4384,6 +4392,20 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                     )
                                 )
                             ))
+                        )
+                    ),
+                    showUsers && activeFilters.role && activeFilters.role.includes('volunteer') && (
+                        React.createElement(
+                            'tr',
+                            { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
+                            React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: columnOrder.length }, 'Súhrn veľkostí tričiek pre dobrovoľníkov:'),
+                            (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
+                                const volunteerTshirtSummary = calculateVolunteerTshirtSummary();
+                                return React.createElement('td', {
+                                    key: `volunteer-tshirt-summary-${size}`,
+                                    className: 'py-3 px-2 text-center'
+                                }, volunteerTshirtSummary.get(size) || 0);
+                            })
                         )
                     )
                 )
