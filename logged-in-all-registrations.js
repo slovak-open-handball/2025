@@ -4390,17 +4390,19 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                         )
                                     )
                                 )}
-                                {/* **SUMÁRNY RIADOK PRE DOBROVOĽNÍKOV** */}
                                 {showUsers && filteredUsers.some(u => u.role === 'volunteer') && (
                                     React.createElement(
                                         'tr',
                                         { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
                                         React.createElement('td', {
-                                          className: 'py-3 px-2 text-right',
-                                          colSpan: columnOrder.length - 1 // Preskočí všetky stĺpce okrem veľkostí tričiek
-                                        }, 'Súhrn tričiek pre dobrovoľníkov:')
+                                            className: 'py-3 px-2 text-right',
+                                            colSpan: columnOrder.length - 1 // Preskočí všetky stĺpce okrem veľkostí tričiek
+                                        }, 'Súhrn tričiek pre dobrovoľníkov:'),
                                         (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                            React.createElement('td', { key: `volunteer-tshirt-summary-${size}`, className: 'py-3 px-2 text-center' }, volunteerTshirtSummary.get(size) || 0)
+                                            React.createElement('td', {
+                                                key: `volunteer-tshirt-summary-${size}`,
+                                                className: 'py-3 px-2 text-center'
+                                            }, volunteerTshirtSummary.get(size) || 0)
                                         )
                                     )
                                 )}
