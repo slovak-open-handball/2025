@@ -219,14 +219,13 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
     if (!isOpen) return null;
 
     const handleCheckboxChange = (value) => {
-        const lowerCaseValue = String(value).toLowerCase();
-        setSelectedValues(prev => {
-            if (prev.includes(lowerCaseValue)) {
-                return prev.filter(item => item !== lowerCaseValue);
-            } else {
-                return [...prev, lowerCaseValue];
-            }
-        });
+      setSelectedValues(prev => {
+        if (prev.includes(value)) {
+          return prev.filter(item => item !== value);
+        } else {
+          return [...prev, value];
+        }
+      });
     };
 
     const handleApply = () => {
@@ -257,9 +256,9 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
                         React.createElement('input', {
                             type: 'checkbox',
                             id: `filter-${columnName}-${index}`,
-                            value: value,
-                            checked: selectedValues.includes(String(value).toLowerCase()),
-                            onChange: () => handleCheckboxChange(value),
+                            value: item.value || item,
+                            checked: selectedValues.includes(item.value || item),
+                            onChange: () => handleCheckboxChange(item.value || item),
                             className: 'mr-2'
                         }),
                         React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, value || '(Prázdne)')
@@ -3095,9 +3094,13 @@ const openFilterModal = (column) => {
     setFilterColumn(column);
     // Pre stĺpec "role" generujeme zoznam preložených hodnôt, ale filtrovanie bude prebiehať na pôvodných
     if (column === 'role') {
-      const roleValues = ['club', 'admin', 'volunteer', 'referee'];
-      const translatedRoleValues = roleValues.map(role => translateRole(role));
-      setUniqueColumnValues(translatedRoleValues);
+      const roleValues = [
+        { value: 'club', label: 'Klub' },
+        { value: 'admin', label: 'Administrátor' },
+        { value: 'volunteer', label: 'Dobrovoľník' },
+        { value: 'referee', label: 'Rozhodca' }
+      ];
+      setUniqueColumnValues(roleValues);
     } else {
         // Pre ostatné stĺpce ostáva pôvodná logika
         const values = [...new Set(allUsers.map(u => {
@@ -3152,11 +3155,7 @@ const openFilterModal = (column) => {
   };
 
 const applyFilter = (column, values) => {
-    if (column === 'role') {
-        setActiveFilters(prev => ({ ...prev, [column]: values }));
-    } else {
-        setActiveFilters(prev => ({ ...prev, [column]: values }));
-    }
+    setActiveFilters(prev => ({ ...prev, [column]: values })); // Ukladáme pôvodné hodnoty
 };
 
 const clearFilter = (column) => {
