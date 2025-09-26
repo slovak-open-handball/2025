@@ -4399,13 +4399,17 @@ const formatTableCellValue = (value, columnId, userObject) => {
                             'tr',
                             { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
                             React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: columnOrder.length }, 'Súhrn veľkostí tričiek pre dobrovoľníkov:'),
-                            (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
-                                const volunteerTshirtSummary = calculateVolunteerTshirtSummary();
-                                return React.createElement('td', {
-                                    key: `volunteer-tshirt-summary-${size}`,
-                                    className: 'py-3 px-2 text-center'
-                                }, volunteerTshirtSummary.get(size) || 0);
-                            })
+                            React.createElement(
+                                'td',
+                                { className: 'py-3 px-2 text-left' },
+                                (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'])
+                                    .map(size => {
+                                        const volunteerTshirtSummary = calculateVolunteerTshirtSummary();
+                                        const count = volunteerTshirtSummary.get(size) || 0;
+                                        return `${size}: ${count}`;
+                                    })
+                                    .join(', ')
+                            )
                         )
                     )
                 )
