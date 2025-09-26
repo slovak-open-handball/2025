@@ -4404,7 +4404,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                     'td',
                                     {
                                         className: 'py-3 px-4 text-left',
-                                        colSpan: columnOrder.length
+                                        colSpan: columnOrder.length + 1
                                     },
                                     'Súhrn veľkostí tričiek pre dobrovoľníkov:'
                                 )
