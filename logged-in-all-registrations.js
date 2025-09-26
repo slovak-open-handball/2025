@@ -3885,6 +3885,21 @@ function AllRegistrationsApp() {
 const formatTableCellValue = (value, columnId, userObject) => {
   if (value === null || value === undefined) return '-';
 
+    if (columnId === 'role') {
+    switch (value) {
+      case 'club':
+        return 'Klub';
+      case 'admin':
+        return 'Administrátor';
+      case 'volunteer':
+        return 'Dobrovoľník';
+      case 'referee':
+        return 'Rozhodca';
+      default:
+        return value;
+    }
+  }
+
   // Špecifické formátovanie na základe ID stĺpca
   if (columnId === 'registrationDate') {
     let date;
