@@ -4395,29 +4395,38 @@ const formatTableCellValue = (value, columnId, userObject) => {
                         )
                     ),
                     showUsers && activeFilters.role && activeFilters.role.includes('volunteer') && (
-                        React.createElement(
-                            'tr',
-                            { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
+                        [
+                            // Nadpisový riadok
                             React.createElement(
-                                'td',
-                                {
-                                    className: 'py-3 px-2 text-left',
-                                    colSpan: columnOrder.length  // Zaberá všetky stĺpce
-                                },
+                                'tr',
+                                { key: 'volunteer-tshirt-summary-header', className: 'bg-gray-200 font-bold text-gray-800 uppercase' },
                                 React.createElement(
-                                    'span',
-                                    { className: 'font-bold' },
-                                    'Súhrn veľkostí tričiek pre dobrovoľníkov: '
-                                ),
-                                (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'])
-                                    .map(size => {
-                                        const volunteerTshirtSummary = calculateVolunteerTshirtSummary();
-                                        const count = volunteerTshirtSummary.get(size) || 0;
-                                        return `${count}× ${size}`;
-                                    })
-                                    .join(', ')
-                            )
-                        )
+                                    'td',
+                                    {
+                                        className: 'py-3 px-4 text-left',
+                                        colSpan: columnOrder.length
+                                    },
+                                    'Súhrn veľkostí tričiek pre dobrovoľníkov:'
+                                )
+                            ),
+                            // Riadky s veľkosťami
+                            ...(availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
+                                const volunteerTshirtSummary = calculateVolunteerTshirtSummary();
+                                const count = volunteerTshirtSummary.get(size) || 0;
+                                return React.createElement(
+                                    'tr',
+                                    { key: `volunteer-tshirt-summary-${size}`, className: 'bg-gray-100 text-gray-700' },
+                                    React.createElement(
+                                        'td',
+                                        {
+                                            className: 'py-2 px-4 text-left',
+                                            colSpan: columnOrder.length
+                                        },
+                                        `${size}: ${count}×`
+                                    )
+                                );
+                            })
+                        ]
                     )
                 )
             )
