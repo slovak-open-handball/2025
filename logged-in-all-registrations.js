@@ -3095,9 +3095,9 @@ const openFilterModal = (column) => {
     setFilterColumn(column);
     // Pre stĺpec "role" generujeme zoznam preložených hodnôt, ale filtrovanie bude prebiehať na pôvodných
     if (column === 'role') {
-        const roleValues = ['club', 'admin', 'volunteer', 'referee'];
-        const translatedRoleValues = roleValues.map(role => translateRole(role));
-        setUniqueColumnValues(translatedRoleValues);
+      const roleValues = ['club', 'admin', 'volunteer', 'referee'];
+      const translatedRoleValues = roleValues.map(role => translateRole(role));
+      setUniqueColumnValues(translatedRoleValues);
     } else {
         // Pre ostatné stĺpce ostáva pôvodná logika
         const values = [...new Set(allUsers.map(u => {
@@ -3153,17 +3153,7 @@ const openFilterModal = (column) => {
 
 const applyFilter = (column, values) => {
     if (column === 'role') {
-        // Pre stĺpec "role" preložíme späť na pôvodné hodnoty pre filtrovanie
-        const originalRoleValues = values.map(val => {
-            switch (val) {
-                case 'Klub': return 'club';
-                case 'Administrátor': return 'admin';
-                case 'Dobrovoľník': return 'volunteer';
-                case 'Rozhodca': return 'referee';
-                default: return val;
-            }
-        });
-        setActiveFilters(prev => ({ ...prev, [column]: originalRoleValues }));
+        setActiveFilters(prev => ({ ...prev, [column]: values }));
     } else {
         setActiveFilters(prev => ({ ...prev, [column]: values }));
     }
