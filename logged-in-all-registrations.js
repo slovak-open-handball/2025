@@ -2506,13 +2506,13 @@ const recalculateTeamCounts = (teamToUpdate) => {
 const translateRole = (role) => {
   switch (role) {
     case 'club':
-      return 'Klub';
+      return 'klub';
     case 'admin':
-      return 'Administrátor';
+      return 'administrátor';
     case 'volunteer':
-      return 'Dobrovoľník';
+      return 'dobrovoľník';
     case 'referee':
-      return 'Rozhodca';
+      return 'rozhodca';
     default:
       return role;
   }
