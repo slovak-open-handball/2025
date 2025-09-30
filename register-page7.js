@@ -185,7 +185,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     // Detaily dopravy
                     let arrivalDetails = team.arrival?.type || 'Nezadaný';
                     if ((team.arrival?.type === 'verejná doprava - vlak' || team.arrival?.type === 'verejná doprava - autobus') && team.arrival?.time) {
-                        arrivalDetails += ` (čas príchodu: ${team.arrival.time})`;
+                        arrivalDetails += ` (čas príchodu: ${team.arrival.time} hod.)`;
                     } else if (team.arrival?.type === 'vlastná doprava' && (team.arrival?.drivers?.male > 0 || team.arrival?.drivers?.female > 0)) {
                         const driversInfo = [];
                         if (team.arrival.drivers.male > 0) driversInfo.push(`${team.arrival.drivers.male} muž`);
