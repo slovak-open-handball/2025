@@ -3920,7 +3920,7 @@ const clearFilter = (column) => {
 
   // Nová pomocná funkcia na formátovanie hodnôt v bunkách tabuľky
 const formatTableCellValue = (value, columnId, userObject) => {
-  if (value === null || value === undefined) return '-';
+  if (value === null || value === undefined || value === "") return '-';
 
     if (columnId === 'role') {
     switch (value) {
