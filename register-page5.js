@@ -1039,10 +1039,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             entry.gender === '' ||
             entry.categoryName === '' ||
             entry.teamIndex === null ||
-            // The check below was problematic as currentEntry was undefined in this scope.
-            // It's meant to ensure that the gender for a given team isn't duplicated in the *same* driver entry being edited.
-            // For checking if a NEW entry can be added, this specific check is not directly applicable.
-            // We need to check if there are any *available* slots in total.
             (entry.gender !== '' && !teamsWithOwnTransport.some(t => `${t.categoryName}-${t.teamIndex}`))
         );
         if (hasIncompleteEntry) {
@@ -1124,6 +1120,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         for (const entry of driverEntries) {
             const count = parseInt(entry.count, 10);
+            // Ak je záznam šoféra pridaný, musí byť kompletný a platný
             if (isNaN(count) || count <= 0 || entry.gender === '' || entry.categoryName === '' || entry.teamIndex === null) {
                 return false; // Neúplný alebo neplatný záznam o šoférovi
             }
@@ -1142,10 +1139,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         // FINÁLNA VALIDÁCIA PRE ŠOFÉROV S VLASTNOU DOPRAVOU
-        // Ak existuje aspoň jeden tím s vlastnou dopravou, musí existovať aspoň jeden platný záznam o šoférovi
+        // Pôvodná podmienka, ktorá vyžadovala šoféra, bola odstránená podľa požiadavky užívateľa.
+        /*
         if (hasTeamWithOwnTransport && !hasValidDriverEntry) {
             return false;
         }
+        */
         
         return true; // Všetky validácie prešli
     }, [teamsDataFromPage4, accommodationTypes, accommodationCounts, packages, driverEntries, teamsWithOwnTransport]);
@@ -1175,11 +1174,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification();
 
         if (!isFormValidPage5) {
-            // Updated error message to reflect the new validation rule
             let errorMessage = "Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod).";
-            if (teamsWithOwnTransport.length > 0) {
-                errorMessage += " Ak existuje tím s 'vlastnou dopravou', musí byť zadaný aspoň jeden šofér s kladným počtom pre ľubovoľný z týchto tímov. Uistite sa, že všetky polia šoférov sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.";
+            
+            // Ak existujú nejaké záznamy šoférov (driverEntries), upozorníme na ich neúplnosť/neplatnosť
+            if (driverEntries.length > 0) {
+                 errorMessage += " Skontrolujte tiež, či sú všetky pridané záznamy šoférov vyplnené, majú kladný počet a nie sú duplicitné pre daný tím a pohlavie.";
             }
+
             setNotificationMessage(errorMessage, 'error');
             setNotificationType('error');
             setLoading(false);
