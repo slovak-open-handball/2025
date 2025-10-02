@@ -142,7 +142,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         };
     }, []);
 
-    // **NOVÁ LOGIKA: Načítanie kategórie a skupiny z URL hashu pri štarte**
+    // **LOGIKA: Načítanie kategórie a skupiny z URL hashu pri štarte**
     useEffect(() => {
         const hash = window.location.hash.substring(1);
         if (hash) {
@@ -156,18 +156,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     }, []);
 
-    // **NOVÁ LOGIKA: Synchronizácia stavu s URL hashom**
+    // **LOGIKA: Synchronizácia stavu s URL hashom**
     useEffect(() => {
         let hash = '';
         if (selectedCategoryId) {
             hash = selectedCategoryId;
             if (selectedGroupName) {
-                // Kódujeme názov skupiny pre URL, aby sme mohli použiť medzery a špeciálne znaky
+                // Kódujeme názov skupiny pre URL
                 hash += `/${encodeURIComponent(selectedGroupName)}`;
             }
         }
 
-        // Aktualizujeme hash, len ak je iný, aby sme predišli zbytočnej histórii prehliadania
         if (window.location.hash.substring(1) !== hash) {
             window.location.hash = hash;
         }
@@ -215,10 +214,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         e.preventDefault();
 
-        // Logovanie len pri presune nad novú skupinu
         if (lastDragOverGroup.current !== targetGroup) {
             lastDragOverGroup.current = targetGroup;
-            const nextOrder = nextOrderMap[`${categoryIdToNameMap[targetCategoryId]}-${targetGroup}`] || 1;
+            const nextOrder = targetCategoryId && targetGroup ? (nextOrderMap[`${categoryIdToNameMap[targetCategoryId]}-${targetGroup}`] || 1) : 1;
 
             console.log("--- Drag & Drop Informácie ---");
             console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
@@ -489,13 +487,18 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 { className: 'flex-grow min-w-0 flex flex-col gap-4' },
                 sortedGroups.length > 0 ? (
                     sortedGroups.map((group, groupIndex) => {
-                        // Dynamické nastavenie výšky, ak je vybraná konkrétna skupina A zistená výška nepriradených tímov
                         let customStyle = {};
-                        if (selectedGroupName && teamsWithoutGroupHeight) {
-                            customStyle = {
-                                height: `${teamsWithoutGroupHeight}px`,
-                                overflowY: 'auto'
-                            };
+                        // Dynamické nastavenie výšky, ak je vybraná konkrétna skupina
+                        if (selectedGroupName) {
+                            // Nastavíme minimálnu výšku na výšku nepriradených tímov, ale necháme kontajner roztiahnuť sa,
+                            // aby zobrazil všetky tímy bez rolovania.
+                            if (teamsWithoutGroupHeight) {
+                                customStyle = {
+                                    minHeight: `${teamsWithoutGroupHeight}px`,
+                                };
+                            }
+                            // Ak je vybraná konkrétna skupina, nebudeme mať overflowY: auto ani scroll
+                            // aby sa celý obsah roztiahol
                         }
 
                         return React.createElement(
