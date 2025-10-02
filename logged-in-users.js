@@ -480,34 +480,34 @@ function UsersManagementApp() {
             };
 
             // Nová logika: Vymažte polia pre 'admin' a 'hall' a nastavte default pre 'user'
-            if (userData.role === 'admin' || userData.role === 'hall') {
-              const updateData = {};
-              
-              // Odstránenie `dataEditDeadline`, ak existuje
-              if (userData.dataEditDeadline !== undefined) {
-                  updateData.dataEditDeadline = deleteField();
-              }
+            else if (userData.role === 'admin' || userData.role === 'hall') {
+                const updateData = {};
 
-              // Odstránenie `rosterEditDeadline`, ak existuje
-              if (userData.rosterEditDeadline !== undefined) {
-                  updateData.rosterEditDeadline = deleteField();
-              }
-
-              if (Object.keys(updateData).length > 0) {
-                  await updateDoc(doc(db, `users`, userData.id), updateData);
-              }
+                // Odstránenie `dataEditDeadline`, ak existuje
+                if (userData.hasOwnProperty('dataEditDeadline')) {
+                    updateData.dataEditDeadline = deleteField();
+                }
+            
+                // Odstránenie `rosterEditDeadline`, ak existuje
+                if (userData.hasOwnProperty('rosterEditDeadline')) {
+                    updateData.rosterEditDeadline = deleteField();
+                }
+            
+                if (Object.keys(updateData).length > 0) {
+                    await updateDoc(doc(db, `users`, userData.id), updateData);
+                }
             } if (userData.role === 'club') {
                 let needsUpdate = false;
                 const updateData = {};
 
-                // Kontrola, či pole `dataEditDeadline` existuje v dokumente
-                if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
+                // Kontrola, či pole `dataEditDeadline` existuje alebo je null
+                if (!userData.hasOwnProperty('dataEditDeadline') || userData.dataEditDeadline === null) {
                     updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline; // Nastaví sa, ak neexistuje alebo je null
                     needsUpdate = true;
                 }
             
-                // Kontrola, či pole `rosterEditDeadline` existuje v dokumente
-                if (userData.rosterEditDeadline === undefined || userData.rosterEditDeadline === null) {
+                // Kontrola, či pole `rosterEditDeadline` existuje alebo je null
+                if (!userData.hasOwnProperty('rosterEditDeadline') || userData.rosterEditDeadline === null) {
                     updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline; // Nastaví sa, ak neexistuje alebo je null
                     needsUpdate = true;
                 }
@@ -519,14 +519,14 @@ function UsersManagementApp() {
                 let needsUpdate = false;
                 const updateData = {};
 
-                // Kontrola, či pole `dataEditDeadline` existuje v dokumente
-                if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
+                // Kontrola, či pole `dataEditDeadline` existuje alebo je null
+                if (!userData.hasOwnProperty('dataEditDeadline') || userData.dataEditDeadline === null) {
                     updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline; // Nastaví sa, ak neexistuje alebo je null
                     needsUpdate = true;
                 }
             
                 // Odstránenie `rosterEditDeadline`, ak existuje
-                if (userData.rosterEditDeadline !== undefined) {
+                if (userData.hasOwnProperty('rosterEditDeadline')) {
                     updateData.rosterEditDeadline = deleteField(); // Odstráni sa, ak existuje
                     needsUpdate = true;
                 }
@@ -535,7 +535,7 @@ function UsersManagementApp() {
                     await updateDoc(doc(db, `users`, userData.id), updateData);
                 }
             }
-
+            
             return userData;
           }));
           
