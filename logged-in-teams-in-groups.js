@@ -29,7 +29,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const timer = setTimeout(() => {
                 setNotification(null);
             }, 5000);
-            return () => clearTimeout(timer;
+            return () => clearTimeout(timer);
         }
     }, [notification]);
 
@@ -195,6 +195,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     /**
      * Pomocná funkcia na presné určenie indexu, keď sa kurzor nachádza v medzerách
      * medzi LI prvkami (keď sa spustí UL handler).
+     * Vráti: Index vloženia (0 až length), alebo -1, ak je kurzor nad LI prvkom.
      */
     const getInsertionIndexInGap = (e, teamElements, sortedTeams) => {
         if (teamElements.length === 0) return 0;
@@ -206,23 +207,22 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return 0;
         }
 
-        // Tím <li> prvky majú nastavené CSS s paddingom (py-2) a li-medzery (space-y-2)
-        // a indikátor má margin (my-1). Presná medzera je súčet týchto priestorov.
-        // Odhadneme bezpečnú oblasť pre detekciu GAP:
-        
         for (let i = 0; i < teamElements.length; i++) {
             const teamEl = teamElements[i];
             const rect = teamEl.getBoundingClientRect();
             
-            // Check 2: Sme POD aktuálnym elementom 'i' a NAD nasledujúcim 'i+1'?
+            // Check: Sme NAD aktuálnym prvkom? Ak áno, LI handler by to mal chytiť.
+            if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                // Sme nad LI prvkom, necháme to riešiť handleDragOverTeam
+                return -1; 
+            }
+            
+            // Check 2: Sme POD aktuálnym elementom 'i' a NAD nasledujúcim 'i+1'? (Priestor medzi)
             if (i < teamElements.length - 1) {
                 const nextRect = teamElements[i + 1].getBoundingClientRect();
                 
-                // Hľadáme priestor, ktorý nepatrí ani horná polovica [i+1] ani spodná polovica [i]
-                
-                // Spodná hranica LI[i] (rect.bottom) + malá bezpečná rezerva (napr. 2px, kvôli marginu indikátora)
+                // Hľadáme priestor, ktorý nepatrí ani spodnej polovici [i] ani hornej polovici [i+1]
                 const gapStart = rect.bottom + 2; 
-                // Horná hranica LI[i+1] (nextRect.top) - malá bezpečná rezerva
                 const gapEnd = nextRect.top - 2; 
                 
                 if (e.clientY > gapStart && e.clientY < gapEnd) {
@@ -238,13 +238,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
         }
         
-        // Ak nebola detekovaná žiadna presná medzera ani koniec, vrátime -1 (žiadna zmena)
+        // Ak nebola detekovaná žiadna presná medzera ani koniec, kurzor je pravdepodobne v mŕtvej zóne 
+        // ale stále v rámci UL kontajnera (ak UL nie je úplne plný LI prvkami).
+        // Vrátime -1, aby sme to spracovali v handleDragOverEnd.
         return -1; 
     }
 
 
-    // Funkcia na spracovanie drag over na UL kontajneri, keď kurzor nie je nad LI elementom
-    // Toto zachytáva presun myši v medzerách (gapoch) medzi tímami.
+    // Funkcia na spracovanie drag over na UL kontajneri
     const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
@@ -255,15 +256,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Vylúčime Drop Indicator prvky z merania
         const teamElements = Array.from(containerRef.children).filter(el => el.tagName === 'LI');
         
-        // Použijeme robustnú geometrickú funkciu na zistenie, či sme v medzerách medzi prvkami
-        const insertionIndex = getInsertionIndexInGap(e, teamElements, sortedTeams);
+        // 1. Skúsi zistiť, či je kurzor v presnej medzere
+        let insertionIndex = getInsertionIndexInGap(e, teamElements, sortedTeams);
+        
+        // 2. Ak sa nenašiel presný index v medzere (-1), predpokladáme koniec zoznamu
+        // Týmto pokryjeme aj mŕtve zóny pod posledným prvkom, ale v rámci UL kontajnera.
+        if (insertionIndex === -1) {
+            insertionIndex = sortedTeams.length;
+        }
 
-        // Ak getInsertionIndexInGap vrátil -1, znamená to, že kurzor je pravdepodobne v oblasti,
-        // ktorú by mal pokrývať LI element (handleDragOverTeam). Ignorujeme túto udalosť, aby sme zabránili blikaniu.
-        if (insertionIndex === -1) return;
-
-
-        // Nastavíme index na vypočítanú pozíciu
+        // Nastavíme index na vypočítanú pozíciu (koniec zoznamu alebo presnú medzeru)
         setDropTarget({
             groupId: targetGroup,
             categoryId: targetCategoryId,
@@ -340,7 +342,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
 
         // Zastaviť, ak sa presúva tím do rovnakej cieľovej skupiny a na rovnakú pozíciu (komplikovanejšia kontrola, zjednodušme ju)
-        // Toto by malo byť už opravené v predchádzajúcej iterácii.
         if (originalGroup === targetGroup && teamData.category === targetCategoryName) {
             setNotification({ id: Date.now(), message: "Tím sa už nachádza v tejto skupine.", type: 'info' });
             return;
@@ -488,7 +489,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Kontrola, či sa má zobraziť indikátor na úplnom konci zoznamu
         // Aktivuje sa v handleDragOverEnd, ak sa kurzor nachádza pod posledným tímom
         const isDropIndicatorVisibleAtEnd = 
-            sortedTeams.length > 0 && 
             dropTarget.groupId === targetGroupId && 
             dropTarget.categoryId === targetCategoryId && 
             dropTarget.index === sortedTeams.length; 
@@ -527,7 +527,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                 },
                 className: 'space-y-2 relative',
-                // Toto zachytáva presun myši V MEDZERÁCH (GAPOCH) medzi prvkami, kde LI.onDragOver nebola spustená
+                // Toto zachytáva presun myši V MEDZERÁCH (GAPOCH) a v mŕtvych zónach v rámci kontajnera
                 onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
             },
