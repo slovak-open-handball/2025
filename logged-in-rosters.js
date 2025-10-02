@@ -94,13 +94,13 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
     };
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1001] flex justify-center items-start pt-20 pb-4 overflow-y-auto' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
-            { className: 'relative w-full max-w-md mx-auto rounded-lg shadow-lg bg-white max-h-[85vh] flex flex-col' },
+            { className: 'relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg' },
             React.createElement(
                 'div',
-                { className: `flex justify-between items-center text-white p-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
+                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
                 React.createElement('h3', { className: 'text-xl font-semibold' }, 'Pridať člena tímu'),
                 React.createElement(
                     'button',
@@ -302,13 +302,13 @@ function MemberDetailsModal({
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1001] flex justify-center items-start pt-20 pb-4 overflow-y-auto' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
             { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[85vh] overflow-y-auto overflow-x-hidden' },
             React.createElement(
                 'div',
-                { className: `flex justify-between items-center text-white p-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
+                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
                 React.createElement('h3', { className: 'text-xl font-semibold' }, `${isEditMode ? 'Upraviť' : 'Pridať'} ${memberType === 'player' ? 'hráča' : memberType === 'womenTeamMember' ? 'členku realizačného tímu' : memberType === 'menTeamMember' ? 'člena realizačného tímu' : memberType === 'driverFemale' ? 'šoférku' : memberType === 'driverMale' ? 'šoféra' : 'člena'}`),
                 React.createElement(
                     'button',
@@ -564,7 +564,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1001] flex justify-center items-start pt-20 pb-4 overflow-y-auto' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
             { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[85vh] overflow-y-auto overflow-x-hidden' },
@@ -938,13 +938,13 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1001] flex justify-center items-start pt-20 pb-4 overflow-y-auto' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
             { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[85vh] overflow-y-auto overflow-x-hidden' },
             React.createElement(
                 'div',
-                { className: `flex justify-between items-center text-white p-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
+                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
                 React.createElement('h3', { className: 'text-2xl font-semibold' }, 'Pridať nový tím'),
                 React.createElement(
                     'button',
@@ -1631,9 +1631,9 @@ const handleDeleteTeam = async (teamToDelete) => {
 
     const confirmDelete = await new Promise((resolve) => {
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1001] flex justify-center items-start pt-20 pb-4 overflow-y-auto';
+        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]';
         modal.innerHTML = `
-            <div class="relative w-full max-w-md mx-auto rounded-lg shadow-lg bg-white max-h-[85vh] flex flex-col">
+            <div class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg">
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Potvrdiť vymazanie tímu</h3>
                 <p class="mb-6 text-gray-700">Naozaj chcete vymazať tím <strong>${teamToDelete.teamName}</strong>? Táto akcia je nevratná.</p>
                 <div class="flex justify-end space-x-2">
