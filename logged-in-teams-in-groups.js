@@ -196,7 +196,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Funkcia na spracovanie drag over na li elemente (tíme)
     const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
         e.preventDefault();
-        e.stopPropagation(); // ZASTAVÍ BUBBLING, aby rodičovský UL neprepísal presný index
+        // ZABRÁNI BUBBLINGU: Dôležité, aby rodičovský UL neprepísal presný index
+        e.stopPropagation(); 
         
         const rect = e.currentTarget.getBoundingClientRect();
         const isOverTopHalf = e.clientY - rect.top < rect.height / 2;
@@ -262,11 +263,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
     };
     
-    // Funkcia, ktorá sa spustí, keď tím opustí li element alebo kontajner
-    const handleDragLeave = (e) => {
-        // Logiku dropTarget čistenia nechávame hlavne na handleDragEnd
-    };
-
 
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
@@ -401,6 +397,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const handleDragEnd = () => {
+        // Toto sa volá, len keď používateľ PUSTÍ tím
         draggedItem.current = null;
         lastDragOverGroup.current = null;
         setDropTarget({ groupId: null, categoryId: null, index: null }); // Vyčistí vizuál
@@ -426,7 +423,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 dropTarget.categoryId === targetCategoryId && 
                 dropTarget.index === index;
 
-            // Indikátor pre vloženie ZA posledný tím (posledný tím je vždy index: sortedTeams.length - 1. Ak sa presúva na spodnú polovicu, index je sortedTeams.length)
+            // Indikátor pre vloženie ZA posledný tím (posledný tím je index: sortedTeams.length - 1. Ak sa presúva na spodnú polovicu, index je sortedTeams.length)
             const isDropIndicatorVisibleAfter = 
                  (index === sortedTeams.length - 1) &&
                  dropTarget.groupId === targetGroupId && 
@@ -466,7 +463,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     // Udalosti sú tu, aby zachytili drop na prázdnu oblasť
                     onDragOver: (e) => handleDragOverEmptyContainer(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
-                    onDragLeave: handleDragEnd, // Vyčisti vizuál, keď opúšťa prázdny kontajner
+                    // ODSTRÁNENÉ: onDragLeave: handleDragEnd - Zabezpečuje, že sa nesresetuje drag stav pri prechode na ďalšiu skupinu.
                     className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`
                 },
                 React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
