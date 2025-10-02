@@ -233,13 +233,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return;
         }
 
+        // Pôvodné dáta tímu obsahujú staré poradie a skupinu
         const teamData = dragData.team;
         const originalGroup = teamData.groupName;
-        const teamCategoryName = categoryIdToNameMap[dragData.teamCategoryId];
+        const originalOrder = teamData.order; // Získame pôvodné poradové číslo
+        const teamCategoryName = teamData.category; // Používame priamo category z teamData
         const targetCategoryName = categoryIdToNameMap[targetCategoryId];
 
         console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
         console.log(`Pôvodná skupina: ${originalGroup || 'bez skupiny'}`);
+        console.log(`Pôvodné poradie: ${originalOrder || 'žiadne'}`);
         console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
 
         if (originalGroup === targetGroup) {
@@ -263,7 +266,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 if (userData.teams?.[teamCategoryName]) {
                     const teams = userData.teams[teamCategoryName];
 
-                    // Nájdeme tím, ktorý sa má presunúť
+                    // Nájdeme tím, ktorý sa má presunúť (podľa vlastníctva tímu)
                     const teamToUpdate = teams.find(t => t.teamName === teamData.teamName);
 
                     if (userDoc.id === teamData.uid) {
@@ -276,7 +279,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                 return movedTeam;
                             }
                             // Posun poradia pre tímy, ktoré zostávajú v PÔVODNEJ skupine
-                            if (t.groupName === originalGroup && t.order > teamData.order) {
+                            // (Len ak pôvodná skupina mala poradie - teda nebola 'bez skupiny' / null)
+                            if (originalGroup && t.groupName === originalGroup && t.order > originalOrder) {
                                 return { ...t, order: t.order - 1 };
                             }
                             return t;
@@ -288,13 +292,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                             })
                         );
                     } else if (teamToUpdate) {
-                        // Logika pre ostatných používateľov - len aktualizujeme poradie v pôvodnej skupine
-                        const otherUsersTeams = teams.map(t => {
-                            if (t.groupName === originalGroup && t.order > teamData.order) {
+                        // Logika pre ostatných používateľov - len aktualizujeme poradie v pôvodnej skupine, ak je to potrebné
+                         const otherUsersTeams = teams.map(t => {
+                            if (originalGroup && t.groupName === originalGroup && t.order > originalOrder) {
                                 return { ...t, order: t.order - 1 };
                             }
                             return t;
                         });
+
                         batchPromises.push(
                             updateDoc(userDoc.ref, {
                                 [`teams.${teamCategoryName}`]: otherUsersTeams
@@ -309,9 +314,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             // Zápis záznamu o notifikácii do databázy
             if (window.db && window.auth && window.auth.currentUser) {
                 try {
+                    const originalGroupInfo = originalGroup ? `'${originalGroup}' (pôvodné poradie: ${originalOrder || 'žiadne'})` : `'bez skupiny'`;
+                    const targetGroupInfo = targetGroup ? `'${targetGroup}'` : `'bez skupiny'`;
+                    
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`],
+                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý z ${originalGroupInfo} do skupiny ${targetGroupInfo}.`],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
@@ -322,7 +330,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
             
             // Notifikácia sa zobrazí bez obnovenia stránky
-            const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý zo skupiny '${originalGroup || 'bez skupiny'}' do skupiny '${targetGroup || 'bez skupiny'}'.`;
+            const originalGroupDisplay = originalGroup ? `'${originalGroup}' (pôvodné poradie: ${originalOrder || 'žiadne'})` : `'bez skupiny'`;
+            const targetGroupDisplay = targetGroup ? `'${targetGroup}'` : `'bez skupiny'`;
+            const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay}.`;
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
@@ -497,8 +507,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                     minHeight: `${teamsWithoutGroupHeight}px`,
                                 };
                             }
-                            // Ak je vybraná konkrétna skupina, nebudeme mať overflowY: auto ani scroll
-                            // aby sa celý obsah roztiahol
                         }
 
                         return React.createElement(
