@@ -196,6 +196,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Funkcia na spracovanie drag over na li elemente (tíme)
     const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
         e.preventDefault();
+        e.stopPropagation(); // ZASTAVÍ BUBBLING, aby rodičovský UL neprepísal presný index
+        
         const rect = e.currentTarget.getBoundingClientRect();
         const isOverTopHalf = e.clientY - rect.top < rect.height / 2;
         
@@ -212,8 +214,22 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         e.dataTransfer.dropEffect = "move";
     };
 
-    // Funkcia na spracovanie drag over na kontajneri (skupine/zozname bez tímu)
-    const handleDragOverContainer = (e, targetGroup, targetCategoryId) => {
+    // Funkcia na spracovanie drag over na konci NEPRÁZDNEHO zoznamu
+    const handleDragOverEnd = (e, targetGroup, targetCategoryId, totalTeams) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        
+        // Nastavíme index na koniec zoznamu (rovný celkovému počtu tímov)
+        setDropTarget({
+            groupId: targetGroup,
+            categoryId: targetCategoryId,
+            index: totalTeams
+        });
+    };
+
+
+    // Funkcia na spracovanie drag over na PRÁZDNOM kontajneri (skupine/zozname bez tímu)
+    const handleDragOverEmptyContainer = (e, targetGroup, targetCategoryId) => {
         const dragData = draggedItem.current;
         if (!dragData) {
             e.preventDefault();
@@ -239,7 +255,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         e.preventDefault();
         
         // Ak kontajner nemá žiadne tímy, nastavíme index na 0 (vloží sa ako prvý/jediný)
-        // Toto sa volá, keď sa presúva cez prázdny kontajner.
         setDropTarget({
             groupId: targetGroup,
             categoryId: targetCategoryId,
@@ -261,7 +276,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Vyčistíme dropTarget hneď po pustení
         setDropTarget({ groupId: null, categoryId: null, index: null });
         
-        // Používame kontrolu indexu vrátane 0
+        // Kontrola platnosti cieľového indexu
         if (!dragData || (finalDropTarget.index === null || finalDropTarget.index === undefined)) {
             console.error("Žiadne dáta na presunutie alebo neplatný cieľový index.");
             return;
@@ -280,13 +295,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
         console.log(`Cieľový index (0-based): ${finalDropTarget.index}`);
         
+        // Vypočítame 1-based nové poradie (ak je v skupine)
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         console.log(`Nové poradie (1-based, ak v skupine): ${newOrder}`);
 
 
-        // Zastaviť, ak sa presúva tím do rovnakej cieľovej skupiny
-        if (originalGroup === targetGroup) {
-            console.log("Zablokovaný presun tímu: rovnaká počiatočná aj cieľová skupina.");
+        // Zastaviť, ak sa presúva tím do rovnakej cieľovej skupiny a na rovnakú pozíciu (komplikovanejšia kontrola, zjednodušme ju)
+        if (originalGroup === targetGroup && teamData.category === targetCategoryName) {
             setNotification({ id: Date.now(), message: "Tím sa už nachádza v tejto skupine.", type: 'info' });
             return;
         }
@@ -318,6 +333,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         }
 
                         // B. Increment v Cieľovej Skupine (pre existujúce tímy, ktoré sa musia posunúť)
+                        // Aplikuje sa len ak cieľová skupina je definovaná a poradie existuje
                         if (!isDraggedTeam && targetGroup && t.groupName === targetGroup && t.order != null && newOrder !== null && t.order >= newOrder) {
                             shouldUpdate = true;
                             // Zvýšenie poradia o 1
@@ -404,10 +420,19 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const teamNameWithOrder = !isWithoutGroup && team.order != null ? `${team.order}. ${team.teamName}` : team.teamName;
             const teamBgClass = !isWithoutGroup ? 'bg-white' : 'bg-gray-100';
             
+            // Indikátor pre vloženie PRED aktuálny tím
             const isDropIndicatorVisible = 
                 dropTarget.groupId === targetGroupId && 
                 dropTarget.categoryId === targetCategoryId && 
                 dropTarget.index === index;
+
+            // Indikátor pre vloženie ZA posledný tím (posledný tím je vždy index: sortedTeams.length - 1. Ak sa presúva na spodnú polovicu, index je sortedTeams.length)
+            const isDropIndicatorVisibleAfter = 
+                 (index === sortedTeams.length - 1) &&
+                 dropTarget.groupId === targetGroupId && 
+                 dropTarget.categoryId === targetCategoryId && 
+                 dropTarget.index === sortedTeams.length;
+
 
             return React.createElement(
                 React.Fragment, 
@@ -421,29 +446,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         onDragStart: (e) => handleDragStart(e, team),
                         onDragEnd: handleDragEnd,
                         onDragOver: (e) => handleDragOverTeam(e, targetGroupId, targetCategoryId, index),
-                        onDragLeave: (e) => {}, // Používame logiku v handleDragOverTeam
                     },
                     `${!selectedCategoryId && team.category && !isWithoutGroup ? `${team.category}: ` : ''}${teamNameWithOrder}`
-                )
+                ),
+                isDropIndicatorVisibleAfter && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
             );
         });
-
-        // Vizuál pre pád na koniec zoznamu
-        const isEndDropIndicatorVisible = 
-            dropTarget.groupId === targetGroupId && 
-            dropTarget.categoryId === targetCategoryId && 
-            dropTarget.index === sortedTeams.length;
-
-        // Ak je zoznam prázdny alebo sa presúva na koniec, pridáme indikátor
-        if (sortedTeams.length > 0 && isEndDropIndicatorVisible) {
-            listItems.push(
-                React.createElement('div', { 
-                    key: 'end-indicator', 
-                    className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' 
-                })
-            );
-        }
-
 
         // Prázdny kontajner (pre drop na prázdnu skupinu)
         if (sortedTeams.length === 0) {
@@ -456,7 +464,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 'div',
                 {
                     // Udalosti sú tu, aby zachytili drop na prázdnu oblasť
-                    onDragOver: (e) => handleDragOverContainer(e, targetGroupId, targetCategoryId),
+                    onDragOver: (e) => handleDragOverEmptyContainer(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
                     onDragLeave: handleDragEnd, // Vyčisti vizuál, keď opúšťa prázdny kontajner
                     className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`
@@ -470,8 +478,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             'ul',
             { 
                 className: 'space-y-2 relative',
-                // Udalosti sú tu, aby zachytili drop na koniec zoznamu, alebo prechádzanie myšou
-                onDragOver: (e) => handleDragOverContainer(e, targetGroupId, targetCategoryId),
+                // Pre neprázdny zoznam zachytávame iba Drop a DragOver na koniec zoznamu
+                onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams.length),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
             },
             ...listItems
