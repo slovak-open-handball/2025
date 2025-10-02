@@ -471,14 +471,25 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             if (!isWithoutGroup) {
                 return (a.order || 0) - (b.order || 0);
             } else {
-                return a.teamName.localeCompare(b.teamName);
+                // Zoradenie podľa kategórie a potom podľa mena
+                return a.category.localeCompare(b.category) || a.teamName.localeCompare(b.teamName);
             }
         });
         
         // Vytvorenie React elementov s pridaním indikátorov
         const listItems = sortedTeams.map((team, index) => {
-            const teamNameWithOrder = !isWithoutGroup && team.order != null ? `${team.order}. ${team.teamName}` : team.teamName;
+            let teamNameDisplay = team.teamName;
             const teamBgClass = !isWithoutGroup ? 'bg-white' : 'bg-gray-100';
+            
+            // Logika pre zobrazenie poradia v skupine
+            if (!isWithoutGroup && team.order != null) {
+                teamNameDisplay = `${team.order}. ${team.teamName}`;
+            }
+
+            // Logika pre zobrazenie kategórie (Ak nie je filter kategórie ALEBO ak je to tím pridelený do skupiny)
+            if (!selectedCategoryId && team.category && (isWithoutGroup || team.groupName)) {
+                teamNameDisplay = `${team.category}: ${teamNameDisplay}`;
+            }
             
             // Indikátor pre vloženie PRED aktuálny tím
             const isDropIndicatorVisible = 
@@ -500,7 +511,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         onDragEnd: handleDragEnd,
                         onDragOver: (e) => handleDragOverTeam(e, targetGroupId, targetCategoryId, index),
                     },
-                    `${!selectedCategoryId && team.category && !isWithoutGroup ? `${team.category}: ` : ''}${teamNameWithOrder}`
+                    teamNameDisplay
                 )
             );
         });
@@ -689,7 +700,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(b.name));
     
     // Dynamické triedy pre notifikáciu
     const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
