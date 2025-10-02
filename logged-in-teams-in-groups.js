@@ -221,6 +221,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         e.dataTransfer.dropEffect = "move";
         
         // Nastavíme index na koniec zoznamu (rovný celkovému počtu tímov)
+        // Toto sa volá iba, ak myš nie je nad žiadnym tímom, ale stále v UL kontajneri.
         setDropTarget({
             groupId: targetGroup,
             categoryId: targetCategoryId,
@@ -427,6 +428,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return React.createElement(
                 React.Fragment, 
                 { key: `${team.uid}-${team.teamName}-${team.groupName}-${index}` },
+                // Indikátor pred tímom
                 isDropIndicatorVisible && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
                 React.createElement(
                     'li',
@@ -443,11 +445,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
 
         // Kontrola, či sa má zobraziť indikátor na úplnom konci zoznamu
+        // Aktivuje sa len, ak myš opustí li elementy a prejde do prázdnej oblasti UL kontajnera (cez handleDragOverEnd)
         const isDropIndicatorVisibleAtEnd = 
-            sortedTeams.length > 0 && // Iba ak zoznam nie je prázdny
+            sortedTeams.length > 0 && 
             dropTarget.groupId === targetGroupId && 
             dropTarget.categoryId === targetCategoryId && 
-            dropTarget.index === sortedTeams.length; // Posledný index + 1
+            dropTarget.index === sortedTeams.length; 
             
         // Prázdny kontajner (pre drop na prázdnu skupinu)
         if (sortedTeams.length === 0) {
@@ -474,11 +477,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             { 
                 className: 'space-y-2 relative',
                 // Udalosť DragOverEnd sa spustí len, ak kurzor nie je nad li elementom (kvôli e.stopPropagation() v handleDragOverTeam)
+                // Toto rieši presun na koniec zoznamu, ak myš opustí li element
                 onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams.length),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
             },
             ...listItems,
             // Vloženie koncového indikátora
+            // Modrá čiara sa objaví len vtedy, ak myš prejde do prázdnej oblasti pod posledným tímom
             isDropIndicatorVisibleAtEnd && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
         );
     };
