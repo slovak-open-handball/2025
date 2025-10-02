@@ -480,7 +480,7 @@ function UsersManagementApp() {
             };
 
             // Nová logika: Vymažte polia pre 'admin' a 'hall' a nastavte default pre 'user'
-            else if (userData.role === 'admin' || userData.role === 'hall') {
+            if (userData.role === 'admin' || userData.role === 'hall') {
                 const updateData = {};
 
                 // Odstránenie `dataEditDeadline`, ak existuje
@@ -496,7 +496,7 @@ function UsersManagementApp() {
                 if (Object.keys(updateData).length > 0) {
                     await updateDoc(doc(db, `users`, userData.id), updateData);
                 }
-            } if (userData.role === 'club') {
+            } else  if (userData.role === 'club') {
                 let needsUpdate = false;
                 const updateData = {};
 
