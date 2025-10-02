@@ -16,10 +16,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
     
-    // Nový stav pre presnú pozíciu, kam bude tím vložený (pre vizuálnu spätnú väzbu)
-    // { groupId: string | null, categoryId: string | null, index: number | null }
-    const [dropTarget, setDropTarget] = useState({ groupId: null, categoryId: null, index: null });
-    
     // REF pre meranie výšky kontajnera s tímami bez skupiny
     const teamsWithoutGroupRef = useRef(null); 
     
@@ -63,7 +59,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             });
             setAllTeams(teamsList);
-            // Vypočítanie nextOrderMap na základe aktuálnych dát (len ako fallback pre prázdny drop)
+            // Vypočítanie nextOrderMap na základe aktuálnych dát
             teamsList.forEach(team => {
                 if (team.groupName) {
                     const key = `${team.category}-${team.groupName}`;
@@ -193,27 +189,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     };
 
-    // Funkcia na spracovanie drag over na li elemente (tíme)
-    const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
-        e.preventDefault();
-        const rect = e.currentTarget.getBoundingClientRect();
-        const isOverTopHalf = e.clientY - rect.top < rect.height / 2;
-        
-        // Ak sa presúva cez tím, vloží sa pred tím (horná polovica) alebo za tím (dolná polovica)
-        const insertionIndex = isOverTopHalf ? index : index + 1;
-        
-        // Nastavíme vizuálnu spätnú väzbu
-        setDropTarget({
-            groupId: targetGroup, // null pre tímy bez skupiny
-            categoryId: targetCategoryId,
-            index: insertionIndex
-        });
-
-        e.dataTransfer.dropEffect = "move";
-    };
-
-    // Funkcia na spracovanie drag over na kontajneri (skupine/zozname bez tímu)
-    const handleDragOverContainer = (e, targetGroup, targetCategoryId) => {
+    const handleDragOver = (e, targetGroup, targetCategoryId) => {
         const dragData = draggedItem.current;
         if (!dragData) {
             e.preventDefault();
@@ -237,33 +213,23 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
 
         e.preventDefault();
-        
-        // Ak kontajner nemá žiadne tímy, nastavíme index na 0 (vloží sa ako prvý/jediný)
-        // Toto sa volá, keď sa presúva cez prázdny kontajner.
-        setDropTarget({
-            groupId: targetGroup,
-            categoryId: targetCategoryId,
-            index: 0
-        });
-    };
-    
-    // Funkcia, ktorá sa spustí, keď tím opustí li element alebo kontajner
-    const handleDragLeave = (e) => {
-        // Ak opúšťa akýkoľvek element, vyčistíme dropTarget, ak neopúšťa celú skupinu
-        // Pre zjednodušenie to necháme na handleDragEnd (a container to prepisuje)
-    };
 
+        if (lastDragOverGroup.current !== targetGroup) {
+            lastDragOverGroup.current = targetGroup;
+            const nextOrder = targetCategoryId && targetGroup ? (nextOrderMap[`${categoryIdToNameMap[targetCategoryId]}-${targetGroup}`] || 1) : 1;
+
+            console.log("--- Drag & Drop Informácie ---");
+            console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
+            console.log(`Nasledujúce poradie pre nový tím: ${nextOrder}`);
+            console.log("-------------------------------");
+        }
+    };
 
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
-        const finalDropTarget = dropTarget; // Získame poslednú platnú cieľovú pozíciu
-
-        // Vyčistíme dropTarget hneď po pustení
-        setDropTarget({ groupId: null, categoryId: null, index: null });
-        
-        if (!dragData || !finalDropTarget.index && finalDropTarget.index !== 0) {
-            console.error("Žiadne dáta na presunutie alebo neplatný cieľový index.");
+        if (!dragData) {
+            console.error("Žiadne dáta na presunutie.");
             return;
         }
 
@@ -272,17 +238,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalGroup = teamData.groupName;
         const originalOrder = teamData.order; // Získame pôvodné poradové číslo
         const teamCategoryName = teamData.category; 
-        const targetCategoryName = categoryIdToNameMap[targetCategoryId || finalDropTarget.categoryId]; // Používame categoryId z dropTarget, ak je k dispozícii
+        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
 
         console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
         console.log(`Pôvodná skupina: ${originalGroup || 'bez skupiny'}`);
         console.log(`Pôvodné poradie: ${originalOrder != null ? originalOrder : 'žiadne'}`);
         console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
-        console.log(`Cieľový index (0-based): ${finalDropTarget.index}`);
-        
-        const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
-        console.log(`Nové poradie (1-based, ak v skupine): ${newOrder}`);
-
 
         // Zastaviť, ak sa presúva tím do rovnakej cieľovej skupiny a pôvodná skupina bola definovaná
         if (originalGroup === targetGroup) {
@@ -306,29 +267,21 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 if (userData.teams?.[teamCategoryName]) {
                     const teams = userData.teams[teamCategoryName];
                     let shouldUpdate = false;
-                    
-                    const updatedUserTeams = teams.map(t => {
-                        const isDraggedTeam = userDoc.id === teamData.uid && t.teamName === teamData.teamName;
 
-                        // A. Decrement v Pôvodnej Skupine (pre tímy, ktoré zostali a mali vyššie poradie)
+                    const updatedUserTeams = teams.map(t => {
+                        // 1. Logika pre majiteľa tímu: Aktualizácia presunutého tímu.
+                        if (userDoc.id === teamData.uid && t.teamName === teamData.teamName) {
+                            const nextOrder = targetGroup ? (nextOrderMap[`${targetCategoryName}-${targetGroup}`] || 1) : null;
+                            shouldUpdate = true;
+                            return { ...t, groupName: targetGroup, order: nextOrder };
+                        }
+
+                        // 2. Logika pre všetky tímy v pôvodnej skupine s vyšším poradím (PREČÍSLOVANIE).
+                        // Toto sa aplikuje na všetky userDocs (vrátane majiteľa, okrem tímu, ktorý sa práve presunul)
                         if (originalGroup && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                             shouldUpdate = true;
                             // Zmenšenie poradia o 1
                             return { ...t, order: t.order - 1 };
-                        }
-
-                        // B. Increment v Cieľovej Skupine (pre existujúce tímy, ktoré sa musia posunúť)
-                        if (!isDraggedTeam && targetGroup && t.groupName === targetGroup && t.order != null && t.order >= newOrder) {
-                            shouldUpdate = true;
-                            // Zvýšenie poradia o 1
-                            return { ...t, order: t.order + 1 };
-                        }
-                        
-                        // C. Update Presunutého Tímu (iba pre majiteľa tímu)
-                        if (isDraggedTeam) {
-                            shouldUpdate = true;
-                            // Nastavíme novú skupinu a vypočítané nové poradie
-                            return { ...t, groupName: targetGroup, order: newOrder }; 
                         }
 
                         // Tím sa nezmenil
@@ -350,13 +303,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             // Zápis záznamu o notifikácii do databázy
             if (window.db && window.auth && window.auth.currentUser) {
                 try {
-                    const originalOrderDisplay = originalGroup && originalOrder != null ? `(pôvodné poradie: ${originalOrder})` : '';
+                    const originalOrderDisplay = originalOrder != null ? `(pôvodné poradie: ${originalOrder})` : '';
                     const originalGroupInfo = originalGroup ? `'${originalGroup}' ${originalOrderDisplay}` : `'bez skupiny'`;
-                    const targetGroupInfo = targetGroup ? `'${targetGroup}' (nové poradie: ${newOrder})` : `'bez skupiny'`;
+                    const targetGroupInfo = targetGroup ? `'${targetGroup}'` : `'bez skupiny'`;
                     
                     const notificationsCollectionRef = collection(window.db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý z ${originalGroupInfo} do skupiny ${targetGroupInfo}. Ostatné tímy v pôvodnej aj cieľovej skupine boli prečíslované.`],
+                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý z ${originalGroupInfo} do skupiny ${targetGroupInfo}. Ostatné tímy v pôvodnej skupine boli prečíslované.`],
                         recipientId: 'all_admins',
                         timestamp: Timestamp.now(),
                         userEmail: window.auth.currentUser.email
@@ -367,9 +320,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
             
             // Notifikácia sa zobrazí bez obnovenia stránky
-            const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
-            const targetGroupDisplay = targetGroup ? `'${targetGroup}' na pozíciu ${newOrder}.` : `'bez skupiny'.`;
-            const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay}`;
+            const originalOrderDisplay = originalOrder != null ? `(pôvodné poradie: ${originalOrder})` : '';
+            const originalGroupDisplay = originalGroup ? `'${originalGroup}' ${originalOrderDisplay}` : `'bez skupiny'`;
+            const targetGroupDisplay = targetGroup ? `'${targetGroup}'` : `'bez skupiny'`;
+            const notificationMessage = `Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay}.`;
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
@@ -387,94 +341,47 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const handleDragEnd = () => {
         draggedItem.current = null;
         lastDragOverGroup.current = null;
-        setDropTarget({ groupId: null, categoryId: null, index: null }); // Vyčistí vizuál
     };
 
-    const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
+    const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
-            if (!isWithoutGroup) {
+            if (a.groupName && b.groupName) {
                 return (a.order || 0) - (b.order || 0);
             } else {
                 return a.teamName.localeCompare(b.teamName);
             }
         });
-        
-        // Vytvorenie React elementov s pridaním indikátorov
-        const listItems = sortedTeams.map((team, index) => {
-            const teamNameWithOrder = !isWithoutGroup && team.order != null ? `${team.order}. ${team.teamName}` : team.teamName;
-            const teamBgClass = !isWithoutGroup ? 'bg-white' : 'bg-gray-100';
-            
-            const isDropIndicatorVisible = 
-                dropTarget.groupId === targetGroupId && 
-                dropTarget.categoryId === targetCategoryId && 
-                dropTarget.index === index;
 
-            return React.createElement(
-                React.Fragment, 
-                { key: `${team.uid}-${team.teamName}-${team.groupName}-${index}` },
-                isDropIndicatorVisible && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
-                React.createElement(
-                    'li',
-                    {
-                        className: `px-4 py-2 ${teamBgClass} rounded-lg text-gray-700 cursor-grab shadow-sm`,
-                        draggable: "true",
-                        onDragStart: (e) => handleDragStart(e, team),
-                        onDragEnd: handleDragEnd,
-                        onDragOver: (e) => handleDragOverTeam(e, targetGroupId, targetCategoryId, index),
-                        onDragLeave: (e) => {}, // Používame logiku v handleDragOverTeam
-                    },
-                    `${!selectedCategoryId && team.category && !isWithoutGroup ? `${team.category}: ` : ''}${teamNameWithOrder}`
-                )
-            );
-        });
-
-        // Vizuál pre pád na koniec zoznamu
-        const isEndDropIndicatorVisible = 
-            dropTarget.groupId === targetGroupId && 
-            dropTarget.categoryId === targetCategoryId && 
-            dropTarget.index === sortedTeams.length;
-
-        // Ak je zoznam prázdny alebo sa presúva na koniec, pridáme indikátor
-        if (sortedTeams.length > 0) {
-            listItems.push(
-                isEndDropIndicatorVisible && React.createElement('div', { 
-                    key: 'end-indicator', 
-                    className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' 
-                })
-            );
-        }
-
-
-        // Prázdny kontajner (pre drop na prázdnu skupinu)
-        if (sortedTeams.length === 0) {
-            const isDropOnEmptyContainer = 
-                dropTarget.groupId === targetGroupId && 
-                dropTarget.categoryId === targetCategoryId && 
-                dropTarget.index === 0;
-
+        if (sortedTeams.length === 0 && targetGroupId) {
             return React.createElement(
                 'div',
                 {
-                    // Na prázdny kontajner použijeme handleDragOverContainer
-                    onDragOver: (e) => handleDragOverContainer(e, targetGroupId, targetCategoryId),
+                    className: `min-h-[50px] p-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center`,
+                    onDragOver: (e) => handleDragOver(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
-                    onDragLeave: handleDragEnd, // Vyčisti vizuál, keď opúšťa prázdny kontajner
-                    className: `min-h-[50px] p-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`
                 },
                 React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
             );
         }
 
-
         return React.createElement(
             'ul',
-            { 
-                className: 'space-y-2 relative',
-                // Pre zoznam s prvkami je dôležité mať aj na ul kontajneri dragOver a drop pre pád na koniec
-                onDragOver: (e) => handleDragOverContainer(e, targetGroupId, targetCategoryId),
-                onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
-            },
-            ...listItems
+            { className: 'space-y-2 relative' },
+            sortedTeams.map((team, index) => {
+                const teamNameWithOrder = team.groupName && team.order != null ? `${team.order}. ${team.teamName}` : team.teamName;
+                const teamBgClass = team.groupName ? 'bg-white' : 'bg-gray-100';
+                return React.createElement(
+                    'li',
+                    {
+                        key: `${team.uid}-${team.teamName}-${team.groupName}-${index}`,
+                        className: `px-4 py-2 ${teamBgClass} rounded-lg text-gray-700 cursor-grab`,
+                        draggable: "true",
+                        onDragStart: (e) => handleDragStart(e, team),
+                        onDragEnd: handleDragEnd,
+                    },
+                    `${!selectedCategoryId && team.category ? `${team.category}: ` : ''}${teamNameWithOrder}`
+                );
+            })
         );
     };
 
@@ -519,10 +426,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                 {
                                     key: groupIndex,
                                     className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}`,
-                                    // Kontajner pre drop
-                                    onDragOver: (e) => handleDragOverContainer(e, group.name, categoryId),
+                                    onDragOver: (e) => handleDragOver(e, group.name, categoryId),
                                     onDrop: (e) => handleDrop(e, group.name, categoryId),
-                                    onDragLeave: handleDragEnd,
                                 },
                                 React.createElement(
                                     'div',
@@ -572,13 +477,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     // REF pre zistenie výšky
                     ref: teamsWithoutGroupRef,
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
-                    // Kontajner pre drop (tímy bez skupiny)
-                    onDragOver: (e) => handleDragOverContainer(e, null, selectedCategoryId),
+                    onDragOver: (e) => handleDragOver(e, null, selectedCategoryId),
                     onDrop: (e) => handleDrop(e, null, selectedCategoryId),
-                    onDragLeave: handleDragEnd,
                 },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v kategórii: ${categoryName}`),
-                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true) // true, lebo sú bez skupiny (sorted by name)
+                renderTeamList(teamsWithoutGroup, null, selectedCategoryId)
             ),
             React.createElement(
                 'div',
@@ -588,6 +491,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         let customStyle = {};
                         // Dynamické nastavenie výšky, ak je vybraná konkrétna skupina
                         if (selectedGroupName) {
+                            // Nastavíme minimálnu výšku na výšku nepriradených tímov, ale necháme kontajner roztiahnuť sa,
+                            // aby zobrazil všetky tímy bez rolovania.
                             if (teamsWithoutGroupHeight) {
                                 customStyle = {
                                     minHeight: `${teamsWithoutGroupHeight}px`,
@@ -600,10 +505,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                             {
                                 key: groupIndex,
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
-                                // Kontajner pre drop
-                                onDragOver: (e) => handleDragOverContainer(e, group.name, selectedCategoryId),
+                                onDragOver: (e) => handleDragOver(e, group.name, selectedCategoryId),
                                 onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
-                                onDragLeave: handleDragEnd,
                                 style: customStyle, // Aplikovanie dynamickej výšky
                             },
                             React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' }, group.name),
@@ -701,12 +604,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     'div',
                     {
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
-                        onDragOver: (e) => handleDragOverContainer(e, null, null),
+                        onDragOver: (e) => handleDragOver(e, null, null),
                         onDrop: (e) => handleDrop(e, null, null),
-                        onDragLeave: handleDragEnd,
                     },
                     React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
-                    renderTeamList(teamsWithoutGroup, null, null, true)
+                    renderTeamList(teamsWithoutGroup, null, null)
                 ),
                 React.createElement(
                     'div',
