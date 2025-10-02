@@ -492,13 +492,13 @@ function UsersManagementApp() {
                 if (Object.keys(docToUpdate).length > 0) {
                     await updateDoc(doc(db, `users`, userData.id), docToUpdate);
                 }
-            } else if (userData.role === 'club') {
+            } if (userData.role === 'club') {
                 let needsUpdate = false;
-                if (!userData.dataEditDeadline) {
+                if ((userData.dataEditDeadline === null || userData.dataEditDeadline === undefined) && defaultDeadlines.dataEditDeadline) {
                     userData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
                     needsUpdate = true;
                 }
-                if (!userData.rosterEditDeadline) {
+                if ((userData.rosterEditDeadline === null || userData.rosterEditDeadline === undefined) && defaultDeadlines.rosterEditDeadline) {
                     userData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
                     needsUpdate = true;
                 }
@@ -509,25 +509,26 @@ function UsersManagementApp() {
                     });
                 }
             } else if (userData.role === 'referee' || userData.role === 'volunteer') {
-                 let needsUpdate = false;
-                if (!userData.dataEditDeadline) {
+                let needsUpdate = false;
+                if ((userData.dataEditDeadline === null || userData.dataEditDeadline === undefined) && defaultDeadlines.dataEditDeadline) {
                     userData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
                     needsUpdate = true;
                 }
-                if (userData.rosterEditDeadline) {
-                    userData.rosterEditDeadline = deleteField();
+                if (userData.rosterEditDeadline !== undefined) {
+                    userData.rosterEditDeadline = deleteField(); // Odstráni sa, ak existuje
                     needsUpdate = true;
                 }
                 if (needsUpdate) {
                     const docToUpdate = {
                         dataEditDeadline: userData.dataEditDeadline
                     };
-                    if (!userData.rosterEditDeadline) {
+                    if (userData.rosterEditDeadline !== undefined) {
                         docToUpdate.rosterEditDeadline = deleteField();
                     }
                     await updateDoc(doc(db, `users`, userData.id), docToUpdate);
                 }
             }
+
             return userData;
           }));
           
