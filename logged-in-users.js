@@ -226,7 +226,7 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
                         type: 'checkbox',
                         id: 'filter-club',
                         checked: selectedRoles.includes('club'),
-                        onChange: () => handleRoleChange('ckub'),
+                        onChange: () => handleRoleChange('club'),
                         className: 'form-checkbox h-4 w-4 text-indigo-600'
                     }),
                     React.createElement('label', { htmlFor: 'filter-club', className: 'ml-2 text-gray-700' }, 'Klub')
@@ -326,7 +326,7 @@ function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
         React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl max-w-fit' },
-            React.createElement('h2', { className: 'text-2xl font-bold mb-4 whitespace-nowade' }, title),
+            React.createElement('h2', { className: 'text-2xl font-bold mb-4 whitespace-nowrap' }, title),
             React.createElement('p', { className: 'mb-4' }, `Používateľ: ${user.firstName} ${user.lastName}`),
             React.createElement('div', { className: 'mb-4' },
                 React.createElement('label', { htmlFor: 'date-input', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Vyberte dátum a čas:'),
@@ -491,24 +491,50 @@ function UsersManagementApp() {
           } else if (userData.role === 'club') {
             let needsUpdate = false;
             const updateData = {};
+            
+            // Kontrola dataEditDeadline
             if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
               updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
               needsUpdate = true;
+            } else {
+              const userDate = userData.dataEditDeadline.toDate ? userData.dataEditDeadline.toDate() : new Date(userData.dataEditDeadline);
+              if (userDate < defaultDeadlines.dataEditDeadline) {
+                updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+                needsUpdate = true;
+              }
             }
+            
+            // Kontrola rosterEditDeadline
             if (userData.rosterEditDeadline === undefined || userData.rosterEditDeadline === null) {
               updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
               needsUpdate = true;
+            } else {
+              const userDate = userData.rosterEditDeadline.toDate ? userData.rosterEditDeadline.toDate() : new Date(userData.rosterEditDeadline);
+              if (userDate < defaultDeadlines.rosterEditDeadline) {
+                updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
+                needsUpdate = true;
+              }
             }
+            
             if (needsUpdate) {
               await updateDoc(doc(db, `users`, userData.id), updateData);
             }
           } else if (userData.role === 'referee' || userData.role === 'volunteer') {
             let needsUpdate = false;
             const updateData = {};
+            
+            // Kontrola dataEditDeadline
             if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
               updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
               needsUpdate = true;
+            } else {
+              const userDate = userData.dataEditDeadline.toDate ? userData.dataEditDeadline.toDate() : new Date(userData.dataEditDeadline);
+              if (userDate < defaultDeadlines.dataEditDeadline) {
+                updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+                needsUpdate = true;
+              }
             }
+            
             if (userData.rosterEditDeadline !== undefined) {
               updateData.rosterEditDeadline = deleteField();
               needsUpdate = true;
@@ -551,7 +577,7 @@ function UsersManagementApp() {
   };
 
   fetchData();
-}, [globalUserProfileData, defaultDeadlines]); // Přidáno `defaultDeadlines` jako závislost
+}, [globalUserProfileData, defaultDeadlines]);
 
   // Funkcia na úpravu roly
   const handleChangeRole = async (userToUpdate, newRole) => {
@@ -586,12 +612,15 @@ function UsersManagementApp() {
           approved: isApproved
       };
       
-      if (newRole === 'admin' || newRole === 'hall' || newRole === 'referee' || newRole === 'volunteer') {
+      if (newRole === 'admin' || newRole === 'hall') {
           updateData.dataEditDeadline = deleteField();
           updateData.rosterEditDeadline = deleteField();
       } else if (newRole === 'club') {
            updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
            updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
+      } else if (newRole === 'referee' || newRole === 'volunteer') {
+          updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+          updateData.rosterEditDeadline = deleteField();
       }
       
       await updateDoc(userDocRef, updateData);
