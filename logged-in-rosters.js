@@ -94,7 +94,7 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
     };
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
             { className: 'relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg' },
@@ -302,7 +302,7 @@ function MemberDetailsModal({
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
             { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[90vh] overflow-y-auto' },
@@ -564,7 +564,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
             { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[90vh] overflow-y-auto' },
@@ -938,7 +938,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
             { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[90vh] overflow-y-auto' },
@@ -1631,7 +1631,7 @@ const handleDeleteTeam = async (teamToDelete) => {
 
     const confirmDelete = await new Promise((resolve) => {
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4';
+        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]';
         modal.innerHTML = `
             <div class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg">
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Potvrdiť vymazanie tímu</h3>
