@@ -163,6 +163,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Funkcia na spracovanie drag over na li elemente (tíme)
     const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
         e.preventDefault();
+        // **OPRAVA 1:** Nastavíme kurzor a drop efekt priamo tu, kde vieme, že presúvame nad LI element.
+        e.dataTransfer.dropEffect = "move";
+        e.currentTarget.style.cursor = 'move';
+        
         // ZABRÁNI BUBBLINGU: Dôležité, aby rodičovský UL neprepísal presný index,
         // keď je kurzor jasne nad LI elementom.
         e.stopPropagation(); 
@@ -178,7 +182,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
              insertionIndex = index;
         } else {
              // Spodná polovica: Vloží sa ZA tento tím (index sa stane index + 1)
-             // Týmto pokryjeme väčšinu medzery už v LI handler-i, čím sa minimalizuje blikanie.
              insertionIndex = index + 1;
         }
         
@@ -188,8 +191,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             categoryId: targetCategoryId,
             index: insertionIndex
         });
-
-        e.dataTransfer.dropEffect = "move";
     };
 
     /**
@@ -213,7 +214,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             
             // Check: Sme NAD aktuálnym prvkom? Ak áno, LI handler by to mal chytiť.
             if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                // Sme nad LI prvkom, necháme to riešiť handleDragOverTeam
+                // Sme nad LI prvkom, necháme to riešiť handleDragOverTeam, 
+                // ktorý správne nastaví dropTarget a zastaví bubbling.
                 return -1; 
             }
             
@@ -248,7 +250,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Funkcia na spracovanie drag over na UL kontajneri
     const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
         e.preventDefault();
+        // **OPRAVA 2:** Nastavíme kurzor a drop efekt pre UL kontajner
         e.dataTransfer.dropEffect = "move";
+        e.currentTarget.style.cursor = 'move';
         
         const containerRef = listRefs.current[`${targetCategoryId}-${targetGroup}`];
         if (!containerRef) return;
@@ -276,10 +280,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     // Funkcia na spracovanie drag over na PRÁZDNOM kontajneri (skupine/zozname bez tímu)
     const handleDragOverEmptyContainer = (e, targetGroup, targetCategoryId) => {
+        e.preventDefault();
         const dragData = draggedItem.current;
         if (!dragData) {
-            e.preventDefault();
             e.dataTransfer.dropEffect = "none";
+            e.currentTarget.style.cursor = 'not-allowed';
             return;
         }
 
@@ -289,16 +294,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         // Ak sa kategórie nezhodujú, zabránime presunu
         if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
-            e.preventDefault();
             e.dataTransfer.dropEffect = "none";
             e.currentTarget.style.cursor = 'not-allowed';
             return;
         } else {
-            e.currentTarget.style.cursor = 'move';
+            // **OPRAVA 3:** Nastavíme kurzor a drop efekt pre prázdny kontajner
             e.dataTransfer.dropEffect = "move";
+            e.currentTarget.style.cursor = 'move';
         }
-
-        e.preventDefault();
         
         // Ak kontajner nemá žiadne tímy, nastavíme index na 0 (vloží sa ako prvý/jediný)
         setDropTarget({
