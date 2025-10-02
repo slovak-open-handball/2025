@@ -73,42 +73,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             });
             setNextOrderMap(newNextOrderMap);
-            
-            // Console log pre kontrolu stavu (ponechané kvôli debugovaniu)
-            /*
-            console.log("Stav tímov po načítaní:");
-            console.log("-----------------------------------------");
-            const teamsByCategoryAndGroup = teamsList.reduce((acc, team) => {
-                const category = team.category;
-                const group = team.groupName || 'Tímy bez skupiny';
-                if (!acc[category]) acc[category] = {};
-                if (!acc[category][group]) acc[category][group] = [];
-                acc[category][group].push(team);
-                return acc;
-            }, {});
-
-            Object.entries(teamsByCategoryAndGroup).forEach(([category, groups]) => {
-                console.log(`\nKategória: ${category}`);
-                Object.entries(groups).forEach(([groupName, teams]) => {
-                    const sortedTeams = groupName === 'Tímy bez skupiny'
-                        ? teams.sort((a, b) => a.teamName.localeCompare(b.teamName))
-                        : teams.sort((a, b) => (a.order || 0) - (b.order || 0));
-                    
-                    const nextOrder = newNextOrderMap[`${category}-${groupName}`] || 1;
-                    const header = groupName === 'Tímy bez skupiny' 
-                        ? `-- ${groupName} (Počet tímov: ${teams.length}) --`
-                        : `-- Skupina: ${groupName} (Počet tímov: ${teams.length}, Ďalšie poradie: ${nextOrder}) --`;
-
-                    console.log(`\n${header}`);
-                    console.table(sortedTeams.map((team) => ({
-                        'Názov tímu': team.teamName,
-                        'Poradie v skupine': team.order || null,
-                    })));
-                });
-                console.log("-----------------------------------------");
-            });
-            */
-            
         });
 
         const categoriesRef = doc(window.db, 'settings', 'categories');
@@ -199,10 +163,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Funkcia na spracovanie drag over na li elemente (tíme)
     const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
         e.preventDefault();
-        // ZABRÁNI BUBBLINGU: Dôležité, aby rodičovský UL neprepísal presný index
+        // ZABRÁNI BUBBLINGU: Dôležité, aby rodičovský UL neprepísal presný index,
+        // keď je kurzor jasne nad LI elementom.
         e.stopPropagation(); 
         
         const rect = e.currentTarget.getBoundingClientRect();
+        // Rozdelenie LI na hornú polovicu (insert PRED) a dolnú polovicu (insert ZA)
         const isOverTopHalf = e.clientY - rect.top < rect.height / 2;
         
         // Ak sa presúva cez tím, vloží sa pred tím (horná polovica) alebo za tím (dolná polovica)
@@ -218,8 +184,50 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         e.dataTransfer.dropEffect = "move";
     };
 
+    /**
+     * Pomocná funkcia na presné určenie indexu, keď sa kurzor nachádza v medzerách
+     * medzi LI prvkami (keď sa spustí UL handler).
+     */
+    const getInsertionIndexInGap = (e, teamElements, sortedTeams) => {
+        if (teamElements.length === 0) return 0;
+        
+        // 1. Kontrola PRED prvým elementom
+        const firstRect = teamElements[0].getBoundingClientRect();
+        // Ak je Y-pozícia myši nad top hranou prvého tímu, vrátime index 0
+        if (e.clientY < firstRect.top) { 
+            return 0;
+        }
+
+        for (let i = 0; i < teamElements.length; i++) {
+            const teamEl = teamElements[i];
+            const rect = teamEl.getBoundingClientRect();
+            
+            // Check 2: Je kurzor v medzere POD aktuálnym elementom 'i' a NAD nasledujúcim 'i+1'?
+            if (i < teamElements.length - 1) {
+                const nextRect = teamElements[i + 1].getBoundingClientRect();
+                
+                // Medzera začína pod spodnou hranou 'rect.bottom' a končí pri hornej hrane 'nextRect.top'
+                if (e.clientY > rect.bottom && e.clientY < nextRect.top) {
+                     // Ak sme v GAPE, vkladáme ZA aktuálny element 'i', teda na index 'i + 1'
+                     return i + 1;
+                }
+            } else {
+                // Check 3: Sme pod POSLEDNÝM elementom
+                // Ak je Y-pozícia myši pod spodnou hranou POSLEDNÉHO tímu, vrátime index na koniec
+                if (e.clientY > rect.bottom) {
+                    return sortedTeams.length;
+                }
+            }
+        }
+        
+        // Ak nebola detekovaná žiadna presná medzera ani koniec, vrátime index na koniec.
+        // Toto by malo byť už len bezpečnostné pravidlo.
+        return sortedTeams.length; 
+    }
+
+
     // Funkcia na spracovanie drag over na UL kontajneri, keď kurzor nie je nad LI elementom
-    // Toto zachytáva presun myši v medzerách medzi tímami.
+    // Toto zachytáva presun myši v medzerách (gapoch) medzi tímami.
     const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
@@ -227,52 +235,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const containerRef = listRefs.current[`${targetCategoryId}-${targetGroup}`];
         if (!containerRef) return;
 
-        const containerRect = containerRef.getBoundingClientRect();
-        const yOffset = e.clientY - containerRect.top; // Y pozícia voči UL kontajneru
-        
         const teamElements = Array.from(containerRef.children).filter(el => el.tagName === 'LI');
-
-        let accumulatedHeight = 0;
-        let insertionIndex = sortedTeams.length; // Predvolene na koniec zoznamu
-
-        // Prechádzame tímami, aby sme zistili, do ktorej medzery kurzor patrí
-        for (let i = 0; i < sortedTeams.length; i++) {
-            const teamEl = teamElements[i];
-            if (!teamEl) continue;
-
-            const teamHeight = teamEl.offsetHeight;
-            const itemBottom = accumulatedHeight + teamHeight;
-            
-            // Medzera medzi tímami (tailwind: space-y-2 = 8px)
-            const gap = 8; 
-            const gapBottom = itemBottom + gap;
-
-            if (yOffset < itemBottom) {
-                // Kurzore je nad tímom (táto vetva by sa nemala spustiť, ak e.stopPropagation() funguje,
-                // ale pre istotu ho zachytíme, ak by sa myš nachádzala v hornej polovici nad prvým elementom)
-                // Vraciame index 'i', čo by bol indikátor PRED týmto tímom.
-                insertionIndex = i;
-                break;
-            } else if (yOffset >= itemBottom && yOffset < gapBottom) {
-                 // Kurzore je v medzere POD aktuálnym tímom 'i'
-                 // Indikátor by mal byť za tímom 'i', čiže na pozícii 'i + 1'
-                 insertionIndex = i + 1;
-                 break;
-            }
-
-            accumulatedHeight = gapBottom;
-            
-            // Ak je toto posledný tím a myš je pod ním, ale stále v kontajneri
-            if (i === sortedTeams.length - 1) {
-                 insertionIndex = sortedTeams.length;
-            }
-        }
         
-        // Ak je kurzor pod posledným prvkom (ale stále v kontajneri)
-        if (yOffset >= accumulatedHeight && sortedTeams.length > 0) {
-             insertionIndex = sortedTeams.length;
-        }
-
+        // Použijeme robustnú geometrickú funkciu na zistenie, či sme v medzerách medzi prvkami
+        const insertionIndex = getInsertionIndexInGap(e, teamElements, sortedTeams);
 
         // Nastavíme index na vypočítanú pozíciu
         setDropTarget({
@@ -537,7 +503,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                 },
                 className: 'space-y-2 relative',
-                // Toto zachytáva presun myši v medzerách
+                // Toto zachytáva presun myši V MEDZERÁCH (GAPOCH) medzi prvkami, kde LI.onDragOver nebola spustená
                 onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
             },
