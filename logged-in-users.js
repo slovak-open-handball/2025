@@ -440,127 +440,118 @@ function UsersManagementApp() {
   }, [db]);
 
   useEffect(() => {
-    
-    const fetchData = async () => {
-      setLoading(true);
+  const fetchData = async () => {
+    setLoading(true);
+    if (!globalUserProfileData || !defaultDeadlines.dataEditDeadline || !defaultDeadlines.rosterEditDeadline) {
+      console.log("UsersManagementApp: Data uživatele nebo defaultDeadlines nejsou k dispozici.");
+      setLoading(false);
+      return;
+    }
 
-      if (!globalUserProfileData) {
-        console.log("UsersManagementApp: Dáta používateľa nie sú dostupné.");
-        setLoading(false);
-        return;
-      }
-      
-      const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
-      window.isCurrentUserAdmin = isUserAdmin;
-      window.currentUserId = auth.currentUser?.uid;
-      
-      if (isUserAdmin) {
-        const usersCollectionPath = `users`; 
-        const usersCol = collection(db, usersCollectionPath);
-        
-        // Nový onSnapshot poslucháč pre okamžité zobrazenie adminCount
-        const adminCountRef = doc(db, `settings`, `adminCount`);
-        const unsubscribeAdminCount = onSnapshot(adminCountRef, (adminCountSnap) => {
-          if (adminCountSnap.exists()) {
-            console.log('Aktuálna hodnota adminCount:', adminCountSnap.data().count);
-          } else {
-            console.log('Dokument adminCount neexistuje.');
-          }
-        }, (error) => {
-          console.error("Chyba pri načítaní adminCount:", error);
-        });
-        
-        const q = query(usersCol);
-        
-        const unsubscribeUsers = onSnapshot(q, async (snapshot) => { // Added async here
-          const usersList = await Promise.all(snapshot.docs.map(async docSnapshot => { // Used Promise.all for async operations
-            const userData = {
-              id: docSnapshot.id,
-              ...docSnapshot.data()
-            };
+    const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
+    window.isCurrentUserAdmin = isUserAdmin;
+    window.currentUserId = auth.currentUser?.uid;
 
-            // Nová logika: Vymažte polia pre 'admin' a 'hall' a nastavte default pre 'user'
-            if (userData.role === 'admin' || userData.role === 'hall') {
-                const updateData = {};
+    if (isUserAdmin) {
+      const usersCollectionPath = `users`;
+      const usersCol = collection(db, usersCollectionPath);
 
-                // Odstránenie `dataEditDeadline`, ak existuje
-                if (userData.hasOwnProperty('dataEditDeadline')) {
-                    updateData.dataEditDeadline = deleteField();
-                }
-            
-                // Odstránenie `rosterEditDeadline`, ak existuje
-                if (userData.hasOwnProperty('rosterEditDeadline')) {
-                    updateData.rosterEditDeadline = deleteField();
-                }
-            
-                if (Object.keys(updateData).length > 0) {
-                    await updateDoc(doc(db, `users`, userData.id), updateData);
-                }
-            } else  if (userData.role === 'club') {
-                let needsUpdate = false;
-                const updateData = {};
-                if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
-                    updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
-                    needsUpdate = true;
-                }
-                if (userData.rosterEditDeadline === undefined || userData.rosterEditDeadline === null) {
-                    updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
-                    needsUpdate = true;
-                }
-                if (needsUpdate) {
-                    await updateDoc(doc(db, `users`, userData.id), updateData);
-                }
-            } else if (userData.role === 'referee' || userData.role === 'volunteer') {
-                let needsUpdate = false;
-                const updateData = {};
-                if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
-                    updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
-                    needsUpdate = true;
-                }
-                if (userData.rosterEditDeadline !== undefined) {
-                    updateData.rosterEditDeadline = deleteField();
-                    needsUpdate = true;
-                }
-                if (needsUpdate) {
-                    await updateDoc(doc(db, `users`, userData.id), updateData);
-                }
+      const adminCountRef = doc(db, `settings`, `adminCount`);
+      const unsubscribeAdminCount = onSnapshot(adminCountRef, (adminCountSnap) => {
+        if (adminCountSnap.exists()) {
+          console.log('Aktuální hodnota adminCount:', adminCountSnap.data().count);
+        } else {
+          console.log('Dokument adminCount neexistuje.');
+        }
+      }, (error) => {
+        console.error("Chyba při načítání adminCount:", error);
+      });
+
+      const q = query(usersCol);
+
+      const unsubscribeUsers = onSnapshot(q, async (snapshot) => {
+        const usersList = await Promise.all(snapshot.docs.map(async docSnapshot => {
+          const userData = {
+            id: docSnapshot.id,
+            ...docSnapshot.data()
+          };
+
+          // Logika pro aktualizaci dat
+          if (userData.role === 'admin' || userData.role === 'hall') {
+            const updateData = {};
+            if (userData.hasOwnProperty('dataEditDeadline')) {
+              updateData.dataEditDeadline = deleteField();
             }
-            
-            return userData;
-          }));
-          
-          const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
-          if (adminUsers.length > 0) {
-            adminUsers.sort((a, b) => {
-              const dateA = a.registrationDate?.seconds ? new Date(a.registrationDate.seconds * 1000 + (a.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
-              const dateB = b.registrationDate?.seconds ? new Date(b.registrationDate.seconds * 1000 + (b.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
-              return dateA - dateB;
-            });
-            setOldestAdminId(adminUsers[0].id);
-          } else {
-            setOldestAdminId(null);
+            if (userData.hasOwnProperty('rosterEditDeadline')) {
+              updateData.rosterEditDeadline = deleteField();
+            }
+            if (Object.keys(updateData).length > 0) {
+              await updateDoc(doc(db, `users`, userData.id), updateData);
+            }
+          } else if (userData.role === 'club') {
+            let needsUpdate = false;
+            const updateData = {};
+            if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
+              updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+              needsUpdate = true;
+            }
+            if (userData.rosterEditDeadline === undefined || userData.rosterEditDeadline === null) {
+              updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
+              needsUpdate = true;
+            }
+            if (needsUpdate) {
+              await updateDoc(doc(db, `users`, userData.id), updateData);
+            }
+          } else if (userData.role === 'referee' || userData.role === 'volunteer') {
+            let needsUpdate = false;
+            const updateData = {};
+            if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
+              updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+              needsUpdate = true;
+            }
+            if (userData.rosterEditDeadline !== undefined) {
+              updateData.rosterEditDeadline = deleteField();
+              needsUpdate = true;
+            }
+            if (needsUpdate) {
+              await updateDoc(doc(db, `users`, userData.id), updateData);
+            }
           }
-          
-          setUsers(usersList);
-          setLoading(false);
-        }, (error) => {
-          console.error("Chyba pri načítaní používateľov:", error);
-          setLoading(false);
-          setNotification({ message: 'Chyba pri načítaní používateľov.', type: 'error' });
-        });
-        
-        // Čistiaca funkcia na odhlásenie oboch poslucháčov
-        return () => {
-          unsubscribeUsers();
-          unsubscribeAdminCount();
-        };
-      } else {
-        setLoading(false);
-      }
-    };
 
-    fetchData();
-  }, [globalUserProfileData]);
+          return userData;
+        }));
+
+        const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
+        if (adminUsers.length > 0) {
+          adminUsers.sort((a, b) => {
+            const dateA = a.registrationDate?.seconds ? new Date(a.registrationDate.seconds * 1000 + (a.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
+            const dateB = b.registrationDate?.seconds ? new Date(b.registrationDate.seconds * 1000 + (b.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
+            return dateA - dateB;
+          });
+          setOldestAdminId(adminUsers[0].id);
+        } else {
+          setOldestAdminId(null);
+        }
+
+        setUsers(usersList);
+        setLoading(false);
+      }, (error) => {
+        console.error("Chyba při načítání uživatelů:", error);
+        setLoading(false);
+        setNotification({ message: 'Chyba při načítání uživatelů.', type: 'error' });
+      });
+
+      return () => {
+        unsubscribeUsers();
+        unsubscribeAdminCount();
+      };
+    } else {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [globalUserProfileData, defaultDeadlines]); // Přidáno `defaultDeadlines` jako závislost
 
   // Funkcia na úpravu roly
   const handleChangeRole = async (userToUpdate, newRole) => {
