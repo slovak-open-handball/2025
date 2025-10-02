@@ -382,9 +382,10 @@ function UsersManagementApp() {
   const auth = window.auth;
   const globalUserProfileData = window.globalUserProfileData;
 
-  // Default deadlines
-  const DEFAULT_DATA_EDIT_DEADLINE = new Date('2025-08-29T14:00:00Z'); // August 29, 2025 at 4:00:00 PM UTC+2
-  const DEFAULT_ROSTER_EDIT_DEADLINE = new Date('2025-09-14T20:00:00Z'); // September 14, 2025 at 10:00:00 PM UTC+2
+  const [defaultDeadlines, setDefaultDeadlines] = useState({
+    dataEditDeadline: null,
+    rosterEditDeadline: null
+  });
 
   // Funkcia na preklad anglických rolí na slovenské
   const getTranslatedRole = (role) => {
@@ -425,6 +426,21 @@ function UsersManagementApp() {
   };
 
   useEffect(() => {
+    const settingsDocRef = doc(db, 'settings', 'registration');
+    const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
+        setDefaultDeadlines({
+          dataEditDeadline: data.dataEditDeadline?.toDate() || new Date(),
+          rosterEditDeadline: data.rosterEditDeadline?.toDate() || new Date()
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [db]);
+
+  useEffect(() => {
+    
     const fetchData = async () => {
       setLoading(true);
 
@@ -479,11 +495,11 @@ function UsersManagementApp() {
             } else if (userData.role === 'club') {
                 let needsUpdate = false;
                 if (!userData.dataEditDeadline) {
-                    userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
+                    userData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
                     needsUpdate = true;
                 }
                 if (!userData.rosterEditDeadline) {
-                    userData.rosterEditDeadline = DEFAULT_ROSTER_EDIT_DEADLINE;
+                    userData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
                     needsUpdate = true;
                 }
                 if (needsUpdate) {
@@ -495,7 +511,7 @@ function UsersManagementApp() {
             } else if (userData.role === 'referee' || userData.role === 'volunteer') {
                  let needsUpdate = false;
                 if (!userData.dataEditDeadline) {
-                    userData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
+                    userData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
                     needsUpdate = true;
                 }
                 if (userData.rosterEditDeadline) {
@@ -585,8 +601,8 @@ function UsersManagementApp() {
           updateData.dataEditDeadline = deleteField();
           updateData.rosterEditDeadline = deleteField();
       } else if (newRole === 'club') {
-           updateData.dataEditDeadline = DEFAULT_DATA_EDIT_DEADLINE;
-           updateData.rosterEditDeadline = DEFAULT_ROSTER_EDIT_DEADLINE;
+           updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+           updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
       }
       
       await updateDoc(userDocRef, updateData);
