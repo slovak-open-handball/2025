@@ -160,9 +160,33 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     };
 
+    // Všeobecná funkcia pre kontrolu kategórie pri drag over
+    const checkCategoryMatch = (targetCategoryId) => {
+        const dragData = draggedItem.current;
+        if (!dragData) return false;
+
+        const teamCategoryName = dragData.team.category; 
+        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+
+        // Ak sa presúva tím bez skupiny do skupiny, musia sa zhodovať kategórie
+        if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
+            return false;
+        }
+        return true;
+    }
+    
     // Funkcia na spracovanie drag over na li elemente (tíme)
     const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
         e.preventDefault();
+        
+        // **NOVÁ KONTROLA KATEGÓRIE**
+        if (!checkCategoryMatch(targetCategoryId)) {
+            e.dataTransfer.dropEffect = "none";
+            e.currentTarget.style.cursor = 'not-allowed';
+            setDropTarget({ groupId: null, categoryId: null, index: null });
+            return;
+        }
+
         // Vizuál kurzora a povolenie dropu
         e.dataTransfer.dropEffect = "move";
         e.currentTarget.style.cursor = 'move';
@@ -236,11 +260,21 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     }
 
 
-    // Funkcia na spracovanie drag over na UL kontajneri
+    // Funkcia na spracovanie drag over na UL kontajneri (zvyšok priestoru skupiny)
     const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
         e.preventDefault();
+        
+        // **NOVÁ KONTROLA KATEGÓRIE**
+        if (!checkCategoryMatch(targetCategoryId)) {
+            e.dataTransfer.dropEffect = "none";
+            e.currentTarget.style.cursor = 'not-allowed';
+            setDropTarget({ groupId: null, categoryId: null, index: null });
+            return;
+        }
+        
         // Povolenie dropu
         e.dataTransfer.dropEffect = "move";
+        e.currentTarget.style.cursor = 'move';
         
         const containerRef = listRefs.current[`${targetCategoryId}-${targetGroup}`];
         if (!containerRef) return;
@@ -268,24 +302,24 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Funkcia na spracovanie drag over na PRÁZDNOM kontajneri (skupine/zozname bez tímu)
     const handleDragOverEmptyContainer = (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
+        
+        // **NOVÁ KONTROLA KATEGÓRIE**
+        if (!checkCategoryMatch(targetCategoryId)) {
+            e.dataTransfer.dropEffect = "none";
+            e.currentTarget.style.cursor = 'not-allowed';
+            setDropTarget({ groupId: null, categoryId: null, index: null });
+            return;
+        }
+        
         const dragData = draggedItem.current;
         if (!dragData) {
             e.dataTransfer.dropEffect = "none";
             return;
         }
-
-        const teamCategoryId = dragData.teamCategoryId;
-        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
-        const teamCategoryName = categoryIdToNameMap[teamCategoryId];
-
-        // Ak sa kategórie nezhodujú, zabránime presunu
-        if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
-            e.dataTransfer.dropEffect = "none";
-            return;
-        } else {
-            // Povolenie dropu
-            e.dataTransfer.dropEffect = "move";
-        }
+        
+        // Povolenie dropu
+        e.dataTransfer.dropEffect = "move";
+        e.currentTarget.style.cursor = 'move';
         
         // Ak kontajner nemá žiadne tímy, nastavíme index na 0 (vloží sa ako prvý/jediný)
         setDropTarget({
@@ -301,6 +335,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const dragData = draggedItem.current;
         const finalDropTarget = dropTarget; // Získame poslednú platnú cieľovú pozíciu
 
+        // **DOPLNKOVÁ KONTROLA KATEGÓRIE pri dropnutí** (Ak by sa nejakým spôsobom obišiel DragOver)
+        if (!checkCategoryMatch(targetCategoryId)) {
+            setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím. Presun bol zrušený.", type: 'error' });
+            // Vyčistíme dropTarget a dragItem
+            setDropTarget({ groupId: null, categoryId: null, index: null });
+            draggedItem.current = null;
+            return;
+        }
+
+
         // Vyčistíme dropTarget hneď po pustení
         setDropTarget({ groupId: null, categoryId: null, index: null });
         
@@ -315,32 +359,42 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalGroup = teamData.groupName;
         const originalOrder = teamData.order; // Získame pôvodné poradové číslo
         const teamCategoryName = teamData.category; 
-        const targetCategoryName = categoryIdToNameMap[targetCategoryId || finalDropTarget.categoryId]; 
         
         // Vypočítame 1-based nové poradie (ak je v skupine)
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
-        // Kontrola kategórie
-        if (targetCategoryId && teamCategoryName !== targetCategoryName) {
+        // **STARÁ KONTROLA KATEGÓRIE - Odstránená, nahradená kontrolou v DragOver**
+        // Ak sa kategórie nezhodujú, zabránime presunu
+        /*
+        if (targetCategoryId && teamCategoryName !== categoryIdToNameMap[targetCategoryId]) {
             setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím.", type: 'error' });
             return;
         }
+        */
         
         // **NOVÁ KONTROLA PRE ZABRÁNENIE ZBYTOČNÉHO ZÁPISU**
-        // Ak sa presúva do rovnakej skupiny (targetGroup === originalGroup) a pozícia sa nemení (alebo je len posunutá o 1 kvôli odobratiu)
+        // Ak sa presúva do rovnakej skupiny (targetGroup === originalGroup) a pozícia sa nemení 
         if (targetGroup === originalGroup) {
-             if (newOrder === originalOrder || newOrder === originalOrder + 1) { 
-                 setNotification({ id: Date.now(), message: "Tím sa presunul do pôvodnej pozície.", type: 'info' });
+            // Zistíme aktuálne zoradený zoznam
+            const teamsInOriginalGroup = allTeams
+                .filter(t => t.category === teamCategoryName && t.groupName === originalGroup)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            // Nájdeme index tímu v aktuálnom zoradenom zozname
+            const teamIndexInOriginal = teamsInOriginalGroup.findIndex(t => t.teamName === teamData.teamName && t.uid === teamData.uid);
+            
+            // Ak je finálny index rovnaký ako pôvodný index alebo posunutý o 1 kvôli odstráneniu 
+            if (teamIndexInOriginal !== -1 && finalDropTarget.index === teamIndexInOriginal) {
+                 setNotification({ id: Date.now(), message: "Tím sa presunul do pôvodnej pozície a poradie sa nezmenilo.", type: 'info' });
                  return;
-             }
+            }
         }
         
         // Ak sa presúva v rámci listu "bez skupiny" a kategória sedí, tak nie je čo meniť, pretože tam nie je poradie.
         if (!targetGroup && !originalGroup) {
-            if (teamData.category === targetCategoryName) {
-                 setNotification({ id: Date.now(), message: "Tím sa už nachádza v tomto zozname.", type: 'info' });
-                 return;
-            }
+            // Kontrola kategórie je už vyššie, stačí len notifikovať o prebytočnom presune
+            setNotification({ id: Date.now(), message: "Tím sa už nachádza v tomto zozname.", type: 'info' });
+            return;
         }
 
 
@@ -454,8 +508,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const handleDragStart = (e, team) => {
-        const teamCategoryId = Object.keys(categoryIdToNameMap).find(key => categoryIdToNameMap[key] === team.category);
-        draggedItem.current = { team, teamCategoryId };
+        // Uloženie len potrebných dát (tímu a kategórie)
+        draggedItem.current = { team };
         e.dataTransfer.setData("text/plain", JSON.stringify(team));
         e.dataTransfer.effectAllowed = "move";
     };
