@@ -14,7 +14,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     
     // Stav pre drag & drop
     const draggedItem = useRef(null);
-    const lastDragOverGroup = useRef(null);
+    const listRefs = useRef({}); // Refy pre UL kontajnery (pre presné meranie)
     
     // Nový stav pre presnú pozíciu, kam bude tím vložený (pre vizuálnu spätnú väzbu)
     // { groupId: string | null, categoryId: string | null, index: number | null }
@@ -73,7 +73,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             });
             setNextOrderMap(newNextOrderMap);
-
+            
+            // Console log pre kontrolu stavu (ponechané kvôli debugovaniu)
+            /*
             console.log("Stav tímov po načítaní:");
             console.log("-----------------------------------------");
             const teamsByCategoryAndGroup = teamsList.reduce((acc, team) => {
@@ -105,6 +107,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 });
                 console.log("-----------------------------------------");
             });
+            */
             
         });
 
@@ -215,17 +218,67 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         e.dataTransfer.dropEffect = "move";
     };
 
-    // Funkcia na spracovanie drag over na konci NEPRÁZDNEHO zoznamu (volá sa len, ak myš nebola nad li elementom)
-    const handleDragOverEnd = (e, targetGroup, targetCategoryId, totalTeams) => {
+    // Funkcia na spracovanie drag over na UL kontajneri, keď kurzor nie je nad LI elementom
+    // Toto zachytáva presun myši v medzerách medzi tímami.
+    const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
         
-        // Nastavíme index na koniec zoznamu (rovný celkovému počtu tímov)
-        // Toto sa volá iba, ak myš nie je nad žiadnym tímom, ale stále v UL kontajneri.
+        const containerRef = listRefs.current[`${targetCategoryId}-${targetGroup}`];
+        if (!containerRef) return;
+
+        const containerRect = containerRef.getBoundingClientRect();
+        const yOffset = e.clientY - containerRect.top; // Y pozícia voči UL kontajneru
+        
+        const teamElements = Array.from(containerRef.children).filter(el => el.tagName === 'LI');
+
+        let accumulatedHeight = 0;
+        let insertionIndex = sortedTeams.length; // Predvolene na koniec zoznamu
+
+        // Prechádzame tímami, aby sme zistili, do ktorej medzery kurzor patrí
+        for (let i = 0; i < sortedTeams.length; i++) {
+            const teamEl = teamElements[i];
+            if (!teamEl) continue;
+
+            const teamHeight = teamEl.offsetHeight;
+            const itemBottom = accumulatedHeight + teamHeight;
+            
+            // Medzera medzi tímami (tailwind: space-y-2 = 8px)
+            const gap = 8; 
+            const gapBottom = itemBottom + gap;
+
+            if (yOffset < itemBottom) {
+                // Kurzore je nad tímom (táto vetva by sa nemala spustiť, ak e.stopPropagation() funguje,
+                // ale pre istotu ho zachytíme, ak by sa myš nachádzala v hornej polovici nad prvým elementom)
+                // Vraciame index 'i', čo by bol indikátor PRED týmto tímom.
+                insertionIndex = i;
+                break;
+            } else if (yOffset >= itemBottom && yOffset < gapBottom) {
+                 // Kurzore je v medzere POD aktuálnym tímom 'i'
+                 // Indikátor by mal byť za tímom 'i', čiže na pozícii 'i + 1'
+                 insertionIndex = i + 1;
+                 break;
+            }
+
+            accumulatedHeight = gapBottom;
+            
+            // Ak je toto posledný tím a myš je pod ním, ale stále v kontajneri
+            if (i === sortedTeams.length - 1) {
+                 insertionIndex = sortedTeams.length;
+            }
+        }
+        
+        // Ak je kurzor pod posledným prvkom (ale stále v kontajneri)
+        if (yOffset >= accumulatedHeight && sortedTeams.length > 0) {
+             insertionIndex = sortedTeams.length;
+        }
+
+
+        // Nastavíme index na vypočítanú pozíciu
         setDropTarget({
             groupId: targetGroup,
             categoryId: targetCategoryId,
-            index: totalTeams
+            index: insertionIndex
         });
     };
 
@@ -400,7 +453,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const handleDragEnd = () => {
         // Toto sa volá, len keď používateľ PUSTÍ tím
         draggedItem.current = null;
-        lastDragOverGroup.current = null;
         setDropTarget({ groupId: null, categoryId: null, index: null }); // Vyčistí vizuál
     };
 
@@ -419,7 +471,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const teamBgClass = !isWithoutGroup ? 'bg-white' : 'bg-gray-100';
             
             // Indikátor pre vloženie PRED aktuálny tím
-            // Zobrazí sa, ak je cieľový index presne na tomto indexe (horná polovica)
             const isDropIndicatorVisible = 
                 dropTarget.groupId === targetGroupId && 
                 dropTarget.categoryId === targetCategoryId && 
@@ -445,7 +496,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
 
         // Kontrola, či sa má zobraziť indikátor na úplnom konci zoznamu
-        // Aktivuje sa len, ak myš opustí li elementy a prejde do prázdnej oblasti UL kontajnera (cez handleDragOverEnd)
+        // Aktivuje sa v handleDragOverEnd, ak sa kurzor nachádza pod posledným tímom
         const isDropIndicatorVisibleAtEnd = 
             sortedTeams.length > 0 && 
             dropTarget.groupId === targetGroupId && 
@@ -471,19 +522,27 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             );
         }
 
-
+        // Kľúč pre ref kontajnera
+        const listRefKey = `${targetCategoryId}-${targetGroupId}`;
+        
         return React.createElement(
             'ul',
             { 
+                ref: el => {
+                    // Uloženie ref pre UL kontajner
+                    if (el) {
+                        listRefs.current[listRefKey] = el;
+                    } else {
+                        delete listRefs.current[listRefKey];
+                    }
+                },
                 className: 'space-y-2 relative',
-                // Udalosť DragOverEnd sa spustí len, ak kurzor nie je nad li elementom (kvôli e.stopPropagation() v handleDragOverTeam)
-                // Toto rieši presun na koniec zoznamu, ak myš opustí li element
-                onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams.length),
+                // Toto zachytáva presun myši v medzerách
+                onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
             },
             ...listItems,
             // Vloženie koncového indikátora
-            // Modrá čiara sa objaví len vtedy, ak myš prejde do prázdnej oblasti pod posledným tímom
             isDropIndicatorVisibleAtEnd && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
         );
     };
