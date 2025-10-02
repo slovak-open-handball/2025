@@ -29,7 +29,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const timer = setTimeout(() => {
                 setNotification(null);
             }, 5000);
-            return () => clearTimeout(timer);
+            return () => clearTimeout(timer;
         }
     }, [notification]);
 
@@ -171,8 +171,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Rozdelenie LI na hornú polovicu (insert PRED) a dolnú polovicu (insert ZA)
         const isOverTopHalf = e.clientY - rect.top < rect.height / 2;
         
-        // Ak sa presúva cez tím, vloží sa pred tím (horná polovica) alebo za tím (dolná polovica)
-        const insertionIndex = isOverTopHalf ? index : index + 1;
+        // Ak sa presúva cez tím:
+        let insertionIndex;
+        if (isOverTopHalf) {
+             // Horná polovica: Vloží sa PRED tento tím (index zostáva index)
+             insertionIndex = index;
+        } else {
+             // Spodná polovica: Vloží sa ZA tento tím (index sa stane index + 1)
+             // Týmto pokryjeme väčšinu medzery už v LI handler-i, čím sa minimalizuje blikanie.
+             insertionIndex = index + 1;
+        }
         
         // Nastavíme vizuálnu spätnú väzbu
         setDropTarget({
@@ -198,16 +206,26 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return 0;
         }
 
+        // Tím <li> prvky majú nastavené CSS s paddingom (py-2) a li-medzery (space-y-2)
+        // a indikátor má margin (my-1). Presná medzera je súčet týchto priestorov.
+        // Odhadneme bezpečnú oblasť pre detekciu GAP:
+        
         for (let i = 0; i < teamElements.length; i++) {
             const teamEl = teamElements[i];
             const rect = teamEl.getBoundingClientRect();
             
-            // Check 2: Je kurzor v medzere POD aktuálnym elementom 'i' a NAD nasledujúcim 'i+1'?
+            // Check 2: Sme POD aktuálnym elementom 'i' a NAD nasledujúcim 'i+1'?
             if (i < teamElements.length - 1) {
                 const nextRect = teamElements[i + 1].getBoundingClientRect();
                 
-                // Medzera začína pod spodnou hranou 'rect.bottom' a končí pri hornej hrane 'nextRect.top'
-                if (e.clientY > rect.bottom && e.clientY < nextRect.top) {
+                // Hľadáme priestor, ktorý nepatrí ani horná polovica [i+1] ani spodná polovica [i]
+                
+                // Spodná hranica LI[i] (rect.bottom) + malá bezpečná rezerva (napr. 2px, kvôli marginu indikátora)
+                const gapStart = rect.bottom + 2; 
+                // Horná hranica LI[i+1] (nextRect.top) - malá bezpečná rezerva
+                const gapEnd = nextRect.top - 2; 
+                
+                if (e.clientY > gapStart && e.clientY < gapEnd) {
                      // Ak sme v GAPE, vkladáme ZA aktuálny element 'i', teda na index 'i + 1'
                      return i + 1;
                 }
@@ -220,9 +238,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
         }
         
-        // Ak nebola detekovaná žiadna presná medzera ani koniec, vrátime index na koniec.
-        // Toto by malo byť už len bezpečnostné pravidlo.
-        return sortedTeams.length; 
+        // Ak nebola detekovaná žiadna presná medzera ani koniec, vrátime -1 (žiadna zmena)
+        return -1; 
     }
 
 
@@ -235,10 +252,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const containerRef = listRefs.current[`${targetCategoryId}-${targetGroup}`];
         if (!containerRef) return;
 
+        // Vylúčime Drop Indicator prvky z merania
         const teamElements = Array.from(containerRef.children).filter(el => el.tagName === 'LI');
         
         // Použijeme robustnú geometrickú funkciu na zistenie, či sme v medzerách medzi prvkami
         const insertionIndex = getInsertionIndexInGap(e, teamElements, sortedTeams);
+
+        // Ak getInsertionIndexInGap vrátil -1, znamená to, že kurzor je pravdepodobne v oblasti,
+        // ktorú by mal pokrývať LI element (handleDragOverTeam). Ignorujeme túto udalosť, aby sme zabránili blikaniu.
+        if (insertionIndex === -1) return;
+
 
         // Nastavíme index na vypočítanú pozíciu
         setDropTarget({
@@ -317,6 +340,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
 
         // Zastaviť, ak sa presúva tím do rovnakej cieľovej skupiny a na rovnakú pozíciu (komplikovanejšia kontrola, zjednodušme ju)
+        // Toto by malo byť už opravené v predchádzajúcej iterácii.
         if (originalGroup === targetGroup && teamData.category === targetCategoryName) {
             setNotification({ id: Date.now(), message: "Tím sa už nachádza v tejto skupine.", type: 'info' });
             return;
