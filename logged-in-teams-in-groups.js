@@ -8,12 +8,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
+    const [selectedGroupName, setSelectedGroupName] = useState(''); // NOVÝ STAV: Vybraná skupina
     const [nextOrderMap, setNextOrderMap] = useState({});
     const [notification, setNotification] = useState(null);
     
     // Stav pre drag & drop
     const draggedItem = useRef(null);
     const lastDragOverGroup = useRef(null);
+    
+    // REF pre meranie výšky kontajnera s tímami bez skupiny (pre vizuálnu synchronizáciu výšok)
+    const teamsWithoutGroupRef = useRef(null); 
     
     // Efekt pre manažovanie notifikácií a vymazanie po 5 sekundách
     // Spúšťa sa len vtedy, keď sa zmení stav notifikácie (notification)
@@ -452,19 +456,32 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     const renderSingleCategoryView = () => {
         const categoryName = categoryIdToNameMap[selectedCategoryId] || "Neznáma kategória";
-        const groups = allGroupsByCategoryId[selectedCategoryId] || [];
+        let groups = allGroupsByCategoryId[selectedCategoryId] || [];
+        
+        // FILTROVANIE: Ak je vybraná konkrétna skupina, zobrazí sa iba tá
+        if (selectedGroupName) {
+            groups = groups.filter(g => g.name === selectedGroupName);
+        }
 
         const sortedGroups = [...groups].sort((a, b) => {
             if (a.type === 'základná skupina' && b.type !== 'základná skupina') return -1;
             if (b.type === 'základná skupina' && a.type !== 'základná skupina') return 1;
             return a.name.localeCompare(b.name);
         });
+        
+        // Zistenie výšky nepriradených tímov
+        const teamsWithoutGroupHeight = teamsWithoutGroupRef.current 
+            ? teamsWithoutGroupRef.current.offsetHeight 
+            : null;
+
         return React.createElement(
             'div',
             { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
             React.createElement(
                 'div',
                 {
+                    // REF pre zistenie výšky
+                    ref: teamsWithoutGroupRef,
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
                     onDragOver: (e) => handleDragOver(e, null, selectedCategoryId),
                     onDrop: (e) => handleDrop(e, null, selectedCategoryId),
@@ -476,14 +493,24 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 'div',
                 { className: 'flex-grow min-w-0 flex flex-col gap-4' },
                 sortedGroups.length > 0 ? (
-                    sortedGroups.map((group, groupIndex) =>
-                        React.createElement(
+                    sortedGroups.map((group, groupIndex) => {
+                        // Dynamické nastavenie výšky, ak je vybraná konkrétna skupina
+                        let customStyle = {};
+                        if (selectedGroupName && teamsWithoutGroupHeight) {
+                            customStyle = {
+                                height: `${teamsWithoutGroupHeight}px`,
+                                overflowY: 'auto' // Aby bol obsah rolovateľný
+                            };
+                        }
+
+                        return React.createElement(
                             'div',
                             {
                                 key: groupIndex,
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
                                 onDragOver: (e) => handleDragOver(e, group.name, selectedCategoryId),
                                 onDrop: (e) => handleDrop(e, group.name, selectedCategoryId),
+                                style: customStyle, // Aplikovanie dynamickej výšky
                             },
                             React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' }, group.name),
                             React.createElement(
@@ -491,8 +518,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                 { className: 'mt-2 space-y-1' },
                                 renderTeamList(teamsInGroups.filter(team => team.groupName === group.name), group.name, selectedCategoryId)
                             )
-                        )
-                    )
+                        );
+                    })
                 ) : (
                     React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne skupiny v tejto kategórii.')
                 )
@@ -534,18 +561,42 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         React.createElement(
             'div',
             { className: 'w-full max-w-xs mx-auto mb-8' },
+            // Select pre kategóriu
             React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2' }, 'Vyberte kategóriu:'),
             React.createElement(
                 'select',
                 {
                     className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
                     value: selectedCategoryId,
-                    onChange: (e) => setSelectedCategoryId(e.target.value)
+                    onChange: (e) => {
+                        setSelectedCategoryId(e.target.value);
+                        setSelectedGroupName(''); // Reset skupiny pri zmene kategórie
+                    }
                 },
                 React.createElement('option', { value: '' }, 'Všetky kategórie'),
                 sortedCategoryEntries.map(([id, name]) =>
                     React.createElement('option', { key: id, value: id }, name)
                 )
+            ),
+
+            // NOVÝ Select pre skupinu
+            React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (Voliteľné):'),
+            React.createElement(
+                'select',
+                {
+                    className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50 cursor-not-allowed' : ''}`,
+                    value: selectedGroupName,
+                    onChange: (e) => setSelectedGroupName(e.target.value),
+                    disabled: !selectedCategoryId, // Zablokované, ak nie je vybraná kategória
+                    style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' } 
+                },
+                React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
+                // Zobrazí iba skupiny pre vybranú kategóriu
+                (allGroupsByCategoryId[selectedCategoryId] || [])
+                    .sort((a, b) => a.name.localeCompare(b.name)) // Abecedné zoradenie
+                    .map((group, index) =>
+                        React.createElement('option', { key: index, value: group.name }, group.name)
+                    )
             )
         ),
         selectedCategoryId
