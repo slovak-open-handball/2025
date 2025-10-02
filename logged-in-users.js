@@ -481,51 +481,58 @@ function UsersManagementApp() {
 
             // Nová logika: Vymažte polia pre 'admin' a 'hall' a nastavte default pre 'user'
             if (userData.role === 'admin' || userData.role === 'hall') {
-                const docToUpdate = {};
-                if (userData.dataEditDeadline) {
-                    docToUpdate.dataEditDeadline = deleteField();
-                }
-                if (userData.rosterEditDeadline) {
-                    docToUpdate.rosterEditDeadline = deleteField();
-                }
+              const updateData = {};
+              
+              // Odstránenie `dataEditDeadline`, ak existuje
+              if (userData.dataEditDeadline !== undefined) {
+                  updateData.dataEditDeadline = deleteField();
+              }
 
-                if (Object.keys(docToUpdate).length > 0) {
-                    await updateDoc(doc(db, `users`, userData.id), docToUpdate);
-                }
+              // Odstránenie `rosterEditDeadline`, ak existuje
+              if (userData.rosterEditDeadline !== undefined) {
+                  updateData.rosterEditDeadline = deleteField();
+              }
+
+              if (Object.keys(updateData).length > 0) {
+                  await updateDoc(doc(db, `users`, userData.id), updateData);
+              }
             } if (userData.role === 'club') {
                 let needsUpdate = false;
-                if ((userData.dataEditDeadline === null || userData.dataEditDeadline === undefined) && defaultDeadlines.dataEditDeadline) {
-                    userData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+                const updateData = {};
+
+                // Kontrola, či pole `dataEditDeadline` existuje v dokumente
+                if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
+                    updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline; // Nastaví sa, ak neexistuje alebo je null
                     needsUpdate = true;
                 }
-                if ((userData.rosterEditDeadline === null || userData.rosterEditDeadline === undefined) && defaultDeadlines.rosterEditDeadline) {
-                    userData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
+            
+                // Kontrola, či pole `rosterEditDeadline` existuje v dokumente
+                if (userData.rosterEditDeadline === undefined || userData.rosterEditDeadline === null) {
+                    updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline; // Nastaví sa, ak neexistuje alebo je null
                     needsUpdate = true;
                 }
+            
                 if (needsUpdate) {
-                    await updateDoc(doc(db, `users`, userData.id), {
-                        dataEditDeadline: userData.dataEditDeadline,
-                        rosterEditDeadline: userData.rosterEditDeadline
-                    });
+                    await updateDoc(doc(db, `users`, userData.id), updateData);
                 }
             } else if (userData.role === 'referee' || userData.role === 'volunteer') {
                 let needsUpdate = false;
-                if ((userData.dataEditDeadline === null || userData.dataEditDeadline === undefined) && defaultDeadlines.dataEditDeadline) {
-                    userData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+                const updateData = {};
+
+                // Kontrola, či pole `dataEditDeadline` existuje v dokumente
+                if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
+                    updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline; // Nastaví sa, ak neexistuje alebo je null
                     needsUpdate = true;
                 }
+            
+                // Odstránenie `rosterEditDeadline`, ak existuje
                 if (userData.rosterEditDeadline !== undefined) {
-                    userData.rosterEditDeadline = deleteField(); // Odstráni sa, ak existuje
+                    updateData.rosterEditDeadline = deleteField(); // Odstráni sa, ak existuje
                     needsUpdate = true;
                 }
+            
                 if (needsUpdate) {
-                    const docToUpdate = {
-                        dataEditDeadline: userData.dataEditDeadline
-                    };
-                    if (userData.rosterEditDeadline !== undefined) {
-                        docToUpdate.rosterEditDeadline = deleteField();
-                    }
-                    await updateDoc(doc(db, `users`, userData.id), docToUpdate);
+                    await updateDoc(doc(db, `users`, userData.id), updateData);
                 }
             }
 
