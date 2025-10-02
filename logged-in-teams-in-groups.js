@@ -163,12 +163,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Funkcia na spracovanie drag over na li elemente (tíme)
     const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
         e.preventDefault();
-        // **OPRAVA 1:** Nastavíme kurzor a drop efekt priamo tu, kde vieme, že presúvame nad LI element.
+        // Vizuál kurzora a povolenie dropu
         e.dataTransfer.dropEffect = "move";
         e.currentTarget.style.cursor = 'move';
         
-        // ZABRÁNI BUBBLINGU: Dôležité, aby rodičovský UL neprepísal presný index,
-        // keď je kurzor jasne nad LI elementom.
+        // ZABRÁNI BUBBLINGU, ak sme nad LI elementom.
         e.stopPropagation(); 
         
         const rect = e.currentTarget.getBoundingClientRect();
@@ -178,10 +177,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Ak sa presúva cez tím:
         let insertionIndex;
         if (isOverTopHalf) {
-             // Horná polovica: Vloží sa PRED tento tím (index zostáva index)
              insertionIndex = index;
         } else {
-             // Spodná polovica: Vloží sa ZA tento tím (index sa stane index + 1)
              insertionIndex = index + 1;
         }
         
@@ -196,14 +193,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     /**
      * Pomocná funkcia na presné určenie indexu, keď sa kurzor nachádza v medzerách
      * medzi LI prvkami (keď sa spustí UL handler).
-     * Vráti: Index vloženia (0 až length), alebo -1, ak je kurzor nad LI prvkom.
      */
     const getInsertionIndexInGap = (e, teamElements, sortedTeams) => {
         if (teamElements.length === 0) return 0;
         
         // 1. Kontrola PRED prvým elementom
         const firstRect = teamElements[0].getBoundingClientRect();
-        // Ak je Y-pozícia myši nad top hranou prvého tímu, vrátime index 0
         if (e.clientY < firstRect.top) { 
             return 0;
         }
@@ -214,8 +209,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             
             // Check: Sme NAD aktuálnym prvkom? Ak áno, LI handler by to mal chytiť.
             if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                // Sme nad LI prvkom, necháme to riešiť handleDragOverTeam, 
-                // ktorý správne nastaví dropTarget a zastaví bubbling.
+                // Sme nad LI prvkom, necháme to riešiť handleDragOverTeam
                 return -1; 
             }
             
@@ -223,26 +217,21 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             if (i < teamElements.length - 1) {
                 const nextRect = teamElements[i + 1].getBoundingClientRect();
                 
-                // Hľadáme priestor, ktorý nepatrí ani spodnej polovici [i] ani hornej polovici [i+1]
+                // Hľadáme priestor medzi elementmi
                 const gapStart = rect.bottom + 2; 
                 const gapEnd = nextRect.top - 2; 
                 
                 if (e.clientY > gapStart && e.clientY < gapEnd) {
-                     // Ak sme v GAPE, vkladáme ZA aktuálny element 'i', teda na index 'i + 1'
                      return i + 1;
                 }
             } else {
                 // Check 3: Sme pod POSLEDNÝM elementom
-                // Ak je Y-pozícia myši pod spodnou hranou POSLEDNÉHO tímu, vrátime index na koniec
                 if (e.clientY > rect.bottom) {
                     return sortedTeams.length;
                 }
             }
         }
         
-        // Ak nebola detekovaná žiadna presná medzera ani koniec, kurzor je pravdepodobne v mŕtvej zóne 
-        // ale stále v rámci UL kontajnera (ak UL nie je úplne plný LI prvkami).
-        // Vrátime -1, aby sme to spracovali v handleDragOverEnd.
         return -1; 
     }
 
@@ -250,9 +239,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Funkcia na spracovanie drag over na UL kontajneri
     const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
         e.preventDefault();
-        // **OPRAVA 2:** Nastavíme kurzor a drop efekt pre UL kontajner
+        // Povolenie dropu
         e.dataTransfer.dropEffect = "move";
-        e.currentTarget.style.cursor = 'move';
         
         const containerRef = listRefs.current[`${targetCategoryId}-${targetGroup}`];
         if (!containerRef) return;
@@ -264,7 +252,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         let insertionIndex = getInsertionIndexInGap(e, teamElements, sortedTeams);
         
         // 2. Ak sa nenašiel presný index v medzere (-1), predpokladáme koniec zoznamu
-        // Týmto pokryjeme aj mŕtve zóny pod posledným prvkom, ale v rámci UL kontajnera.
         if (insertionIndex === -1) {
             insertionIndex = sortedTeams.length;
         }
@@ -284,7 +271,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const dragData = draggedItem.current;
         if (!dragData) {
             e.dataTransfer.dropEffect = "none";
-            e.currentTarget.style.cursor = 'not-allowed';
             return;
         }
 
@@ -295,12 +281,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Ak sa kategórie nezhodujú, zabránime presunu
         if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
             e.dataTransfer.dropEffect = "none";
-            e.currentTarget.style.cursor = 'not-allowed';
             return;
         } else {
-            // **OPRAVA 3:** Nastavíme kurzor a drop efekt pre prázdny kontajner
+            // Povolenie dropu
             e.dataTransfer.dropEffect = "move";
-            e.currentTarget.style.cursor = 'move';
         }
         
         // Ak kontajner nemá žiadne tímy, nastavíme index na 0 (vloží sa ako prvý/jediný)
@@ -331,34 +315,46 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalGroup = teamData.groupName;
         const originalOrder = teamData.order; // Získame pôvodné poradové číslo
         const teamCategoryName = teamData.category; 
-        const targetCategoryName = categoryIdToNameMap[targetCategoryId || finalDropTarget.categoryId]; // Používame categoryId z dropTarget, ak je k dispozícii
-
-        console.log(`\n--- Presun tímu: '${teamData.teamName}' ---`);
-        console.log(`Pôvodná skupina: ${originalGroup || 'bez skupiny'}`);
-        console.log(`Pôvodné poradie: ${originalOrder != null ? originalOrder : 'žiadne'}`);
-        console.log(`Cieľová skupina: ${targetGroup || 'bez skupiny'}`);
-        console.log(`Cieľový index (0-based): ${finalDropTarget.index}`);
+        const targetCategoryName = categoryIdToNameMap[targetCategoryId || finalDropTarget.categoryId]; 
         
         // Vypočítame 1-based nové poradie (ak je v skupine)
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
-        console.log(`Nové poradie (1-based, ak v skupine): ${newOrder}`);
-
-
-        // Zastaviť, ak sa presúva tím do rovnakej cieľovej skupiny a na rovnakú pozíciu (komplikovanejšia kontrola, zjednodušme ju)
-        if (originalGroup === targetGroup && teamData.category === targetCategoryName) {
-            setNotification({ id: Date.now(), message: "Tím sa už nachádza v tejto skupine.", type: 'info' });
-            return;
-        }
-
+        
+        // Kontrola kategórie
         if (targetCategoryId && teamCategoryName !== targetCategoryName) {
             setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím.", type: 'error' });
             return;
         }
+        
+        // **NOVÁ KONTROLA PRE ZABRÁNENIE ZBYTOČNÉHO ZÁPISU**
+        // Ak sa presúva do rovnakej skupiny (targetGroup === originalGroup) a pozícia sa nemení (alebo je len posunutá o 1 kvôli odobratiu)
+        if (targetGroup === originalGroup) {
+             if (newOrder === originalOrder || newOrder === originalOrder + 1) { 
+                 setNotification({ id: Date.now(), message: "Tím sa presunul do pôvodnej pozície.", type: 'info' });
+                 return;
+             }
+        }
+        
+        // Ak sa presúva v rámci listu "bez skupiny" a kategória sedí, tak nie je čo meniť, pretože tam nie je poradie.
+        if (!targetGroup && !originalGroup) {
+            if (teamData.category === targetCategoryName) {
+                 setNotification({ id: Date.now(), message: "Tím sa už nachádza v tomto zozname.", type: 'info' });
+                 return;
+            }
+        }
+
 
         try {
             const usersRef = collection(window.db, 'users');
             const userDocs = await getDocs(usersRef);
             const batchPromises = [];
+
+            // Určenie typu presunu pre internú logiku posúvania
+            const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
+            const isMovingFromGroup = originalGroup && !targetGroup;
+            const isMovingToGroup = !originalGroup && targetGroup;
+            const isMovingBetweenGroups = originalGroup && targetGroup && originalGroup !== targetGroup;
+
 
             userDocs.forEach(userDoc => {
                 const userData = userDoc.data();
@@ -368,29 +364,49 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     const updatedUserTeams = teams.map(t => {
                         const isDraggedTeam = userDoc.id === teamData.uid && t.teamName === teamData.teamName;
+                        
+                        // 1. Spracovanie tímu, ktorý sa presúva (platí pre jeho majiteľa)
+                        if (isDraggedTeam) {
+                            // Nastavíme novú skupinu a vypočítané nové poradie
+                            shouldUpdate = true;
+                            return { ...t, groupName: targetGroup, order: newOrder }; 
+                        }
 
-                        // A. Decrement v Pôvodnej Skupine (pre tímy, ktoré zostali a mali vyššie poradie)
-                        if (originalGroup && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                        // 2. Spracovanie ostatných tímov (posúvanie poradia)
+
+                        // --- Prípad: Presun v rámci TEJ ISTEJ skupiny (Internal Reorder) ---
+                        if (isMovingWithinSameGroup && t.groupName === targetGroup && t.order != null) {
+                            // A. Pohyb smerom dole (originalOrder < newOrder). Tímy medzi (originalOrder, newOrder-1) musia klesnúť o 1.
+                            if (newOrder > originalOrder && t.order > originalOrder && t.order <= newOrder - 1) { 
+                                shouldUpdate = true;
+                                return { ...t, order: t.order - 1 };
+                            }
+                            // B. Pohyb smerom hore (newOrder < originalOrder). Tímy medzi (newOrder, originalOrder-1) musia stúpnuť o 1.
+                            else if (newOrder < originalOrder && t.order >= newOrder && t.order < originalOrder) {
+                                shouldUpdate = true;
+                                return { ...t, order: t.order + 1 };
+                            }
+                            // Ostatné tímy sa nemenia
+                            return t;
+                        }
+
+
+                        // --- Prípady: Insertion/Deletion shift (presun medzi listami) ---
+                        
+                        // C. Posun v Pôvodnej Skupine (DEKREMENT - ak tím odchádza)
+                        if ((isMovingFromGroup || isMovingBetweenGroups) && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                             shouldUpdate = true;
                             // Zmenšenie poradia o 1
                             return { ...t, order: t.order - 1 };
                         }
 
-                        // B. Increment v Cieľovej Skupine (pre existujúce tímy, ktoré sa musia posunúť)
-                        // Aplikuje sa len ak cieľová skupina je definovaná a poradie existuje
-                        if (!isDraggedTeam && targetGroup && t.groupName === targetGroup && t.order != null && newOrder !== null && t.order >= newOrder) {
+                        // D. Posun v Cieľovej Skupine (INKREMENT - ak tím prichádza)
+                        if ((isMovingToGroup || isMovingBetweenGroups) && targetGroup && t.groupName === targetGroup && t.order != null && newOrder !== null && t.order >= newOrder) {
                             shouldUpdate = true;
                             // Zvýšenie poradia o 1
                             return { ...t, order: t.order + 1 };
                         }
                         
-                        // C. Update Presunutého Tímu (iba pre majiteľa tímu)
-                        if (isDraggedTeam) {
-                            shouldUpdate = true;
-                            // Nastavíme novú skupinu a vypočítané nové poradie
-                            return { ...t, groupName: targetGroup, order: newOrder }; 
-                        }
-
                         // Tím sa nezmenil
                         return t;
                     });
@@ -490,7 +506,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
 
         // Kontrola, či sa má zobraziť indikátor na úplnom konci zoznamu
-        // Aktivuje sa v handleDragOverEnd, ak sa kurzor nachádza pod posledným tímom
         const isDropIndicatorVisibleAtEnd = 
             dropTarget.groupId === targetGroupId && 
             dropTarget.categoryId === targetCategoryId && 
@@ -824,7 +839,7 @@ if (window.globalUserProfileData) {
             React.createElement(
                 'div',
                 { className: 'flex justify-center items-center h-full pt-16' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-b-4 border-blue-500' })
             )
         );
     }
