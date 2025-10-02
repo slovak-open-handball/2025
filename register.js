@@ -928,7 +928,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
             },
             categories: formData.categories,
             teams: teamsDataToSaveFinal,
-            globalNote: finalGlobalNote // NOVINKA: Odoslanie globalNote do Apps Scriptu
+            globalNote: finalGlobalNote 
           };
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
