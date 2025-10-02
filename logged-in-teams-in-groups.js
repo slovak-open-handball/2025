@@ -215,7 +215,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         e.dataTransfer.dropEffect = "move";
     };
 
-    // Funkcia na spracovanie drag over na konci NEPRÁZDNEHO zoznamu
+    // Funkcia na spracovanie drag over na konci NEPRÁZDNEHO zoznamu (volá sa len, ak myš nebola nad li elementom)
     const handleDragOverEnd = (e, targetGroup, targetCategoryId, totalTeams) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
@@ -418,18 +418,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const teamBgClass = !isWithoutGroup ? 'bg-white' : 'bg-gray-100';
             
             // Indikátor pre vloženie PRED aktuálny tím
+            // Zobrazí sa, ak je cieľový index presne na tomto indexe (horná polovica)
             const isDropIndicatorVisible = 
                 dropTarget.groupId === targetGroupId && 
                 dropTarget.categoryId === targetCategoryId && 
                 dropTarget.index === index;
-
-            // Indikátor pre vloženie ZA posledný tím (posledný tím je index: sortedTeams.length - 1. Ak sa presúva na spodnú polovicu, index je sortedTeams.length)
-            const isDropIndicatorVisibleAfter = 
-                 (index === sortedTeams.length - 1) &&
-                 dropTarget.groupId === targetGroupId && 
-                 dropTarget.categoryId === targetCategoryId && 
-                 dropTarget.index === sortedTeams.length;
-
 
             return React.createElement(
                 React.Fragment, 
@@ -445,11 +438,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         onDragOver: (e) => handleDragOverTeam(e, targetGroupId, targetCategoryId, index),
                     },
                     `${!selectedCategoryId && team.category && !isWithoutGroup ? `${team.category}: ` : ''}${teamNameWithOrder}`
-                ),
-                isDropIndicatorVisibleAfter && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
+                )
             );
         });
 
+        // Kontrola, či sa má zobraziť indikátor na úplnom konci zoznamu
+        const isDropIndicatorVisibleAtEnd = 
+            sortedTeams.length > 0 && // Iba ak zoznam nie je prázdny
+            dropTarget.groupId === targetGroupId && 
+            dropTarget.categoryId === targetCategoryId && 
+            dropTarget.index === sortedTeams.length; // Posledný index + 1
+            
         // Prázdny kontajner (pre drop na prázdnu skupinu)
         if (sortedTeams.length === 0) {
             const isDropOnEmptyContainer = 
@@ -463,7 +462,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     // Udalosti sú tu, aby zachytili drop na prázdnu oblasť
                     onDragOver: (e) => handleDragOverEmptyContainer(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
-                    // ODSTRÁNENÉ: onDragLeave: handleDragEnd - Zabezpečuje, že sa nesresetuje drag stav pri prechode na ďalšiu skupinu.
                     className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`
                 },
                 React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
@@ -475,11 +473,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             'ul',
             { 
                 className: 'space-y-2 relative',
-                // Pre neprázdny zoznam zachytávame iba Drop a DragOver na koniec zoznamu
+                // Udalosť DragOverEnd sa spustí len, ak kurzor nie je nad li elementom (kvôli e.stopPropagation() v handleDragOverTeam)
                 onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams.length),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
             },
-            ...listItems
+            ...listItems,
+            // Vloženie koncového indikátora
+            isDropIndicatorVisibleAtEnd && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
         );
     };
 
