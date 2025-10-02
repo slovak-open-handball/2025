@@ -884,6 +884,10 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         approved: true,
         registrationDate: serverTimestamp(),
         passwordLastChanged: serverTimestamp(),
+
+        dataEditDeadline: dataEditDeadline,
+        rosterEditDeadline: rosterEditDeadline,
+        
         categories: formData.categories,
         teams: teamsDataToSaveFinal,
         note: finalGlobalNote || '' // NOVINKA: Uloženie poznámky zo samostatného propu
