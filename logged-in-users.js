@@ -501,14 +501,13 @@ function UsersManagementApp() {
                 const updateData = {};
 
                 // Kontrola, či pole `dataEditDeadline` existuje alebo je null
+                // Aktuálna logika (zmenená)
                 if (!userData.hasOwnProperty('dataEditDeadline') || userData.dataEditDeadline === null) {
-                    updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline; // Nastaví sa, ak neexistuje alebo je null
+                    updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
                     needsUpdate = true;
                 }
-            
-                // Kontrola, či pole `rosterEditDeadline` existuje alebo je null
                 if (!userData.hasOwnProperty('rosterEditDeadline') || userData.rosterEditDeadline === null) {
-                    updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline; // Nastaví sa, ak neexistuje alebo je null
+                    updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
                     needsUpdate = true;
                 }
             
