@@ -305,7 +305,7 @@ function MemberDetailsModal({
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
-            { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[90vh] overflow-y-auto' },
+            { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[85vh] overflow-y-auto' },
             React.createElement(
                 'div',
                 { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
@@ -567,7 +567,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
-            { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[90vh] overflow-y-auto' },
+            { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[85vh] overflow-y-auto' },
             React.createElement(
                 'div',
                 { className: `flex flex-col text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
@@ -941,7 +941,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
         React.createElement(
             'div',
-            { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[90vh] overflow-y-auto' },
+            { className: 'relative p-6 bg-white w-full max-w-md mx-auto rounded-lg shadow-lg max-h-[85vh] overflow-y-auto' },
             React.createElement(
                 'div',
                 { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
