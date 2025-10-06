@@ -258,6 +258,30 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     }, [notification]);
 
+    // --- NOVÉ POMOCNÉ FUNKCIE PRE URL SLUG ---
+
+    /**
+     * Prevedie názov kategórie (s medzerami) na URL slug (s pomlčkami).
+     * @param {string} name - Názov kategórie.
+     * @returns {string} - URL slug.
+     */
+    const slugifyCategoryName = (name) => {
+        if (!name) return '';
+        // Používame regulárny výraz / /g na nahradenie všetkých medzier pomlčkami
+        return name.replace(/ /g, '-'); 
+    };
+
+    /**
+     * Prevedie URL slug (s pomlčkami) späť na názov kategórie (s medzerami).
+     * @param {string} slug - URL slug.
+     * @returns {string} - Pôvodný názov kategórie.
+     */
+    const deslugifyCategoryName = (slug) => {
+        if (!slug) return '';
+        // Používame regulárny výraz /-/g na nahradenie všetkých pomlčiek medzerami
+        return slug.replace(/-/g, ' '); 
+    };
+
     // **Pomocná funkcia: Mapuje globálne dáta na jednotný formát poľa**
     const mapSuperstructureTeams = (globalTeams) => {
         let globalTeamsList = [];
@@ -389,7 +413,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         return acc;
     }, {});
     
-    // --- NOVÁ LOGIKA SYNCHRONIZÁCIE HASHA ---
+    // --- NOVO UPRAVENÁ LOGIKA SYNCHRONIZÁCIE HASHA (S podorou SLUG/DE-SLUG) ---
     
     // Pomocná funkcia na čítanie hashu a nastavenie stavu
     const readHashAndSetState = (map) => {
@@ -400,9 +424,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         if (hash) {
             const parts = hash.split('/');
-            const categoryNameFromUrl = decodeURIComponent(parts[0]);
+            const categorySlugFromUrl = parts[0]; // Získame slug (s pomlčkami)
+            
+            // 1. Dekódujeme URL časť a prevedieme slug späť na názov kategórie (s medzerami)
+            const categoryNameFromUrl = deslugifyCategoryName(decodeURIComponent(categorySlugFromUrl));
 
-            const categoryId = map[categoryNameFromUrl];
+            // 2. Nájdeme ID kategórie podľa pôvodného názvu
+            const categoryId = map[categoryNameFromUrl]; 
             
             const groupNameEncoded = parts[1];
             const groupName = groupNameEncoded ? decodeURIComponent(groupNameEncoded) : '';
@@ -434,15 +462,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         };
     }, [categoryNameToIdMap]); // Závislosť na mape zaručuje, že preklad je vždy aktuálny
 
-    // **LOGIKA 4: Ukladanie hashu (zápis NÁZVU kategórie do URL)**
+    // **LOGIKA 4: Ukladanie hashu (zápis SLUG kategórie do URL)**
     useEffect(() => {
         let hash = '';
         
         // Získame NÁZOV kategórie z ID
         const categoryName = categoryIdToNameMap[selectedCategoryId]; 
 
-        if (categoryName) { // Použijeme NÁZOV pre URL (URL-enkódovaný pre bezpečnosť)
-            hash = encodeURIComponent(categoryName); 
+        if (categoryName) { 
+            // 1. Prevedieme NÁZOV na SLUG (s pomlčkami)
+            const categorySlug = slugifyCategoryName(categoryName);
+            
+            // 2. Encódujeme SLUG pre URL
+            hash = encodeURIComponent(categorySlug); 
+            
             if (selectedGroupName) {
                 hash += `/${encodeURIComponent(selectedGroupName)}`;
             }
@@ -502,7 +535,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 teamName: finalTeamName, // Použijeme formátovaný názov
                 groupName: groupName || null,
                 order: newOrder,
-                timestamp: Timestamp.now(),
                 id: crypto.randomUUID()
             };
             
