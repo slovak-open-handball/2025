@@ -6,11 +6,12 @@ const { useState, useEffect, useRef } = React;
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 // --- Komponent Modálne Okno pre Pridanie Tímu/Konfigurácie ---
-// Prijíma nové props: defaultCategoryId a defaultGroupName
-const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave, defaultCategoryId, defaultGroupName }) => {
+// Prijíma nové props: defaultCategoryId, defaultGroupName, allTeams
+const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave, defaultCategoryId, defaultGroupName, allTeams }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [teamName, setTeamName] = useState('');
+    const [isDuplicate, setIsDuplicate] = useState(false); // NOVÝ STAV pre kontrolu duplikátov
 
     // Nastavenie/reset stavu pri otvorení/zatvorení modálu alebo zmene predvolených hodnôt
     useEffect(() => {
@@ -27,8 +28,28 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
              setSelectedCategory('');
              setSelectedGroup('');
              setTeamName('');
+             setIsDuplicate(false); // Reset aj pre duplikát
         }
     }, [isOpen, defaultCategoryId, defaultGroupName]); // Pridaná závislosť defaultGroupName
+
+    // EFEKT: Kontrola duplicitného názvu tímu
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const name = teamName.trim();
+        const categoryName = categoryIdToNameMap[selectedCategory] || '';
+
+        if (name && selectedCategory && categoryName) {
+            // Vytvoríme finálny názov tímu, ako bude uložený v databáze (s názvom kategórie)
+            const finalName = `${categoryName} ${name}`;
+            
+            // Kontrola duplikátu v existujúcich tímoch (userTeams aj superstructureTeams)
+            const duplicate = allTeams.some(team => team.teamName === finalName);
+            setIsDuplicate(duplicate);
+        } else {
+            setIsDuplicate(false);
+        }
+    }, [teamName, selectedCategory, allTeams, isOpen, categoryIdToNameMap]); // Pridané závislosti allTeams a categoryIdToNameMap
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
@@ -47,32 +68,31 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        
+        // Zabezpečenie, že aj pri odoslaní formulára nie je duplikát alebo neplatné vstupy
+        if (isSubmitDisabled) {
+            return;
+        }
+
         handleSave({ 
             categoryId: selectedCategory, 
             groupName: selectedGroup, 
-            teamName: teamName 
+            teamName: teamName // Pôvodný názov tímu, kým ho funkcia handleAddNewTeam neformátuje
         });
     };
     
-    // LOGIKA BLOKOVANIA TLAČIDLA:
+    // NOVÁ LOGIKA BLOKOVANIA TLAČIDLA:
     // Tlačidlo je NEAKTÍVNE, ak:
     // 1. Nie je vybraná kategória (selectedCategory je prázdne)
-    // 2. Je vybraná kategória, ale nie je vybraná skupina A nebola prednastavená skupina (logika: ak kategória vyžaduje skupinu, musí byť vybraná, ale v tomto prípade skupiny nie sú povinné pre všetky tímy, tak to zjednodušíme - Zatiaľ necháme Skupinu voliteľnú)
+    // 2. Nie je vybraná skupina (selectedGroup je prázdne)
     // 3. TeamName je prázdny (po očistení bielych znakov)
-    
-    // Zjednodušené pravidlo: Kategória a Názov tímu sú povinné. Skupina je voliteľná (ako to je v logike ukladania).
-    // Ak by sme chceli vynútiť aj výber skupiny pre tie, ktoré majú skupiny, museli by sme pridať komplexnejšiu logiku.
+    // 4. Je nájdený duplicitný názov tímu (isDuplicate je true)
     
     const isCategoryValid = !!selectedCategory;
+    const isGroupValid = !!selectedGroup; // KONTROLA SKUPINY (MUSÍ BYŤ VYBRANÁ)
     const isTeamNameValid = teamName.trim().length > 0;
     
-    // Ak je kategória vybraná a má dostupné skupiny A skupina nebola predvolená, vynútiť jej výber.
-    // Ak sa kategória zvolí, je možné že chceme aby sa vybrala aj skupina:
-    // Pre tímy, ktoré chcú byť v skupine: Vybratá skupina by nemala byť prázdna, ak kategória nie je prázdna.
-    
-    // Zjednodušená verzia: Povinná je Kategória a Názov tímu (podľa pôvodného disabled stavu tlačidla)
-    const isSubmitDisabled = !isCategoryValid || !isTeamNameValid;
-
+    const isSubmitDisabled = !isCategoryValid || !isGroupValid || !isTeamNameValid || isDuplicate;
 
     if (!isOpen) return null;
     
@@ -85,15 +105,12 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     const buttonBaseClasses = 'px-4 py-2 rounded-lg transition-colors duration-200';
     const activeClasses = 'bg-indigo-600 text-white hover:bg-indigo-700';
     const disabledClasses = `
-        bg-white 
-        text-indigo-600 
-        border border-indigo-600 
-        cursor-default 
-        hover:bg-gray-50
-        !shadow-none 
-        !pointer-events-none 
-        hover:cursor-not-allowed
-    `; // !important triedy pre prepísanie hover efektov
+        bg-gray-200 
+        text-gray-500 
+        cursor-not-allowed 
+        shadow-none 
+        pointer-events-none 
+    `; 
 
     return React.createElement(
         'div',
@@ -139,18 +156,18 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                 React.createElement(
                     'div',
                     { className: 'flex flex-col' },
-                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Vyberte skupinu (Voliteľné):'),
+                    // Skupina je teraz povinná!
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Vyberte skupinu:'), 
                     React.createElement(
                         'select',
                         {
-                            // NOVÉ: Pridanie isGroupFixed do podmienky pre disabled a štýly
                             className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${!selectedCategory || isGroupFixed ? 'bg-gray-100 cursor-not-allowed' : ''}`,
                             value: selectedGroup,
                             onChange: (e) => setSelectedGroup(e.target.value),
-                            // NOVÉ: Skupina je disabled, ak nie je kategória ALEBO ak je skupina predvolená
+                            required: true, // Skupina je teraz povinná
                             disabled: !selectedCategory || isGroupFixed
                         },
-                        React.createElement('option', { value: '' }, availableGroups.length > 0 ? 'Bez skupiny (Zoznam pre priradenie)' : 'Najprv vyberte kategóriu'),
+                        React.createElement('option', { value: '' }, availableGroups.length > 0 ? '--- Vyberte skupinu ---' : 'Najprv vyberte kategóriu'),
                         availableGroups.map((group, index) =>
                             React.createElement('option', { key: index, value: group.name }, group.name)
                         )
@@ -174,7 +191,9 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                             required: true,
                             placeholder: 'Napr. Tím Alfa (Váš názov)'
                         }
-                    )
+                    ),
+                    // Zobrazenie upozornenia pre duplikát
+                    isDuplicate && React.createElement('p', { className: 'text-sm text-red-600 mt-2 font-medium p-2 bg-red-50 rounded-lg border border-red-300' }, `Tím s názvom "${categoryIdToNameMap[selectedCategory]} ${teamName.trim()}" už existuje v globálnych alebo používateľských dátach. Zmeňte prosím názov.`)
                 ),
 
                 // Tlačidlá
@@ -399,6 +418,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // ** NOVÁ LOGIKA: Formátovanie názvu tímu **
         const finalTeamName = `${categoryName} ${teamName}`;
 
+        // Kontrola duplikátu pri finálnom ukladaní pre istotu (aj keď je kontrolované v modále)
+        const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
+        if (isDuplicateFinal) {
+             setNotification({ id: Date.now(), message: `Globálny tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, type: 'error' });
+             setIsModalOpen(false);
+             return;
+        }
+
         try {
             const docSnap = await getDoc(superstructureDocRef);
             const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
@@ -422,7 +449,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 teamName: finalTeamName, // Použijeme formátovaný názov
                 groupName: groupName || null,
                 order: newOrder,
-                timestamp: Timestamp.now(),
                 id: crypto.randomUUID()
             };
             
@@ -1084,7 +1110,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             categoryIdToNameMap: categoryIdToNameMap,
             handleSave: handleAddNewTeam,
             defaultCategoryId: selectedCategoryId, // Existujúca prop
-            defaultGroupName: selectedGroupName // NOVÁ prop
+            defaultGroupName: selectedGroupName, // NOVÁ prop
+            allTeams: allTeams // NOVÁ prop pre kontrolu duplikátov
         }),
 
         React.createElement(
