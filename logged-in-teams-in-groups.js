@@ -569,7 +569,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalGroup = teamData.groupName;
         const originalOrder = teamData.order; 
         const teamCategoryName = teamData.category; 
-        // Ak je targetGroup null, newOrder je null, čo je správne pre tímy bez skupiny
+        
+        // Ak je targetGroup null (presun do zoznamu bez skupiny), newOrder je null.
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
         const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
@@ -590,8 +591,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     if (isDraggedTeam) {
                         shouldUpdate = true;
-                        // Ak je targetGroup null, nastavia sa groupName: null a order: null
-                        return { ...t, groupName: targetGroup, order: newOrder }; 
+                        // Tím, ktorý sa presúva: nastavenie novej skupiny a poradia (null, ak je bez skupiny)
+                        const updatedTeam = { ...t, groupName: targetGroup, order: newOrder };
+                        console.log(`[DRAG] Presúvaný globálny tím výsledok: name=${updatedTeam.teamName}, groupName=${updatedTeam.groupName}, order=${updatedTeam.order}`);
+                        return updatedTeam; 
                     }
                     
                     const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
@@ -667,7 +670,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     if (isDraggedTeam) {
                         shouldUpdate = true;
                         // Tím, ktorý sa presúva: nastavenie novej skupiny a poradia (null, ak je bez skupiny)
-                        return { ...t, groupName: targetGroup, order: newOrder }; 
+                        const updatedTeam = { ...t, groupName: targetGroup, order: newOrder };
+                        
+                        // --- DEBUG: Vypíšeme finálny objekt tímu pred aktualizáciou ---
+                        console.log(`[DRAG] Presúvaný používateľský tím výsledok: name=${updatedTeam.teamName}, groupName=${updatedTeam.groupName}, order=${updatedTeam.order}`);
+                        // -------------------------------------------------------------
+
+                        return updatedTeam; 
                     }
 
                     // 2. Reorganizácia ostatných tímov V RÁMCI TOHTO DOKUMENTU (vlastníka)
