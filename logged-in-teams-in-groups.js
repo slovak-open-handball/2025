@@ -167,7 +167,8 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                         },
                         React.createElement('option', { value: '' }, availableGroups.length > 0 ? '--- Vyberte skupinu ---' : 'Najprv vyberte kategóriu'),
                         availableGroups.map((group, index) =>
-                            React.createElement('option', { key: index, value: group.name }, group.name)
+                            // ZOBRAZENIE: Pridaný typ skupiny v zátvorkách
+                            React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
                         )
                     ),
                     // NOVÉ: Zobrazenie upozornenia, ak je skupina predvolená
@@ -1138,7 +1139,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                     'div',
                                     null,
                                     React.createElement('p', { className: 'font-semibold whitespace-nowrap' }, group.name),
-                                    React.createElement('p', { className: 'text-sm text-gray-500 whitespace-nowrap' }, group.type),
+                                    // TYP SKUPINY (UŽ BOL)
+                                    React.createElement('p', { className: 'text-sm text-gray-500 whitespace-nowrap' }, group.type), 
                                     React.createElement(
                                         'div',
                                         { className: 'mt-2 space-y-1' },
@@ -1205,7 +1207,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
                                 style: customStyle,
                             },
-                            React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' }, group.name),
+                            React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
+                            // NOVÝ TYP SKUPINY PRE SINGLE VIEW A FILTROVANÝ VIEW
+                            React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type), 
                             React.createElement(
                                 'div',
                                 { className: 'mt-2 space-y-1' },
@@ -1239,6 +1243,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         default:
             typeClasses = 'bg-gray-700';
     }
+    
+    // Získame všetky dostupné skupiny pre zvolenú kategóriu na zobrazenie vo filtri
+    const availableGroupsForSelect = (allGroupsByCategoryId[selectedCategoryId] || [])
+        .sort((a, b) => a.name.localeCompare(b.name));
 
     return React.createElement(
         'div',
@@ -1292,11 +1300,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' } 
                 },
                 React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
-                (allGroupsByCategoryId[selectedCategoryId] || [])
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((group, index) =>
-                        React.createElement('option', { key: index, value: group.name }, group.name)
-                    )
+                availableGroupsForSelect.map((group, index) =>
+                    // ZOBRAZENIE: Pridaný typ skupiny do <option>
+                    React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
+                )
             )
         ),
         selectedCategoryId
