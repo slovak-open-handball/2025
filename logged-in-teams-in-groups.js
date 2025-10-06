@@ -485,6 +485,27 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap]); 
     // --- KONIEC NOVEJ LOGIKY SYNCHRONIZÁCIE HASHA ---
 
+    // --- NOVÉ FUNKCIE PRE SELECT BOXY (FIX PRE KLIK MYŠOU) ---
+    
+    const handleCategorySelect = (e) => {
+        const newCategoryId = e.target.value;
+        // Log pre kontrolu, či mouse event odovzdáva hodnotu
+        console.log("Kategória zmenená. Nové ID:", newCategoryId); 
+        
+        // Nastavenie stavu, ktoré spúšťa LOGIKA 4 (zápis hashu)
+        setSelectedCategoryId(newCategoryId);
+        setSelectedGroupName(''); // Reset skupiny
+    };
+
+    const handleGroupSelect = (e) => {
+        const newGroupName = e.target.value;
+        // Log pre kontrolu, či mouse event odovzdáva hodnotu
+        console.log("Skupina zmenená. Nový názov:", newGroupName); 
+        setSelectedGroupName(newGroupName);
+    };
+
+    // --- KONIEC NOVÝCH FUNKCIÍ PRE SELECT BOXY ---
+
 
     // --- FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
     const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
@@ -1204,11 +1225,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 {
                     className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
                     value: selectedCategoryId,
-                    onChange: (e) => {
-                        // Pri zmene select boxu priamo nastavíme stav, čo následne spustí LOGIKA 4 (zápis hashu)
-                        setSelectedCategoryId(e.target.value);
-                        setSelectedGroupName('');
-                    }
+                    // POUŽITIE NOVÉHO HANDLERA
+                    onChange: handleCategorySelect
                 },
                 React.createElement('option', { value: '' }, 'Všetky kategórie'),
                 sortedCategoryEntries.map(([id, name]) =>
@@ -1222,7 +1240,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 {
                     className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
                     value: selectedGroupName,
-                    onChange: (e) => setSelectedGroupName(e.target.value),
+                    // POUŽITIE NOVÉHO HANDLERA
+                    onChange: handleGroupSelect,
                     disabled: !selectedCategoryId,
                     style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' } 
                 },
