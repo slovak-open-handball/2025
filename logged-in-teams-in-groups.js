@@ -1,7 +1,9 @@
-<!-- Tento kód je upravený pre pridávanie tímov a ukladanie poradového čísla (order) do databázy. -->
 import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
+
+// Referencia na globálny konfiguračný dokument pre nadstavbové tímy
+const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 // --- Komponent Modálne Okno pre Pridanie Tímu/Konfigurácie ---
 const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave }) => {
@@ -116,7 +118,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                             value: teamName,
                             onChange: (e) => setTeamName(e.target.value),
                             required: true,
-                            placeholder: 'Napr. Tím Alfa'
+                            placeholder: 'Napr. Tím Alfa (Globálny tím)'
                         }
                     )
                 ),
@@ -157,6 +159,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [selectedGroupName, setSelectedGroupName] = useState(''); 
     const [notification, setNotification] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false); 
+    const [superstructureTeams, setSuperstructureTeams] = useState({}); // NOVÝ STAV pre globálne tímy
     
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -164,7 +167,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [dropTarget, setDropTarget] = useState({ groupId: null, categoryId: null, index: null });
     const teamsWithoutGroupRef = useRef(null); 
     
-    // Efekt pre manažovanie notifikácií a vymazanie po 5 sekundách
+    // Efekt pre manažovanie notifikácií
     useEffect(() => {
         if (notification) {
             const timer = setTimeout(() => {
@@ -174,16 +177,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     }, [notification]);
 
-    // Efekt pre načítanie dát z Firebase
+    // **NOVÝ EFEKT: Spájanie tímov**
+    // Spája tímy od používateľa a globálne tímy vždy, keď sa jeden z nich zmení.
     useEffect(() => {
-        if (!window.db) {
-            console.error("Firebase Firestore nie je inicializovaný.");
-            return;
-        }
-
+        let teamsList = [];
+        
+        // 1. Tímy od používateľov (Primárne tímy)
         const usersRef = collection(window.db, 'users');
-        const unsubscribeTeams = onSnapshot(usersRef, (querySnapshot) => {
-            const teamsList = [];
+        const userDocs = query(usersRef); // Bude prečítané v onSnapshot nižšie
+        
+        const unsubscribeUsers = onSnapshot(userDocs, (querySnapshot) => {
+            let userTeamsList = [];
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
                 if (userData && userData.teams) {
@@ -191,14 +195,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         if (Array.isArray(teamArray)) {
                             teamArray.forEach(team => {
                                 if (team.teamName) {
-                                    // Zabezpečíme, že tím má order a ID (pre staré tímy fallback)
-                                    teamsList.push({
+                                    userTeamsList.push({
                                         uid: doc.id,
                                         category: categoryName,
-                                        id: team.id || `${doc.id}-${team.teamName}`, // Použitie unikátneho ID alebo fallback
+                                        id: team.id || `${doc.id}-${team.teamName}`, // Unikátne ID
                                         teamName: team.teamName,
                                         groupName: team.groupName || null,
-                                        order: team.order || 0, // Zabezpečíme, že order je číslo (0 pre default/bez skupiny)
+                                        order: team.order || 0, 
+                                        isSuperstructureTeam: false, // KLASIFIKÁTOR PÔVODU
                                     });
                                 }
                             });
@@ -206,9 +210,54 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     });
                 }
             });
-            setAllTeams(teamsList);
+            // Nastaví výsledný zoznam s pridanými globálnymi tímami
+            setAllTeams([...userTeamsList, ...mapSuperstructureTeams(superstructureTeams)]);
         });
 
+        // 2. Globálne tímy (Superštruktúra)
+        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+        const unsubscribeSuperstructure = onSnapshot(superstructureDocRef, (docSnap) => {
+            let globalTeams = {};
+            if (docSnap.exists()) {
+                globalTeams = docSnap.data();
+            }
+            setSuperstructureTeams(globalTeams); 
+        });
+
+        const mapSuperstructureTeams = (globalTeams) => {
+            let globalTeamsList = [];
+            Object.entries(globalTeams).forEach(([categoryName, teamArray]) => {
+                 if (Array.isArray(teamArray)) {
+                    teamArray.forEach(team => {
+                        if (team.teamName) {
+                            globalTeamsList.push({
+                                uid: 'global', // UNIKÁTNE ID pre globálne tímy
+                                category: categoryName,
+                                id: team.id || crypto.randomUUID(), 
+                                teamName: team.teamName,
+                                groupName: team.groupName || null,
+                                order: team.order || 0,
+                                isSuperstructureTeam: true, // KLASIFIKÁTOR PÔVODU
+                            });
+                        }
+                    });
+                 }
+            });
+            return globalTeamsList;
+        }
+
+        // Zmena SuperstructureTeams vyvolá novú re-render
+        useEffect(() => {
+            // Prepočíta allTeams, keď sa zmenia globálne tímy (reaguje na unsubscribeUsers)
+            if (unsubscribeUsers) {
+                // Dočasne vypneme/zapneme, aby sa znova prepočítali zjednotené tímy s novými dátami
+                unsubscribeUsers(); 
+                // Znovu spustíme logiku v rámci onSnapshot pre users, aby sa zjednotilo s novým stavom superstructureTeams.
+            }
+        }, [superstructureTeams]); 
+        
+        
+        // Načítanie Kategórií a Skupín (ako predtým)
         const categoriesRef = doc(window.db, 'settings', 'categories');
         const unsubscribeCategories = onSnapshot(categoriesRef, (docSnap) => {
             const categoryIdToName = {};
@@ -241,11 +290,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
 
         return () => {
-            unsubscribeTeams();
+            unsubscribeUsers();
+            unsubscribeSuperstructure();
             unsubscribeCategories();
             unsubscribeGroups();
         };
-    }, []);
+    }, []); // Prázdne závislosti pre inicializáciu listenerov
 
     // **LOGIKA: Načítanie kategórie a skupiny z URL hashu pri štarte**
     useEffect(() => {
@@ -257,7 +307,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const groupName = groupNameEncoded ? decodeURIComponent(groupNameEncoded) : '';
 
             setSelectedCategoryId(categoryId);
-            setSelectedGroupName(groupName); // Nastaví skupinu, ak je v URL
+            setSelectedGroupName(groupName); 
         }
     }, []);
 
@@ -267,7 +317,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         if (selectedCategoryId) {
             hash = selectedCategoryId;
             if (selectedGroupName) {
-                // Kódujeme názov skupiny pre URL
                 hash += `/${encodeURIComponent(selectedGroupName)}`;
             }
         }
@@ -278,77 +327,71 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     }, [selectedCategoryId, selectedGroupName]);
 
-    // --- NOVÁ FUNKCIA: Uloženie nového Tímu ---
+    // --- NOVÁ FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
     const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
-        if (!window.db || !window.auth.currentUser) {
-            setNotification({ id: Date.now(), message: "Pre pridanie tímu musíte byť prihlásený.", type: 'error' });
+        if (!window.db) {
+            setNotification({ id: Date.now(), message: "Firestore nie je inicializovaný.", type: 'error' });
             return;
         }
 
-        const userId = window.auth.currentUser.uid;
         const categoryName = categoryIdToNameMap[categoryId];
-        // Kľúč pre poľa tímov v dokumente používateľa (napr. teams.Kategoria A)
-        const teamCategoryKey = `teams.${categoryName}`; 
+        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
 
-        // 1. Nájdeme tímy v cieľovej kategórii a skupine (len pre výpočet poradia)
-        // Toto funguje vďaka tomu, že 'allTeams' je aktuálny stav celej databázy.
-        const teamsInTargetGroup = allTeams.filter(t => 
-            t.category === categoryName && 
-            t.groupName === groupName
-        );
-        
-        // Zistíme maximálne poradie v tejto skupine/kategórii
-        let maxOrder = 0;
-        teamsInTargetGroup.forEach(t => {
-            if (t.order > maxOrder) {
-                maxOrder = t.order;
-            }
-        });
-        
-        // Nové poradie: null ak bez skupiny, inak maxOrder + 1
-        // Poradové číslo (order) sa ukladá rovnako ako pri drag & drop
-        const newOrder = groupName ? (maxOrder + 1) : null; 
-        
         try {
-            // Referencia na dokument používateľa, kde sú uložené jeho tímy
-            const userDocRef = doc(window.db, 'users', userId);
-            
-            // 1. Získame aktuálne pole tímov pre danú kategóriu (ak existuje)
-            const userDocSnap = await getDoc(userDocRef);
-            const currentTeams = userDocSnap.data()?.teams?.[categoryName] || [];
+            // 1. Získanie aktuálneho globálneho dokumentu
+            const docSnap = await getDoc(superstructureDocRef);
+            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+            const currentTeamsForCategory = globalTeamsData[categoryName] || [];
 
-            // 2. Vytvorenie nového tímu s poradovým číslom
+            // 2. Výpočet nového poradia v cieľovej skupine
+            // Filtrujeme globálne tímy v danej kategórii/skupine
+            const teamsInTargetGroup = currentTeamsForCategory.filter(t => 
+                t.groupName === groupName
+            );
+            
+            let maxOrder = 0;
+            teamsInTargetGroup.forEach(t => {
+                if (t.order > maxOrder) {
+                    maxOrder = t.order;
+                }
+            });
+            
+            // Nové poradie: null ak bez skupiny, inak maxOrder + 1
+            const newOrder = groupName ? (maxOrder + 1) : null; 
+            
+            // 3. Vytvorenie nového tímu s poradovým číslom
             const newTeam = {
                 teamName: teamName,
                 groupName: groupName || null,
                 order: newOrder,
                 timestamp: Timestamp.now(),
-                // Pridáme ID pre unikátnu identifikáciu v rámci poľa
-                id: crypto.randomUUID() 
+                id: crypto.randomUUID() // Unikátne ID pre presun
             };
             
-            // 3. Aktualizácia poľa tímov o nový tím
-            const updatedTeamsArray = [...currentTeams, newTeam];
+            // 4. Aktualizácia poľa tímov o nový tím
+            const updatedTeamsArray = [...currentTeamsForCategory, newTeam];
             
-            // Použijeme updateDoc na aktualizáciu len konkrétneho poľa
-            await updateDoc(userDocRef, {
-                [teamCategoryKey]: updatedTeamsArray
+            // 5. Uloženie globálneho dokumentu
+            await setDoc(superstructureDocRef, {
+                ...globalTeamsData,
+                [categoryName]: updatedTeamsArray
             });
             
             setIsModalOpen(false);
             setNotification({ 
                 id: Date.now(), 
-                message: `Tím '${teamName}' bol úspešne pridaný a zaradený (Poradie: ${newOrder || 'bez poradia'}).`, 
+                message: `Globálny tím '${teamName}' bol úspešne pridaný. (Cesta: ${SUPERSTRUCTURE_TEAMS_DOC_PATH})`, 
                 type: 'success' 
             });
 
         } catch (error) {
-            console.error("Chyba pri pridávaní nového tímu:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu do databázy.", type: 'error' });
+            console.error("Chyba pri pridávaní nového globálneho tímu:", error);
+            setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu do globálneho dokumentu.", type: 'error' });
         }
     };
-    // --- KONIEC NOVEJ FUNKCIE ---
-
+    // --- KONIEC FUNKCIE PRE GLOBÁLNE UKLADANIE ---
+    
+    // Filtrovanie pre zobrazenie
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
         : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
@@ -365,7 +408,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     };
 
-    // Všeobecná funkcia pre kontrolu kategórie pri drag over
     const checkCategoryMatch = (targetCategoryId) => {
         const dragData = draggedItem.current;
         if (!dragData) return false;
@@ -373,18 +415,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const teamCategoryName = dragData.team.category; 
         const targetCategoryName = categoryIdToNameMap[targetCategoryId];
 
-        // Ak sa presúva tím bez skupiny do skupiny, musia sa zhodovať kategórie
         if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
             return false;
         }
         return true;
     }
     
-    // Funkcia na spracovanie drag over na li elemente (tíme)
     const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
         e.preventDefault();
         
-        // **NOVÁ KONTROLA KATEGÓRIE**
         if (!checkCategoryMatch(targetCategoryId)) {
             e.dataTransfer.dropEffect = "none";
             e.currentTarget.style.cursor = 'not-allowed';
@@ -392,41 +431,25 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return;
         }
 
-        // Vizuál kurzora a povolenie dropu
         e.dataTransfer.dropEffect = "move";
         e.currentTarget.style.cursor = 'move';
-        
-        // ZABRÁNI BUBBLINGU, ak sme nad LI elementom.
         e.stopPropagation(); 
         
         const rect = e.currentTarget.getBoundingClientRect();
-        // Rozdelenie LI na hornú polovicu (insert PRED) a dolnú polovicu (insert ZA)
         const isOverTopHalf = e.clientY - rect.top < rect.height / 2;
         
-        // Ak sa presúva cez tím:
-        let insertionIndex;
-        if (isOverTopHalf) {
-             insertionIndex = index;
-        } else {
-             insertionIndex = index + 1;
-        }
+        let insertionIndex = isOverTopHalf ? index : index + 1;
         
-        // Nastavíme vizuálnu spätnú väzbu
         setDropTarget({
-            groupId: targetGroup, // null pre tímy bez skupiny
+            groupId: targetGroup,
             categoryId: targetCategoryId,
             index: insertionIndex
         });
     };
 
-    /**
-     * Pomocná funkcia na presné určenie indexu, keď sa kurzor nachádza v medzerách
-     * medzi LI prvkami (keď sa spustí UL handler).
-     */
     const getInsertionIndexInGap = (e, teamElements, sortedTeams) => {
         if (teamElements.length === 0) return 0;
         
-        // 1. Kontrola PRED prvým elementom
         const firstRect = teamElements[0].getBoundingClientRect();
         if (e.clientY < firstRect.top) { 
             return 0;
@@ -436,17 +459,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const teamEl = teamElements[i];
             const rect = teamEl.getBoundingClientRect();
             
-            // Check: Sme NAD aktuálnym prvkom? Ak áno, LI handler by to mal chytiť.
             if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                // Sme nad LI prvkom, necháme to riešiť handleDragOverTeam
                 return -1; 
             }
             
-            // Check 2: Sme POD aktuálnym elementom 'i' a NAD nasledujúcim 'i+1'? (Priestor medzi)
             if (i < teamElements.length - 1) {
                 const nextRect = teamElements[i + 1].getBoundingClientRect();
                 
-                // Hľadáme priestor medzi elementmi
                 const gapStart = rect.bottom + 2; 
                 const gapEnd = nextRect.top - 2; 
                 
@@ -454,7 +473,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                      return i + 1;
                 }
             } else {
-                // Check 3: Sme pod POSLEDNÝM elementom
                 if (e.clientY > rect.bottom) {
                     return sortedTeams.length;
                 }
@@ -464,12 +482,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         return -1; 
     }
 
-
-    // Funkcia na spracovanie drag over na UL kontajneri (zvyšok priestoru skupiny)
     const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
         e.preventDefault();
         
-        // **NOVÁ KONTROLA KATEGÓRIE**
         if (!checkCategoryMatch(targetCategoryId)) {
             e.dataTransfer.dropEffect = "none";
             e.currentTarget.style.cursor = 'not-allowed';
@@ -477,25 +492,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return;
         }
         
-        // Povolenie dropu
         e.dataTransfer.dropEffect = "move";
         e.currentTarget.style.cursor = 'move';
         
         const containerRef = listRefs.current[`${targetCategoryId}-${targetGroup}`];
         if (!containerRef) return;
 
-        // Vylúčime Drop Indicator prvky z merania
         const teamElements = Array.from(containerRef.children).filter(el => el.tagName === 'LI');
         
-        // 1. Skúsi zistiť, či je kurzor v presnej medzere
         let insertionIndex = getInsertionIndexInGap(e, teamElements, sortedTeams);
         
-        // 2. Ak sa nenašiel presný index v medzere (-1), predpokladáme koniec zoznamu
         if (insertionIndex === -1) {
             insertionIndex = sortedTeams.length;
         }
 
-        // Nastavíme index na vypočítanú pozíciu (koniec zoznamu alebo presnú medzeru)
         setDropTarget({
             groupId: targetGroup,
             categoryId: targetCategoryId,
@@ -503,12 +513,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
     };
 
-
-    // Funkcia na spracovanie drag over na PRÁZDNOM kontajneri (skupine/zozname bez tímu)
     const handleDragOverEmptyContainer = (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         
-        // **NOVÁ KONTROLA KATEGÓRIE**
         if (!checkCategoryMatch(targetCategoryId)) {
             e.dataTransfer.dropEffect = "none";
             e.currentTarget.style.cursor = 'not-allowed';
@@ -522,11 +529,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return;
         }
         
-        // Povolenie dropu
         e.dataTransfer.dropEffect = "move";
         e.currentTarget.style.cursor = 'move';
         
-        // Ak kontajner nemá žiadne tímy, nastavíme index na 0 (vloží sa ako prvý/jediný)
         setDropTarget({
             groupId: targetGroup,
             categoryId: targetCategoryId,
@@ -538,167 +543,153 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
-        const finalDropTarget = dropTarget; // Získame poslednú platnú cieľovú pozíciu
+        const finalDropTarget = dropTarget; 
 
-        // **DOPLNKOVÁ KONTROLA KATEGÓRIE pri dropnutí** (Ak by sa nejakým spôsobom obišiel DragOver)
         if (!checkCategoryMatch(targetCategoryId)) {
             setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím. Presun bol zrušený.", type: 'error' });
-            // Vyčistíme dropTarget a dragItem
             setDropTarget({ groupId: null, categoryId: null, index: null });
             draggedItem.current = null;
             return;
         }
 
-
-        // Vyčistíme dropTarget hneď po pustení
         setDropTarget({ groupId: null, categoryId: null, index: null });
         
-        // Kontrola platnosti cieľového indexu
         if (!dragData || (finalDropTarget.index === null || finalDropTarget.index === undefined)) {
             console.error("Žiadne dáta na presunutie alebo neplatný cieľový index.");
             return;
         }
 
-        // Pôvodné dáta tímu obsahujú staré poradie a skupinu
         const teamData = dragData.team;
         const originalGroup = teamData.groupName;
-        const originalOrder = teamData.order; // Získame pôvodné poradové číslo
+        const originalOrder = teamData.order; 
         const teamCategoryName = teamData.category; 
-        
-        // Vypočítame 1-based nové poradie (ak je v skupine)
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
-        // **NOVÁ KONTROLA PRE ZABRÁNENIE ZBYTOČNÉHO ZÁPISU**
-        // Ak sa presúva do rovnakej skupiny (targetGroup === originalGroup) a pozícia sa nemení 
-        if (targetGroup === originalGroup) {
-            // Zistíme aktuálne zoradený zoznam
-            const teamsInOriginalGroup = allTeams
-                .filter(t => t.category === teamCategoryName && t.groupName === originalGroup)
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-            
-            // Nájdeme index tímu v aktuálnom zoradenom zozname
-            const teamIndexInOriginal = teamsInOriginalGroup.findIndex(t => t.id === teamData.id); // Používame ID pre spoľahlivú identifikáciu
-            
-            // Ak je finálny index rovnaký ako pôvodný index alebo posunutý o 1 kvôli odstráneniu 
-            // V rámci internej logiky, ak je index ten istý, nebudeme prečíslovať.
-            if (teamIndexInOriginal !== -1 && finalDropTarget.index === teamIndexInOriginal) {
-                 setNotification({ id: Date.now(), message: "Tím sa presunul do pôvodnej pozície a poradie sa nezmenilo.", type: 'info' });
-                 return;
-            }
-        }
-        
-        // Ak sa presúva v rámci listu "bez skupiny" a kategória sedí, tak nie je čo meniť, pretože tam nie je poradie.
-        if (!targetGroup && !originalGroup) {
-            // Kontrola kategórie je už vyššie, stačí len notifikovať o prebytočnom presune
-            setNotification({ id: Date.now(), message: "Tím sa už nachádza v tomto zozname.", type: 'info' });
-            return;
-        }
-
+        // **NOVÁ LOGIKA: Rozdelenie aktualizácie podľa PÔVODU tímu**
 
         try {
-            const usersRef = collection(window.db, 'users');
-            const userDocs = await getDocs(usersRef);
-            const batchPromises = [];
-
-            // Určenie typu presunu pre internú logiku posúvania
-            const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
-            const isMovingFromGroup = originalGroup && !targetGroup;
-            const isMovingToGroup = !originalGroup && targetGroup;
-            const isMovingBetweenGroups = originalGroup && targetGroup && originalGroup !== targetGroup;
-
-
-            userDocs.forEach(userDoc => {
-                const userData = userDoc.data();
-                if (userData.teams?.[teamCategoryName]) {
-                    const teams = userData.teams[teamCategoryName];
-                    let shouldUpdate = false;
+            if (teamData.isSuperstructureTeam) {
+                // --- UPDATE GLOBÁLNEHO DOKUMENTU (/settings/superstructureGroups) ---
+                const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+                const docSnap = await getDoc(superstructureDocRef);
+                const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+                
+                let teams = globalTeamsData[teamCategoryName] || [];
+                let shouldUpdate = false;
+                
+                const updatedTeamsArray = teams.map(t => {
+                    const isDraggedTeam = t.id === teamData.id;
                     
-                    const updatedUserTeams = teams.map(t => {
-                        // Identifikujeme presúvaný tím (použijeme stabilné ID)
-                        const isDraggedTeam = userDoc.id === teamData.uid && t.id === teamData.id;
-                        
-                        // 1. Spracovanie tímu, ktorý sa presúva (platí pre jeho majiteľa)
-                        if (isDraggedTeam) {
-                            // Nastavíme novú skupinu a vypočítané nové poradie
+                    if (isDraggedTeam) {
+                        shouldUpdate = true;
+                        return { ...t, groupName: targetGroup, order: newOrder }; 
+                    }
+                    
+                    // Logika prečíslovania je rovnaká ako v užívateľskom kóde, len sa aplikuje na tento globálny zoznam
+                    const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
+                    const isMovingFromGroup = originalGroup && !targetGroup;
+                    const isMovingToGroup = !originalGroup && targetGroup;
+                    const isMovingBetweenGroups = originalGroup && targetGroup && originalGroup !== targetGroup;
+
+                    if (isMovingWithinSameGroup && t.groupName === targetGroup && t.order != null) {
+                        if (newOrder > originalOrder && t.order > originalOrder && t.order <= newOrder - 1) { 
                             shouldUpdate = true;
-                            return { ...t, groupName: targetGroup, order: newOrder }; 
+                            return { ...t, order: t.order - 1 };
+                        } else if (newOrder < originalOrder && t.order >= newOrder && t.order < originalOrder) {
+                            shouldUpdate = true;
+                            return { ...t, order: t.order + 1 };
                         }
+                        return t;
+                    }
 
-                        // 2. Spracovanie ostatných tímov (posúvanie poradia)
+                    if ((isMovingFromGroup || isMovingBetweenGroups) && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                        shouldUpdate = true;
+                        return { ...t, order: t.order - 1 };
+                    }
 
-                        // --- Prípad: Presun v rámci TEJ ISTEJ skupiny (Internal Reorder) ---
-                        if (isMovingWithinSameGroup && t.groupName === targetGroup && t.order != null) {
-                            // A. Pohyb smerom dole (originalOrder < newOrder). Tímy medzi (originalOrder, newOrder-1) musia klesnúť o 1.
-                            if (newOrder > originalOrder && t.order > originalOrder && t.order <= newOrder - 1) { 
+                    if ((isMovingToGroup || isMovingBetweenGroups) && targetGroup && t.groupName === targetGroup && t.order != null && newOrder !== null && t.order >= newOrder) {
+                        shouldUpdate = true;
+                        return { ...t, order: t.order + 1 };
+                    }
+                    
+                    return t;
+                });
+                
+                if (shouldUpdate) {
+                    await setDoc(superstructureDocRef, {
+                        ...globalTeamsData,
+                        [teamCategoryName]: updatedTeamsArray
+                    });
+                }
+
+
+            } else {
+                // --- PÔVODNÁ LOGIKA: UPDATE UŽÍVATEĽSKÝCH DOKUMENTOV ---
+                const usersRef = collection(window.db, 'users');
+                const userDocs = await getDocs(usersRef);
+                const batchPromises = [];
+
+                const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
+                const isMovingFromGroup = originalGroup && !targetGroup;
+                const isMovingToGroup = !originalGroup && targetGroup;
+                const isMovingBetweenGroups = originalGroup && targetGroup && originalGroup !== targetGroup;
+
+                userDocs.forEach(userDoc => {
+                    const userData = userDoc.data();
+                    if (userData.teams?.[teamCategoryName]) {
+                        const teams = userData.teams[teamCategoryName];
+                        let shouldUpdate = false;
+                        
+                        const updatedUserTeams = teams.map(t => {
+                            const isDraggedTeam = userDoc.id === teamData.uid && t.id === teamData.id;
+                            
+                            if (isDraggedTeam) {
+                                shouldUpdate = true;
+                                return { ...t, groupName: targetGroup, order: newOrder }; 
+                            }
+
+                            if (isMovingWithinSameGroup && t.groupName === targetGroup && t.order != null) {
+                                if (newOrder > originalOrder && t.order > originalOrder && t.order <= newOrder - 1) { 
+                                    shouldUpdate = true;
+                                    return { ...t, order: t.order - 1 };
+                                } else if (newOrder < originalOrder && t.order >= newOrder && t.order < originalOrder) {
+                                    shouldUpdate = true;
+                                    return { ...t, order: t.order + 1 };
+                                }
+                                return t;
+                            }
+
+                            if ((isMovingFromGroup || isMovingBetweenGroups) && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                                 shouldUpdate = true;
                                 return { ...t, order: t.order - 1 };
                             }
-                            // B. Pohyb smerom hore (newOrder < originalOrder). Tímy medzi (newOrder, originalOrder-1) musia stúpnuť o 1.
-                            else if (newOrder < originalOrder && t.order >= newOrder && t.order < originalOrder) {
+
+                            if ((isMovingToGroup || isMovingBetweenGroups) && targetGroup && t.groupName === targetGroup && t.order != null && newOrder !== null && t.order >= newOrder) {
                                 shouldUpdate = true;
                                 return { ...t, order: t.order + 1 };
                             }
-                            // Ostatné tímy sa nemenia
+                            
                             return t;
-                        }
-
-
-                        // --- Prípady: Insertion/Deletion shift (presun medzi listami) ---
+                        });
                         
-                        // C. Posun v Pôvodnej Skupine (DEKREMENT - ak tím odchádza)
-                        if ((isMovingFromGroup || isMovingBetweenGroups) && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                            shouldUpdate = true;
-                            // Zmenšenie poradia o 1
-                            return { ...t, order: t.order - 1 };
+                        if (shouldUpdate) {
+                             batchPromises.push(
+                                updateDoc(userDoc.ref, {
+                                    [`teams.${teamCategoryName}`]: updatedUserTeams
+                                })
+                            );
                         }
-
-                        // D. Posun v Cieľovej Skupine (INKREMENT - ak tím prichádza)
-                        if ((isMovingToGroup || isMovingBetweenGroups) && targetGroup && t.groupName === targetGroup && t.order != null && newOrder !== null && t.order >= newOrder) {
-                            shouldUpdate = true;
-                            // Zvýšenie poradia o 1
-                            return { ...t, order: t.order + 1 };
-                        }
-                        
-                        // Tím sa nezmenil
-                        return t;
-                    });
-                    
-                    if (shouldUpdate) {
-                         batchPromises.push(
-                            updateDoc(userDoc.ref, {
-                                [`teams.${teamCategoryName}`]: updatedUserTeams
-                            })
-                        );
                     }
-                }
-            });
-
-            await Promise.all(batchPromises);
-            
-            // Zápis záznamu o notifikácii do databázy
-            if (window.db && window.auth && window.auth.currentUser) {
-                try {
-                    const originalOrderDisplay = originalGroup && originalOrder != null ? `(pôvodné poradie: ${originalOrder})` : '';
-                    const originalGroupInfo = originalGroup ? `'${originalGroup}' ${originalOrderDisplay}` : `'bez skupiny'`;
-                    const targetGroupInfo = targetGroup ? `'${targetGroup}' (nové poradie: ${newOrder})` : `'bez skupiny'`;
-                    
-                    const notificationsCollectionRef = collection(window.db, 'notifications');
-                    await addDoc(notificationsCollectionRef, {
-                        changes: [`Tím ${teamData.teamName} v kategórii ${teamCategoryName} bol presunutý z ${originalGroupInfo} do skupiny ${targetGroupInfo}. Ostatné tímy v pôvodnej aj cieľovej skupine boli prečíslované.`],
-                        recipientId: 'all_admins',
-                        timestamp: Timestamp.now(),
-                        userEmail: window.auth.currentUser.email
-                    });
-                } catch (dbError) {
-                    console.error("Chyba pri ukladaní notifikácie do databázy:", dbError);
-                }
+                });
+                await Promise.all(batchPromises);
             }
             
-            // Notifikácia sa zobrazí bez obnovenia stránky
+            // Oznámenie o úspechu
             const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
             const targetGroupDisplay = targetGroup ? `'${targetGroup}' na pozíciu ${newOrder}.` : `'bez skupiny'.`;
             const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay}`;
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
+
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
             setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
@@ -706,45 +697,41 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const handleDragStart = (e, team) => {
-        // Uloženie len potrebných dát (tímu a kategórie)
         draggedItem.current = { team };
         e.dataTransfer.setData("text/plain", JSON.stringify(team));
         e.dataTransfer.effectAllowed = "move";
     };
 
     const handleDragEnd = () => {
-        // Toto sa volá, len keď používateľ PUSTÍ tím
         draggedItem.current = null;
-        setDropTarget({ groupId: null, categoryId: null, index: null }); // Vyčistí vizuál
+        setDropTarget({ groupId: null, categoryId: null, index: null });
     };
 
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             if (!isWithoutGroup) {
-                // Zoradenie podľa order (ak nie je definovaný, použijeme 0)
                 return (a.order || 0) - (b.order || 0);
             } else {
-                // Zoradenie podľa kategórie a potom podľa mena pre tímy bez skupiny
                 return a.category.localeCompare(b.category) || a.teamName.localeCompare(b.teamName);
             }
         });
         
-        // Vytvorenie React elementov s pridaním indikátorov
         const listItems = sortedTeams.map((team, index) => {
             let teamNameDisplay = team.teamName;
-            const teamBgClass = !isWithoutGroup ? 'bg-white' : 'bg-gray-100';
+            const teamBgClass = !isWithoutGroup ? (team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white') : 'bg-gray-100';
             
-            // Logika pre zobrazenie poradia v skupine
             if (!isWithoutGroup && team.order != null) {
                 teamNameDisplay = `${team.order}. ${team.teamName}`;
             }
 
-            // Logika pre zobrazenie kategórie (Ak nie je filter kategórie ALEBO ak je to tím pridelený do skupiny)
             if (!selectedCategoryId && team.category && (isWithoutGroup || team.groupName)) {
-                teamNameDisplay = `${team.category}: ${teamNameDisplay}`;
+                 // Pridanie globálnej značky, ak je to globálny tím
+                const globalTag = team.isSuperstructureTeam ? ' [G]' : ''; 
+                teamNameDisplay = `${team.category}: ${teamNameDisplay}${globalTag}`;
+            } else if (team.isSuperstructureTeam) {
+                teamNameDisplay = `${teamNameDisplay} [G]`;
             }
             
-            // Indikátor pre vloženie PRED aktuálny tím
             const isDropIndicatorVisible = 
                 dropTarget.groupId === targetGroupId && 
                 dropTarget.categoryId === targetCategoryId && 
@@ -752,13 +739,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             return React.createElement(
                 React.Fragment, 
-                { key: team.id || `${team.uid}-${team.teamName}-${team.groupName}-${index}` }, // Používame stabilné ID
-                // Indikátor pred tímom
+                { key: team.id || `${team.uid}-${team.teamName}-${team.groupName}-${index}` },
                 isDropIndicatorVisible && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
                 React.createElement(
                     'li',
                     {
-                        className: `px-4 py-2 ${teamBgClass} rounded-lg text-gray-700 cursor-grab shadow-sm`,
+                        className: `px-4 py-2 ${teamBgClass} rounded-lg text-gray-700 cursor-grab shadow-sm border border-gray-200`,
                         draggable: "true",
                         onDragStart: (e) => handleDragStart(e, team),
                         onDragEnd: handleDragEnd,
@@ -769,13 +755,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             );
         });
 
-        // Kontrola, či sa má zobraziť indikátor na úplnom konci zoznamu
         const isDropIndicatorVisibleAtEnd = 
             dropTarget.groupId === targetGroupId && 
             dropTarget.categoryId === targetCategoryId && 
             dropTarget.index === sortedTeams.length; 
             
-        // Prázdny kontajner (pre drop na prázdnu skupinu)
         if (sortedTeams.length === 0) {
             const isDropOnEmptyContainer = 
                 dropTarget.groupId === targetGroupId && 
@@ -785,7 +769,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return React.createElement(
                 'div',
                 {
-                    // Udalosti sú tu, aby zachytili drop na prázdnu oblasť
                     onDragOver: (e) => handleDragOverEmptyContainer(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
                     className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`
@@ -794,14 +777,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             );
         }
 
-        // Kľúč pre ref kontajnera
         const listRefKey = `${targetCategoryId}-${targetGroupId}`;
         
         return React.createElement(
             'ul',
             { 
                 ref: el => {
-                    // Uloženie ref pre UL kontajner
                     if (el) {
                         listRefs.current[listRefKey] = el;
                     } else {
@@ -809,12 +790,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                 },
                 className: 'space-y-2 relative',
-                // Toto zachytáva presun myši V MEDZERÁCH (GAPOCH) a v mŕtvych zónach v rámci kontajnera
                 onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams),
                 onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
             },
             ...listItems,
-            // Vloženie koncového indikátora
             isDropIndicatorVisibleAtEnd && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
         );
     };
@@ -828,7 +807,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             );
         }
         
-        // OPRAVENÉ: Použitie nameA a nameB pre zoradenie
         const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
             .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
         
@@ -862,7 +840,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                 {
                                     key: groupIndex,
                                     className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}`,
-                                    // Drop/DragOver sa rieši v renderTeamList, aby sa zabránilo kolíziám
                                 },
                                 React.createElement(
                                     'div',
@@ -887,7 +864,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const categoryName = categoryIdToNameMap[selectedCategoryId] || "Neznáma kategória";
         let groups = allGroupsByCategoryId[selectedCategoryId] || [];
         
-        // FILTROVANIE: Ak je vybraná konkrétna skupina, zobrazí sa iba tá
         if (selectedGroupName) {
             groups = groups.filter(g => g.name === selectedGroupName);
         }
@@ -898,7 +874,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return a.name.localeCompare(b.name);
         });
         
-        // Zistenie výšky nepriradených tímov
         const teamsWithoutGroupHeight = teamsWithoutGroupRef.current 
             ? teamsWithoutGroupRef.current.offsetHeight 
             : null;
@@ -911,10 +886,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 {
                     ref: teamsWithoutGroupRef,
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
-                    // Drop/DragOver sa rieši v renderTeamList
                 },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v kategórii: ${categoryName}`),
-                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true) // true, lebo sú bez skupiny (sorted by name)
+                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
             ),
             React.createElement(
                 'div',
@@ -922,7 +896,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 sortedGroups.length > 0 ? (
                     sortedGroups.map((group, groupIndex) => {
                         let customStyle = {};
-                        // Dynamické nastavenie výšky, ak je vybraná konkrétna skupina
                         if (selectedGroupName) {
                             if (teamsWithoutGroupHeight) {
                                 customStyle = {
@@ -936,8 +909,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                             {
                                 key: groupIndex,
                                 className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
-                                // Drop/DragOver sa rieši v renderTeamList
-                                style: customStyle, // Aplikovanie dynamickej výšky
+                                style: customStyle,
                             },
                             React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' }, group.name),
                             React.createElement(
@@ -954,11 +926,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         );
     };
 
-    // OPRAVENÉ: Použitie nameA a nameB pre zoradenie
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
-    // Dynamické triedy pre notifikáciu
     const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
                   ${notification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     let typeClasses = '';
@@ -992,13 +962,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             onClose: () => setIsModalOpen(false),
             allGroupsByCategoryId: allGroupsByCategoryId,
             categoryIdToNameMap: categoryIdToNameMap,
-            handleSave: handleAddNewTeam // Spustí upravenú funkciu ukladania
+            handleSave: handleAddNewTeam 
         }),
 
         React.createElement(
             'div',
             { className: 'w-full max-w-xs mx-auto mb-8' },
-            // Select pre kategóriu
             React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2' }, 'Vyberte kategóriu:'),
             React.createElement(
                 'select',
@@ -1007,7 +976,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     value: selectedCategoryId,
                     onChange: (e) => {
                         setSelectedCategoryId(e.target.value);
-                        setSelectedGroupName(''); // Reset skupiny pri zmene kategórie
+                        setSelectedGroupName('');
                     }
                 },
                 React.createElement('option', { value: '' }, 'Všetky kategórie'),
@@ -1016,7 +985,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 )
             ),
 
-            // Select pre skupinu
             React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (Voliteľné):'),
             React.createElement(
                 'select',
@@ -1024,13 +992,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
                     value: selectedGroupName,
                     onChange: (e) => setSelectedGroupName(e.target.value),
-                    disabled: !selectedCategoryId, // Zablokované, ak nie je vybraná kategória
+                    disabled: !selectedCategoryId,
                     style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' } 
                 },
                 React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
-                // Zobrazí iba skupiny pre vybranú kategóriu
                 (allGroupsByCategoryId[selectedCategoryId] || [])
-                    .sort((a, b) => a.name.localeCompare(b.name)) // Abecedné zoradenie
+                    .sort((a, b) => a.name.localeCompare(b.name))
                     .map((group, index) =>
                         React.createElement('option', { key: index, value: group.name }, group.name)
                     )
@@ -1045,7 +1012,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     'div',
                     {
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
-                        // Drop/DragOver sa rieši v renderTeamList
                     },
                     React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
                     renderTeamList(teamsWithoutGroup, null, null, true)
@@ -1069,7 +1035,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     );
 };
 
-// Inicializácia aplikácie
+// Inicializácia aplikácie (štandardný kód)
 let isEmailSyncListenerSetup = false;
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
