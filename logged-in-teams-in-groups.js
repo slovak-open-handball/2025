@@ -198,6 +198,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         globalTeamsList.push({
                             uid: 'global', // UNIKÁTNE ID pre globálne tímy
                             category: categoryName,
+                            // UDRŽÍME LOKÁLNU ID GENERÁCIU PRE PRÍPADNÉ CHÝBAJÚCE ID V DB
                             id: team.id || crypto.randomUUID(), 
                             teamName: team.teamName,
                             groupName: team.groupName || null,
@@ -234,6 +235,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                     userTeamsList.push({
                                         uid: doc.id,
                                         category: categoryName,
+                                        // UDRŽÍME LOKÁLNU ID GENERÁCIU PRE PRÍPADNÉ CHÝBAJÚCE ID V DB
                                         id: team.id || `${doc.id}-${team.teamName}`,
                                         teamName: team.teamName,
                                         groupName: team.groupName || null,
@@ -552,7 +554,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
     };
     
-    // --- OPRAVENÁ FUNKCIA handleDrop ---
+    // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
@@ -596,7 +598,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 
                 let teams = globalTeamsData[teamCategoryName] || [];
                 
-                const originalTeamIndex = teams.findIndex(t => t.id === teamData.id);
+                // OPRAVA: Nájdeme tím podľa teamName, nie podľa lokálneho ID
+                const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
                 
                 if (originalTeamIndex === -1) {
                     setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
@@ -674,7 +677,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 // Musíme urobiť kópiu pre manipuláciu
                 let teams = [...ownerTeamsData[teamCategoryName]]; 
                 
-                const originalTeamIndex = teams.findIndex(t => t.id === teamData.id);
+                // OPRAVA: Nájdeme tím podľa teamName, nie podľa lokálneho ID
+                const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
 
                 if (originalTeamIndex === -1) {
                     setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
