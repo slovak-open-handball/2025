@@ -383,24 +383,48 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         setAllTeams([...userTeamsData, ...globalTeamsList]);
     }, [userTeamsData, superstructureTeams]); 
 
-    // **LOGIKA: Načítanie a synchronizácia hashu (zostáva bezo zmeny)**
+    // NOVÉ: Vytvorenie inverznej mapy pre preklad z URL mena na ID
+    const categoryNameToIdMap = Object.entries(categoryIdToNameMap).reduce((acc, [id, name]) => {
+        acc[name] = id;
+        return acc;
+    }, {});
+
+    // **LOGIKA 3: Načítanie a synchronizácia hashu (zmena: čítanie NÁZVU kategórie z URL)**
     useEffect(() => {
+        // Čakáme, kým bude mapa mien pripravená, aby sme mohli prekladať
+        if (Object.keys(categoryNameToIdMap).length === 0) return;
+        
         const hash = window.location.hash.substring(1);
         if (hash) {
             const parts = hash.split('/');
-            const categoryId = parts[0];
+            const categoryNameFromUrl = decodeURIComponent(parts[0]); // Názov kategórie z URL
+
+            // NOVÁ LOGIKA PREKLADU: Názov kategórie -> ID kategórie
+            const categoryId = categoryNameToIdMap[categoryNameFromUrl];
+            
             const groupNameEncoded = parts[1];
             const groupName = groupNameEncoded ? decodeURIComponent(groupNameEncoded) : '';
 
-            setSelectedCategoryId(categoryId);
+            if (categoryId) {
+                 setSelectedCategoryId(categoryId);
+            } else {
+                 // Ak názov kategórie v URL neexistuje, resetujeme filter
+                 setSelectedCategoryId('');
+                 console.warn(`Kategória s názvom '${categoryNameFromUrl}' nebola nájdená.`);
+            }
             setSelectedGroupName(groupName); 
         }
-    }, []);
+    }, [categoryNameToIdMap]); // ZÁVISÍ OD MAPY, aby sme vedeli prekladať názvy
 
+    // **LOGIKA 4: Ukladanie hashu (zmena: zápis NÁZVU kategórie do URL)**
     useEffect(() => {
         let hash = '';
-        if (selectedCategoryId) {
-            hash = selectedCategoryId;
+        
+        // Získame NÁZOV kategórie z ID
+        const categoryName = categoryIdToNameMap[selectedCategoryId]; 
+
+        if (categoryName) { // Použijeme NÁZOV pre URL (URL-enkódovaný pre bezpečnosť)
+            hash = encodeURIComponent(categoryName); 
             if (selectedGroupName) {
                 hash += `/${encodeURIComponent(selectedGroupName)}`;
             }
@@ -410,7 +434,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             window.location.hash = hash;
         }
 
-    }, [selectedCategoryId, selectedGroupName]);
+    }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap]); // Pridaná závislosť categoryIdToNameMap
 
     // --- FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
     const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
