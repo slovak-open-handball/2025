@@ -5,14 +5,6 @@ const { useState, useEffect, useRef } = React;
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
-// --- POMOCNÁ FUNKCIA: Odstráni interné vlastnosti pred uložením do Firestore ---
-const getTeamDataForSave = (team) => {
-    // Rozklad a znovuzostavenie tímu bez interných vlastností uid a isSuperstructureTeam
-    const { isSuperstructureTeam, uid, ...dataToSave } = team;
-    return dataToSave;
-};
-// --- KONIEC POMOCNEJ FUNKCIE ---
-
 // --- Komponent Modálne Okno pre Pridanie/Editáciu Tímu ---
 // Zjednotený Modál pre pridávanie (Add) a úpravu (Edit)
 const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, unifiedSaveHandler, teamToEdit, allTeams, defaultCategoryId, defaultGroupName }) => {
@@ -551,7 +543,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap, isInitialHashReadComplete]); 
 
-    // --- FUNKCIA PRE SELECT BOXY (Priamy zápis do URL hash) ---
+    // --- OPRAVA: FUNKCIE PRE SELECT BOXY (Priamy zápis do URL hash) ---
     
     const handleCategorySelect = (e) => {
         const newCategoryId = e.target.value;
@@ -620,17 +612,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             // Nový tím je vždy s najvyšším poradím, ak má skupinu
             const newOrder = groupName ? (maxOrder + 1) : null; 
             
-            const newTeam = getTeamDataForSave({ // <-- Použitie getTeamDataForSave
+            const newTeam = {
                 teamName: finalTeamName, 
                 groupName: groupName || null,
                 order: newOrder,
-                id: crypto.randomUUID(), 
-                // Pridáme interné hodnoty len do lokálneho objektu, nie pre uloženie do DB
-                uid: 'global',
-                isSuperstructureTeam: true
-            });
+                id: crypto.randomUUID() // Pridanie ID
+            };
             
-            const updatedTeamsArray = [...currentTeamsForCategory.map(getTeamDataForSave), newTeam]; // <-- Filter aj na existujúce tímy (pre istotu)
+            const updatedTeamsArray = [...currentTeamsForCategory, newTeam];
             
             await setDoc(superstructureDocRef, {
                 ...globalTeamsData,
@@ -686,43 +675,39 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 // A. Reordering v PÔVODNEJ skupine
                 teams = teams.map(t => {
                     if (t.groupName === originalGroupName && t.order != null && t.order > oldOrder) {
-                         // Znížime poradie o 1
-                         return getTeamDataForSave({ ...t, order: t.order - 1 }); 
+                         return { ...t, order: t.order - 1 };
                     }
-                    return getTeamDataForSave(t);
+                    return t;
                 });
                 
                 // B. Nájdeme nové najvyššie poradie v CIEĽOVEJ skupine
                 const teamsInTargetGroup = teams.filter(t => t.groupName === newGroupName);
-                // Tu potrebujeme použiť mapované (uložené) dáta, ktoré už nemajú uid/isSuperstructureTeam
                 const maxOrder = teamsInTargetGroup.reduce((max, t) => (t.order != null ? Math.max(max, t.order) : max), 0);
                 
                 newOrder = newGroupName ? (maxOrder + 1) : null; 
             }
             
-            // 4. Vytvoríme aktualizovaný tím (už bez uid/isSuperstructureTeam)
-            const updatedTeam = getTeamDataForSave({
+            // 4. Vytvoríme aktualizovaný tím
+            const updatedTeam = {
                 ...teamToUpdate, 
                 teamName: finalTeamName, 
                 groupName: newGroupName,
                 order: newOrder, 
-            });
+            };
             
             // 5. Pridáme ho späť
-            let finalTeamsForSave;
             if (originalGroupName !== newGroupName) {
-                // Ak sa zmenila skupina, pridáme ho na koniec po reorderingu
-                finalTeamsForSave = [...teams, updatedTeam];
+                // Ak sa zmenila skupina, pridáme ho na koniec (po reorderingu)
+                teams.push(updatedTeam);
             } else {
                  // Ak sa nezmenila skupina, vložíme ho naspäť na pôvodnú pozíciu
                  teams.splice(originalTeamIndex, 0, updatedTeam);
-                 finalTeamsForSave = teams.map(getTeamDataForSave); // Final filter pre istotu
             }
 
-            // 6. Zápis do databázy
+            // 6. Zápis do databázy (používame setDoc, ale len pre túto kategóriu)
             await setDoc(superstructureDocRef, {
                 ...globalTeamsData,
-                [originalTeam.category]: finalTeamsForSave
+                [originalTeam.category]: teams
             }, { merge: true }); 
             
             setNotification({ 
@@ -733,7 +718,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         } catch (error) {
             console.error("Chyba pri aktualizácii globálneho tímu:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri aktualizácii tímu v globálnom dokumentu.", type: 'error' });
+            setNotification({ id: Date.now(), message: "Chyba pri aktualizácii tímu v globálnom dokumente.", type: 'error' });
         }
     };
 
@@ -768,10 +753,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             // 3. Reordering v PÔVODNEJ skupine (len ak mal tím skupinu)
             const reorderedTeams = teams.map(t => {
                 if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                     // Znížime poradie o 1 a filtrujeme interné dáta
-                     return getTeamDataForSave({ ...t, order: t.order - 1 }); 
+                     return { ...t, order: t.order - 1 };
                 }
-                return getTeamDataForSave(t); // Filter aj pre ostatné tímy
+                return t;
             });
 
             // 4. Zápis do databázy
@@ -792,19 +776,169 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     };
     
-    // --- OPRAVENÁ FUNKCIA handleDrop (S re-indexáciou pôvodnej skupiny a filtrovaním pre ukladanie) ---
+    // --- KONIEC FUNKCIÍ PRE UKLADANIE, UPDATE A MAZANIE ---
+
+    // Filtrovanie pre zobrazenie (zostáva bezo zmeny)
+    const teamsWithoutGroup = selectedCategoryId
+        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
+        : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
+
+    const teamsInGroups = selectedCategoryId
+        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && team.groupName)
+        : allTeams.filter(team => team.groupName);
+
+    const getGroupColorClass = (type) => {
+        switch (type) {
+            case 'základná skupina': return 'bg-gray-100';
+            case 'nadstavbová skupina': return 'bg-blue-100';
+            default: return 'bg-white';
+        }
+    };
+
+    const checkCategoryMatch = (targetCategoryId) => {
+        const dragData = draggedItem.current;
+        if (!dragData) return false;
+
+        const teamCategoryName = dragData.team.category; 
+        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+
+        if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
+            return false;
+        }
+        return true;
+    }
+    
+    const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
+        e.preventDefault();
+        
+        if (!checkCategoryMatch(targetCategoryId)) {
+            e.dataTransfer.dropEffect = "none";
+            e.currentTarget.style.cursor = 'not-allowed';
+            setDropTarget({ groupId: null, categoryId: null, index: null });
+            return;
+        }
+
+        e.dataTransfer.dropEffect = "move";
+        e.currentTarget.style.cursor = 'move';
+        e.stopPropagation(); 
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const isOverTopHalf = e.clientY - rect.top < rect.height / 2;
+        
+        let insertionIndex = isOverTopHalf ? index : index + 1;
+        
+        setDropTarget({
+            groupId: targetGroup,
+            categoryId: targetCategoryId,
+            index: insertionIndex
+        });
+    };
+
+    const getInsertionIndexInGap = (e, teamElements, sortedTeams) => {
+        if (teamElements.length === 0) return 0;
+        
+        const firstRect = teamElements[0].getBoundingClientRect();
+        if (e.clientY < firstRect.top) { 
+            return 0;
+        }
+
+        for (let i = 0; i < teamElements.length; i++) {
+            const teamEl = teamElements[i];
+            const rect = teamEl.getBoundingClientRect();
+            
+            if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                return -1; 
+            }
+            
+            if (i < teamElements.length - 1) {
+                const nextRect = teamElements[i + 1];
+                const nextRectBounds = nextRect.getBoundingClientRect();
+                
+                const gapStart = rect.bottom + 2; 
+                const gapEnd = nextRectBounds.top - 2; 
+                
+                if (e.clientY > gapStart && e.clientY < gapEnd) {
+                     return i + 1;
+                }
+            } else {
+                if (e.clientY > rect.bottom) {
+                    return sortedTeams.length;
+                }
+            }
+        }
+        
+        return -1; 
+    }
+
+    const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
+        e.preventDefault();
+        
+        if (!checkCategoryMatch(targetCategoryId)) {
+            e.dataTransfer.dropEffect = "none";
+            e.currentTarget.style.cursor = 'not-allowed';
+            setDropTarget({ groupId: null, categoryId: null, index: null });
+            return;
+        }
+        
+        e.dataTransfer.dropEffect = "move";
+        e.currentTarget.style.cursor = 'move';
+        
+        // Ak targetGroup je null (bez skupiny), použijeme špeciálnu referenciu
+        const listRefKey = targetGroup === null 
+            ? `${targetCategoryId}-null` 
+            : `${targetCategoryId}-${targetGroup}`;
+            
+        const containerRef = listRefs.current[listRefKey];
+        if (!containerRef) return;
+
+        const teamElements = Array.from(containerRef.children).filter(el => el.tagName === 'LI');
+        
+        let insertionIndex = getInsertionIndexInGap(e, teamElements, sortedTeams);
+        
+        if (insertionIndex === -1) {
+            insertionIndex = sortedTeams.length;
+        }
+
+        setDropTarget({
+            groupId: targetGroup,
+            categoryId: targetCategoryId,
+            index: insertionIndex
+        });
+    };
+
+    const handleDragOverEmptyContainer = (e, targetGroup, targetCategoryId) => {
+        e.preventDefault();
+        
+        if (!checkCategoryMatch(targetCategoryId)) {
+            e.dataTransfer.dropEffect = "none";
+            e.currentTarget.style.cursor = 'not-allowed';
+            setDropTarget({ groupId: null, categoryId: null, index: null });
+            return;
+        }
+        
+        const dragData = draggedItem.current;
+        if (!dragData) {
+            e.dataTransfer.dropEffect = "none";
+            return;
+        }
+        
+        e.dataTransfer.dropEffect = "move";
+        e.currentTarget.style.cursor = 'move';
+        
+        setDropTarget({
+            groupId: targetGroup,
+            categoryId: targetCategoryId,
+            index: 0
+        });
+    };
+    
+    // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
         const finalDropTarget = dropTarget; 
 
-        const checkCategoryMatch = (id) => {
-            const dragCategoryName = dragData.team.category;
-            const targetCategoryName = categoryIdToNameMap[id];
-            return dragCategoryName === targetCategoryName;
-        };
-        
-        if (targetCategoryId && dragData && !checkCategoryMatch(targetCategoryId)) {
+        if (!checkCategoryMatch(targetCategoryId)) {
             setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím. Presun bol zrušený.", type: 'error' });
             setDropTarget({ groupId: null, categoryId: null, index: null });
             draggedItem.current = null;
@@ -819,164 +953,172 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
 
         const teamData = dragData.team;
-        const originalTeamGroup = teamData.groupName; // Pôvodná skupina
-        const originalTeamOrder = teamData.order; // Pôvodné poradie
+        const originalGroup = teamData.groupName;
+        const originalOrder = teamData.order; 
         const teamCategoryName = teamData.category; 
         
+        // Ak je targetGroup null (presun do zoznamu bez skupiny), newOrder je null.
+        const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
+        
+        // Vynútené nastavenie null hodnôt, ak je cieľ 'Bez skupiny'
         const finalGroupName = targetGroup === null ? null : targetGroup;
+        const finalOrder = targetGroup === null ? null : newOrder; 
         
-        let provisionalOrder = targetGroup ? (finalDropTarget.index + 1) : null;
-        
-        // --- DEKLARÁCIA PREMENNÝCH V HLAVNOM SCOPE ---
-        let teamsToUpdate;
-        let finalOrderToUse; 
-        let targetDocPath;
-        let originalTeamIndexInFullList = -1;
-        let teams; // Array všetkých tímov v kategórii
+        const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
+        const targetGroupDisplay = finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder}.` : `'bez skupiny'.`;
 
-        let globalTeamsData = {}; 
-        let ownerDocRef = null; 
-        let superstructureDocRef = null;
-        
         try {
             if (teamData.isSuperstructureTeam) {
                 // --- UPDATE GLOBÁLNEHO DOKUMENTU (/settings/superstructureGroups) ---
-                superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+                const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
                 const docSnap = await getDoc(superstructureDocRef);
+                const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
                 
-                globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+                let teams = globalTeamsData[teamCategoryName] || [];
                 
-                teams = [...(globalTeamsData[teamCategoryName] || [])];
-                targetDocPath = SUPERSTRUCTURE_TEAMS_DOC_PATH;
+                // OPRAVA: Nájdeme tím podľa teamName, nie podľa lokálneho ID
+                const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
                 
-                originalTeamIndexInFullList = teams.findIndex(t => t.teamName === teamData.teamName);
-                if (originalTeamIndexInFullList === -1) {
-                    setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel.`, type: 'error' });
+                if (originalTeamIndex === -1) {
+                    setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
                     return;
                 }
                 
-                // Odstránime tím z aktuálnej pozície
-                teams.splice(originalTeamIndexInFullList, 1);
-                
-                
-            } else {
-                // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU ---
-                const ownerUid = teamData.uid;
-                ownerDocRef = doc(window.db, 'users', ownerUid);
-                targetDocPath = `users/${ownerUid}`;
+                // 1. Vytvoríme aktualizovaný tím s novými hodnotami (null alebo Group/Order)
+                const updatedDraggedTeam = { 
+                    ...teams[originalTeamIndex], 
+                    groupName: finalGroupName, 
+                    order: finalOrder 
+                };
 
+                // 2. Odstránime tím z pôvodnej pozície (pre reordering ostatných)
+                // Musíme použiť slice/splice na kópiu, ak by sme teams použili priamo z doc.data()
+                teams = [...teams];
+                teams.splice(originalTeamIndex, 1);
+                
+                // 3. Spustíme reordering logiku na ostatných tímoch
+                const reorderedTeams = teams.map(t => {
+                    const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
+                    const t_is_in_target_group = t.groupName === targetGroup && t.order != null;
+
+                    // Ak tím zostal v PÔVODNEJ skupine a má vyššie poradie, posunieme ho hore (-1)
+                    if (originalGroup !== null && originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    
+                    // Ak tím je v CIEĽOVEJ skupine a má vyššie alebo rovnaké poradie ako vkladaný tím, posunieme ho dole (+1)
+                    if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    
+                    // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
+                    if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
+                        if (finalOrder > originalOrder && t.order > originalOrder && t.order < finalOrder) { 
+                             return { ...t, order: t.order - 1 };
+                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                             return { ...t, order: t.order + 1 };
+                        }
+                    }
+
+                    return t;
+                });
+                
+                // 4. Vložíme presunutý tím naspäť na správnu pozíciu
+                if (finalGroupName !== null) {
+                    // Vložíme na pozíciu finalOrder - 1 (pretože poradie 1 je index 0)
+                    reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+                } else {
+                    // Ak je bez skupiny, vložíme ho na koniec (order je null, takže sa zaradí podľa názvu)
+                    reorderedTeams.push(updatedDraggedTeam); 
+                }
+                
+                // 5. Zápis do databázy
+                await setDoc(superstructureDocRef, {
+                    ...globalTeamsData,
+                    [teamCategoryName]: reorderedTeams
+                }, { merge: true });
+
+
+            } else {
+                // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU (Zameranie iba na dokument vlastníka) ---
+                const ownerUid = teamData.uid;
+                const ownerDocRef = doc(window.db, 'users', ownerUid);
+
+                // 1. Získanie aktuálnych dát vlastníka
                 const docSnap = await getDoc(ownerDocRef);
                 if (!docSnap.exists() || !docSnap.data().teams || !docSnap.data().teams[teamCategoryName]) {
-                    setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu nenájdený.`, type: 'error' });
+                    setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu (${ownerUid}) alebo pole tímov v kategórii ${teamCategoryName} nenájdené.`, type: 'error' });
                     return;
                 }
                 
                 const ownerTeamsData = docSnap.data().teams;
-                teams = [...ownerTeamsData[teamCategoryName]]; 
+                // Musíme urobiť kópiu pre manipuláciu
+                let teams = [...ownerTeamsData[teamCategoryName]]; 
                 
-                originalTeamIndexInFullList = teams.findIndex(t => t.teamName === teamData.teamName);
-                if (originalTeamIndexInFullList === -1) {
-                    setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel.`, type: 'error' });
+                // OPRAVA: Nájdeme tím podľa teamName, nie podľa lokálneho ID
+                const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
+
+                if (originalTeamIndex === -1) {
+                    setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
                     return;
                 }
+
+                // 1. Vytvoríme aktualizovaný tím s novými hodnotami (null alebo Group/Order)
+                const updatedDraggedTeam = { 
+                    ...teams[originalTeamIndex], 
+                    groupName: finalGroupName, 
+                    order: finalOrder 
+                };
                 
-                // Odstránime tím z aktuálnej pozície
-                teams.splice(originalTeamIndexInFullList, 1);
-            }
-            
-            // --- UNIFIKOVANÁ LOGIKA REORDERINGU A KOREKCIE PORADIA ---
-            
-            // 1. Re-indexovanie PÔVODNEJ SKUPINY (ak sa tím presunul inam a mal pôvodne skupinu)
-            if (originalTeamGroup !== finalGroupName && originalTeamGroup !== null) {
-                teams = teams.map(t => {
-                    if (t.groupName === originalTeamGroup && t.order != null && t.order > originalTeamOrder) {
-                        // Zníženie order o 1
+                // 2. Odstránime tím z pôvodnej pozície (pre reordering ostatných)
+                teams.splice(originalTeamIndex, 1);
+                
+                // 3. Spustíme reordering logiku na ostatných tímoch
+                const reorderedTeams = teams.map(t => {
+                    const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
+                    const t_is_in_target_group = t.groupName === targetGroup && t.order != null;
+
+                    // Ak tím zostal v PÔVODNEJ skupine a má vyššie poradie, posunieme ho hore (-1)
+                    if (originalGroup !== null && originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
                         return { ...t, order: t.order - 1 };
                     }
+                    
+                    // Ak tím je v CIEĽOVEJ skupine a má vyššie alebo rovnaké poradie ako vkladaný tím, posunieme ho dole (+1)
+                    if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    
+                    // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
+                    if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
+                        if (finalOrder > originalOrder && t.order > originalOrder && t.order < finalOrder) { 
+                             return { ...t, order: t.order - 1 };
+                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                             return { ...t, order: t.order + 1 };
+                        }
+                    }
+                    
                     return t;
                 });
-            }
-
-            // 2. Výpočet Finálneho Poradia (FinalOrderToUse)
-            const teamsInTargetGroupCount = teams.filter(t => t.groupName === finalGroupName).length;
-            let maxPossibleOrder = teamsInTargetGroupCount + 1; // +1 pre tím, ktorý ideme vložiť
-
-            finalOrderToUse = provisionalOrder;
-            if (finalGroupName !== null && provisionalOrder !== null && provisionalOrder > maxPossibleOrder) {
-                 finalOrderToUse = maxPossibleOrder;
-            }
-            
-            // Ak presúvame do 'Bez skupiny', poradie je vždy null
-            if (finalGroupName === null) {
-                finalOrderToUse = null;
-            }
-            
-            // --- LADIACI VÝSTUP DO KONZOLY ---
-            console.log(`[DRAG-DROP DEBUG] Skupina: ${finalGroupName}`);
-            console.log(`[DRAG-DROP DEBUG] Cieľový Index (Drop Index): ${finalDropTarget.index}`);
-            console.log(`[DRAG-DROP DEBUG] Predbežné Poradie (ProvisionalOrder): ${provisionalOrder}`);
-            console.log(`[DRAG-DROP DEBUG] Max. Možné Poradie (MaxPossibleOrder): ${maxPossibleOrder}`);
-            console.log(`[DRAG-DROP DEBUG] Finálne Poradie (FinalOrderToUse): ${finalOrderToUse}`);
-            // --- KONIEC LADIACEHO VÝSTUPU ---
-            
-            // 3. Vytvoríme aktualizovaný tím
-            const updatedDraggedTeam = { 
-                ...teamData, 
-                groupName: finalGroupName, 
-                order: finalOrderToUse,
-            };
-            
-            // 4. Vytvoríme finálny zoznam tímov v kategórii
-            
-            if (finalGroupName === null) {
-                // Ak je cieľ bez skupiny, jednoducho pridáme tím na koniec zoznamu
-                teams.push(updatedDraggedTeam);
-            } else {
-                // Ak je cieľ so skupinou, musíme re-indexovať iba túto cieľovú skupinu.
-
-                // Získame tímy, ktoré patria do finalGroupName a sú už v poli 'teams'
-                let currentTargetGroupTeams = teams.filter(t => t.groupName === finalGroupName)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0)); 
                 
-                // Vložíme presunutý tím na správny index (order - 1)
-                let insertIndex = finalOrderToUse - 1;
-                if (insertIndex < 0) insertIndex = 0;
+                // 4. Vložíme presunutý tím naspäť na správnu pozíciu
+                if (finalGroupName !== null) {
+                    // Vložíme na pozíciu finalOrder - 1 (pretože poradie 1 je index 0)
+                    reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+                } else {
+                    // Ak je bez skupiny, vložíme ho na koniec
+                    reorderedTeams.push(updatedDraggedTeam); 
+                }
                 
-                currentTargetGroupTeams.splice(insertIndex, 0, updatedDraggedTeam);
-                
-                // Prečíslovanie všetkých tímov v cieľovej skupine od 1 do N
-                const reorderedTargetGroup = currentTargetGroupTeams.map((t, index) => ({
-                    ...t,
-                    order: index + 1 // Nové poradie 1, 2, 3...
-                }));
-                
-                // Zlúčime tímy, ktoré nie sú v cieľovej skupine, s prečíslovanou cieľovou skupinou
-                const teamsNotTargeted = teams.filter(t => t.groupName !== finalGroupName);
-                teams = [...teamsNotTargeted, ...reorderedTargetGroup];
-            }
-
-            // 5. Filter for saving (ODSTRÁNENIE INTERNÝCH VLASTNOSTÍ)
-            const teamsForSave = teams.map(getTeamDataForSave); 
-
-            // 6. Zápis do databázy (Superštruktúra / Používateľ)
-            if (teamData.isSuperstructureTeam) {
-                teamsToUpdate = {
-                    ...globalTeamsData, 
-                    [teamCategoryName]: teamsForSave // Použitie filtrovaného zoznamu
-                };
-                await setDoc(superstructureDocRef, teamsToUpdate, { merge: true });
-
-            } else {
-                teamsToUpdate = {
-                    [`teams.${teamCategoryName}`]: teamsForSave // Použitie filtrovaného zoznamu
-                };
-                await updateDoc(ownerDocRef, teamsToUpdate);
+                // 5. Zápis do databázy
+                await updateDoc(ownerDocRef, {
+                    [`teams.${teamCategoryName}`]: reorderedTeams
+                });
             }
             
-            // Oznámenie o úspechu
-            const originalGroupDisplay = originalTeamGroup ? `'${originalTeamGroup}'` : `'bez skupiny'`;
-            const targetGroupDisplay = finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrderToUse}.` : `'bez skupiny'.`;
-
+            // Oznámenie o úspechu s pridaním cieľovej cesty pre overenie
+            const targetDocPath = teamData.isSuperstructureTeam 
+                ? SUPERSTRUCTURE_TEAMS_DOC_PATH 
+                : `users/${teamData.uid}`;
 
             const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay} (Dokument: ${targetDocPath}).`;
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
@@ -1181,57 +1323,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         );
     };
 
-    const handleDragOverTeam = (e, targetGroupId, targetCategoryId, targetIndex) => {
-        e.preventDefault();
-        const rect = e.currentTarget.getBoundingClientRect();
-        const y = e.clientY - rect.top; // y position within the element
-
-        // Determine the drop index based on whether the cursor is in the top or bottom half
-        let index = targetIndex;
-        if (y > rect.height / 2) {
-            index = targetIndex + 1;
-        }
-
-        setDropTarget({ groupId: targetGroupId, categoryId: targetCategoryId, index: index });
-        e.dataTransfer.dropEffect = "move";
-    };
-
-    const handleDragOverEmptyContainer = (e, targetGroupId, targetCategoryId) => {
-        e.preventDefault();
-        setDropTarget({ groupId: targetGroupId, categoryId: targetCategoryId, index: 0 });
-        e.dataTransfer.dropEffect = "move";
-    };
-
-    const handleDragOverEnd = (e, targetGroupId, targetCategoryId, teams) => {
-        e.preventDefault();
-        const rect = e.currentTarget.getBoundingClientRect();
-        const y = e.clientY - rect.top;
-
-        // Ak kurzor mieri pod posledný element, nastavíme index na koniec (teams.length)
-        if (y > rect.height * 0.9) { 
-            setDropTarget({ groupId: targetGroupId, categoryId: targetCategoryId, index: teams.length });
-        } else {
-             // Ak je kurzor stále nad posledným elementom, necháme to na handleDragOverTeam
-             // Ak by sme tu nenastavili na null, dropTarget by ostal visieť na konci zoznamu
-             setDropTarget({ groupId: null, categoryId: null, index: null });
-        }
-
-        e.dataTransfer.dropEffect = "move";
-    };
-    
-    // Farby pre skupiny
-    const getGroupColorClass = (type) => {
-        switch (type) {
-            case 'základná skupina':
-                return 'bg-blue-100 border border-blue-200';
-            case 'skupina nadstavby':
-                return 'bg-yellow-100 border border-yellow-200';
-            default:
-                return 'bg-gray-100 border border-gray-200';
-        }
-    };
-
-
     const renderGroupedCategories = () => {
         if (Object.keys(allGroupsByCategoryId).length === 0) {
             return React.createElement(
@@ -1249,7 +1340,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             { className: 'flex flex-wrap gap-4 justify-center' },
             sortedCategoryEntries.map(([categoryId, categoryName], index) => {
                 const groups = allGroupsByCategoryId[categoryId];
-                const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
+                const teamsInThisCategory = allTeams.filter(team => team.category === categoryIdToNameMap[categoryId]);
 
                 const sortedGroups = [...groups].sort((a, b) => {
                     if (a.type === 'základná skupina' && b.type !== 'základná skupina') return -1;
@@ -1283,7 +1374,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                     React.createElement(
                                         'div',
                                         { className: 'mt-2 space-y-1' },
-                                        // Filtrujeme tímy v danej kategórii podľa groupName
                                         renderTeamList(teamsInThisCategory.filter(team => team.groupName === group.name), group.name, categoryId)
                                     )
                                 )
@@ -1309,9 +1399,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return a.name.localeCompare(b.name);
         });
         
-        // OPRAVA: Používame teamsWithoutGroupRef.current.offsetHeight
         const teamsWithoutGroupHeight = teamsWithoutGroupRef.current 
-            ? teamsWithoutGroupRef.current.offsetHeight 
+            ? teamsWithoutGroupRef.offsetHeight 
             : null;
 
         return React.createElement(
@@ -1363,25 +1452,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             )
         );
     };
-
-    // --- VÝPOČET FILTROVANÝCH TÍMOV (OPRAVA ReferenceError) ---
-    
-    // Tímy bez skupiny pre zobrazenie v móde "Všetky kategórie" (Všetky kategórie, len bez skupiny)
-    const allTeamsWithoutGroup = allTeams.filter(team => team.groupName === null);
-
-    // Tímy pre AKTUÁLNE ZVOLENÚ KATEGÓRIU
-    const teamsInSelectedCategory = selectedCategoryId 
-        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId]) 
-        : [];
-
-    // Tímy so skupinou (pre Single Category View)
-    const teamsInGroups = teamsInSelectedCategory.filter(team => team.groupName !== null);
-    
-    // Tímy bez skupiny (pre Single Category View)
-    const teamsWithoutGroup = teamsInSelectedCategory.filter(team => team.groupName === null);
-    
-    // --- KONIEC VÝPOČTU FILTROVANÝCH TÍMOV ---
-
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
@@ -1500,9 +1570,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     {
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
                     },
-                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov bez skupiny'),
-                    // OPRAVA: Používame allTeamsWithoutGroup
-                    renderTeamList(allTeamsWithoutGroup, null, selectedCategoryId, true)
+                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
+                    renderTeamList(teamsWithoutGroup, null, null, true)
                 ),
                 React.createElement(
                     'div',
