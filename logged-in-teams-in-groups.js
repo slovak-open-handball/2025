@@ -19,7 +19,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
             // Ak je k dispozícii predvolená kategória (z filtra hlavnej stránky), použije sa
             setSelectedCategory(defaultCategoryId || '');
             
-            // NOVÉ: Ak je k dispozícii predvolená skupina, použije sa, inak prázdny reťazec
+            // Ak je k dispozícii predvolená skupina, použije sa, inak prázdny reťazec
             setSelectedGroup(defaultGroupName || ''); 
             
             setTeamName('');
@@ -82,12 +82,6 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     };
     
     // NOVÁ LOGIKA BLOKOVANIA TLAČIDLA:
-    // Tlačidlo je NEAKTÍVNE, ak:
-    // 1. Nie je vybraná kategória (selectedCategory je prázdne)
-    // 2. Nie je vybraná skupina (selectedGroup je prázdne)
-    // 3. TeamName je prázdny (po očistení bielych znakov)
-    // 4. Je nájdený duplicitný názov tímu (isDuplicate je true)
-    
     const isCategoryValid = !!selectedCategory;
     const isGroupValid = !!selectedGroup; // KONTROLA SKUPINY (MUSÍ BYŤ VYBRANÁ)
     const isTeamNameValid = teamName.trim().length > 0;
@@ -106,9 +100,6 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     const activeClasses = 'bg-indigo-600 text-white hover:bg-indigo-700';
     
     // UPRAVENÉ TRIEDY PRE ZABLOKOVANÉ TLAČIDLO
-    // farba výplne: biela (bg-white)
-    // farba textu a orámovania: farba aktívnej výplne (text-indigo-600, border border-indigo-600)
-    // kurzor: kurzor-default, pointer-events-none
     const disabledClasses = `
         bg-white 
         text-indigo-600 
@@ -258,25 +249,25 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     }, [notification]);
 
-    // --- NOVÉ POMOCNÉ FUNKCIE PRE URL SLUG ---
+    // --- UPRAVENÉ POMOCNÉ FUNKCIE PRE URL SLUG ---
 
     /**
-     * Prevedie názov kategórie (s medzerami) na URL slug (s pomlčkami).
-     * @param {string} name - Názov kategórie.
+     * Prevedie názov (kategória alebo skupina) s medzerami na URL slug (s pomlčkami).
+     * @param {string} name - Názov.
      * @returns {string} - URL slug.
      */
-    const slugifyCategoryName = (name) => {
+    const slugifyName = (name) => {
         if (!name) return '';
         // Používame regulárny výraz / /g na nahradenie všetkých medzier pomlčkami
         return name.replace(/ /g, '-'); 
     };
 
     /**
-     * Prevedie URL slug (s pomlčkami) späť na názov kategórie (s medzerami).
+     * Prevedie URL slug (s pomlčkami) späť na pôvodný názov (s medzerami).
      * @param {string} slug - URL slug.
-     * @returns {string} - Pôvodný názov kategórie.
+     * @returns {string} - Pôvodný názov.
      */
-    const deslugifyCategoryName = (slug) => {
+    const deslugifyName = (slug) => {
         if (!slug) return '';
         // Používame regulárny výraz /-/g na nahradenie všetkých pomlčiek medzerami
         return slug.replace(/-/g, ' '); 
@@ -413,7 +404,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         return acc;
     }, {});
     
-    // --- NOVO UPRAVENÁ LOGIKA SYNCHRONIZÁCIE HASHA (S podorou SLUG/DE-SLUG) ---
+    // --- NOVO UPRAVENÁ LOGIKA SYNCHRONIZÁCIE HASHA (S podorou SLUG/DE-SLUG pre Kategóriu a Skupinu) ---
     
     // Pomocná funkcia na čítanie hashu a nastavenie stavu
     const readHashAndSetState = (map) => {
@@ -424,20 +415,21 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         if (hash) {
             const parts = hash.split('/');
-            const categorySlugFromUrl = parts[0]; // Získame slug (s pomlčkami)
-            
-            // 1. Dekódujeme URL časť a prevedieme slug späť na názov kategórie (s medzerami)
-            const categoryNameFromUrl = deslugifyCategoryName(decodeURIComponent(categorySlugFromUrl));
+            const categorySlugFromUrl = parts[0]; 
+            const groupSlugFromUrl = parts[1]; // NOVÉ: Získame slug skupiny
 
-            // 2. Nájdeme ID kategórie podľa pôvodného názvu
+            // 1. KATEGÓRIA: Dekódujeme URL časť a prevedieme slug späť na názov kategórie (s medzerami)
+            const categoryNameFromUrl = deslugifyName(decodeURIComponent(categorySlugFromUrl));
+
+            // 2. SKUPINA: Dekódujeme URL časť a prevedieme slug späť na názov skupiny (s medzerami)
+            const groupNameFromUrl = groupSlugFromUrl ? deslugifyName(decodeURIComponent(groupSlugFromUrl)) : '';
+            
+            // 3. Nájdeme ID kategórie podľa pôvodného názvu
             const categoryId = map[categoryNameFromUrl]; 
             
-            const groupNameEncoded = parts[1];
-            const groupName = groupNameEncoded ? decodeURIComponent(groupNameEncoded) : '';
-
             // Nastavenie ID, ak je nájdené, inak reset
             setSelectedCategoryId(categoryId || '');
-            setSelectedGroupName(groupName || ''); 
+            setSelectedGroupName(groupNameFromUrl || ''); // Nastavíme deslugifikovaný názov skupiny
         } else {
             // Reset filtrov, ak je hash prázdny
             setSelectedCategoryId('');
@@ -462,7 +454,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         };
     }, [categoryNameToIdMap]); // Závislosť na mape zaručuje, že preklad je vždy aktuálny
 
-    // **LOGIKA 4: Ukladanie hashu (zápis SLUG kategórie do URL)**
+    // **LOGIKA 4: Ukladanie hashu (zápis SLUG kategórie a SLUG skupiny do URL)**
     useEffect(() => {
         let hash = '';
         
@@ -470,14 +462,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const categoryName = categoryIdToNameMap[selectedCategoryId]; 
 
         if (categoryName) { 
-            // 1. Prevedieme NÁZOV na SLUG (s pomlčkami)
-            const categorySlug = slugifyCategoryName(categoryName);
+            // 1. KATEGÓRIA: Prevedieme NÁZOV na SLUG (s pomlčkami)
+            const categorySlug = slugifyName(categoryName);
             
             // 2. Encódujeme SLUG pre URL
             hash = encodeURIComponent(categorySlug); 
             
             if (selectedGroupName) {
-                hash += `/${encodeURIComponent(selectedGroupName)}`;
+                // 3. SKUPINA: Prevedieme NÁZOV SKUPINY na SLUG
+                const groupSlug = slugifyName(selectedGroupName); 
+                // 4. Encódujeme SLUG SKUPINY a pripojíme
+                hash += `/${encodeURIComponent(groupSlug)}`;
             }
         }
 
