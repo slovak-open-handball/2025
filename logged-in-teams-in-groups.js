@@ -5,34 +5,59 @@ const { useState, useEffect, useRef } = React;
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
-// --- Komponent Modálne Okno pre Pridanie Tímu/Konfigurácie ---
-// Prijíma nové props: defaultCategoryId, defaultGroupName, allTeams
-const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave, defaultCategoryId, defaultGroupName, allTeams }) => {
+// --- Komponent Modálne Okno pre Pridanie/Editáciu Tímu ---
+// Zjednotený Modál pre pridávanie (Add) a úpravu (Edit)
+const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, unifiedSaveHandler, teamToEdit, allTeams, defaultCategoryId, defaultGroupName }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [teamName, setTeamName] = useState('');
-    const [isDuplicate, setIsDuplicate] = useState(false); // NOVÝ STAV pre kontrolu duplikátov
+    const [isDuplicate, setIsDuplicate] = useState(false); 
+
+    // Nové stavy na uchovanie pôvodných hodnôt pre Edit mód a kontrolu duplikátov
+    const [originalTeamName, setOriginalTeamName] = useState('');
+    const [originalCategory, setOriginalCategory] = useState('');
+    const [originalGroup, setOriginalGroup] = useState('');
 
     // Nastavenie/reset stavu pri otvorení/zatvorení modálu alebo zmene predvolených hodnôt
     useEffect(() => {
         if (isOpen) {
-            // Ak je k dispozícii predvolená kategória (z filtra hlavnej stránky), použije sa
-            setSelectedCategory(defaultCategoryId || '');
-            
-            // Ak je k dispozícii predvolená skupina, použije sa, inak prázdny reťazec
-            setSelectedGroup(defaultGroupName || ''); 
-            
-            setTeamName('');
+            if (teamToEdit) {
+                // --- EDIT MÓD ---
+                const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === teamToEdit.category) || '';
+                setSelectedCategory(categoryId);
+                
+                // Názov tímu bez prefixu kategórie
+                const teamNameWithoutPrefix = teamToEdit.teamName.replace(new RegExp(`^${teamToEdit.category} `), '');
+                setTeamName(teamNameWithoutPrefix);
+                setSelectedGroup(teamToEdit.groupName || '');
+                
+                // Uloženie originálnych hodnôt pre logiku duplikátov/kontroly zmien
+                setOriginalTeamName(teamToEdit.teamName);
+                setOriginalCategory(categoryId);
+                setOriginalGroup(teamToEdit.groupName || '');
+                
+            } else {
+                // --- ADD MÓD ---
+                setSelectedCategory(defaultCategoryId || '');
+                setSelectedGroup(defaultGroupName || ''); 
+                setTeamName('');
+                setOriginalTeamName('');
+                setOriginalCategory('');
+                setOriginalGroup('');
+            }
         } else {
              // Reset stavu pri zatvorení
              setSelectedCategory('');
              setSelectedGroup('');
              setTeamName('');
-             setIsDuplicate(false); // Reset aj pre duplikát
+             setIsDuplicate(false);
+             setOriginalTeamName('');
+             setOriginalCategory('');
+             setOriginalGroup('');
         }
-    }, [isOpen, defaultCategoryId, defaultGroupName]); // Pridaná závislosť defaultGroupName
+    }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap]); 
 
-    // EFEKT: Kontrola duplicitného názvu tímu
+    // EFEKT: Kontrola duplicitného názvu tímu (upravená pre edit mód)
     useEffect(() => {
         if (!isOpen) return;
 
@@ -40,16 +65,17 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
         const categoryName = categoryIdToNameMap[selectedCategory] || '';
 
         if (name && selectedCategory && categoryName) {
-            // Vytvoríme finálny názov tímu, ako bude uložený v databáze (s názvom kategórie)
             const finalName = `${categoryName} ${name}`;
             
-            // Kontrola duplikátu v existujúcich tímoch (userTeams aj superstructureTeams)
-            const duplicate = allTeams.some(team => team.teamName === finalName);
+            // Kontrola duplikátu: V edit móde ignorujeme duplikát, ak je to pôvodný názov tímu, ktorý upravujeme
+            const duplicate = allTeams.some(team => 
+                team.teamName === finalName && (!teamToEdit || team.teamName !== originalTeamName)
+            );
             setIsDuplicate(duplicate);
         } else {
             setIsDuplicate(false);
         }
-    }, [teamName, selectedCategory, allTeams, isOpen, categoryIdToNameMap]); // Pridané závislosti allTeams a categoryIdToNameMap
+    }, [teamName, selectedCategory, allTeams, isOpen, categoryIdToNameMap, teamToEdit, originalTeamName]); 
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
@@ -69,19 +95,20 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // Zabezpečenie, že aj pri odoslaní formulára nie je duplikát alebo neplatné vstupy
         if (isSubmitDisabled) {
             return;
         }
 
-        handleSave({ 
+        unifiedSaveHandler({ 
             categoryId: selectedCategory, 
             groupName: selectedGroup, 
-            teamName: teamName // Pôvodný názov tímu, kým ho funkcia handleAddNewTeam neformátuje
+            teamName: teamName, 
+            isEdit: !!teamToEdit,
+            originalTeam: teamToEdit
         });
     };
     
-    // NOVÁ LOGIKA BLOKOVANIA TLAČIDLA:
+    // LOGIKA BLOKOVANIA TLAČIDLA:
     const isCategoryValid = !!selectedCategory;
     const isGroupValid = !!selectedGroup; // KONTROLA SKUPINY (MUSÍ BYŤ VYBRANÁ)
     const isTeamNameValid = teamName.trim().length > 0;
@@ -91,11 +118,16 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     if (!isOpen) return null;
     
     // Zistíme, či je pole kategórie disabled
-    const isCategoryFixed = !!defaultCategoryId;
+    const isCategoryFixed = !!defaultCategoryId && !teamToEdit; // Len ak pridávame a filter je aktívny
     // NOVÉ: Zistíme, či je pole skupiny disabled
-    const isGroupFixed = !!defaultGroupName;
+    const isGroupFixed = !!defaultGroupName && !teamToEdit;
     
-    // KONTROLA PRE TLAČIDLO:
+    // EDIT MÓD nastaví pole kategórie na disabled, aby sa tím nepresúval medzi kategóriami
+    const isCategoryDisabledInEdit = !!teamToEdit; 
+    
+    const modalTitle = teamToEdit ? 'Upraviť Globálny Tím' : 'Pridať Nový Tím';
+    const buttonText = teamToEdit ? 'Potvrdiť a Aktualizovať Tím' : 'Potvrdiť a Uložiť Tím';
+
     const buttonBaseClasses = 'px-4 py-2 rounded-lg transition-colors duration-200';
     const activeClasses = 'bg-indigo-600 text-white hover:bg-indigo-700';
     
@@ -122,7 +154,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                 className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transition-all transform scale-100',
                 onClick: (e) => e.stopPropagation()
             },
-            React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-6 border-b pb-2' }, 'Pridať Nový Tím'),
+            React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-6 border-b pb-2' }, modalTitle),
 
             React.createElement(
                 'form',
@@ -132,22 +164,23 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                 React.createElement(
                     'div',
                     { className: 'flex flex-col' },
-                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Vyberte kategóriu:'),
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Kategória:'),
                     React.createElement(
                         'select',
                         {
-                            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${isCategoryFixed ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`,
+                            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${isCategoryFixed || isCategoryDisabledInEdit ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`,
                             value: selectedCategory,
                             onChange: handleCategoryChange,
                             required: true,
-                            disabled: isCategoryFixed // Zakázanie zmeny, ak je kategória nastavená filtrom
+                            disabled: isCategoryFixed || isCategoryDisabledInEdit // Zakázanie zmeny pri editácii
                         },
                         React.createElement('option', { value: '' }, '--- Vyberte kategóriu ---'),
                         sortedCategoryEntries.map(([id, name]) =>
                             React.createElement('option', { key: id, value: id }, name)
                         )
                     ),
-                    isCategoryFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Kategória je predvolená filtrom na stránke: ${categoryIdToNameMap[defaultCategoryId]}`)
+                    isCategoryDisabledInEdit && React.createElement('p', { className: 'text-xs text-red-600 mt-1' }, `Pri editácii tímu nemôžete zmeniť kategóriu.`),
+                    isCategoryFixed && !isCategoryDisabledInEdit && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Kategória je predvolená filtrom na stránke: ${categoryIdToNameMap[defaultCategoryId]}`)
                 ),
 
                 // 2. Select Skupiny
@@ -155,7 +188,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                     'div',
                     { className: 'flex flex-col' },
                     // Skupina je teraz povinná!
-                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Vyberte skupinu:'), 
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Skupina:'), 
                     React.createElement(
                         'select',
                         {
@@ -192,7 +225,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                         }
                     ),
                     // Zobrazenie upozornenia pre duplikát
-                    isDuplicate && React.createElement('p', { className: 'text-sm text-red-600 mt-2 font-medium p-2 bg-red-50 rounded-lg border border-red-300' }, `Tím s názvom "${categoryIdToNameMap[selectedCategory]} ${teamName.trim()}" už existuje v globálnych alebo používateľských dátach. Zmeňte prosím názov.`)
+                    isDuplicate && React.createElement('p', { className: 'text-sm text-red-600 mt-2 font-medium p-2 bg-red-50 rounded-lg border border-red-300' }, `Tím s názvom "${categoryIdToNameMap[selectedCategory]} ${teamName.trim()}" už existuje. Zmeňte prosím názov.`)
                 ),
 
                 // Tlačidlá
@@ -215,7 +248,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                             className: `${buttonBaseClasses} ${isSubmitDisabled ? disabledClasses : activeClasses}`,
                             disabled: isSubmitDisabled
                         },
-                        'Potvrdiť a Uložiť Tím'
+                        buttonText
                     )
                 )
             )
@@ -225,16 +258,20 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
 
 const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
-    const [userTeamsData, setUserTeamsData] = useState([]); // NOVÝ STAV pre tímy z user dokumentov
-    const [superstructureTeams, setSuperstructureTeams] = useState({}); // Stav pre globálne tímy
+    const [userTeamsData, setUserTeamsData] = useState([]); 
+    const [superstructureTeams, setSuperstructureTeams] = useState({}); 
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState(''); 
     const [notification, setNotification] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false); 
-    // NOVÝ STAV pre zabránenie prepisu hashu pri prvotnom načítaní
+    const [teamToEdit, setTeamToEdit] = useState(null); // NOVÝ STAV pre tím, ktorý sa bude upravovať
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false); 
+    
+    // NOVÉ STAVY pre Drag-to-Delete FAB
+    const [isDraggingSuperstructureTeam, setIsDraggingSuperstructureTeam] = useState(false); 
+    const [isOverFabToDelete, setIsOverFabToDelete] = useState(false);
     
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -251,28 +288,51 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return () => clearTimeout(timer);
         }
     }, [notification]);
+    
+    // --- NOVÉ ZJEDNOTENÉ HANDLERY PRE MODÁL ---
+    
+    // Zjednotený handler pre zatvorenie modálu
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setTeamToEdit(null); // Resetujeme tím na editáciu
+    };
+    
+    // Handler pre otvorenie modálu na editáciu
+    const openEditModal = (team) => {
+        // Kontrola, či je tím globálny (žltý)
+        if (team.isSuperstructureTeam) {
+            setTeamToEdit(team);
+            setIsModalOpen(true);
+        } else {
+            setNotification({ id: Date.now(), message: "Môžete upravovať len globálne (žlté) tímy.", type: 'info' });
+        }
+    };
+    
+    // Handler pre otvorenie modálu na pridanie
+    const openAddModal = () => {
+        setTeamToEdit(null); // Uistíme sa, že nie je aktívny edit mód
+        setIsModalOpen(true);
+    };
+    
+    // ZJEDNOTENÝ HANDLE SAVE/UPDATE:
+    const unifiedSaveHandler = async (data) => {
+        if (data.isEdit) {
+            await handleUpdateTeam(data);
+        } else {
+            await handleAddNewTeam(data);
+        }
+        closeModal();
+    };
 
     // --- UPRAVENÉ POMOCNÉ FUNKCIE PRE URL SLUG ---
 
-    /**
-     * Prevedie názov (kategória alebo skupina) s medzerami na URL slug (s pomlčkami).
-     * @param {string} name - Názov.
-     * @returns {string} - URL slug.
-     */
     const slugifyName = (name) => {
         if (!name) return '';
-        // Používame regulárny výraz / /g na nahradenie všetkých medzier pomlčkami
         return name.replace(/ /g, '-'); 
     };
 
-    /**
-     * Prevedie URL slug (s pomlčkami) späť na pôvodný názov (s medzerami).
-     * @param {string} slug - URL slug.
-     * @returns {string} - Pôvodný názov.
-     */
     const deslugifyName = (slug) => {
         if (!slug) return '';
-        // Používame regulárny výraz /-/g na nahradenie všetkých pomlčiek medzerami
         return slug.replace(/-/g, ' '); 
     };
 
@@ -413,36 +473,27 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const readHashAndSetState = (map) => {
         const hash = window.location.hash.substring(1);
         
-        // Ak ešte nie sú načítané mapy, ale v hashi je hodnota, počkáme
         if (Object.keys(map).length === 0 && hash) {
-            // V tomto prípade sa neukončujeme, necháme prebehnúť, ale len ak je prázdny hash
-            if (hash) return; // Ak je hash a mapa nie je hotová, čakáme
+            if (hash) return;
         } 
 
         if (hash) {
             const parts = hash.split('/');
             const categorySlugFromUrl = parts[0]; 
-            const groupSlugFromUrl = parts[1]; // NOVÉ: Získame slug skupiny
+            const groupSlugFromUrl = parts[1]; 
 
-            // 1. KATEGÓRIA: Dekódujeme URL časť a prevedieme slug späť na názov kategórie (s medzerami)
             const categoryNameFromUrl = deslugifyName(decodeURIComponent(categorySlugFromUrl));
-
-            // 2. SKUPINA: Dekódujeme URL časť a prevedieme slug späť na názov skupiny (s medzerami)
             const groupNameFromUrl = groupSlugFromUrl ? deslugifyName(decodeURIComponent(groupSlugFromUrl)) : '';
             
-            // 3. Nájdeme ID kategórie podľa pôvodného názvu
             const categoryId = map[categoryNameFromUrl]; 
             
-            // Nastavenie ID, ak je nájdené, inak reset
             setSelectedCategoryId(categoryId || '');
-            setSelectedGroupName(groupNameFromUrl || ''); // Nastavíme deslugifikovaný názov skupiny
+            setSelectedGroupName(groupNameFromUrl || '');
         } else {
-            // Reset filtrov, ak je hash prázdny
             setSelectedCategoryId('');
             setSelectedGroupName('');
         }
         
-        // KĽÚČOVÁ ZMENA: Ak už mapa bola načítaná a spracovali sme hash (alebo zistili, že je prázdny), nastavíme flag na true
         if (Object.keys(map).length > 0 && !isInitialHashReadComplete) {
             setIsInitialHashReadComplete(true);
         }
@@ -450,10 +501,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     // **LOGIKA 3: Načítanie hashu z URL a Listener pre zmeny**
     useEffect(() => {
-        // 1. Inicializácia: Načíta hash po prvom renderi a pri pripravenosti mapy
         readHashAndSetState(categoryNameToIdMap);
         
-        // 2. Hashchange Listener: Zabezpečuje obojsmernú synchronizáciu (napr. pri Back/Forward alebo manuálnej zmene)
         const handleHashChange = () => {
             readHashAndSetState(categoryNameToIdMap);
         };
@@ -463,48 +512,36 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         return () => {
             window.removeEventListener('hashchange', handleHashChange);
         };
-    // Pridáme isInitialHashReadComplete do dependencies, aj keď hlavnú prácu robí categoryNameToIdMap
     }, [categoryNameToIdMap, isInitialHashReadComplete]); 
 
     // **LOGIKA 4: Ukladanie hashu (zápis SLUG kategórie a SLUG skupiny do URL)**
     useEffect(() => {
         
-        // KĽÚČOVÁ ZMENA: Zastavíme zápis, kým sa nenačíta mapa a neprebehne prvotné čítanie hashu
         if (!isInitialHashReadComplete) {
             return;
         }
         
         let hash = '';
         
-        // Získame NÁZOV kategórie z ID
         const categoryName = categoryIdToNameMap[selectedCategoryId]; 
 
         if (categoryName) { 
-            // 1. KATEGÓRIA: Prevedieme NÁZOV na SLUG (s pomlčkami)
             const categorySlug = slugifyName(categoryName);
-            
-            // 2. Encódujeme SLUG pre URL
             hash = encodeURIComponent(categorySlug); 
             
             if (selectedGroupName) {
-                // 3. SKUPINA: Prevedieme NÁZOV SKUPINY na SLUG
                 const groupSlug = slugifyName(selectedGroupName); 
-                // 4. Encódujeme SLUG SKUPINY a pripojíme
                 hash += `/${encodeURIComponent(groupSlug)}`;
             }
         }
         
-        // Prečítame aktuálny hash v URL pre kontrolu pretekárskeho stavu/ slučky
         const currentHash = window.location.hash.substring(1); 
 
-        // Zabránenie nekonečnej slučke: nastavujeme hash len ak sa líši od aktuálneho
         if (currentHash !== hash) {
-            // Používame replace() namiesto priradenia, aby sme nezaplnili históriu prehliadača
             window.location.replace(`#${hash}`); 
         }
 
-    }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap, isInitialHashReadComplete]); // Pridanie isInitialHashReadComplete
-    // --- KONIEC NOVEJ LOGIKY SYNCHRONIZÁCIE HASHA ---
+    }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap, isInitialHashReadComplete]); 
 
     // --- OPRAVA: FUNKCIE PRE SELECT BOXY (Priamy zápis do URL hash) ---
     
@@ -512,28 +549,18 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const newCategoryId = e.target.value;
         const categoryName = categoryIdToNameMap[newCategoryId];
 
-//        console.log("Kategória zmenená (Priama zmena HASH). Nové ID:", newCategoryId); 
-        
-        // Ak je vybraná kategória (nie 'Všetky kategórie')
         if (categoryName) {
             const categorySlug = slugifyName(categoryName);
             const newHash = `#${encodeURIComponent(categorySlug)}`;
-            
-            // Priamo prepíšeme hash. LOGIKA 3 následne prečíta hash a nastaví stav.
             window.location.replace(newHash); 
         } else {
-             // Reset hashu, ak je vybraná prázdna hodnota
              window.location.replace(`#`); 
         }
-        
-        // NEvoláme setSelectedCategoryId, aby sme sa vyhli zbytočnej zmene stavu/race condition
     };
 
     const handleGroupSelect = (e) => {
         const newGroupName = e.target.value;
         const categoryName = categoryIdToNameMap[selectedCategoryId];
-        
-//        console.log("Skupina zmenená (Priama zmena HASH). Nový názov:", newGroupName); 
         
         if (categoryName) {
             const categorySlug = slugifyName(categoryName);
@@ -544,15 +571,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 newHash += `/${encodeURIComponent(groupSlug)}`;
             }
             
-            // Priamo prepíšeme hash. LOGIKA 3 následne prečíta hash a nastaví stav.
             window.location.replace(newHash); 
         } 
-        
-        // NEvoláme setSelectedGroupName, aby sme sa vyhli zbytočnej zmene stavu/race condition
     };
-
-    // --- KONIEC OPRAVENÝCH FUNKCIÍ PRE SELECT BOXY ---
-
 
     // --- FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
     const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
@@ -564,14 +585,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const categoryName = categoryIdToNameMap[categoryId];
         const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
         
-        // ** NOVÁ LOGIKA: Formátovanie názvu tímu **
         const finalTeamName = `${categoryName} ${teamName}`;
 
-        // Kontrola duplikátu pri finálnom ukladaní pre istotu (aj keď je kontrolované v modále)
         const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
         if (isDuplicateFinal) {
              setNotification({ id: Date.now(), message: `Globálny tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, type: 'error' });
-             setIsModalOpen(false);
              return;
         }
 
@@ -595,10 +613,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const newOrder = groupName ? (maxOrder + 1) : null; 
             
             const newTeam = {
-                teamName: finalTeamName, // Použijeme formátovaný názov
+                teamName: finalTeamName, 
                 groupName: groupName || null,
                 order: newOrder,
-                id: crypto.randomUUID()
+                id: crypto.randomUUID() // Pridanie ID
             };
             
             const updatedTeamsArray = [...currentTeamsForCategory, newTeam];
@@ -606,9 +624,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             await setDoc(superstructureDocRef, {
                 ...globalTeamsData,
                 [categoryName]: updatedTeamsArray
-            });
+            }, { merge: true });
             
-            setIsModalOpen(false);
             setNotification({ 
                 id: Date.now(), 
                 message: `Globálny tím '${finalTeamName}' bol úspešne pridaný. (Cesta: ${SUPERSTRUCTURE_TEAMS_DOC_PATH})`, 
@@ -620,8 +637,147 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu do globálneho dokumentu.", type: 'error' });
         }
     };
-    // --- KONIEC FUNKCIE PRE GLOBÁLNE UKLADANIE ---
     
+    // --- FUNKCIA: Aktualizácia existujúceho Tímu v /settings/superstructureGroups ---
+    const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam }) => {
+        if (!window.db || !originalTeam) return;
+
+        const categoryName = categoryIdToNameMap[categoryId];
+        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+        
+        const finalTeamName = `${categoryName} ${teamName}`;
+        const originalGroupName = originalTeam.groupName;
+        
+        try {
+            const docSnap = await getDoc(superstructureDocRef);
+            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+            // Tím by sa mal nachádzať v kategórii, v ktorej bol pôvodne
+            let teams = globalTeamsData[originalTeam.category] || []; 
+            
+            // 1. Nájdeme pôvodný tím, ktorý sa má aktualizovať (používame ID pre istotu)
+            const originalTeamIndex = teams.findIndex(t => t.id === originalTeam.id);
+            
+            if (originalTeamIndex === -1) {
+                setNotification({ id: Date.now(), message: `Chyba: Aktualizovaný globálny tím sa nenašiel.`, type: 'error' });
+                return;
+            }
+            
+            const oldOrder = originalTeam.order;
+            const newGroupName = groupName || null;
+            let newOrder = originalTeam.order; 
+            const teamToUpdate = teams[originalTeamIndex];
+
+            // 2. Odstránenie tímu z aktuálnej pozície
+            teams.splice(originalTeamIndex, 1);
+            
+            // 3. Logika presunu (vykoná sa len ak sa zmenila skupina)
+            if (originalGroupName !== newGroupName) {
+                // A. Reordering v PÔVODNEJ skupine
+                teams = teams.map(t => {
+                    if (t.groupName === originalGroupName && t.order != null && t.order > oldOrder) {
+                         return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+                
+                // B. Nájdeme nové najvyššie poradie v CIEĽOVEJ skupine
+                const teamsInTargetGroup = teams.filter(t => t.groupName === newGroupName);
+                const maxOrder = teamsInTargetGroup.reduce((max, t) => (t.order != null ? Math.max(max, t.order) : max), 0);
+                
+                newOrder = newGroupName ? (maxOrder + 1) : null; 
+            }
+            
+            // 4. Vytvoríme aktualizovaný tím
+            const updatedTeam = {
+                ...teamToUpdate, 
+                teamName: finalTeamName, 
+                groupName: newGroupName,
+                order: newOrder, 
+            };
+            
+            // 5. Pridáme ho späť
+            if (originalGroupName !== newGroupName) {
+                // Ak sa zmenila skupina, pridáme ho na koniec (po reorderingu)
+                teams.push(updatedTeam);
+            } else {
+                 // Ak sa nezmenila skupina, vložíme ho naspäť na pôvodnú pozíciu
+                 teams.splice(originalTeamIndex, 0, updatedTeam);
+            }
+
+            // 6. Zápis do databázy (používame setDoc, ale len pre túto kategóriu)
+            await setDoc(superstructureDocRef, {
+                ...globalTeamsData,
+                [originalTeam.category]: teams
+            }, { merge: true }); 
+            
+            setNotification({ 
+                id: Date.now(), 
+                message: `Globálny tím '${finalTeamName}' bol úspešne aktualizovaný.`, 
+                type: 'success' 
+            });
+
+        } catch (error) {
+            console.error("Chyba pri aktualizácii globálneho tímu:", error);
+            setNotification({ id: Date.now(), message: "Chyba pri aktualizácii tímu v globálnom dokumente.", type: 'error' });
+        }
+    };
+
+    // --- FUNKCIA: Odstránenie existujúceho Tímu z /settings/superstructureGroups ---
+    const handleDeleteTeam = async (teamToDelete) => {
+        if (!window.db || !teamToDelete || !teamToDelete.isSuperstructureTeam) {
+             setNotification({ id: Date.now(), message: "Chyba: Možno odstrániť len globálne tímy.", type: 'error' });
+             return;
+        }
+
+        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+        
+        try {
+            const docSnap = await getDoc(superstructureDocRef);
+            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+            let teams = globalTeamsData[teamToDelete.category] || []; 
+            
+            // 1. Nájdeme tím, ktorý sa má odstrániť (používame ID pre istotu)
+            const teamIndex = teams.findIndex(t => t.id === teamToDelete.id);
+            
+            if (teamIndex === -1) {
+                setNotification({ id: Date.now(), message: `Chyba: Odstraňovaný globálny tím sa nenašiel.`, type: 'error' });
+                return;
+            }
+            
+            const originalGroup = teamToDelete.groupName;
+            const originalOrder = teamToDelete.order;
+            
+            // 2. Odstránime tím
+            teams.splice(teamIndex, 1);
+            
+            // 3. Reordering v PÔVODNEJ skupine (len ak mal tím skupinu)
+            const reorderedTeams = teams.map(t => {
+                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                     return { ...t, order: t.order - 1 };
+                }
+                return t;
+            });
+
+            // 4. Zápis do databázy
+            await setDoc(superstructureDocRef, {
+                ...globalTeamsData,
+                [teamToDelete.category]: reorderedTeams
+            }, { merge: true }); 
+
+            setNotification({ 
+                id: Date.now(), 
+                message: `Globálny tím '${teamToDelete.teamName}' bol úspešne odstránený.`, 
+                type: 'success' 
+            });
+
+        } catch (error) {
+            console.error("Chyba pri odstraňovaní globálneho tímu:", error);
+            setNotification({ id: Date.now(), message: "Chyba pri odstraňovaní tímu z globálneho dokumentu.", type: 'error' });
+        }
+    };
+    
+    // --- KONIEC FUNKCIÍ PRE UKLADANIE, UPDATE A MAZANIE ---
+
     // Filtrovanie pre zobrazenie (zostáva bezo zmeny)
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
@@ -880,7 +1036,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 await setDoc(superstructureDocRef, {
                     ...globalTeamsData,
                     [teamCategoryName]: reorderedTeams
-                });
+                }, { merge: true });
 
 
             } else {
@@ -910,8 +1066,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 // 1. Vytvoríme aktualizovaný tím s novými hodnotami (null alebo Group/Order)
                 const updatedDraggedTeam = { 
                     ...teams[originalTeamIndex], 
-                    groupName: finalGroupName, // Použijeme finalGroupName (môže byť null)
-                    order: finalOrder // Použijeme finalOrder (môže byť null)
+                    groupName: finalGroupName, 
+                    order: finalOrder 
                 };
                 
                 // 2. Odstránime tím z pôvodnej pozície (pre reordering ostatných)
@@ -969,24 +1125,62 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            // Zabezpečenie, že notifikácia chyby sa zobrazí, ak k nej došlo
             if (!notification || notification.type !== 'error') {
                  setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
             }
         }
     };
     // --- KONIEC OPRAVENEJ FUNKCIE handleDrop ---
-
+    
+    // --- DRAG/DROP LOGIKA PRE FAB MAZANIE ---
+    
     const handleDragStart = (e, team) => {
         draggedItem.current = { team };
         e.dataTransfer.setData("text/plain", JSON.stringify(team));
         e.dataTransfer.effectAllowed = "move";
+        
+        // Ak je tím globálny, aktivujeme FAB na mazanie
+        if (team.isSuperstructureTeam) {
+            setIsDraggingSuperstructureTeam(true);
+        }
     };
 
     const handleDragEnd = () => {
         draggedItem.current = null;
         setDropTarget({ groupId: null, categoryId: null, index: null });
+        setIsDraggingSuperstructureTeam(false);
+        setIsOverFabToDelete(false); // Reset FAB stavu
     };
+
+    const handleFabDragEnter = (e) => {
+        e.preventDefault();
+        const dragData = draggedItem.current;
+        if (dragData && dragData.team.isSuperstructureTeam) {
+            setIsOverFabToDelete(true);
+            e.dataTransfer.dropEffect = "copy";
+        }
+    };
+
+    const handleFabDragLeave = () => {
+        setIsOverFabToDelete(false);
+    };
+    
+    const handleFabDrop = (e) => {
+        e.preventDefault();
+        const dragData = draggedItem.current;
+        setIsOverFabToDelete(false);
+        setIsDraggingSuperstructureTeam(false); // Ukončenie draggovania
+
+        if (dragData && dragData.team.isSuperstructureTeam) {
+            // Spustenie funkcie na odstránenie tímu
+            handleDeleteTeam(dragData.team);
+            // Nutné resetovať draggedItem.current (handleDragEnd sa spustí až po uvoľnení myši)
+            draggedItem.current = null;
+        }
+    };
+    
+    // --- KONIEC DRAG/DROP LOGIKY PRE FAB MAZANIE ---
+
 
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
@@ -1001,6 +1195,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         
         const listItems = sortedTeams.map((team, index) => {
             let teamNameDisplay = team.teamName;
+            // Žlté pozadie pre globálne tímy
             const teamBgClass = !isWithoutGroup ? (team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white') : 'bg-gray-100';
             
             if (!isWithoutGroup && team.order != null) {
@@ -1009,7 +1204,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             if (!selectedCategoryId && team.category && (isWithoutGroup || team.groupName)) {
                 const globalTag = team.isSuperstructureTeam ? ' ' : ''; 
-                // V globálnom zobrazení už nezobrazujeme kategóriu, pretože názov ju už obsahuje
                 teamNameDisplay = `${teamNameDisplay}${globalTag}`;
             } else if (team.isSuperstructureTeam) {
                 teamNameDisplay = `${teamNameDisplay} `;
@@ -1019,6 +1213,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 dropTarget.groupId === targetGroupId && 
                 dropTarget.categoryId === targetCategoryId && 
                 dropTarget.index === index;
+            
+            // Iba pre globálne tímy priradené k skupine a nie v zozname "Bez skupiny"
+            const showActionButtons = team.isSuperstructureTeam && !isWithoutGroup; 
 
             return React.createElement(
                 React.Fragment, 
@@ -1027,13 +1224,49 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 React.createElement(
                     'li',
                     {
-                        className: `px-4 py-2 ${teamBgClass} rounded-lg text-gray-700 cursor-grab shadow-sm border border-gray-200`,
+                        className: `flex justify-between items-center px-4 py-2 ${teamBgClass} rounded-lg text-gray-700 shadow-sm border border-gray-200`,
                         draggable: "true",
                         onDragStart: (e) => handleDragStart(e, team),
                         onDragEnd: handleDragEnd,
                         onDragOver: (e) => handleDragOverTeam(e, targetGroupId, targetCategoryId, index),
                     },
-                    teamNameDisplay
+                    // Hlavný obsah tímu
+                    React.createElement('span', { className: 'flex-grow cursor-grab' }, teamNameDisplay),
+                    
+                    // Akčné tlačidlá (len pre globálne tímy v skupinách)
+                    showActionButtons && React.createElement(
+                        'div',
+                        { className: 'flex space-x-2 ml-4 flex-shrink-0' },
+                        // Tlačidlo Edit (Ceruzka)
+                        React.createElement(
+                            'button',
+                            { 
+                                type: 'button',
+                                onClick: () => openEditModal(team), // NOVÝ HANDLER
+                                className: 'text-gray-500 hover:text-indigo-600 p-1 rounded-full transition-colors duration-150',
+                                title: 'Upraviť tím'
+                            },
+                            // Inline SVG pre ceruzku (Edit)
+                            React.createElement('svg', { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, 
+                                React.createElement('path', { 'strokeLinecap': 'round', 'strokeLinejoin': 'round', 'strokeWidth': '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                            )
+                        ),
+                        // Tlačidlo Delete (Kôš)
+                        React.createElement(
+                            'button',
+                            { 
+                                type: 'button',
+                                // Dočasne priame mazanie, kedze window.confirm() je zakazane
+                                onClick: () => handleDeleteTeam(team), 
+                                className: 'text-gray-500 hover:text-red-600 p-1 rounded-full transition-colors duration-150',
+                                title: 'Odstrániť tím'
+                            },
+                            // Inline SVG pre kôš (Delete)
+                            React.createElement('svg', { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' }, 
+                                React.createElement('path', { 'strokeLinecap': 'round', 'strokeLinejoin': 'round', 'strokeWidth': '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                            )
+                        )
+                    )
                 )
             );
         });
@@ -1043,7 +1276,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             dropTarget.categoryId === targetCategoryId && 
             dropTarget.index === sortedTeams.length; 
             
-        // Kľúč pre referenciu (dôležité pre správne fungovanie dropu na prázdny priestor)
         const listRefKey = targetGroupId === null 
             ? `${targetCategoryId}-null` 
             : `${targetCategoryId}-${targetGroupId}`;
@@ -1060,7 +1292,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     onDragOver: (e) => handleDragOverEmptyContainer(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
                     className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`,
-                    // Pridanie referencie aj pre prázdny kontajner
                     ref: el => {
                         if (el) {
                             listRefs.current[listRefKey] = el;
@@ -1139,7 +1370,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                     'div',
                                     null,
                                     React.createElement('p', { className: 'font-semibold whitespace-nowrap' }, group.name),
-                                    // TYP SKUPINY (UŽ BOL)
                                     React.createElement('p', { className: 'text-sm text-gray-500 whitespace-nowrap' }, group.type), 
                                     React.createElement(
                                         'div',
@@ -1208,7 +1438,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                 style: customStyle,
                             },
                             React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
-                            // NOVÝ TYP SKUPINY PRE SINGLE VIEW A FILTROVANÝ VIEW
                             React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type), 
                             React.createElement(
                                 'div',
@@ -1247,6 +1476,33 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     // Získame všetky dostupné skupiny pre zvolenú kategóriu na zobrazenie vo filtri
     const availableGroupsForSelect = (allGroupsByCategoryId[selectedCategoryId] || [])
         .sort((a, b) => a.name.localeCompare(b.name));
+        
+    // NOVÉ: Triedy a logika pre FAB Drag-to-Delete
+    const fabBaseClasses = 'fixed bottom-8 right-8 p-5 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 focus:outline-none';
+    
+    const fabButton = isDraggingSuperstructureTeam && !isModalOpen
+        ? React.createElement(
+            'button',
+            {
+                // Tlačidlo na mazanie (červené a mínus)
+                className: `${fabBaseClasses} ${isOverFabToDelete ? 'bg-red-600 focus:ring-red-400' : 'bg-red-400 focus:ring-red-300'} text-white`,
+                onDragEnter: handleFabDragEnter,
+                onDragLeave: handleFabDragLeave,
+                onDragOver: (e) => e.preventDefault(), // Dôležité pre drop
+                onDrop: handleFabDrop,
+            },
+            React.createElement('span', { className: 'text-2xl font-bold' }, '−') // Minus icon
+        )
+        : React.createElement(
+            'button',
+            {
+                // Tlačidlo na pridávanie (zelené a plus)
+                className: `${fabBaseClasses} bg-green-500 hover:bg-green-600 text-white focus:ring-green-400`,
+                onClick: openAddModal, // NOVÝ HANDLER
+            },
+            React.createElement('span', { className: 'text-2xl font-bold' }, '+')
+        );
+
 
     return React.createElement(
         'div',
@@ -1258,16 +1514,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             notification?.message
         ),
         
-        // Modálne okno - odovzdáme selectedCategoryId ako defaultCategoryId a selectedGroupName ako defaultGroupName
+        // Modálne okno - odovzdáme unifiedSaveHandler a teamToEdit
         React.createElement(NewTeamModal, {
             isOpen: isModalOpen,
-            onClose: () => setIsModalOpen(false),
+            onClose: closeModal,
             allGroupsByCategoryId: allGroupsByCategoryId,
             categoryIdToNameMap: categoryIdToNameMap,
-            handleSave: handleAddNewTeam,
-            defaultCategoryId: selectedCategoryId, // Existujúca prop
-            defaultGroupName: selectedGroupName, // NOVÁ prop
-            allTeams: allTeams // NOVÁ prop pre kontrolu duplikátov
+            unifiedSaveHandler: unifiedSaveHandler, // ZJEDNOTENÝ HANDLER
+            teamToEdit: teamToEdit, // DÁTA PRE EDITÁCIU
+            allTeams: allTeams,
+            defaultCategoryId: selectedCategoryId, 
+            defaultGroupName: selectedGroupName, 
         }),
 
         React.createElement(
@@ -1279,7 +1536,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 {
                     className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
                     value: selectedCategoryId,
-                    // POUŽITIE NOVÉHO HANDLERA (priamy zápis HASH)
                     onChange: handleCategorySelect
                 },
                 React.createElement('option', { value: '' }, 'Všetky kategórie'),
@@ -1294,14 +1550,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 {
                     className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
                     value: selectedGroupName,
-                    // POUŽITIE NOVÉHO HANDLERA (priamy zápis HASH)
                     onChange: handleGroupSelect,
                     disabled: !selectedCategoryId,
                     style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' } 
                 },
                 React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
                 availableGroupsForSelect.map((group, index) =>
-                    // ZOBRAZENIE: Pridaný typ skupiny do <option>
                     React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
                 )
             )
@@ -1327,14 +1581,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             ),
             
         // NOVÉ: Floating Action Button (FAB)
-        React.createElement(
-            'button',
-            {
-                className: 'fixed bottom-8 right-8 bg-green-500 hover:bg-green-600 text-white p-5 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-green-400',
-                onClick: () => setIsModalOpen(true)
-            },
-            React.createElement('span', { className: 'text-2xl font-bold' }, '+')
-        )
+        fabButton
     );
 };
 
