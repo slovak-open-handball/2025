@@ -572,6 +572,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Ak je targetGroup null, newOrder je null, čo je správne pre tímy bez skupiny
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
+        const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
+        const targetGroupDisplay = targetGroup ? `'${targetGroup}' na pozíciu ${newOrder}.` : `'bez skupiny'.`;
+
         try {
             if (teamData.isSuperstructureTeam) {
                 // --- UPDATE GLOBÁLNEHO DOKUMENTU (/settings/superstructureGroups) ---
@@ -630,13 +633,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
 
             } else {
-                // --- PÔVODNÁ LOGIKA: UPDATE UŽÍVATEĽSKÝCH DOKUMENTOV ---
+                // --- UPDATE UŽÍVATEĽSKÝCH DOKUMENTOV (Oprava pre spoľahlivé ukladanie) ---
                 const usersRef = collection(window.db, 'users');
                 const userDocs = await getDocs(usersRef);
                 const batchPromises = [];
 
                 const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
-                const isMovingFromGroup = originalGroup && !targetGroup; // TRUE, ak presúvame naspäť do bez skupiny
+                const isMovingFromGroup = originalGroup && !targetGroup; 
                 const isMovingToGroup = !originalGroup && targetGroup;
                 const isMovingBetweenGroups = originalGroup && targetGroup && originalGroup !== targetGroup;
 
@@ -647,14 +650,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         let shouldUpdate = false;
                         
                         const updatedUserTeams = teams.map(t => {
+                            // Rozhodujúca kontrola, ktorá identifikuje buď presunutý tím, alebo tím, ktorý treba prečíslovať
                             const isDraggedTeam = userDoc.id === teamData.uid && t.id === teamData.id;
                             
                             if (isDraggedTeam) {
                                 shouldUpdate = true;
-                                // Ak je targetGroup null, nastavia sa groupName: null a order: null
+                                // Tím, ktorý sa presúva: nastaví groupName: null a order: null
                                 return { ...t, groupName: targetGroup, order: newOrder }; 
                             }
 
+                            // 1. Reorganizácia v rámci tej istej cieľovej skupiny
                             if (isMovingWithinSameGroup && t.groupName === targetGroup && t.order != null) {
                                 if (newOrder > originalOrder && t.order > originalOrder && t.order <= newOrder - 1) { 
                                     shouldUpdate = true;
@@ -666,12 +671,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                 return t;
                             }
 
-                            // Logika pre prečíslovanie tímu, ktorý zostal v PÔVODNEJ skupine
+                            // 2. Tím zostal v PÔVODNEJ skupine a treba ho prečíslovať
                             if ((isMovingFromGroup || isMovingBetweenGroups) && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                                 shouldUpdate = true;
                                 return { ...t, order: t.order - 1 };
                             }
-
+                            
+                            // 3. Tím v CIEĽOVEJ skupine a treba ho prečíslovať (iba ak cieľová skupina existuje)
                             if ((isMovingToGroup || isMovingBetweenGroups) && targetGroup && t.groupName === targetGroup && t.order != null && newOrder !== null && t.order >= newOrder) {
                                 shouldUpdate = true;
                                 return { ...t, order: t.order + 1 };
@@ -681,26 +687,45 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         });
                         
                         if (shouldUpdate) {
+                             // Zabezpečenie, že update bude zachytený v prípade chyby
                              batchPromises.push(
-                                updateDoc(userDoc.ref, {
-                                    [`teams.${teamCategoryName}`]: updatedUserTeams
-                                })
+                                (async () => {
+                                    try {
+                                        await updateDoc(userDoc.ref, {
+                                            [`teams.${teamCategoryName}`]: updatedUserTeams
+                                        });
+                                    } catch (e) {
+                                        console.error(`CHYBA: Zlyhala aktualizácia dokumentu používateľa ${userDoc.id} pre kategóriu ${teamCategoryName}`, e);
+                                        // Vyvolanie chyby, ktorá sa zachytí v Promise.all
+                                        throw new Error(`Aktualizácia zlyhala pre používateľa ${userDoc.id}: ${e.message}`);
+                                    }
+                                })()
                             );
                         }
                     }
                 });
-                await Promise.all(batchPromises);
+                
+                // Spustenie všetkých aktualizácií a zachytenie chýb
+                try {
+                    await Promise.all(batchPromises);
+                } catch (error) {
+                    console.error("Kritické zlyhanie počas hromadnej aktualizácie:", error);
+                    setNotification({ id: Date.now(), message: `Kritická chyba pri aktualizácii dokumentov: ${error.message}`, type: 'error' });
+                    // Znova vyvolajte chybu, aby sa zabránilo správe o úspechu
+                    throw error; 
+                }
             }
             
             // Oznámenie o úspechu
-            const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
-            const targetGroupDisplay = targetGroup ? `'${targetGroup}' na pozíciu ${newOrder}.` : `'bez skupiny'.`;
             const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay}`;
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
 
         } catch (error) {
             console.error("Chyba pri aktualizácii databázy:", error);
-            setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
+            // Zabezpečenie, že notifikácia chyby sa zobrazí, ak k nej došlo
+            if (!notification || notification.type !== 'error') {
+                 setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
+            }
         }
     };
 
