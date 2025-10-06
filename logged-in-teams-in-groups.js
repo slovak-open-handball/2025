@@ -1,26 +1,168 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where, limit, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
+
+// --- Komponent Modálne Okno pre Pridanie Tímu/Konfigurácie ---
+const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave }) => {
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedGroup, setSelectedGroup] = useState('');
+    const [teamName, setTeamName] = useState('');
+
+    useEffect(() => {
+        // Reset stavov pri otvorení/zatvorení modálu
+        if (!isOpen) {
+            setSelectedCategory('');
+            setSelectedGroup('');
+            setTeamName('');
+        }
+    }, [isOpen]);
+
+    // Získanie zoradených kategórií pre Select box
+    const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+
+    // Získanie zoradených skupín pre vybranú kategóriu
+    const availableGroups = selectedCategory && allGroupsByCategoryId[selectedCategory]
+        ? allGroupsByCategoryId[selectedCategory].sort((a, b) => a.name.localeCompare(b.name))
+        : [];
+        
+    // Reset skupiny, ak sa zmení kategória
+    const handleCategoryChange = (e) => {
+        setSelectedCategory(e.target.value);
+        setSelectedGroup(''); // Reset skupiny pri zmene kategórie
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        // Spustenie funkcie ukladania z rodičovského komponentu
+        handleSave({ 
+            categoryId: selectedCategory, 
+            groupName: selectedGroup, 
+            teamName: teamName 
+        });
+    };
+
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        { 
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]',
+            onClick: onClose // Zatvorenie po kliknutí mimo modál
+        },
+        React.createElement(
+            'div',
+            { 
+                className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transition-all transform scale-100',
+                onClick: (e) => e.stopPropagation() // Zabránenie zatvoreniu po kliknutí vnútri modálu
+            },
+            React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-6 border-b pb-2' }, 'Pridať Nový Tím/Konfiguráciu'),
+
+            React.createElement(
+                'form',
+                { onSubmit: handleSubmit, className: 'space-y-4' },
+                
+                // 1. Select Kategórie
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Vyberte kategóriu:'),
+                    React.createElement(
+                        'select',
+                        {
+                            className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
+                            value: selectedCategory,
+                            onChange: handleCategoryChange,
+                            required: true
+                        },
+                        React.createElement('option', { value: '' }, '--- Vyberte kategóriu ---'),
+                        sortedCategoryEntries.map(([id, name]) =>
+                            React.createElement('option', { key: id, value: id }, name)
+                        )
+                    )
+                ),
+
+                // 2. Select Skupiny
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Vyberte skupinu (Voliteľné):'),
+                    React.createElement(
+                        'select',
+                        {
+                            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${!selectedCategory ? 'bg-gray-100 cursor-not-allowed' : ''}`,
+                            value: selectedGroup,
+                            onChange: (e) => setSelectedGroup(e.target.value),
+                            disabled: !selectedCategory
+                        },
+                        React.createElement('option', { value: '' }, availableGroups.length > 0 ? 'Bez skupiny (Zoznam pre priradenie)' : 'Najprv vyberte kategóriu'),
+                        availableGroups.map((group, index) =>
+                            React.createElement('option', { key: index, value: group.name }, group.name)
+                        )
+                    )
+                ),
+
+                // 3. Input Názov Tímu
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Zadajte názov tímu:'),
+                    React.createElement(
+                        'input',
+                        {
+                            type: 'text',
+                            className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
+                            value: teamName,
+                            onChange: (e) => setTeamName(e.target.value),
+                            required: true,
+                            placeholder: 'Napr. Tím Alfa'
+                        }
+                    )
+                ),
+
+                // Tlačidlá
+                React.createElement(
+                    'div',
+                    { className: 'pt-4 flex justify-end space-x-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors',
+                            onClick: onClose
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'submit',
+                            className: 'px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors',
+                            disabled: !selectedCategory || !teamName // Povinné polia
+                        },
+                        'Potvrdiť a Uložiť'
+                    )
+                )
+            )
+        )
+    );
+};
 
 const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
-    const [selectedGroupName, setSelectedGroupName] = useState(''); // Vybraná skupina
+    const [selectedGroupName, setSelectedGroupName] = useState(''); 
     const [nextOrderMap, setNextOrderMap] = useState({});
     const [notification, setNotification] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false); // Nový stav pre modál
     
     // Stav pre drag & drop
     const draggedItem = useRef(null);
-    const listRefs = useRef({}); // Refy pre UL kontajnery (pre presné meranie)
-    
-    // Nový stav pre presnú pozíciu, kam bude tím vložený (pre vizuálnu spätnú väzbu)
-    // { groupId: string | null, categoryId: string | null, index: number | null }
+    const listRefs = useRef({}); 
     const [dropTarget, setDropTarget] = useState({ groupId: null, categoryId: null, index: null });
-    
-    // REF pre meranie výšky kontajnera s tímami bez skupiny
     const teamsWithoutGroupRef = useRef(null); 
     
     // Efekt pre manažovanie notifikácií a vymazanie po 5 sekundách
@@ -143,6 +285,48 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
 
     }, [selectedCategoryId, selectedGroupName]);
+
+    // --- NOVÁ FUNKCIA: Uloženie novej konfigurácie (Tímu) ---
+    const handleAddNewConfig = async ({ categoryId, groupName, teamName }) => {
+        if (!window.db || !categoryId || !teamName) {
+            setNotification({ id: Date.now(), message: "Vyplňte prosím kategóriu a názov tímu.", type: 'error' });
+            return;
+        }
+
+        const categoryName = categoryIdToNameMap[categoryId];
+        
+        try {
+            // POZNÁMKA: Ukladanie do 'settings/superstructureGroups' podľa požiadavky.
+            // Bežné tímy, ktoré sa presúvajú, sú uložené v users/{uid}/teams.
+            const docRef = doc(window.db, 'settings', 'superstructureGroups');
+            
+            // Vytvorenie jednoduchej štruktúry pre uloženie do 'superstructureGroups'
+            const newEntry = {
+                teamName: teamName,
+                categoryId: categoryId,
+                categoryName: categoryName,
+                groupName: groupName || 'bez skupiny',
+                addedBy: window.auth.currentUser?.email || 'Neznámy používateľ',
+                timestamp: Timestamp.now()
+            };
+            
+            // Uloženie pod unikátnym ID do dokumentu 'superstructureGroups' s merge=true
+            const newTeamId = crypto.randomUUID();
+            await setDoc(docRef, { [newTeamId]: newEntry }, { merge: true });
+            
+            setIsModalOpen(false);
+            setNotification({ 
+                id: Date.now(), 
+                message: `Požiadavka na pridanie tímu '${teamName}' bola úspešne uložená do settings/superstructureGroups.`, 
+                type: 'success' 
+            });
+
+        } catch (error) {
+            console.error("Chyba pri ukladaní novej konfigurácie:", error);
+            setNotification({ id: Date.now(), message: "Chyba pri ukladaní dát do 'superstructureGroups'.", type: 'error' });
+        }
+    };
+    // --- KONIEC NOVEJ FUNKCIE ---
 
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
@@ -363,15 +547,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Vypočítame 1-based nové poradie (ak je v skupine)
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
-        // **STARÁ KONTROLA KATEGÓRIE - Odstránená, nahradená kontrolou v DragOver**
-        // Ak sa kategórie nezhodujú, zabránime presunu
-        /*
-        if (targetCategoryId && teamCategoryName !== categoryIdToNameMap[targetCategoryId]) {
-            setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím.", type: 'error' });
-            return;
-        }
-        */
-        
         // **NOVÁ KONTROLA PRE ZABRÁNENIE ZBYTOČNÉHO ZÁPISU**
         // Ak sa presúva do rovnakej skupiny (targetGroup === originalGroup) a pozícia sa nemení 
         if (targetGroup === originalGroup) {
@@ -384,6 +559,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const teamIndexInOriginal = teamsInOriginalGroup.findIndex(t => t.teamName === teamData.teamName && t.uid === teamData.uid);
             
             // Ak je finálny index rovnaký ako pôvodný index alebo posunutý o 1 kvôli odstráneniu 
+            // V rámci internej logiky, ak je index ten istý, nebudeme prečíslovať.
             if (teamIndexInOriginal !== -1 && finalDropTarget.index === teamIndexInOriginal) {
                  setNotification({ id: Date.now(), message: "Tím sa presunul do pôvodnej pozície a poradie sa nezmenilo.", type: 'info' });
                  return;
@@ -786,6 +962,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             { className: `${notificationClasses} ${typeClasses}`},
             notification?.message
         ),
+        
+        // Modálne okno
+        React.createElement(NewTeamModal, {
+            isOpen: isModalOpen,
+            onClose: () => setIsModalOpen(false),
+            allGroupsByCategoryId: allGroupsByCategoryId,
+            categoryIdToNameMap: categoryIdToNameMap,
+            handleSave: handleAddNewConfig // Spustí funkciu ukladania do 'superstructureGroups'
+        }),
+
         React.createElement(
             'div',
             { className: 'w-full max-w-xs mx-auto mb-8' },
@@ -846,7 +1032,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     { className: 'flex-grow min-w-0' },
                     renderGroupedCategories()
                 )
-            )
+            ),
+            
+        // NOVÉ: Floating Action Button (FAB)
+        React.createElement(
+            'button',
+            {
+                className: 'fixed bottom-8 right-8 bg-green-500 hover:bg-green-600 text-white p-5 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-green-400',
+                onClick: () => setIsModalOpen(true)
+            },
+            React.createElement('span', { className: 'text-2xl font-bold' }, '+')
+        )
     );
 };
 
