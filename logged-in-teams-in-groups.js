@@ -551,7 +551,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap, isInitialHashReadComplete]); 
 
-    // --- OPRAVA: FUNKCIE PRE SELECT BOXY (Priamy zápis do URL hash) ---
+    // --- FUNKCIA PRE SELECT BOXY (Priamy zápis do URL hash) ---
     
     const handleCategorySelect = (e) => {
         const newCategoryId = e.target.value;
@@ -798,7 +798,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const dragData = draggedItem.current;
         const finalDropTarget = dropTarget; 
 
-        if (!checkCategoryMatch(targetCategoryId)) {
+        const checkCategoryMatch = (id) => {
+            const dragCategoryName = dragData.team.category;
+            const targetCategoryName = categoryIdToNameMap[id];
+            return dragCategoryName === targetCategoryName;
+        };
+        
+        if (targetCategoryId && dragData && !checkCategoryMatch(targetCategoryId)) {
             setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím. Presun bol zrušený.", type: 'error' });
             setDropTarget({ groupId: null, categoryId: null, index: null });
             draggedItem.current = null;
@@ -1175,6 +1181,57 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         );
     };
 
+    const handleDragOverTeam = (e, targetGroupId, targetCategoryId, targetIndex) => {
+        e.preventDefault();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top; // y position within the element
+
+        // Determine the drop index based on whether the cursor is in the top or bottom half
+        let index = targetIndex;
+        if (y > rect.height / 2) {
+            index = targetIndex + 1;
+        }
+
+        setDropTarget({ groupId: targetGroupId, categoryId: targetCategoryId, index: index });
+        e.dataTransfer.dropEffect = "move";
+    };
+
+    const handleDragOverEmptyContainer = (e, targetGroupId, targetCategoryId) => {
+        e.preventDefault();
+        setDropTarget({ groupId: targetGroupId, categoryId: targetCategoryId, index: 0 });
+        e.dataTransfer.dropEffect = "move";
+    };
+
+    const handleDragOverEnd = (e, targetGroupId, targetCategoryId, teams) => {
+        e.preventDefault();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+
+        // Ak kurzor mieri pod posledný element, nastavíme index na koniec (teams.length)
+        if (y > rect.height * 0.9) { 
+            setDropTarget({ groupId: targetGroupId, categoryId: targetCategoryId, index: teams.length });
+        } else {
+             // Ak je kurzor stále nad posledným elementom, necháme to na handleDragOverTeam
+             // Ak by sme tu nenastavili na null, dropTarget by ostal visieť na konci zoznamu
+             setDropTarget({ groupId: null, categoryId: null, index: null });
+        }
+
+        e.dataTransfer.dropEffect = "move";
+    };
+    
+    // Farby pre skupiny
+    const getGroupColorClass = (type) => {
+        switch (type) {
+            case 'základná skupina':
+                return 'bg-blue-100 border border-blue-200';
+            case 'skupina nadstavby':
+                return 'bg-yellow-100 border border-yellow-200';
+            default:
+                return 'bg-gray-100 border border-gray-200';
+        }
+    };
+
+
     const renderGroupedCategories = () => {
         if (Object.keys(allGroupsByCategoryId).length === 0) {
             return React.createElement(
@@ -1192,7 +1249,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             { className: 'flex flex-wrap gap-4 justify-center' },
             sortedCategoryEntries.map(([categoryId, categoryName], index) => {
                 const groups = allGroupsByCategoryId[categoryId];
-                const teamsInThisCategory = allTeams.filter(team => team.category === categoryIdToNameMap[categoryId]);
+                const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
 
                 const sortedGroups = [...groups].sort((a, b) => {
                     if (a.type === 'základná skupina' && b.type !== 'základná skupina') return -1;
@@ -1226,6 +1283,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                     React.createElement(
                                         'div',
                                         { className: 'mt-2 space-y-1' },
+                                        // Filtrujeme tímy v danej kategórii podľa groupName
                                         renderTeamList(teamsInThisCategory.filter(team => team.groupName === group.name), group.name, categoryId)
                                     )
                                 )
@@ -1251,8 +1309,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return a.name.localeCompare(b.name);
         });
         
+        // OPRAVA: Používame teamsWithoutGroupRef.current.offsetHeight
         const teamsWithoutGroupHeight = teamsWithoutGroupRef.current 
-            ? teamsWithoutGroupRef.offsetHeight 
+            ? teamsWithoutGroupRef.current.offsetHeight 
             : null;
 
         return React.createElement(
@@ -1304,6 +1363,25 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             )
         );
     };
+
+    // --- VÝPOČET FILTROVANÝCH TÍMOV (OPRAVA ReferenceError) ---
+    
+    // Tímy bez skupiny pre zobrazenie v móde "Všetky kategórie" (Všetky kategórie, len bez skupiny)
+    const allTeamsWithoutGroup = allTeams.filter(team => team.groupName === null);
+
+    // Tímy pre AKTUÁLNE ZVOLENÚ KATEGÓRIU
+    const teamsInSelectedCategory = selectedCategoryId 
+        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId]) 
+        : [];
+
+    // Tímy so skupinou (pre Single Category View)
+    const teamsInGroups = teamsInSelectedCategory.filter(team => team.groupName !== null);
+    
+    // Tímy bez skupiny (pre Single Category View)
+    const teamsWithoutGroup = teamsInSelectedCategory.filter(team => team.groupName === null);
+    
+    // --- KONIEC VÝPOČTU FILTROVANÝCH TÍMOV ---
+
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
@@ -1422,8 +1500,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     {
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
                     },
-                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
-                    renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
+                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov bez skupiny'),
+                    // OPRAVA: Používame allTeamsWithoutGroup
+                    renderTeamList(allTeamsWithoutGroup, null, selectedCategoryId, true)
                 ),
                 React.createElement(
                     'div',
