@@ -485,26 +485,52 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap]); 
     // --- KONIEC NOVEJ LOGIKY SYNCHRONIZÁCIE HASHA ---
 
-    // --- NOVÉ FUNKCIE PRE SELECT BOXY (FIX PRE KLIK MYŠOU) ---
+    // --- OPRAVA: FUNKCIE PRE SELECT BOXY (Priamy zápis do URL hash) ---
     
     const handleCategorySelect = (e) => {
         const newCategoryId = e.target.value;
-        // Log pre kontrolu, či mouse event odovzdáva hodnotu
-        console.log("Kategória zmenená. Nové ID:", newCategoryId); 
+        const categoryName = categoryIdToNameMap[newCategoryId];
+
+        console.log("Kategória zmenená (Priama zmena HASH). Nové ID:", newCategoryId); 
         
-        // Nastavenie stavu, ktoré spúšťa LOGIKA 4 (zápis hashu)
-        setSelectedCategoryId(newCategoryId);
-        setSelectedGroupName(''); // Reset skupiny
+        // Ak je vybraná kategória (nie 'Všetky kategórie')
+        if (categoryName) {
+            const categorySlug = slugifyName(categoryName);
+            const newHash = `#${encodeURIComponent(categorySlug)}`;
+            
+            // Priamo prepíšeme hash. LOGIKA 3 následne prečíta hash a nastaví stav.
+            window.location.replace(newHash); 
+        } else {
+             // Reset hashu, ak je vybraná prázdna hodnota
+             window.location.replace(`#`); 
+        }
+        
+        // NEvoláme setSelectedCategoryId, aby sme sa vyhli zbytočnej zmene stavu/race condition
     };
 
     const handleGroupSelect = (e) => {
         const newGroupName = e.target.value;
-        // Log pre kontrolu, či mouse event odovzdáva hodnotu
-        console.log("Skupina zmenená. Nový názov:", newGroupName); 
-        setSelectedGroupName(newGroupName);
+        const categoryName = categoryIdToNameMap[selectedCategoryId];
+        
+        console.log("Skupina zmenená (Priama zmena HASH). Nový názov:", newGroupName); 
+        
+        if (categoryName) {
+            const categorySlug = slugifyName(categoryName);
+            let newHash = `#${encodeURIComponent(categorySlug)}`;
+            
+            if (newGroupName) {
+                const groupSlug = slugifyName(newGroupName);
+                newHash += `/${encodeURIComponent(groupSlug)}`;
+            }
+            
+            // Priamo prepíšeme hash. LOGIKA 3 následne prečíta hash a nastaví stav.
+            window.location.replace(newHash); 
+        } 
+        
+        // NEvoláme setSelectedGroupName, aby sme sa vyhli zbytočnej zmene stavu/race condition
     };
 
-    // --- KONIEC NOVÝCH FUNKCIÍ PRE SELECT BOXY ---
+    // --- KONIEC OPRAVENÝCH FUNKCIÍ PRE SELECT BOXY ---
 
 
     // --- FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
@@ -1225,7 +1251,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 {
                     className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
                     value: selectedCategoryId,
-                    // POUŽITIE NOVÉHO HANDLERA
+                    // POUŽITIE NOVÉHO HANDLERA (priamy zápis HASH)
                     onChange: handleCategorySelect
                 },
                 React.createElement('option', { value: '' }, 'Všetky kategórie'),
@@ -1240,7 +1266,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 {
                     className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
                     value: selectedGroupName,
-                    // POUŽITIE NOVÉHO HANDLERA
+                    // POUŽITIE NOVÉHO HANDLERA (priamy zápis HASH)
                     onChange: handleGroupSelect,
                     disabled: !selectedCategoryId,
                     style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' } 
