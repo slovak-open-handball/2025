@@ -932,7 +932,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
     };
     
-    // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
+    // --- OPRAVENÁ FUNKCIA handleDrop (Implementácia limitácie finalOrder) ---
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
@@ -957,15 +957,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalOrder = teamData.order; 
         const teamCategoryName = teamData.category; 
         
-        // Ak je targetGroup null (presun do zoznamu bez skupiny), newOrder je null.
-        const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
-        
         // Vynútené nastavenie null hodnôt, ak je cieľ 'Bez skupiny'
         const finalGroupName = targetGroup === null ? null : targetGroup;
-        const finalOrder = targetGroup === null ? null : newOrder; 
         
-        const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
-        const targetGroupDisplay = finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder}.` : `'bez skupiny'.`;
+        // 1. Predbežný výpočet finalOrder
+        let provisionalOrder = targetGroup ? (finalDropTarget.index + 1) : null;
+        
+        // Pomocné premenné pre ukladanie do databázy
+        let teamsToUpdate;
+        let finalOrderToUse; // Sem uložíme korigované finálne poradie
+        let targetDocPath;
 
         try {
             if (teamData.isSuperstructureTeam) {
@@ -974,7 +975,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 const docSnap = await getDoc(superstructureDocRef);
                 const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
                 
-                let teams = globalTeamsData[teamCategoryName] || [];
+                // Musíme pracovať s kópiou tímu pre túto kategóriu
+                let teams = [...(globalTeamsData[teamCategoryName] || [])];
+                targetDocPath = SUPERSTRUCTURE_TEAMS_DOC_PATH;
                 
                 // OPRAVA: Nájdeme tím podľa teamName, nie podľa lokálneho ID
                 const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
@@ -984,16 +987,35 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     return;
                 }
                 
+                // 2. KOREKCIA MAX ORDER
+                const teamsInTargetGroup = teams.filter(t => t.groupName === finalGroupName);
+                const teamsInTargetGroupCount = teamsInTargetGroup.length;
+
+                let maxPossibleOrder = teamsInTargetGroupCount;
+                if (originalGroup !== finalGroupName) {
+                     // Ak meníme skupinu, max order je teamsInTargetGroupCount + 1 (po vložení)
+                     maxPossibleOrder = teamsInTargetGroupCount + 1;
+                } else {
+                     // Ak zostávame v rovnakej skupine, max order je teamsInTargetGroupCount (len meníme poradie)
+                     maxPossibleOrder = teamsInTargetGroupCount;
+                }
+
+                // 3. Finálny finalOrder (limitujeme na maxPossibleOrder)
+                finalOrderToUse = provisionalOrder;
+                if (targetGroup !== null && provisionalOrder !== null && provisionalOrder > maxPossibleOrder) {
+                     finalOrderToUse = maxPossibleOrder;
+                }
+                
+                // --- POKRAČOVANIE LOGIKY UPDATE ---
+
                 // 1. Vytvoríme aktualizovaný tím s novými hodnotami (null alebo Group/Order)
                 const updatedDraggedTeam = { 
                     ...teams[originalTeamIndex], 
                     groupName: finalGroupName, 
-                    order: finalOrder 
+                    order: finalOrderToUse 
                 };
 
                 // 2. Odstránime tím z pôvodnej pozície (pre reordering ostatných)
-                // Musíme použiť slice/splice na kópiu, ak by sme teams použili priamo z doc.data()
-                teams = [...teams];
                 teams.splice(originalTeamIndex, 1);
                 
                 // 3. Spustíme reordering logiku na ostatných tímoch
@@ -1007,15 +1029,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                     
                     // Ak tím je v CIEĽOVEJ skupine a má vyššie alebo rovnaké poradie ako vkladaný tím, posunieme ho dole (+1)
-                    if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                    if (targetGroup !== null && targetGroup === t.groupName && finalOrderToUse !== null && t.order >= finalOrderToUse) {
                         return { ...t, order: t.order + 1 };
                     }
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
                     if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order < finalOrder) { 
+                        if (finalOrderToUse > originalOrder && t.order > originalOrder && t.order < finalOrderToUse) { 
                              return { ...t, order: t.order - 1 };
-                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                        } else if (finalOrderToUse < originalOrder && t.order >= finalOrderToUse && t.order < originalOrder) {
                              return { ...t, order: t.order + 1 };
                         }
                     }
@@ -1026,23 +1048,26 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 // 4. Vložíme presunutý tím naspäť na správnu pozíciu
                 if (finalGroupName !== null) {
                     // Vložíme na pozíciu finalOrder - 1 (pretože poradie 1 je index 0)
-                    reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+                    reorderedTeams.splice(finalOrderToUse - 1, 0, updatedDraggedTeam);
                 } else {
                     // Ak je bez skupiny, vložíme ho na koniec (order je null, takže sa zaradí podľa názvu)
                     reorderedTeams.push(updatedDraggedTeam); 
                 }
                 
                 // 5. Zápis do databázy
-                await setDoc(superstructureDocRef, {
+                teamsToUpdate = {
                     ...globalTeamsData,
                     [teamCategoryName]: reorderedTeams
-                }, { merge: true });
+                };
+
+                await setDoc(superstructureDocRef, teamsToUpdate, { merge: true });
 
 
             } else {
                 // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU (Zameranie iba na dokument vlastníka) ---
                 const ownerUid = teamData.uid;
                 const ownerDocRef = doc(window.db, 'users', ownerUid);
+                targetDocPath = `users/${ownerUid}`;
 
                 // 1. Získanie aktuálnych dát vlastníka
                 const docSnap = await getDoc(ownerDocRef);
@@ -1062,12 +1087,31 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
                     return;
                 }
+                
+                // 2. KOREKCIA MAX ORDER
+                const teamsInTargetGroup = teams.filter(t => t.groupName === finalGroupName);
+                const teamsInTargetGroupCount = teamsInTargetGroup.length;
 
+                let maxPossibleOrder = teamsInTargetGroupCount;
+                if (originalGroup !== finalGroupName) {
+                    maxPossibleOrder = teamsInTargetGroupCount + 1;
+                } else {
+                    maxPossibleOrder = teamsInTargetGroupCount;
+                }
+
+                // 3. Finálny finalOrder (limitujeme na maxPossibleOrder)
+                finalOrderToUse = provisionalOrder;
+                if (targetGroup !== null && provisionalOrder !== null && provisionalOrder > maxPossibleOrder) {
+                    finalOrderToUse = maxPossibleOrder;
+                }
+                
+                // --- POKRAČOVANIE LOGIKY UPDATE ---
+                
                 // 1. Vytvoríme aktualizovaný tím s novými hodnotami (null alebo Group/Order)
                 const updatedDraggedTeam = { 
                     ...teams[originalTeamIndex], 
                     groupName: finalGroupName, 
-                    order: finalOrder 
+                    order: finalOrderToUse 
                 };
                 
                 // 2. Odstránime tím z pôvodnej pozície (pre reordering ostatných)
@@ -1084,15 +1128,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                     
                     // Ak tím je v CIEĽOVEJ skupine a má vyššie alebo rovnaké poradie ako vkladaný tím, posunieme ho dole (+1)
-                    if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                    if (targetGroup !== null && targetGroup === t.groupName && finalOrderToUse !== null && t.order >= finalOrderToUse) {
                         return { ...t, order: t.order + 1 };
                     }
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
                     if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order < finalOrder) { 
+                        if (finalOrderToUse > originalOrder && t.order > originalOrder && t.order < finalOrderToUse) { 
                              return { ...t, order: t.order - 1 };
-                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                        } else if (finalOrderToUse < originalOrder && t.order >= finalOrderToUse && t.order < originalOrder) {
                              return { ...t, order: t.order + 1 };
                         }
                     }
@@ -1103,22 +1147,24 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 // 4. Vložíme presunutý tím naspäť na správnu pozíciu
                 if (finalGroupName !== null) {
                     // Vložíme na pozíciu finalOrder - 1 (pretože poradie 1 je index 0)
-                    reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+                    reorderedTeams.splice(finalOrderToUse - 1, 0, updatedDraggedTeam);
                 } else {
                     // Ak je bez skupiny, vložíme ho na koniec
                     reorderedTeams.push(updatedDraggedTeam); 
                 }
                 
                 // 5. Zápis do databázy
-                await updateDoc(ownerDocRef, {
+                teamsToUpdate = {
                     [`teams.${teamCategoryName}`]: reorderedTeams
-                });
+                };
+
+                await updateDoc(ownerDocRef, teamsToUpdate);
             }
             
             // Oznámenie o úspechu s pridaním cieľovej cesty pre overenie
-            const targetDocPath = teamData.isSuperstructureTeam 
-                ? SUPERSTRUCTURE_TEAMS_DOC_PATH 
-                : `users/${teamData.uid}`;
+            const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
+            const targetGroupDisplay = finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrderToUse}.` : `'bez skupiny'.`;
+
 
             const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay} (Dokument: ${targetDocPath}).`;
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
