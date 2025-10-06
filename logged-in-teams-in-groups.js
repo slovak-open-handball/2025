@@ -6,18 +6,18 @@ const { useState, useEffect, useRef } = React;
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 // --- Komponent Modálne Okno pre Pridanie Tímu/Konfigurácie ---
-// Prijíma nový prop: defaultCategoryId
-const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave, defaultCategoryId }) => {
+// Prijíma nové propy: defaultCategoryId a defaultGroupName
+const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave, defaultCategoryId, defaultGroupName }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [teamName, setTeamName] = useState('');
 
-    // Nastavenie/reset stavu pri otvorení/zatvorení modálu alebo zmene predvolenej kategórie
+    // Nastavenie/reset stavu pri otvorení/zatvorení modálu alebo zmene predvolených hodnôt
     useEffect(() => {
         if (isOpen) {
-            // Ak je k dispozícii predvolená kategória (z filtra hlavnej stránky), použije sa
+            // Ak je k dispozícii predvolená kategória/skupina (z filtra hlavnej stránky), použije sa
             setSelectedCategory(defaultCategoryId || '');
-            setSelectedGroup('');
+            setSelectedGroup(defaultGroupName || ''); // <<< AKTUALIZOVANÉ: Nastavenie predvolenej skupiny
             setTeamName('');
         } else {
              // Reset stavu pri zatvorení
@@ -25,7 +25,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
              setSelectedGroup('');
              setTeamName('');
         }
-    }, [isOpen, defaultCategoryId]); // Pridaná závislosť defaultCategoryId
+    }, [isOpen, defaultCategoryId, defaultGroupName]); // <<< AKTUALIZOVANÉ: Pridaná závislosť defaultGroupName
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
@@ -36,6 +36,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
         
     const handleCategoryChange = (e) => {
         setSelectedCategory(e.target.value);
+        // Reset skupiny, ak sa zmení kategória
         setSelectedGroup(''); 
     };
 
@@ -50,8 +51,9 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
 
     if (!isOpen) return null;
     
-    // Zistíme, či je pole kategórie disabled
+    // Zistíme, či sú polia disabled
     const isCategoryFixed = !!defaultCategoryId;
+    const isGroupFixed = !!defaultGroupName; // <<< NOVÉ: Kontrola, či je skupina prednastavená
 
     return React.createElement(
         'div',
@@ -101,16 +103,17 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                     React.createElement(
                         'select',
                         {
-                            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${!selectedCategory ? 'bg-gray-100 cursor-not-allowed' : ''}`,
+                            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${!selectedCategory || isGroupFixed ? 'bg-gray-100 cursor-not-allowed' : ''}`, // <<< AKTUALIZOVANÉ
                             value: selectedGroup,
                             onChange: (e) => setSelectedGroup(e.target.value),
-                            disabled: !selectedCategory
+                            disabled: !selectedCategory || isGroupFixed // <<< AKTUALIZOVANÉ: Zablokovanie, ak je skupina prednastavená
                         },
                         React.createElement('option', { value: '' }, availableGroups.length > 0 ? 'Bez skupiny (Zoznam pre priradenie)' : 'Najprv vyberte kategóriu'),
                         availableGroups.map((group, index) =>
                             React.createElement('option', { key: index, value: group.name }, group.name)
                         )
-                    )
+                    ),
+                    isGroupFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Skupina je predvolená filtrom na stránke: ${defaultGroupName}`) // <<< NOVÉ: Info o predvolenej skupine
                 ),
 
                 // 3. Input Názov Tímu
@@ -953,7 +956,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         return React.createElement(
             'div',
             { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
-            React.createElement(
+            // Zoznam tímov bez skupiny (zobrazí sa len v Single Category View, nie ak je vybraná len konkrétna skupina)
+            !selectedGroupName && React.createElement(
                 'div',
                 {
                     ref: teamsWithoutGroupRef,
@@ -1000,7 +1004,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(b.name));
     
     const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
                   ${notification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
@@ -1029,14 +1033,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             notification?.message
         ),
         
-        // Modálne okno - odovzdáme selectedCategoryId ako defaultCategoryId
+        // Modálne okno - odovzdáme selectedCategoryId a selectedGroupName
         React.createElement(NewTeamModal, {
             isOpen: isModalOpen,
             onClose: () => setIsModalOpen(false),
             allGroupsByCategoryId: allGroupsByCategoryId,
             categoryIdToNameMap: categoryIdToNameMap,
             handleSave: handleAddNewTeam,
-            defaultCategoryId: selectedCategoryId // Nová prop
+            defaultCategoryId: selectedCategoryId, 
+            defaultGroupName: selectedGroupName // <<< NOVÝ PROP ODOVZDANÝ DO MODÁLU
         }),
 
         React.createElement(
