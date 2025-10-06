@@ -12,7 +12,6 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     const [teamName, setTeamName] = useState('');
 
     useEffect(() => {
-        // Reset stavov pri otvorení/zatvorení modálu
         if (!isOpen) {
             setSelectedCategory('');
             setSelectedGroup('');
@@ -20,24 +19,20 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
         }
     }, [isOpen]);
 
-    // Získanie zoradených kategórií pre Select box
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
 
-    // Získanie zoradených skupín pre vybranú kategóriu
     const availableGroups = selectedCategory && allGroupsByCategoryId[selectedCategory]
         ? allGroupsByCategoryId[selectedCategory].sort((a, b) => a.name.localeCompare(b.name))
         : [];
         
-    // Reset skupiny, ak sa zmení kategória
     const handleCategoryChange = (e) => {
         setSelectedCategory(e.target.value);
-        setSelectedGroup(''); // Reset skupiny pri zmene kategórie
+        setSelectedGroup(''); 
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Spustenie funkcie ukladania z rodičovského komponentu
         handleSave({ 
             categoryId: selectedCategory, 
             groupName: selectedGroup, 
@@ -51,13 +46,13 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
         'div',
         { 
             className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]',
-            onClick: onClose // Zatvorenie po kliknutí mimo modál
+            onClick: onClose
         },
         React.createElement(
             'div',
             { 
                 className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transition-all transform scale-100',
-                onClick: (e) => e.stopPropagation() // Zabránenie zatvoreniu po kliknutí vnútri modálu
+                onClick: (e) => e.stopPropagation()
             },
             React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-6 border-b pb-2' }, 'Pridať Nový Tím'),
 
@@ -141,7 +136,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                         {
                             type: 'submit',
                             className: 'px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors',
-                            disabled: !selectedCategory || !teamName // Povinné polia
+                            disabled: !selectedCategory || !teamName
                         },
                         'Potvrdiť a Uložiť Tím'
                     )
@@ -153,13 +148,14 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
 
 const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
+    const [userTeamsData, setUserTeamsData] = useState([]); // NOVÝ STAV pre tímy z user dokumentov
+    const [superstructureTeams, setSuperstructureTeams] = useState({}); // Stav pre globálne tímy
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState(''); 
     const [notification, setNotification] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false); 
-    const [superstructureTeams, setSuperstructureTeams] = useState({}); // NOVÝ STAV pre globálne tímy
     
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -177,14 +173,36 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     }, [notification]);
 
-    // **NOVÝ EFEKT: Spájanie tímov**
-    // Spája tímy od používateľa a globálne tímy vždy, keď sa jeden z nich zmení.
+    // **Pomocná funkcia: Mapuje globálne dáta na jednotný formát poľa**
+    const mapSuperstructureTeams = (globalTeams) => {
+        let globalTeamsList = [];
+        Object.entries(globalTeams).forEach(([categoryName, teamArray]) => {
+             if (Array.isArray(teamArray)) {
+                teamArray.forEach(team => {
+                    if (team.teamName) {
+                        globalTeamsList.push({
+                            uid: 'global', // UNIKÁTNE ID pre globálne tímy
+                            category: categoryName,
+                            id: team.id || crypto.randomUUID(), 
+                            teamName: team.teamName,
+                            groupName: team.groupName || null,
+                            order: team.order || 0,
+                            isSuperstructureTeam: true, // KLASIFIKÁTOR PÔVODU
+                        });
+                    }
+                });
+             }
+        });
+        return globalTeamsList;
+    };
+    
+    // **EFEKT 1: Nastavenie všetkých Firestore Listenerov (beží len raz)**
     useEffect(() => {
-        let teamsList = [];
-        
+        if (!window.db) return; 
+
         // 1. Tímy od používateľov (Primárne tímy)
         const usersRef = collection(window.db, 'users');
-        const userDocs = query(usersRef); // Bude prečítané v onSnapshot nižšie
+        const userDocs = query(usersRef);
         
         const unsubscribeUsers = onSnapshot(userDocs, (querySnapshot) => {
             let userTeamsList = [];
@@ -198,11 +216,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                     userTeamsList.push({
                                         uid: doc.id,
                                         category: categoryName,
-                                        id: team.id || `${doc.id}-${team.teamName}`, // Unikátne ID
+                                        id: team.id || `${doc.id}-${team.teamName}`,
                                         teamName: team.teamName,
                                         groupName: team.groupName || null,
                                         order: team.order || 0, 
-                                        isSuperstructureTeam: false, // KLASIFIKÁTOR PÔVODU
+                                        isSuperstructureTeam: false,
                                     });
                                 }
                             });
@@ -210,8 +228,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     });
                 }
             });
-            // Nastaví výsledný zoznam s pridanými globálnymi tímami
-            setAllTeams([...userTeamsList, ...mapSuperstructureTeams(superstructureTeams)]);
+            // Uložíme RAW dáta používateľských tímov
+            setUserTeamsData(userTeamsList); 
         });
 
         // 2. Globálne tímy (Superštruktúra)
@@ -221,43 +239,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             if (docSnap.exists()) {
                 globalTeams = docSnap.data();
             }
+            // Uložíme RAW dáta globálnych tímov
             setSuperstructureTeams(globalTeams); 
         });
-
-        const mapSuperstructureTeams = (globalTeams) => {
-            let globalTeamsList = [];
-            Object.entries(globalTeams).forEach(([categoryName, teamArray]) => {
-                 if (Array.isArray(teamArray)) {
-                    teamArray.forEach(team => {
-                        if (team.teamName) {
-                            globalTeamsList.push({
-                                uid: 'global', // UNIKÁTNE ID pre globálne tímy
-                                category: categoryName,
-                                id: team.id || crypto.randomUUID(), 
-                                teamName: team.teamName,
-                                groupName: team.groupName || null,
-                                order: team.order || 0,
-                                isSuperstructureTeam: true, // KLASIFIKÁTOR PÔVODU
-                            });
-                        }
-                    });
-                 }
-            });
-            return globalTeamsList;
-        }
-
-        // Zmena SuperstructureTeams vyvolá novú re-render
-        useEffect(() => {
-            // Prepočíta allTeams, keď sa zmenia globálne tímy (reaguje na unsubscribeUsers)
-            if (unsubscribeUsers) {
-                // Dočasne vypneme/zapneme, aby sa znova prepočítali zjednotené tímy s novými dátami
-                unsubscribeUsers(); 
-                // Znovu spustíme logiku v rámci onSnapshot pre users, aby sa zjednotilo s novým stavom superstructureTeams.
-            }
-        }, [superstructureTeams]); 
         
-        
-        // Načítanie Kategórií a Skupín (ako predtým)
+        // 3. Načítanie Kategórií a Skupín
         const categoriesRef = doc(window.db, 'settings', 'categories');
         const unsubscribeCategories = onSnapshot(categoriesRef, (docSnap) => {
             const categoryIdToName = {};
@@ -295,9 +281,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             unsubscribeCategories();
             unsubscribeGroups();
         };
-    }, []); // Prázdne závislosti pre inicializáciu listenerov
+    }, []); 
 
-    // **LOGIKA: Načítanie kategórie a skupiny z URL hashu pri štarte**
+    // **EFEKT 2: Spájanie tímov (beží pri zmene userTeamsData alebo superstructureTeams)**
+    useEffect(() => {
+        const globalTeamsList = mapSuperstructureTeams(superstructureTeams);
+        // Spojíme oba zoznamy do finálneho zoznamu
+        setAllTeams([...userTeamsData, ...globalTeamsList]);
+    }, [userTeamsData, superstructureTeams]); 
+
+    // **LOGIKA: Načítanie a synchronizácia hashu (zostáva bezo zmeny)**
     useEffect(() => {
         const hash = window.location.hash.substring(1);
         if (hash) {
@@ -311,7 +304,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     }, []);
 
-    // **LOGIKA: Synchronizácia stavu s URL hashom**
     useEffect(() => {
         let hash = '';
         if (selectedCategoryId) {
@@ -327,7 +319,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     }, [selectedCategoryId, selectedGroupName]);
 
-    // --- NOVÁ FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
+    // --- FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
     const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
         if (!window.db) {
             setNotification({ id: Date.now(), message: "Firestore nie je inicializovaný.", type: 'error' });
@@ -338,13 +330,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
 
         try {
-            // 1. Získanie aktuálneho globálneho dokumentu
             const docSnap = await getDoc(superstructureDocRef);
             const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
             const currentTeamsForCategory = globalTeamsData[categoryName] || [];
 
-            // 2. Výpočet nového poradia v cieľovej skupine
-            // Filtrujeme globálne tímy v danej kategórii/skupine
             const teamsInTargetGroup = currentTeamsForCategory.filter(t => 
                 t.groupName === groupName
             );
@@ -356,22 +345,18 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             });
             
-            // Nové poradie: null ak bez skupiny, inak maxOrder + 1
             const newOrder = groupName ? (maxOrder + 1) : null; 
             
-            // 3. Vytvorenie nového tímu s poradovým číslom
             const newTeam = {
                 teamName: teamName,
                 groupName: groupName || null,
                 order: newOrder,
                 timestamp: Timestamp.now(),
-                id: crypto.randomUUID() // Unikátne ID pre presun
+                id: crypto.randomUUID()
             };
             
-            // 4. Aktualizácia poľa tímov o nový tím
             const updatedTeamsArray = [...currentTeamsForCategory, newTeam];
             
-            // 5. Uloženie globálneho dokumentu
             await setDoc(superstructureDocRef, {
                 ...globalTeamsData,
                 [categoryName]: updatedTeamsArray
@@ -391,7 +376,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
     // --- KONIEC FUNKCIE PRE GLOBÁLNE UKLADANIE ---
     
-    // Filtrovanie pre zobrazenie
+    // Filtrovanie pre zobrazenie (zostáva bezo zmeny)
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
         : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
@@ -565,8 +550,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const teamCategoryName = teamData.category; 
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
-        // **NOVÁ LOGIKA: Rozdelenie aktualizácie podľa PÔVODU tímu**
-
         try {
             if (teamData.isSuperstructureTeam) {
                 // --- UPDATE GLOBÁLNEHO DOKUMENTU (/settings/superstructureGroups) ---
@@ -585,7 +568,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         return { ...t, groupName: targetGroup, order: newOrder }; 
                     }
                     
-                    // Logika prečíslovania je rovnaká ako v užívateľskom kóde, len sa aplikuje na tento globálny zoznam
                     const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
                     const isMovingFromGroup = originalGroup && !targetGroup;
                     const isMovingToGroup = !originalGroup && targetGroup;
@@ -725,7 +707,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
 
             if (!selectedCategoryId && team.category && (isWithoutGroup || team.groupName)) {
-                 // Pridanie globálnej značky, ak je to globálny tím
                 const globalTag = team.isSuperstructureTeam ? ' [G]' : ''; 
                 teamNameDisplay = `${team.category}: ${teamNameDisplay}${globalTag}`;
             } else if (team.isSuperstructureTeam) {
