@@ -193,13 +193,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
              if (Array.isArray(teamArray)) {
                 teamArray.forEach(team => {
                     if (team.teamName) {
+                        const hasGroup = team.groupName && team.groupName.trim() !== '';
+
                         globalTeamsList.push({
                             uid: 'global', // UNIKÁTNE ID pre globálne tímy
                             category: categoryName,
                             id: team.id || crypto.randomUUID(), 
                             teamName: team.teamName,
                             groupName: team.groupName || null,
-                            order: team.order || 0,
+                            // FIX 2: Poradie je relevantné len ak má tím skupinu
+                            order: hasGroup ? (team.order ?? 0) : null,
                             isSuperstructureTeam: true, // KLASIFIKÁTOR PÔVODU
                         });
                     }
@@ -226,13 +229,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         if (Array.isArray(teamArray)) {
                             teamArray.forEach(team => {
                                 if (team.teamName) {
+                                    const hasGroup = team.groupName && team.groupName.trim() !== '';
+
                                     userTeamsList.push({
                                         uid: doc.id,
                                         category: categoryName,
                                         id: team.id || `${doc.id}-${team.teamName}`,
                                         teamName: team.teamName,
                                         groupName: team.groupName || null,
-                                        order: team.order || 0, 
+                                        // FIX 2: Poradie je relevantné len ak má tím skupinu
+                                        order: hasGroup ? (team.order ?? 0) : null, 
                                         isSuperstructureTeam: false,
                                     });
                                 }
@@ -361,6 +367,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             });
             
+            // Nový tím je vždy s najvyšším poradím, ak má skupinu
             const newOrder = groupName ? (maxOrder + 1) : null; 
             
             const newTeam = {
@@ -573,8 +580,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Ak je targetGroup null (presun do zoznamu bez skupiny), newOrder je null.
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
+        // FIX 1: Explicitné nastavenie null hodnôt pre 'Bez skupiny'
+        const finalGroupName = targetGroup === null ? null : targetGroup;
+        const finalOrder = targetGroup === null ? null : newOrder; 
+        
         const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
-        const targetGroupDisplay = targetGroup ? `'${targetGroup}' na pozíciu ${newOrder}.` : `'bez skupiny'.`;
+        const targetGroupDisplay = finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder}.` : `'bez skupiny'.`;
 
         try {
             if (teamData.isSuperstructureTeam) {
@@ -592,7 +603,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     if (isDraggedTeam) {
                         shouldUpdate = true;
                         // Tím, ktorý sa presúva: nastavenie novej skupiny a poradia (null, ak je bez skupiny)
-                        const updatedTeam = { ...t, groupName: targetGroup, order: newOrder };
+                        const updatedTeam = { 
+                            ...t, 
+                            groupName: finalGroupName, // Použijeme finalGroupName (môže byť null)
+                            order: finalOrder // Použijeme finalOrder (môže byť null)
+                        };
                         console.log(`[DRAG] Presúvaný globálny tím výsledok: name=${updatedTeam.teamName}, groupName=${updatedTeam.groupName}, order=${updatedTeam.order}`);
                         return updatedTeam; 
                     }
@@ -670,7 +685,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     if (isDraggedTeam) {
                         shouldUpdate = true;
                         // Tím, ktorý sa presúva: nastavenie novej skupiny a poradia (null, ak je bez skupiny)
-                        const updatedTeam = { ...t, groupName: targetGroup, order: newOrder };
+                        const updatedTeam = { 
+                            ...t, 
+                            groupName: finalGroupName, // Použijeme finalGroupName (môže byť null)
+                            order: finalOrder // Použijeme finalOrder (môže byť null)
+                        };
                         
                         // --- DEBUG: Vypíšeme finálny objekt tímu pred aktualizáciou ---
                         console.log(`[DRAG] Presúvaný používateľský tím výsledok: name=${updatedTeam.teamName}, groupName=${updatedTeam.groupName}, order=${updatedTeam.order}`);
@@ -749,8 +768,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             if (!isWithoutGroup) {
+                // Pre tímy v skupine triedime podľa 'order'
                 return (a.order || 0) - (b.order || 0);
             } else {
+                // Pre tímy bez skupiny triedime len podľa názvu
                 return a.category.localeCompare(b.category) || a.teamName.localeCompare(b.teamName);
             }
         });
