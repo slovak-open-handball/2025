@@ -104,10 +104,17 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     // KONTROLA PRE TLAČIDLO:
     const buttonBaseClasses = 'px-4 py-2 rounded-lg transition-colors duration-200';
     const activeClasses = 'bg-indigo-600 text-white hover:bg-indigo-700';
+    
+    // UPRAVENÉ TRIEDY PRE ZABLOKOVANÉ TLAČIDLO
+    // farba výplne: biela (bg-white)
+    // farba textu a orámovania: farba aktívnej výplne (text-indigo-600, border border-indigo-600)
+    // kurzor: kurzor-default, pointer-events-none
     const disabledClasses = `
-        bg-gray-200 
-        text-gray-500 
-        cursor-not-allowed 
+        bg-white 
+        text-indigo-600 
+        border 
+        border-indigo-600 
+        cursor-default
         shadow-none 
         pointer-events-none 
     `; 
@@ -216,7 +223,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                             className: `${buttonBaseClasses} ${isSubmitDisabled ? disabledClasses : activeClasses}`,
                             disabled: isSubmitDisabled
                         },
-                        'Potvrdiť a uložiť tím'
+                        'Potvrdiť a Uložiť Tím'
                     )
                 )
             )
@@ -449,6 +456,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 teamName: finalTeamName, // Použijeme formátovaný názov
                 groupName: groupName || null,
                 order: newOrder,
+                timestamp: Timestamp.now(),
                 id: crypto.randomUUID()
             };
             
