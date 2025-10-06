@@ -232,6 +232,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [selectedGroupName, setSelectedGroupName] = useState(''); 
     const [notification, setNotification] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false); 
+    // NOVÝ STAV pre zabránenie prepisu hashu pri prvotnom načítaní
+    const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false); 
     
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -411,7 +413,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const hash = window.location.hash.substring(1);
         
         // Ak ešte nie sú načítané mapy, ale v hashi je hodnota, počkáme
-        if (Object.keys(map).length === 0 && hash) return; 
+        if (Object.keys(map).length === 0 && hash) {
+            // V tomto prípade sa neukončujeme, necháme prebehnúť, ale len ak je prázdny hash
+            if (hash) return; // Ak je hash a mapa nie je hotová, čakáme
+        } 
 
         if (hash) {
             const parts = hash.split('/');
@@ -435,6 +440,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             setSelectedCategoryId('');
             setSelectedGroupName('');
         }
+        
+        // KĽÚČOVÁ ZMENA: Ak už mapa bola načítaná a spracovali sme hash (alebo zistili, že je prázdny), nastavíme flag na true
+        if (Object.keys(map).length > 0 && !isInitialHashReadComplete) {
+            setIsInitialHashReadComplete(true);
+        }
     };
 
     // **LOGIKA 3: Načítanie hashu z URL a Listener pre zmeny**
@@ -452,10 +462,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         return () => {
             window.removeEventListener('hashchange', handleHashChange);
         };
-    }, [categoryNameToIdMap]); // Závislosť na mape zaručuje, že preklad je vždy aktuálny
+    // Pridáme isInitialHashReadComplete do dependencies, aj keď hlavnú prácu robí categoryNameToIdMap
+    }, [categoryNameToIdMap, isInitialHashReadComplete]); 
 
     // **LOGIKA 4: Ukladanie hashu (zápis SLUG kategórie a SLUG skupiny do URL)**
     useEffect(() => {
+        
+        // KĽÚČOVÁ ZMENA: Zastavíme zápis, kým sa nenačíta mapa a neprebehne prvotné čítanie hashu
+        if (!isInitialHashReadComplete) {
+            return;
+        }
+        
         let hash = '';
         
         // Získame NÁZOV kategórie z ID
@@ -476,23 +493,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
         }
         
-        // NOVÁ KONTROLA PRE ZABRÁNENIE PREPÍSANIA HASHA PRI NAČÍTANÍ DÁT
-        const hashExistsOnLoad = window.location.hash.substring(1);
-        const mapIsNotReady = Object.keys(categoryIdToNameMap).length === 0;
-
-        // Ak sa práve inicializujeme (filter je prázdny) A mapa nie je plná A existuje hash v URL,
-        // preskočíme zápis, aby sme ho nepremazali.
-        if (!selectedCategoryId && mapIsNotReady && hashExistsOnLoad) {
-            return;
-        }
+        // Prečítame aktuálny hash v URL pre kontrolu pretekárskeho stavu/ slučky
+        const currentHash = window.location.hash.substring(1); 
 
         // Zabránenie nekonečnej slučke: nastavujeme hash len ak sa líši od aktuálneho
-        if (hashExistsOnLoad !== hash) {
+        if (currentHash !== hash) {
             // Používame replace() namiesto priradenia, aby sme nezaplnili históriu prehliadača
             window.location.replace(`#${hash}`); 
         }
 
-    }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap]); 
+    }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap, isInitialHashReadComplete]); // Pridanie isInitialHashReadComplete
     // --- KONIEC NOVEJ LOGIKY SYNCHRONIZÁCIE HASHA ---
 
     // --- OPRAVA: FUNKCIE PRE SELECT BOXY (Priamy zápis do URL hash) ---
