@@ -1,5 +1,5 @@
-// Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, where, limit, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+<!-- Tento kód je upravený pre pridávanie tímov a ukladanie poradového čísla (order) do databázy. -->
+import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
@@ -57,7 +57,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                 className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transition-all transform scale-100',
                 onClick: (e) => e.stopPropagation() // Zabránenie zatvoreniu po kliknutí vnútri modálu
             },
-            React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-6 border-b pb-2' }, 'Pridať Nový Tím/Konfiguráciu'),
+            React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-6 border-b pb-2' }, 'Pridať Nový Tím'),
 
             React.createElement(
                 'form',
@@ -141,7 +141,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                             className: 'px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors',
                             disabled: !selectedCategory || !teamName // Povinné polia
                         },
-                        'Potvrdiť a Uložiť'
+                        'Potvrdiť a Uložiť Tím'
                     )
                 )
             )
@@ -155,9 +155,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState(''); 
-    const [nextOrderMap, setNextOrderMap] = useState({});
     const [notification, setNotification] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false); // Nový stav pre modál
+    const [isModalOpen, setIsModalOpen] = useState(false); 
     
     // Stav pre drag & drop
     const draggedItem = useRef(null);
@@ -185,7 +184,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const usersRef = collection(window.db, 'users');
         const unsubscribeTeams = onSnapshot(usersRef, (querySnapshot) => {
             const teamsList = [];
-            const newNextOrderMap = {};
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
                 if (userData && userData.teams) {
@@ -193,10 +191,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         if (Array.isArray(teamArray)) {
                             teamArray.forEach(team => {
                                 if (team.teamName) {
+                                    // Zabezpečíme, že tím má order a ID (pre staré tímy fallback)
                                     teamsList.push({
                                         uid: doc.id,
                                         category: categoryName,
-                                        ...team
+                                        id: team.id || `${doc.id}-${team.teamName}`, // Použitie unikátneho ID alebo fallback
+                                        teamName: team.teamName,
+                                        groupName: team.groupName || null,
+                                        order: team.order || 0, // Zabezpečíme, že order je číslo (0 pre default/bez skupiny)
                                     });
                                 }
                             });
@@ -205,16 +207,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             });
             setAllTeams(teamsList);
-            // Vypočítanie nextOrderMap na základe aktuálnych dát (len ako fallback pre prázdny drop)
-            teamsList.forEach(team => {
-                if (team.groupName) {
-                    const key = `${team.category}-${team.groupName}`;
-                    if (!newNextOrderMap[key] || team.order >= newNextOrderMap[key]) {
-                        newNextOrderMap[key] = (team.order || 0) + 1;
-                    }
-                }
-            });
-            setNextOrderMap(newNextOrderMap);
         });
 
         const categoriesRef = doc(window.db, 'settings', 'categories');
@@ -286,44 +278,73 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     }, [selectedCategoryId, selectedGroupName]);
 
-    // --- NOVÁ FUNKCIA: Uloženie novej konfigurácie (Tímu) ---
-    const handleAddNewConfig = async ({ categoryId, groupName, teamName }) => {
-        if (!window.db || !categoryId || !teamName) {
-            setNotification({ id: Date.now(), message: "Vyplňte prosím kategóriu a názov tímu.", type: 'error' });
+    // --- NOVÁ FUNKCIA: Uloženie nového Tímu ---
+    const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
+        if (!window.db || !window.auth.currentUser) {
+            setNotification({ id: Date.now(), message: "Pre pridanie tímu musíte byť prihlásený.", type: 'error' });
             return;
         }
 
+        const userId = window.auth.currentUser.uid;
         const categoryName = categoryIdToNameMap[categoryId];
+        // Kľúč pre poľa tímov v dokumente používateľa (napr. teams.Kategoria A)
+        const teamCategoryKey = `teams.${categoryName}`; 
+
+        // 1. Nájdeme tímy v cieľovej kategórii a skupine (len pre výpočet poradia)
+        // Toto funguje vďaka tomu, že 'allTeams' je aktuálny stav celej databázy.
+        const teamsInTargetGroup = allTeams.filter(t => 
+            t.category === categoryName && 
+            t.groupName === groupName
+        );
+        
+        // Zistíme maximálne poradie v tejto skupine/kategórii
+        let maxOrder = 0;
+        teamsInTargetGroup.forEach(t => {
+            if (t.order > maxOrder) {
+                maxOrder = t.order;
+            }
+        });
+        
+        // Nové poradie: null ak bez skupiny, inak maxOrder + 1
+        // Poradové číslo (order) sa ukladá rovnako ako pri drag & drop
+        const newOrder = groupName ? (maxOrder + 1) : null; 
         
         try {
-            // POZNÁMKA: Ukladanie do 'settings/superstructureGroups' podľa požiadavky.
-            // Bežné tímy, ktoré sa presúvajú, sú uložené v users/{uid}/teams.
-            const docRef = doc(window.db, 'settings', 'superstructureGroups');
+            // Referencia na dokument používateľa, kde sú uložené jeho tímy
+            const userDocRef = doc(window.db, 'users', userId);
             
-            // Vytvorenie jednoduchej štruktúry pre uloženie do 'superstructureGroups'
-            const newEntry = {
+            // 1. Získame aktuálne pole tímov pre danú kategóriu (ak existuje)
+            const userDocSnap = await getDoc(userDocRef);
+            const currentTeams = userDocSnap.data()?.teams?.[categoryName] || [];
+
+            // 2. Vytvorenie nového tímu s poradovým číslom
+            const newTeam = {
                 teamName: teamName,
-                categoryId: categoryId,
-                categoryName: categoryName,
-                groupName: groupName || 'bez skupiny',
-                addedBy: window.auth.currentUser?.email || 'Neznámy používateľ',
-                timestamp: Timestamp.now()
+                groupName: groupName || null,
+                order: newOrder,
+                timestamp: Timestamp.now(),
+                // Pridáme ID pre unikátnu identifikáciu v rámci poľa
+                id: crypto.randomUUID() 
             };
             
-            // Uloženie pod unikátnym ID do dokumentu 'superstructureGroups' s merge=true
-            const newTeamId = crypto.randomUUID();
-            await setDoc(docRef, { [newTeamId]: newEntry }, { merge: true });
+            // 3. Aktualizácia poľa tímov o nový tím
+            const updatedTeamsArray = [...currentTeams, newTeam];
+            
+            // Použijeme updateDoc na aktualizáciu len konkrétneho poľa
+            await updateDoc(userDocRef, {
+                [teamCategoryKey]: updatedTeamsArray
+            });
             
             setIsModalOpen(false);
             setNotification({ 
                 id: Date.now(), 
-                message: `Požiadavka na pridanie tímu '${teamName}' bola úspešne uložená do settings/superstructureGroups.`, 
+                message: `Tím '${teamName}' bol úspešne pridaný a zaradený (Poradie: ${newOrder || 'bez poradia'}).`, 
                 type: 'success' 
             });
 
         } catch (error) {
-            console.error("Chyba pri ukladaní novej konfigurácie:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri ukladaní dát do 'superstructureGroups'.", type: 'error' });
+            console.error("Chyba pri pridávaní nového tímu:", error);
+            setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu do databázy.", type: 'error' });
         }
     };
     // --- KONIEC NOVEJ FUNKCIE ---
@@ -556,7 +577,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
             
             // Nájdeme index tímu v aktuálnom zoradenom zozname
-            const teamIndexInOriginal = teamsInOriginalGroup.findIndex(t => t.teamName === teamData.teamName && t.uid === teamData.uid);
+            const teamIndexInOriginal = teamsInOriginalGroup.findIndex(t => t.id === teamData.id); // Používame ID pre spoľahlivú identifikáciu
             
             // Ak je finálny index rovnaký ako pôvodný index alebo posunutý o 1 kvôli odstráneniu 
             // V rámci internej logiky, ak je index ten istý, nebudeme prečíslovať.
@@ -593,7 +614,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     let shouldUpdate = false;
                     
                     const updatedUserTeams = teams.map(t => {
-                        const isDraggedTeam = userDoc.id === teamData.uid && t.teamName === teamData.teamName;
+                        // Identifikujeme presúvaný tím (použijeme stabilné ID)
+                        const isDraggedTeam = userDoc.id === teamData.uid && t.id === teamData.id;
                         
                         // 1. Spracovanie tímu, ktorý sa presúva (platí pre jeho majiteľa)
                         if (isDraggedTeam) {
@@ -699,9 +721,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             if (!isWithoutGroup) {
+                // Zoradenie podľa order (ak nie je definovaný, použijeme 0)
                 return (a.order || 0) - (b.order || 0);
             } else {
-                // Zoradenie podľa kategórie a potom podľa mena
+                // Zoradenie podľa kategórie a potom podľa mena pre tímy bez skupiny
                 return a.category.localeCompare(b.category) || a.teamName.localeCompare(b.teamName);
             }
         });
@@ -729,7 +752,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             return React.createElement(
                 React.Fragment, 
-                { key: `${team.uid}-${team.teamName}-${team.groupName}-${index}` },
+                { key: team.id || `${team.uid}-${team.teamName}-${team.groupName}-${index}` }, // Používame stabilné ID
                 // Indikátor pred tímom
                 isDropIndicatorVisible && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
                 React.createElement(
@@ -969,7 +992,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             onClose: () => setIsModalOpen(false),
             allGroupsByCategoryId: allGroupsByCategoryId,
             categoryIdToNameMap: categoryIdToNameMap,
-            handleSave: handleAddNewConfig // Spustí funkciu ukladania do 'superstructureGroups'
+            handleSave: handleAddNewTeam // Spustí upravenú funkciu ukladania
         }),
 
         React.createElement(
