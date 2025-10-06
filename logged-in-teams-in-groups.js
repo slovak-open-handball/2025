@@ -580,7 +580,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Ak je targetGroup null (presun do zoznamu bez skupiny), newOrder je null.
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
-        // FIX 1: Explicitné nastavenie null hodnôt pre 'Bez skupiny'
+        // Vynútené nastavenie null hodnôt, ak je cieľ 'Bez skupiny'
         const finalGroupName = targetGroup === null ? null : targetGroup;
         const finalOrder = targetGroup === null ? null : newOrder; 
         
@@ -605,10 +605,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         // Tím, ktorý sa presúva: nastavenie novej skupiny a poradia (null, ak je bez skupiny)
                         const updatedTeam = { 
                             ...t, 
-                            groupName: finalGroupName, // Použijeme finalGroupName (môže byť null)
-                            order: finalOrder // Použijeme finalOrder (môže byť null)
+                            groupName: finalGroupName, 
+                            order: finalOrder 
                         };
-                        console.log(`[DRAG] Presúvaný globálny tím výsledok: name=${updatedTeam.teamName}, groupName=${updatedTeam.groupName}, order=${updatedTeam.order}`);
+                        // --- DEBUG LOGOVANIE PRED ZÁPISOM ---
+                        console.log(`[FIREBASE COMMIT - GLOBAL] Tím: ${updatedTeam.teamName} - Nastavený groupName: ${updatedTeam.groupName} (${typeof updatedTeam.groupName}), order: ${updatedTeam.order} (${typeof updatedTeam.order})`);
+                        // ------------------------------------
                         return updatedTeam; 
                     }
                     
@@ -654,11 +656,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU (Zameranie iba na dokument vlastníka) ---
                 const ownerUid = teamData.uid;
                 
-                // --- KONTROLA A DEBUG: POTVRDENIE CIEĽOVÉHO VLASTNÍKA ---
-                console.log(`[DRAG] Aktualizácia používateľského tímu: Tím '${teamData.teamName}' (ID: ${teamData.id}).`);
-                console.log(`[DRAG] Cieľový vlastník pre aktualizáciu (musí byť vlastník tímu): ${ownerUid}`);
-                // --------------------------------------------------------
-                
                 const ownerDocRef = doc(window.db, 'users', ownerUid);
 
                 // 1. Získanie aktuálnych dát vlastníka
@@ -691,9 +688,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                             order: finalOrder // Použijeme finalOrder (môže byť null)
                         };
                         
-                        // --- DEBUG: Vypíšeme finálny objekt tímu pred aktualizáciou ---
-                        console.log(`[DRAG] Presúvaný používateľský tím výsledok: name=${updatedTeam.teamName}, groupName=${updatedTeam.groupName}, order=${updatedTeam.order}`);
-                        // -------------------------------------------------------------
+                        // --- DEBUG LOGOVANIE PRED ZÁPISOM ---
+                        console.log(`[FIREBASE COMMIT - USER] Tím: ${updatedTeam.teamName} - Nastavený groupName: ${updatedTeam.groupName} (${typeof updatedTeam.groupName}), order: ${updatedTeam.order} (${typeof updatedTeam.order})`);
+                        // ------------------------------------
 
                         return updatedTeam; 
                     }
