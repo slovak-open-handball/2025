@@ -475,9 +475,19 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 hash += `/${encodeURIComponent(groupSlug)}`;
             }
         }
+        
+        // NOVÁ KONTROLA PRE ZABRÁNENIE PREPÍSANIA HASHA PRI NAČÍTANÍ DÁT
+        const hashExistsOnLoad = window.location.hash.substring(1);
+        const mapIsNotReady = Object.keys(categoryIdToNameMap).length === 0;
+
+        // Ak sa práve inicializujeme (filter je prázdny) A mapa nie je plná A existuje hash v URL,
+        // preskočíme zápis, aby sme ho nepremazali.
+        if (!selectedCategoryId && mapIsNotReady && hashExistsOnLoad) {
+            return;
+        }
 
         // Zabránenie nekonečnej slučke: nastavujeme hash len ak sa líši od aktuálneho
-        if (window.location.hash.substring(1) !== hash) {
+        if (hashExistsOnLoad !== hash) {
             // Používame replace() namiesto priradenia, aby sme nezaplnili históriu prehliadača
             window.location.replace(`#${hash}`); 
         }
