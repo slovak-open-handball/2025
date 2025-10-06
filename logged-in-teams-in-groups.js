@@ -546,6 +546,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
     
 
+    // --- FUNKCIA: Spracovanie presunu (Aktualizovaná pre správne zacielenie na vlastníka) ---
     const handleDrop = async (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         const dragData = draggedItem.current;
@@ -569,7 +570,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalGroup = teamData.groupName;
         const originalOrder = teamData.order; 
         const teamCategoryName = teamData.category; 
-        // Ak je targetGroup null, newOrder je null, čo je správne pre tímy bez skupiny
+        
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
         const originalGroupDisplay = originalGroup ? `'${originalGroup}'` : `'bez skupiny'`;
@@ -595,7 +596,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                     
                     const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
-                    const isMovingFromGroup = originalGroup && !targetGroup; // TRUE, ak presúvame naspäť do bez skupiny
+                    const isMovingFromGroup = originalGroup && !targetGroup; 
                     const isMovingToGroup = !originalGroup && targetGroup;
                     const isMovingBetweenGroups = originalGroup && targetGroup && originalGroup !== targetGroup;
 
@@ -633,19 +634,27 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
 
             } else {
-                // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU (Zameranie iba na dokument vlastníka) ---
+                // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU (Targetuje dokument vlastníka, bez ohľadu na to, kto ťahá) ---
                 const ownerUid = teamData.uid;
                 const ownerDocRef = doc(window.db, 'users', ownerUid);
 
                 // 1. Získanie aktuálnych dát vlastníka
                 const docSnap = await getDoc(ownerDocRef);
+                
+                // Kontrola existencie dát
                 if (!docSnap.exists() || !docSnap.data().teams || !docSnap.data().teams[teamCategoryName]) {
                     setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu (${ownerUid}) alebo pole tímov v kategórii ${teamCategoryName} nenájdené.`, type: 'error' });
                     return;
                 }
                 
                 const ownerTeamsData = docSnap.data().teams;
-                const teams = ownerTeamsData[teamCategoryName]; // Pole tímov v danej kategórii
+                const teams = ownerTeamsData[teamCategoryName]; // Pole tímov v danej kategórii (vlastníkova verzia)
+                
+                // Kontrola, či sa skutočne jedná o presun (predídenie zbytočným zápisom)
+                if (targetGroup === originalGroup && newOrder === originalOrder) {
+                     setNotification({ id: Date.now(), message: `Presun tímu ${teamData.teamName} nebol potrebný.`, type: 'info' });
+                     return;
+                }
                 
                 const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
                 const isMovingFromGroup = originalGroup && !targetGroup; 
@@ -661,6 +670,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     if (isDraggedTeam) {
                         shouldUpdate = true;
                         // Tím, ktorý sa presúva: nastavenie novej skupiny a poradia (null, ak je bez skupiny)
+                        // Ak presúvame v rámci skupiny, ale len meníme poradie
+                        if (isMovingWithinSameGroup) {
+                            return { ...t, groupName: targetGroup, order: newOrder };
+                        }
+                        // Ak meníme skupinu (alebo do/z nepriradených)
                         return { ...t, groupName: targetGroup, order: newOrder }; 
                     }
 
@@ -668,12 +682,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
                     // a) Presun v rámci tej istej skupiny (len zmena poradia)
                     if (isMovingWithinSameGroup && t.groupName === targetGroup && t.order != null) {
-                        // Presun dolu: tímy medzi originál a novou pozíciou dekrementovať
-                        if (newOrder > originalOrder && t.order > originalOrder && t.order <= newOrder - 1) { 
+                        // Presun dolu (order sa zníži o 1)
+                        if (newOrder > originalOrder && t.order > originalOrder && t.order < newOrder) { 
                             shouldUpdate = true;
                             return { ...t, order: t.order - 1 };
                         } 
-                        // Presun hore: tímy medzi novou a originálnou pozíciou inkrementovať
+                        // Presun hore (order sa zvýši o 1)
                         else if (newOrder < originalOrder && t.order >= newOrder && t.order < originalOrder) {
                             shouldUpdate = true;
                             return { ...t, order: t.order + 1 };
@@ -682,12 +696,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
 
                     // b) Tím zostal v PÔVODNEJ skupine (bol odstránený z tejto skupiny, treba posunúť hore)
+                    // Platia pre: Presun z Group A do Group B, Presun z Group A do Unassigned
                     if ((isMovingFromGroup || isMovingBetweenGroups) && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                         shouldUpdate = true;
                         return { ...t, order: t.order - 1 };
                     }
                     
                     // c) Tím v CIEĽOVEJ skupine (bol vložený nový tím, treba posunúť dolu)
+                    // Platia pre: Presun z Group A do Group B, Presun z Unassigned do Group B
                     if ((isMovingToGroup || isMovingBetweenGroups) && targetGroup && t.groupName === targetGroup && t.order != null && newOrder !== null && t.order >= newOrder) {
                         shouldUpdate = true;
                         return { ...t, order: t.order + 1 };
@@ -704,7 +720,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
             
             // Oznámenie o úspechu
-            const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay}`;
+            const notificationMessage = `Tím **${teamData.teamName}** (vlastník: ${teamData.uid}) bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay}`;
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
 
         } catch (error) {
@@ -715,6 +731,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
         }
     };
+    // --- KONIEC AKTUALIZOVANEJ handleDrop FUNKCIE ---
 
     const handleDragStart = (e, team) => {
         draggedItem.current = { team };
@@ -745,11 +762,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
 
             if (!selectedCategoryId && team.category && (isWithoutGroup || team.groupName)) {
-                const globalTag = team.isSuperstructureTeam ? ' ' : ''; 
+                const globalTag = team.isSuperstructureTeam ? ' [G]' : ''; 
                 // V globálnom zobrazení už nezobrazujeme kategóriu, pretože názov ju už obsahuje
-                teamNameDisplay = `${teamNameDisplay}${globalTag}`;
+                teamNameDisplay = `${teamNameDisplay} (Vlastník: ${team.uid.substring(0, 4)}...)${globalTag}`;
             } else if (team.isSuperstructureTeam) {
-                teamNameDisplay = `${teamNameDisplay} `;
+                teamNameDisplay = `${teamNameDisplay} [G]`;
+            } else {
+                 teamNameDisplay = `${teamNameDisplay} (Vlastník: ${team.uid.substring(0, 4)}...)`;
             }
             
             const isDropIndicatorVisible = 
@@ -959,7 +978,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
-        .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+        .sort(([, nameA], [, nameB]) => nameA.localeCompare(b.name));
     
     const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
                   ${notification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
