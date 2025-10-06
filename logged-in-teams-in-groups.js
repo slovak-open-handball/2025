@@ -491,7 +491,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const newCategoryId = e.target.value;
         const categoryName = categoryIdToNameMap[newCategoryId];
 
-        console.log("Kategória zmenená (Priama zmena HASH). Nové ID:", newCategoryId); 
+//        console.log("Kategória zmenená (Priama zmena HASH). Nové ID:", newCategoryId); 
         
         // Ak je vybraná kategória (nie 'Všetky kategórie')
         if (categoryName) {
@@ -512,7 +512,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const newGroupName = e.target.value;
         const categoryName = categoryIdToNameMap[selectedCategoryId];
         
-        console.log("Skupina zmenená (Priama zmena HASH). Nový názov:", newGroupName); 
+//        console.log("Skupina zmenená (Priama zmena HASH). Nový názov:", newGroupName); 
         
         if (categoryName) {
             const categorySlug = slugifyName(categoryName);
