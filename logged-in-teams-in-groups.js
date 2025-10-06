@@ -116,7 +116,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
         border-indigo-600 
         cursor-default
         shadow-none 
-        pointer-events-none 
+        cursor-not-allowed
     `; 
 
     return React.createElement(
