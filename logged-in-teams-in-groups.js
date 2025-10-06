@@ -216,7 +216,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                             className: `${buttonBaseClasses} ${isSubmitDisabled ? disabledClasses : activeClasses}`,
                             disabled: isSubmitDisabled
                         },
-                        'Potvrdiť a Uložiť Tím'
+                        'Potvrdiť a uložiť tím'
                     )
                 )
             )
