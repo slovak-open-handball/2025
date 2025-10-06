@@ -960,7 +960,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // Vynútené nastavenie null hodnôt, ak je cieľ 'Bez skupiny'
         const finalGroupName = targetGroup === null ? null : targetGroup;
         
-        // 1. Predbežný výpočet finalOrder
+        // 1. Predbežný výpočet provisionalOrder (Cieľové poradie = Index vloženia + 1)
         let provisionalOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
         // Pomocné premenné pre ukladanie do databázy
@@ -1007,6 +1007,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                      finalOrderToUse = maxPossibleOrder;
                 }
                 
+                // --- LADIACI VÝSTUP DO KONZOLY ---
+                console.log(`[DRAG-DROP DEBUG] Skupina: ${finalGroupName}`);
+                console.log(`[DRAG-DROP DEBUG] Pôvodné poradie (OriginalOrder): ${originalOrder}`);
+                console.log(`[DRAG-DROP DEBUG] Cieľový Index (Drop Index): ${finalDropTarget.index}`);
+                console.log(`[DRAG-DROP DEBUG] Predbežné Poradie (ProvisionalOrder): ${provisionalOrder}`);
+                console.log(`[DRAG-DROP DEBUG] Max. Možné Poradie (MaxPossibleOrder): ${maxPossibleOrder}`);
+                console.log(`[DRAG-DROP DEBUG] Finálne Poradie (FinalOrderToUse): ${finalOrderToUse}`);
+                // --- KONIEC LADIACEHO VÝSTUPU ---
+                
                 // --- POKRAČOVANIE LOGIKY UPDATE ---
 
                 // 1. Vytvoríme aktualizovaný tím s novými hodnotami (null alebo Group/Order)
@@ -1036,15 +1045,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
                     if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrderToUse > originalOrder) { // Presun na VYŠŠIE poradie (napr. 3 -> 6)
+                        if (finalOrderToUse > originalOrder) { // Presun na VYŠŠIE poradie (napr. 4 -> 7)
                              // Tímy medzi starým a novým miestom vrátane nového miesta sa posunú o -1
-                             // Tímy, kde T.order > OriginalOrder A T.order <= NewOrder
                             if (t.order > originalOrder && t.order <= finalOrderToUse) { 
                                  return { ...t, order: t.order - 1 };
                             }
-                        } else if (finalOrderToUse < originalOrder) { // Presun na NIŽŠIE poradie (napr. 6 -> 3)
+                        } else if (finalOrderToUse < originalOrder) { // Presun na NIŽŠIE poradie (napr. 7 -> 4)
                             // Tímy medzi novým a starým miestom sa posunú o +1
-                            // Tímy, kde T.order >= NewOrder A T.order < OriginalOrder
                             if (t.order >= finalOrderToUse && t.order < originalOrder) {
                                  return { ...t, order: t.order + 1 };
                             }
@@ -1114,6 +1121,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     finalOrderToUse = maxPossibleOrder;
                 }
                 
+                // --- LADIACI VÝSTUP DO KONZOLY ---
+                console.log(`[DRAG-DROP DEBUG] Skupina: ${finalGroupName}`);
+                console.log(`[DRAG-DROP DEBUG] Pôvodné poradie (OriginalOrder): ${originalOrder}`);
+                console.log(`[DRAG-DROP DEBUG] Cieľový Index (Drop Index): ${finalDropTarget.index}`);
+                console.log(`[DRAG-DROP DEBUG] Predbežné Poradie (ProvisionalOrder): ${provisionalOrder}`);
+                console.log(`[DRAG-DROP DEBUG] Max. Možné Poradie (MaxPossibleOrder): ${maxPossibleOrder}`);
+                console.log(`[DRAG-DROP DEBUG] Finálne Poradie (FinalOrderToUse): ${finalOrderToUse}`);
+                // --- KONIEC LADIACEHO VÝSTUPU ---
+
                 // --- POKRAČOVANIE LOGIKY UPDATE ---
                 
                 // 1. Vytvoríme aktualizovaný tím s novými hodnotami (null alebo Group/Order)
