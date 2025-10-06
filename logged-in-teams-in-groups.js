@@ -635,6 +635,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             } else {
                 // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU (Zameranie iba na dokument vlastníka) ---
                 const ownerUid = teamData.uid;
+                
+                // --- KONTROLA A DEBUG: POTVRDENIE CIEĽOVÉHO VLASTNÍKA ---
+                console.log(`[DRAG] Aktualizácia používateľského tímu: Tím '${teamData.teamName}' (ID: ${teamData.id}).`);
+                console.log(`[DRAG] Cieľový vlastník pre aktualizáciu (musí byť vlastník tímu): ${ownerUid}`);
+                // --------------------------------------------------------
+                
                 const ownerDocRef = doc(window.db, 'users', ownerUid);
 
                 // 1. Získanie aktuálnych dát vlastníka
@@ -703,8 +709,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 }
             }
             
-            // Oznámenie o úspechu
-            const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay}`;
+            // Oznámenie o úspechu s pridaním cieľovej cesty pre overenie
+            const targetDocPath = teamData.isSuperstructureTeam 
+                ? SUPERSTRUCTURE_TEAMS_DOC_PATH 
+                : `users/${teamData.uid}`;
+
+            const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay} (Dokument: ${targetDocPath}).`;
             setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
 
         } catch (error) {
