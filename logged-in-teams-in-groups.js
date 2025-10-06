@@ -1003,6 +1003,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 // 3. Finálny finalOrder (limitujeme na maxPossibleOrder)
                 finalOrderToUse = provisionalOrder;
                 if (targetGroup !== null && provisionalOrder !== null && provisionalOrder > maxPossibleOrder) {
+                     // Tu sa vykoná oprava napr. z 8 na 7
                      finalOrderToUse = maxPossibleOrder;
                 }
                 
@@ -1035,10 +1036,18 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
                     if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrderToUse > originalOrder && t.order > originalOrder && t.order < finalOrderToUse) { 
-                             return { ...t, order: t.order - 1 };
-                        } else if (finalOrderToUse < originalOrder && t.order >= finalOrderToUse && t.order < originalOrder) {
-                             return { ...t, order: t.order + 1 };
+                        if (finalOrderToUse > originalOrder) { // Presun na VYŠŠIE poradie (napr. 3 -> 6)
+                             // Tímy medzi starým a novým miestom vrátane nového miesta sa posunú o -1
+                             // Tímy, kde T.order > OriginalOrder A T.order <= NewOrder
+                            if (t.order > originalOrder && t.order <= finalOrderToUse) { 
+                                 return { ...t, order: t.order - 1 };
+                            }
+                        } else if (finalOrderToUse < originalOrder) { // Presun na NIŽŠIE poradie (napr. 6 -> 3)
+                            // Tímy medzi novým a starým miestom sa posunú o +1
+                            // Tímy, kde T.order >= NewOrder A T.order < OriginalOrder
+                            if (t.order >= finalOrderToUse && t.order < originalOrder) {
+                                 return { ...t, order: t.order + 1 };
+                            }
                         }
                     }
 
@@ -1134,10 +1143,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
                     if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrderToUse > originalOrder && t.order > originalOrder && t.order < finalOrderToUse) { 
-                             return { ...t, order: t.order - 1 };
-                        } else if (finalOrderToUse < originalOrder && t.order >= finalOrderToUse && t.order < originalOrder) {
-                             return { ...t, order: t.order + 1 };
+                         if (finalOrderToUse > originalOrder) { // Presun na VYŠŠIE poradie
+                            // FIX: Zahrnutie tímu na cieľovej pozícii (t.order <= finalOrderToUse)
+                            if (t.order > originalOrder && t.order <= finalOrderToUse) { 
+                                 return { ...t, order: t.order - 1 };
+                            }
+                        } else if (finalOrderToUse < originalOrder) { // Presun na NIŽŠIE poradie
+                            if (t.order >= finalOrderToUse && t.order < originalOrder) {
+                                return { ...t, order: t.order + 1 };
+                            }
                         }
                     }
                     
@@ -1617,7 +1631,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
                     },
                     React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
-                    renderTeamList(teamsWithoutGroup, null, null, true)
+                    renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
                 ),
                 React.createElement(
                     'div',
