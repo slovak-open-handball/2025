@@ -383,40 +383,58 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         setAllTeams([...userTeamsData, ...globalTeamsList]);
     }, [userTeamsData, superstructureTeams]); 
 
-    // NOVÉ: Vytvorenie inverznej mapy pre preklad z URL mena na ID
+    // NOVÉ: Vytvorenie inverznej mapy pre preklad z URL mena na ID (Reaktívny stav)
     const categoryNameToIdMap = Object.entries(categoryIdToNameMap).reduce((acc, [id, name]) => {
         acc[name] = id;
         return acc;
     }, {});
-
-    // **LOGIKA 3: Načítanie a synchronizácia hashu (zmena: čítanie NÁZVU kategórie z URL)**
-    useEffect(() => {
-        // Čakáme, kým bude mapa mien pripravená, aby sme mohli prekladať
-        if (Object.keys(categoryNameToIdMap).length === 0) return;
-        
+    
+    // --- NOVÁ LOGIKA SYNCHRONIZÁCIE HASHA ---
+    
+    // Pomocná funkcia na čítanie hashu a nastavenie stavu
+    const readHashAndSetState = (map) => {
         const hash = window.location.hash.substring(1);
+        
+        // Ak ešte nie sú načítané mapy, ale v hashi je hodnota, počkáme
+        if (Object.keys(map).length === 0 && hash) return; 
+
         if (hash) {
             const parts = hash.split('/');
-            const categoryNameFromUrl = decodeURIComponent(parts[0]); // Názov kategórie z URL
+            const categoryNameFromUrl = decodeURIComponent(parts[0]);
 
-            // NOVÁ LOGIKA PREKLADU: Názov kategórie -> ID kategórie
-            const categoryId = categoryNameToIdMap[categoryNameFromUrl];
+            const categoryId = map[categoryNameFromUrl];
             
             const groupNameEncoded = parts[1];
             const groupName = groupNameEncoded ? decodeURIComponent(groupNameEncoded) : '';
 
-            if (categoryId) {
-                 setSelectedCategoryId(categoryId);
-            } else {
-                 // Ak názov kategórie v URL neexistuje, resetujeme filter
-                 setSelectedCategoryId('');
-                 console.warn(`Kategória s názvom '${categoryNameFromUrl}' nebola nájdená.`);
-            }
-            setSelectedGroupName(groupName); 
+            // Nastavenie ID, ak je nájdené, inak reset
+            setSelectedCategoryId(categoryId || '');
+            setSelectedGroupName(groupName || ''); 
+        } else {
+            // Reset filtrov, ak je hash prázdny
+            setSelectedCategoryId('');
+            setSelectedGroupName('');
         }
-    }, [categoryNameToIdMap]); // ZÁVISÍ OD MAPY, aby sme vedeli prekladať názvy
+    };
 
-    // **LOGIKA 4: Ukladanie hashu (zmena: zápis NÁZVU kategórie do URL)**
+    // **LOGIKA 3: Načítanie hashu z URL a Listener pre zmeny**
+    useEffect(() => {
+        // 1. Inicializácia: Načíta hash po prvom renderi a pri pripravenosti mapy
+        readHashAndSetState(categoryNameToIdMap);
+        
+        // 2. Hashchange Listener: Zabezpečuje obojsmernú synchronizáciu (napr. pri Back/Forward alebo manuálnej zmene)
+        const handleHashChange = () => {
+            readHashAndSetState(categoryNameToIdMap);
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        
+        return () => {
+            window.removeEventListener('hashchange', handleHashChange);
+        };
+    }, [categoryNameToIdMap]); // Závislosť na mape zaručuje, že preklad je vždy aktuálny
+
+    // **LOGIKA 4: Ukladanie hashu (zápis NÁZVU kategórie do URL)**
     useEffect(() => {
         let hash = '';
         
@@ -430,11 +448,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             }
         }
 
+        // Zabránenie nekonečnej slučke: nastavujeme hash len ak sa líši od aktuálneho
         if (window.location.hash.substring(1) !== hash) {
-            window.location.hash = hash;
+            // Používame replace() namiesto priradenia, aby sme nezaplnili históriu prehliadača
+            window.location.replace(`#${hash}`); 
         }
 
-    }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap]); // Pridaná závislosť categoryIdToNameMap
+    }, [selectedCategoryId, selectedGroupName, categoryIdToNameMap]); 
+    // --- KONIEC NOVEJ LOGIKY SYNCHRONIZÁCIE HASHA ---
+
 
     // --- FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
     const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
@@ -1156,6 +1178,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
                     value: selectedCategoryId,
                     onChange: (e) => {
+                        // Pri zmene select boxu priamo nastavíme stav, čo následne spustí LOGIKA 4 (zápis hashu)
                         setSelectedCategoryId(e.target.value);
                         setSelectedGroupName('');
                     }
