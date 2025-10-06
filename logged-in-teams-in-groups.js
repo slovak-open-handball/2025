@@ -53,6 +53,26 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
             teamName: teamName 
         });
     };
+    
+    // LOGIKA BLOKOVANIA TLAČIDLA:
+    // Tlačidlo je NEAKTÍVNE, ak:
+    // 1. Nie je vybraná kategória (selectedCategory je prázdne)
+    // 2. Je vybraná kategória, ale nie je vybraná skupina A nebola prednastavená skupina (logika: ak kategória vyžaduje skupinu, musí byť vybraná, ale v tomto prípade skupiny nie sú povinné pre všetky tímy, tak to zjednodušíme - Zatiaľ necháme Skupinu voliteľnú)
+    // 3. TeamName je prázdny (po očistení bielych znakov)
+    
+    // Zjednodušené pravidlo: Kategória a Názov tímu sú povinné. Skupina je voliteľná (ako to je v logike ukladania).
+    // Ak by sme chceli vynútiť aj výber skupiny pre tie, ktoré majú skupiny, museli by sme pridať komplexnejšiu logiku.
+    
+    const isCategoryValid = !!selectedCategory;
+    const isTeamNameValid = teamName.trim().length > 0;
+    
+    // Ak je kategória vybraná a má dostupné skupiny A skupina nebola predvolená, vynútiť jej výber.
+    // Ak sa kategória zvolí, je možné že chceme aby sa vybrala aj skupina:
+    // Pre tímy, ktoré chcú byť v skupine: Vybratá skupina by nemala byť prázdna, ak kategória nie je prázdna.
+    
+    // Zjednodušená verzia: Povinná je Kategória a Názov tímu (podľa pôvodného disabled stavu tlačidla)
+    const isSubmitDisabled = !isCategoryValid || !isTeamNameValid;
+
 
     if (!isOpen) return null;
     
@@ -60,6 +80,20 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     const isCategoryFixed = !!defaultCategoryId;
     // NOVÉ: Zistíme, či je pole skupiny disabled
     const isGroupFixed = !!defaultGroupName;
+    
+    // KONTROLA PRE TLAČIDLO:
+    const buttonBaseClasses = 'px-4 py-2 rounded-lg transition-colors duration-200';
+    const activeClasses = 'bg-indigo-600 text-white hover:bg-indigo-700';
+    const disabledClasses = `
+        bg-white 
+        text-indigo-600 
+        border border-indigo-600 
+        cursor-default 
+        hover:bg-gray-50
+        !shadow-none 
+        !pointer-events-none 
+        hover:cursor-not-allowed
+    `; // !important triedy pre prepísanie hover efektov
 
     return React.createElement(
         'div',
@@ -160,8 +194,8 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                         'button',
                         {
                             type: 'submit',
-                            className: 'px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors',
-                            disabled: !selectedCategory || !teamName
+                            className: `${buttonBaseClasses} ${isSubmitDisabled ? disabledClasses : activeClasses}`,
+                            disabled: isSubmitDisabled
                         },
                         'Potvrdiť a Uložiť Tím'
                     )
@@ -960,7 +994,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
         
         const teamsWithoutGroupHeight = teamsWithoutGroupRef.current 
-            ? teamsWithoutGroupRef.current.offsetHeight 
+            ? teamsWithoutGroupRef.offsetHeight 
             : null;
 
         return React.createElement(
