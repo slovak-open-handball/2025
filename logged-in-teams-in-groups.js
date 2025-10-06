@@ -718,7 +718,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         } catch (error) {
             console.error("Chyba pri aktualizácii globálneho tímu:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri aktualizácii tímu v globálnom dokumente.", type: 'error' });
+            setNotification({ id: Date.now(), message: "Chyba pri aktualizácii tímu v globálnom dokumentu.", type: 'error' });
         }
     };
 
@@ -962,19 +962,26 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         // 1. Predbežný výpočet provisionalOrder (Cieľové poradie = Index vloženia + 1)
         let provisionalOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
-        // Pomocné premenné pre ukladanie do databázy
+        // --- PREMENNÉ SÚ DEKLAROVANÉ S LET V HLAVNOM SCOPE FUNKCIE ---
         let teamsToUpdate;
-        let finalOrderToUse; // Sem uložíme korigované finálne poradie
+        let finalOrderToUse; 
         let targetDocPath;
         let originalTeamIndexInFullList = -1;
         let teams; // Array všetkých tímov v kategórii
+
+        // Nové deklarácie premenných (opravené zo 'const' na 'let' v ich blokoch na 'let' v hlavnom scope)
+        let globalTeamsData = {}; 
+        let ownerDocRef = null; 
+        let superstructureDocRef = null;
         
         try {
             if (teamData.isSuperstructureTeam) {
                 // --- UPDATE GLOBÁLNEHO DOKUMENTU (/settings/superstructureGroups) ---
-                const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+                superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
                 const docSnap = await getDoc(superstructureDocRef);
-                const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+                
+                // globalTeamsData je teraz let premenná v scope handleDrop
+                globalTeamsData = docSnap.exists() ? docSnap.data() : {};
                 
                 teams = [...(globalTeamsData[teamCategoryName] || [])];
                 targetDocPath = SUPERSTRUCTURE_TEAMS_DOC_PATH;
@@ -992,7 +999,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             } else {
                 // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU ---
                 const ownerUid = teamData.uid;
-                const ownerDocRef = doc(window.db, 'users', ownerUid);
+                // ownerDocRef je teraz let premenná v scope handleDrop
+                ownerDocRef = doc(window.db, 'users', ownerUid);
                 targetDocPath = `users/${ownerUid}`;
 
                 const docSnap = await getDoc(ownerDocRef);
@@ -1083,13 +1091,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             
             // 5. Zápis do databázy (Superštruktúra / Používateľ)
             if (teamData.isSuperstructureTeam) {
+                // Používame globalTeamsData, ktoré je teraz v scope
                 teamsToUpdate = {
-                    ...globalTeamsData,
+                    ...globalTeamsData, 
                     [teamCategoryName]: finalTeams
                 };
                 await setDoc(superstructureDocRef, teamsToUpdate, { merge: true });
 
             } else {
+                // Používame ownerDocRef, ktoré je teraz v scope
                 teamsToUpdate = {
                     [`teams.${teamCategoryName}`]: finalTeams
                 };
