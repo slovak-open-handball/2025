@@ -496,7 +496,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         e.dataTransfer.dropEffect = "move";
         e.currentTarget.style.cursor = 'move';
         
-        const containerRef = listRefs.current[`${targetCategoryId}-${targetGroup}`];
+        // Ak targetGroup je null (bez skupiny), použijeme špeciálnu referenciu
+        const listRefKey = targetGroup === null 
+            ? `${targetCategoryId}-null` 
+            : `${targetCategoryId}-${targetGroup}`;
+            
+        const containerRef = listRefs.current[listRefKey];
         if (!containerRef) return;
 
         const teamElements = Array.from(containerRef.children).filter(el => el.tagName === 'LI');
@@ -564,6 +569,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalGroup = teamData.groupName;
         const originalOrder = teamData.order; 
         const teamCategoryName = teamData.category; 
+        // Ak je targetGroup null, newOrder je null, čo je správne pre tímy bez skupiny
         const newOrder = targetGroup ? (finalDropTarget.index + 1) : null;
         
         try {
@@ -581,11 +587,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     if (isDraggedTeam) {
                         shouldUpdate = true;
+                        // Ak je targetGroup null, nastavia sa groupName: null a order: null
                         return { ...t, groupName: targetGroup, order: newOrder }; 
                     }
                     
                     const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
-                    const isMovingFromGroup = originalGroup && !targetGroup;
+                    const isMovingFromGroup = originalGroup && !targetGroup; // TRUE, ak presúvame naspäť do bez skupiny
                     const isMovingToGroup = !originalGroup && targetGroup;
                     const isMovingBetweenGroups = originalGroup && targetGroup && originalGroup !== targetGroup;
 
@@ -600,6 +607,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         return t;
                     }
 
+                    // Logika pre prečíslovanie tímu, ktorý zostal v PÔVODNEJ skupine
                     if ((isMovingFromGroup || isMovingBetweenGroups) && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                         shouldUpdate = true;
                         return { ...t, order: t.order - 1 };
@@ -628,7 +636,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 const batchPromises = [];
 
                 const isMovingWithinSameGroup = targetGroup && (targetGroup === originalGroup);
-                const isMovingFromGroup = originalGroup && !targetGroup;
+                const isMovingFromGroup = originalGroup && !targetGroup; // TRUE, ak presúvame naspäť do bez skupiny
                 const isMovingToGroup = !originalGroup && targetGroup;
                 const isMovingBetweenGroups = originalGroup && targetGroup && originalGroup !== targetGroup;
 
@@ -643,6 +651,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                             
                             if (isDraggedTeam) {
                                 shouldUpdate = true;
+                                // Ak je targetGroup null, nastavia sa groupName: null a order: null
                                 return { ...t, groupName: targetGroup, order: newOrder }; 
                             }
 
@@ -657,6 +666,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                 return t;
                             }
 
+                            // Logika pre prečíslovanie tímu, ktorý zostal v PÔVODNEJ skupine
                             if ((isMovingFromGroup || isMovingBetweenGroups) && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                                 shouldUpdate = true;
                                 return { ...t, order: t.order - 1 };
@@ -758,6 +768,11 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             dropTarget.categoryId === targetCategoryId && 
             dropTarget.index === sortedTeams.length; 
             
+        // Kľúč pre referenciu (dôležité pre správne fungovanie dropu na prázdny priestor)
+        const listRefKey = targetGroupId === null 
+            ? `${targetCategoryId}-null` 
+            : `${targetCategoryId}-${targetGroupId}`;
+            
         if (sortedTeams.length === 0) {
             const isDropOnEmptyContainer = 
                 dropTarget.groupId === targetGroupId && 
@@ -769,14 +784,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 {
                     onDragOver: (e) => handleDragOverEmptyContainer(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
-                    className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`
+                    className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`,
+                    // Pridanie referencie aj pre prázdny kontajner
+                    ref: el => {
+                        if (el) {
+                            listRefs.current[listRefKey] = el;
+                        } else {
+                            delete listRefs.current[listRefKey];
+                        }
+                    },
                 },
                 React.createElement('p', { className: 'text-center text-gray-400' }, 'Sem presuňte tím')
             );
         }
 
-        const listRefKey = `${targetCategoryId}-${targetGroupId}`;
-        
         return React.createElement(
             'ul',
             { 
@@ -886,7 +907,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
                 },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v kategórii: ${categoryName}`),
-                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
+                // TargetGroupId je nastavené na null pre nezaradené tímy
+                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true) 
             ),
             React.createElement(
                 'div',
