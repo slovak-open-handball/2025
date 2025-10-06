@@ -1,3 +1,4 @@
+<!-- V tomto súbore je odstránený nelegálny vnorený useEffect a prečistená logika spájania dát. -->
 import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
@@ -6,18 +7,26 @@ const { useState, useEffect, useRef } = React;
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 // --- Komponent Modálne Okno pre Pridanie Tímu/Konfigurácie ---
-const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave }) => {
+// Prijíma nový prop: defaultCategoryId
+const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, handleSave, defaultCategoryId }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [teamName, setTeamName] = useState('');
 
+    // Nastavenie/reset stavu pri otvorení/zatvorení modálu alebo zmene predvolenej kategórie
     useEffect(() => {
-        if (!isOpen) {
-            setSelectedCategory('');
+        if (isOpen) {
+            // Ak je k dispozícii predvolená kategória (z filtra hlavnej stránky), použije sa
+            setSelectedCategory(defaultCategoryId || '');
             setSelectedGroup('');
             setTeamName('');
+        } else {
+             // Reset stavu pri zatvorení
+             setSelectedCategory('');
+             setSelectedGroup('');
+             setTeamName('');
         }
-    }, [isOpen]);
+    }, [isOpen, defaultCategoryId]); // Pridaná závislosť defaultCategoryId
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
@@ -41,6 +50,9 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     };
 
     if (!isOpen) return null;
+    
+    // Zistíme, či je pole kategórie disabled
+    const isCategoryFixed = !!defaultCategoryId;
 
     return React.createElement(
         'div',
@@ -68,16 +80,18 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                     React.createElement(
                         'select',
                         {
-                            className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
+                            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${isCategoryFixed ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`,
                             value: selectedCategory,
                             onChange: handleCategoryChange,
-                            required: true
+                            required: true,
+                            disabled: isCategoryFixed // Zakázanie zmeny, ak je kategória nastavená filtrom
                         },
                         React.createElement('option', { value: '' }, '--- Vyberte kategóriu ---'),
                         sortedCategoryEntries.map(([id, name]) =>
                             React.createElement('option', { key: id, value: id }, name)
                         )
-                    )
+                    ),
+                    isCategoryFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Kategória je predvolená filtrom na stránke: ${categoryIdToNameMap[defaultCategoryId]}`)
                 ),
 
                 // 2. Select Skupiny
@@ -104,7 +118,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                 React.createElement(
                     'div',
                     { className: 'flex flex-col' },
-                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Zadajte názov tímu:'),
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, `Zadajte názov tímu (Uloží sa ako: "${categoryIdToNameMap[selectedCategory] || 'Kategória'} [Váš Názov])":`),
                     React.createElement(
                         'input',
                         {
@@ -113,7 +127,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
                             value: teamName,
                             onChange: (e) => setTeamName(e.target.value),
                             required: true,
-                            placeholder: 'Napr. Tím Alfa (Globálny tím)'
+                            placeholder: 'Napr. Tím Alfa (Váš názov)'
                         }
                     )
                 ),
@@ -328,6 +342,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
         const categoryName = categoryIdToNameMap[categoryId];
         const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+        
+        // ** NOVÁ LOGIKA: Formátovanie názvu tímu **
+        const finalTeamName = `${categoryName} ${teamName}`;
 
         try {
             const docSnap = await getDoc(superstructureDocRef);
@@ -348,7 +365,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const newOrder = groupName ? (maxOrder + 1) : null; 
             
             const newTeam = {
-                teamName: teamName,
+                teamName: finalTeamName, // Použijeme formátovaný názov
                 groupName: groupName || null,
                 order: newOrder,
                 timestamp: Timestamp.now(),
@@ -365,7 +382,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             setIsModalOpen(false);
             setNotification({ 
                 id: Date.now(), 
-                message: `Globálny tím '${teamName}' bol úspešne pridaný. (Cesta: ${SUPERSTRUCTURE_TEAMS_DOC_PATH})`, 
+                message: `Globálny tím '${finalTeamName}' bol úspešne pridaný. (Cesta: ${SUPERSTRUCTURE_TEAMS_DOC_PATH})`, 
                 type: 'success' 
             });
 
@@ -708,7 +725,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
             if (!selectedCategoryId && team.category && (isWithoutGroup || team.groupName)) {
                 const globalTag = team.isSuperstructureTeam ? ' [G]' : ''; 
-                teamNameDisplay = `${team.category}: ${teamNameDisplay}${globalTag}`;
+                // V globálnom zobrazení už nezobrazujeme kategóriu, pretože názov ju už obsahuje
+                teamNameDisplay = `${teamNameDisplay}${globalTag}`;
             } else if (team.isSuperstructureTeam) {
                 teamNameDisplay = `${teamNameDisplay} [G]`;
             }
@@ -937,13 +955,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             notification?.message
         ),
         
-        // Modálne okno
+        // Modálne okno - odovzdáme selectedCategoryId ako defaultCategoryId
         React.createElement(NewTeamModal, {
             isOpen: isModalOpen,
             onClose: () => setIsModalOpen(false),
             allGroupsByCategoryId: allGroupsByCategoryId,
             categoryIdToNameMap: categoryIdToNameMap,
-            handleSave: handleAddNewTeam 
+            handleSave: handleAddNewTeam,
+            defaultCategoryId: selectedCategoryId // Nová prop
         }),
 
         React.createElement(
