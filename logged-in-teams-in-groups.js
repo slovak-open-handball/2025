@@ -933,7 +933,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
     
     // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
-    // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
 const handleDrop = async (e, targetGroup, targetCategoryId) => {
     e.preventDefault();
     const dragData = draggedItem.current;
