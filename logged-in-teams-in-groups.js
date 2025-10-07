@@ -741,10 +741,12 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 return;
             }
 
+            // Nastavenie order pre presúvaný tím
+            const updatedDraggedTeamOrder = finalOrder < originalOrder ? finalOrder + 2 : finalOrder + 1;
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
-                order: finalOrder
+                order: updatedDraggedTeamOrder,
             };
 
             teams = [...teams];
@@ -760,16 +762,16 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return { ...t, order: t.order + 1 };
                     }
                     // Presúvanie smerom dole (napr. z 2 na 5)
-                    else if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= updatedDraggedTeamOrder) {
                         return { ...t, order: t.order - 1 };
                     }
                     return t;
                 });
 
-                // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom hore
-                // Vkladanie na pozíciu finalOrder, ak presúvame smerom dole
-                const insertPosition = finalOrder < originalOrder ? finalOrder + 1 : finalOrder;
-                reorderedTeams.splice(insertPosition, 0, updatedDraggedTeam);
+                // Vkladanie na pozíciu finalOrder + 2, ak presúvame smerom hore
+                // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom dole
+                const insertPosition = finalOrder < originalOrder ? finalOrder + 2 : finalOrder + 1;
+                reorderedTeams.splice(insertPosition - 1, 0, updatedDraggedTeam);
 
                 await setDoc(superstructureDocRef, {
                     ...globalTeamsData,
@@ -788,13 +790,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
                 // Pridať presúvaný tím do novej skupiny a zvýšiť order pre tímy za ním
                 const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
-                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder);
+                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder + 1);
                 teamsInNewGroupWithOrder.forEach(t => {
                     t.order += 1;
                 });
 
-                // Vkladanie na pozíciu finalOrder - 1
-                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+                // Vkladanie na pozíciu finalOrder
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
 
                 await setDoc(superstructureDocRef, {
                     ...globalTeamsData,
@@ -820,10 +822,12 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 return;
             }
 
+            // Nastavenie order pre presúvaný tím
+            const updatedDraggedTeamOrder = finalOrder < originalOrder ? finalOrder + 2 : finalOrder + 1;
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
-                order: finalOrder
+                order: updatedDraggedTeamOrder,
             };
 
             teams.splice(originalTeamIndex, 1);
@@ -838,16 +842,16 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return { ...t, order: t.order + 1 };
                     }
                     // Presúvanie smerom dole (napr. z 2 na 5)
-                    else if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= updatedDraggedTeamOrder) {
                         return { ...t, order: t.order - 1 };
                     }
                     return t;
                 });
 
-                // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom hore
-                // Vkladanie na pozíciu finalOrder, ak presúvame smerom dole
-                const insertPosition = finalOrder < originalOrder ? finalOrder + 1 : finalOrder;
-                reorderedTeams.splice(insertPosition, 0, updatedDraggedTeam);
+                // Vkladanie na pozíciu finalOrder + 2, ak presúvame smerom hore
+                // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom dole
+                const insertPosition = finalOrder < originalOrder ? finalOrder + 2 : finalOrder + 1;
+                reorderedTeams.splice(insertPosition - 1, 0, updatedDraggedTeam);
 
                 await updateDoc(ownerDocRef, {
                     [`teams.${teamCategoryName}`]: reorderedTeams
@@ -865,13 +869,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
                 // Pridať presúvaný tím do novej skupiny a zvýšiť order pre tímy za ním
                 const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
-                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder);
+                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder + 1);
                 teamsInNewGroupWithOrder.forEach(t => {
                     t.order += 1;
                 });
 
-                // Vkladanie na pozíciu finalOrder - 1
-                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+                // Vkladanie na pozíciu finalOrder
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
 
                 await updateDoc(ownerDocRef, {
                     [`teams.${teamCategoryName}`]: reorderedTeams
@@ -880,7 +884,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         }
 
         const targetDocPath = teamData.isSuperstructureTeam ? SUPERSTRUCTURE_TEAMS_DOC_PATH : `users/${teamData.uid}`;
-        const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroup ? `'${originalGroup}'` : 'bez skupiny'} do ${finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder}` : 'bez skupiny'}. (Dokument: ${targetDocPath}).`;
+        const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroup ? `'${originalGroup}'` : 'bez skupiny'} do ${finalGroupName ? `'${finalGroupName}' na pozíciu ${updatedDraggedTeamOrder}` : 'bez skupiny'}. (Dokument: ${targetDocPath}).`;
         setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
     } catch (error) {
         console.error("Chyba pri aktualizácii databázy:", error);
