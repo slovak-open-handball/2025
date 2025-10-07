@@ -721,7 +721,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         const originalGroup = teamData.groupName;
         const originalOrder = teamData.order;
         const teamCategoryName = teamData.category;
-        const newOrder = targetGroup ? finalDropTarget.index : null;
+        const newOrder = targetGroup ? finalDropTarget.index + 1 : null;
         const finalGroupName = targetGroup === null ? null : targetGroup;
         const finalOrder = targetGroup === null ? null : newOrder;
         try {
