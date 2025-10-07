@@ -1012,14 +1012,30 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
-                    if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
+                    if (originalGroup === finalGroupName && originalGroup !== null) {
                         // Ak presúvame smerom dole (finalOrder > originalOrder)
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                            return { ...t, order: t.order - 1 };
+                        if (finalOrder > originalOrder) {
+                            reorderedTeams = teams.map(t => {
+                                if (t.groupName === originalGroup && t.order != null) {
+                                    // Tímy, ktoré sú medzi originalOrder a finalOrder (vrátane finalOrder), sa posunú o 1 hore
+                                    if (t.order > originalOrder && t.order <= finalOrder) {
+                                        return { ...t, order: t.order - 1 };
+                                    }
+                                }
+                                return t;
+                            });
                         }
                         // Ak presúvame smerom hore (finalOrder < originalOrder)
-                        else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                            return { ...t, order: t.order + 1 };
+                        else if (finalOrder < originalOrder) {
+                            reorderedTeams = teams.map(t => {
+                                if (t.groupName === originalGroup && t.order != null) {
+                                    // Tímy, ktoré sú medzi finalOrder a originalOrder (vrátane originalOrder), sa posunú o 1 dole
+                                    if (t.order >= finalOrder && t.order < originalOrder) {
+                                        return { ...t, order: t.order + 1 };
+                                    }
+                                }
+                                return t;
+                            });
                         }
                     }
 
@@ -1092,17 +1108,32 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
-                    if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
+                    if (originalGroup === finalGroupName && originalGroup !== null) {
                         // Ak presúvame smerom dole (finalOrder > originalOrder)
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                            return { ...t, order: t.order - 1 };
+                        if (finalOrder > originalOrder) {
+                            reorderedTeams = teams.map(t => {
+                                if (t.groupName === originalGroup && t.order != null) {
+                                    // Tímy, ktoré sú medzi originalOrder a finalOrder (vrátane finalOrder), sa posunú o 1 hore
+                                    if (t.order > originalOrder && t.order <= finalOrder) {
+                                        return { ...t, order: t.order - 1 };
+                                    }
+                                }
+                                return t;
+                            });
                         }
                         // Ak presúvame smerom hore (finalOrder < originalOrder)
-                        else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                            return { ...t, order: t.order + 1 };
+                        else if (finalOrder < originalOrder) {
+                            reorderedTeams = teams.map(t => {
+                                if (t.groupName === originalGroup && t.order != null) {
+                                    // Tímy, ktoré sú medzi finalOrder a originalOrder (vrátane originalOrder), sa posunú o 1 dole
+                                    if (t.order >= finalOrder && t.order < originalOrder) {
+                                        return { ...t, order: t.order + 1 };
+                                    }
+                                }
+                                return t;
+                            });
                         }
                     }
-
                     
                     return t;
                 });
