@@ -1028,9 +1028,15 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             // 4. Vložíme přesunutý tým zpět na správnou pozici
             if (finalGroupName !== null) {
                 // Vložíme na pozici finalOrder - 1 (protože pořadí 1 je index 0)
+                // Nový tým dostane order rovný finalOrder
+                const updatedDraggedTeam = {
+                    ...teams[originalTeamIndex],
+                    groupName: finalGroupName,
+                    order: finalOrder, // Nový order je rovný finalOrder
+                };
                 reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
             } else {
-                // Pokud je bez skupiny, vložíme ho na konec (order je null, takže se zařadí podle názvu)
+                // Pokud je bez skupiny, vložíme ho na konec
                 reorderedTeams.push(updatedDraggedTeam);
             }
 
@@ -1106,6 +1112,12 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             // 4. Vložíme přesunutý tým zpět na správnou pozici
             if (finalGroupName !== null) {
                 // Vložíme na pozici finalOrder - 1 (protože pořadí 1 je index 0)
+                // Nový tým dostane order rovný finalOrder
+                const updatedDraggedTeam = {
+                    ...teams[originalTeamIndex],
+                    groupName: finalGroupName,
+                    order: finalOrder, // Nový order je rovný finalOrder
+                };
                 reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
             } else {
                 // Pokud je bez skupiny, vložíme ho na konec
