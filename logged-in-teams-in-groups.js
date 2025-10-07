@@ -742,7 +742,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             }
 
             // Nastavenie order pre presúvaný tím
-            const updatedDraggedTeamOrder = finalOrder < originalOrder ? finalOrder + 2 : finalOrder + 1;
+            const updatedDraggedTeamOrder = finalOrder < originalOrder ? finalOrder + 1 : finalOrder + 1;
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
@@ -768,9 +768,8 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     return t;
                 });
 
-                // Vkladanie na pozíciu finalOrder + 2, ak presúvame smerom hore
                 // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom dole
-                const insertPosition = finalOrder < originalOrder ? finalOrder + 2 : finalOrder + 1;
+                const insertPosition = finalOrder < originalOrder ? finalOrder + 1 : finalOrder + 1;
                 reorderedTeams.splice(insertPosition - 1, 0, updatedDraggedTeam);
 
                 await setDoc(superstructureDocRef, {
@@ -823,7 +822,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             }
 
             // Nastavenie order pre presúvaný tím
-            const updatedDraggedTeamOrder = finalOrder < originalOrder ? finalOrder + 2 : finalOrder + 1;
+            const updatedDraggedTeamOrder = finalOrder < originalOrder ? finalOrder + 1 : finalOrder + 1;
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
@@ -848,9 +847,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     return t;
                 });
 
-                // Vkladanie na pozíciu finalOrder + 2, ak presúvame smerom hore
-                // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom dole
-                const insertPosition = finalOrder < originalOrder ? finalOrder + 2 : finalOrder + 1;
+                const insertPosition = finalOrder < originalOrder ? finalOrder + 1 : finalOrder + 1;
                 reorderedTeams.splice(insertPosition - 1, 0, updatedDraggedTeam);
 
                 await updateDoc(ownerDocRef, {
