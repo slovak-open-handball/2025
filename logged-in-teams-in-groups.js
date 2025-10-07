@@ -723,9 +723,9 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const originalGroup = teamData.groupName;
     const originalOrder = teamData.order;
     const teamCategoryName = teamData.category;
-    const newOrder = targetGroup ? finalDropTarget.index + 1 : null;
+    const newOrder = targetGroup ? finalDropTarget.index : null;
     const finalGroupName = targetGroup === null ? null : targetGroup;
-    const finalOrder = targetGroup === null ? null : newOrder;
+    const finalOrder = targetGroup === null ? null : newOrder + 1; // Order je index + 1
 
     try {
         if (teamData.isSuperstructureTeam) {
@@ -748,32 +748,57 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             teams = [...teams];
             teams.splice(originalTeamIndex, 1);
 
-            // Posunúť tímy v pôvodnej skupine
-            const reorderedTeams = teams.map(t => {
-                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                    return { ...t, order: t.order - 1 };
-                }
-                return t;
-            });
+            // Ak presúvame vrámci rovnakej skupiny
+            if (originalGroup === finalGroupName) {
+                const reorderedTeams = teams.map(t => {
+                    if (t.groupName !== finalGroupName || t.order === null) return t;
 
-            // Posunúť tímy v novej skupine, ktoré sú za pozíciou vloženia
-            if (finalGroupName !== null) {
+                    // Presúvanie smerom hore (napr. z 5 na 2)
+                    if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    // Presúvanie smerom dole (napr. z 2 na 5)
+                    else if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+
+                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+                reorderedTeams.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                await setDoc(superstructureDocRef, {
+                    ...globalTeamsData,
+                    [teamCategoryName]: reorderedTeams
+                }, { merge: true });
+            }
+            // Ak presúvame do inej skupiny
+            else {
+                // Znížiť order pre tímy v pôvodnej skupine, ktoré boli za presúvaným tímom
+                const reorderedTeams = teams.map(t => {
+                    if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+
+                // Pridať presúvaný tím do novej skupiny a zvýšiť order pre tímy za ním
                 const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
                 const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder);
                 teamsInNewGroupWithOrder.forEach(t => {
                     t.order += 1;
                 });
-                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
-            } else {
-                reorderedTeams.push(updatedDraggedTeam);
-            }
 
-            await setDoc(superstructureDocRef, {
-                ...globalTeamsData,
-                [teamCategoryName]: reorderedTeams
-            }, { merge: true });
-        } else {
-            // Podobná logika pre užívateľské tímy
+                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+
+                await setDoc(superstructureDocRef, {
+                    ...globalTeamsData,
+                    [teamCategoryName]: reorderedTeams
+                }, { merge: true });
+            }
+        }
+        // Podobná logika pre užívateľské tímy
+        else {
             const ownerUid = teamData.uid;
             const ownerDocRef = doc(window.db, 'users', ownerUid);
             const docSnap = await getDoc(ownerDocRef);
@@ -798,29 +823,52 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
             teams.splice(originalTeamIndex, 1);
 
-            // Posunúť tímy v pôvodnej skupine
-            const reorderedTeams = teams.map(t => {
-                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                    return { ...t, order: t.order - 1 };
-                }
-                return t;
-            });
+            // Ak presúvame vrámci rovnakej skupiny
+            if (originalGroup === finalGroupName) {
+                const reorderedTeams = teams.map(t => {
+                    if (t.groupName !== finalGroupName || t.order === null) return t;
 
-            // Posunúť tímy v novej skupine, ktoré sú za pozíciou vloženia
-            if (finalGroupName !== null) {
+                    // Presúvanie smerom hore (napr. z 5 na 2)
+                    if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    // Presúvanie smerom dole (napr. z 2 na 5)
+                    else if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+
+                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+                reorderedTeams.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                await updateDoc(ownerDocRef, {
+                    [`teams.${teamCategoryName}`]: reorderedTeams
+                });
+            }
+            // Ak presúvame do inej skupiny
+            else {
+                // Znížiť order pre tímy v pôvodnej skupine, ktoré boli za presúvaným tímom
+                const reorderedTeams = teams.map(t => {
+                    if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+
+                // Pridať presúvaný tím do novej skupiny a zvýšiť order pre tímy za ním
                 const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
                 const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder);
                 teamsInNewGroupWithOrder.forEach(t => {
                     t.order += 1;
                 });
-                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
-            } else {
-                reorderedTeams.push(updatedDraggedTeam);
-            }
 
-            await updateDoc(ownerDocRef, {
-                [`teams.${teamCategoryName}`]: reorderedTeams
-            });
+                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
+
+                await updateDoc(ownerDocRef, {
+                    [`teams.${teamCategoryName}`]: reorderedTeams
+                });
+            }
         }
 
         const targetDocPath = teamData.isSuperstructureTeam ? SUPERSTRUCTURE_TEAMS_DOC_PATH : `users/${teamData.uid}`;
