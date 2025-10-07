@@ -723,9 +723,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const originalGroup = teamData.groupName;
     const originalOrder = teamData.order;
     const teamCategoryName = teamData.category;
-    const newOrder = targetGroup ? finalDropTarget.index : null;
+    const newOrder = targetGroup ? finalDropTarget.index + 1 : null;
     const finalGroupName = targetGroup === null ? null : targetGroup;
     const finalOrder = targetGroup === null ? null : newOrder;
+
     try {
         if (teamData.isSuperstructureTeam) {
             const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
@@ -737,32 +738,36 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
                 return;
             }
+
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
                 order: finalOrder
             };
+
             teams = [...teams];
             teams.splice(originalTeamIndex, 1);
-            const reorderedTeams = teams.map(t => {
-                const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
-                if (!t_is_in_target_group) return t;
 
-                // Ak presúvame dole (napr. z 2 na 4)
-                if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+            // Posunúť tímy v pôvodnej skupine
+            const reorderedTeams = teams.map(t => {
+                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                     return { ...t, order: t.order - 1 };
-                }
-                // Ak presúvame hore (napr. z 4 na 2)
-                else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                    return { ...t, order: t.order + 1 };
                 }
                 return t;
             });
+
+            // Posunúť tímy v novej skupine, ktoré sú za pozíciou vloženia
             if (finalGroupName !== null) {
-                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
+                const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
+                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder);
+                teamsInNewGroupWithOrder.forEach(t => {
+                    t.order += 1;
+                });
+                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
             } else {
                 reorderedTeams.push(updatedDraggedTeam);
             }
+
             await setDoc(superstructureDocRef, {
                 ...globalTeamsData,
                 [teamCategoryName]: reorderedTeams
@@ -776,6 +781,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu (${ownerUid}) alebo pole tímov v kategórii ${teamCategoryName} nenájdené.`, type: 'error' });
                 return;
             }
+
             const ownerTeamsData = docSnap.data().teams;
             let teams = [...ownerTeamsData[teamCategoryName]];
             const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
@@ -783,35 +789,40 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
                 return;
             }
+
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
                 order: finalOrder
             };
-            teams.splice(originalTeamIndex, 1);
-            const reorderedTeams = teams.map(t => {
-                const t_is_in_target_group = t.groupName === targetGroup && t.order != null;
-                if (!t_is_in_target_group) return t;
 
-                // Ak presúvame dole (napr. z 2 na 4)
-                if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+            teams.splice(originalTeamIndex, 1);
+
+            // Posunúť tímy v pôvodnej skupine
+            const reorderedTeams = teams.map(t => {
+                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                     return { ...t, order: t.order - 1 };
-                }
-                // Ak presúvame hore (napr. z 4 na 2)
-                else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                    return { ...t, order: t.order + 1 };
                 }
                 return t;
             });
+
+            // Posunúť tímy v novej skupine, ktoré sú za pozíciou vloženia
             if (finalGroupName !== null) {
-                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
+                const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
+                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder);
+                teamsInNewGroupWithOrder.forEach(t => {
+                    t.order += 1;
+                });
+                reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
             } else {
                 reorderedTeams.push(updatedDraggedTeam);
             }
+
             await updateDoc(ownerDocRef, {
                 [`teams.${teamCategoryName}`]: reorderedTeams
             });
         }
+
         const targetDocPath = teamData.isSuperstructureTeam ? SUPERSTRUCTURE_TEAMS_DOC_PATH : `users/${teamData.uid}`;
         const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroup ? `'${originalGroup}'` : 'bez skupiny'} do ${finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder}` : 'bez skupiny'}. (Dokument: ${targetDocPath}).`;
         setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
