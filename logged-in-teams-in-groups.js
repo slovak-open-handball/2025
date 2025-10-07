@@ -768,7 +768,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
                 // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom hore
                 // Vkladanie na pozíciu finalOrder, ak presúvame smerom dole
-                const insertPosition = finalOrder < originalOrder ? finalOrder + 1 : finalOrder;
+                const insertPosition = finalOrder < originalOrder ? finalOrder : finalOrder + 1;
                 reorderedTeams.splice(insertPosition, 0, updatedDraggedTeam);
 
                 await setDoc(superstructureDocRef, {
@@ -846,7 +846,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
                 // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom hore
                 // Vkladanie na pozíciu finalOrder, ak presúvame smerom dole
-                const insertPosition = finalOrder < originalOrder ? finalOrder + 1 : finalOrder;
+                const insertPosition = finalOrder < originalOrder ? finalOrder : finalOrder + 1;
                 reorderedTeams.splice(insertPosition, 0, updatedDraggedTeam);
 
                 await updateDoc(ownerDocRef, {
