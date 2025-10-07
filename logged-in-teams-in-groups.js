@@ -725,7 +725,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const teamCategoryName = teamData.category;
     const newOrder = targetGroup ? finalDropTarget.index : null;
     const finalGroupName = targetGroup === null ? null : targetGroup;
-    const finalOrder = targetGroup === null ? null : newOrder + 1; // Order je index + 1
+    const finalOrder = targetGroup === null ? null : newOrder + 1;
 
     try {
         if (teamData.isSuperstructureTeam) {
@@ -765,7 +765,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 });
 
                 reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
-                reorderedTeams.sort((a, b) => (a.order || 0) - (b.order || 0));
 
                 await setDoc(superstructureDocRef, {
                     ...globalTeamsData,
@@ -840,7 +839,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 });
 
                 reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
-                reorderedTeams.sort((a, b) => (a.order || 0) - (b.order || 0));
 
                 await updateDoc(ownerDocRef, {
                     [`teams.${teamCategoryName}`]: reorderedTeams
