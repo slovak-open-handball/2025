@@ -1112,10 +1112,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     });
                 }
             } else {
-                // OPRAVENÁ ČASŤ: Zmenšenie order v pôvodnej skupine pri presune do inej skupiny alebo do "bez skupiny"
+                // OPRAVENÁ ČASŤ: Presun medzi skupinami alebo do/z "bez skupiny"
                 const reorderedTeams = teams.map(t => {
                     const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
-                    const t_is_in_target_group = t.groupName === targetGroup && t.order != null;
+                    const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
 
                     // Ak tím zostal v PÔVODNEJ skupine a má vyššie poradie, posunieme ho hore (-1)
                     if (originalGroup !== null && t_is_in_original_group && t.order > originalOrder) {
@@ -1123,7 +1123,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     }
 
                     // Ak tím je v CIEĽOVEJ skupine a má vyššie alebo rovnaké poradie ako vkladaný tím, posunieme ho dole (+1)
-                    if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                    if (finalGroupName !== null && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
                         return { ...t, order: t.order + 1 };
                     }
 
@@ -1157,7 +1157,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
         }
     }
-};    
+};  
     // --- DRAG/DROP LOGIKA PRE FAB MAZANIE ---
     
     const handleDragStart = (e, team) => {
