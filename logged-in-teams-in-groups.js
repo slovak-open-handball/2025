@@ -937,21 +937,17 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     e.preventDefault();
     const dragData = draggedItem.current;
     const finalDropTarget = dropTarget;
-
     if (!checkCategoryMatch(targetCategoryId)) {
         setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím. Presun bol zrušený.", type: 'error' });
         setDropTarget({ groupId: null, categoryId: null, index: null });
         draggedItem.current = null;
         return;
     }
-
     setDropTarget({ groupId: null, categoryId: null, index: null });
-
     if (!dragData || (finalDropTarget.index === null || finalDropTarget.index === undefined)) {
         console.error("Žiadne dáta na presunutie alebo neplatný cieľový index.");
         return;
     }
-
     const teamData = dragData.team;
     const originalGroup = teamData.groupName;
     const originalOrder = teamData.order;
@@ -977,7 +973,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
             let teams = globalTeamsData[teamCategoryName] || [];
             const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
-
             if (originalTeamIndex === -1) {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
                 return;
@@ -1043,21 +1038,17 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 ...globalTeamsData,
                 [teamCategoryName]: teams,
             }, { merge: true });
-
         } else {
             // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU ---
             const ownerUid = teamData.uid;
             const ownerDocRef = doc(window.db, 'users', ownerUid);
             const docSnap = await getDoc(ownerDocRef);
-
             if (!docSnap.exists() || !docSnap.data().teams || !docSnap.data().teams[teamCategoryName]) {
                 setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu (${ownerUid}) alebo pole tímov v kategórii ${teamCategoryName} nenájdené.`, type: 'error' });
                 return;
             }
-
             let teams = [...docSnap.data().teams[teamCategoryName]];
             const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
-
             if (originalTeamIndex === -1) {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
                 return;
@@ -1130,7 +1121,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             : `users/${teamData.uid}`;
         const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay} (Dokument: ${targetDocPath}).`;
         setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
-
     } catch (error) {
         console.error("Chyba pri aktualizácii databázy:", error);
         if (!notification || notification.type !== 'error') {
