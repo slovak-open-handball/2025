@@ -1069,6 +1069,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             const ownerTeamsData = docSnap.data().teams;
             let teams = [...ownerTeamsData[teamCategoryName]];
 
+            console.log(`Kategória: ${teamCategoryName}`);
+            console.log(`Počet tímov v kategórii pred operáciou:`, teams.length);
+            console.log(`Tímy v kategórii:`, teams.map(t => ({ name: t.teamName, group: t.groupName, order: t.order })));
+
             const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
 
             if (originalTeamIndex === -1) {
