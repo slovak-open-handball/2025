@@ -1157,7 +1157,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
         }
     }
-};  
+};
     // --- DRAG/DROP LOGIKA PRE FAB MAZANIE ---
     
     const handleDragStart = (e, team) => {
