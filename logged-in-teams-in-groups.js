@@ -1022,7 +1022,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     // 3. Prečíslujeme tímy medzi pôvodnou a novou pozíciou, ak presúvame dole
                     if (finalOrder > originalOrder) {
                         teams = teams.map(t => {
-                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= originalTeam.order) {
+                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= originalOrder) {
                                 return { ...t, order: t.order - 1 };
                             }
                             return t;
@@ -1131,7 +1131,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     // 3. Prečíslujeme tímy medzi pôvodnou a novou pozíciou, ak presúvame dole
                     if (finalOrder > originalOrder) {
                         teams = teams.map(t => {
-                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= originalTeam.order) {
+                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= originalOrder) {
                                 return { ...t, order: t.order - 1 };
                             }
                             return t;
