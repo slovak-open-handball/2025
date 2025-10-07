@@ -971,7 +971,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const originalOrder = teamData.order;
     const teamCategoryName = teamData.category;
     const finalGroupName = targetGroup === null ? null : targetGroup;
-    const finalOrder = targetGroup === null ? null : finalDropTarget.index + 1;
+    const finalOrder = targetGroup === null ? null : finalDropTarget.index + 1; // Pozícia + 1
 
     try {
         if (teamData.isSuperstructureTeam) {
@@ -1000,18 +1000,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 const updatedDraggedTeam = {
                     ...teamData,
                     groupName: finalGroupName,
-                    order: finalOrder
+                    order: finalOrder // Pozícia + 1
                 };
 
                 // Reordering tímov v rovnakej skupine
                 const reorderedTeams = teamsWithoutDragged.map(t => {
                     if (t.groupName === finalGroupName && t.order != null) {
-                        // Ak presúvame tím smerom nadol (t.j. finalOrder > originalOrder)
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                            return { ...t, order: t.order - 1 };
-                        }
-                        // Ak presúvame tím smerom nahor (t.j. finalOrder < originalOrder)
-                        else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                        // Posunieme tímy za vloženým tímom o +1
+                        if (t.order >= finalOrder) {
                             return { ...t, order: t.order + 1 };
                         }
                     }
@@ -1036,7 +1032,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 const updatedDraggedTeam = {
                     ...teamData,
                     groupName: finalGroupName,
-                    order: finalOrder
+                    order: finalOrder // Pozícia + 1
                 };
 
                 // Reordering tímov v pôvodnej skupine
@@ -1123,15 +1119,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 const updatedDraggedTeam = {
                     ...teamData,
                     groupName: finalGroupName,
-                    order: finalOrder
+                    order: finalOrder // Pozícia + 1
                 };
 
                 // Reordering tímov v rovnakej skupine
                 const reorderedTeams = teamsWithoutDragged.map(t => {
                     if (t.groupName === finalGroupName && t.order != null) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                            return { ...t, order: t.order - 1 };
-                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                        // Posunieme tímy za vloženým tímom o +1
+                        if (t.order >= finalOrder) {
                             return { ...t, order: t.order + 1 };
                         }
                     }
@@ -1155,7 +1150,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 const updatedDraggedTeam = {
                     ...teamData,
                     groupName: finalGroupName,
-                    order: finalOrder
+                    order: finalOrder // Pozícia + 1
                 };
 
                 // Reordering tímov v pôvodnej skupine
