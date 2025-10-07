@@ -1272,25 +1272,27 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             if (!isWithoutGroup) {
-                // Pre tímy v skupine triedime podľa 'order'
                 return (a.order || 0) - (b.order || 0);
             } else {
-                // Pre tímy bez skupiny triedime len podľa názvu
                 return a.category.localeCompare(b.category) || a.teamName.localeCompare(b.teamName);
             }
         });
-        
+    
         const listItems = sortedTeams.map((team, index) => {
             let teamNameDisplay = team.teamName;
-            // Žlté pozadie pre globálne tímy
-            const teamBgClass = !isWithoutGroup ? (team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white') : 'bg-gray-100';
-            
-            if (!isWithoutGroup && team.order != null) {
-                teamNameDisplay = `${team.order}. ${team.teamName}`;
+    
+            // **ÚPRAVA: Pridanie kategórie pred názov tímu len ak nie je vybraný filter**
+            if (!selectedCategoryId && team.category && isWithoutGroup) {
+                teamNameDisplay = `${team.category}: ${teamNameDisplay}`;
             }
-
+    
+            const teamBgClass = !isWithoutGroup ? (team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white') : 'bg-gray-100';
+    
+            if (!isWithoutGroup && team.order != null) {
+                teamNameDisplay = `${team.order}. ${teamNameDisplay}`;
+            }
             if (!selectedCategoryId && team.category && (isWithoutGroup || team.groupName)) {
-                const globalTag = team.isSuperstructureTeam ? ' ' : ''; 
+                const globalTag = team.isSuperstructureTeam ? ' ' : '';
                 teamNameDisplay = `${teamNameDisplay}${globalTag}`;
             } else if (team.isSuperstructureTeam) {
                 teamNameDisplay = `${teamNameDisplay} `;
