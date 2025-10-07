@@ -997,29 +997,30 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 teams.splice(originalTeamIndex, 1);
                 
                 // 3. Spustíme reordering logiku na ostatných tímoch
+                // 3. Spustíme reordering logiku na ostatných tímoch
                 const reorderedTeams = teams.map(t => {
                     const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
-                    const t_is_in_target_group = t.groupName === targetGroup && t.order != null;
-
-                    // Ak tím zostal v PÔVODNEJ skupine a má vyššie poradie, posunieme ho hore (-1)
-                    if (originalGroup !== null && originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
+                    const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
+                
+                    // Ak presúvame do inej skupiny, reordering v pôvodnej skupine
+                    if (originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
                         return { ...t, order: t.order - 1 };
                     }
-                    
-                    // Ak tím je v CIEĽOVEJ skupine a má vyššie alebo rovnaké poradie ako vkladaný tím, posunieme ho dole (+1)
-                    if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                    // Ak presúvame do inej skupiny, reordering v cieľovej skupine
+                    else if (t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
                         return { ...t, order: t.order + 1 };
                     }
-                    
-                    // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
-                    if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order < finalOrder) { 
-                             return { ...t, order: t.order - 1 };
-                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                             return { ...t, order: t.order + 1 };
+                    // Ak presúvame v rámci rovnakej skupiny
+                    else if (originalGroup === finalGroupName && t_is_in_target_group) {
+                        // Presun smerom nadol (order sa zväčšuje)
+                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+                            return { ...t, order: t.order - 1 };
+                        }
+                        // Presun smerom hore (order sa zmenšuje)
+                        else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                            return { ...t, order: t.order + 1 };
                         }
                     }
-
                     return t;
                 });
                 
