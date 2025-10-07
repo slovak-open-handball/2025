@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
@@ -59,6 +59,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+
     const availableGroups = selectedCategory && allGroupsByCategoryId[selectedCategory]
         ? allGroupsByCategoryId[selectedCategory].sort((a, b) => a.name.localeCompare(b.name))
         : [];
@@ -285,6 +286,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     useEffect(() => {
         if (!window.db) return;
+
         const usersRef = collection(window.db, 'users');
         const userDocs = query(usersRef);
         const unsubscribeUsers = onSnapshot(userDocs, (querySnapshot) => {
@@ -1096,7 +1098,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         case 'info': typeClasses = 'bg-blue-500'; break;
         default: typeClasses = 'bg-gray-700';
     }
-
     const availableGroupsForSelect = (allGroupsByCategoryId[selectedCategoryId] || []).sort((a, b) => a.name.localeCompare(b.name));
     const fabBaseClasses = 'fixed bottom-8 right-8 p-5 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 focus:outline-none';
     const fabButton = isDraggingSuperstructureTeam && !isModalOpen
@@ -1119,7 +1120,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             },
             React.createElement('span', { className: 'text-2xl font-bold' }, '+')
         );
-
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
         : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
