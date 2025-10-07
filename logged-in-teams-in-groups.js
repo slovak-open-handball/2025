@@ -704,133 +704,135 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
     };
 
-    const handleDrop = async (e, targetGroup, targetCategoryId) => {
-        e.preventDefault();
-        const dragData = draggedItem.current;
-        const finalDropTarget = dropTarget;
-        if (!checkCategoryMatch(targetCategoryId)) {
-            setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím. Presun bol zrušený.", type: 'error' });
-            setDropTarget({ groupId: null, categoryId: null, index: null });
-            draggedItem.current = null;
-            return;
-        }
+const handleDrop = async (e, targetGroup, targetCategoryId) => {
+    e.preventDefault();
+    const dragData = draggedItem.current;
+    const finalDropTarget = dropTarget;
+    if (!checkCategoryMatch(targetCategoryId)) {
+        setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím. Presun bol zrušený.", type: 'error' });
         setDropTarget({ groupId: null, categoryId: null, index: null });
-        if (!dragData || (finalDropTarget.index === null || finalDropTarget.index === undefined)) {
-            console.error("Žiadne dáta na presunutie alebo neplatný cieľový index.");
-            return;
-        }
-        const teamData = dragData.team;
-        const originalGroup = teamData.groupName;
-        const originalOrder = teamData.order;
-        const teamCategoryName = teamData.category;
-        const newOrder = targetGroup ? finalDropTarget.index + 1 : null;
-        const finalGroupName = targetGroup === null ? null : targetGroup;
-        const finalOrder = targetGroup === null ? null : newOrder;
-        try {
-            if (teamData.isSuperstructureTeam) {
-                const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-                const docSnap = await getDoc(superstructureDocRef);
-                const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
-                let teams = globalTeamsData[teamCategoryName] || [];
-                const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
-                if (originalTeamIndex === -1) {
-                    setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
-                    return;
+        draggedItem.current = null;
+        return;
+    }
+    setDropTarget({ groupId: null, categoryId: null, index: null });
+    if (!dragData || (finalDropTarget.index === null || finalDropTarget.index === undefined)) {
+        console.error("Žiadne dáta na presunutie alebo neplatný cieľový index.");
+        return;
+    }
+    const teamData = dragData.team;
+    const originalGroup = teamData.groupName;
+    const originalOrder = teamData.order;
+    const teamCategoryName = teamData.category;
+    const newOrder = targetGroup ? finalDropTarget.index : null; // Zmena: finalDropTarget.index (nie +1)
+    const finalGroupName = targetGroup === null ? null : targetGroup;
+    const finalOrder = targetGroup === null ? null : newOrder;
+    try {
+        if (teamData.isSuperstructureTeam) {
+            const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+            const docSnap = await getDoc(superstructureDocRef);
+            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+            let teams = globalTeamsData[teamCategoryName] || [];
+            const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
+            if (originalTeamIndex === -1) {
+                setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
+                return;
+            }
+            const updatedDraggedTeam = {
+                ...teams[originalTeamIndex],
+                groupName: finalGroupName,
+                order: finalOrder
+            };
+            teams = [...teams];
+            teams.splice(originalTeamIndex, 1);
+            const reorderedTeams = teams.map(t => {
+                const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
+                const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
+                if (originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
+                    return { ...t, order: t.order - 1 };
                 }
-                const updatedDraggedTeam = {
-                    ...teams[originalTeamIndex],
-                    groupName: finalGroupName,
-                    order: finalOrder
-                };
-                teams = [...teams];
-                teams.splice(originalTeamIndex, 1);
-                const reorderedTeams = teams.map(t => {
-                    const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
-                    const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
-                    if (originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
+                else if (t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                    // Zmena: Posunúť len tímy, ktoré sú za vloženým tímom
+                    return { ...t, order: t.order + 1 };
+                }
+                else if (originalGroup === finalGroupName && t_is_in_target_group) {
+                    if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
                         return { ...t, order: t.order - 1 };
                     }
-                    else if (t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                    else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
                         return { ...t, order: t.order + 1 };
                     }
-                    else if (originalGroup === finalGroupName && t_is_in_target_group) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                            return { ...t, order: t.order - 1 };
-                        }
-                        else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                            return { ...t, order: t.order + 1 };
-                        }
-                    }
-                    return t;
-                });
-                if (finalGroupName !== null) {
-                    reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
-                } else {
-                    reorderedTeams.push(updatedDraggedTeam);
                 }
-                await setDoc(superstructureDocRef, {
-                    ...globalTeamsData,
-                    [teamCategoryName]: reorderedTeams
-                }, { merge: true });
+                return t;
+            });
+            if (finalGroupName !== null) {
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam); // Zmena: finalOrder (nie finalOrder - 1)
             } else {
-                const ownerUid = teamData.uid;
-                const ownerDocRef = doc(window.db, 'users', ownerUid);
-                const docSnap = await getDoc(ownerDocRef);
-                if (!docSnap.exists() || !docSnap.data().teams || !docSnap.data().teams[teamCategoryName]) {
-                    setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu (${ownerUid}) alebo pole tímov v kategórii ${teamCategoryName} nenájdené.`, type: 'error' });
-                    return;
+                reorderedTeams.push(updatedDraggedTeam);
+            }
+            await setDoc(superstructureDocRef, {
+                ...globalTeamsData,
+                [teamCategoryName]: reorderedTeams
+            }, { merge: true });
+        } else {
+            // Podobná logika pre užívateľské tímy
+            const ownerUid = teamData.uid;
+            const ownerDocRef = doc(window.db, 'users', ownerUid);
+            const docSnap = await getDoc(ownerDocRef);
+            if (!docSnap.exists() || !docSnap.data().teams || !docSnap.data().teams[teamCategoryName]) {
+                setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu (${ownerUid}) alebo pole tímov v kategórii ${teamCategoryName} nenájdené.`, type: 'error' });
+                return;
+            }
+            const ownerTeamsData = docSnap.data().teams;
+            let teams = [...ownerTeamsData[teamCategoryName]];
+            const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
+            if (originalTeamIndex === -1) {
+                setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
+                return;
+            }
+            const updatedDraggedTeam = {
+                ...teams[originalTeamIndex],
+                groupName: finalGroupName,
+                order: finalOrder
+            };
+            teams.splice(originalTeamIndex, 1);
+            const reorderedTeams = teams.map(t => {
+                const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
+                const t_is_in_target_group = t.groupName === targetGroup && t.order != null;
+                if (originalGroup !== null && originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
+                    return { ...t, order: t.order - 1 };
                 }
-                const ownerTeamsData = docSnap.data().teams;
-                let teams = [...ownerTeamsData[teamCategoryName]];
-                const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
-                if (originalTeamIndex === -1) {
-                    setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
-                    return;
+                else if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                    return { ...t, order: t.order + 1 };
                 }
-                const updatedDraggedTeam = {
-                    ...teams[originalTeamIndex],
-                    groupName: finalGroupName,
-                    order: finalOrder
-                };
-                teams.splice(originalTeamIndex, 1);
-                const reorderedTeams = teams.map(t => {
-                    const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
-                    const t_is_in_target_group = t.groupName === targetGroup && t.order != null;
-                    if (originalGroup !== null && originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
+                else if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
+                    if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
                         return { ...t, order: t.order - 1 };
                     }
-                    else if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                    else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
                         return { ...t, order: t.order + 1 };
                     }
-                    else if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                            return { ...t, order: t.order - 1 };
-                        }
-                        else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                            return { ...t, order: t.order + 1 };
-                        }
-                    }
-                    return t;
-                });
-                if (finalGroupName !== null) {
-                    reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
-                } else {
-                    reorderedTeams.push(updatedDraggedTeam);
                 }
-                await updateDoc(ownerDocRef, {
-                    [`teams.${teamCategoryName}`]: reorderedTeams
-                });
+                return t;
+            });
+            if (finalGroupName !== null) {
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam); // Zmena: finalOrder (nie finalOrder - 1)
+            } else {
+                reorderedTeams.push(updatedDraggedTeam);
             }
-            const targetDocPath = teamData.isSuperstructureTeam ? SUPERSTRUCTURE_TEAMS_DOC_PATH : `users/${teamData.uid}`;
-            const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroup ? `'${originalGroup}'` : 'bez skupiny'} do ${finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder}` : 'bez skupiny'}. (Dokument: ${targetDocPath}).`;
-            setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
-        } catch (error) {
-            console.error("Chyba pri aktualizácii databázy:", error);
-            if (!notification || notification.type !== 'error') {
-                setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
-            }
+            await updateDoc(ownerDocRef, {
+                [`teams.${teamCategoryName}`]: reorderedTeams
+            });
         }
-    };
+        const targetDocPath = teamData.isSuperstructureTeam ? SUPERSTRUCTURE_TEAMS_DOC_PATH : `users/${teamData.uid}`;
+        const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroup ? `'${originalGroup}'` : 'bez skupiny'} do ${finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder}` : 'bez skupiny'}. (Dokument: ${targetDocPath}).`;
+        setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
+    } catch (error) {
+        console.error("Chyba pri aktualizácii databázy:", error);
+        if (!notification || notification.type !== 'error') {
+            setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
+        }
+    }
+};
 
     const handleDragStart = (e, team) => {
         draggedItem.current = { team };
