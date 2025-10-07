@@ -992,20 +992,25 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     return t;
                 });
             }
-
-            // Korekcia pre poslednú pozíciu
-            if (originalGroup === finalGroupName && finalGroupName !== null) {
-                const teamsInGroup = teams.filter(t => t.groupName === finalGroupName && t.teamName !== teamData.teamName);
-                const countInGroup = teamsInGroup.length;
-                const correctLastOrder = countInGroup + 1;
-
-                if (finalOrder !== null && finalOrder > correctLastOrder) {
-                    finalOrder = correctLastOrder;
-                }
+            // Reordering pre presun do inej skupiny
+            else if (finalGroupName !== null && originalGroup !== finalGroupName) {
+                // Zníženie order v pôvodnej skupine
+                teams = teams.map(t => {
+                    if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+                // Zvýšenie order v novej skupine
+                teams = teams.map(t => {
+                    if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    return t;
+                });
             }
-
-            // Aktualizácia poradia v rámci rovnakej skupiny
-            if (originalGroup === finalGroupName && originalGroup !== null) {
+            // Reordering v rámci rovnakej skupiny
+            else if (originalGroup === finalGroupName && originalGroup !== null) {
                 if (finalOrder > originalOrder) {
                     teams = teams.map(t => {
                         if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= finalOrder) {
@@ -1021,20 +1026,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return t;
                     });
                 }
-            } else if (finalGroupName !== null) {
-                // Reordering medzi skupinami
-                teams = teams.map(t => {
-                    const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
-                    const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
-
-                    if (originalGroup !== null && originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
-                        return { ...t, order: t.order - 1 };
-                    }
-                    if (finalGroupName !== null && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
-                    return t;
-                });
             }
 
             // Vytvorenie aktualizovaného tímu
@@ -1089,20 +1080,25 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     return t;
                 });
             }
-
-            // Korekcia pre poslednú pozíciu
-            if (originalGroup === finalGroupName && finalGroupName !== null) {
-                const teamsInGroup = teams.filter(t => t.groupName === finalGroupName && t.teamName !== teamData.teamName);
-                const countInGroup = teamsInGroup.length;
-                const correctLastOrder = countInGroup + 1;
-
-                if (finalOrder !== null && finalOrder > correctLastOrder) {
-                    finalOrder = correctLastOrder;
-                }
+            // Reordering pre presun do inej skupiny
+            else if (finalGroupName !== null && originalGroup !== finalGroupName) {
+                // Zníženie order v pôvodnej skupine
+                teams = teams.map(t => {
+                    if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+                // Zvýšenie order v novej skupine
+                teams = teams.map(t => {
+                    if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    return t;
+                });
             }
-
-            // Aktualizácia poradia v rámci rovnakej skupiny
-            if (originalGroup === finalGroupName && originalGroup !== null) {
+            // Reordering v rámci rovnakej skupiny
+            else if (originalGroup === finalGroupName && originalGroup !== null) {
                 if (finalOrder > originalOrder) {
                     teams = teams.map(t => {
                         if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= finalOrder) {
@@ -1118,20 +1114,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return t;
                     });
                 }
-            } else if (finalGroupName !== null) {
-                // Reordering medzi skupinami
-                teams = teams.map(t => {
-                    const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
-                    const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
-
-                    if (originalGroup !== null && originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
-                        return { ...t, order: t.order - 1 };
-                    }
-                    if (finalGroupName !== null && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
-                    return t;
-                });
             }
 
             // Vytvorenie aktualizovaného tímu
