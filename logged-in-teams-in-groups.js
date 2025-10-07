@@ -932,7 +932,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
     };
     
-    // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
+// --- KOMPLETNE OPRAVENÁ FUNKCIA handleDrop ---
 const handleDrop = async (e, targetGroup, targetCategoryId) => {
     e.preventDefault();
     const dragData = draggedItem.current;
@@ -1097,17 +1097,27 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 }
             } else {
                 // KĽÚČOVÁ OPRAVA: Reordering pri presune medzi skupinami
-                teams = teams.map(t => {
-                    // Zníženie order v pôvodnej skupine
-                    if (originalGroup !== null && t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                        return { ...t, order: t.order - 1 };
-                    }
-                    // Zvýšenie order v cieľovej skupine
-                    if (finalGroupName !== null && t.groupName === finalGroupName && t.order != null && finalOrder !== null && t.order >= finalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
-                    return t;
-                });
+                // MUSÍME spraviť reordering v dvoch krokoch kvôli správnemu prepočtu
+                
+                // KROK 1: Zníženie order v pôvodnej skupine (ak tím mal skupinu)
+                if (originalGroup !== null) {
+                    teams = teams.map(t => {
+                        if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                            return { ...t, order: t.order - 1 };
+                        }
+                        return t;
+                    });
+                }
+                
+                // KROK 2: Zvýšenie order v cieľovej skupine (ak vkladáme do skupiny)
+                if (finalGroupName !== null && finalOrder !== null) {
+                    teams = teams.map(t => {
+                        if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
+                            return { ...t, order: t.order + 1 };
+                        }
+                        return t;
+                    });
+                }
             }
 
             if (finalGroupName !== null) {
