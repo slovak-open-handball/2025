@@ -471,12 +471,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
             const currentTeamsForCategory = globalTeamsData[categoryName] || [];
             const teamsInTargetGroup = currentTeamsForCategory.filter(t => t.groupName === groupName);
-            let maxOrder = 0;
-            teamsInTargetGroup.forEach(t => {
-                if (t.order > maxOrder) {
-                    maxOrder = t.order;
-                }
-            });
+            const maxOrder = teamsInTargetGroup.length > 0
+                ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
+                : 0;
             const newOrder = groupName ? (maxOrder + 1) : null;
             const newTeam = {
                 teamName: finalTeamName,
@@ -528,7 +525,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     return t;
                 });
                 const teamsInTargetGroup = teams.filter(t => t.groupName === newGroupName);
-                const maxOrder = teamsInTargetGroup.reduce((max, t) => (t.order != null ? Math.max(max, t.order) : max), 0);
+                const maxOrder = teamsInTargetGroup.length > 0
+                    ? Math.max(...teamsInTargetGroup.map(t => t.order || 0))
+                    : 0;
                 newOrder = newGroupName ? (maxOrder + 1) : null;
             }
             const updatedTeam = {
@@ -775,7 +774,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 });
                 // Pridať presúvaný tím do novej skupiny a zvýšiť order pre tímy za ním
                 const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
-                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder);
+                const maxOrderInNewGroup = teamsInNewGroup.length > 0
+                    ? Math.max(...teamsInNewGroup.map(t => t.order || 0))
+                    : 0;
+                const finalOrder = maxOrderInNewGroup + 1;
                 teamsInNewGroupWithOrder.forEach(t => {
                     t.order += 1;
                 });
