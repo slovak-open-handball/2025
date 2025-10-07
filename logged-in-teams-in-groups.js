@@ -983,6 +983,16 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 return;
             }
 
+            // Reordering pre presun do "Bez skupiny"
+            if (finalGroupName === null && originalGroup !== null) {
+                teams = teams.map(t => {
+                    if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+            }
+
             // Korekcia pre poslednú pozíciu
             if (originalGroup === finalGroupName && finalGroupName !== null) {
                 const teamsInGroup = teams.filter(t => t.groupName === finalGroupName && t.teamName !== teamData.teamName);
@@ -1011,7 +1021,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return t;
                     });
                 }
-            } else {
+            } else if (finalGroupName !== null) {
                 // Reordering medzi skupinami
                 teams = teams.map(t => {
                     const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
@@ -1070,6 +1080,16 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 return;
             }
 
+            // Reordering pre presun do "Bez skupiny"
+            if (finalGroupName === null && originalGroup !== null) {
+                teams = teams.map(t => {
+                    if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+            }
+
             // Korekcia pre poslednú pozíciu
             if (originalGroup === finalGroupName && finalGroupName !== null) {
                 const teamsInGroup = teams.filter(t => t.groupName === finalGroupName && t.teamName !== teamData.teamName);
@@ -1098,7 +1118,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return t;
                     });
                 }
-            } else {
+            } else if (finalGroupName !== null) {
                 // Reordering medzi skupinami
                 teams = teams.map(t => {
                     const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
