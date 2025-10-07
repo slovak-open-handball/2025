@@ -1096,6 +1096,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             teams.splice(originalTeamIndex, 1);
 
             if (originalGroup === finalGroupName && originalGroup !== null) {
+                // Presun v rámci rovnakej skupiny
                 if (finalOrder > originalOrder) {
                     teams = teams.map(t => {
                         if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= finalOrder) {
@@ -1112,12 +1113,12 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     });
                 }
             } else {
-                // OPRAVENÁ ČASŤ: Presun medzi skupinami alebo do/z "bez skupiny"
-                const reorderedTeams = teams.map(t => {
+                // Presun medzi rôznymi skupinami alebo do/z "bez skupiny"
+                teams = teams.map(t => {
                     const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
                     const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
 
-                    // Ak tím zostal v PÔVODNEJ skupine a má vyššie poradie, posunieme ho hore (-1)
+                    // Ak tím bol v PÔVODNEJ skupine a má vyššie poradie, posunieme ho hore (-1)
                     if (originalGroup !== null && t_is_in_original_group && t.order > originalOrder) {
                         return { ...t, order: t.order - 1 };
                     }
@@ -1129,7 +1130,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
                     return t;
                 });
-                teams = reorderedTeams;
             }
 
             if (finalGroupName !== null) {
