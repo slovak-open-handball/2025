@@ -1010,16 +1010,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     if (finalOrder > originalOrder) {
                         // Presun dole - nový order bude rovnaký ako order tímu nad ním
                         updatedDraggedTeam.order = targetTeamAbove ? targetTeamAbove.order : 1; // Ak nie je tím nad ním, dáme 1
-                    }
-
-                    // 3. Prečíslujeme tímy medzi pôvodnou a novou pozíciou, ale len ak sa presúvame dole
-                    if (finalOrder > originalOrder) {
-                         teams = teams.map(t => {
-                            if (t.groupName === originalGroup && t.order != null && t.order >= updatedDraggedTeam.order && t.order < originalOrder) {
-                                return { ...t, order: t.order + 1 };
-                            }
-                            return t;
-                        });
                     } else if (finalOrder < originalOrder) {
                          teams = teams.map(t => {
                             if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
@@ -1028,6 +1018,17 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                             return t;
                         });
                     }
+
+                    // 3. Prečíslujeme tímy medzi pôvodnou a novou pozíciou, ak presúvame dole
+                    if (finalOrder > originalOrder) {
+                        teams = teams.map(t => {
+                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= originalTeam.order) {
+                                return { ...t, order: t.order - 1 };
+                            }
+                            return t;
+                        });
+                    }
+
 
                 }
 
@@ -1118,16 +1119,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     if (finalOrder > originalOrder) {
                         // Presun dole - nový order bude rovnaký ako order tímu nad ním
                         updatedDraggedTeam.order = targetTeamAbove ? targetTeamAbove.order : 1; // Ak nie je tím nad ním, dáme 1
-                    }
-
-                    // 3. Prečíslujeme tímy medzi pôvodnou a novou pozíciou, ale len ak sa presúvame dole
-                    if (finalOrder > originalOrder) {
-                         teams = teams.map(t => {
-                            if (t.groupName === originalGroup && t.order != null && t.order >= updatedDraggedTeam.order && t.order < originalOrder) {
-                                return { ...t, order: t.order + 1 };
-                            }
-                            return t;
-                        });
                     } else if (finalOrder < originalOrder) {
                          teams = teams.map(t => {
                             if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
@@ -1137,10 +1128,21 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         });
                     }
 
+                    // 3. Prečíslujeme tímy medzi pôvodnou a novou pozíciou, ak presúvame dole
+                    if (finalOrder > originalOrder) {
+                        teams = teams.map(t => {
+                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= originalTeam.order) {
+                                return { ...t, order: t.order - 1 };
+                            }
+                            return t;
+                        });
+                    }
+
+
                 }
                 // ---------------------- KONIEC UPRAVENEJ ČASTI ----------------------
                 else {
-                
+
                     // 3. Spustíme reordering logiku na ostatných tímoch (pre presun medzi skupinami alebo do/z "bez skupiny")
                     const reorderedTeams = teams.map(t => {
                         const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
