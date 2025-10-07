@@ -761,7 +761,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     }
                     // Presúvanie smerom dole (napr. z 2 na 5)
                     else if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                        return { ...t, order: t.order + 1 };
+                        return { ...t, order: t.order - 1 };
                     }
                     return t;
                 });
