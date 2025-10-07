@@ -933,6 +933,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
     
     // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
+
 const handleDrop = async (e, targetGroup, targetCategoryId) => {
     e.preventDefault();
     const dragData = draggedItem.current;
@@ -1114,23 +1115,34 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 }
             } else {
                 // Presun medzi rôznymi skupinami alebo do/z "bez skupiny"
-                teams = teams.map(t => {
-                    const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
-                    const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
-
-                    // Ak tím bol v PÔVODNEJ skupine a má vyššie poradie, posunieme ho hore (-1)
-                    if (originalGroup !== null && t_is_in_original_group && t.order > originalOrder) {
-                        return { ...t, order: t.order - 1 };
-                    }
-
-                    // Ak tím je v CIEĽOVEJ skupine a má vyššie alebo rovnaké poradie ako vkladaný tím, posunieme ho dole (+1)
-                    if (finalGroupName !== null && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
-
-                    return t;
-                });
+                
+                // KROK 1: Zmenšiť order v pôvodnej skupine (ak existuje)
+                if (originalGroup !== null) {
+                    teams = teams.map(t => {
+                        if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                            console.log(`Zmenšujem order pre tím ${t.teamName} z ${t.order} na ${t.order - 1}`);
+                            return { ...t, order: t.order - 1 };
+                        }
+                        return t;
+                    });
+                }
+                
+                // KROK 2: Zväčšiť order v cieľovej skupine (ak existuje a nie je to "bez skupiny")
+                if (finalGroupName !== null && finalOrder !== null) {
+                    console.log(`Zvačšujem order v skupine ${finalGroupName} pre tímy s order >= ${finalOrder}`);
+                    teams = teams.map(t => {
+                        if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
+                            console.log(`Zvačšujem order pre tím ${t.teamName} z ${t.order} na ${t.order + 1}`);
+                            return { ...t, order: t.order + 1 };
+                        }
+                        return t;
+                    });
+                }
             }
+
+            // Debug: Výpis stavu pred vložením
+            console.log(`Vkladám tím ${updatedDraggedTeam.teamName} s order ${updatedDraggedTeam.order} do skupiny ${updatedDraggedTeam.groupName}`);
+            console.log('Aktuálny stav tímov pred vložením:', teams.map(t => ({ name: t.teamName, group: t.groupName, order: t.order })));
 
             if (finalGroupName !== null) {
                 const insertionIndex = teams.filter(t => t.groupName === finalGroupName && (t.order === null || t.order < updatedDraggedTeam.order)).length;
