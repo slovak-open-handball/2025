@@ -766,7 +766,8 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     return t;
                 });
 
-                reorderedTeams.splice(finalOrder - (finalOrder > originalOrder ? 0 : 1), 0, updatedDraggedTeam);
+                // Vkladanie na pozíciu finalOrder
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
 
                 await setDoc(superstructureDocRef, {
                     ...globalTeamsData,
@@ -790,6 +791,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     t.order += 1;
                 });
 
+                // Vkladanie na pozíciu finalOrder
                 reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
 
                 await setDoc(superstructureDocRef, {
@@ -840,7 +842,8 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     return t;
                 });
 
-                reorderedTeams.splice(finalOrder - (finalOrder > originalOrder ? 0 : 1), 0, updatedDraggedTeam);
+                // Vkladanie na pozíciu finalOrder
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
 
                 await updateDoc(ownerDocRef, {
                     [`teams.${teamCategoryName}`]: reorderedTeams
@@ -863,6 +866,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     t.order += 1;
                 });
 
+                // Vkladanie na pozíciu finalOrder - 1
                 reorderedTeams.splice(finalOrder - 1, 0, updatedDraggedTeam);
 
                 await updateDoc(ownerDocRef, {
