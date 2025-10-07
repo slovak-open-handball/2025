@@ -1096,11 +1096,11 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     });
                 }
             } else {
-                // KĽÚČOVÁ OPRAVA: Reordering pri presune medzi skupinami
+                // KĽÚČOVÁ OPRAVA: Reordering pri presune medzi skupinami alebo do/z nepriradených
                 // MUSÍME spraviť reordering v dvoch krokoch kvôli správnemu prepočtu
                 
-                // KROK 1: Zníženie order v pôvodnej skupine (ak tím mal skupinu)
-                if (originalGroup !== null) {
+                // KROK 1: Zníženie order v pôvodnej skupine (ak tím mal skupinu a presúva sa inam)
+                if (originalGroup !== null && originalGroup !== finalGroupName) {
                     teams = teams.map(t => {
                         if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                             return { ...t, order: t.order - 1 };
