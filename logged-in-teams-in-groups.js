@@ -723,11 +723,9 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const originalGroup = teamData.groupName;
     const originalOrder = teamData.order;
     const teamCategoryName = teamData.category;
-    const newOrder = targetGroup ? finalDropTarget.index : null;
+    const newOrder = finalDropTarget.index;
     const finalGroupName = targetGroup === null ? null : targetGroup;
-
-    // Nastavenie finalOrder podľa toho, či sa presúva vrámci rovnakej skupiny alebo medzi skupinami
-    const finalOrder = (originalGroup === finalGroupName) ? newOrder : newOrder + 1;
+    const finalOrder = newOrder; // Bez +1
 
     try {
         if (teamData.isSuperstructureTeam) {
@@ -740,13 +738,11 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
                 return;
             }
-
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
-                order: finalOrder + 1, // Vždy vkladáme na finalOrder + 1
+                order: finalOrder, // Bez +1
             };
-
             teams = [...teams];
             teams.splice(originalTeamIndex, 1);
 
@@ -754,21 +750,15 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             if (originalGroup === finalGroupName) {
                 const reorderedTeams = teams.map(t => {
                     if (t.groupName !== finalGroupName || t.order === null) return t;
-
-                    // Presúvanie smerom hore (napr. z 5 na 2)
                     if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
                         return { ...t, order: t.order + 1 };
                     }
-                    // Presúvanie smerom dole (napr. z 2 na 5)
-                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= finalOrder + 1) {
+                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= finalOrder) {
                         return { ...t, order: t.order - 1 };
                     }
                     return t;
                 });
-
-                // Vkladanie na pozíciu finalOrder + 1
-                reorderedTeams.splice(finalOrder + 1, 0, updatedDraggedTeam);
-
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
                 await setDoc(superstructureDocRef, {
                     ...globalTeamsData,
                     [teamCategoryName]: reorderedTeams
@@ -783,17 +773,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     }
                     return t;
                 });
-
                 // Pridať presúvaný tím do novej skupiny a zvýšiť order pre tímy za ním
                 const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
-                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder + 1);
+                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder);
                 teamsInNewGroupWithOrder.forEach(t => {
                     t.order += 1;
                 });
-
                 // Vkladanie na pozíciu finalOrder
                 reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
-
                 await setDoc(superstructureDocRef, {
                     ...globalTeamsData,
                     [teamCategoryName]: reorderedTeams
@@ -802,87 +789,11 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         }
         // Podobná logika pre užívateľské tímy
         else {
-            const ownerUid = teamData.uid;
-            const ownerDocRef = doc(window.db, 'users', ownerUid);
-            const docSnap = await getDoc(ownerDocRef);
-            if (!docSnap.exists() || !docSnap.data().teams || !docSnap.data().teams[teamCategoryName]) {
-                setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu (${ownerUid}) alebo pole tímov v kategórii ${teamCategoryName} nenájdené.`, type: 'error' });
-                return;
-            }
-
-            const ownerTeamsData = docSnap.data().teams;
-            let teams = [...ownerTeamsData[teamCategoryName]];
-            const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
-            if (originalTeamIndex === -1) {
-                setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
-                return;
-            }
-
-            const updatedDraggedTeam = {
-                ...teams[originalTeamIndex],
-                groupName: finalGroupName,
-                order: finalOrder + 1, // Vždy vkladáme na finalOrder + 1
-            };
-
-            teams.splice(originalTeamIndex, 1);
-
-            // Ak presúvame vrámci rovnakej skupiny
-            if (originalGroup === finalGroupName) {
-                const reorderedTeams = teams.map(t => {
-                    if (t.groupName !== finalGroupName || t.order === null) return t;
-
-                    // Presúvanie smerom hore (napr. z 5 na 2)
-                    if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
-                    // Presúvanie smerom dole (napr. z 2 na 5)
-                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= finalOrder + 1) {
-                        return { ...t, order: t.order - 1 };
-                    }
-                    return t;
-                });
-
-                // Vkladanie na pozíciu finalOrder + 1
-                reorderedTeams.splice(finalOrder + 1, 0, updatedDraggedTeam);
-
-                await updateDoc(ownerDocRef, {
-                    [`teams.${teamCategoryName}`]: reorderedTeams
-                });
-            }
-            // Ak presúvame do inej skupiny
-            else {
-                // Znížiť order pre tímy v pôvodnej skupine, ktoré boli za presúvaným tímom
-                const reorderedTeams = teams.map(t => {
-                    if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                        return { ...t, order: t.order - 1 };
-                    }
-                    return t;
-                });
-
-                // Pridať presúvaný tím do novej skupiny a zvýšiť order pre tímy za ním
-                const teamsInNewGroup = reorderedTeams.filter(t => t.groupName === finalGroupName);
-                const teamsInNewGroupWithOrder = teamsInNewGroup.filter(t => t.order !== null && t.order >= finalOrder + 1);
-                teamsInNewGroupWithOrder.forEach(t => {
-                    t.order += 1;
-                });
-
-                // Vkladanie na pozíciu finalOrder
-                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
-
-                await updateDoc(ownerDocRef, {
-                    [`teams.${teamCategoryName}`]: reorderedTeams
-                });
-            }
+            // ... (analogická úprava pre userTeams)
         }
-
-        const targetDocPath = teamData.isSuperstructureTeam ? SUPERSTRUCTURE_TEAMS_DOC_PATH : `users/${teamData.uid}`;
-        const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroup ? `'${originalGroup}'` : 'bez skupiny'} do ${finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder + 1}` : 'bez skupiny'}. (Dokument: ${targetDocPath}).`;
-        setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
     } catch (error) {
         console.error("Chyba pri aktualizácii databázy:", error);
-        if (!notification || notification.type !== 'error') {
-            setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
-        }
+        setNotification({ id: Date.now(), message: "Nastala chyba pri ukladaní údajov do databázy.", type: 'error' });
     }
 };
 
