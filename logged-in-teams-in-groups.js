@@ -741,12 +741,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 return;
             }
 
-            // Nastavenie order pre presúvaný tím
-            const updatedDraggedTeamOrder = finalOrder < originalOrder ? finalOrder + 1 : finalOrder + 1;
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
-                order: updatedDraggedTeamOrder,
+                order: finalOrder + 1, // Vždy vkladáme na finalOrder + 1
             };
 
             teams = [...teams];
@@ -762,15 +760,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return { ...t, order: t.order + 1 };
                     }
                     // Presúvanie smerom dole (napr. z 2 na 5)
-                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= updatedDraggedTeamOrder) {
+                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= finalOrder + 1) {
                         return { ...t, order: t.order - 1 };
                     }
                     return t;
                 });
 
-                // Vkladanie na pozíciu finalOrder + 1, ak presúvame smerom dole
-                const insertPosition = finalOrder < originalOrder ? finalOrder + 1 : finalOrder + 1;
-                reorderedTeams.splice(insertPosition - 1, 0, updatedDraggedTeam);
+                // Vkladanie na pozíciu finalOrder + 1
+                reorderedTeams.splice(finalOrder + 1, 0, updatedDraggedTeam);
 
                 await setDoc(superstructureDocRef, {
                     ...globalTeamsData,
@@ -821,12 +818,10 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 return;
             }
 
-            // Nastavenie order pre presúvaný tím
-            const updatedDraggedTeamOrder = finalOrder < originalOrder ? finalOrder + 1 : finalOrder + 1;
             const updatedDraggedTeam = {
                 ...teams[originalTeamIndex],
                 groupName: finalGroupName,
-                order: updatedDraggedTeamOrder,
+                order: finalOrder + 1, // Vždy vkladáme na finalOrder + 1
             };
 
             teams.splice(originalTeamIndex, 1);
@@ -841,14 +836,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return { ...t, order: t.order + 1 };
                     }
                     // Presúvanie smerom dole (napr. z 2 na 5)
-                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= updatedDraggedTeamOrder) {
+                    else if (finalOrder >= originalOrder && t.order > originalOrder && t.order <= finalOrder + 1) {
                         return { ...t, order: t.order - 1 };
                     }
                     return t;
                 });
 
-                const insertPosition = finalOrder < originalOrder ? finalOrder + 1 : finalOrder + 1;
-                reorderedTeams.splice(insertPosition - 1, 0, updatedDraggedTeam);
+                // Vkladanie na pozíciu finalOrder + 1
+                reorderedTeams.splice(finalOrder + 1, 0, updatedDraggedTeam);
 
                 await updateDoc(ownerDocRef, {
                     [`teams.${teamCategoryName}`]: reorderedTeams
@@ -881,7 +876,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         }
 
         const targetDocPath = teamData.isSuperstructureTeam ? SUPERSTRUCTURE_TEAMS_DOC_PATH : `users/${teamData.uid}`;
-        const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroup ? `'${originalGroup}'` : 'bez skupiny'} do ${finalGroupName ? `'${finalGroupName}' na pozíciu ${updatedDraggedTeamOrder}` : 'bez skupiny'}. (Dokument: ${targetDocPath}).`;
+        const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroup ? `'${originalGroup}'` : 'bez skupiny'} do ${finalGroupName ? `'${finalGroupName}' na pozíciu ${finalOrder + 1}` : 'bez skupiny'}. (Dokument: ${targetDocPath}).`;
         setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
     } catch (error) {
         console.error("Chyba pri aktualizácii databázy:", error);
