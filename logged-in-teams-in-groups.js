@@ -1013,10 +1013,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
                     if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order < finalOrder) { 
-                             return { ...t, order: t.order - 1 };
-                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                             return { ...t, order: t.order + 1 };
+                        // Ak presúvame smerom dole (finalOrder > originalOrder)
+                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+                            return { ...t, order: t.order - 1 };
+                        }
+                        // Ak presúvame smerom hore (finalOrder < originalOrder)
+                        else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                            return { ...t, order: t.order + 1 };
                         }
                     }
 
@@ -1090,12 +1093,16 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
                     if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order < finalOrder) { 
-                             return { ...t, order: t.order - 1 };
-                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                             return { ...t, order: t.order + 1 };
+                        // Ak presúvame smerom dole (finalOrder > originalOrder)
+                        if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
+                            return { ...t, order: t.order - 1 };
+                        }
+                        // Ak presúvame smerom hore (finalOrder < originalOrder)
+                        else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
+                            return { ...t, order: t.order + 1 };
                         }
                     }
+
                     
                     return t;
                 });
