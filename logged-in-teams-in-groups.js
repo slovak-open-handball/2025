@@ -723,7 +723,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const originalGroup = teamData.groupName;
     const originalOrder = teamData.order;
     const teamCategoryName = teamData.category;
-    const newOrder = targetGroup ? finalDropTarget.index : null; // Zmena: finalDropTarget.index (nie +1)
+    const newOrder = targetGroup ? finalDropTarget.index : null;
     const finalGroupName = targetGroup === null ? null : targetGroup;
     const finalOrder = targetGroup === null ? null : newOrder;
     try {
@@ -745,27 +745,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             teams = [...teams];
             teams.splice(originalTeamIndex, 1);
             const reorderedTeams = teams.map(t => {
-                const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
                 const t_is_in_target_group = t.groupName === finalGroupName && t.order != null;
-                if (originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
+                if (!t_is_in_target_group) return t;
+
+                // Ak presúvame dole (napr. z 2 na 4)
+                if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
                     return { ...t, order: t.order - 1 };
                 }
-                else if (t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
-                    // Zmena: Posunúť len tímy, ktoré sú za vloženým tímom
+                // Ak presúvame hore (napr. z 4 na 2)
+                else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
                     return { ...t, order: t.order + 1 };
-                }
-                else if (originalGroup === finalGroupName && t_is_in_target_group) {
-                    if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                        return { ...t, order: t.order - 1 };
-                    }
-                    else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
                 }
                 return t;
             });
             if (finalGroupName !== null) {
-                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam); // Zmena: finalOrder (nie finalOrder - 1)
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
             } else {
                 reorderedTeams.push(updatedDraggedTeam);
             }
@@ -796,26 +790,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             };
             teams.splice(originalTeamIndex, 1);
             const reorderedTeams = teams.map(t => {
-                const t_is_in_original_group = t.groupName === originalGroup && t.order != null;
                 const t_is_in_target_group = t.groupName === targetGroup && t.order != null;
-                if (originalGroup !== null && originalGroup !== finalGroupName && t_is_in_original_group && t.order > originalOrder) {
+                if (!t_is_in_target_group) return t;
+
+                // Ak presúvame dole (napr. z 2 na 4)
+                if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
                     return { ...t, order: t.order - 1 };
                 }
-                else if (targetGroup !== null && targetGroup === t.groupName && t_is_in_target_group && finalOrder !== null && t.order >= finalOrder) {
+                // Ak presúvame hore (napr. z 4 na 2)
+                else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
                     return { ...t, order: t.order + 1 };
-                }
-                else if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                    if (finalOrder > originalOrder && t.order > originalOrder && t.order <= finalOrder) {
-                        return { ...t, order: t.order - 1 };
-                    }
-                    else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
                 }
                 return t;
             });
             if (finalGroupName !== null) {
-                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam); // Zmena: finalOrder (nie finalOrder - 1)
+                reorderedTeams.splice(finalOrder, 0, updatedDraggedTeam);
             } else {
                 reorderedTeams.push(updatedDraggedTeam);
             }
