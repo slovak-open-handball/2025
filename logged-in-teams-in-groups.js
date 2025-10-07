@@ -2,7 +2,7 @@ import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDo
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
-// Referencia na globálny konfiguračný dokument pre nadstavbové tímyprosím celý upravený kod pre funkciu 
+// Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 // --- Komponent Modálne Okno pre Pridanie/Editáciu Tímu ---
@@ -937,17 +937,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     e.preventDefault();
     const dragData = draggedItem.current;
     const finalDropTarget = dropTarget;
+
     if (!checkCategoryMatch(targetCategoryId)) {
         setNotification({ id: Date.now(), message: "Skupina nepatrí do rovnakej kategórie ako tím. Presun bol zrušený.", type: 'error' });
         setDropTarget({ groupId: null, categoryId: null, index: null });
         draggedItem.current = null;
         return;
     }
+
     setDropTarget({ groupId: null, categoryId: null, index: null });
+
     if (!dragData || (finalDropTarget.index === null || finalDropTarget.index === undefined)) {
         console.error("Žiadne dáta na presunutie alebo neplatný cieľový index.");
         return;
     }
+
     const teamData = dragData.team;
     const originalGroup = teamData.groupName;
     const originalOrder = teamData.order;
@@ -973,6 +977,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
             let teams = globalTeamsData[teamCategoryName] || [];
             const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
+
             if (originalTeamIndex === -1) {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
                 return;
@@ -1006,13 +1011,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             }
             // Reordering v rámci rovnakej skupiny
             else if (originalGroup === finalGroupName && originalGroup !== null) {
-                // Zvýšenie order pre všetky tímy v skupine, ktoré majú order >= finalOrder
-                teams = teams.map(t => {
-                    if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
-                    return t;
-                });
+                if (finalOrder > originalOrder) {
+                    teams = teams.map(t => {
+                        if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= finalOrder) {
+                            return { ...t, order: t.order - 1 };
+                        }
+                        return t;
+                    });
+                } else if (finalOrder < originalOrder) {
+                    teams = teams.map(t => {
+                        if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
+                            return { ...t, order: t.order + 1 };
+                        }
+                        return t;
+                    });
+                }
             }
 
             // Vytvorenie aktualizovaného tímu
@@ -1038,17 +1051,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 ...globalTeamsData,
                 [teamCategoryName]: teams,
             }, { merge: true });
+
         } else {
             // --- UPDATE UŽÍVATEĽSKÉHO DOKUMENTU ---
             const ownerUid = teamData.uid;
             const ownerDocRef = doc(window.db, 'users', ownerUid);
             const docSnap = await getDoc(ownerDocRef);
+
             if (!docSnap.exists() || !docSnap.data().teams || !docSnap.data().teams[teamCategoryName]) {
                 setNotification({ id: Date.now(), message: `Chyba: Dokument vlastníka tímu (${ownerUid}) alebo pole tímov v kategórii ${teamCategoryName} nenájdené.`, type: 'error' });
                 return;
             }
+
             let teams = [...docSnap.data().teams[teamCategoryName]];
             const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
+
             if (originalTeamIndex === -1) {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
                 return;
@@ -1082,13 +1099,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             }
             // Reordering v rámci rovnakej skupiny
             else if (originalGroup === finalGroupName && originalGroup !== null) {
-                // Zvýšenie order pre všetky tímy v skupine, ktoré majú order >= finalOrder
-                teams = teams.map(t => {
-                    if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
-                        return { ...t, order: t.order + 1 };
-                    }
-                    return t;
-                });
+                if (finalOrder > originalOrder) {
+                    teams = teams.map(t => {
+                        if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= finalOrder) {
+                            return { ...t, order: t.order - 1 };
+                        }
+                        return t;
+                    });
+                } else if (finalOrder < originalOrder) {
+                    teams = teams.map(t => {
+                        if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
+                            return { ...t, order: t.order + 1 };
+                        }
+                        return t;
+                    });
+                }
             }
 
             // Vytvorenie aktualizovaného tímu
@@ -1121,6 +1146,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             : `users/${teamData.uid}`;
         const notificationMessage = `Tím ${teamData.teamName} bol presunutý z ${originalGroupDisplay} do skupiny ${targetGroupDisplay} (Dokument: ${targetDocPath}).`;
         setNotification({ id: Date.now(), message: notificationMessage, type: 'success' });
+
     } catch (error) {
         console.error("Chyba pri aktualizácii databázy:", error);
         if (!notification || notification.type !== 'error') {
