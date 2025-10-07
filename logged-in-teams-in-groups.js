@@ -1090,13 +1090,40 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     }
                     
                     // Ak presúvame v rámci rovnakej skupiny (len zmena poradia)
-                    if (originalGroup === finalGroupName && originalGroup !== null && t_is_in_target_group) {
-                        if (finalOrder > originalOrder && t.order > originalOrder && t.order < finalOrder) { 
-                             return { ...t, order: t.order - 1 };
-                        } else if (finalOrder < originalOrder && t.order >= finalOrder && t.order < originalOrder) {
-                             return { ...t, order: t.order + 1 };
-                        }
-                    }
+if (originalGroup === finalGroupName && originalGroup !== null) {
+    // Nové order pre presúvaný tím
+    const newOrder = finalDropTarget.index;
+
+    // 1. Odstránime presúvaný tím z pôvodnej pozície
+    teams = [...teams];
+    const originalTeamIndex = teams.findIndex(t => t.id === teamData.id);
+    if (originalTeamIndex === -1) return;
+    const [movedTeam] = teams.splice(originalTeamIndex, 1);
+
+    // 2. Reordering ostatných tímov
+    const reorderedTeams = teams.map(t => {
+        if (t.groupName === finalGroupName && t.order != null) {
+            // Ak sa presúva nadol (napr. z 4 na 5)
+            if (newOrder > originalOrder && t.order > originalOrder && t.order <= newOrder) {
+                return { ...t, order: t.order - 1 };
+            }
+            // Ak sa presúva hore (napr. z 6 na 5)
+            else if (newOrder < originalOrder && t.order >= newOrder && t.order < originalOrder) {
+                return { ...t, order: t.order + 1 };
+            }
+        }
+        return t;
+    });
+
+    // 3. Vložíme presúvaný tím na správnu pozíciu
+    reorderedTeams.splice(newOrder - 1, 0, { ...movedTeam, order: newOrder });
+
+    // 4. Zápis do databázy
+    await setDoc(superstructureDocRef, {
+        ...globalTeamsData,
+        [teamCategoryName]: reorderedTeams
+    }, { merge: true });
+}
                     
                     return t;
                 });
