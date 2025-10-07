@@ -725,7 +725,9 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const teamCategoryName = teamData.category;
     const newOrder = targetGroup ? finalDropTarget.index : null;
     const finalGroupName = targetGroup === null ? null : targetGroup;
-    const finalOrder = targetGroup === null ? null : newOrder; // Zmena: finalOrder je nastavené na newOrder
+
+    // Nastavenie finalOrder podľa toho, či sa presúva vrámci rovnakej skupiny alebo medzi skupinami
+    const finalOrder = (originalGroup === finalGroupName) ? newOrder : newOrder + 1;
 
     try {
         if (teamData.isSuperstructureTeam) {
