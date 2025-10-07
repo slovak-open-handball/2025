@@ -1010,6 +1010,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     if (finalOrder > originalOrder) {
                         // Presun dole - nový order bude rovnaký ako order tímu nad ním
                         updatedDraggedTeam.order = targetTeamAbove ? targetTeamAbove.order : 1; // Ak nie je tím nad ním, dáme 1
+
+                        // 3. Znížime order hodnoty tímom medzi pôvodnou a novou pozíciou
+                        teams = teams.map(t => {
+                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order < finalOrder) {
+                                return { ...t, order: t.order - 1 };
+                            }
+                            return t;
+                        });
+
                     } else if (finalOrder < originalOrder) {
                          teams = teams.map(t => {
                             if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
@@ -1018,18 +1027,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                             return t;
                         });
                     }
-
-                    // 3. Prečíslujeme tímy medzi pôvodnou a novou pozíciou, ak presúvame dole
-                    if (finalOrder > originalOrder) {
-                        teams = teams.map(t => {
-                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= originalOrder) {
-                                return { ...t, order: t.order - 1 };
-                            }
-                            return t;
-                        });
-                    }
-
-
                 }
 
                 // ---------------------- KONIEC UPRAVENEJ ČASTI ----------------------
@@ -1119,6 +1116,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     if (finalOrder > originalOrder) {
                         // Presun dole - nový order bude rovnaký ako order tímu nad ním
                         updatedDraggedTeam.order = targetTeamAbove ? targetTeamAbove.order : 1; // Ak nie je tím nad ním, dáme 1
+
+                        // 3. Znížime order hodnoty tímom medzi pôvodnou a novou pozíciou
+                        teams = teams.map(t => {
+                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order < finalOrder) {
+                                return { ...t, order: t.order - 1 };
+                            }
+                            return t;
+                        });
+
                     } else if (finalOrder < originalOrder) {
                          teams = teams.map(t => {
                             if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
@@ -1127,19 +1133,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                             return t;
                         });
                     }
-
-                    // 3. Prečíslujeme tímy medzi pôvodnou a novou pozíciou, ak presúvame dole
-                    if (finalOrder > originalOrder) {
-                        teams = teams.map(t => {
-                            if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= originalOrder) {
-                                return { ...t, order: t.order - 1 };
-                            }
-                            return t;
-                        });
-                    }
-
-
                 }
+
                 // ---------------------- KONIEC UPRAVENEJ ČASTI ----------------------
                 else {
 
@@ -1162,7 +1157,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                     });
                     teams = reorderedTeams;
                 }
-
 
                 // 4. Vložíme presunutý tím naspäť na správnu pozíciu
                 if (finalGroupName !== null) {
