@@ -576,75 +576,77 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     // --- FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
-    const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
-        if (!window.db) {
-            setNotification({ id: Date.now(), message: "Firestore nie je inicializovaný.", type: 'error' });
-            return;
-        }
+const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
+    if (!window.db) {
+        setNotification({ id: Date.now(), message: "Firestore nie je inicializovaný.", type: 'error' });
+        return;
+    }
 
-        const categoryName = categoryIdToNameMap[categoryId];
-        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-        
-        const finalTeamName = `${categoryName} ${teamName}`;
+    const categoryName = categoryIdToNameMap[categoryId];
+    const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+    const finalTeamName = `${categoryName} ${teamName}`;
 
-        const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
-        if (isDuplicateFinal) {
-             setNotification({ id: Date.now(), message: `Globálny tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, type: 'error' });
-             return;
-        }
+    // Kontrola duplicity
+    const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
+    if (isDuplicateFinal) {
+        setNotification({ id: Date.now(), message: `Globálny tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, type: 'error' });
+        return;
+    }
 
-        try {
-            const docSnap = await getDoc(superstructureDocRef);
-            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
-            const currentTeamsForCategory = globalTeamsData[categoryName] || [];
+    try {
+        const docSnap = await getDoc(superstructureDocRef);
+        const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+        const currentTeamsForCategory = globalTeamsData[categoryName] || [];
 
-            const teamsInTargetGroup = currentTeamsForCategory.filter(t => 
-                t.groupName === groupName
-            );
-            
-            let maxOrder = 0;
-            teamsInTargetGroup.forEach(t => {
-                if (t.order > maxOrder) {
-                    maxOrder = t.order;
-                }
-            });
-            
-            // Nový tím je vždy s najvyšším poradím, ak má skupinu
-            const newOrder = groupName ? (maxOrder + 1) : null; 
-            
-            const newTeam = {
-                teamName: finalTeamName, 
-                groupName: groupName || null,
-                order: newOrder,
-                id: crypto.randomUUID() // Pridanie ID
-            };
-            
-            const updatedTeamsArray = [...currentTeamsForCategory, newTeam];
-            
-            await setDoc(superstructureDocRef, {
-                ...globalTeamsData,
-                [categoryName]: updatedTeamsArray
-            }, { merge: true });
+        // Filtrovanie tímov v cieľovej skupine
+        const teamsInTargetGroup = currentTeamsForCategory.filter(t => t.groupName === groupName);
 
-            console.log("categoryId:", categoryId);
-            console.log("categoryName:", categoryName);
-            console.log("groupName:", groupName);
-            console.log("teamName:", teamName);
-            console.log("finalTeamName:", finalTeamName);
-            console.log("currentTeamsForCategory:", currentTeamsForCategory);
-            console.log("updatedTeamsArray:", updatedTeamsArray);
-            
-            setNotification({ 
-                id: Date.now(), 
-                message: `Globálny tím '${finalTeamName}' bol úspešne pridaný. (Cesta: ${SUPERSTRUCTURE_TEAMS_DOC_PATH})`, 
-                type: 'success' 
-            });
+        // Zoradenie tímov podľa order
+        teamsInTargetGroup.sort((a, b) => a.order - b.order);
 
-        } catch (error) {
-            console.error("Chyba pri pridávaní nového globálneho tímu:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu do globálneho dokumentu.", type: 'error' });
-        }
-    };
+        // Prepísanie order všetkých tímov v skupine na kompaktné poradie
+        const updatedTeamsInGroup = teamsInTargetGroup.map((team, index) => ({
+            ...team,
+            order: index + 1
+        }));
+
+        // Zostavenie zoznamu tímov, ktoré nie sú v tejto skupine
+        const teamsNotInGroup = currentTeamsForCategory.filter(t => t.groupName !== groupName);
+
+        // Nový order pre nový tím
+        const newOrder = teamsInTargetGroup.length + 1;
+
+        // Vytvorenie nového tímu
+        const newTeam = {
+            teamName: finalTeamName,
+            groupName: groupName || null,
+            order: newOrder,
+            id: crypto.randomUUID()
+        };
+
+        // Zloženie všetkých tímov (tímy mimo skupiny + aktualizované tímy v skupine + nový tím)
+        const updatedTeamsArray = [
+            ...teamsNotInGroup,
+            ...updatedTeamsInGroup,
+            newTeam
+        ];
+
+        // Uloženie do Firestore
+        await setDoc(superstructureDocRef, {
+            ...globalTeamsData,
+            [categoryName]: updatedTeamsArray
+        }, { merge: true });
+
+        setNotification({
+            id: Date.now(),
+            message: `Globálny tím '${finalTeamName}' bol úspešne pridaný. (Cesta: ${SUPERSTRUCTURE_TEAMS_DOC_PATH})`,
+            type: 'success'
+        });
+    } catch (error) {
+        console.error("Chyba pri pridávaní nového globálneho tímu:", error);
+        setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu do globálneho dokumentu.", type: 'error' });
+    }
+};
     
     // --- FUNKCIA: Aktualizácia existujúceho Tímu v /settings/superstructureGroups ---
     const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam }) => {
