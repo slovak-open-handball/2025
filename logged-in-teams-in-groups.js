@@ -2,7 +2,7 @@ import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDo
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
-// Referencia na globálny konfiguračný dokument pre nadstavbové tímy
+// Referencia na globálny konfiguračný dokument pre nadstavbové tímyprosím celý upravený kod pre funkciu 
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 // --- Komponent Modálne Okno pre Pridanie/Editáciu Tímu ---
@@ -932,6 +932,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         });
     };
     
+    // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
     // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
 const handleDrop = async (e, targetGroup, targetCategoryId) => {
     e.preventDefault();
