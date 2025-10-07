@@ -1011,21 +1011,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             }
             // Reordering v rámci rovnakej skupiny
             else if (originalGroup === finalGroupName && originalGroup !== null) {
-                if (finalOrder > originalOrder) {
-                    teams = teams.map(t => {
-                        if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= finalOrder) {
-                            return { ...t, order: t.order - 1 };
-                        }
-                        return t;
-                    });
-                } else if (finalOrder < originalOrder) {
-                    teams = teams.map(t => {
-                        if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
-                            return { ...t, order: t.order + 1 };
-                        }
-                        return t;
-                    });
-                }
+                // Zvýšenie order pre všetky tímy v skupine, ktoré majú order >= finalOrder
+                teams = teams.map(t => {
+                    if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    return t;
+                });
             }
 
             // Vytvorenie aktualizovaného tímu
@@ -1099,21 +1091,13 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             }
             // Reordering v rámci rovnakej skupiny
             else if (originalGroup === finalGroupName && originalGroup !== null) {
-                if (finalOrder > originalOrder) {
-                    teams = teams.map(t => {
-                        if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= finalOrder) {
-                            return { ...t, order: t.order - 1 };
-                        }
-                        return t;
-                    });
-                } else if (finalOrder < originalOrder) {
-                    teams = teams.map(t => {
-                        if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
-                            return { ...t, order: t.order + 1 };
-                        }
-                        return t;
-                    });
-                }
+                // Zvýšenie order pre všetky tímy v skupine, ktoré majú order >= finalOrder
+                teams = teams.map(t => {
+                    if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    return t;
+                });
             }
 
             // Vytvorenie aktualizovaného tímu
