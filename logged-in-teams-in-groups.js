@@ -1098,12 +1098,12 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 order: finalOrder
             };
 
-            teams.splice(originalTeamIndex, 1);
-
+            // VYKONAJ REORDERING PRED ODSTRÁNENÍM TÍMU
             if (originalGroup === finalGroupName && originalGroup !== null) {
                 // Presun v rámci rovnakej skupiny
                 if (finalOrder > originalOrder) {
                     teams = teams.map(t => {
+                        if (t.teamName === teamData.teamName) return t; // Presúvaný tím necháme zatiaľ
                         if (t.groupName === originalGroup && t.order != null && t.order > originalOrder && t.order <= finalOrder) {
                             return { ...t, order: t.order - 1 };
                         }
@@ -1111,6 +1111,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     });
                 } else if (finalOrder < originalOrder) {
                     teams = teams.map(t => {
+                        if (t.teamName === teamData.teamName) return t; // Presúvaný tím necháme zatiaľ
                         if (t.groupName === originalGroup && t.order != null && t.order >= finalOrder && t.order < originalOrder) {
                             return { ...t, order: t.order + 1 };
                         }
@@ -1123,6 +1124,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 // KROK 1: Zmenšiť order v pôvodnej skupine (ak existuje)
                 if (originalGroup !== null) {
                     teams = teams.map(t => {
+                        if (t.teamName === teamData.teamName) return t; // Presúvaný tím necháme zatiaľ
                         if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                             console.log(`Zmenšujem order pre tím ${t.teamName} z ${t.order} na ${t.order - 1}`);
                             return { ...t, order: t.order - 1 };
@@ -1135,6 +1137,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 if (finalGroupName !== null && finalOrder !== null) {
                     console.log(`Zvačšujem order v skupine ${finalGroupName} pre tímy s order >= ${finalOrder}`);
                     teams = teams.map(t => {
+                        if (t.teamName === teamData.teamName) return t; // Presúvaný tím necháme zatiaľ
                         if (t.groupName === finalGroupName && t.order != null && t.order >= finalOrder) {
                             console.log(`Zvačšujem order pre tím ${t.teamName} z ${t.order} na ${t.order + 1}`);
                             return { ...t, order: t.order + 1 };
@@ -1142,6 +1145,12 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                         return t;
                     });
                 }
+            }
+
+            // TERAZ ODSTRÁNIME PRESÚVANÝ TÍM
+            const updatedTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
+            if (updatedTeamIndex !== -1) {
+                teams.splice(updatedTeamIndex, 1);
             }
 
             // Debug: Výpis stavu pred vložením
