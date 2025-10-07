@@ -625,6 +625,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                 ...globalTeamsData,
                 [categoryName]: updatedTeamsArray
             }, { merge: true });
+
+            console.log("categoryId:", categoryId);
+            console.log("categoryName:", categoryName);
+            console.log("groupName:", groupName);
+            console.log("teamName:", teamName);
+            console.log("finalTeamName:", finalTeamName);
+            console.log("currentTeamsForCategory:", currentTeamsForCategory);
+            console.log("updatedTeamsArray:", updatedTeamsArray);
             
             setNotification({ 
                 id: Date.now(), 
