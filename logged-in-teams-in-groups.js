@@ -985,7 +985,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
             let teams = globalTeamsData[teamCategoryName] || [];
 
-            const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
+            const originalTeamIndex = teams.findIndex(t => t.id === teamData.id);
 
             if (originalTeamIndex === -1) {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný globálny tím (${teamData.teamName}) sa nenašiel v cieľovej kategórii.`, type: 'error' });
@@ -996,7 +996,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             if (originalGroup === finalGroupName && finalGroupName !== null) {
                 // Tím je stále v tej istej skupine
                 // Zistíme počet tímov v tejto skupine (bez aktuálne presúvaného tímu)
-                const teamsInGroup = teams.filter(t => t.groupName === finalGroupName && t.teamName !== teamData.teamName);
+                const teamsInGroup = teams.filter(t => t.groupName === finalGroupName && t.id !== teamData.id);
                 const countInGroup = teamsInGroup.length;
                 
                 // Ak je finálny order rovný (alebo väčší) ako počet tímov v skupine + 1, znamená to, že má ísť na poslednú pozíciu.
@@ -1109,7 +1109,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             // Musíme urobiť kópiu pre manipuláciu
             let teams = [...ownerTeamsData[teamCategoryName]];
 
-            const originalTeamIndex = teams.findIndex(t => t.teamName === teamData.teamName);
+            const originalTeamIndex = teams.findIndex(t => t.id === teamData.id);
 
             if (originalTeamIndex === -1) {
                 setNotification({ id: Date.now(), message: `Chyba: Presúvaný používateľský tím (${teamData.teamName}) sa nenašiel v dokumente vlastníka.`, type: 'error' });
@@ -1118,7 +1118,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
 
             // ---------------------- NOVÁ KOREKČNÁ LOGIKA PRE POSLEDNÚ POZÍCIU ----------------------
             if (originalGroup === finalGroupName && finalGroupName !== null) {
-                const teamsInGroup = teams.filter(t => t.groupName === finalGroupName && t.teamName !== teamData.teamName);
+                const teamsInGroup = teams.filter(t => t.groupName === finalGroupName && t.id !== teamData.id);
                 const countInGroup = teamsInGroup.length;
                 const correctLastOrder = countInGroup + 1;
                 
