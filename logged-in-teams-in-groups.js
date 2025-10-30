@@ -1316,11 +1316,12 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                     onDragOver: (e) => handleDragOverEmptyContainer(e, targetGroupId, targetCategoryId),
                     onDrop: (e) => {
                         e.preventDefault();
-                        const data = e.dataTransfer.getData("text/plain");
+                        const data = e.dataTransfer.getData("application/json");
                         if (data) {
                             const team = JSON.parse(data);
                             const targetIndex = dropTarget.index;
-                            handleDrop(team, targetGroupId === null ? null : { name: targetGroupId }, targetIndex);
+                            const targetGroup = targetGroupId === null ? null : { name: targetGroupId };
+                            handleDrop(team, targetGroup, targetIndex);
                         }
                     },
                     className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`,
@@ -1350,11 +1351,12 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                 onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams),
                 onDrop: (e) => {
                     e.preventDefault();
-                    const data = e.dataTransfer.getData("text/plain");
+                    const data = e.dataTransfer.getData("application/json");
                     if (data) {
                         const team = JSON.parse(data);
                         const targetIndex = dropTarget.index;
-                        handleDrop(team, targetGroupId === null ? null : { name: targetGroupId }, targetIndex);
+                        const targetGroup = targetGroupId === null ? null : { name: targetGroupId };
+                        handleDrop(team, targetGroup, targetIndex);
                     }
                 },
             },
