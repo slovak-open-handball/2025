@@ -938,8 +938,15 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const dragData = draggedItem.current;
     const finalDropTarget = dropTarget;
 
+    console.log('=== DRAG & DROP ZAČIATOK ===');
+    console.log('Presúvaný tím:', dragData?.team?.teamName, 'ID:', dragData?.team?.id);
+    console.log('Cieľová skupina:', targetGroup, '| Cieľový index:', finalDropTarget.index);
+
     setDropTarget({ groupId: null, categoryId: null, index: null });
-    if (!dragData || finalDropTarget.index === null) return;
+    if (!dragData || finalDropTarget.index === null) {
+        console.warn('Chýbajú dáta na presun.');
+        return;
+    }
 
     const teamData = dragData.team;
     const originalGroup = teamData.groupName;
@@ -947,16 +954,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const teamCategoryName = teamData.category;
 
     const finalGroupName = targetGroup === null ? null : targetGroup;
-    const newOrder = finalGroupName ? (finalDropTarget.index + 1) : null; // 1-based
+    const newOrder = finalGroupName ? (finalDropTarget.index + 1) : null;
+
+    console.log('Pôvodná skupina:', originalGroup, '| Pôvodné order:', originalOrder);
+    console.log('Cieľová skupina:', finalGroupName, '| Nové order:', newOrder);
 
     const targetCategoryName = categoryIdToNameMap[targetCategoryId];
     if (targetCategoryName !== teamCategoryName) {
+        console.error('Nesúhlasí kategória!');
         setNotification({ id: Date.now(), message: "Tím nemôže byť presunutý do inej kategórie.", type: 'error' });
         draggedItem.current = null;
         return;
     }
 
     if (originalGroup === finalGroupName && originalOrder === newOrder) {
+        console.log('Zbytočný presun – rovnaká pozícia.');
         draggedItem.current = null;
         return;
     }
@@ -980,7 +992,9 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             updatePath = `teams.${teamCategoryName}`;
         }
 
-        // 1. Nájdeme tím (podľa ID alebo teamName)
+        console.log('Načítané tímy v kategórii:', teams.map(t => `${t.teamName} (group: ${t.groupName}, order: ${t.order})`).join(' | '));
+
+        // 1. Nájdeme tím
         const teamIndex = teams.findIndex(t =>
             (t.id && teamData.id && t.id === teamData.id) ||
             (!t.id && t.teamName === teamData.teamName)
@@ -988,48 +1002,58 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         if (teamIndex === -1) throw new Error("Tím sa nenašiel.");
 
         const movedTeam = { ...teams[teamIndex] };
+        console.log('Nájdený tím na indexe:', teamIndex, movedTeam);
 
         // ====================================================================
-        // 2. NAJPRV POSUNÚŤ ORDER – AŽ POTOM ODSTRÁNIŤ TÍM
+        // 2. NAJPRV POSUNÚŤ ORDER – AŽ POTOM ODSTRÁNIŤ
         // ====================================================================
 
         // A. PRESUN V RÁMCI ROVNAKEJ SKUPINY
         if (originalGroup === finalGroupName && finalGroupName !== null) {
+            console.log('PRESUN V RÁMCI ROVNAKEJ SKUPINY');
+
             if (newOrder > originalOrder) {
-                // Presun DOLE → tímy medzi originalOrder+1 a newOrder → order -1
+                console.log(`Presun DOLE: z ${originalOrder} na ${newOrder} → tímy medzi ${originalOrder + 1} a ${newOrder} dostanú order -1`);
                 teams = teams.map(t => {
                     if (t.groupName === finalGroupName && t.order > originalOrder && t.order <= newOrder) {
+                        console.log(`  → Tím "${t.teamName}" (order ${t.order}) → ${t.order - 1}`);
                         return { ...t, order: t.order - 1 };
                     }
                     return t;
                 });
             } else if (newOrder < originalOrder) {
-                // Presun HORE → tímy medzi newOrder a originalOrder-1 → order +1
+                console.log(`Presun HORE: z ${originalOrder} na ${newOrder} → tímy medzi ${newOrder} a ${originalOrder - 1} dostanú order +1`);
                 teams = teams.map(t => {
                     if (t.groupName === finalGroupName && t.order >= newOrder && t.order < originalOrder) {
+                        console.log(`  → Tím "${t.teamName}" (order ${t.order}) → ${t.order + 1}`);
                         return { ...t, order: t.order + 1 };
                     }
                     return t;
                 });
             }
-            // movedTeam.order sa nastaví až pri vkladaní
         }
         // B. PRESUN MEDZI SKUPINAMI ALEBO DO/Z "BEZ SKUPINY"
         else {
-            // 1. Znížiť order v PÔVODNEJ skupine (ak mala)
+            console.log('PRESUN MEDZI SKUPINAMI');
+
+            // 1. Znížiť order v PÔVODNEJ skupine
             if (originalGroup !== null && originalOrder !== null) {
+                console.log(`Znižujem order v pôvodnej skupine "${originalGroup}" pre tímy s order > ${originalOrder}`);
                 teams = teams.map(t => {
                     if (t.groupName === originalGroup && t.order > originalOrder) {
+                        console.log(`  → Tím "${t.teamName}" (order ${t.order}) → ${t.order - 1}`);
                         return { ...t, order: t.order - 1 };
                     }
                     return t;
                 });
             }
 
-            // 2. Zvýšiť order v CIEĽOVEJ skupine (ak ide do skupiny)
+            // 2. Zvýšiť order v CIEĽOVEJ skupine
             if (finalGroupName !== null && newOrder !== null) {
+                console.log(`Zvyšujem order v cieľovej skupine "${finalGroupName}" pre tímy s order >= ${newOrder}`);
                 teams = teams.map(t => {
                     if (t.groupName === finalGroupName && t.order >= newOrder) {
+                        console.log(`  → Tím "${t.teamName}" (order ${t.order}) → ${t.order + 1}`);
                         return { ...t, order: t.order + 1 };
                     }
                     return t;
@@ -1040,13 +1064,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         // ====================================================================
         // 3. ODSTRÁNIŤ TÍM Z PÔVODNEJ POZÍCIE
         // ====================================================================
+        console.log('Odstraňujem tím z indexu:', teamIndex);
         teams.splice(teamIndex, 1);
+        console.log('Po odstránení:', teams.map(t => `${t.teamName} (order: ${t.order})`).join(' | '));
 
         // ====================================================================
         // 4. VLOŽIŤ TÍM NA NOVÚ POZÍCIU
         // ====================================================================
         if (finalGroupName !== null && newOrder !== null) {
-            // Nájdeme index podľa order (už posunuté)
             let insertIndex = 0;
             for (let i = 0; i < teams.length; i++) {
                 if (teams[i].groupName === finalGroupName && teams[i].order >= newOrder) {
@@ -1055,19 +1080,22 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 }
                 if (i === teams.length - 1) insertIndex = teams.length;
             }
+            console.log(`Vkladám tím "${movedTeam.teamName}" na index ${insertIndex} s order ${newOrder}`);
             teams.splice(insertIndex, 0, {
                 ...movedTeam,
                 groupName: finalGroupName,
                 order: newOrder
             });
         } else {
-            // Do "bez skupiny"
+            console.log(`Vkladám tím "${movedTeam.teamName}" do "bez skupiny"`);
             teams.push({
                 ...movedTeam,
                 groupName: null,
                 order: null
             });
         }
+
+        console.log('FINÁLNY STAV tímov:', teams.map(t => `${t.teamName} (group: ${t.groupName}, order: ${t.order})`).join(' | '));
 
         // ====================================================================
         // 5. ULOŽIŤ
@@ -1077,6 +1105,8 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         } else {
             await updateDoc(docRef, { [updatePath]: teams });
         }
+
+        console.log('ÚSPEŠNE ULOŽENÉ DO FIRESTORE');
 
         // ====================================================================
         // 6. NOTIFIKÁCIA
@@ -1090,10 +1120,11 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         });
 
     } catch (error) {
-        console.error("Chyba pri presune:", error);
+        console.error("CHYBA PRI PRESUNE:", error);
         setNotification({ id: Date.now(), message: "Chyba pri presúvaní tímu.", type: 'error' });
     } finally {
         draggedItem.current = null;
+        console.log('=== DRAG & DROP KONIEC ===\n');
     }
 };
     // --- KONIEC OPRAVENEJ FUNKCIE handleDrop ---
