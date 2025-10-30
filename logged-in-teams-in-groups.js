@@ -999,17 +999,19 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             });
         }
 
-        // 3. AK IDE DO SKUPINY → posunieme tímy v cieľovej skupine o +1
+        // 3. AK IDE DO SKUPINY → NAJPRV posunieme všetky tímy s order >= newOrder o +1
         if (finalGroupName !== null && newOrder !== null) {
-            // ZVÝŠIME order všetkých tímov v cieľovej skupine s order >= newOrder
             teams = teams.map(t => {
                 if (t.groupName === finalGroupName && t.order >= newOrder) {
                     return { ...t, order: t.order + 1 };
                 }
                 return t;
             });
+        }
 
-            // Vložíme tím na presnú pozíciu podľa newOrder
+        // 4. Teraz vložíme tím na správnu pozíciu
+        if (finalGroupName !== null && newOrder !== null) {
+            // Nájdeme správny index podľa nového order (už posunuté)
             let insertIndex = 0;
             for (let i = 0; i < teams.length; i++) {
                 if (teams[i].groupName === finalGroupName && teams[i].order > newOrder) {
@@ -1025,7 +1027,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 order: newOrder
             });
         } 
-        // 4. AK IDE DO "BEZ SKUPINY"
+        // 5. AK IDE DO "BEZ SKUPINY"
         else {
             teams.push({
                 ...movedTeam,
@@ -1034,7 +1036,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             });
         }
 
-        // 5. Uložíme
+        // 6. Uložíme
         if (teamData.isSuperstructureTeam) {
             await setDoc(docRef, { [teamCategoryName]: teams }, { merge: true });
         } else {
