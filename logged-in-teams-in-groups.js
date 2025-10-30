@@ -983,7 +983,6 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         let newOrder = null;
 
         // 1. Odstráň tím z pôvodnej pozície
-
         allTeams.splice(movedTeamIndex, 1);
 
         // 2. Ak je to presun v rámci rovnakej skupiny
@@ -995,7 +994,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             const isMovingDown = originalOrderIndex < targetIndex;
 
             if (targetIndex === 0) {
-                // Vložíme na začiatok
+                // Vloženie na začiatok
                 newOrder = 1;
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null) {
@@ -1004,21 +1003,25 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 });
             } else {
                 const beforeTeam = sorted[targetIndex - 1];
-                newOrder = beforeTeam.order + 1;
+                const beforeOrder = beforeTeam.order;
 
                 if (isMovingDown) {
-                    // Nadol: tímy medzi originalOrder+1 a beforeTeam.order → -1
+                    // PRESUN NADOL → vložiť ZA tím na targetIndex-1
+                    newOrder = beforeOrder; // NIE +1!
+                    // Zníž order tímov medzi originalOrder+1 a beforeOrder
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
-                            t.order > originalOrder && t.order <= beforeTeam.order) {
+                            t.order > originalOrder && t.order <= beforeOrder) {
                             allTeams[i].order = t.order - 1;
                         }
                     });
                 } else {
-                    // Nahor: tímy medzi beforeTeam.order+1 a originalOrder → +1
+                    // PRESUN NAHOR → vložiť ZA tím na targetIndex-1
+                    newOrder = beforeOrder + 1;
+                    // Zvýš order tímov medzi beforeOrder+1 a originalOrder
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
-                            t.order > beforeTeam.order && t.order < originalOrder) {
+                            t.order > beforeOrder && t.order < originalOrder) {
                             allTeams[i].order = t.order + 1;
                         }
                     });
@@ -1115,7 +1118,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         const from = originalGroup ? `'${originalGroup}'` : 'bez skupiny';
         const to = targetGroupName ? `'${targetGroupName}' (pozícia ${newOrder})` : 'bez skupiny';
         setNotification({
-            id: Date.Now(),
+            id: Date.now(),
             message: `Tím "${teamData.teamName}" presunutý z ${from} do ${to}.`,
             type: 'success'
         });
