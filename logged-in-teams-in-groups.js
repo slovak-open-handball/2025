@@ -943,20 +943,24 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     
     // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
 const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
-    const targetGroupName = targetGroupObj?.name || null;  // <-- opravené
-    const targetCategoryId = selectedCategoryId || Object.keys(categoryIdToNameMap).find(id => 
+    const targetGroupName = targetGroupObj?.name || null;
+    const targetCategoryId = selectedCategoryId || Object.keys(categoryIdToNameMap).find(id =>
         categoryIdToNameMap[id] === teamData.category
     );
     const targetCategoryName = categoryIdToNameMap[targetCategoryId];
-
     if (teamData.category !== targetCategoryName) {
-        setNotification({ 
-            id: Date.now(), 
-            message: "Tím nemôže byť presunutý do inej kategórie.", 
-            type: 'error' 
+        setNotification({
+            id: Date.now(),
+            message: "Tím nemôže byť presunutý do inej kategórie.",
+            type: 'error'
         });
+        // Reset drop indicatoru aj pri chybe
+        setDropTarget({ groupId: null, categoryId: null, index: null });
         return;
     }
+
+    // Reset drop indicatoru hneď na začiatku po validácii
+    setDropTarget({ groupId: null, categoryId: null, index: null });
 
     console.log('=== DRAG & DROP ZAČIATOK ===');
     console.log('Presúvaný tím:', teamData.teamName);
@@ -967,22 +971,19 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         if (allTeams.length === 0) return;
 
         const movedTeamIndex = allTeams.findIndex(t =>
-            t.__uid === teamData.__uid && 
+            t.__uid === teamData.__uid &&
             t.teamName === teamData.teamName
         );
-
         if (movedTeamIndex === -1) return;
 
         const movedTeam = { ...allTeams[movedTeamIndex] };
         const originalGroup = movedTeam.groupName;
         const originalOrder = movedTeam.order;
-
         let newOrder = null;
 
         if (targetGroupName && targetIndex != null) {
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
             const sorted = teamsInTargetGroup.sort((a, b) => a.order - b.order);
-
             if (sorted.length === 0) {
                 newOrder = 1;
             } else if (targetIndex === 0) {
@@ -1016,13 +1017,11 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
 
         // Odstránenie a vloženie
         allTeams.splice(movedTeamIndex, 1);
-
         if (targetGroupName && newOrder !== null) {
-            let insertIndex = allTeams.findIndex(t => 
+            let insertIndex = allTeams.findIndex(t =>
                 t.groupName === targetGroupName && t.order != null && t.order >= newOrder
             );
             if (insertIndex === -1) insertIndex = allTeams.length;
-
             allTeams.splice(insertIndex, 0, {
                 ...movedTeam,
                 groupName: targetGroupName,
@@ -1041,8 +1040,6 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
 
         // Batch write do Firestore
         const batch = writeBatch(window.db);
-
-        // Superstructure
         const superDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
         const categoryTeams = allTeams
             .filter(t => t.__isSuper)
@@ -1057,10 +1054,8 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 });
                 return acc;
             }, {});
-
         batch.set(superDocRef, categoryTeams, { merge: true });
 
-        // Používatelia
         const userTeamsMap = {};
         allTeams.forEach(t => {
             if (t.__uid && !t.__isSuper) {
@@ -1075,7 +1070,6 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 });
             }
         });
-
         Object.keys(userTeamsMap).forEach(uid => {
             const userDocRef = doc(window.db, 'users', uid);
             batch.set(userDocRef, { teams: userTeamsMap[uid] }, { merge: true });
@@ -1091,7 +1085,6 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             message: `Tím "${teamData.teamName}" presunutý z ${from} do ${to}.`,
             type: 'success'
         });
-
     } catch (error) {
         console.error('Chyba pri presune tímu:', error);
         setNotification({
@@ -1099,6 +1092,8 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             message: `Chyba: ${error.message}`,
             type: 'error'
         });
+        // Reset aj pri chybe
+        setDropTarget({ groupId: null, categoryId: null, index: null });
     }
 };
     // --- KONIEC OPRAVENEJ FUNKCIE handleDrop ---
