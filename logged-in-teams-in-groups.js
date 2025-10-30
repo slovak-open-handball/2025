@@ -345,25 +345,23 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const mapSuperstructureTeams = (globalTeams) => {
         let globalTeamsList = [];
         Object.entries(globalTeams).forEach(([categoryName, teamArray]) => {
-             if (Array.isArray(teamArray)) {
+            if (Array.isArray(teamArray)) {
                 teamArray.forEach(team => {
                     if (team.teamName) {
                         const hasGroup = team.groupName && team.groupName.trim() !== '';
-
+    
                         globalTeamsList.push({
-                            uid: 'global', // UNIKÁTNE ID pre globálne tímy
+                            __uid: 'global', // ← NOVÉ: Zjednotenie s user tímami
+                            __isSuper: true, // ← NOVÉ: Pre batch zápis
                             category: categoryName,
-                            // UDRŽÍME LOKÁLNU ID GENERÁCIU PRE PRÍPADNÉ CHÝBAJÚCE ID V DB
-                            id: team.id || crypto.randomUUID(), 
+                            id: team.id || crypto.randomUUID(),
                             teamName: team.teamName,
                             groupName: team.groupName || null,
-                            // FIX 2: Poradie je relevantné len ak má tím skupinu
                             order: hasGroup ? (team.order ?? 0) : null,
-                            isSuperstructureTeam: true, // KLASIFIKÁTOR PÔVODU
                         });
                     }
                 });
-             }
+            }
         });
         return globalTeamsList;
     };
@@ -388,13 +386,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                                     const hasGroup = team.groupName && team.groupName.trim() !== '';
 
                                     userTeamsList.push({
-                                        uid: doc.id,
+                                        __uid: doc.id,
+                                        __isSuper: false,
                                         category: categoryName,
-                                        // UDRŽÍME LOKÁLNU ID GENERÁCIU PRE PRÍPADNÉ CHÝBAJÚCE ID V DB
                                         id: team.id || `${doc.id}-${team.teamName}`,
                                         teamName: team.teamName,
                                         groupName: team.groupName || null,
-                                        // FIX 2: Poradie je relevantné len ak má tím skupinu
                                         order: hasGroup ? (team.order ?? 0) : null, 
                                         isSuperstructureTeam: false,
                                     });
@@ -954,12 +951,12 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
 
         // 2. NÁJDENIE PRESÚVANÉHO TÍMU
         const movedTeamIndex = allTeams.findIndex(t =>
-            (t.__uid && t.teamName === teamData.teamName && t.__uid === teamData.__uid) ||
-            (t.id && t.id === teamData.id)
+            t.__uid === teamData.__uid && 
+            t.teamName === teamData.teamName
         );
 
         if (movedTeamIndex === -1) {
-            console.error('Presúvaný tím nenájdený v allTeams!');
+            console.error('Presúvaný tím nenájdený v allTeams!', { teamData, allTeams: allTeams.map(t => ({ __uid: t.__uid, teamName: t.teamName })) });
             return;
         }
 
@@ -1154,6 +1151,11 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
     // --- DRAG/DROP LOGIKA PRE FAB MAZANIE ---
     
     const handleDragStart = (e, team) => {
+        const dragData = {
+            __uid: team.__uid,
+            teamName: team.teamName,
+            team: team // celý tím
+        };
         draggedItem.current = { team };
         e.dataTransfer.setData("text/plain", JSON.stringify(team));
         e.dataTransfer.effectAllowed = "move";
