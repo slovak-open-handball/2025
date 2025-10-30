@@ -982,7 +982,9 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
 
         let newOrder = null;
 
-        // 1. Odstráň tím z pôvodnej pozície
+        // ===================================================================
+        // 1. ODSTRÁŇ TÍM Z PÔVODNEJ POZÍCIE
+        // ===================================================================
         allTeams.splice(movedTeamIndex, 1);
 
         // ===================================================================
@@ -998,28 +1000,30 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         }
 
         // ===================================================================
-        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY
+        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY – NAJPRV PREČÍSLOVAŤ, AŽ POTOM VLOŽIŤ
         // ===================================================================
         if (isSameGroup && targetGroupName && targetIndex != null && originalOrder !== null) {
             const teamsInGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
             const sorted = teamsInGroup.sort((a, b) => a.order - b.order);
 
             const originalOrderIndex = sorted.findIndex(t => t.order === originalOrder);
-            const isMovingDown = originalOrderIndex < targetIndex; // nadol = vyššie číslo
+            const isMovingDown = originalOrderIndex < targetIndex;
 
             if (targetIndex === 0) {
                 // Vloženie na začiatok
                 newOrder = 1;
+                // NAJPRV: posunúť všetky o +1
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null) {
                         allTeams[i].order = t.order + 1;
                     }
                 });
+                // AŽ POTOM: vložíme nižšie
             } else {
                 const targetOrder = isMovingDown ? targetIndex : targetIndex + 1;
 
                 if (isMovingDown) {
-                    // NADOL: znížiť order len medzi originalOrder+1 a targetOrder (vrátane targetOrder)
+                    // NADOL: najprv znížiť tímy medzi originalOrder+1 a targetOrder
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order > originalOrder && t.order <= targetOrder) {
@@ -1028,7 +1032,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                     });
                     newOrder = targetOrder; // = targetIndex
                 } else {
-                    // NAHOR: zvýšiť order len medzi targetOrder a originalOrder-1
+                    // NAHOR: najprv zvýšiť tímy medzi targetOrder a originalOrder-1
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order >= targetOrder && t.order < originalOrder) {
@@ -1040,7 +1044,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             }
         }
         // ===================================================================
-        // 4. PRESUN DO INEJ SKUPINY ALEBO NOVÝ TÍM (vkladanie)
+        // 4. PRESUN DO INEJ SKUPINY – VLOŽENIE
         // ===================================================================
         else if (targetGroupName && targetIndex != null) {
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
@@ -1058,7 +1062,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 newOrder = before + 1 <= after ? before + 1 : after;
             }
 
-            // Posun všetkých od newOrder nahor o +1 v cieľovej skupine
+            // NAJPRV: posunúť od newOrder nahor
             allTeams.forEach((t, i) => {
                 if (t.groupName === targetGroupName && t.order != null && t.order >= newOrder) {
                     allTeams[i].order = t.order + 1;
@@ -1069,7 +1073,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         }
 
         // ===================================================================
-        // 5. VLOŽ TÍM SPÄŤ
+        // 5. AŽ TERAZ: VLOŽ TÍM SPÄŤ (PO PREČÍSLOVANÍ)
         // ===================================================================
         const updatedTeam = {
             ...movedTeam,
