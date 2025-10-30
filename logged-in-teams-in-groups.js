@@ -279,6 +279,9 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const listRefs = useRef({}); 
     const [dropTarget, setDropTarget] = useState({ groupId: null, categoryId: null, index: null });
     const teamsWithoutGroupRef = useRef(null);
+
+    const teamsWithoutGroupListRef = useRef(null);
+    const height = teamsWithoutGroupListRef.current?.offsetHeight || 0;
     
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
@@ -293,6 +296,13 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     useEffect(() => {
         allTeamsRef.current = allTeams;
     }, [allTeams]);
+
+    useEffect(() => {
+        if (teamsWithoutGroupRef.current) {
+            const height = teamsWithoutGroupRef.current.offsetHeight;
+            console.log('Výška bez skupiny:', height);
+        }
+    }, [selectedCategoryId, teamsWithoutGroup]);
     
     // --- NOVÉ ZJEDNOTENÉ HANDLERY PRE MODÁL ---
     
@@ -1462,10 +1472,6 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
             if (b.type === 'základná skupina' && a.type !== 'základná skupina') return 1;
             return a.name.localeCompare(b.name);
         });
-        
-        const teamsWithoutGroupListRef = useRef(null);
-        ref={teamsWithoutGroupListRef}
-        const height = teamsWithoutGroupListRef.current?.offsetHeight || 0;
 
         return React.createElement(
             'div',
