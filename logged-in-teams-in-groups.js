@@ -949,7 +949,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
     );
     const targetCategoryName = categoryIdToNameMap[targetCategoryId];
 
-    // Reset drop indicatoru hneď na začiatku
+    // Reset drop indicatoru
     setDropTarget({ groupId: null, categoryId: null, index: null });
 
     if (teamData.category !== targetCategoryName) {
@@ -985,17 +985,35 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         // 1. Odstráň tím z pôvodnej pozície
         allTeams.splice(movedTeamIndex, 1);
 
-        // 2. Uvoľni poradie v pôvodnej skupine (ak mala order)
-        if (originalGroup && originalOrder !== null) {
-            allTeams.forEach((t, i) => {
-                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                    allTeams[i].order = t.order - 1;
-                }
-            });
-        }
+        // 2. Ak je to presun v rámci rovnakej skupiny → uprav poradie medzi
+        if (isSameGroup && originalOrder !== null && targetGroupName && targetIndex != null) {
+            const teamsInGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
+            const sorted = teamsInGroup.sort((a, b) => a.order - b.order);
 
-        // 3. Ak je cieľová skupina → vypočítaj nové order
-        if (targetGroupName && targetIndex != null) {
+            const originalOrderIndex = sorted.findIndex(t => t.order === originalOrder);
+            const isMovingDown = originalOrderIndex < targetIndex;
+
+            if (isMovingDown) {
+                // PRESUN NADOL → zníž order tímov medzi pôvodnou a novou pozíciou
+                allTeams.forEach((t, i) => {
+                    if (t.groupName === targetGroupName && t.order != null &&
+                        t.order > originalOrder && t.order <= targetIndex) {
+                        allTeams[i].order = t.order - 1;
+                    }
+                });
+                newOrder = targetIndex; // vložiť na pozíciu targetIndex
+            } else {
+                // PRESUN NAHOR → zvýš order tímov medzi pôvodnou a novou pozíciou
+                allTeams.forEach((t, i) => {
+                    if (t.groupName === targetGroupName && t.order != null &&
+                        t.order >= targetIndex && t.order < originalOrder) {
+                        allTeams[i].order = t.order + 1;
+                    }
+                });
+                newOrder = targetIndex + 1; // vložiť za tím na targetIndex-1
+            }
+        } else if (targetGroupName && targetIndex != null) {
+            // PRESUN DO INEJ SKUPINY ALEBO NOVÝ TÍM
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
             const sorted = teamsInTargetGroup.sort((a, b) => a.order - b.order);
 
@@ -1006,42 +1024,23 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             } else if (targetIndex >= sorted.length) {
                 newOrder = sorted[sorted.length - 1].order + 1;
             } else {
-                if (isSameGroup) {
-                    // --- PRESUN V ROVNAKEJ SKUPINE ---
-                    const originalOrderIndex = teamsInTargetGroup.findIndex(t => t.order === originalOrder);
-                    const isMovingDown = originalOrderIndex < targetIndex; // posúva sa nadol?
+                const before = sorted[targetIndex - 1].order;
+                const after = sorted[targetIndex].order;
+                newOrder = before + 1 <= after ? before + 1 : after;
+            }
 
-                    if (isMovingDown) {
-                        // Presun nadol → vložiť PRED tím na targetIndex
-                        newOrder = targetIndex;
-                    } else {
-                        // Presun nahor → pôvodná logika (bez zmien)
-                        const before = sorted[targetIndex - 1].order;
-                        const after = sorted[targetIndex].order;
-                        newOrder = before + 1 <= after ? before + 1 : after;
-                    }
-                } else {
-                    // --- PRESUN DO INEJ SKUPINY ---
-                    const before = sorted[targetIndex - 1].order;
-                    const after = sorted[targetIndex].order;
-                    newOrder = before + 1 <= after ? before + 1 : after;
+            // Posuň ostatné tímy v cieľovej skupine o +1 (iba pri presune do inej skupiny)
+            allTeams.forEach((t, i) => {
+                if (t.groupName === targetGroupName && t.order != null && t.order >= newOrder) {
+                    allTeams[i].order = t.order + 1;
                 }
-            }
-
-            // 4. Posuň ostatné tímy v CIEĽOVEJ skupine (iba ak nie je rovnaká skupina)
-            if (!isSameGroup) {
-                allTeams.forEach((t, i) => {
-                    if (t.groupName === targetGroupName && t.order != null && t.order >= newOrder) {
-                        allTeams[i].order = t.order + 1;
-                    }
-                });
-            }
+            });
         } else {
             // Presun do "bez skupiny"
             newOrder = null;
         }
 
-        // 5. Vlož tím späť s novým order
+        // 3. Vlož tím späť s novým order
         const updatedTeam = {
             ...movedTeam,
             groupName: targetGroupName,
@@ -1064,7 +1063,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         // --- Batch write do Firestore ---
         const batch = writeBatch(window.db);
 
-        // Superštruktúra (globálne tímy)
+        // Superštruktúra
         const superDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
         const categoryTeams = allTeams
             .filter(t => t.__isSuper)
@@ -1081,7 +1080,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             }, {});
         batch.set(superDocRef, categoryTeams, { merge: true });
 
-        // Používateľské tímy
+        // Používatelia
         const userTeamsMap = {};
         allTeams.forEach(t => {
             if (t.__uid && !t.__isSuper) {
