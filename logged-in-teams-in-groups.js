@@ -1011,7 +1011,15 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                     const originalOrderIndex = teamsInTargetGroup.findIndex(t => t.order === originalOrder);
                     const isMovingDown = originalOrderIndex < targetIndex; // posúva sa nadol?
 
-                    newOrder = isMovingDown ? targetIndex : targetIndex + 1;
+                    if (isMovingDown) {
+                        // Presun nadol → vložiť PRED tím na targetIndex
+                        newOrder = targetIndex;
+                    } else {
+                        // Presun nahor → pôvodná logika (bez zmien)
+                        const before = sorted[targetIndex - 1].order;
+                        const after = sorted[targetIndex].order;
+                        newOrder = before + 1 <= after ? before + 1 : after;
+                    }
                 } else {
                     // --- PRESUN DO INEJ SKUPINY ---
                     const before = sorted[targetIndex - 1].order;
