@@ -939,7 +939,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const finalDropTarget = dropTarget;
 
     setDropTarget({ groupId: null, categoryId: null, index: null });
-
     if (!dragData || finalDropTarget.index === null) return;
 
     const teamData = dragData.team;
@@ -948,7 +947,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const teamCategoryName = teamData.category;
 
     const finalGroupName = targetGroup === null ? null : targetGroup;
-    const newOrder = finalGroupName ? (finalDropTarget.index + 1) : null;
+    const newOrder = finalGroupName ? (finalDropTarget.index + 1) : null; // 1-based
 
     const targetCategoryName = categoryIdToNameMap[targetCategoryId];
     if (targetCategoryName !== teamCategoryName) {
@@ -988,11 +987,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         );
         if (teamIndex === -1) throw new Error("Tím sa nenašiel.");
 
-        const movedTeam = teams[teamIndex];
+        const movedTeam = { ...teams[teamIndex] };
 
-        // 2. AK JE PRESUN V RÁMCI ROVNAKEJ SKUPINY
+        // ====================================================================
+        // 2. NAJPRV POSUNÚŤ ORDER – AŽ POTOM ODSTRÁNIŤ TÍM
+        // ====================================================================
+
+        // A. PRESUN V RÁMCI ROVNAKEJ SKUPINY
         if (originalGroup === finalGroupName && finalGroupName !== null) {
-            // --- REORDER V RÁMCI JEDNEJ SKUPINY ---
             if (newOrder > originalOrder) {
                 // Presun DOLE → tímy medzi originalOrder+1 a newOrder → order -1
                 teams = teams.map(t => {
@@ -1010,22 +1012,11 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     return t;
                 });
             }
-
-            // Odstránime a vložíme na novú pozíciu
-            teams.splice(teamIndex, 1);
-            let insertIndex = 0;
-            for (let i = 0; i < teams.length; i++) {
-                if (teams[i].groupName === finalGroupName && teams[i].order >= newOrder) {
-                    insertIndex = i;
-                    break;
-                }
-                if (i === teams.length - 1) insertIndex = teams.length;
-            }
-            teams.splice(insertIndex, 0, { ...movedTeam, order: newOrder });
+            // movedTeam.order sa nastaví až pri vkladaní
         }
-        // 3. AK JE PRESUN MEDZI SKUPINAMI ALEBO DO/Z "BEZ SKUPINY"
+        // B. PRESUN MEDZI SKUPINAMI ALEBO DO/Z "BEZ SKUPINY"
         else {
-            // A. Znížime order v PÔVODNEJ skupine
+            // 1. Znížiť order v PÔVODNEJ skupine (ak mala)
             if (originalGroup !== null && originalOrder !== null) {
                 teams = teams.map(t => {
                     if (t.groupName === originalGroup && t.order > originalOrder) {
@@ -1035,7 +1026,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 });
             }
 
-            // B. Ak ide DO SKUPINY → posunieme tímy s order >= newOrder o +1
+            // 2. Zvýšiť order v CIEĽOVEJ skupine (ak ide do skupiny)
             if (finalGroupName !== null && newOrder !== null) {
                 teams = teams.map(t => {
                     if (t.groupName === finalGroupName && t.order >= newOrder) {
@@ -1044,35 +1035,52 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                     return t;
                 });
             }
-
-            // C. Odstránime tím z pôvodnej pozície
-            teams.splice(teamIndex, 1);
-
-            // D. Vložíme na novú pozíciu
-            if (finalGroupName !== null && newOrder !== null) {
-                let insertIndex = 0;
-                for (let i = 0; i < teams.length; i++) {
-                    if (teams[i].groupName === finalGroupName && teams[i].order > newOrder) {
-                        insertIndex = i;
-                        break;
-                    }
-                    if (i === teams.length - 1) insertIndex = teams.length;
-                }
-                teams.splice(insertIndex, 0, { ...movedTeam, groupName: finalGroupName, order: newOrder });
-            } else {
-                // Do "bez skupiny"
-                teams.push({ ...movedTeam, groupName: null, order: null });
-            }
         }
 
-        // 4. Uložíme
+        // ====================================================================
+        // 3. ODSTRÁNIŤ TÍM Z PÔVODNEJ POZÍCIE
+        // ====================================================================
+        teams.splice(teamIndex, 1);
+
+        // ====================================================================
+        // 4. VLOŽIŤ TÍM NA NOVÚ POZÍCIU
+        // ====================================================================
+        if (finalGroupName !== null && newOrder !== null) {
+            // Nájdeme index podľa order (už posunuté)
+            let insertIndex = 0;
+            for (let i = 0; i < teams.length; i++) {
+                if (teams[i].groupName === finalGroupName && teams[i].order >= newOrder) {
+                    insertIndex = i;
+                    break;
+                }
+                if (i === teams.length - 1) insertIndex = teams.length;
+            }
+            teams.splice(insertIndex, 0, {
+                ...movedTeam,
+                groupName: finalGroupName,
+                order: newOrder
+            });
+        } else {
+            // Do "bez skupiny"
+            teams.push({
+                ...movedTeam,
+                groupName: null,
+                order: null
+            });
+        }
+
+        // ====================================================================
+        // 5. ULOŽIŤ
+        // ====================================================================
         if (teamData.isSuperstructureTeam) {
             await setDoc(docRef, { [teamCategoryName]: teams }, { merge: true });
         } else {
             await updateDoc(docRef, { [updatePath]: teams });
         }
 
-        // Úspech
+        // ====================================================================
+        // 6. NOTIFIKÁCIA
+        // ====================================================================
         const from = originalGroup ? `'${originalGroup}'` : 'bez skupiny';
         const to = finalGroupName ? `'${finalGroupName}' (pozícia ${newOrder})` : 'bez skupiny';
         setNotification({
