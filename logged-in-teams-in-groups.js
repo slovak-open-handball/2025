@@ -988,10 +988,9 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         allTeams.splice(movedTeamIndex, 1);
 
         // ===================================================================
-        // 2. PRESUN DO INEJ SKUPINY ALEBO DO "NEPRIRADENÝCH"
+        // 2. PRESUN DO INEJ SKUPINY – ZNÍŽENIE V PÔVODNEJ SKUPINE
         // ===================================================================
         if (!isSameGroup && originalGroup && originalOrder !== null) {
-            // Zníž order všetkých tímov ZA pôvodnou pozíciou v pôvodnej skupine
             allTeams.forEach((t, i) => {
                 if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                     allTeams[i].order = t.order - 1;
@@ -1000,7 +999,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         }
 
         // ===================================================================
-        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY – NAJPRV PREČÍSLOVAŤ, AŽ POTOM VLOŽIŤ
+        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY – NAJPRV PREČÍSLOVAŤ, POTOM VLOŽIŤ
         // ===================================================================
         if (isSameGroup && targetGroupName && targetIndex != null && originalOrder !== null) {
             const teamsInGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
@@ -1010,41 +1009,36 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             const isMovingDown = originalOrderIndex < targetIndex;
 
             if (targetIndex === 0) {
-                // Vloženie na začiatok
                 newOrder = 1;
-                // NAJPRV: posunúť všetky o +1
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null) {
                         allTeams[i].order = t.order + 1;
                     }
                 });
-                // AŽ POTOM: vložíme nižšie
             } else {
                 const targetOrder = isMovingDown ? targetIndex : targetIndex + 1;
 
                 if (isMovingDown) {
-                    // NADOL: najprv znížiť tímy medzi originalOrder+1 a targetOrder
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order > originalOrder && t.order <= targetOrder) {
                             allTeams[i].order = t.order - 1;
                         }
                     });
-                    newOrder = targetOrder; // = targetIndex
+                    newOrder = targetOrder;
                 } else {
-                    // NAHOR: najprv zvýšiť tímy medzi targetOrder a originalOrder-1
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order >= targetOrder && t.order < originalOrder) {
                             allTeams[i].order = t.order + 1;
                         }
                     });
-                    newOrder = targetOrder; // = targetIndex + 1
+                    newOrder = targetOrder;
                 }
             }
         }
         // ===================================================================
-        // 4. PRESUN DO INEJ SKUPINY – VLOŽENIE
+        // 4. PRESUN DO INEJ SKUPINY ALEBO NOVÝ TÍM – VÝPOČET newOrder
         // ===================================================================
         else if (targetGroupName && targetIndex != null) {
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
@@ -1055,25 +1049,26 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             } else if (targetIndex === 0) {
                 newOrder = 1;
             } else if (targetIndex >= sorted.length) {
+                // VLOŽENIE NA KONIEC – ZA posledný tím
                 newOrder = sorted[sorted.length - 1].order + 1;
+                // ŽIADNY POSUN – len pridáme nový order
             } else {
                 const before = sorted[targetIndex - 1].order;
                 const after = sorted[targetIndex].order;
                 newOrder = before + 1 <= after ? before + 1 : after;
+                // Posun od newOrder nahor
+                allTeams.forEach((t, i) => {
+                    if (t.groupName === targetGroupName && t.order != null && t.order >= newOrder) {
+                        allTeams[i].order = t.order + 1;
+                    }
+                });
             }
-
-            // NAJPRV: posunúť od newOrder nahor
-            allTeams.forEach((t, i) => {
-                if (t.groupName === targetGroupName && t.order != null && t.order >= newOrder) {
-                    allTeams[i].order = t.order + 1;
-                }
-            });
         } else {
             newOrder = null;
         }
 
         // ===================================================================
-        // 5. AŽ TERAZ: VLOŽ TÍM SPÄŤ (PO PREČÍSLOVANÍ)
+        // 5. AŽ TERAZ: VLOŽ TÍM SPÄŤ
         // ===================================================================
         const updatedTeam = {
             ...movedTeam,
