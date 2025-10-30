@@ -1089,9 +1089,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         // 5. ULOŽENIE DO KAŽDÉHO DOKUMENTU – SPRÁVNE MAPOVANIE
         // ====================================================================
         const batch = writeBatch(window.db);
-
-        // Zoskupíme tímy podľa ich pôvodného dokumentu
-        const teamsByDoc = new Map(); // docRef.path → [tímy]
+        const teamsByDoc = new Map();
 
         allTeams.forEach(team => {
             const docPath = team.__docRef?.path;
@@ -1100,26 +1098,21 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             if (!teamsByDoc.has(docPath)) {
                 teamsByDoc.set(docPath, []);
             }
-
-            // Odstránime pomocné polia
             const { __docRef, __uid, __isSuper, ...cleanTeam } = team;
             teamsByDoc.get(docPath).push(cleanTeam);
         });
 
-        // Uložíme každý dokument
         for (const [docPath, updatedTeams] of teamsByDoc) {
             const docRef = doc(window.db, docPath);
             const isSuper = docPath.includes(SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/').pop());
-
             const fieldPath = isSuper ? teamCategoryName : `teams.${teamCategoryName}`;
 
             console.log(`Ukladám do ${docPath} → ${fieldPath}:`, updatedTeams.map(t => `${t.teamName} (${t.groupName || 'null'}, ${t.order})`).join(' | '));
-
             batch.set(docRef, { [fieldPath]: updatedTeams }, { merge: true });
         }
 
         await batch.commit();
-        console.log('ÚSPEŠNE ULOŽENÉ VO VŠETKÝCH DOKUMENTOCH')
+        console.log('ÚSPEŠNE ULOŽENÉ VO VŠETKÝCH DOKUMENTOCH');
 
         // ====================================================================
         // 6. NOTIFIKÁCIA
