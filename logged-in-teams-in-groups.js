@@ -1265,7 +1265,7 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
 
             return React.createElement(
                 React.Fragment, 
-                { key: team.id || `${team.__uid || 'global'}-${team.teamName}` },
+                { key: team.id || `${team.__uid || 'super'}-${team.teamName}-${team.category}` },
                 isDropIndicatorVisible && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
                 React.createElement(
                     'li',
@@ -1463,7 +1463,9 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
             return a.name.localeCompare(b.name);
         });
         
-        const teamsWithoutGroupHeight = teamsWithoutGroupRef.current?.offsetHeight || 0;
+        const teamsWithoutGroupListRef = useRef(null);
+        ref={teamsWithoutGroupListRef}
+        const height = teamsWithoutGroupListRef.current?.offsetHeight || 0;
             ? teamsWithoutGroupRef.offsetHeight 
             : null;
 
