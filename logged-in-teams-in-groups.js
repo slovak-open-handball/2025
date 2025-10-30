@@ -948,7 +948,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const teamCategoryName = teamData.category;
 
     const finalGroupName = targetGroup === null ? null : targetGroup;
-    const newOrder = finalGroupName ? (finalDropTarget.index + 1) : null; // 1-based
+    const newOrder = finalGroupName ? (finalDropTarget.index + 1) : null;
 
     const targetCategoryName = categoryIdToNameMap[targetCategoryId];
     if (targetCategoryName !== teamCategoryName) {
@@ -981,62 +981,91 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             updatePath = `teams.${teamCategoryName}`;
         }
 
-        // 1. Nájdeme a odstránime tím
+        // 1. Nájdeme tím (podľa ID alebo teamName)
         const teamIndex = teams.findIndex(t =>
-            t.teamName === teamData.teamName && (t.id ? t.id === teamData.id : true)
+            (t.id && teamData.id && t.id === teamData.id) ||
+            (!t.id && t.teamName === teamData.teamName)
         );
         if (teamIndex === -1) throw new Error("Tím sa nenašiel.");
 
-        const [movedTeam] = teams.splice(teamIndex, 1);
+        const movedTeam = teams[teamIndex];
 
-        // 2. Znížime order v pôvodnej skupine (ak mal skupinu)
-        if (originalGroup !== null && originalOrder !== null) {
-            teams = teams.map(t => {
-                if (t.groupName === originalGroup && t.order > originalOrder) {
-                    return { ...t, order: t.order - 1 };
-                }
-                return t;
-            });
-        }
+        // 2. AK JE PRESUN V RÁMCI ROVNAKEJ SKUPINY
+        if (originalGroup === finalGroupName && finalGroupName !== null) {
+            // --- REORDER V RÁMCI JEDNEJ SKUPINY ---
+            if (newOrder > originalOrder) {
+                // Presun DOLE → tímy medzi originalOrder+1 a newOrder → order -1
+                teams = teams.map(t => {
+                    if (t.groupName === finalGroupName && t.order > originalOrder && t.order <= newOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+            } else if (newOrder < originalOrder) {
+                // Presun HORE → tímy medzi newOrder a originalOrder-1 → order +1
+                teams = teams.map(t => {
+                    if (t.groupName === finalGroupName && t.order >= newOrder && t.order < originalOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    return t;
+                });
+            }
 
-        // 3. AK IDE DO SKUPINY → NAJPRV posunieme všetky tímy s order >= newOrder o +1
-        if (finalGroupName !== null && newOrder !== null) {
-            teams = teams.map(t => {
-                if (t.groupName === finalGroupName && t.order >= newOrder) {
-                    return { ...t, order: t.order + 1 };
-                }
-                return t;
-            });
-        }
-
-        // 4. Teraz vložíme tím na správnu pozíciu
-        if (finalGroupName !== null && newOrder !== null) {
-            // Nájdeme správny index podľa nového order (už posunuté)
+            // Odstránime a vložíme na novú pozíciu
+            teams.splice(teamIndex, 1);
             let insertIndex = 0;
             for (let i = 0; i < teams.length; i++) {
-                if (teams[i].groupName === finalGroupName && teams[i].order > newOrder) {
+                if (teams[i].groupName === finalGroupName && teams[i].order >= newOrder) {
                     insertIndex = i;
                     break;
                 }
                 if (i === teams.length - 1) insertIndex = teams.length;
             }
-
-            teams.splice(insertIndex, 0, {
-                ...movedTeam,
-                groupName: finalGroupName,
-                order: newOrder
-            });
-        } 
-        // 5. AK IDE DO "BEZ SKUPINY"
+            teams.splice(insertIndex, 0, { ...movedTeam, order: newOrder });
+        }
+        // 3. AK JE PRESUN MEDZI SKUPINAMI ALEBO DO/Z "BEZ SKUPINY"
         else {
-            teams.push({
-                ...movedTeam,
-                groupName: null,
-                order: null
-            });
+            // A. Znížime order v PÔVODNEJ skupine
+            if (originalGroup !== null && originalOrder !== null) {
+                teams = teams.map(t => {
+                    if (t.groupName === originalGroup && t.order > originalOrder) {
+                        return { ...t, order: t.order - 1 };
+                    }
+                    return t;
+                });
+            }
+
+            // B. Ak ide DO SKUPINY → posunieme tímy s order >= newOrder o +1
+            if (finalGroupName !== null && newOrder !== null) {
+                teams = teams.map(t => {
+                    if (t.groupName === finalGroupName && t.order >= newOrder) {
+                        return { ...t, order: t.order + 1 };
+                    }
+                    return t;
+                });
+            }
+
+            // C. Odstránime tím z pôvodnej pozície
+            teams.splice(teamIndex, 1);
+
+            // D. Vložíme na novú pozíciu
+            if (finalGroupName !== null && newOrder !== null) {
+                let insertIndex = 0;
+                for (let i = 0; i < teams.length; i++) {
+                    if (teams[i].groupName === finalGroupName && teams[i].order > newOrder) {
+                        insertIndex = i;
+                        break;
+                    }
+                    if (i === teams.length - 1) insertIndex = teams.length;
+                }
+                teams.splice(insertIndex, 0, { ...movedTeam, groupName: finalGroupName, order: newOrder });
+            } else {
+                // Do "bez skupiny"
+                teams.push({ ...movedTeam, groupName: null, order: null });
+            }
         }
 
-        // 6. Uložíme
+        // 4. Uložíme
         if (teamData.isSuperstructureTeam) {
             await setDoc(docRef, { [teamCategoryName]: teams }, { merge: true });
         } else {
