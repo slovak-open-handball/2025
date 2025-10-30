@@ -998,45 +998,52 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         }
 
         // ===================================================================
-        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY – LEN MEDZI POZÍCIAMI
+        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY – NAJPRV PREČÍSLOVAŤ
         // ===================================================================
         if (isSameGroup && targetGroupName && targetIndex != null && originalOrder !== null) {
-            // Získaj aktuálne tímy v skupine PO odstránení
+            // Získaj aktuálne tímy po odstránení
             const currentTeams = allTeams
                 .filter(t => t.groupName === targetGroupName && t.order != null)
                 .sort((a, b) => a.order - b.order);
 
-            // Vypočítaj targetOrder z targetIndex
-            let targetOrder;
+            const originalOrderIndex = currentTeams.findIndex(t => t.order === originalOrder);
+            const isMovingDown = originalOrderIndex < targetIndex;
+
             if (targetIndex === 0) {
-                targetOrder = 1;
-            } else if (targetIndex >= currentTeams.length) {
-                targetOrder = currentTeams[currentTeams.length - 1].order + 1;
-            } else {
-                const beforeTeam = currentTeams[targetIndex - 1];
-                targetOrder = beforeTeam.order + 1;
-            }
-
-            const isMovingDown = originalOrder < targetOrder;
-
-            if (isMovingDown) {
-                // NADOL: znížiť len medzi originalOrder+1 a targetOrder
+                newOrder = 1;
                 allTeams.forEach((t, i) => {
-                    if (t.groupName === targetGroupName && t.order != null &&
-                        t.order > originalOrder && t.order <= targetOrder) {
-                        allTeams[i].order = t.order - 1;
-                    }
-                });
-                newOrder = targetOrder;
-            } else {
-                // NAHOR: zvýšiť len medzi targetOrder a originalOrder-1
-                allTeams.forEach((t, i) => {
-                    if (t.groupName === targetGroupName && t.order != null &&
-                        t.order >= targetOrder && t.order < originalOrder) {
+                    if (t.groupName === targetGroupName && t.order != null) {
                         allTeams[i].order = t.order + 1;
                     }
                 });
-                newOrder = targetOrder;
+            } else {
+                // Vypočítaj targetOrder
+                let targetOrder;
+                if (isMovingDown) {
+                    targetOrder = targetIndex; // NADOL: newOrder = targetIndex
+                } else {
+                    targetOrder = targetIndex + 1; // NAHOR: newOrder = targetIndex + 1
+                }
+
+                if (isMovingDown) {
+                    // NADOL: znížiť len medzi originalOrder+1 a targetOrder
+                    allTeams.forEach((t, i) => {
+                        if (t.groupName === targetGroupName && t.order != null &&
+                            t.order > originalOrder && t.order <= targetOrder) {
+                            allTeams[i].order = t.order - 1;
+                        }
+                    });
+                    newOrder = targetOrder;
+                } else {
+                    // NAHOR: zvýšiť len medzi targetOrder a originalOrder-1
+                    allTeams.forEach((t, i) => {
+                        if (t.groupName === targetGroupName && t.order != null &&
+                            t.order >= targetOrder && t.order < originalOrder) {
+                            allTeams[i].order = t.order + 1;
+                        }
+                    });
+                    newOrder = targetOrder;
+                }
             }
         }
         // ===================================================================
