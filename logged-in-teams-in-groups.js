@@ -985,9 +985,11 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         // 1. Odstráň tím z pôvodnej pozície
         allTeams.splice(movedTeamIndex, 1);
 
-        // 2. AK JE TO PRESUN DO INEJ SKUPINY ALEBO DO "NEPRIRADENÝCH"
+        // ===================================================================
+        // 2. PRESUN DO INEJ SKUPINY ALEBO DO "NEPRIRADENÝCH"
+        // ===================================================================
         if (!isSameGroup && originalGroup && originalOrder !== null) {
-            // Zníž order všetkých tímov za pôvodnou pozíciou v pôvodnej skupine
+            // Zníž order všetkých tímov ZA pôvodnou pozíciou v pôvodnej skupine
             allTeams.forEach((t, i) => {
                 if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                     allTeams[i].order = t.order - 1;
@@ -995,15 +997,18 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             });
         }
 
-        // 3. AK JE TO PRESUN V RÁMCI ROVNAKEJ SKUPINY
+        // ===================================================================
+        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY
+        // ===================================================================
         if (isSameGroup && targetGroupName && targetIndex != null && originalOrder !== null) {
             const teamsInGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
             const sorted = teamsInGroup.sort((a, b) => a.order - b.order);
 
             const originalOrderIndex = sorted.findIndex(t => t.order === originalOrder);
-            const isMovingDown = originalOrderIndex < targetIndex;
+            const isMovingDown = originalOrderIndex < targetIndex; // nadol = vyššie číslo
 
             if (targetIndex === 0) {
+                // Vloženie na začiatok
                 newOrder = 1;
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null) {
@@ -1012,33 +1017,31 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 });
             } else {
                 const targetOrder = isMovingDown ? targetIndex : targetIndex + 1;
-                const startOrder = Math.min(originalOrder, targetOrder);
-                const endOrder = Math.max(originalOrder, targetOrder);
 
                 if (isMovingDown) {
-                    // 1. Zníž order tímov medzi originalOrder+1 a targetOrder
+                    // NADOL: znížiť order len medzi originalOrder+1 a targetOrder (vrátane targetOrder)
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order > originalOrder && t.order <= targetOrder) {
                             allTeams[i].order = t.order - 1;
                         }
                     });
-                    // 2. Vlož tím
-                    newOrder = targetOrder;
+                    newOrder = targetOrder; // = targetIndex
                 } else {
-                    // 1. Zvýš order tímov medzi targetOrder a originalOrder-1
+                    // NAHOR: zvýšiť order len medzi targetOrder a originalOrder-1
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order >= targetOrder && t.order < originalOrder) {
                             allTeams[i].order = t.order + 1;
                         }
                     });
-                    // 2. Vlož tím
-                    newOrder = targetOrder;
+                    newOrder = targetOrder; // = targetIndex + 1
                 }
             }
         }
-        // 4. AK JE TO PRESUN DO INEJ SKUPINY ALEBO NOVÝ TÍM
+        // ===================================================================
+        // 4. PRESUN DO INEJ SKUPINY ALEBO NOVÝ TÍM (vkladanie)
+        // ===================================================================
         else if (targetGroupName && targetIndex != null) {
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
             const sorted = teamsInTargetGroup.sort((a, b) => a.order - b.order);
@@ -1065,7 +1068,9 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             newOrder = null;
         }
 
-        // 5. Vlož tím späť
+        // ===================================================================
+        // 5. VLOŽ TÍM SPÄŤ
+        // ===================================================================
         const updatedTeam = {
             ...movedTeam,
             groupName: targetGroupName,
@@ -1507,7 +1512,7 @@ const renderSingleCategoryView = () => {
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
-    const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-200 flex items-center justify-center 
+    const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-500 flex items-center justify-center 
                   ${notification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     let typeClasses = '';
     switch (notification?.type) {
