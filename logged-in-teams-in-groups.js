@@ -1006,36 +1006,43 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             } else if (targetIndex >= currentTeams.length) {
                 targetOrder = currentTeams[currentTeams.length - 1].order + 1;
             } else {
-                // PRI PRESUNE NADOL: targetOrder = order tímu na targetIndex
-                // PRI PRESUNE NAHOR: targetOrder = order tímu na targetIndex-1 + 1
-                const isMovingDown = originalOrder < currentTeams[Math.min(targetIndex, currentTeams.length - 1)].order;
-                if (isMovingDown) {
-                    targetOrder = currentTeams[targetIndex].order; // presne na pozíciu
+                // VYPOČÍTAME targetOrder PODĽA targetIndex
+                const beforeTeam = currentTeams[targetIndex - 1];
+                const afterTeam = currentTeams[targetIndex];
+                const beforeOrder = beforeTeam.order;
+                const afterOrder = afterTeam ? afterTeam.order : beforeOrder + 2;
+
+                // Ak je medzera, vložíme medzi
+                if (beforeOrder + 1 < afterOrder) {
+                    targetOrder = beforeOrder + 1;
                 } else {
-                    targetOrder = currentTeams[targetIndex - 1].order + 1; // medzi
+                    // Ak nie je medzera → rozhodneme podľa smeru
+                    const originalIndexInCurrent = currentTeams.findIndex(t => t.order === originalOrder);
+                    const isMovingDown = originalIndexInCurrent < targetIndex;
+                    targetOrder = isMovingDown ? afterOrder : beforeOrder + 1;
                 }
             }
 
             const isMovingDown = originalOrder < targetOrder;
 
             if (isMovingDown) {
-                // NADOL: znížiť tímy medzi originalOrder+1 a targetOrder
+                // NADOL: znížiť len medzi originalOrder+1 a targetOrder
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null &&
                         t.order > originalOrder && t.order <= targetOrder) {
                         allTeams[i].order = t.order - 1;
                     }
                 });
-                newOrder = targetOrder;
+                newOrder = targetOrder; // targetIndex
             } else {
-                // NAHOR: zvýšiť tímy medzi targetOrder a originalOrder-1
+                // NAHOR: zvýšiť len medzi targetOrder a originalOrder-1
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null &&
                         t.order >= targetOrder && t.order < originalOrder) {
                         allTeams[i].order = t.order + 1;
                     }
                 });
-                newOrder = targetOrder;
+                newOrder = targetOrder; // targetIndex + 1
             }
         }
         // 4. PRESUN DO INEJ SKUPINY
