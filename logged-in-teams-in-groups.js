@@ -1473,7 +1473,7 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
             React.createElement(
                 'div',
                 {
-                    ref: teamsWithoutGroupRef
+                    ref: teamsWithoutGroupRef,
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
                 },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v kategórii: ${categoryName}`),
