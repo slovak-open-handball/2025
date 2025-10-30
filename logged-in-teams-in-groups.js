@@ -1015,57 +1015,46 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         console.log('Presúvaný tím nájdený:', movedTeam);
 
         // ====================================================================
-        // 3. POSUN ORDER – NAJPRV VO VŠETKÝCH TÍMOCH
+        // 3. POSUN ORDER – SPRÁVNE (iba pre cieľovú skupinu)
         // ====================================================================
-        if (originalGroup === finalGroupName && finalGroupName !== null) {
-            if (newOrder > originalOrder) {
-                allTeams.forEach((t, i) => {
-                    if (t.groupName === finalGroupName && t.order > originalOrder && t.order <= newOrder) {
-                        allTeams[i].order = t.order - 1;
-                        console.log(`  → ${t.teamName}: ${t.order} → ${t.order - 1}`);
-                    }
-                });
-            } else if (newOrder < originalOrder) {
-                allTeams.forEach((t, i) => {
-                    if (t.groupName === finalGroupName && t.order >= newOrder && t.order < originalOrder) {
-                        allTeams[i].order = t.order + 1;
-                        console.log(`  → ${t.teamName}: ${t.order} → ${t.order + 1}`);
-                    }
-                });
-            }
-        } else {
-            if (originalGroup !== null && originalOrder !== null) {
-                allTeams.forEach((t, i) => {
-                    if (t.groupName === originalGroup && t.order > originalOrder) {
-                        allTeams[i].order = t.order - 1;
-                        console.log(`  → ${t.teamName} (z ${originalGroup}): ${t.order} → ${t.order - 1}`);
-                    }
-                });
-            }
-            if (finalGroupName !== null && newOrder !== null) {
-                allTeams.forEach((t, i) => {
-                    if (t.groupName === finalGroupName && t.order >= newOrder) {
-                        allTeams[i].order = t.order + 1;
-                        console.log(`  → ${t.teamName} (do ${finalGroupName}): ${t.order} → ${t.order + 1}`);
-                    }
-                });
-            }
+        if (finalGroupName !== null && newOrder !== null) {
+            // Posunieme všetky tímy v cieľovej skupine, ktoré majú order >= newOrder
+            allTeams.forEach((t, i) => {
+                if (t.groupName === finalGroupName && t.order != null && t.order >= newOrder) {
+                    allTeams[i].order = t.order + 1;
+                    console.log(`  → ${t.teamName} (v ${finalGroupName}): ${t.order} → ${t.order + 1}`);
+                }
+            });
         }
 
-        // ====================================================================
+        // Ak sa tím presúva z inej skupiny, uvoľníme jeho pôvodné poradie
+        if (originalGroup !== null && originalOrder !== null) {
+            allTeams.forEach((t, i) => {
+                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                    allTeams[i].order = t.order - 1;
+                    console.log(`  → ${t.teamName} (z ${originalGroup}): ${t.order} → ${t.order - 1}`);
+                }
+            });
+        }
+
+                // ====================================================================
         // 4. ODSTRÁNENIE A VLOŽENIE
         // ====================================================================
         allTeams.splice(movedTeamIndex, 1);
 
         if (finalGroupName !== null && newOrder !== null) {
+            // Vložíme tím na správnu pozíciu podľa order
             let insertIndex = 0;
             for (let i = 0; i < allTeams.length; i++) {
-                if (allTeams[i].groupName === finalGroupName && allTeams[i].order >= newOrder) {
+                if (allTeams[i].groupName === finalGroupName && 
+                    allTeams[i].order != null && 
+                    allTeams[i].order >= newOrder) {
                     insertIndex = i;
                     break;
                 }
                 if (i === allTeams.length - 1) insertIndex = allTeams.length;
             }
+
             allTeams.splice(insertIndex, 0, {
                 ...movedTeam,
                 groupName: finalGroupName,
@@ -1080,9 +1069,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             });
             console.log(`Vkladám do "bez skupiny"`);
         }
-
-        console.log('FINÁLNY STAV:', allTeams.map(t => `${t.teamName} (group: ${t.groupName}, order: ${t.order})`).join(' | '));
-
+            
         // ====================================================================
         // 5. ULOŽENIE DO KAŽDÉHO DOKUMENTU
         // ====================================================================
