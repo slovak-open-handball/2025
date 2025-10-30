@@ -968,12 +968,12 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         return;
     }
 
-    try {
+        try {
         // ====================================================================
         // 1. NAČÍTAJ VŠETKY TÍMY ZO VŠETKÝCH DOKUMENTOV V KATEGÓRII
         // ====================================================================
         const allTeams = [];
-        const docUpdates = new Map(); // docRef → { path, teams }
+        const docUpdates = new Map();
 
         // A. Superstructure tím
         if (SUPERSTRUCTURE_TEAMS_DOC_PATH) {
@@ -1018,7 +1018,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         // 3. POSUN ORDER – NAJPRV VO VŠETKÝCH TÍMOCH
         // ====================================================================
         if (originalGroup === finalGroupName && finalGroupName !== null) {
-            // Presun v rovnakej skupine
             if (newOrder > originalOrder) {
                 allTeams.forEach((t, i) => {
                     if (t.groupName === finalGroupName && t.order > originalOrder && t.order <= newOrder) {
@@ -1035,7 +1034,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 });
             }
         } else {
-            // Medzi skupinami
             if (originalGroup !== null && originalOrder !== null) {
                 allTeams.forEach((t, i) => {
                     if (t.groupName === originalGroup && t.order > originalOrder) {
@@ -1086,7 +1084,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         console.log('FINÁLNY STAV:', allTeams.map(t => `${t.teamName} (group: ${t.groupName}, order: ${t.order})`).join(' | '));
 
         // ====================================================================
-        // 5. ULOŽENIE DO KAŽDÉHO DOKUMENTU – SPRÁVNE MAPOVANIE
+        // 5. ULOŽENIE DO KAŽDÉHO DOKUMENTU
         // ====================================================================
         const batch = writeBatch(window.db);
         const teamsByDoc = new Map();
@@ -1115,7 +1113,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         console.log('ÚSPEŠNE ULOŽENÉ VO VŠETKÝCH DOKUMENTOCH');
 
         // ====================================================================
-        // 7. ZNOVU NAČÍTAJ DÁTA → AKTUALIZUJ UI
+        // 7. ZNOVU NAČÍTAJ DÁTA
         // ====================================================================
         console.log('Znovu načítavam dáta pre UI...');
         await loadAllTeams();
@@ -1130,6 +1128,17 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             message: `Tím "${teamData.teamName}" presunutý z ${from} do ${to}.`,
             type: 'success'
         });
+
+    } catch (error) {
+        console.error('CHYBA PRI PRESUNE TÍMU:', error);
+        setNotification({
+            id: Date.now(),
+            message: `Chyba pri presune tímu: ${error.message}`,
+            type: 'error'
+        });
+    } finally {
+        draggedItem.current = null;
+    }
 };
     // --- KONIEC OPRAVENEJ FUNKCIE handleDrop ---
     
@@ -1634,10 +1643,9 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-const loadAllTeams = async () => {
+const loadAllTeams = async (categoryName) => {
     try {
         const allTeams = [];
-        const categoryName = 'U10 D'; // ← alebo dynamicky podľa categoryId
 
         // Superstructure
         if (SUPERSTRUCTURE_TEAMS_DOC_PATH) {
@@ -1658,12 +1666,10 @@ const loadAllTeams = async () => {
             teams.forEach(t => allTeams.push({ ...t, __uid: userDoc.id }));
         }
 
-        // Ulož do stavu
-        setTeams(allTeams); // ← tvoj useState pre zobrazenie
-
+        setAllTeams(allTeams); // ← SPRÁVNE!
         console.log('Dáta znova načítané:', allTeams.length, 'tímov');
     } catch (error) {
-        console.error('Chyba pri znova načítaní dát:', error);
+        console.error('Chyba pri načítaní:', error);
     }
 };
 
