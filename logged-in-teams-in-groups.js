@@ -993,40 +993,20 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             const originalOrderIndex = sorted.findIndex(t => t.order === originalOrder);
             const isMovingDown = originalOrderIndex < targetIndex;
 
-            if (targetIndex === 0) {
-                // Vloženie na začiatok
-                newOrder = 1;
-                allTeams.forEach((t, i) => {
-                    if (t.groupName === targetGroupName && t.order != null && t.order >= 1) {
-                        allTeams[i].order = t.order + 1;
-                    }
-                });
-            } else {
-                const beforeTeam = sorted[targetIndex - 1];
-                const beforeOrder = beforeTeam.order;
+            // --- NOVÁ LOGIKA: VŽDY +1 MEDZI, POTOM VLOŽIŤ ---
+            const startOrder = Math.min(originalOrder, targetIndex + 1);
+            const endOrder = Math.max(originalOrder, targetIndex + 1);
 
-                if (isMovingDown) {
-                    // PRESUN NADOL: vložiť ZA tím na targetIndex-1 → newOrder = beforeOrder
-                    newOrder = beforeOrder;
-                    // Zníž order tímov medzi originalOrder+1 a beforeOrder (vrátane beforeOrder)
-                    allTeams.forEach((t, i) => {
-                        if (t.groupName === targetGroupName && t.order != null &&
-                            t.order > originalOrder && t.order <= beforeOrder) {
-                            allTeams[i].order = t.order - 1;
-                        }
-                    });
-                } else {
-                    // PRESUN NAHOR: vložiť ZA tím na targetIndex-1 → newOrder = beforeOrder + 1
-                    newOrder = beforeOrder + 1;
-                    // Zvýš order tímov medzi beforeOrder+1 a originalOrder-1 (len medzi)
-                    allTeams.forEach((t, i) => {
-                        if (t.groupName === targetGroupName && t.order != null &&
-                            t.order > beforeOrder && t.order < originalOrder) {
-                            allTeams[i].order = t.order + 1;
-                        }
-                    });
+            // 1. Najprv zvýšiť order tímov medzi pôvodnou a novou pozíciou
+            allTeams.forEach((t, i) => {
+                if (t.groupName === targetGroupName && t.order != null &&
+                    t.order >= startOrder && t.order < endOrder) {
+                    allTeams[i].order = t.order + 1;
                 }
-            }
+            });
+
+            // 2. Až potom vložiť tím s newOrder = targetIndex + 1
+            newOrder = targetIndex + 1;
         }
         // 3. Ak je to presun do inej skupiny alebo nový tím
         else if (targetGroupName && targetIndex != null) {
