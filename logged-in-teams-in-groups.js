@@ -369,13 +369,14 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
                         const hasGroup = team.groupName && team.groupName.trim() !== '';
     
                         globalTeamsList.push({
-                            __uid: 'global', // ← NOVÉ: Zjednotenie s user tímami
-                            __isSuper: true, // ← NOVÉ: Pre batch zápis
+                            __uid: 'global',
+                            __isSuper: true,
                             category: categoryName,
                             id: team.id || crypto.randomUUID(),
                             teamName: team.teamName,
                             groupName: team.groupName || null,
                             order: hasGroup ? (team.order ?? 0) : null,
+                            isSuperstructureTeam: true,
                         });
                     }
                 });
