@@ -1102,7 +1102,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                     order: t.order,
                     id: t.id
                 });
-                return跨境 acc;
+                return acc;
             }, {});
         batch.set(superDocRef, categoryTeams, { merge: true });
 
