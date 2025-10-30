@@ -806,28 +806,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         }
     };
 
-    const checkCategoryMatch = (targetCategoryId) => {
-        const targetCategoryName = categoryIdToNameMap[targetGroup?.categoryId || selectedCategoryId];
-        if (teamData.category !== targetCategoryName) {
-            setNotification({ id: Date.now(), message: "Tím nemôže byť presunutý do inej kategórie.", type: 'error' });
-            return;
-        }
-        
+    const checkCategoryMatch = (targetCategoryId, targetGroup) => {
+        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+        if (!targetCategoryName) return false;
+    
         const dragData = draggedItem.current;
-        if (!dragData) return false;
-
-        const teamCategoryName = dragData.team.category; 
-
-        if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
-            return false;
-        }
-        return true;
-    }
+        if (!dragData?.team?.category) return false;
+    
+        return dragData.team.category === targetCategoryName;
+    };
     
     const handleDragOverTeam = (e, targetGroup, targetCategoryId, index) => {
         e.preventDefault();
         
-        if (!checkCategoryMatch(targetCategoryId)) {
+        if (!checkCategoryMatch(targetCategoryId, targetGroup)) {
             e.dataTransfer.dropEffect = "none";
             e.currentTarget.style.cursor = 'not-allowed';
             setDropTarget({ groupId: null, categoryId: null, index: null });
@@ -889,7 +881,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const handleDragOverEnd = (e, targetGroup, targetCategoryId, sortedTeams) => {
         e.preventDefault();
         
-        if (!checkCategoryMatch(targetCategoryId)) {
+        if (!checkCategoryMatch(targetCategoryId, targetGroup)) {
             e.dataTransfer.dropEffect = "none";
             e.currentTarget.style.cursor = 'not-allowed';
             setDropTarget({ groupId: null, categoryId: null, index: null });
@@ -925,7 +917,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const handleDragOverEmptyContainer = (e, targetGroup, targetCategoryId) => {
         e.preventDefault();
         
-        if (!checkCategoryMatch(targetCategoryId)) {
+        if (!checkCategoryMatch(targetCategoryId, targetGroup)) {
             e.dataTransfer.dropEffect = "none";
             e.currentTarget.style.cursor = 'not-allowed';
             setDropTarget({ groupId: null, categoryId: null, index: null });
@@ -1351,8 +1343,13 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                         if (data) {
                             const team = JSON.parse(data);
                             const targetIndex = dropTarget.index;
-                            const targetGroup = targetGroupId === null ? null : targetGroupId; // string
-                            handleDrop(team, targetGroup, targetIndex);
+
+                            // Find the actual group object
+                            const groupObj = targetGroupId === null 
+                                ? null 
+                                : (allGroupsByCategoryId[targetCategoryId] || []).find(g => g.name === targetGroupId);
+
+                            handleDrop(team, groupObj, targetIndex);
                         }
                     },
                     className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`,
@@ -1386,8 +1383,13 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                     if (data) {
                         const team = JSON.parse(data);
                         const targetIndex = dropTarget.index;
-                        const targetGroup = targetGroupId === null ? null : targetGroupId; // string
-                        handleDrop(team, targetGroup, targetIndex);
+
+                        // Find the actual group object
+                        const groupObj = targetGroupId === null 
+                            ? null 
+                            : (allGroupsByCategoryId[targetCategoryId] || []).find(g => g.name === targetGroupId);
+                
+                        handleDrop(team, groupObj, targetIndex);
                     }
                 },
             },
