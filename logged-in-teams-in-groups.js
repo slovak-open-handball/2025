@@ -938,24 +938,18 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
     const dragData = draggedItem.current;
     const finalDropTarget = dropTarget;
 
-    // Reset drop target
     setDropTarget({ groupId: null, categoryId: null, index: null });
 
-    if (!dragData || finalDropTarget.index === null) {
-        console.error("Žiadne dáta na presun alebo neplatný cieľ.");
-        return;
-    }
+    if (!dragData || finalDropTarget.index === null) return;
 
     const teamData = dragData.team;
     const originalGroup = teamData.groupName;
     const originalOrder = teamData.order;
     const teamCategoryName = teamData.category;
 
-    // Cieľová skupina a poradie
     const finalGroupName = targetGroup === null ? null : targetGroup;
     const newOrder = finalGroupName ? (finalDropTarget.index + 1) : null; // 1-based
 
-    // Kontrola kategórie
     const targetCategoryName = categoryIdToNameMap[targetCategoryId];
     if (targetCategoryName !== teamCategoryName) {
         setNotification({ id: Date.now(), message: "Tím nemôže byť presunutý do inej kategórie.", type: 'error' });
@@ -963,7 +957,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         return;
     }
 
-    // Zrušiť ak je to zbytočný presun
     if (originalGroup === finalGroupName && originalOrder === newOrder) {
         draggedItem.current = null;
         return;
@@ -975,32 +968,28 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         let updatePath = null;
 
         if (teamData.isSuperstructureTeam) {
-            // GLOBÁLNE TÍMY
             docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
             const snap = await getDoc(docRef);
             const data = snap.exists() ? snap.data() : {};
             teams = [...(data[teamCategoryName] || [])];
         } else {
-            // POUŽÍVATEĽSKÉ TÍMY
             docRef = doc(window.db, 'users', teamData.uid);
             const snap = await getDoc(docRef);
-            if (!snap.exists()) throw new Error("Dokument používateľa neexistuje.");
+            if (!snap.exists()) throw new Error("Dokument neexistuje.");
             const data = snap.data();
             teams = [...(data.teams?.[teamCategoryName] || [])];
             updatePath = `teams.${teamCategoryName}`;
         }
 
-        // 1. Nájdeme index presúvaného tímu
-        const teamIndex = teams.findIndex(t => 
-            t.teamName === teamData.teamName && 
-            (t.id ? t.id === teamData.id : true)
+        // 1. Nájdeme a odstránime tím
+        const teamIndex = teams.findIndex(t =>
+            t.teamName === teamData.teamName && (t.id ? t.id === teamData.id : true)
         );
-        if (teamIndex === -1) throw new Error("Tím sa nenašiel v zdrojovom zozname.");
+        if (teamIndex === -1) throw new Error("Tím sa nenašiel.");
 
-        // 2. Odstránime tím z pôvodnej pozície
         const [movedTeam] = teams.splice(teamIndex, 1);
 
-        // 3. Reorder v PÔVODNEJ skupine (ak mal skupinu)
+        // 2. Znížime order v pôvodnej skupine (ak mal skupinu)
         if (originalGroup !== null && originalOrder !== null) {
             teams = teams.map(t => {
                 if (t.groupName === originalGroup && t.order > originalOrder) {
@@ -1010,9 +999,9 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             });
         }
 
-        // 4. Ak ide do SKUPINY → vložíme na správnu pozíciu a posunieme ostatné
+        // 3. AK IDE DO SKUPINY → posunieme tímy v cieľovej skupine o +1
         if (finalGroupName !== null && newOrder !== null) {
-            // Posunieme tímy v cieľovej skupine s order >= newOrder o +1
+            // ZVÝŠIME order všetkých tímov v cieľovej skupine s order >= newOrder
             teams = teams.map(t => {
                 if (t.groupName === finalGroupName && t.order >= newOrder) {
                     return { ...t, order: t.order + 1 };
@@ -1020,18 +1009,24 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
                 return t;
             });
 
-            // Vložíme tím na správnu pozíciu
-            const insertIndex = teams.findIndex(t => 
-                t.groupName === finalGroupName && t.order > newOrder
-            );
-            const finalInsertIndex = insertIndex === -1 ? teams.length : insertIndex;
-            teams.splice(finalInsertIndex, 0, {
+            // Vložíme tím na presnú pozíciu podľa newOrder
+            let insertIndex = 0;
+            for (let i = 0; i < teams.length; i++) {
+                if (teams[i].groupName === finalGroupName && teams[i].order > newOrder) {
+                    insertIndex = i;
+                    break;
+                }
+                if (i === teams.length - 1) insertIndex = teams.length;
+            }
+
+            teams.splice(insertIndex, 0, {
                 ...movedTeam,
                 groupName: finalGroupName,
                 order: newOrder
             });
-        } else {
-            // Ide do "bez skupiny" → pridáme na koniec, order = null
+        } 
+        // 4. AK IDE DO "BEZ SKUPINY"
+        else {
             teams.push({
                 ...movedTeam,
                 groupName: null,
@@ -1039,14 +1034,14 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             });
         }
 
-        // 5. Uložíme zmeny
+        // 5. Uložíme
         if (teamData.isSuperstructureTeam) {
             await setDoc(docRef, { [teamCategoryName]: teams }, { merge: true });
         } else {
             await updateDoc(docRef, { [updatePath]: teams });
         }
 
-        // Úspešné hlásenie
+        // Úspech
         const from = originalGroup ? `'${originalGroup}'` : 'bez skupiny';
         const to = finalGroupName ? `'${finalGroupName}' (pozícia ${newOrder})` : 'bez skupiny';
         setNotification({
@@ -1056,7 +1051,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         });
 
     } catch (error) {
-        console.error("Chyba pri presune tímu:", error);
+        console.error("Chyba pri presune:", error);
         setNotification({ id: Date.now(), message: "Chyba pri presúvaní tímu.", type: 'error' });
     } finally {
         draggedItem.current = null;
