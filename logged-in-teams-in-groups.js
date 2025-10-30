@@ -514,7 +514,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         return () => {
             window.removeEventListener('hashchange', handleHashChange);
         };
-    }, [categoryNameToIdMap, isInitialHashReadComplete]); 
+    }, [categoryIdToNameMap]);
 
     // **LOGIKA 4: Ukladanie hashu (zápis SLUG kategórie a SLUG skupiny do URL)**
     useEffect(() => {
@@ -1083,7 +1083,7 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                     return acc;
                 }, {});
 
-            batch.set(superDocRef, { teams: categoryTeams }, { merge: true });
+            batch.set(superDocRef, categoryTeams, { merge: true });
             console.log(`Ukladám do settings/superstructureGroups → U10 D:`, 
                 (categoryTeams['U10 D'] || []).map(t => `${t.teamName} (${t.groupName}, ${t.order})`).join(' | ')
             );
@@ -1157,7 +1157,8 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
             team: team // celý tím
         };
         draggedItem.current = { team };
-        e.dataTransfer.setData("text/plain", JSON.stringify(team));
+        e.dataTransfer.setData("application/json", JSON.stringify(team));
+        const data = e.dataTransfer.getData("application/json");
         e.dataTransfer.effectAllowed = "move";
         
         // Ak je tím globálny, aktivujeme FAB na mazanie
@@ -1242,7 +1243,7 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
 
             return React.createElement(
                 React.Fragment, 
-                { key: team.id || `${team.uid}-${team.teamName}-${team.groupName}-${index}` },
+                { key: team.id || `${team.__uid || 'global'}-${team.teamName}` },
                 isDropIndicatorVisible && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
                 React.createElement(
                     'li',
@@ -1313,7 +1314,15 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                 'div',
                 {
                     onDragOver: (e) => handleDragOverEmptyContainer(e, targetGroupId, targetCategoryId),
-                    onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
+                    onDrop: (e) => {
+                        e.preventDefault();
+                        const data = e.dataTransfer.getData("text/plain");
+                        if (data) {
+                            const team = JSON.parse(data);
+                            const targetIndex = dropTarget.index;
+                            handleDrop(team, targetGroupId === null ? null : { name: targetGroupId }, targetIndex);
+                        }
+                    },
                     className: `min-h-[50px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative ${isDropOnEmptyContainer ? 'border-blue-500 bg-blue-50' : ''}`,
                     ref: el => {
                         if (el) {
@@ -1339,7 +1348,15 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                 },
                 className: 'space-y-2 relative',
                 onDragOver: (e) => handleDragOverEnd(e, targetGroupId, targetCategoryId, sortedTeams),
-                onDrop: (e) => handleDrop(e, targetGroupId, targetCategoryId),
+                onDrop: (e) => {
+                    e.preventDefault();
+                    const data = e.dataTransfer.getData("text/plain");
+                    if (data) {
+                        const team = JSON.parse(data);
+                        const targetIndex = dropTarget.index;
+                        handleDrop(team, targetGroupId === null ? null : { name: targetGroupId }, targetIndex);
+                    }
+                },
             },
             ...listItems,
             isDropIndicatorVisibleAtEnd && React.createElement('div', { className: 'drop-indicator h-1 bg-blue-500 rounded-full my-1 transition-all duration-100' }),
@@ -1479,7 +1496,7 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
     
-    const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center 
+    const notificationClasses = `fixed-notification fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-200 flex items-center justify-center 
                   ${notification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     let typeClasses = '';
     switch (notification?.type) {
