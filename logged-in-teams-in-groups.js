@@ -1115,6 +1115,12 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         console.log('ÚSPEŠNE ULOŽENÉ VO VŠETKÝCH DOKUMENTOCH');
 
         // ====================================================================
+        // 7. ZNOVU NAČÍTAJ DÁTA → AKTUALIZUJ UI
+        // ====================================================================
+        console.log('Znovu načítavam dáta pre UI...');
+        await loadAllTeams();
+
+        // ====================================================================
         // 6. NOTIFIKÁCIA
         // ====================================================================
         const from = originalGroup ? `'${originalGroup}'` : 'bez skupiny';
@@ -1124,19 +1130,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
             message: `Tím "${teamData.teamName}" presunutý z ${from} do ${to}.`,
             type: 'success'
         });
-
-    } catch (error) {
-        console.error("CHYBA:", error);
-        setNotification({ id: Date.now(), message: "Chyba pri presúvaní tímu.", type: 'error' });
-    } finally {
-        draggedItem.current = null;
-        console.log('=== DRAG & DROP KONIEC ===\n');
-    }
-    // ====================================================================
-    // 7. ZNOVU NAČÍTAJ DÁTA → AKTUALIZUJ UI
-    // ====================================================================
-    console.log('Znovu načítavam dáta pre UI...');
-    await loadAllTeams(); // ← TOTO MUSÍŠ MAŤ DEFINOVANÉ
 };
     // --- KONIEC OPRAVENEJ FUNKCIE handleDrop ---
 
