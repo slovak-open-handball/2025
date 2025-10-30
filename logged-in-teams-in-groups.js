@@ -268,6 +268,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [isModalOpen, setIsModalOpen] = useState(false); 
     const [teamToEdit, setTeamToEdit] = useState(null); // NOVÝ STAV pre tím, ktorý sa bude upravovať
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false); 
+    const allTeamsRef = useRef([]);
     
     // NOVÉ STAVY pre Drag-to-Delete FAB
     const [isDraggingSuperstructureTeam, setIsDraggingSuperstructureTeam] = useState(false); 
@@ -288,6 +289,10 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             return () => clearTimeout(timer);
         }
     }, [notification]);
+
+    useEffect(() => {
+        allTeamsRef.current = allTeams;
+    }, [allTeams]);
     
     // --- NOVÉ ZJEDNOTENÉ HANDLERY PRE MODÁL ---
     
@@ -940,7 +945,12 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
 
     try {
         // 1. POUŽI AKTUÁLNE allTeams Z useState
-        const allTeams = [...allTeams]; // ← Z useState, nie z onSnapshot priamo
+        const allTeams = [...allTeamsRef.current]; // ← Z useState, nie z onSnapshot priamo
+
+        if (allTeams.length === 0) {
+            console.warn('allTeams je prázdne! Čakám na onSnapshot...');
+            return;
+        }
 
         // 2. NÁJDENIE PRESÚVANÉHO TÍMU
         const movedTeamIndex = allTeams.findIndex(t =>
