@@ -808,7 +808,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
         if (!dragData) return false;
 
         const teamCategoryName = dragData.team.category; 
-        const targetCategoryName = categoryIdToNameMap[targetCategoryId];
 
         if (targetCategoryName && teamCategoryName && targetCategoryName !== teamCategoryName) {
             return false;
