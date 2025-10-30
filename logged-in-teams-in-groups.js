@@ -798,6 +798,12 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
 
     const checkCategoryMatch = (targetCategoryId) => {
+        const targetCategoryName = categoryIdToNameMap[targetGroup?.categoryId || selectedCategoryId];
+        if (teamData.category !== targetCategoryName) {
+            setNotification({ id: Date.now(), message: "Tím nemôže byť presunutý do inej kategórie.", type: 'error' });
+            return;
+        }
+        
         const dragData = draggedItem.current;
         if (!dragData) return false;
 
@@ -936,6 +942,20 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     
     // --- OPRAVENÁ FUNKCIA handleDrop (Oprava vyhľadávania tímu podľa teamName) ---
 const handleDrop = async (teamData, targetGroup, targetIndex) => {
+    const targetCategoryId = selectedCategoryId || Object.keys(categoryIdToNameMap).find(id => 
+        categoryIdToNameMap[id] === teamData.category
+    );
+    const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+
+    if (teamData.category !== targetCategoryName) {
+        setNotification({ 
+            id: Date.now(), 
+            message: "Tím nemôže byť presunutý do inej kategórie.", 
+            type: 'error' 
+        });
+        return;
+    }
+    
     console.log('=== DRAG & DROP ZAČIATOK ===');
     console.log('Presúvaný tím:', teamData.teamName, 'ID:', teamData.__uid ? `${teamData.__uid}-${teamData.teamName}` : teamData.teamName);
     console.log('Cieľová skupina:', targetGroup?.name || 'bez skupiny', '| Cieľový index:', targetIndex);
@@ -1320,7 +1340,7 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                         if (data) {
                             const team = JSON.parse(data);
                             const targetIndex = dropTarget.index;
-                            const targetGroup = targetGroupId === null ? null : { name: targetGroupId };
+                            const targetGroup = targetGroupId === null ? null : targetGroupId; // string
                             handleDrop(team, targetGroup, targetIndex);
                         }
                     },
@@ -1355,7 +1375,7 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                     if (data) {
                         const team = JSON.parse(data);
                         const targetIndex = dropTarget.index;
-                        const targetGroup = targetGroupId === null ? null : { name: targetGroupId };
+                        const targetGroup = targetGroupId === null ? null : targetGroupId; // string
                         handleDrop(team, targetGroup, targetIndex);
                     }
                 },
@@ -1484,7 +1504,7 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                             React.createElement(
                                 'div',
                                 { className: 'mt-2 space-y-1' },
-                                renderTeamList(teamsInGroups.filter(team => team.groupName === group.name), group.name, selectedCategoryId)
+                                renderTeamList(teamsInGroups.filter(team => team.groupName === group.name), group.name, categoryId)
                             )
                         );
                     })
@@ -1613,7 +1633,12 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
                     },
                     React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
-                    renderTeamList(teamsWithoutGroup, null, null, true)
+                    {!selectedCategoryId && (
+                        <div className="w-full lg:w-1/4 ...">
+                            <h3>Tímy bez skupiny (všetky kategórie)</h3>
+                            {renderTeamList(teamsWithoutGroup, null, null, true)}
+                        </div>
+                    )}
                 ),
                 React.createElement(
                     'div',
