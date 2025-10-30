@@ -1086,18 +1086,40 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         console.log('FINÁLNY STAV:', allTeams.map(t => `${t.teamName} (group: ${t.groupName}, order: ${t.order})`).join(' | '));
 
         // ====================================================================
-        // 5. ULOŽENIE DO KAŽDÉHO DOKUMENTU
+        // 5. ULOŽENIE DO KAŽDÉHO DOKUMENTU – SPRÁVNE MAPOVANIE
         // ====================================================================
         const batch = writeBatch(window.db);
-        for (const [docRef, { path, teams }] of docUpdates) {
-            const updatedTeams = allTeams
-                .filter(t => t.__docRef?.path === docRef.path)
-                .map(({ __docRef, __uid, __isSuper, ...t }) => t); // odstrániť pomocné polia
-            batch.set(docRef, { [path]: updatedTeams }, { merge: true });
-        }
-        await batch.commit();
 
-        console.log('ÚSPEŠNE ULOŽENÉ VO VŠETKÝCH DOKUMENTOCH');
+        // Zoskupíme tímy podľa ich pôvodného dokumentu
+        const teamsByDoc = new Map(); // docRef.path → [tímy]
+
+        allTeams.forEach(team => {
+            const docPath = team.__docRef?.path;
+            if (!docPath) return;
+
+            if (!teamsByDoc.has(docPath)) {
+                teamsByDoc.set(docPath, []);
+            }
+
+            // Odstránime pomocné polia
+            const { __docRef, __uid, __isSuper, ...cleanTeam } = team;
+            teamsByDoc.get(docPath).push(cleanTeam);
+        });
+
+        // Uložíme každý dokument
+        for (const [docPath, updatedTeams] of teamsByDoc) {
+            const docRef = doc(window.db, docPath);
+            const isSuper = docPath.includes(SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/').pop());
+
+            const fieldPath = isSuper ? teamCategoryName : `teams.${teamCategoryName}`;
+
+            console.log(`Ukladám do ${docPath} → ${fieldPath}:`, updatedTeams.map(t => `${t.teamName} (${t.groupName || 'null'}, ${t.order})`).join(' | '));
+
+            batch.set(docRef, { [fieldPath]: updatedTeams }, { merge: true });
+        }
+
+        await batch.commit();
+        console.log('ÚSPEŠNE ULOŽENÉ VO VŠETKÝCH DOKUMENTOCH')
 
         // ====================================================================
         // 6. NOTIFIKÁCIA
