@@ -949,7 +949,6 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
     );
     const targetCategoryName = categoryIdToNameMap[targetCategoryId];
 
-    // Reset drop indicatoru
     setDropTarget({ groupId: null, categoryId: null, index: null });
 
     if (teamData.category !== targetCategoryName) {
@@ -988,7 +987,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         allTeams.splice(movedTeamIndex, 1);
 
         // ===================================================================
-        // 2. PRESUN DO INEJ SKUPINY – ZNÍŽENIE V PÔVODNEJ SKUPINE
+        // 2. PRESUN DO INEJ SKUPINY – ZNÍŽENIE V PÔVODNEJ
         // ===================================================================
         if (!isSameGroup && originalGroup && originalOrder !== null) {
             allTeams.forEach((t, i) => {
@@ -1003,32 +1002,32 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         // ===================================================================
         if (isSameGroup && targetGroupName && targetIndex != null && originalOrder !== null) {
             // Získaj aktuálne tímy v skupine PO odstránení
-            const currentTeamsInGroup = allTeams
+            const currentTeams = allTeams
                 .filter(t => t.groupName === targetGroupName && t.order != null)
                 .sort((a, b) => a.order - b.order);
 
-            // Nájdi pôvodný index (po odstránení)
-            const originalOrderIndex = currentTeamsInGroup.findIndex(t => t.order === originalOrder);
+            const originalOrderIndex = currentTeams.findIndex(t => t.order === originalOrder);
             const isMovingDown = originalOrderIndex < targetIndex;
 
             if (targetIndex === 0) {
-                // Vloženie na začiatok
+                newOrder = 1;
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null) {
                         allTeams[i].order = t.order + 1;
                     }
                 });
-                newOrder = 1;
             } else {
-                // Vypočítaj targetOrder podľa aktuálneho zoradenia
-                const targetOrder = isMovingDown
-                    ? currentTeamsInGroup[Math.min(targetIndex, currentTeamsInGroup.length - 1)].order
-                    : (targetIndex <= currentTeamsInGroup.length
-                        ? currentTeamsInGroup[targetIndex - 1].order + 1
-                        : currentTeamsInGroup[currentTeamsInGroup.length - 1].order + 1);
+                // Vypočítaj targetOrder z aktuálneho zoznamu
+                let targetOrder;
+                if (targetIndex >= currentTeams.length) {
+                    targetOrder = currentTeams[currentTeams.length - 1].order + 1;
+                } else {
+                    const beforeTeam = currentTeams[Math.max(0, targetIndex - 1)];
+                    targetOrder = beforeTeam.order + 1;
+                }
 
                 if (isMovingDown) {
-                    // NADOL: zníž tímy medzi originalOrder+1 a targetOrder
+                    // NADOL: znížiť len medzi originalOrder+1 a targetOrder
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order > originalOrder && t.order <= targetOrder) {
@@ -1037,7 +1036,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                     });
                     newOrder = targetOrder;
                 } else {
-                    // NAHOR: zvýš tímy medzi targetOrder a originalOrder-1
+                    // NAHOR: zvýšiť len medzi targetOrder a originalOrder-1
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order >= targetOrder && t.order < originalOrder) {
@@ -1049,7 +1048,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             }
         }
         // ===================================================================
-        // 4. PRESUN DO INEJ SKUPINY – VÝPOČET newOrder A POSUN
+        // 4. PRESUN DO INEJ SKUPINY – VÝPOČET A POSUN
         // ===================================================================
         else if (targetGroupName && targetIndex != null) {
             const teamsInTargetGroup = allTeams
@@ -1061,15 +1060,11 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             } else if (targetIndex === 0) {
                 newOrder = 1;
             } else if (targetIndex >= teamsInTargetGroup.length) {
-                // KONIEC: za posledný
                 newOrder = teamsInTargetGroup[teamsInTargetGroup.length - 1].order + 1;
-                // Žiadny posun
             } else {
                 const before = teamsInTargetGroup[targetIndex - 1].order;
                 const after = teamsInTargetGroup[targetIndex].order;
                 newOrder = before + 1 <= after ? before + 1 : after;
-
-                // Posun od newOrder nahor
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null && t.order >= newOrder) {
                         allTeams[i].order = t.order + 1;
@@ -1081,7 +1076,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         }
 
         // ===================================================================
-        // 5. AŽ TERAZ: VLOŽ TÍM SPÄŤ
+        // 5. AŽ TERAZ: VLOŽ TÍM
         // ===================================================================
         const updatedTeam = {
             ...movedTeam,
@@ -1099,7 +1094,6 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             allTeams.push(updatedTeam);
         }
 
-        // Aktualizácia UI
         setAllTeams(allTeams);
 
         // --- Batch write do Firestore ---
@@ -1141,7 +1135,6 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
 
         await batch.commit();
 
-        // Notifikácia
         const from = originalGroup ? `'${originalGroup}'` : 'bez skupiny';
         const to = targetGroupName ? `'${targetGroupName}' (pozícia ${newOrder})` : 'bez skupiny';
         setNotification({
