@@ -1466,8 +1466,6 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
         const teamsWithoutGroupListRef = useRef(null);
         ref={teamsWithoutGroupListRef}
         const height = teamsWithoutGroupListRef.current?.offsetHeight || 0;
-            ? teamsWithoutGroupRef.offsetHeight 
-            : null;
 
         return React.createElement(
             'div',
