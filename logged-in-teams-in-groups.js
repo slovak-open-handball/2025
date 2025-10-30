@@ -997,7 +997,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 // Vloženie na začiatok
                 newOrder = 1;
                 allTeams.forEach((t, i) => {
-                    if (t.groupName === targetGroupName && t.order != null) {
+                    if (t.groupName === targetGroupName && t.order != null && t.order >= 1) {
                         allTeams[i].order = t.order + 1;
                     }
                 });
@@ -1006,9 +1006,9 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 const beforeOrder = beforeTeam.order;
 
                 if (isMovingDown) {
-                    // PRESUN NADOL → vložiť ZA tím na targetIndex-1
-                    newOrder = beforeOrder; // NIE +1!
-                    // Zníž order tímov medzi originalOrder+1 a beforeOrder
+                    // PRESUN NADOL: vložiť ZA tím na targetIndex-1 → newOrder = beforeOrder
+                    newOrder = beforeOrder;
+                    // Zníž order tímov medzi originalOrder+1 a beforeOrder (vrátane beforeOrder)
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order > originalOrder && t.order <= beforeOrder) {
@@ -1016,9 +1016,9 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                         }
                     });
                 } else {
-                    // PRESUN NAHOR → vložiť ZA tím na targetIndex-1
+                    // PRESUN NAHOR: vložiť ZA tím na targetIndex-1 → newOrder = beforeOrder + 1
                     newOrder = beforeOrder + 1;
-                    // Zvýš order tímov medzi beforeOrder+1 a originalOrder
+                    // Zvýš order tímov medzi beforeOrder+1 a originalOrder-1 (len medzi)
                     allTeams.forEach((t, i) => {
                         if (t.groupName === targetGroupName && t.order != null &&
                             t.order > beforeOrder && t.order < originalOrder) {
