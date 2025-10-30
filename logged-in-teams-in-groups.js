@@ -282,6 +282,15 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
 
     const teamsWithoutGroupListRef = useRef(null);
     const height = teamsWithoutGroupListRef.current?.offsetHeight || 0;
+
+    // Filtrovanie pre zobrazenie (zostáva bezo zmeny)
+    const teamsWithoutGroup = selectedCategoryId
+        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
+        : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
+
+    const teamsInGroups = selectedCategoryId
+        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && team.groupName)
+        : allTeams.filter(team => team.groupName);
     
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
@@ -789,15 +798,6 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
     
     // --- KONIEC FUNKCIÍ PRE UKLADANIE, UPDATE A MAZANIE ---
-
-    // Filtrovanie pre zobrazenie (zostáva bezo zmeny)
-    const teamsWithoutGroup = selectedCategoryId
-        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
-        : allTeams.filter(team => !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName));
-
-    const teamsInGroups = selectedCategoryId
-        ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && team.groupName)
-        : allTeams.filter(team => team.groupName);
 
     const getGroupColorClass = (type) => {
         switch (type) {
