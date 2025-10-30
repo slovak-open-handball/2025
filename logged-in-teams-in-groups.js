@@ -279,6 +279,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const listRefs = useRef({}); 
     const [dropTarget, setDropTarget] = useState({ groupId: null, categoryId: null, index: null });
     const teamsWithoutGroupRef = useRef(null);
+
+    const teamsWithoutGroupHeight = useRef(0);
     
     // Filtrovanie pre zobrazenie (zostáva bezo zmeny)
     const teamsWithoutGroup = selectedCategoryId
@@ -1456,68 +1458,76 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
         );
     };
 
-    const renderSingleCategoryView = () => {
-        const categoryName = categoryIdToNameMap[selectedCategoryId] || "Neznáma kategória";
-        let groups = allGroupsByCategoryId[selectedCategoryId] || [];
-        
-        if (selectedGroupName) {
-            groups = groups.filter(g => g.name === selectedGroupName);
-        }
+const renderSingleCategoryView = () => {
+    const categoryName = categoryIdToNameMap[selectedCategoryId] || "Neznáma kategória";
+    let groups = allGroupsByCategoryId[selectedCategoryId] || [];
+    
+    if (selectedGroupName) {
+        groups = groups.filter(g => g.name === selectedGroupName);
+    }
 
-        const sortedGroups = [...groups].sort((a, b) => {
-            if (a.type === 'základná skupina' && b.type !== 'základná skupina') return -1;
-            if (b.type === 'základná skupina' && a.type !== 'základná skupina') return 1;
-            return a.name.localeCompare(b.name);
-        });
+    const sortedGroups = [...groups].sort((a, b) => {
+        if (a.type === 'základná skupina' && b.type !== 'základná skupina') return -1;
+        if (b.type === 'základná skupina' && a.type !== 'základná skupina') return 1;
+        return a.name.localeCompare(b.name);
+    });
 
-        return React.createElement(
+    return React.createElement(
+        'div',
+        { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
+        React.createElement(
             'div',
-            { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
+            {
+                className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
+            },
+            React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v kategórii: ${categoryName}`),
             React.createElement(
                 'div',
                 {
-                    className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
-                },
-                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v kategórii: ${categoryName}`),
-                // TargetGroupId je nastavené na null pre nezaradené tímy
-                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true) 
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex-grow min-w-0 flex flex-col gap-4' },
-                sortedGroups.length > 0 ? (
-                    sortedGroups.map((group, groupIndex) => {
-                        let customStyle = {};
-                        if (selectedGroupName) {
-                            if (teamsWithoutGroupHeight) {
-                                customStyle = {
-                                    minHeight: `${teamsWithoutGroupHeight}px`,
-                                };
-                            }
+                    ref: el => {
+                        if (el) {
+                            teamsWithoutGroupHeight.current = el.offsetHeight;
                         }
-
-                        return React.createElement(
-                            'div',
-                            {
-                                key: groupIndex,
-                                className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
-                                style: customStyle,
-                            },
-                            React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
-                            React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type), 
-                            React.createElement(
-                                'div',
-                                { className: 'mt-2 space-y-1' },
-                                renderTeamList(teamsInGroups.filter(team => team.groupName === group.name), group.name, categoryId)
-                            )
-                        );
-                    })
-                ) : (
-                    React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne skupiny v tejto kategórii.')
-                )
+                    },
+                    className: "w-full"
+                },
+                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
             )
-        );
-    };
+        ),
+        React.createElement(
+            'div',
+            { className: 'flex-grow min-w-0 flex flex-col gap-4' },
+            sortedGroups.length > 0 ? (
+                sortedGroups.map((group, groupIndex) => {
+                    let customStyle = {};
+                    if (selectedGroupName && teamsWithoutGroupHeight.current > 0) {
+                        customStyle = {
+                            minHeight: `${teamsWithoutGroupHeight.current}px`,
+                        };
+                    }
+
+                    return React.createElement(
+                        'div',
+                        {
+                            key: groupIndex,
+                            className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
+                            style: customStyle,
+                        },
+                        React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
+                        React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type), 
+                        React.createElement(
+                            'div',
+                            { className: 'mt-2 space-y-1' },
+                            renderTeamList(teamsInGroups.filter(team => team.groupName === group.name), group.name, selectedCategoryId)
+                        )
+                    );
+                })
+            ) : (
+                React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne skupiny v tejto kategórii.')
+            )
+        )
+    );
+};
 
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
