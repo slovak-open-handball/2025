@@ -984,6 +984,8 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
         if (targetGroupName && targetIndex != null) {
             const teamsInTargetGroup = allTeams.filter(t => t.groupName === targetGroupName && t.order != null);
             const sorted = teamsInTargetGroup.sort((a, b) => a.order - b.order);
+            const isSameGroup = originalGroup === targetGroupName;
+
             if (sorted.length === 0) {
                 newOrder = 1;
             } else if (targetIndex === 0) {
@@ -993,7 +995,15 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             } else {
                 const before = sorted[targetIndex - 1].order;
                 const after = sorted[targetIndex].order;
-                newOrder = before + 1 <= after ? before + 1 : after;
+
+                if (isSameGroup) {
+                    const originalOrderIndex = sorted.findIndex(t => t.order === originalOrder);
+                    const isMovingDown = originalOrderIndex < targetIndex;
+        
+                    newOrder = isMovingDown ? targetIndex : targetIndex + 1;
+                } else {
+                    newOrder = before + 1 <= after ? before + 1 : after;
+                }
             }
         }
 
