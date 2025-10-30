@@ -279,10 +279,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const listRefs = useRef({}); 
     const [dropTarget, setDropTarget] = useState({ groupId: null, categoryId: null, index: null });
     const teamsWithoutGroupRef = useRef(null);
-
-    const teamsWithoutGroupListRef = useRef(null);
-    const height = teamsWithoutGroupListRef.current?.offsetHeight || 0;
-
+    
     // Filtrovanie pre zobrazenie (zostáva bezo zmeny)
     const teamsWithoutGroup = selectedCategoryId
         ? allTeams.filter(team => team.category === categoryIdToNameMap[selectedCategoryId] && !team.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
@@ -1479,7 +1476,6 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
             React.createElement(
                 'div',
                 {
-                    ref: teamsWithoutGroupRef,
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0",
                 },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v kategórii: ${categoryName}`),
