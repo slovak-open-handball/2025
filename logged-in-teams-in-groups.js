@@ -1116,7 +1116,7 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         // 7. ZNOVU NAČÍTAJ DÁTA
         // ====================================================================
         console.log('Znovu načítavam dáta pre UI...');
-        await loadAllTeams();
+        await loadAllTeams(teamCategoryName);
 
         // ====================================================================
         // 6. NOTIFIKÁCIA
