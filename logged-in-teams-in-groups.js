@@ -1132,39 +1132,6 @@ const handleDrop = async (e, targetGroup, targetCategoryId) => {
         });
 };
     // --- KONIEC OPRAVENEJ FUNKCIE handleDrop ---
-
-const loadAllTeams = async () => {
-    try {
-        const allTeams = [];
-        const categoryName = 'U10 D'; // ← alebo dynamicky podľa categoryId
-
-        // Superstructure
-        if (SUPERSTRUCTURE_TEAMS_DOC_PATH) {
-            const superDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-            const superSnap = await getDoc(superDocRef);
-            if (superSnap.exists()) {
-                const data = superSnap.data();
-                const teams = data[categoryName] || [];
-                teams.forEach(t => allTeams.push({ ...t, __isSuper: true }));
-            }
-        }
-
-        // Používatelia
-        const usersSnap = await getDocs(collection(window.db, 'users'));
-        for (const userDoc of usersSnap.docs) {
-            const data = userDoc.data();
-            const teams = data.teams?.[categoryName] || [];
-            teams.forEach(t => allTeams.push({ ...t, __uid: userDoc.id }));
-        }
-
-        // Ulož do stavu
-        setTeams(allTeams); // ← tvoj useState pre zobrazenie
-
-        console.log('Dáta znova načítané:', allTeams.length, 'tímov');
-    } catch (error) {
-        console.error('Chyba pri znova načítaní dát:', error);
-    }
-};
     
     // --- DRAG/DROP LOGIKA PRE FAB MAZANIE ---
     
@@ -1664,6 +1631,39 @@ const handleDataUpdateAndRender = (event) => {
                 )
             );
         }
+    }
+};
+
+const loadAllTeams = async () => {
+    try {
+        const allTeams = [];
+        const categoryName = 'U10 D'; // ← alebo dynamicky podľa categoryId
+
+        // Superstructure
+        if (SUPERSTRUCTURE_TEAMS_DOC_PATH) {
+            const superDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+            const superSnap = await getDoc(superDocRef);
+            if (superSnap.exists()) {
+                const data = superSnap.data();
+                const teams = data[categoryName] || [];
+                teams.forEach(t => allTeams.push({ ...t, __isSuper: true }));
+            }
+        }
+
+        // Používatelia
+        const usersSnap = await getDocs(collection(window.db, 'users'));
+        for (const userDoc of usersSnap.docs) {
+            const data = userDoc.data();
+            const teams = data.teams?.[categoryName] || [];
+            teams.forEach(t => allTeams.push({ ...t, __uid: userDoc.id }));
+        }
+
+        // Ulož do stavu
+        setTeams(allTeams); // ← tvoj useState pre zobrazenie
+
+        console.log('Dáta znova načítané:', allTeams.length, 'tímov');
+    } catch (error) {
+        console.error('Chyba pri znova načítaní dát:', error);
     }
 };
 
