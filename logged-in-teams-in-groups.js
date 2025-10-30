@@ -981,14 +981,10 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
 
         let newOrder = null;
 
-        // ===================================================================
-        // 1. ODSTRÁŇ TÍM Z PÔVODNEJ POZÍCIE
-        // ===================================================================
+        // 1. ODSTRÁŇ TÍM
         allTeams.splice(movedTeamIndex, 1);
 
-        // ===================================================================
         // 2. PRESUN DO INEJ SKUPINY – ZNÍŽENIE V PÔVODNEJ
-        // ===================================================================
         if (!isSameGroup && originalGroup && originalOrder !== null) {
             allTeams.forEach((t, i) => {
                 if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
@@ -997,30 +993,33 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             });
         }
 
-        // ===================================================================
-        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY – NAJPRV VYPOČÍTAŤ, POTOM PREČÍSLOVAŤ
-        // ===================================================================
+        // 3. PRESUN V RÁMCI ROVNAKEJ SKUPINY
         if (isSameGroup && targetGroupName && targetIndex != null && originalOrder !== null) {
-            // Získaj aktuálne tímy po odstránení
             const currentTeams = allTeams
                 .filter(t => t.groupName === targetGroupName && t.order != null)
                 .sort((a, b) => a.order - b.order);
 
-            // Vypočítaj targetOrder z targetIndex
             let targetOrder;
+
             if (targetIndex === 0) {
                 targetOrder = 1;
             } else if (targetIndex >= currentTeams.length) {
                 targetOrder = currentTeams[currentTeams.length - 1].order + 1;
             } else {
-                const beforeTeam = currentTeams[targetIndex - 1];
-                targetOrder = beforeTeam.order + 1;
+                // PRI PRESUNE NADOL: targetOrder = order tímu na targetIndex
+                // PRI PRESUNE NAHOR: targetOrder = order tímu na targetIndex-1 + 1
+                const isMovingDown = originalOrder < currentTeams[Math.min(targetIndex, currentTeams.length - 1)].order;
+                if (isMovingDown) {
+                    targetOrder = currentTeams[targetIndex].order; // presne na pozíciu
+                } else {
+                    targetOrder = currentTeams[targetIndex - 1].order + 1; // medzi
+                }
             }
 
             const isMovingDown = originalOrder < targetOrder;
 
             if (isMovingDown) {
-                // NADOL: znížiť len medzi originalOrder+1 a targetOrder
+                // NADOL: znížiť tímy medzi originalOrder+1 a targetOrder
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null &&
                         t.order > originalOrder && t.order <= targetOrder) {
@@ -1029,7 +1028,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 });
                 newOrder = targetOrder;
             } else {
-                // NAHOR: zvýšiť len medzi targetOrder a originalOrder-1
+                // NAHOR: zvýšiť tímy medzi targetOrder a originalOrder-1
                 allTeams.forEach((t, i) => {
                     if (t.groupName === targetGroupName && t.order != null &&
                         t.order >= targetOrder && t.order < originalOrder) {
@@ -1039,9 +1038,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                 newOrder = targetOrder;
             }
         }
-        // ===================================================================
-        // 4. PRESUN DO INEJ SKUPINY – VÝPOČET A POSUN
-        // ===================================================================
+        // 4. PRESUN DO INEJ SKUPINY
         else if (targetGroupName && targetIndex != null) {
             const teamsInTargetGroup = allTeams
                 .filter(t => t.groupName === targetGroupName && t.order != null)
@@ -1067,9 +1064,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             newOrder = null;
         }
 
-        // ===================================================================
         // 5. VLOŽ TÍM
-        // ===================================================================
         const updatedTeam = {
             ...movedTeam,
             groupName: targetGroupName,
@@ -1088,7 +1083,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
 
         setAllTeams(allTeams);
 
-        // --- Batch write do Firestore ---
+        // --- BATCH WRITE ---
         const batch = writeBatch(window.db);
         const superDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
         const categoryTeams = allTeams
