@@ -1279,7 +1279,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                             // Find the actual group object
                             const groupObj = targetGroupId === null 
                                 ? null 
-                                : (allGroupsByCategoryId[targetCategoryId] || []).find(g => g.name === targetGroup);
+                                : (allGroupsByCategoryId[targetCategoryId] || []).find(g => g.name === targetGroupId);
 
                             handleDrop(team, groupObj, targetIndex);
                         }
@@ -1319,7 +1319,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
                         // Find the actual group object
                         const groupObj = targetGroupId === null 
                             ? null 
-                            : (allGroupsByCategoryId[targetCategoryId] || []).find(g => g.name === targetGroup);
+                            : (allGroupsByCategoryId[targetCategoryId] || []).find(g => g.name === targetGroupId);
                 
                         handleDrop(team, groupObj, targetIndex);
                     }
