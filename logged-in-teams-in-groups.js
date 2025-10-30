@@ -1635,12 +1635,12 @@ const handleDrop = async (teamData, targetGroup, targetIndex) => {
                         className: `w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0`,
                     },
                     React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
-                    {!selectedCategoryId && (
-                        <div className="w-full lg:w-1/4 ...">
-                            <h3>Tímy bez skupiny (všetky kategórie)</h3>
-                            {renderTeamList(teamsWithoutGroup, null, null, true)}
-                        </div>
-                    )}
+                    selectedCategoryId === '' && React.createElement(
+                        'div',
+                        { className: 'w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0' },
+                        React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Tímy bez skupiny (všetky kategórie)'),
+                        renderTeamList(teamsWithoutGroup, null, null, true)
+                    )
                 ),
                 React.createElement(
                     'div',
