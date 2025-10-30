@@ -1052,7 +1052,7 @@ const handleDrop = async (teamData, targetGroupObj, targetIndex) => {
             } else if (targetIndex === 0) {
                 newOrder = 1;
             } else if (targetIndex >= teamsInTargetGroup.length) {
-                newOrder = teamsInTargetGroup[teamsInTargetGroup.length - 1].order + 1;
+                newOrder = teamsInTargetGroup[teamsInTargetGroup.length].order + 1;
             } else {
                 const before = teamsInTargetGroup[targetIndex - 1].order;
                 const after = teamsInTargetGroup[targetIndex].order;
