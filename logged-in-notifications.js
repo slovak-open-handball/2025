@@ -867,4 +867,4 @@ export function NotificationsApp() {
 }
 
 // Explicitly expose the component globally
-window.NotificationsApp = NotificationsApp;
+// window.NotificationsApp = NotificationsApp;
