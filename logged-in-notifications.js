@@ -118,7 +118,7 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading, showCh
 
 
 // Main React component for the logged-in-notifications.html page
-function NotificationsApp() {
+export function NotificationsApp() {
   // Use global Firebase instances provided by authentication.js
   const auth = React.useRef(getAuth()).current; // Ensure auth is consistent
   const db = React.useRef(getFirestore()).current; // Ensure db is consistent
