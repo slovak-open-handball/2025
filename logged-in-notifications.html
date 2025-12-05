@@ -18,6 +18,7 @@
             min-height: 100vh; /* Minimálna výška stránky */
         }
     </style>
+    <!-- React a ReactDOM sú načítané globálne -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
@@ -42,6 +43,7 @@
 
     <script type="module">
         import { NotificationsApp } from './logged-in-notifications.js';
+        
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.addEventListener('DOMContentLoaded', async () => {
             const headerPlaceholder = document.getElementById('header-placeholder');
@@ -72,21 +74,22 @@
             }
 
             const renderApp = () => {
+                // V module musíme explicitne pristupovať k React a ReactDOM cez window
+                const React = window.React;
+                const ReactDOM = window.ReactDOM;
+
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov a globálnu dostupnosť.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                     return;
                 }
-                if (typeof NotificationsApp === 'undefined') {
-                    console.error("Chyba: Komponent NotificationsApp nie je definovaný. Skontrolujte logged-in-notifications.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
+
+                // NotificationsApp je definovaný v scope vďaka importu
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(NotificationsApp, null));
                 console.log("logged-in-notifications.html: React App vykreslená.");
             };
-    
+            
             // Počkáme na globalDataUpdated
             window.addEventListener('globalDataUpdated', (event) => {
                 console.log("logged-in-notifications.html: Prijatá udalosť 'globalDataUpdated'. Pripravujem vykreslenie React aplikácie.");
