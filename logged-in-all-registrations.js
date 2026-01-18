@@ -3610,6 +3610,46 @@ const clearFilter = (column) => {
             if (isNewEntryFlag) {
                 const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} };
                 currentMemberArray.push(newMember);
+                
+                // Generovanie detailnej notifikácie pre nového člena
+                const memberName = `${newMember.firstName || ''} ${newMember.lastName || ''}`.trim() || 'Bez mena';
+                const memberType = editModalTitle.includes('hráča') ? 'Hráč' : 
+                                  editModalTitle.includes('členku R. tímu (žena)') ? 'Člen realizačného tímu (žena)' :
+                                  editModalTitle.includes('člena R. tímu (muž)') ? 'Člen realizačného tímu (muž)' :
+                                  editModalTitle.includes('šoférku (žena)') ? 'Šofér (žena)' :
+                                  editModalTitle.includes('šoféra (muž)') ? 'Šofér (muž)' : 'Člen tímu';
+                
+                const newMemberChanges = [];
+                newMemberChanges.push(`Nový ${memberType} pridaný: ${memberName}`);
+                if (newMember.dateOfBirth) newMemberChanges.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMember.dateOfBirth)}`);
+                if (newMember.jerseyNumber) newMemberChanges.push(`Číslo dresu: ${newMember.jerseyNumber}`);
+                if (newMember.registrationNumber) newMemberChanges.push(`Registračné číslo: ${newMember.registrationNumber}`);
+                if (newMember.address) {
+                    const addressParts = [
+                        newMember.address.street,
+                        newMember.address.houseNumber,
+                        newMember.address.postalCode,
+                        newMember.address.city,
+                        newMember.address.country
+                    ].filter(part => part && part.trim() !== '');
+                    if (addressParts.length > 0) {
+                        newMemberChanges.push(`Adresa: ${addressParts.join(', ')}`);
+                    }
+                }
+                newMemberChanges.push(`Tím: ${teamToUpdate.teamName || 'Bez názvu'} (${category})`);
+                
+                // Uložiť notifikáciu do Firestore
+                const userEmail = window.auth.currentUser?.email;
+                if (userEmail) {
+                    const notificationsCollectionRef = collection(db, 'notifications');
+                    await addDoc(notificationsCollectionRef, {
+                        userEmail,
+                        changes: newMemberChanges,
+                        timestamp: serverTimestamp()
+                    });
+                    console.log("Notifikácia o pridaní nového člena tímu uložená do Firestore.");
+                }
+                
                 setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
             } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
                 const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
