@@ -605,7 +605,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             const newMealValue = isChecked ? 'Áno' : 'Nie';
 
             if (originalMealValue !== newMealValue) {
-                changes.push(`Zmena Stravovanie (${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}): z '${originalMealValue}' na '${newMealValue}'`);
+                const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Bez mena';
+                const teamName = team.teamName || 'Bez názvu';
+                changes.push(`Zmena stravovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
+                changes.push(`  • ${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}: z '${originalMealValue}' na '${newMealValue}'`);
             }
             // --- End Notification Logic ---
 
@@ -874,9 +877,9 @@ const formatLabel = (key) => {
     if (key === 'billing.ico') return 'IČO';
     if (key === 'billing.dic') return 'DIČ';
     if (key === 'billing.icDph') return 'IČ DPH';
-    if (key === 'accommodation.type') return 'Typ ubytovania';
-    if (key === 'arrival.type') return 'Typ dopravy';
-    if (key === 'packageDetails.name') return 'Názov balíka';
+    if (key === 'accommodation.type'  || key === 'accommodation') return 'Typ ubytovania';
+    if (key === 'arrival.type' || key === 'arrival') return 'Typ dopravy';
+    if (key === 'packageDetails.name' || key === 'packageDetails') return 'Názov balíka';
     if (key === 'packageDetails.meals') return 'Stravovanie';
     if (key === 'teamName') return 'Názov tímu';
     if (key === 'playerDetails') return 'Detaily hráčov';
@@ -908,12 +911,11 @@ const formatLabel = (key) => {
     if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
     if (key === 'isMenuToggled') return 'Prepínač menu';
     if (key === 'note') return 'Poznámka';
-    if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
+    if (key === '_category' || key === 'category') return 'Kategória tímu'; 
     if (key === 'jerseyNumber') return 'Číslo dresu';
     if (key === 'registrationNumber') return 'Číslo registrácie';
-    if (key === 'time') return 'Čas príchodu'; // Nový label pre čas príchodu
-
-
+    if (key === 'time') return 'Čas príchodu'; 
+  
     return label;
 };
 
@@ -973,7 +975,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     // Helper for deep comparison of objects
     const compareObjects = (origObj, updObj, pathPrefix = '') => {
-        const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]); // Handle null/undefined objects
+        const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]);
 
         for (const key of nestedKeys) {
             const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
@@ -992,7 +994,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
             if (isOrigObject && isUpdObject) {
                 compareObjects(origValue, updValue, currentPath);
-                continue; // Done with this key, move to next
+                continue;
             }
 
             // Special handling for tshirts array (must be here, as it's an array and not handled by recursive object comparison)
@@ -1012,11 +1014,11 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                         } else if (newQuantity === 0 && oldQuantity > 0) {
                             changes.push(`Odstránené tričko (${size}): ${oldQuantity}`);
                         } else {
-                            changes.push(`Zmena Veľkosť trička a ich počet: z '${size} - ${oldQuantity}' na '${size} - ${newQuantity}'`);
+                            changes.push(`Zmena ${formatLabel('tshirts')}: z '${size} - ${oldQuantity}' na '${size} - ${newQuantity}'`);
                         }
                     }
                 }
-                continue; // Done with tshirts array
+                continue;
             }
 
 
@@ -1026,30 +1028,11 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
             if (valueA !== valueB) {
                 let changeDescription = '';
-                const label = formatLabel(currentPath); // Use formatLabel for user-friendly names
+                const label = formatLabel(currentPath);
 
-                // More specific descriptions for known paths
-                if (currentPath === '_category' || currentPath === 'category') {
-                    changeDescription = `Zmena Kategórie: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'teamName') {
-                    changeDescription = `Zmena Názov tímu: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'arrival.type' || currentPath === 'arrival.time') { // Catch both type and time
-                    // Consolidate 'arrival.type' and 'arrival.time' into one notification
-                    // We will check for the full 'arrival' object change later in this function
-                    // and handle it in the parent `compareObjects` loop.
-                    // For now, prevent individual type/time changes from generating separate notifications.
-                    if (pathPrefix === 'arrival') { // Only prevent if directly nested under 'arrival'
-                        return;
-                    }
-                } else if (currentPath === 'accommodation.type') { // Use normalized values here
-                    changeDescription = `Zmena Typ ubytovania: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'packageDetails.name') { // Use normalized values here
-                    changeDescription = `Zmena Balík: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else {
-                    // General case for other fields (including firstName, lastName, billing.*, address.*, jerseyNumber, registrationNumber etc.)
-                    changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                }
-
+                // General case - use formatLabel for all fields
+                changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
+            
                 if (changeDescription && !changes.includes(changeDescription)) {
                     changes.push(changeDescription);
                 }
@@ -1069,10 +1052,10 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     const formattedOriginalArrival = formatArrivalTime(originalArrivalType, originalArrivalTime);
     const formattedUpdatedArrival = formatArrivalTime(updatedArrivalType, updatedArrivalTime);
 
-    if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes('Zmena Typ dopravy:'))) {
-        changes.push(`Zmena Typ dopravy: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
-    }
-
+    if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes(`Zmena ${formatLabel('arrival.type')}:`))) {
+      changes.push(`Zmena ${formatLabel('arrival.type')}: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
+  }
+  
     return changes;
 };
 
@@ -1145,10 +1128,10 @@ const formatDisplayValue = (value, path) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp, formatDateToDMMYYYY: formatDateToDMMYYYYProp, currentUserId }) { // Pridané onDeleteMember a getChangesForNotificationProp a formatDateToDMMYYYYProp
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotification, formatDateToDMMYYYY: formatDateToDMMYYYY, currentUserId, editModalTitle }) { // Pridané editModalTitle
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
-    const [localEditedData, setLocalEditedData] = React.useState(data); 
+    const [localEditedData, setLocalEditedData] = React.useState(data);
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
     const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); // Opravený preklep z setIsTargetMuserHall na setIsTargetUserHall
@@ -1642,10 +1625,23 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     const renderMemberFields = () => {
         // console.log('DataEditModal: renderMemberFields called. localEditedData:', localEditedData); // Debug log
         const memberElements = [];
-        const memberFieldsOrder = [
-            'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
+        
+        // Určiť, či ide o hráča (zobrazujeme jerseyNumber a registrationNumber) alebo iného člena tímu
+        const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nového hráča');
+        
+        // Základné polia pre všetkých členov
+        let memberFieldsOrder = [
+            'firstName', 'lastName', 'dateOfBirth',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
         ];
+        
+        // Ak je to hráč, pridáme jerseyNumber a registrationNumber po dateOfBirth
+        if (isPlayer) {
+            memberFieldsOrder = [
+                'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
+                'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
+            ];
+        }
         
         memberFieldsOrder.forEach(path => {
             // Používame getNestedValue s localEditedData pre aktuálny stav
@@ -2333,19 +2329,24 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 console.log("DEBUG: DataEditModal - onSave click. originalDataForCompare for diff:", originalDataForCompare);
                                 console.log("DEBUG: DataEditModal - onSave click. modifiedDataForCompare for diff:", modifiedDataForCompare);
 
-                                // Pass formatDateToDMMYYYYProp to getChangesForNotificationProp
-                                const generatedChanges = getChangesForNotificationProp(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYYProp); 
+                                // Pass formatDateToDMMYYYY to getChangesForNotification
+                                let generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYY); 
 
                                 // --- Explicitná kontrola pre zmenu kategórie ---
                                 // Zistite pôvodnú kategóriu (ak existuje)
                                 const originalCategory = originalDataForCompare?._category || originalDataForCompare?.category || '-';
                                 // Zistite novú kategóriu (ak existuje)
                                 const updatedCategory = modifiedDataForCompare?._category || modifiedDataForCompare?.category || '-';
-
+                                
                                 // Ak sa kategórie líšia a notifikácia ešte nebola pridaná
                                 if (originalCategory !== updatedCategory && !generatedChanges.some(change => change.includes('Zmena Kategórie:'))) {
                                     generatedChanges.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
                                 }
+
+                                // Pridať informáciu o tíme a kategórii na začiatok každej zmeny
+                                const teamName = finalDataToSave.teamName || 'Bez názvu';
+                                const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
+                                generatedChanges = generatedChanges.map(change => `Tím "${teamName}" (${teamCategory}): ${change}`);
                                                               
                                 console.log("DEBUG: DataEditModal - onSave click. generatedChanges.length (before conditional):", generatedChanges.length);
                                 console.log("DEBUG: DataEditModal - onSave click. isNewEntry (modal state):", isNewEntry);
@@ -2360,11 +2361,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
                                 // --- Save Notification to Firestore ---
                                 const userEmail = window.auth.currentUser?.email;
-                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) { // Notify also for new entries (if changes or it's a new entry)
+                                if ((generatedChanges.length > 0) && userEmail) { 
                                     const notificationsCollectionRef = collection(db, 'notifications');
+                                    // Pre nové tímy vytvoríme špeciálnu notifikáciu len ak ide skutočne o tím (nie člena)
+                                    const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isNewEntry ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges, // Updated for team addition below
+                                        changes: isAddingNewTeam ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges,
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
@@ -3316,8 +3319,6 @@ const clearFilter = (column) => {
 
   // Removed moveColumn function and related logic as column reordering is no longer supported.
 
-  // Removed handleSaveColumnVisibility function as column visibility is no longer user-configurable.
-
   const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag, isTargetUserAdminFromModal, isTargetUserHallFromModal) => { // <--- ZMENENÝ PODPIS FUNKCIE
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
@@ -3458,7 +3459,8 @@ const clearFilter = (column) => {
             if (isNewEntryFlag) {
                 // Nový tím
                 updatedTeam = { ...updatedDataFromModal, registeredBy: currentDocData.firstName + " " + currentDocData.lastName };
-                generatedChanges.push(`Nový tím bol pridaný: ${updatedTeam.teamName || 'Bez názvu'} (Kategória: ${actualCategory})`);
+                const newTeamName = updatedTeam.teamName || 'Bez názvu';
+                generatedChanges.push(`Nový tím bol pridaný: ${newTeamName} (Kategória: ${actualCategory})`);
                 
                 // Uistite sa, že kategória sa zhoduje s kľúčom
                 updatedTeam.category = actualCategory;
@@ -3478,78 +3480,85 @@ const clearFilter = (column) => {
                     // 1. Odstrániť tím z pôvodnej kategórie
                     const oldCategoryTeams = currentDocData.teams?.[oldCategory] || [];
                     const updatedOldCategoryTeams = oldCategoryTeams.filter((_, idx) => idx !== oldTeamIndex);
-
+                
                     // 2. Pridať tím do novej kategórie
                     const newCategoryTeams = currentDocData.teams?.[actualCategory] || [];
                     // Ensure the updatedTeam has the correct _category and category
                     updatedDataFromModal.category = actualCategory;
                     updatedDataFromModal._category = actualCategory;
-
+                
                     updatedTeam = updatedDataFromModal; // Použiť priamo updatedDataFromModal, pretože už je spracovaný
                     
                     const updatedNewCategoryTeams = [...newCategoryTeams, updatedTeam];
-
+                
                     const updates = {};
                     updates[`teams.${oldCategory}`] = updatedOldCategoryTeams; // Aktualizovať starú kategóriu
                     updates[`teams.${actualCategory}`] = updatedNewCategoryTeams; // Aktualizovať novú kategóriu
                     
-                    generatedChanges.push(`Zmena Kategórie tímu '${originalTeam.teamName || 'Bez názvu'}': z '${oldCategory}' na '${actualCategory}'`);
+                    const teamName = updatedTeam.teamName || 'Bez názvu';
+                    generatedChanges.push(`Tím "${teamName}": Zmena Kategórie: z '${oldCategory}' na '${actualCategory}'`);
                     
                     // Získame aj ostatné zmeny
                     originalTeam = JSON.parse(JSON.stringify(currentDocData.teams?.[oldCategory]?.[oldTeamIndex] || {}));
-                    generatedChanges.push(...getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY));
-
+                    const otherChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY);
+                    // Pridať informáciu o tíme ku všetkým zmenám
+                    generatedChanges.push(...otherChanges.map(change => `Tím "${teamName}" (${actualCategory}): ${change}`));
+                
                     await updateDoc(targetDocRef, updates);
 
                 } else {
-                    // AK sa kategória NEZMENILA, len aktualizovať existujúci tím v tej istej kategórii
-                    originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[oldTeamIndex] || {}));
-                    
-                    updatedTeam = { ...originalTeam };
-                    for (const key in updatedDataFromModal) {
+                  // AK sa kategória NEZMENILA, len aktualizovať existujúci tím v tej istej kategórii
+                  originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[oldTeamIndex] || {}));
+                      
+                      updatedTeam = { ...originalTeam };
+                      for (const key in updatedDataFromModal) {
                         if (key === 'address' || key === 'billing') { // Opravené na 'billing'
-                            updatedTeam[key] = {
-                                ...(originalTeam[key] || {}),
-                                ...(updatedDataFromModal[key] || {})
+                          updatedTeam[key] = {
+                              ...(originalTeam[key] || {}),
+                              ...(updatedDataFromModal[key] || {})
+                          };
+                          if (updatedDataFromModal[key]) {
+                              for (const subKey in originalTeam[key]) {
+                                  if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
+                                      updatedTeam[key][subKey] = '';
+                                  }
+                              }
+                          } else if (originalTeam[key]) { // If updatedDataFromModal[key] is null/undefined but originalTeam[key] exists
+                              for (const subKey in originalTeam[key]) {
+                                  updatedTeam[key][subKey] = "";
+                              }
+                          }
+                      } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
+                          updatedTeam[key] = {
+                              ...(originalTeam[key] || {}),
+                              ...updatedDataFromModal[key]
                             };
-                            if (updatedDataFromModal[key]) {
-                                for (const subKey in originalTeam[key]) {
-                                    if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
-                                        updatedTeam[key][subKey] = '';
-                                    }
-                                }
-                            } else if (originalTeam[key]) { // If updatedDataFromModal[key] is null/undefined but originalTeam[key] exists
-                                for (const subKey in originalTeam[key]) {
-                                    updatedTeam[key][subKey] = "";
-                                }
-                            }
-                        } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
-                            updatedTeam[key] = {
-                                ...(originalTeam[key] || {}),
-                                ...updatedDataFromModal[key]
-                            };
-                             if (updatedDataFromModal[key]) {
-                                for (const subKey in originalTeam[key]) {
-                                    if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
-                                        updatedTeam[key][subKey] = '';
-                                    }
-                                }
-                            }
-                        } else {
-                            updatedTeam[key] = updatedDataFromModal[key];
-                        }
+                           if (updatedDataFromModal[key]) {
+                              for (const subKey in originalTeam[key]) {
+                                  if (updatedDataFromModal[key][subKey] === undefined && typeof originalTeam[key][subKey] === 'string') {
+                                      updatedTeam[key][subKey] = '';
+                                  }
+                              }
+                          }
+                      } else {
+                          updatedTeam[key] = updatedDataFromModal[key];
+                      }
+                  }
+                  generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY);
+          
+                  if (generatedChanges.length === 0) {
+                      setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
+                      closeEditModal();
+                      return;
                     }
-                    generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY);
-
-                    if (generatedChanges.length === 0) {
-                        setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
-                        closeEditModal();
-                        return;
-                    }
-
+          
+                    // Pridať informáciu o tíme a kategórii ku všetkým zmenám
+                    const teamName = updatedTeam.teamName || 'Bez názvu';
+                    generatedChanges = generatedChanges.map(change => `Tím "${teamName}" (${actualCategory}): ${change}`);
+    
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams[oldTeamIndex] = updatedTeam; // Používame oldTeamIndex
-                    
+            
                     const updates = {};
                     updates[`teams.${actualCategory}`] = newCategoryTeams; // Použiť SKUTOČNÚ kategóriu
                     await updateDoc(targetDocRef, updates);
@@ -3610,6 +3619,48 @@ const clearFilter = (column) => {
             if (isNewEntryFlag) {
                 const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} };
                 currentMemberArray.push(newMember);
+                
+                // Generovanie detailnej notifikácie pre nového člena
+                const memberName = `${newMember.firstName || ''} ${newMember.lastName || ''}`.trim() || 'Bez mena';
+                const memberType = editModalTitle.includes('hráča') ? 'Hráč' : 
+                                  editModalTitle.includes('členku R. tímu (žena)') ? 'Člen realizačného tímu (žena)' :
+                                  editModalTitle.includes('člena R. tímu (muž)') ? 'Člen realizačného tímu (muž)' :
+                                  editModalTitle.includes('šoférku (žena)') ? 'Šofér (žena)' :
+                                  editModalTitle.includes('šoféra (muž)') ? 'Šofér (muž)' : 'Člen tímu';
+                
+                const newMemberChanges = [];
+                newMemberChanges.push(`Nový ${memberType} pridaný: ${memberName}`);
+                if (newMember.dateOfBirth) newMemberChanges.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMember.dateOfBirth)}`);
+                if (newMember.jerseyNumber) newMemberChanges.push(`Číslo dresu: ${newMember.jerseyNumber}`);
+                if (newMember.registrationNumber) newMemberChanges.push(`Registračné číslo: ${newMember.registrationNumber}`);
+                if (newMember.address) {
+                    const streetAndNumber = [newMember.address.street, newMember.address.houseNumber]
+                        .filter(part => part && part.trim() !== '')
+                        .join(' ');
+                    const addressParts = [
+                        streetAndNumber,
+                        newMember.address.postalCode,
+                        newMember.address.city,
+                        newMember.address.country
+                    ].filter(part => part && part.trim() !== '');
+                    if (addressParts.length > 0) {
+                        newMemberChanges.push(`Adresa: ${addressParts.join(', ')}`);
+                    }
+                }
+                newMemberChanges.push(`Tím: ${teamToUpdate.teamName || 'Bez názvu'} (${category})`);
+                
+                // Uložiť notifikáciu do Firestore
+                const userEmail = window.auth.currentUser?.email;
+                if (userEmail) {
+                    const notificationsCollectionRef = collection(db, 'notifications');
+                    await addDoc(notificationsCollectionRef, {
+                        userEmail,
+                        changes: newMemberChanges,
+                        timestamp: serverTimestamp()
+                    });
+                    console.log("Notifikácia o pridaní nového člena tímu uložená do Firestore.");
+                }
+                
                 setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
             } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
                 const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
@@ -3644,7 +3695,7 @@ const clearFilter = (column) => {
                     }
 
 
-                const generatedChanges = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
+                let generatedChanges = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
                 // console.log("DEBUG: Člen tímu - Generované zmeny:", generatedChanges);
 
                 if (generatedChanges.length === 0) {
@@ -3652,6 +3703,11 @@ const clearFilter = (column) => {
                     closeEditModal();
                     return;
                 }
+
+                // Pridať informáciu o tíme a kategórii ku všetkým zmenám člena
+                const memberName = `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() || 'Bez mena';
+                const teamName = teamToUpdate.teamName || 'Bez názvu';
+                generatedChanges = generatedChanges.map(change => `${memberName} (Tím: ${teamName}, ${category}): ${change}`);
 
                 currentMemberArray[memberArrayIndex] = updatedMember;
                 setUserNotificationMessage("Zmeny člena boli úspešne uložené.", 'success');
@@ -4072,7 +4128,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
         data: editingData,
         onSave: handleSaveEditedData, // Odovzdať handler na uloženie
         onDeleteMember: handleDeleteMember, // Odovzdať handler pre odstránenie člena
-        onDeleteTeam: handleDeleteTeam, // ODVOZDAŤ NOVÝ HANDLER PRE ODSTRÁNENIE TÍMU
+        onDeleteTeam: handleDeleteTeam, // Odovzdať handler pre odstránenie tímu
         targetDocRef: editingDocRef,    // Odovzdať referenciu na dokument
         originalDataPath: editingDataPath, // Odovzdať cestu v dokumente
         setUserNotificationMessage: setUserNotificationMessage, // Preposielame setter notifikácie
@@ -4080,7 +4136,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
         isNewEntry: isNewEntry, // Odovzdať príznak
         getChangesForNotification: getChangesForNotification, // Pass the helper function as a prop
         formatDateToDMMYYYY: formatDateToDMMYYYY, // Pass formatDateToDMMYYYY as a prop
-        currentUserId: user?.uid // Pass the current user ID to the modal
+        currentUserId: user?.uid, // Pass the current user ID to the modal
+        editModalTitle: editModalTitle // Pass editModalTitle as a prop
     }),
     // Modálne okno na výber typu člena
     React.createElement(AddMemberTypeSelectionModal, {
