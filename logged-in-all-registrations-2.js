@@ -3408,7 +3408,7 @@ const clearFilter = (column) => {
                 delete modifiedDataForCompare.billing; // Opravené na 'billing' namiesto 'billingAddress'
             }
 
-            const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
+            const generatedChanges = getChangesForNotificationProp(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYYProp); // Pass formatDateToDMMYYYY
             
             if (generatedChanges.length === 0) {
                 setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
@@ -3494,11 +3494,11 @@ const clearFilter = (column) => {
                     updates[`teams.${oldCategory}`] = updatedOldCategoryTeams; // Aktualizovať starú kategóriu
                     updates[`teams.${actualCategory}`] = updatedNewCategoryTeams; // Aktualizovať novú kategóriu
                     
-                    generatedChanges.push(`Zmena Kategórie tímu '${originalTeam.teamName || 'Bez názvu'}': z '${oldCategory}' na '${actualCategory}'`);
+                    generatedChanges.push(`Zmena ${formatLabel('_category')}: z '${oldCategory}' na '${actualCategory}'`);
                     
                     // Získame aj ostatné zmeny
                     originalTeam = JSON.parse(JSON.stringify(currentDocData.teams?.[oldCategory]?.[oldTeamIndex] || {}));
-                    generatedChanges.push(...getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY));
+                    generatedChanges.push(...getChangesForNotificationProp(originalTeam, updatedTeam, formatDateToDMMYYYYProp));
 
                     await updateDoc(targetDocRef, updates);
 
@@ -3540,7 +3540,7 @@ const clearFilter = (column) => {
                             updatedTeam[key] = updatedDataFromModal[key];
                         }
                     }
-                    generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY);
+                    generatedChanges = getChangesForNotificationProp(originalTeam, updatedTeam, formatDateToDMMYYYYProp);
 
                     if (generatedChanges.length === 0) {
                         setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
@@ -3687,7 +3687,7 @@ const clearFilter = (column) => {
                     }
 
 
-                const generatedChanges = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
+                const generatedChanges = getChangesForNotificationProp(originalMember, updatedMember, formatDateToDMMYYYYProp); // Pass formatDateToDMMYYYY
                 // console.log("DEBUG: Člen tímu - Generované zmeny:", generatedChanges);
 
                 if (generatedChanges.length === 0) {
