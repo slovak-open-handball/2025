@@ -3693,29 +3693,29 @@ const clearFilter = (column) => {
 
         const addressStr = newMember.address
             ? [
-                `${newMember.address.street || ''} ${newMember.address.houseNumber || ''}`.trim(),
-                `${newMember.address.postalCode || ''} ${newMember.address.city || ''}`.trim(),
+                `"""${newMember.address.street || ''} ${newMember.address.houseNumber || ''}"`.trim(),
+                `"""${newMember.address.postalCode || ''} ${newMember.address.city || ''}"`.trim(),
                 newMember.address.country || ''
               ].filter(Boolean).join(', ') || '—'
             : '—';
 
         const additionMessage = [
-            `Nový ${memberType} pridaný: ${memberName}`,
+            `Nový ${memberType} pridaný: """${memberName}"`,
         ];
 
         if (newMember.dateOfBirth) {
-            additionMessage.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMember.dateOfBirth)}`);
+            additionMessage.push(`Dátum narodenia: """${formatDateToDMMYYYY(newMember.dateOfBirth)}"`);
         }
         if (newMember.jerseyNumber) {
-            additionMessage.push(`Číslo dresu: ${newMember.jerseyNumber}`);
+            additionMessage.push(`Číslo dresu: """${newMember.jerseyNumber}"`);
         }
         if (newMember.registrationNumber) {
-            additionMessage.push(`Registračné číslo: ${newMember.registrationNumber}`);
+            additionMessage.push(`Registračné číslo: """${newMember.registrationNumber}"`);
         }
         if (addressStr !== '—') {
-            additionMessage.push(`Adresa: ${addressStr}`);
+            additionMessage.push(`Adresa: """${addressStr}"`);
         }
-        additionMessage.push(`Tím: ${teamName} (${teamCategory})`);
+        additionMessage.push(`Tím: """${teamName} (${teamCategory})"`);
 
         // Uloženie notifikácie do Firestore
         const userEmail = window.auth.currentUser?.email;
