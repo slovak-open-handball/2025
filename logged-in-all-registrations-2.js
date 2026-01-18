@@ -1033,7 +1033,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
                 // General case - use formatLabel for all fields
                 changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
-
+            
                 if (changeDescription && !changes.includes(changeDescription)) {
                     changes.push(changeDescription);
                 }
@@ -1054,9 +1054,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     const formattedUpdatedArrival = formatArrivalTime(updatedArrivalType, updatedArrivalTime);
 
     if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes(`Zmena ${formatLabel('arrival.type')}:`))) {
-        changes.push(`Zmena ${formatLabel('arrival.type')}: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
-    }
-
+      changes.push(`Zmena ${formatLabel('arrival.type')}: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
+  }
+  
     return changes;
 };
 
@@ -3498,7 +3498,7 @@ const clearFilter = (column) => {
                     
                     // Získame aj ostatné zmeny
                     originalTeam = JSON.parse(JSON.stringify(currentDocData.teams?.[oldCategory]?.[oldTeamIndex] || {}));
-                    generatedChanges.push(...getChangesForNotificationProp(originalTeam, updatedTeam, formatDateToDMMYYYYProp));
+                    generatedChanges.push(...getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY));
 
                     await updateDoc(targetDocRef, updates);
 
