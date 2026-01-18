@@ -3625,9 +3625,11 @@ const clearFilter = (column) => {
                 if (newMember.jerseyNumber) newMemberChanges.push(`Číslo dresu: ${newMember.jerseyNumber}`);
                 if (newMember.registrationNumber) newMemberChanges.push(`Registračné číslo: ${newMember.registrationNumber}`);
                 if (newMember.address) {
+                    const streetAndNumber = [newMember.address.street, newMember.address.houseNumber]
+                        .filter(part => part && part.trim() !== '')
+                        .join(' ');
                     const addressParts = [
-                        newMember.address.street,
-                        newMember.address.houseNumber,
+                        streetAndNumber,
                         newMember.address.postalCode,
                         newMember.address.city,
                         newMember.address.country
