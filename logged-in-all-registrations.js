@@ -2377,11 +2377,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 // --- Save Notification to Firestore ---
                                 const userEmail = window.auth.currentUser?.email;
                                 if ((generatedChanges.length > 0) && userEmail) { 
-//                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) {
                                     const notificationsCollectionRef = collection(db, 'notifications');
+                                    // Pre nové tímy vytvoríme špeciálnu notifikáciu len ak ide skutočne o tím (nie člena)
+                                    const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isNewEntry ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges, // Updated for team addition below
+                                        changes: isAddingNewTeam ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges,
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
