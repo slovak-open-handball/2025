@@ -3567,47 +3567,44 @@ const clearFilter = (column) => {
             }
             closeEditModal(); 
             return;
-        } else if (originalDataPath.includes('playerDetails') || 
+        } else if (originalDataPath.includes('playerDetails') ||
            originalDataPath.includes('menTeamMemberDetails') ||
            originalDataPath.includes('womenTeamMemberDetails') ||
            originalDataPath.includes('driverDetailsMale') ||
            originalDataPath.includes('driverDetailsFemale')) {
 
-    // ────────────────────────────────────────────────────────────────
-    // Rozbor cesty: teams.[kategória][indexTímu].[poleČlenov][indexČlena]
-    // ────────────────────────────────────────────────────────────────
     const pathParts = originalDataPath.split('.');
     if (pathParts.length !== 3) {
-        throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty, našlo sa ${pathParts.length}. Cesta: ${originalDataPath}`);
+        throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty.`);
     }
 
     const categoryAndIndexPart = pathParts[1];
     const memberArrayAndIndexPart = pathParts[2];
 
     const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-    if (!categoryMatch) {
-        throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}`);
-    }
+    if (!categoryMatch) throw new Error("Neplatný formát kategórie a indexu tímu");
+
+    const category = categoryMatch[1];
+    const teamIndex = parseInt(categoryMatch[2]);
+
+    // ─── Kľúčová zmena ───────────────────────────────────────
+    // Rozhodujeme podľa prítomnosti [-1] v ceste, nie podľa flagu
+    const isReallyNew = memberArrayAndIndexPart.includes('[-1]');
 
     let memberArrayPath;
     let memberArrayIndex;
-    
-    if (isNewEntryFlag) {
+
+    if (isReallyNew) {
         const arrayNameMatch = memberArrayAndIndexPart.match(/^(.*?)\[-1\]$/);
-        if (!arrayNameMatch) {
-            throw new Error(`Neplatný formát poľa člena pre nový záznam (očakáva sa [-1]): ${memberArrayAndIndexPart}`);
-        }
+        if (!arrayNameMatch) throw new Error("Neplatný formát [-1]");
         memberArrayPath = arrayNameMatch[1];
         memberArrayIndex = -1;
     } else {
-        const existingMemberMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-        if (!existingMemberMatch) {
-            throw new Error(`Neplatný formát poľa člena a indexu: ${memberArrayAndIndexPart}`);
-        }
-        memberArrayPath = existingMemberMatch[1];
-        memberArrayIndex = parseInt(existingMemberMatch[2]);
+        const existingMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+        if (!existingMatch) throw new Error("Neplatný formát indexu člena");
+        memberArrayPath = existingMatch[1];
+        memberArrayIndex = parseInt(existingMatch[2]);
     }
-
     const category = categoryMatch[1];
     const teamIndex = parseInt(categoryMatch[2]);
 
