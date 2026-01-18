@@ -605,10 +605,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             const newMealValue = isChecked ? 'Áno' : 'Nie';
 
             if (originalMealValue !== newMealValue) {
-                const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Bez mena';
-                const teamName = team.teamName || 'Bez názvu';
-                changes.push(`Zmena stravovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
-                changes.push(`  • ${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}: z '${originalMealValue}' na '${newMealValue}'`);
+                changes.push(`Zmena Stravovanie (${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}): z '${originalMealValue}' na '${newMealValue}'`);
             }
             // --- End Notification Logic ---
 
@@ -1645,23 +1642,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     const renderMemberFields = () => {
         // console.log('DataEditModal: renderMemberFields called. localEditedData:', localEditedData); // Debug log
         const memberElements = [];
-        
-        // Určiť, či ide o hráča (zobrazujeme jerseyNumber a registrationNumber) alebo iného člena tímu
-        const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nového hráča');
-        
-        // Základné polia pre všetkých členov
-        let memberFieldsOrder = [
-            'firstName', 'lastName', 'dateOfBirth',
+        const memberFieldsOrder = [
+            'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
         ];
-        
-        // Ak je to hráč, pridáme jerseyNumber a registrationNumber po dateOfBirth
-        if (isPlayer) {
-            memberFieldsOrder = [
-                'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
-                'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
-            ];
-        }
         
         memberFieldsOrder.forEach(path => {
             // Používame getNestedValue s localEditedData pre aktuálny stav
@@ -2376,13 +2360,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
                                 // --- Save Notification to Firestore ---
                                 const userEmail = window.auth.currentUser?.email;
-                                if ((generatedChanges.length > 0) && userEmail) { 
+                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) { // Notify also for new entries (if changes or it's a new entry)
                                     const notificationsCollectionRef = collection(db, 'notifications');
-                                    // Pre nové tímy vytvoríme špeciálnu notifikáciu len ak ide skutočne o tím (nie člena)
-                                    const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
-                                        changes: isAddingNewTeam ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges,
+                                        changes: isNewEntry ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges, // Updated for team addition below
                                         timestamp: serverTimestamp()
                                     });
                                     console.log("Notifikácia o zmene uložená do Firestore.");
@@ -3476,9 +3458,7 @@ const clearFilter = (column) => {
             if (isNewEntryFlag) {
                 // Nový tím
                 updatedTeam = { ...updatedDataFromModal, registeredBy: currentDocData.firstName + " " + currentDocData.lastName };
-                if (updatedTeam.teamName && updatedTeam.teamName.trim() !== '') {
-                    generatedChanges.push(`Nový tím bol pridaný: ${updatedTeam.teamName} (Kategória: ${actualCategory})`);
-                }
+                generatedChanges.push(`Nový tím bol pridaný: ${updatedTeam.teamName || 'Bez názvu'} (Kategória: ${actualCategory})`);
                 
                 // Uistite sa, že kategória sa zhoduje s kľúčom
                 updatedTeam.category = actualCategory;
@@ -3630,48 +3610,6 @@ const clearFilter = (column) => {
             if (isNewEntryFlag) {
                 const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} };
                 currentMemberArray.push(newMember);
-                
-                // Generovanie detailnej notifikácie pre nového člena
-                const memberName = `${newMember.firstName || ''} ${newMember.lastName || ''}`.trim() || 'Bez mena';
-                const memberType = editModalTitle.includes('hráča') ? 'Hráč' : 
-                                  editModalTitle.includes('členku R. tímu (žena)') ? 'Člen realizačného tímu (žena)' :
-                                  editModalTitle.includes('člena R. tímu (muž)') ? 'Člen realizačného tímu (muž)' :
-                                  editModalTitle.includes('šoférku (žena)') ? 'Šofér (žena)' :
-                                  editModalTitle.includes('šoféra (muž)') ? 'Šofér (muž)' : 'Člen tímu';
-                
-                const newMemberChanges = [];
-                newMemberChanges.push(`Nový ${memberType} pridaný: ${memberName}`);
-                if (newMember.dateOfBirth) newMemberChanges.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMember.dateOfBirth)}`);
-                if (newMember.jerseyNumber) newMemberChanges.push(`Číslo dresu: ${newMember.jerseyNumber}`);
-                if (newMember.registrationNumber) newMemberChanges.push(`Registračné číslo: ${newMember.registrationNumber}`);
-                if (newMember.address) {
-                    const streetAndNumber = [newMember.address.street, newMember.address.houseNumber]
-                        .filter(part => part && part.trim() !== '')
-                        .join(' ');
-                    const addressParts = [
-                        streetAndNumber,
-                        newMember.address.postalCode,
-                        newMember.address.city,
-                        newMember.address.country
-                    ].filter(part => part && part.trim() !== '');
-                    if (addressParts.length > 0) {
-                        newMemberChanges.push(`Adresa: ${addressParts.join(', ')}`);
-                    }
-                }
-                newMemberChanges.push(`Tím: ${teamToUpdate.teamName || 'Bez názvu'} (${category})`);
-                
-                // Uložiť notifikáciu do Firestore
-                const userEmail = window.auth.currentUser?.email;
-                if (userEmail) {
-                    const notificationsCollectionRef = collection(db, 'notifications');
-                    await addDoc(notificationsCollectionRef, {
-                        userEmail,
-                        changes: newMemberChanges,
-                        timestamp: serverTimestamp()
-                    });
-                    console.log("Notifikácia o pridaní nového člena tímu uložená do Firestore.");
-                }
-                
                 setUserNotificationMessage("Nový člen bol úspešne pridaný do tímu.", 'success');
             } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
                 const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
