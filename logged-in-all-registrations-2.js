@@ -3456,7 +3456,7 @@ const clearFilter = (column) => {
             }
 
 
-            if (isNewEntryFlag) {
+            if (isReallyNew) {
                 // Nový tím
                 updatedTeam = { ...updatedDataFromModal, registeredBy: currentDocData.firstName + " " + currentDocData.lastName };
                 const newTeamName = updatedTeam.teamName || 'Bez názvu';
@@ -3630,7 +3630,7 @@ const clearFilter = (column) => {
     // ────────────────────────────────────────────────────────────────
     // PRÍPAD 1: Pridávanie NOVÉHO člena
     // ────────────────────────────────────────────────────────────────
-    if (isNewEntryFlag) {
+    if (isReallyNew) {
 
         const newMember = {
             ...updatedDataFromModal,
