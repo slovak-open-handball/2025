@@ -1128,10 +1128,10 @@ const formatDisplayValue = (value, path) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotification, formatDateToDMMYYYY: formatDateToDMMYYYY, currentUserId }) { // Pridané onDeleteMember a getChangesForNotification a formatDateToDMMYYYY
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotification, formatDateToDMMYYYY: formatDateToDMMYYYY, currentUserId, editModalTitle }) { // Pridané editModalTitle
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
-    const [localEditedData, setLocalEditedData] = React.useState(data); 
+    const [localEditedData, setLocalEditedData] = React.useState(data);
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
     const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); // Opravený preklep z setIsTargetMuserHall na setIsTargetUserHall
@@ -4128,7 +4128,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
         data: editingData,
         onSave: handleSaveEditedData, // Odovzdať handler na uloženie
         onDeleteMember: handleDeleteMember, // Odovzdať handler pre odstránenie člena
-        onDeleteTeam: handleDeleteTeam, // ODVOZDAŤ NOVÝ HANDLER PRE ODSTRÁNENIE TÍMU
+        onDeleteTeam: handleDeleteTeam, // Odovzdať handler pre odstránenie tímu
         targetDocRef: editingDocRef,    // Odovzdať referenciu na dokument
         originalDataPath: editingDataPath, // Odovzdať cestu v dokumente
         setUserNotificationMessage: setUserNotificationMessage, // Preposielame setter notifikácie
@@ -4136,7 +4136,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
         isNewEntry: isNewEntry, // Odovzdať príznak
         getChangesForNotification: getChangesForNotification, // Pass the helper function as a prop
         formatDateToDMMYYYY: formatDateToDMMYYYY, // Pass formatDateToDMMYYYY as a prop
-        currentUserId: user?.uid // Pass the current user ID to the modal
+        currentUserId: user?.uid, // Pass the current user ID to the modal
+        editModalTitle: editModalTitle // Pass editModalTitle as a prop
     }),
     // Modálne okno na výber typu člena
     React.createElement(AddMemberTypeSelectionModal, {
