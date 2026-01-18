@@ -605,7 +605,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             const newMealValue = isChecked ? 'Áno' : 'Nie';
 
             if (originalMealValue !== newMealValue) {
-                changes.push(`Zmena Stravovanie (${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}): z '${originalMealValue}' na '${newMealValue}'`);
+                const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Bez mena';
+                const teamName = team.teamName || 'Bez názvu';
+                changes.push(`Zmena stravovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
+                changes.push(`  • ${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}: z '${originalMealValue}' na '${newMealValue}'`);
             }
             // --- End Notification Logic ---
 
