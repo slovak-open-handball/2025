@@ -1642,10 +1642,23 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     const renderMemberFields = () => {
         // console.log('DataEditModal: renderMemberFields called. localEditedData:', localEditedData); // Debug log
         const memberElements = [];
-        const memberFieldsOrder = [
-            'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
+        
+        // Určiť, či ide o hráča (zobrazujeme jerseyNumber a registrationNumber) alebo iného člena tímu
+        const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nového hráča');
+        
+        // Základné polia pre všetkých členov
+        let memberFieldsOrder = [
+            'firstName', 'lastName', 'dateOfBirth',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
         ];
+        
+        // Ak je to hráč, pridáme jerseyNumber a registrationNumber po dateOfBirth
+        if (isPlayer) {
+            memberFieldsOrder = [
+                'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
+                'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
+            ];
+        }
         
         memberFieldsOrder.forEach(path => {
             // Používame getNestedValue s localEditedData pre aktuálny stav
