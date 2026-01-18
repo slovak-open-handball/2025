@@ -3458,7 +3458,9 @@ const clearFilter = (column) => {
             if (isNewEntryFlag) {
                 // Nový tím
                 updatedTeam = { ...updatedDataFromModal, registeredBy: currentDocData.firstName + " " + currentDocData.lastName };
-                generatedChanges.push(`Nový tím bol pridaný: ${updatedTeam.teamName || 'Bez názvu'} (Kategória: ${actualCategory})`);
+                if (updatedTeam.teamName && updatedTeam.teamName.trim() !== '') {
+                    generatedChanges.push(`Nový tím bol pridaný: ${updatedTeam.teamName} (Kategória: ${actualCategory})`);
+                }
                 
                 // Uistite sa, že kategória sa zhoduje s kľúčom
                 updatedTeam.category = actualCategory;
