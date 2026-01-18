@@ -2360,7 +2360,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
                                 // --- Save Notification to Firestore ---
                                 const userEmail = window.auth.currentUser?.email;
-                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) { // Notify also for new entries (if changes or it's a new entry)
+                                if ((generatedChanges.length > 0) && userEmail) { 
+//                                if ((generatedChanges.length > 0 || isNewEntry) && userEmail) {
                                     const notificationsCollectionRef = collection(db, 'notifications');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
