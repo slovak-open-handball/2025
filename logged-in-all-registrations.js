@@ -2379,7 +2379,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 if ((generatedChanges.length > 0) && userEmail) { 
                                     const notificationsCollectionRef = collection(db, 'notifications');
                                     // Pre nové tímy vytvoríme špeciálnu notifikáciu len ak ide skutočne o tím (nie člena)
-                                    const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
+                                    const isAddingNewTeam = isNewEntryFlag && modalTitle.includes('Pridať nový tím');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail,
                                         changes: isAddingNewTeam ? [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`] : generatedChanges,
@@ -2391,7 +2391,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
                                 // Teraz zavolať prop onSave z AllRegistrationsApp s kompletne pripravenými dátami
                                 // ODOSLAŤ isTargetUserAdmin a isTargetUserHall AKO PARAMETRE
-                                onSave(finalDataToSave, targetDocRef, originalDataPath, isNewEntry, isTargetUserAdmin, isTargetUserHall); // <--- ZMENA TU
+                                onSave(finalDataToSave, targetDocRef, originalDataPath, isNewEntry, isTargetUserAdmin, isTargetUserHall, title);
 
                             } catch (e) {
                                 console.error("Chyba v DataEditModal pri príprave dát na uloženie:", e);
@@ -3336,7 +3336,7 @@ const clearFilter = (column) => {
 
   // Removed handleSaveColumnVisibility function as column visibility is no longer user-configurable.
 
-  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag, isTargetUserAdminFromModal, isTargetUserHallFromModal) => { // <--- ZMENENÝ PODPIS FUNKCIE
+  const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag, isTargetUserAdminFromModal, isTargetUserHallFromModal, modalTitle) => {
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
         setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
@@ -3439,7 +3439,7 @@ const clearFilter = (column) => {
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal(); 
             return;
-        } else if (editModalTitle.includes('Upraviť tím') || editModalTitle.includes('Pridať nový tím')) { 
+        } else if (modalTitle.includes('Upraviť tím') || modalTitle.includes('Pridať nový tím')) {
             // Logika pre aktualizáciu tímu
             
             const docSnapshot = await getDoc(targetDocRef);
@@ -3761,7 +3761,7 @@ const clearFilter = (column) => {
     } finally {
         window.hideGlobalLoader();
     }
-  }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle, editingData, getChangesForNotification]); // REMOVED MODAL-SPECIFIC STATES FROM DEPENDENCY ARRAY
+  }, [db, closeEditModal, setUserNotificationMessage, setError, getChangesForNotification]);
 
 
   const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPath) => {
