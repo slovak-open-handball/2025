@@ -877,9 +877,9 @@ const formatLabel = (key) => {
     if (key === 'billing.ico') return 'IČO';
     if (key === 'billing.dic') return 'DIČ';
     if (key === 'billing.icDph') return 'IČ DPH';
-    if (key === 'accommodation.type') return 'Typ ubytovania';
-    if (key === 'arrival.type') return 'Typ dopravy';
-    if (key === 'packageDetails.name') return 'Názov balíka';
+    if (key === 'accommodation.type'  || key === 'accommodation') return 'Typ ubytovania';
+    if (key === 'arrival.type' || key === 'arrival') return 'Typ dopravy';
+    if (key === 'packageDetails.name' || key === 'packageDetails') return 'Názov balíka';
     if (key === 'packageDetails.meals') return 'Stravovanie';
     if (key === 'teamName') return 'Názov tímu';
     if (key === 'playerDetails') return 'Detaily hráčov';
@@ -911,12 +911,11 @@ const formatLabel = (key) => {
     if (key === 'displayNotifications') return 'Zobrazovať notifikácie';
     if (key === 'isMenuToggled') return 'Prepínač menu';
     if (key === 'note') return 'Poznámka';
-    if (key === '_category' || key === 'category') return 'Kategória tímu'; // Pre zobrazenie kategórie tímu
+    if (key === '_category' || key === 'category') return 'Kategória tímu'; 
     if (key === 'jerseyNumber') return 'Číslo dresu';
     if (key === 'registrationNumber') return 'Číslo registrácie';
-    if (key === 'time') return 'Čas príchodu'; // Nový label pre čas príchodu
-
-
+    if (key === 'time') return 'Čas príchodu'; 
+  
     return label;
 };
 
