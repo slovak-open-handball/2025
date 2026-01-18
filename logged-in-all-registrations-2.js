@@ -2323,7 +2323,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     
                                 if (isAddingNewMember) {
                                     // NOVÝ ČLEN → v modálnom okne NEgenerujeme diff
-                                    // (notifikáciu spraví handleSaveEditedData cez vlastnú logiku)
                                     console.log("DEBUG: Nový člen → preskakujem getChangesForNotification v DataEditModal");
                                 }
                                 else if (isAddingNewTeam) {
@@ -2357,8 +2356,22 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         generatedChanges.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
                                     }
                     
-                                    // Prefix tímom (len ak máme teamName a kategóriu)
-                                    if (finalDataToSave.teamName || finalDataToSave._category) {
+                                    // ─── PRIDAŤ PREFIX PRE ČLENA (ak ide o úpravu člena) ───────────────────────────────
+                                    if (editModalTitle.toLowerCase().includes('upraviť hráč') ||
+                                        editModalTitle.toLowerCase().includes('upraviť člen') ||
+                                        editModalTitle.toLowerCase().includes('upraviť šofér')) {
+                    
+                                        const memberName = `${finalDataToSave.firstName || ''} ${finalDataToSave.lastName || ''}`.trim() || 'Bez mena';
+                                        const teamName = finalDataToSave.teamName || 'Neznámy tím'; // ak nie je v dátach, fallback
+                                        const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
+                    
+                                        generatedChanges.forEach((change, i) => {
+                                            generatedChanges[i] = `${memberName} (Tím: ${teamName}, ${teamCategory}): ${change}`;
+                                        });
+                                    }
+                                    // ────────────────────────────────────────────────────────────────────────────────
+                                    else if (finalDataToSave.teamName || finalDataToSave._category) {
+                                        // pre tímy – prefix tímom
                                         const teamName = finalDataToSave.teamName || 'Bez názvu';
                                         const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
                                         generatedChanges = generatedChanges.map(change => 
@@ -2369,7 +2382,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     
                                 console.log("DEBUG: DataEditModal → generatedChanges:", generatedChanges);
                                 console.log("DEBUG: DataEditModal → generatedChanges.length:", generatedChanges.length);
-
+                    
                                 // Ak nič nezmenené a nie je to nový člen/tím → zavrieť
                                 if (generatedChanges.length === 0 && !isAddingNewMember && !isAddingNewTeam) {
                                     setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
