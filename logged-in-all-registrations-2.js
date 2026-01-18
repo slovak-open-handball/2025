@@ -3617,49 +3617,74 @@ const clearFilter = (column) => {
             let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
             
             if (isNewEntryFlag) {
-              const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} };
-              currentMemberArray.push(newMember);
-
-              // ────────────────────────────────────────────────────────────────
-              //           Čistá notifikácia iba o pridaní nového člena
-              // ────────────────────────────────────────────────────────────────
-              const memberName = `${newMember.firstName || ''} ${newMember.lastName || ''}`.trim() || 'bez mena';
-          
-              const memberType =
-                  editModalTitle.includes('hráč')                        ? 'Hráč' :
-                  editModalTitle.includes('člen realizačného tímu (žena)') ? 'Člen RT – žena' :
-                  editModalTitle.includes('člen realizačného tímu (muž)')  ? 'Člen RT – muž' :
-                  editModalTitle.includes('šofér (žena)')                ? 'Šofér – žena' :
-                  editModalTitle.includes('šofér (muž)')                 ? 'Šofér – muž' :
-                  'Člen tímu';
-          
-              const teamName     = teamToUpdate.teamName || 'Bez názvu';
-              const teamCategory = category;  // premenná category je dostupná z vyššieho scope
-          
-              // Jednoduchá a prehľadná notifikácia (2 riadky)
-              const additionMessage = [
-                  `Pridaný nový člen: **${memberName}** (${memberType})`,
-                  `do tímu **${teamName}** (${teamCategory})`
-              ];
-          
-              // Uloženie notifikácie
-              const userEmail = window.auth.currentUser?.email;
-              if (userEmail) {
-                  const notificationsCollectionRef = collection(db, 'notifications');
-                  await addDoc(notificationsCollectionRef, {
-                      userEmail,
-                      changes: additionMessage,
-                      timestamp: serverTimestamp()
-                  });
-                  console.log("Notifikácia o pridaní nového člena uložená (bez diffu).");
-              }
-          
-              // Užívateľské hlásenie v aplikácii
-              setUserNotificationMessage(
-                  `Pridaný ${memberType} ${memberName} do tímu ${teamName} (${teamCategory})`,
-                  'success'
-              );
-          } else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
+                const newMember = { ...updatedDataFromModal, address: updatedDataFromModal.address || {} };
+                currentMemberArray.push(newMember);
+            
+                // ────────────────────────────────────────────────────────────────
+                // Vlastná notifikácia iba o pridaní (bez diffu)
+                // ────────────────────────────────────────────────────────────────
+                const memberName = `${newMember.firstName || ''} ${newMember.lastName || ''}`.trim() || 'bez mena';
+            
+                const memberType =
+                    editModalTitle.includes('hráč') ? 'Hráč' :
+                    editModalTitle.includes('člen realizačného tímu (žena)') ? 'Člen RT – žena' :
+                    editModalTitle.includes('člen realizačného tímu (muž)') ? 'Člen RT – muž' :
+                    editModalTitle.includes('šofér (žena)') ? 'Šofér – žena' :
+                    editModalTitle.includes('šofér (muž)') ? 'Šofér – muž' :
+                    'Člen tímu';
+            
+                const teamName = teamToUpdate.teamName || 'Bez názvu';
+                const teamCategory = category; // premenná category je z vyššieho scope
+            
+                // Formátovaná adresa
+                const addressStr = newMember.address
+                    ? [
+                        `${newMember.address.street || ''} ${newMember.address.houseNumber || ''}`.trim(),
+                        `${newMember.address.postalCode || ''} ${newMember.address.city || ''}`.trim(),
+                        newMember.address.country || ''
+                      ].filter(Boolean).join(', ') || '—'
+                    : '—';
+            
+                // Zoznam riadkov notifikácie
+                const additionMessage = [
+                    `Nový ${memberType} pridaný: **${memberName}**`,
+                ];
+            
+                // Voliteľné polia – pridávame iba ak majú hodnotu
+                if (newMember.dateOfBirth) {
+                    additionMessage.push(`* Dátum narodenia: ${formatDateToDMMYYYY(newMember.dateOfBirth)}`);
+                }
+                if (newMember.jerseyNumber) {
+                    additionMessage.push(`* Číslo dresu: ${newMember.jerseyNumber}`);
+                }
+                if (newMember.registrationNumber) {
+                    additionMessage.push(`* Registračné číslo: ${newMember.registrationNumber}`);
+                }
+                if (addressStr !== '—') {
+                    additionMessage.push(`* Adresa: ${addressStr}`);
+                }
+                additionMessage.push(`* Tím: ${teamName} (${teamCategory})`);
+            
+                // Uloženie notifikácie do Firestore
+                const userEmail = window.auth.currentUser?.email;
+                if (userEmail) {
+                    const notificationsCollectionRef = collection(db, 'notifications');
+                    await addDoc(notificationsCollectionRef, {
+                        userEmail,
+                        changes: additionMessage,
+                        timestamp: serverTimestamp()
+                    });
+                    console.log("Notifikácia o pridaní nového člena uložená (bez diffu).");
+                }
+            
+                // Zobrazenie používateľovi v aplikácii
+                setUserNotificationMessage(
+                    `Pridaný ${memberType} ${memberName} do tímu ${teamName} (${teamCategory})`,
+                    'success'
+                );
+            
+                // → NEvoláme getChangesForNotification → žiadne diff riadky nevzniknú
+            }else if (memberArrayIndex >= 0 && memberArrayIndex < currentMemberArray.length) {
                 const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
                 let updatedMember = { ...originalMember }; 
 
