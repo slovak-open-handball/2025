@@ -976,7 +976,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     // Helper for deep comparison of objects
     const compareObjects = (origObj, updObj, pathPrefix = '') => {
-        const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]); // Handle null/undefined objects
+        const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]);
 
         for (const key of nestedKeys) {
             const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
@@ -995,7 +995,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
             if (isOrigObject && isUpdObject) {
                 compareObjects(origValue, updValue, currentPath);
-                continue; // Done with this key, move to next
+                continue;
             }
 
             // Special handling for tshirts array (must be here, as it's an array and not handled by recursive object comparison)
@@ -1019,7 +1019,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                         }
                     }
                 }
-                continue; // Done with tshirts array
+                continue;
             }
 
 
@@ -1029,24 +1029,24 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
             if (valueA !== valueB) {
                 let changeDescription = '';
-                const label = formatLabel(currentPath); // Use formatLabel for user-friendly names
+                const label = formatLabel(currentPath);
 
                 // More specific descriptions for known paths
                 if (currentPath === '_category' || currentPath === 'category') {
                     changeDescription = `Zmena Kategórie: z '${valueA || '-'}' na '${valueB || '-'}'`;
                 } else if (currentPath === 'teamName') {
                     changeDescription = `Zmena Názov tímu: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'arrival.type' || currentPath === 'arrival.time') { // Catch both type and time
+                } else if (currentPath === 'arrival.type' || currentPath === 'arrival.time') {
                     // Consolidate 'arrival.type' and 'arrival.time' into one notification
                     // We will check for the full 'arrival' object change later in this function
                     // and handle it in the parent `compareObjects` loop.
                     // For now, prevent individual type/time changes from generating separate notifications.
-                    if (pathPrefix === 'arrival') { // Only prevent if directly nested under 'arrival'
+                    if (pathPrefix === 'arrival') {
                         return;
                     }
-                } else if (currentPath === 'accommodation.type') { // Use normalized values here
-                    changeDescription = `Zmena Typ ubytovania: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'packageDetails.name') { // Use normalized values here
+                } else if (currentPath === 'accommodation.type') {
+                    changeDescription = `Zmena Ubytovanie: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                } else if (currentPath === 'packageDetails.name') {
                     changeDescription = `Zmena Balík: z '${valueA || '-'}' na '${valueB || '-'}'`;
                 } else {
                     // General case for other fields (including firstName, lastName, billing.*, address.*, jerseyNumber, registrationNumber etc.)
@@ -1072,8 +1072,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     const formattedOriginalArrival = formatArrivalTime(originalArrivalType, originalArrivalTime);
     const formattedUpdatedArrival = formatArrivalTime(updatedArrivalType, updatedArrivalTime);
 
-    if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes('Zmena Typ dopravy:'))) {
-        changes.push(`Zmena Typ dopravy: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
+    if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes('Zmena Doprava:'))) {
+        changes.push(`Zmena Doprava: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
     }
 
     return changes;
