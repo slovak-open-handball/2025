@@ -3695,7 +3695,7 @@ const clearFilter = (column) => {
                     }
 
 
-                const generatedChanges = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
+                let generatedChanges = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY); // Pass formatDateToDMMYYYY
                 // console.log("DEBUG: Člen tímu - Generované zmeny:", generatedChanges);
 
                 if (generatedChanges.length === 0) {
@@ -3703,6 +3703,11 @@ const clearFilter = (column) => {
                     closeEditModal();
                     return;
                 }
+
+                // Pridať informáciu o tíme a kategórii ku všetkým zmenám člena
+                const memberName = `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() || 'Bez mena';
+                const teamName = teamToUpdate.teamName || 'Bez názvu';
+                generatedChanges = generatedChanges.map(change => `${memberName} (Tím: ${teamName}, ${category}): ${change}`);
 
                 currentMemberArray[memberArrayIndex] = updatedMember;
                 setUserNotificationMessage("Zmeny člena boli úspešne uložené.", 'success');
