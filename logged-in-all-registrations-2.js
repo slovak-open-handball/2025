@@ -3605,8 +3605,6 @@ const clearFilter = (column) => {
         memberArrayPath = existingMatch[1];
         memberArrayIndex = parseInt(existingMatch[2]);
     }
-    const category = categoryMatch[1];
-    const teamIndex = parseInt(categoryMatch[2]);
 
     // ────────────────────────────────────────────────────────────────
     // Načítanie aktuálneho dokumentu
