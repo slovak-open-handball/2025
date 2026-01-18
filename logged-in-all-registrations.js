@@ -3780,22 +3780,28 @@ const clearFilter = (column) => {
             updatedMember,
             formatDateToDMMYYYY
         );
-
+        
         if (generatedChanges.length === 0) {
             setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
             closeEditModal();
             return;
         }
-
-        // Pridať kontext (meno + tím + kategória)
+        
+        // ─── PRIDAŤ SPRÁVNY PREFIX PRE ČLENA ────────────────────────────────────────
         const memberName = `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() || 'Bez mena';
-        const teamName = teamToUpdate.teamName || 'Bez názvu';
+        const teamName   = teamToUpdate.teamName   || 'Bez názvu';
+        const teamCategory = category;  // ← category máš už z cesty originalDataPath
+        
+        // Ak sa zmenilo meno/priezvisko, použijeme NOVÉ meno v prefixe (vyzerá prirodzenejšie)
+        const prefix = `${memberName} (Tím: ${teamName}, ${teamCategory}): `;
+        
+        // Pridať prefix ku každému riadku zmeny
         generatedChanges.forEach((change, i) => {
-            generatedChanges[i] = `${memberName} (Tím: ${teamName}, ${category}): ${change}`;
+            generatedChanges[i] = prefix + change;
         });
-
+        // ──────────────────────────────────────────────────────────────────────────────
+        
         currentMemberArray[memberArrayIndex] = updatedMember;
-
         setUserNotificationMessage("Zmeny člena boli uložené.", 'success');
     }
 
