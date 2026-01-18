@@ -2334,7 +2334,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     // ÚPRAVA (člena alebo tímu) → normálny diff
                                     const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
                                     const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave));
-                    
+                                
                                     // Skryť billing/adresu pre admin/hall pri porovnaní
                                     if (isTargetUserAdmin || isTargetUserHall) {
                                         delete originalDataForCompare.address;
@@ -2342,41 +2342,33 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         delete modifiedDataForCompare.address;
                                         delete modifiedDataForCompare.billing;
                                     }
-                    
+                                
                                     generatedChanges = getChangesForNotification(
                                         originalDataForCompare,
                                         modifiedDataForCompare,
                                         formatDateToDMMYYYY
                                     );
-                    
+                                
                                     // Explicitná kontrola zmeny kategórie (len pre tímy)
                                     const originalCategory = originalDataForCompare?._category || originalDataForCompare?.category || '-';
                                     const updatedCategory = modifiedDataForCompare?._category || modifiedDataForCompare?.category || '-';
                                     if (originalCategory !== updatedCategory && !generatedChanges.some(c => c.includes('Zmena Kategórie:'))) {
                                         generatedChanges.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
                                     }
-                    
-                                    // ─── PRIDAŤ PREFIX PRE ČLENA (ak ide o úpravu člena) ───────────────────────────────
-                                    if (editModalTitle.toLowerCase().includes('upraviť hráč') ||
-                                        editModalTitle.toLowerCase().includes('upraviť člen') ||
-                                        editModalTitle.toLowerCase().includes('upraviť šofér')) {
-                    
-                                        const memberName = `${finalDataToSave.firstName || ''} ${finalDataToSave.lastName || ''}`.trim() || 'Bez mena';
-                                        const teamName = finalDataToSave.teamName || 'Neznámy tím'; // ak nie je v dátach, fallback
-                                        const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
-                    
-                                        generatedChanges.forEach((change, i) => {
-                                            generatedChanges[i] = `${memberName} (Tím: ${teamName}, ${teamCategory}): ${change}`;
-                                        });
-                                    }
-                                    // ────────────────────────────────────────────────────────────────────────────────
-                                    else if (finalDataToSave.teamName || finalDataToSave._category) {
-                                        // pre tímy – prefix tímom
+                                
+                                    // Prefix iba pre tímy (ak ide o tím)
+                                    if (finalDataToSave.teamName || finalDataToSave._category) {
                                         const teamName = finalDataToSave.teamName || 'Bez názvu';
                                         const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
                                         generatedChanges = generatedChanges.map(change => 
                                             `Tím "${teamName}" (${teamCategory}): ${change}`
                                         );
+                                    }
+                                    else if (editModalTitle.toLowerCase().includes('upraviť hráč') ||
+                                             editModalTitle.toLowerCase().includes('upraviť člen') ||
+                                             editModalTitle.toLowerCase().includes('upraviť šofér')) {
+                                        // ŽIADNY prefix tu – necháme to na handleSaveEditedData
+                                        console.log("DEBUG: Úprava člena → prefix sa pridá v handleSaveEditedData");
                                     }
                                 }
                     
@@ -3790,9 +3782,8 @@ const clearFilter = (column) => {
         // ─── PRIDAŤ SPRÁVNY PREFIX PRE ČLENA ────────────────────────────────────────
         const memberName = `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() || 'Bez mena';
         const teamName   = teamToUpdate.teamName   || 'Bez názvu';
-        const teamCategory = category;  // ← category máš už z cesty originalDataPath
+        const teamCategory = category;  // ← toto je správna hodnota z cesty
         
-        // Ak sa zmenilo meno/priezvisko, použijeme NOVÉ meno v prefixe (vyzerá prirodzenejšie)
         const prefix = `${memberName} (Tím: ${teamName}, ${teamCategory}): `;
         
         // Pridať prefix ku každému riadku zmeny
