@@ -1129,7 +1129,7 @@ const formatDisplayValue = (value, path) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotificationProp, formatDateToDMMYYYY: formatDateToDMMYYYYProp, currentUserId }) { // Pridané onDeleteMember a getChangesForNotificationProp a formatDateToDMMYYYYProp
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotification, formatDateToDMMYYYY: formatDateToDMMYYYYProp, currentUserId }) { // Pridané onDeleteMember a getChangesForNotification a formatDateToDMMYYYYProp
     const modalRef = React.useRef(null);
     const db = window.db; // Prístup k db z window objektu
     const [localEditedData, setLocalEditedData] = React.useState(data); 
@@ -2330,8 +2330,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 console.log("DEBUG: DataEditModal - onSave click. originalDataForCompare for diff:", originalDataForCompare);
                                 console.log("DEBUG: DataEditModal - onSave click. modifiedDataForCompare for diff:", modifiedDataForCompare);
 
-                                // Pass formatDateToDMMYYYYProp to getChangesForNotificationProp
-                                const generatedChanges = getChangesForNotificationProp(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYYProp); 
+                                // Pass formatDateToDMMYYYYProp to getChangesForNotification
+                                const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYYProp); 
 
                                 // --- Explicitná kontrola pre zmenu kategórie ---
                                 // Zistite pôvodnú kategóriu (ak existuje)
@@ -3315,8 +3315,6 @@ const clearFilter = (column) => {
 
   // Removed moveColumn function and related logic as column reordering is no longer supported.
 
-  // Removed handleSaveColumnVisibility function as column visibility is no longer user-configurable.
-
   const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag, isTargetUserAdminFromModal, isTargetUserHallFromModal) => { // <--- ZMENENÝ PODPIS FUNKCIE
     if (!targetDocRef) {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
@@ -3408,7 +3406,7 @@ const clearFilter = (column) => {
                 delete modifiedDataForCompare.billing; // Opravené na 'billing' namiesto 'billingAddress'
             }
 
-            const generatedChanges = getChangesForNotificationProp(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYYProp); // Pass formatDateToDMMYYYY
+            const generatedChanges = getChangesForNotification(originalDataForCompare, modifiedDataForCompare, formatDateToDMMYYYYProp); // Pass formatDateToDMMYYYY
             
             if (generatedChanges.length === 0) {
                 setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
@@ -3540,7 +3538,7 @@ const clearFilter = (column) => {
                             updatedTeam[key] = updatedDataFromModal[key];
                         }
                     }
-                    generatedChanges = getChangesForNotificationProp(originalTeam, updatedTeam, formatDateToDMMYYYYProp);
+                    generatedChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYYProp);
 
                     if (generatedChanges.length === 0) {
                         setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
@@ -3687,7 +3685,7 @@ const clearFilter = (column) => {
                     }
 
 
-                const generatedChanges = getChangesForNotificationProp(originalMember, updatedMember, formatDateToDMMYYYYProp); // Pass formatDateToDMMYYYY
+                const generatedChanges = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYYProp); // Pass formatDateToDMMYYYY
                 // console.log("DEBUG: Člen tímu - Generované zmeny:", generatedChanges);
 
                 if (generatedChanges.length === 0) {
