@@ -1015,7 +1015,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                         } else if (newQuantity === 0 && oldQuantity > 0) {
                             changes.push(`Odstránené tričko (${size}): ${oldQuantity}`);
                         } else {
-                            changes.push(`Zmena Veľkosť trička a ich počet: z '${size} - ${oldQuantity}' na '${size} - ${newQuantity}'`);
+                            changes.push(`Zmena ${formatLabel('tshirts')}: z '${size} - ${oldQuantity}' na '${size} - ${newQuantity}'`);
                         }
                     }
                 }
@@ -1031,27 +1031,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 let changeDescription = '';
                 const label = formatLabel(currentPath);
 
-                // More specific descriptions for known paths
-                if (currentPath === '_category' || currentPath === 'category') {
-                    changeDescription = `Zmena Kategórie: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'teamName') {
-                    changeDescription = `Zmena Názov tímu: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'arrival.type' || currentPath === 'arrival.time') {
-                    // Consolidate 'arrival.type' and 'arrival.time' into one notification
-                    // We will check for the full 'arrival' object change later in this function
-                    // and handle it in the parent `compareObjects` loop.
-                    // For now, prevent individual type/time changes from generating separate notifications.
-                    if (pathPrefix === 'arrival') {
-                        return;
-                    }
-                } else if (currentPath === 'accommodation.type') {
-                    changeDescription = `Zmena Ubytovanie: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else if (currentPath === 'packageDetails.name') {
-                    changeDescription = `Zmena Balík: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                } else {
-                    // General case for other fields (including firstName, lastName, billing.*, address.*, jerseyNumber, registrationNumber etc.)
-                    changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                }
+                // General case - use formatLabel for all fields
+                changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
 
                 if (changeDescription && !changes.includes(changeDescription)) {
                     changes.push(changeDescription);
@@ -1072,8 +1053,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     const formattedOriginalArrival = formatArrivalTime(originalArrivalType, originalArrivalTime);
     const formattedUpdatedArrival = formatArrivalTime(updatedArrivalType, updatedArrivalTime);
 
-    if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes('Zmena Doprava:'))) {
-        changes.push(`Zmena Doprava: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
+    if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes(`Zmena ${formatLabel('arrival.type')}:`))) {
+        changes.push(`Zmena ${formatLabel('arrival.type')}: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
     }
 
     return changes;
