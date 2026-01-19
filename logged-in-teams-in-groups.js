@@ -434,7 +434,6 @@ const AddGroupsApp = (props) => {
         const userId = originalTeam.uid;
     
         const categoryName = categoryIdToNameMap[categoryId];
-        const userId = originalTeam.uid;
         const finalTeamName = `${categoryName} ${teamName.trim() || ''}`;
     
         try {
