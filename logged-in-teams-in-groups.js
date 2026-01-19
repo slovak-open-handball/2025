@@ -916,62 +916,50 @@ const AddGroupsApp = (props) => {
                     }`
                 },
                 React.createElement('span', { className: `flex-grow ${textColor}` }, display),
-    
-                // ceruzka pri KAŽDOM tíme
+        
                 React.createElement(
                     'button',
                     {
-                        onClick: () => {
-                            console.log("Editujem tím:", team);
-                            console.log("uid:", team.uid);
-
-                            if (!team.isSuperstructureTeam && team.uid) {
-                                try {
-                                    const userRef = doc(window.db, 'users', team.uid);
-                                    const snap = await getDoc(userRef);
-                                    if (snap.exists()) {
-                                        const data = snap.data();
-                                        const cat = team.category;
-                                        const teams = data.teams?.[cat] || [];
-                                        const exists = teams.some(t => t.id === team.id);
-                                        if (!exists) {
-                                            alert(`Tím "${team.teamName}" už v profile používateľa neexistuje. Zoznam sa čoskoro aktualizuje.`);
-                                            return;
-                                        }
-                                    } else {
-                                        alert("Profil používateľa už neexistuje.");
+                    onClick: async () => { 
+                        console.log("Editujem tím:", team);
+                        console.log("uid:", team.uid);
+        
+                        if (!team.isSuperstructureTeam && team.uid) {
+                            try {
+                                const userRef = doc(window.db, 'users', team.uid);
+                                const snap = await getDoc(userRef);
+                                if (snap.exists()) {
+                                    const data = snap.data();
+                                    const cat = team.category;
+                                    const teams = data.teams?.[cat] || [];
+                                    const exists = teams.some(t => t.id === team.id);
+                                    if (!exists) {
+                                        alert(`Tím "${team.teamName}" už v profile používateľa neexistuje. Zoznam sa čoskoro aktualizuje.`);
                                         return;
                                     }
-                                } catch (err) {
-                                    console.error("Chyba pri overovaní existencie tímu:", err);
+                                } else {
+                                    alert("Profil používateľa už neexistuje.");
+                                    return;
                                 }
+                            } catch (err) {
+                                console.error("Chyba pri overovaní existencie tímu:", err);
                             }
-                            
-                            setTeamToEdit(team);
-                            setIsModalOpen(true);
+                        }
+        
+                        setTeamToEdit(team);
+                        setIsModalOpen(true);
                         },
-                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
-                        title: 'Upraviť tím'
+                    className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                    title: 'Upraviť tím'
                     },
-                    React.createElement('svg', {
-                        className: 'w-5 h-5',
-                        fill: 'none',
-                        stroke: 'currentColor',
-                        viewBox: '0 0 24 24'
-                    },
-                        React.createElement('path', {
-                            strokeLinecap: 'round',
-                            strokeLinejoin: 'round',
-                            strokeWidth: '2',
-                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                        })
-                    )
+                React.createElement('svg', { ... }, ...)
                 )
             );
-        });
+        };
+    });
     
-        return React.createElement('ul', { className: 'space-y-2' }, ...items);
-    };
+    return React.createElement('ul', { className: 'space-y-2' }, ...items);
+};
     const renderGroupedCategories = () => {
         if (Object.keys(allGroupsByCategoryId).length === 0) {
             return React.createElement(
