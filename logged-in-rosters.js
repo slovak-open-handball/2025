@@ -536,9 +536,9 @@ function MemberDetailsModal({
                     )
                 ),
             
-                // Krajina
+                // Štát
                 React.createElement('div', null,
-                    React.createElement('label', { htmlFor: 'country', className: 'block text-sm font-medium text-gray-700' }, 'Krajina'),
+                    React.createElement('label', { htmlFor: 'country', className: 'block text-sm font-medium text-gray-700' }, 'Štát'),
                     React.createElement('input', {
                         type: 'text',
                         id: 'country',
