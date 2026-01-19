@@ -4,41 +4,116 @@ const { useState, useEffect, useRef, useMemo } = window.React || {};
 
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
+
+    // Kľúče, ktoré nikdy nespúšťajú notifikáciu
     const ignoredKeys = new Set([
         '_userId', '_teamIndex', '_registeredBy', 'id', 'uniqueId', 'type',
         'originalArray', 'originalIndex', 'password', 'emailVerified',
         'isMenuToggled', 'role', 'approved', 'registrationDate',
-        'passwordLastChanged', 'teams', 'categories', 'timestamp', 'note'
+        'passwordLastChanged', 'teams', 'categories', 'timestamp', 'note',
+        // interné poľa pre flattened tímy
+        '_category', '_menTeamMembersCount', '_womenTeamMembersCount',
+        '_menDriversCount', '_womenDriversCount', '_players', '_teamTshirtsMap'
     ]);
 
     const normalize = (value, path) => {
         if (value == null) return '';
-        if (typeof value.toDate === 'function') return formatDateFn(value.toDate());
+
+        // Dátumy
+        if (typeof value.toDate === 'function') {
+            return formatDateFn(value.toDate());
+        }
+
+        // Špeciálne formáty podľa cesty
+        const lowerPath = path.toLowerCase();
+
+        if (lowerPath === 'arrival' || lowerPath.endsWith('.arrival')) {
+            return value.type 
+                ? `${value.type}${value.time ? ` (${value.time})` : ''}` 
+                : '';
+        }
+
+        if (lowerPath.includes('dateofbirth') || 
+            lowerPath.includes('registrationdate') || 
+            lowerPath.includes('date')) {
+            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return formatDateFn(value);
+            }
+        }
+
+        // Objekty
         if (typeof value === 'object' && !Array.isArray(value)) {
-            if (path === 'arrival') return value.type ? `${value.type}${value.time ? ` (${value.time})` : ''}` : '';
             return JSON.stringify(value);
         }
+
         return String(value);
     };
 
     const compare = (o, u, prefix = '') => {
         const keys = new Set([...Object.keys(o || {}), ...Object.keys(u || {})]);
+
         for (const key of keys) {
             if (ignoredKeys.has(key)) continue;
-            const p = prefix ? `${prefix}.${key}` : key;
+
+            const currentPath = prefix ? `${prefix}.${key}` : key;
             const ov = o?.[key];
             const uv = u?.[key];
 
+            // Rekurzívne porovnanie vnorených objektov
             if (typeof ov === 'object' && ov !== null && !Array.isArray(ov) &&
                 typeof uv === 'object' && uv !== null && !Array.isArray(uv)) {
-                compare(ov, uv, p);
+                compare(ov, uv, currentPath);
                 continue;
             }
 
-            const a = normalize(ov, p);
-            const b = normalize(uv, p);
+            // Špeciálne porovnanie tričiek
+            if (currentPath === 'tshirts' || currentPath.endsWith('.tshirts')) {
+                const origMap = new Map((ov || []).map(t => [String(t.size).trim(), t.quantity || 0]));
+                const updMap = new Map((uv || []).map(t => [String(t.size).trim(), t.quantity || 0]));
+                const allSizes = new Set([...origMap.keys(), ...updMap.keys()]);
+
+                for (const size of allSizes) {
+                    const oldQ = origMap.get(size) || 0;
+                    const newQ = updMap.get(size) || 0;
+
+                    if (oldQ !== newQ) {
+                        if (oldQ === 0) {
+                            changes.push(`Pridané tričká (${size}): ${newQ} ks`);
+                        } else if (newQ === 0) {
+                            changes.push(`Odstránené tričká (${size}): ${oldQ} ks`);
+                        } else {
+                            changes.push(`Zmena počtu tričiek (${size}): z ${oldQ} na ${newQ} ks`);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            const a = normalize(ov, currentPath);
+            const b = normalize(uv, currentPath);
+
             if (a !== b) {
-                const label = p.replace(/\./g, ' → ').replace(/\[(\d+)\]/g, '[$1]');
+                let label = currentPath
+                    .replace(/\./g, ' → ')
+                    .replace(/\[(\d+)\]/g, ' [$1]');
+
+                // Pekné pomenovania najčastejších polí
+                if (currentPath === 'teamName')              label = 'Názov tímu';
+                if (currentPath === 'arrival.type')          label = 'Typ dopravy';
+                if (currentPath === 'arrival.time')          label = 'Čas príchodu';
+                if (currentPath === 'accommodation.type')    label = 'Typ ubytovania';
+                if (currentPath === 'packageDetails.name')   label = 'Balík';
+                if (currentPath === 'firstName')             label = 'Meno';
+                if (currentPath === 'lastName')              label = 'Priezvisko';
+                if (currentPath === 'dateOfBirth')           label = 'Dátum narodenia';
+                if (currentPath === 'jerseyNumber')          label = 'Číslo dresu';
+                if (currentPath === 'registrationNumber')    label = 'Registračné číslo';
+                if (currentPath.includes('address.street'))       label = 'Ulica';
+                if (currentPath.includes('address.houseNumber'))  label = 'Popisné číslo';
+                if (currentPath.includes('address.postalCode'))   label = 'PSČ';
+                if (currentPath.includes('address.city'))         label = 'Mesto/obec';
+                if (currentPath.includes('address.country'))      label = 'Štát';
+
                 changes.push(`Zmena ${label}: z '${a || '-'}' na '${b || '-'}`);
             }
         }
@@ -46,10 +121,17 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     compare(original, updated);
 
-    // arrival špeciálne
-    const oa = original?.arrival ? `${original.arrival.type || ''}${original.arrival.time ? ` (${original.arrival.time})` : ''}` : '';
-    const ua = updated?.arrival ? `${updated.arrival.type || ''}${updated.arrival.time ? ` (${updated.arrival.time})` : ''}` : '';
-    if (oa !== ua) changes.push(`Zmena dopravy: z '${oa}' na '${ua}'`);
+    // Špeciálne porovnanie arrival (pre istotu, keby vyššie neprešlo)
+    const oa = original?.arrival 
+        ? `${original.arrival.type || ''}${original.arrival.time ? ` (${original.arrival.time})` : ''}` 
+        : '';
+    const ua = updated?.arrival 
+        ? `${updated.arrival.type || ''}${updated.arrival.time ? ` (${updated.arrival.time})` : ''}` 
+        : '';
+
+    if (oa !== ua) {
+        changes.push(`Zmena dopravy: z '${oa || '-'}' na '${ua || '-'}`);
+    }
 
     return changes;
 };
