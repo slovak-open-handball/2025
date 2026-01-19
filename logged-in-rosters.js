@@ -1438,6 +1438,8 @@ useEffect(() => {
             const userData = docSnapshot.data();
             setUserProfileData(userData);
 
+            console.log("---------------- Načítaná rola používateľa:", userData.role);
+
             if (userData.teams) {
                 const normalizedTeams = {};
                 const currentClubName = userData.billing?.clubName?.trim() || 'Neznámy klub';
