@@ -484,7 +484,6 @@ const AddGroupsApp = (props) => {
                             onChange: (e) => setOrderInputValue(e.target.value === '' ? null : parseInt(e.target.value, 10)),
                             placeholder: 'auto'
                         }),
-                        React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, 'Nechaj prázdne → tím sa pridá na koniec skupiny')
                     ),
                     React.createElement(
                         'div',
