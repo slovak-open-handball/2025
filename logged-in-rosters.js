@@ -196,7 +196,7 @@ function MemberDetailsModal({
     const [postalCode, setPostalCode] = useState('');
     const [city, setCity] = useState('');
     const [country, setCountry] = useState('');
-
+    const postalCodeInputRef = useRef(null);
     const [dateOfBirthError, setDateOfBirthError] = useState('');
     const [isDateOfBirthValid, setIsDateOfBirthValid] = useState(true);
 
