@@ -1008,7 +1008,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                         } else if (newQ === 0) {
                             changes.push(`Odstránené tričko (${size}): ${oldQ}`);
                         } else {
-                            changes.push(`Zmena tričiek: ${size} z ${oldQ} na ${newQ}`);
+                            changes.push(`Zmena tričiek: ${size} z '${oldQ}' na '${newQ}'`);
                         }
                     }
                 }
@@ -1020,7 +1020,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
             if (valueA !== valueB) {
                 const label = formatLabel(currentPath);
-                let changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}`;
+                let changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
                 if (!changes.includes(changeDescription)) {
                     changes.push(changeDescription);
                 }
@@ -1034,7 +1034,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     const originalArrival = formatArrivalTime(original?.arrival?.type, original?.arrival?.time);
     const updatedArrival   = formatArrivalTime(updated?.arrival?.type,   updated?.arrival?.time);
     if (originalArrival !== updatedArrival) {
-        changes.push(`Zmena ${formatLabel('arrival.type')}: z '${originalArrival}' na '${updatedArrival}'`);
+        changes.push(`Zmena ${formatLabel(arrival.type)}: z '${originalArrival}' na '${updatedArrival}'`);
     }
 
     return changes;
