@@ -2,6 +2,14 @@ import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, get
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
+const formatPostalCode = (value) => {
+    if (!value) return '';
+    // Len číslice, max 5
+    const digits = value.replace(/\D/g, '').slice(0, 5);
+    if (digits.length <= 3) return digits;
+    return digits.slice(0, 3) + ' ' + digits.slice(3);
+};
+
 function showLocalNotification(message, type = 'success') {
     let notificationElement = document.getElementById('local-notification');
     if (!notificationElement) {
@@ -195,14 +203,6 @@ function MemberDetailsModal({
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
     const showAddressFields = teamAccommodationType !== 'bez ubytovania';
     const isButtonDisabled = isEditMode ? isRosterEditDeadlinePassed : isDataEditDeadlinePassed;
-
-    const formatPostalCode = (value) => {
-        if (!value) return '';
-        // Len číslice, max 5
-        const digits = value.replace(/\D/g, '').slice(0, 5);
-        if (digits.length <= 3) return digits;
-        return digits.slice(0, 3) + ' ' + digits.slice(3);
-    };
     
     const cleanPostalCode = (value) => {
         return value ? value.replace(/\D/g, '').slice(0, 5) : '';
