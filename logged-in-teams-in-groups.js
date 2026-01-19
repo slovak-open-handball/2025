@@ -895,10 +895,10 @@ const AddGroupsApp = (props) => {
             const textColor = hasDuplicateOrder ? 'text-red-600 font-medium' : 'text-gray-800';
     
             let displayName = team.teamName;
-    
-            if (team.category && displayName.startsWith(team.category + ' ')) {
+
+            if (!team.isSuperstructureTeam && team.category && displayName.startsWith(team.category + ' ')) {
                 displayName = displayName.substring(team.category.length + 1).trim();
-            }
+            } 
     
             let display = team.order != null && !isWithoutGroup 
                 ? `${team.order}. ${displayName}`
