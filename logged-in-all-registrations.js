@@ -2343,7 +2343,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         const teamName = finalDataToSave.teamName || 'Bez názvu';
                                         const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
                                         generatedChanges = generatedChanges.map(change => 
-                                            `Tím "${teamName}" (${teamCategory}): ${change}`
+                                            `Tím '${teamName}' (${teamCategory}): ${change}`
                                         );
                                     }
                                     else if (editModalTitle.toLowerCase().includes('upraviť hráč') ||
@@ -3477,7 +3477,7 @@ const clearFilter = (column) => {
                     registeredBy: `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() 
                 };
                 const newTeamName = updatedTeam.teamName || 'Bez názvu';
-                generatedChanges.push(`Nový tím bol pridaný: ${newTeamName} (Kategória: ${actualCategory})`);
+                generatedChanges.push(`Nový tím bol pridaný: '${newTeamName} (Kategória: ${actualCategory})'`);
         
                 // Uistiť sa, že kategória sedí
                 updatedTeam.category = actualCategory;
@@ -3517,12 +3517,12 @@ const clearFilter = (column) => {
                     updates[`teams.${actualCategory}`] = updatedNewCategoryTeams;
         
                     const teamName = updatedTeam.teamName || 'Bez názvu';
-                    generatedChanges.push(`Tím "${teamName}": Zmena Kategórie: z '${oldCategory}' na '${actualCategory}'`);
+                    generatedChanges.push(`Tím ${teamName}: Zmena Kategórie: z '${oldCategory}' na '${actualCategory}'`);
         
                     // Ostatné zmeny
                     originalTeam = JSON.parse(JSON.stringify(currentDocData.teams?.[oldCategory]?.[oldTeamIndex] || {}));
                     const otherChanges = getChangesForNotification(originalTeam, updatedTeam, formatDateToDMMYYYY);
-                    generatedChanges.push(...otherChanges.map(ch => `Tím "${teamName}" (${actualCategory}): ${ch}`));
+                    generatedChanges.push(...otherChanges.map(ch => `Tím ${teamName} (${actualCategory}): ${ch}`));
         
                     await updateDoc(targetDocRef, updates);
                 } 
@@ -3574,7 +3574,7 @@ const clearFilter = (column) => {
                     }
         
                     const teamName = updatedTeam.teamName || 'Bez názvu';
-                    generatedChanges = generatedChanges.map(ch => `Tím "${teamName}" (${actualCategory}): ${ch}`);
+                    generatedChanges = generatedChanges.map(ch => `Tím ${teamName} (${actualCategory}): ${ch}`);
         
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams[oldTeamIndex] = updatedTeam;
@@ -3789,7 +3789,7 @@ const clearFilter = (column) => {
         if (memberArrayPath === 'driverDetailsFemale')        memberTypeLabel = 'šoférka (žena)';
     
         // Finálny prefix pre KAŽDÝ riadok zmeny
-        const prefix = `${memberName} – ${memberTypeLabel} – tím „${teamName}“ (${teamCategory}): `;
+        const prefix = `${memberName} – ${memberTypeLabel} – tím ${teamName} (${teamCategory}): `;
     
         // Pridáme prefix ku každému riadku zmeny
         const prefixedChanges = changes.map(change => prefix + change);
@@ -3988,13 +3988,13 @@ const clearFilter = (column) => {
                 const notificationsCollectionRef = collection(db, 'notifications');
                 await addDoc(notificationsCollectionRef, {
                     userEmail,
-                    changes: [`Tím "${teamName}" bol odstránený z kategórie "${category}".`],
+                    changes: [`Tím '${teamName}' bol odstránený z kategórie '${category}'.`],
                     timestamp: serverTimestamp()
                 });
                 console.log("Notifikácia o odstránení tímu uložená do Firestore.");
             }
 
-            setUserNotificationMessage(`Tím "${teamName}" bol úspešne odstránený.`, 'success');
+            setUserNotificationMessage(`Tím '${teamName}' bol úspešne odstránený.`, 'success');
             closeEditModal(); // Zatvoriť modálne okno po odstránení
         } else {
             throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
