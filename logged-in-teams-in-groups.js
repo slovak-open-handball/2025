@@ -890,14 +890,24 @@ const AddGroupsApp = (props) => {
             });
         }
     
-        const items = sortedTeams.map((team, idx) => {
+        cconst items = sortedTeams.map((team, idx) => {
             const hasDuplicateOrder = !isWithoutGroup && team.order != null && (orderCountMap.get(team.order) || 0) > 1;
             const textColor = hasDuplicateOrder ? 'text-red-600 font-medium' : 'text-gray-800';
     
-            let display = team.order != null && !isWithoutGroup ? `${team.order}. ${team.teamName}` : team.teamName;
-            if (!selectedCategoryId && team.category) {
+            let displayName = team.teamName;
+    
+            if (team.category && displayName.startsWith(team.category + ' ')) {
+                displayName = displayName.substring(team.category.length + 1).trim();
+            }
+    
+            let display = team.order != null && !isWithoutGroup 
+                ? `${team.order}. ${displayName}`
+                : displayName;
+    
+            if (!selectedCategoryId && !team.groupName && team.category) {
                 display = `${team.category}: ${display}`;
             }
+            // ────────────────────────────────────────────────
     
             return React.createElement(
                 'li',
