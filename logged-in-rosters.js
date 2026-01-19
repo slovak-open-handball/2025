@@ -1624,18 +1624,22 @@ const handleDeleteTeam = async (teamToDelete) => {
         showLocalNotification('Termín pre úpravu dát tímu už uplynul, tím nie je možné vymazať.', 'error');
         return;
     }
+
     if (!user || !user.uid || !userProfileData?.billing?.clubName) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
         return;
     }
 
+    const teamNameToShow = teamToDelete.teamName?.trim() || '(bez názvu)';
+    
     const confirmDelete = await new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]';
         modal.innerHTML = `
             <div class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg">
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Potvrdiť vymazanie tímu</h3>
-                <p class="mb-6 text-gray-700">Naozaj chcete vymazať tím <strong>${teamToDelete.teamName}</strong>? Táto akcia je nevratná.</p>
+                <p class="mb-6 text-gray-700">Naozaj chcete vymazať tím <strong>${teamNameToShow}</strong>?</p>
+                <p class="mb-6 text-red-600 font-medium">Táto akcia je nevratná!</p>
                 <div class="flex justify-end space-x-2">
                     <button id="cancelDelete" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors">Zrušiť</button>
                     <button id="confirmDelete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">Vymazať</button>
@@ -1643,7 +1647,6 @@ const handleDeleteTeam = async (teamToDelete) => {
             </div>
         `;
         document.body.appendChild(modal);
-
         document.getElementById('cancelDelete').onclick = () => {
             document.body.removeChild(modal);
             resolve(false);
@@ -1654,48 +1657,52 @@ const handleDeleteTeam = async (teamToDelete) => {
         };
     });
 
-    if (!confirmDelete) {
-        return;
-    }
+    if (!confirmDelete) return;
 
     const userDocRef = doc(db, 'users', user.uid);
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData));
-
     const categoryToDeleteFrom = teamToDelete.categoryName;
-    const clubName = userProfileData.billing.clubName?.trim();
+    const clubName = userProfileData.billing.clubName?.trim() || 'Neznámy klub';
 
     if (!currentTeamsCopy[categoryToDeleteFrom]) {
         showLocalNotification('Chyba: Kategória tímu nebola nájdená.', 'error');
         return;
     }
 
-    let teamsInCurrentCategory = currentTeamsCopy[categoryToDeleteFrom].filter(
-        team => team.teamName !== teamToDelete.teamName
+    // Filtrujeme tím na základe referencie (index + porovnanie objektov), nie len názvu
+    const teamsInCurrentCategory = currentTeamsCopy[categoryToDeleteFrom].filter(
+        team => team !== teamToDelete   // porovnanie referencií (funguje priamo v pamäti)
     );
 
+    // Získame iba tímy nášho klubu v danej kategórii (okrem toho, ktorý mažeme)
     let clubTeamsInCategory = teamsInCurrentCategory.filter(
         team => team.clubName?.trim() === clubName && team.categoryName === categoryToDeleteFrom
     );
-    let otherTeamsInCategories = teamsInCurrentCategory.filter(
+
+    // Ostatné tímy (nie nášho klubu alebo iná kategória – v tejto kategórii)
+    const otherTeamsInCategories = teamsInCurrentCategory.filter(
         team => !(team.clubName?.trim() === clubName && team.categoryName === categoryToDeleteFrom)
     );
 
+    // Zoradíme tímy nášho klubu podľa suffixu (A,B,C,...) alebo bez suffixu
     clubTeamsInCategory.sort((a, b) => {
-        const getSuffixPart = (teamName, baseClubName) => {
-            const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
-            const match = teamName.match(regex);
+        const getSuffix = (name) => {
+            if (!name) return '';
+            const match = name.match(new RegExp(`^${clubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`));
             return match ? match[1] : '';
         };
 
-        const suffixA = getSuffixPart(a.teamName, clubName);
-        const suffixB = getSuffixPart(b.teamName, clubName);
+        const suffixA = getSuffix(a.teamName);
+        const suffixB = getSuffix(b.teamName);
 
         if (suffixA === '' && suffixB !== '') return -1;
         if (suffixA !== '' && suffixB === '') return 1;
         return suffixA.localeCompare(suffixB);
     });
 
+    // Premenujeme zostávajúce tímy nášho klubu
     if (clubTeamsInCategory.length === 0) {
+        // žiadny tím nášho klubu už nezostal → kategóriu môžeme vymazať
         delete currentTeamsCopy[categoryToDeleteFrom];
     } else if (clubTeamsInCategory.length === 1) {
         clubTeamsInCategory[0].teamName = clubName;
@@ -1705,7 +1712,8 @@ const handleDeleteTeam = async (teamToDelete) => {
         }
     }
 
-    if (currentTeamsCopy[categoryToDeleteFrom]) {
+    // Zostavíme finálne pole tímov v kategórii
+    if (currentTeamsCopy[categoryToDeleteFrom] !== undefined) {
         currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategories, ...clubTeamsInCategory];
     }
 
