@@ -1,6 +1,21 @@
 import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs, serverTimestamp, addDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from './countryDialCodes.js'; 
 
+const formatPostalCode = (postalCode) => {
+    if (!postalCode) return '-';
+
+    // Odstránime všetko okrem číslic
+    const cleaned = String(postalCode).replace(/\D/g, '');
+
+    // Ak máme presne 5 číslic → formát xxx xx
+    if (cleaned.length === 5) {
+        return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
+    }
+
+    // Ak má menej alebo viac → vrátime tak, ako je (alebo len číslice)
+    return cleaned || '-';
+};
+
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -4051,21 +4066,6 @@ const clearFilter = (column) => {
       window.location.href = 'logged-in-my-data.html';
       return null;
   }
-
-const formatPostalCode = (postalCode) => {
-    if (!postalCode) return '-';
-
-    // Odstránime všetko okrem číslic
-    const cleaned = String(postalCode).replace(/\D/g, '');
-
-    // Ak máme presne 5 číslic → formát xxx xx
-    if (cleaned.length === 5) {
-        return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
-    }
-
-    // Ak má menej alebo viac → vrátime tak, ako je (alebo len číslice)
-    return cleaned || '-';
-};
 
   const shouldShowExpander = (u) => {
       return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
