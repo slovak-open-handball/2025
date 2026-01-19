@@ -2,6 +2,58 @@ import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, get
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
+const getChangesForNotification = (original, updated, formatDateFn) => {
+    const changes = [];
+    const ignoredKeys = new Set([
+        '_userId', '_teamIndex', '_registeredBy', 'id', 'uniqueId', 'type',
+        'originalArray', 'originalIndex', 'password', 'emailVerified',
+        'isMenuToggled', 'role', 'approved', 'registrationDate',
+        'passwordLastChanged', 'teams', 'categories', 'timestamp', 'note'
+    ]);
+
+    const normalize = (value, path) => {
+        if (value == null) return '';
+        if (typeof value.toDate === 'function') return formatDateFn(value.toDate());
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            if (path === 'arrival') return value.type ? `${value.type}${value.time ? ` (${value.time})` : ''}` : '';
+            return JSON.stringify(value);
+        }
+        return String(value);
+    };
+
+    const compare = (o, u, prefix = '') => {
+        const keys = new Set([...Object.keys(o || {}), ...Object.keys(u || {})]);
+        for (const key of keys) {
+            if (ignoredKeys.has(key)) continue;
+            const p = prefix ? `${prefix}.${key}` : key;
+            const ov = o?.[key];
+            const uv = u?.[key];
+
+            if (typeof ov === 'object' && ov !== null && !Array.isArray(ov) &&
+                typeof uv === 'object' && uv !== null && !Array.isArray(uv)) {
+                compare(ov, uv, p);
+                continue;
+            }
+
+            const a = normalize(ov, p);
+            const b = normalize(uv, p);
+            if (a !== b) {
+                const label = p.replace(/\./g, ' → ').replace(/\[(\d+)\]/g, '[$1]');
+                changes.push(`Zmena ${label}: z '${a || '-'}' na '${b || '-'}`);
+            }
+        }
+    };
+
+    compare(original, updated);
+
+    // arrival špeciálne
+    const oa = original?.arrival ? `${original.arrival.type || ''}${original.arrival.time ? ` (${original.arrival.time})` : ''}` : '';
+    const ua = updated?.arrival ? `${updated.arrival.type || ''}${updated.arrival.time ? ` (${updated.arrival.time})` : ''}` : '';
+    if (oa !== ua) changes.push(`Zmena dopravy: z '${oa}' na '${ua}'`);
+
+    return changes;
+};
+
 const formatPostalCode = (value) => {
     if (!value) return '';
     // Len číslice, max 5
@@ -1811,7 +1863,7 @@ useEffect(() => {
     setShowEditTeamModal(true);
   };
 
-  const handleSaveTeam = async (updatedTeamData) => {
+const handleSaveTeam = async (updatedTeamData) => {
     if (isDataEditDeadlinePassed) {
         showLocalNotification('Termín pre úpravu dát tímu už uplynul.', 'error');
         return;
@@ -1821,6 +1873,11 @@ useEffect(() => {
         return;
     }
 
+    const userEmail = user.email;
+    const originalTeam = selectedTeam;
+    const teamName = updatedTeamData.teamName || selectedTeam?.teamName || 'bez názvu';
+    const category = updatedTeamData.categoryName || selectedTeam?.categoryName || '?';
+
     const originalPackageName = selectedTeam?.packageDetails?.name || '';
     const newPackageName = updatedTeamData.packageDetails.name;
 
@@ -1828,46 +1885,58 @@ useEffect(() => {
         try {
             const packagesRef = collection(db, 'settings', 'packages', 'list');
             const q = query(packagesRef, where('name', '==', newPackageName));
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                const packageDoc = querySnapshot.docs[0];
-                const packageData = packageDoc.data();
-                updatedTeamData.packageDetails.meals = packageData.meals || {};
-                updatedTeamData.packageDetails.price = packageData.price || 0;
-                updatedTeamData.packageDetails.id = packageDoc.id;
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const pkg = snap.docs[0].data();
+                updatedTeamData.packageDetails.meals = pkg.meals || {};
+                updatedTeamData.packageDetails.price = pkg.price || 0;
+                updatedTeamData.packageDetails.id = snap.docs[0].id;
             } else {
                 updatedTeamData.packageDetails.meals = {};
                 updatedTeamData.packageDetails.price = 0;
                 updatedTeamData.packageDetails.id = null;
             }
-        } catch (error) {
-            console.error("Error fetching new package details:", error);
-            showLocalNotification('Nastala chyba pri načítaní detailov nového balíka.', 'error');
+        } catch (err) {
+            console.error("Chyba pri načítaní balíka:", err);
+            showLocalNotification('Chyba pri načítaní detailov balíka.', 'error');
             return;
         }
     }
 
     const teamCategory = updatedTeamData.categoryName;
-    const teamIndex = teamsData[teamCategory].findIndex(t => t.teamName === updatedTeamData.teamName);
+    const teamIndex = teamsData[teamCategory]?.findIndex(t => t.teamName === updatedTeamData.teamName);
 
-    if (teamIndex !== -1) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const currentTeams = { ...teamsData };
-
-        currentTeams[teamCategory][teamIndex] = updatedTeamData;
-
-        try {
-            await updateDoc(userDocRef, {
-                teams: currentTeams
-            });
-            showLocalNotification('Údaje tímu boli aktualizované!', 'success');
-        } catch (error) {
-            console.error("Chyba pri aktualizácii tímu:", error);
-            showLocalNotification('Nastala chyba pri aktualizácii údajov tímu.', 'error');
-        }
-    } else {
+    if (teamIndex === -1 || teamIndex === undefined) {
         showLocalNotification('Chyba: Tím nebol nájdený pre aktualizáciu.', 'error');
+        return;
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const currentTeams = { ...teamsData };
+    currentTeams[teamCategory][teamIndex] = updatedTeamData;
+
+    try {
+        await updateDoc(userDocRef, { teams: currentTeams });
+
+        // ─── NOTIFIKÁCIA pri ÚPRAVE TÍMU ───────────────────────────────────────
+        const changes = getChangesForNotification(originalTeam, updatedTeamData, formatDateToDMMYYYY);
+
+        if (changes.length > 0 && userEmail) {
+            const prefixed = changes.map(ch => `Tím "${teamName}" (${category}): ${ch}`);
+
+            const notificationsRef = collection(db, 'notifications');
+            await addDoc(notificationsRef, {
+                userEmail,
+                changes: prefixed,
+                timestamp: serverTimestamp()
+            });
+        }
+        // ────────────────────────────────────────────────────────────────────────
+
+        showLocalNotification('Údaje tímu boli aktualizované!', 'success');
+    } catch (error) {
+        console.error("Chyba pri aktualizácii tímu:", error);
+        showLocalNotification('Nastala chyba pri aktualizácii údajov tímu.', 'error');
     }
 };
 
@@ -1881,7 +1950,7 @@ const handleDeleteTeam = async (teamToDelete) => {
         return;
     }
 
-    const confirmDelete = await new Promise((resolve) => {
+    const confirmDelete = await new Promise(resolve => {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]';
         modal.innerHTML = `
@@ -1889,82 +1958,76 @@ const handleDeleteTeam = async (teamToDelete) => {
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Potvrdiť vymazanie tímu</h3>
                 <p class="mb-6 text-gray-700">Naozaj chcete vymazať tím <strong>${teamToDelete.teamName}</strong>? Táto akcia je nevratná.</p>
                 <div class="flex justify-end space-x-2">
-                    <button id="cancelDelete" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors">Zrušiť</button>
-                    <button id="confirmDelete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">Vymazať</button>
+                    <button id="cancel" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Zrušiť</button>
+                    <button id="confirm" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Vymazať</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
-        document.getElementById('cancelDelete').onclick = () => {
-            document.body.removeChild(modal);
-            resolve(false);
-        };
-        document.getElementById('confirmDelete').onclick = () => {
-            document.body.removeChild(modal);
-            resolve(true);
-        };
+        modal.querySelector('#cancel').onclick = () => { document.body.removeChild(modal); resolve(false); };
+        modal.querySelector('#confirm').onclick = () => { document.body.removeChild(modal); resolve(true); };
     });
 
-    if (!confirmDelete) {
-        return;
-    }
+    if (!confirmDelete) return;
+
+    const userEmail = user.email;
+    const teamName = teamToDelete.teamName;
+    const category = teamToDelete.categoryName;
 
     const userDocRef = doc(db, 'users', user.uid);
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData));
+    const cat = teamToDelete.categoryName;
+    const club = userProfileData.billing.clubName?.trim();
 
-    const categoryToDeleteFrom = teamToDelete.categoryName;
-    const clubName = userProfileData.billing.clubName?.trim();
-
-    if (!currentTeamsCopy[categoryToDeleteFrom]) {
+    if (!currentTeamsCopy[cat]) {
         showLocalNotification('Chyba: Kategória tímu nebola nájdená.', 'error');
         return;
     }
 
-    let teamsInCurrentCategory = currentTeamsCopy[categoryToDeleteFrom].filter(
-        team => team.teamName !== teamToDelete.teamName
-    );
+    let teamsInCat = currentTeamsCopy[cat].filter(t => t.teamName !== teamToDelete.teamName);
+    let clubTeams = teamsInCat.filter(t => t.clubName?.trim() === club && t.categoryName === cat);
+    let others = teamsInCat.filter(t => !(t.clubName?.trim() === club && t.categoryName === cat));
 
-    let clubTeamsInCategory = teamsInCurrentCategory.filter(
-        team => team.clubName?.trim() === clubName && team.categoryName === categoryToDeleteFrom
-    );
-    let otherTeamsInCategories = teamsInCurrentCategory.filter(
-        team => !(team.clubName?.trim() === clubName && team.categoryName === categoryToDeleteFrom)
-    );
-
-    clubTeamsInCategory.sort((a, b) => {
-        const getSuffixPart = (teamName, baseClubName) => {
-            const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
-            const match = teamName.match(regex);
-            return match ? match[1] : '';
+    clubTeams.sort((a, b) => {
+        const getS = n => {
+            const m = n.match(new RegExp(`^${club.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`));
+            return m ? m[1] : '';
         };
-
-        const suffixA = getSuffixPart(a.teamName, clubName);
-        const suffixB = getSuffixPart(b.teamName, clubName);
-
-        if (suffixA === '' && suffixB !== '') return -1;
-        if (suffixA !== '' && suffixB === '') return 1;
-        return suffixA.localeCompare(suffixB);
+        const sa = getS(a.teamName), sb = getS(b.teamName);
+        if (sa === '' && sb !== '') return -1;
+        if (sa !== '' && sb === '') return 1;
+        return sa.localeCompare(sb);
     });
 
-    if (clubTeamsInCategory.length === 0) {
-        delete currentTeamsCopy[categoryToDeleteFrom];
-    } else if (clubTeamsInCategory.length === 1) {
-        clubTeamsInCategory[0].teamName = clubName;
+    if (clubTeams.length === 0) {
+        delete currentTeamsCopy[cat];
+    } else if (clubTeams.length === 1) {
+        clubTeams[0].teamName = club;
     } else {
-        for (let i = 0; i < clubTeamsInCategory.length; i++) {
-            clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
-        }
+        clubTeams.forEach((t, i) => t.teamName = `${club} ${String.fromCharCode(65 + i)}`);
     }
 
-    if (currentTeamsCopy[categoryToDeleteFrom]) {
-        currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategories, ...clubTeamsInCategory];
+    if (currentTeamsCopy[cat]) {
+        currentTeamsCopy[cat] = [...others, ...clubTeams];
     }
 
     try {
-        await updateDoc(userDocRef, {
-            teams: currentTeamsCopy
-        });
+        await updateDoc(userDocRef, { teams: currentTeamsCopy });
+
+        // ─── NOTIFIKÁCIA pri VYMAZANÍ TÍMU ──────────────────────────────────────
+        if (userEmail) {
+            const changes = [`Tím "${teamName}" (${category}) bol vymazaný`];
+
+            const notificationsRef = collection(db, 'notifications');
+            await addDoc(notificationsRef, {
+                userEmail,
+                changes,
+                timestamp: serverTimestamp()
+            });
+        }
+        // ────────────────────────────────────────────────────────────────────────
+
         showLocalNotification('Tím bol vymazaný!', 'success');
         setShowEditTeamModal(false);
         setSelectedTeam(null);
@@ -1984,58 +2047,70 @@ const handleAddTeam = async (newTeamDataFromModal) => {
         return;
     }
 
+    const userEmail = user.email;
+    const teamName = newTeamDataFromModal.teamName || 'bez názvu';
+    const category = newTeamDataFromModal.categoryName;
+
     const userDocRef = doc(db, 'users', user.uid);
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData));
-
-    const category = newTeamDataFromModal.categoryName;
+    const categoryKey = newTeamDataFromModal.categoryName;
     const clubName = newTeamDataFromModal.clubName;
 
-    if (!currentTeamsCopy[category]) {
-        currentTeamsCopy[category] = [];
+    if (!currentTeamsCopy[categoryKey]) {
+        currentTeamsCopy[categoryKey] = [];
     }
 
-    let existingClubTeamsInThisCategory = currentTeamsCopy[category].filter(
-        team => team.clubName?.trim() === clubName && team.categoryName === category
+    let existingClubTeams = currentTeamsCopy[categoryKey].filter(
+        t => t.clubName?.trim() === clubName && t.categoryName === categoryKey
     );
 
-    const allRelevantTeamsBeforeUpdate = [
-        ...existingClubTeamsInThisCategory.map(team => ({ ...team, originalNameForSort: team.teamName })),
+    const allRelevant = [
+        ...existingClubTeams.map(t => ({ ...t, originalNameForSort: t.teamName })),
         { ...newTeamDataFromModal, originalNameForSort: newTeamDataFromModal.teamName }
     ];
 
-    allRelevantTeamsBeforeUpdate.sort((a, b) => {
-        const getSuffixPart = (teamName, baseClubName) => {
-            const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
-            const match = teamName.match(regex);
-            return match ? match[1] : '';
+    allRelevant.sort((a, b) => {
+        const getSuffix = name => {
+            const m = name.match(new RegExp(`^${clubName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`));
+            return m ? m[1] : '';
         };
-
-        const suffixA = getSuffixPart(a.originalNameForSort, clubName);
-        const suffixB = getSuffixPart(b.originalNameForSort, clubName);
-
-        if (suffixA === '' && suffixB !== '') return -1;
-        if (suffixA !== '' && suffixB === '') return 1;
-        return suffixA.localeCompare(suffixB);
+        const sa = getSuffix(a.originalNameForSort);
+        const sb = getSuffix(b.originalNameForSort);
+        if (sa === '' && sb !== '') return -1;
+        if (sa !== '' && sb === '') return 1;
+        return sa.localeCompare(sb);
     });
 
-    if (allRelevantTeamsBeforeUpdate.length === 1) {
-        allRelevantTeamsBeforeUpdate[0].teamName = clubName;
+    if (allRelevant.length === 1) {
+        allRelevant[0].teamName = clubName;
     } else {
-        for (let i = 0; i < allRelevantTeamsBeforeUpdate.length; i++) {
-            allRelevantTeamsBeforeUpdate[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
-        }
+        allRelevant.forEach((t, i) => {
+            t.teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
+        });
     }
 
-    const otherTeamsInCategories = currentTeamsCopy[category].filter(
-        team => !(team.clubName?.trim() === clubName && team.categoryName === category)
+    const otherTeams = currentTeamsCopy[categoryKey].filter(
+        t => !(t.clubName?.trim() === clubName && t.categoryName === categoryKey)
     );
 
-    currentTeamsCopy[category] = [...otherTeamsInCategories, ...allRelevantTeamsBeforeUpdate];
+    currentTeamsCopy[categoryKey] = [...otherTeams, ...allRelevant];
 
     try {
-        await updateDoc(userDocRef, {
-            teams: currentTeamsCopy
-        });
+        await updateDoc(userDocRef, { teams: currentTeamsCopy });
+
+        // ─── NOTIFIKÁCIA pri PRIDANÍ NOVÉHO TÍMU ────────────────────────────────
+        if (userEmail) {
+            const changes = [`Nový tím bol pridaný: ${teamName} (${category})`];
+
+            const notificationsRef = collection(db, 'notifications');
+            await addDoc(notificationsRef, {
+                userEmail,
+                changes,
+                timestamp: serverTimestamp()
+            });
+        }
+        // ────────────────────────────────────────────────────────────────────────
+
         showLocalNotification('Nový tím bol pridaný a názvy tímov aktualizované!', 'success');
     } catch (error) {
         console.error("Chyba pri pridávaní tímu a aktualizácii názvov:", error);
@@ -2074,6 +2149,21 @@ const handleSaveNewMember = async (newMemberDetails) => {
     if (!user || !user.uid || !teamToAddMemberTo) {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo tím nie je vybraný.', 'error');
         return;
+    }
+
+    const userEmail = user.email;
+    const memberName = `${newMemberDetails.firstName || ''} ${newMemberDetails.lastName || ''}`.trim() || 'bez mena';
+    const teamName = teamToAddMemberTo.teamName || 'bez názvu';
+    const category = teamToAddMemberTo.categoryName || '?';
+
+    let memberTypeLabel = '';
+    switch (memberTypeToAdd) {
+        case 'player':          memberTypeLabel = 'hráč'; break;
+        case 'womenTeamMember': memberTypeLabel = 'členka realizačného tímu (žena)'; break;
+        case 'menTeamMember':   memberTypeLabel = 'člen realizačného tímu (muž)'; break;
+        case 'driverFemale':    memberTypeLabel = 'šoférka (žena)'; break;
+        case 'driverMale':      memberTypeLabel = 'šofér (muž)'; break;
+        default:                memberTypeLabel = 'člen tímu';
     }
 
     const userDocRef = doc(db, 'users', user.uid);
@@ -2120,9 +2210,34 @@ const handleSaveNewMember = async (newMemberDetails) => {
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
 
     try {
-        await updateDoc(userDocRef, {
-            teams: currentTeams
-        });
+        await updateDoc(userDocRef, { teams: currentTeams });
+
+        // ─── NOTIFIKÁCIA pri PRIDANÍ NOVÉHO ČLENA ────────────────────────────────
+        if (userEmail) {
+            const changes = [
+                `Pridaný nový ${memberTypeLabel}: ${memberName}`,
+                `Tím: ${teamName} (${category})`
+            ];
+
+            if (newMemberDetails.dateOfBirth) {
+                changes.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMemberDetails.dateOfBirth)}`);
+            }
+            if (newMemberDetails.jerseyNumber && memberTypeToAdd === 'player') {
+                changes.push(`Číslo dresu: ${newMemberDetails.jerseyNumber}`);
+            }
+            if (newMemberDetails.registrationNumber && memberTypeToAdd === 'player') {
+                changes.push(`Registračné číslo: ${newMemberDetails.registrationNumber}`);
+            }
+
+            const notificationsRef = collection(db, 'notifications');
+            await addDoc(notificationsRef, {
+                userEmail,
+                changes,
+                timestamp: serverTimestamp()
+            });
+        }
+        // ────────────────────────────────────────────────────────────────────────
+
         showLocalNotification('Nový člen tímu bol pridaný!', 'success');
         setTeamToAddMemberTo(null);
         setMemberTypeToAdd(null);
@@ -2142,11 +2257,17 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         return;
     }
 
+    const userEmail = user.email;
+    const originalMember = memberToEdit;
+    const memberName = `${updatedMemberDetails.firstName || originalMember.firstName || ''} ${updatedMemberDetails.lastName || originalMember.lastName || ''}`.trim() || 'bez mena';
+    const teamName = teamOfMemberToEdit.teamName || 'bez názvu';
+    const category = teamOfMemberToEdit.categoryName || '?';
+
     const userDocRef = doc(db, 'users', user.uid);
     const currentTeams = { ...teamsData };
     const teamCategory = teamOfMemberToEdit.categoryName;
-    const teamName = teamOfMemberToEdit.teamName;
-    const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === teamName);
+    const teamNameFromPath = teamOfMemberToEdit.teamName;
+    const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === teamNameFromPath);
 
     if (teamIndex === -1) {
         showLocalNotification('Chyba: Tím nebol nájdený pre aktualizáciu člena.', 'error');
@@ -2155,13 +2276,12 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
     const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
     let memberArrayName;
-
     switch (memberToEdit.originalType) {
-        case 'player': memberArrayName = 'playerDetails'; break;
+        case 'player':          memberArrayName = 'playerDetails'; break;
         case 'womenTeamMember': memberArrayName = 'womenTeamMemberDetails'; break;
-        case 'menTeamMember': memberArrayName = 'menTeamMemberDetails'; break;
-        case 'driverFemale': memberArrayName = 'driverDetailsFemale'; break;
-        case 'driverMale': memberArrayName = 'driverDetailsMale'; break;
+        case 'menTeamMember':   memberArrayName = 'menTeamMemberDetails'; break;
+        case 'driverFemale':    memberArrayName = 'driverDetailsFemale'; break;
+        case 'driverMale':      memberArrayName = 'driverDetailsMale'; break;
         default:
             showLocalNotification('Neznámy typ člena tímu pre aktualizáciu.', 'error');
             return;
@@ -2174,17 +2294,36 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
              m.dateOfBirth === memberToEdit.dateOfBirth
     );
 
-    if (memberIndex !== -1) {
-        memberArray[memberIndex] = { ...memberArray[memberIndex], ...updatedMemberDetails };
-    } else {
+    if (memberIndex === -1) {
         showLocalNotification('Chyba: Člen tímu nebol nájdený pre aktualizáciu.', 'error');
         return;
     }
+
+    const originalMemberData = { ...memberArray[memberIndex] };
+    memberArray[memberIndex] = { ...memberArray[memberIndex], ...updatedMemberDetails };
 
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
 
     try {
         await updateDoc(userDocRef, { teams: currentTeams });
+
+        // ─── NOTIFIKÁCIA pri ÚPRAVE ČLENA ───────────────────────────────────────
+        const changes = getChangesForNotification(originalMemberData, updatedMemberDetails, formatDateToDMMYYYY);
+
+        if (changes.length > 0 && userEmail) {
+            const prefixedChanges = changes.map(ch =>
+                `${memberName} – ${memberToEdit.type} – tím „${teamName}“ (${category}): ${ch}`
+            );
+
+            const notificationsRef = collection(db, 'notifications');
+            await addDoc(notificationsRef, {
+                userEmail,
+                changes: prefixedChanges,
+                timestamp: serverTimestamp()
+            });
+        }
+        // ────────────────────────────────────────────────────────────────────────
+
         showLocalNotification('Údaje člena tímu boli aktualizované!', 'success');
         setMemberToEdit(null);
         setTeamOfMemberToEdit(null);
