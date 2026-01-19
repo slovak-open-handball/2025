@@ -48,8 +48,6 @@ const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam 
             groupName: newGroupName,
         };        
 
-        let newOrder = null;
-
         if (newGroupName) {
             // Tím má (alebo bude mať) skupinu
         
