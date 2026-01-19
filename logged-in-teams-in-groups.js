@@ -368,6 +368,7 @@ const NewTeamModal = ({
 };
 
 const AddGroupsApp = (props) => {
+    const { useState, useEffect, useRef } = React;
     const teamsWithoutGroupRef = React.useRef(null);
     const [allTeams, setAllTeams] = useState([]);
     const [userTeamsData, setUserTeamsData] = useState([]);
