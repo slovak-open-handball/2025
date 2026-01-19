@@ -472,7 +472,6 @@ function MemberDetailsModal({
                         value: registrationNumber,
                         onChange: handleRegistrationChange,
                         disabled: isButtonDisabled,
-                        placeholder: "napr. 123456"
                     }),
                     regNumberError && React.createElement('p', { 
                         className: 'mt-1 text-sm text-red-600' 
@@ -525,7 +524,7 @@ function MemberDetailsModal({
                     ),
                     // Mesto
                     React.createElement('div', null,
-                        React.createElement('label', { htmlFor: 'city', className: 'block text-sm font-medium text-gray-700' }, 'Mesto / Obec'),
+                        React.createElement('label', { htmlFor: 'city', className: 'block text-sm font-medium text-gray-700' }, 'Mesto/obec'),
                         React.createElement('input', {
                             type: 'text',
                             id: 'city',
