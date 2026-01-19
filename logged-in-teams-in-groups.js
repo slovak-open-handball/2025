@@ -924,6 +924,29 @@ const AddGroupsApp = (props) => {
                         onClick: () => {
                             console.log("Editujem tím:", team);
                             console.log("uid:", team.uid);
+
+                            if (!team.isSuperstructureTeam && team.uid) {
+                                try {
+                                    const userRef = doc(window.db, 'users', team.uid);
+                                    const snap = await getDoc(userRef);
+                                    if (snap.exists()) {
+                                        const data = snap.data();
+                                        const cat = team.category;
+                                        const teams = data.teams?.[cat] || [];
+                                        const exists = teams.some(t => t.id === team.id);
+                                        if (!exists) {
+                                            alert(`Tím "${team.teamName}" už v profile používateľa neexistuje. Zoznam sa čoskoro aktualizuje.`);
+                                            return;
+                                        }
+                                    } else {
+                                        alert("Profil používateľa už neexistuje.");
+                                        return;
+                                    }
+                                } catch (err) {
+                                    console.error("Chyba pri overovaní existencie tímu:", err);
+                                }
+                            }
+                            
                             setTeamToEdit(team);
                             setIsModalOpen(true);
                         },
