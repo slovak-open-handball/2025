@@ -694,20 +694,23 @@ const AddGroupsApp = (props) => {
         const items = sortedTeams.map((team, idx) => {
             const hasDuplicateOrder = !isWithoutGroup && team.order != null && (orderCountMap.get(team.order) || 0) > 1;
             const textColor = hasDuplicateOrder ? 'text-red-600 font-bold' : 'text-gray-800';
-
+    
             let displayName = team.teamName;
             if (!team.isSuperstructureTeam && team.category && displayName.startsWith(team.category + ' ')) {
                 displayName = displayName.substring(team.category.length + 1).trim();
             }
-
+    
             let display = team.order != null && !isWithoutGroup
                 ? `${team.order}. ${displayName}`
                 : displayName;
-
+    
             if (!selectedCategoryId && !team.groupName && team.category) {
                 display = `${team.category}: ${display}`;
             }
-
+    
+            // Rozhodnutie, či vôbec zobrazíme tlačidlo s košom
+            const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
+    
             return React.createElement(
                 'li',
                 {
@@ -732,6 +735,8 @@ const AddGroupsApp = (props) => {
                             React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
                         )
                     ),
+                    // Ikonka koša sa zobrazí LEN ak showDeleteButton === true
+                    showDeleteButton &&
                     React.createElement(
                         'button',
                         {
@@ -746,7 +751,7 @@ const AddGroupsApp = (props) => {
                 )
             );
         });
-
+    
         return React.createElement('ul', { className: 'space-y-2' }, ...items);
     };
 
