@@ -34,20 +34,11 @@ const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam 
         // Odstránime tím z pôvodného miesta
         const teamToUpdate = teams.splice(originalTeamIndex, 1)[0];
 
-        // Ak sa zmenila skupina → reordering v starej aj novej
-        if (originalGroupName !== newGroupName) {
-            // Znížime poradie v pôvodnej skupine
-            teams = teams.map(t => {
-                if (t.groupName === originalGroupName && t.order != null && t.order > oldOrder) {
-                    return { ...t, order: t.order - 1 };
-                }
-                return t;
-            });
-
-            // Nové najvyššie poradie v cieľovej skupine
-            const teamsInTarget = teams.filter(t => t.groupName === newGroupName);
-            const maxOrder = teamsInTarget.reduce((max, t) => Math.max(max, t.order ?? 0), 0);
-            newOrder = newGroupName ? maxOrder + 1 : null;
+        let newOrder;
+        if (order !== undefined && order !== null && !isNaN(order)) {
+            newOrder = parseInt(order, 10);
+        } else {
+            newOrder = originalTeam.order ?? null;
         }
 
         // Aktualizovaný tím
@@ -475,49 +466,31 @@ const AddGroupsApp = (props) => {
                 return;
             }
     
-            const oldOrder = originalTeam.order;
-            const originalGroupName = originalTeam.groupName;
-    
-            // === KĽÚČOVÁ ČASŤ – určenie novej hodnoty order ===
+            // === ŽIADNE AUTOMATICKÉ POSÚVANIE ===
+            // Použijeme iba to, čo prišlo z modálu (alebo pôvodnú hodnotu)
             let newOrder;
-    
-            // Ak používateľ explicitne zadal hodnotu v inpute, použijeme ju
             if (order !== undefined && order !== null && !isNaN(order)) {
                 newOrder = parseInt(order, 10);
-            } 
-            // Inak zachováme pôvodnú hodnotu (ak existovala)
-            else {
+            } else {
                 newOrder = originalTeam.order ?? null;
             }
     
             const teamToUpdate = teamsInCategory.splice(teamIndex, 1)[0];
     
-            // Ak sa zmenila skupina → posunieme tímy v starej skupine
-            if (originalGroupName !== newGroupName) {
-                teamsInCategory = teamsInCategory.map(t => {
-                    if (t.groupName === originalGroupName && t.order != null && t.order > oldOrder) {
-                        return { ...t, order: t.order - 1 };
-                    }
-                    return t;
-                });
-    
-                // NEpočítame maxOrder + 1 – rešpektujeme zadanú hodnotu používateľa
-                // newOrder zostáva buď z inputu, alebo pôvodná
-            }
-    
             const updatedTeam = {
                 ...teamToUpdate,
                 teamName: finalTeamName,
                 groupName: newGroupName,
-                order: newOrder,           // ← tu sa uloží buď zadaná hodnota, alebo pôvodná
+                order: newOrder,           // ← presne to, čo zadal používateľ (alebo pôvodné)
             };
     
-            // Vloženie späť do poľa
+            // === Vloženie späť ===
             if (originalGroupName === newGroupName) {
-                // Ak sa skupina nemení → vložíme na pôvodný index (zachová poradie v zozname)
+                // Rovnaká skupina → vložíme na pôvodný index (zachová poradie v poli)
                 teamsInCategory.splice(teamIndex, 0, updatedTeam);
             } else {
-                // Ak sa zmení skupina → pridáme na koniec poľa (ale order je už nastavený)
+                // Iná skupina → jednoducho pridáme na koniec poľa
+                // (poradie určuje len hodnota order, nie pozícia v poli)
                 teamsInCategory.push(updatedTeam);
             }
     
@@ -540,7 +513,7 @@ const AddGroupsApp = (props) => {
             });
         }
     };
-    
+        
     // --- UPRAVENÉ POMOCNÉ FUNKCIE PRE URL SLUG ---
     const slugifyName = (name) => {
         if (!name) return '';
