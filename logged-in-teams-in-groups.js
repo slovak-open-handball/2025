@@ -35,10 +35,10 @@ const handleUpdateTeam = async ({ categoryId, groupName, teamName, order, origin
 
         // Pripravíme aktualizovaný tím
         const updatedTeam = {
-            ...teamToUpdate,
             id: teamToUpdate.id || crypto.randomUUID(),
             teamName: finalTeamName,
             groupName: newGroupName,
+            order: newOrder
         };
 
         // Logika poradia
@@ -430,44 +430,58 @@ const AddGroupsApp = (props) => {
     // Nová funkcia na aktualizáciu používateľského tímu
     const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
         if (!window.db || !originalTeam?.uid) return;
-    
+
         const userId = originalTeam.uid;
-    
         const categoryName = categoryIdToNameMap[categoryId];
-        const finalTeamName = `${categoryName} ${teamName.trim() || ''}`;
+        if (!categoryName) return;
+    
+        const finalTeamName = `${categoryName} ${teamName.trim()}`;
     
         try {
             const userRef = doc(window.db, 'users', userId);
             const userSnap = await getDoc(userRef);
     
-            if (!userSnap.exists()) { ... error ... }
-    
-            const userData = userSnap.data();
-            let teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-    
-            // NÁJDENIE TÍMU PODĽA NÁZVU (namiesto id)
-            const teamIndex = teamsInCategory.findIndex(t => t.teamName === finalTeamName);
-    
-            if (teamIndex === -1) {
+            if (!userSnap.exists()) {
                 setNotification({
                     id: Date.now(),
-                    message: `Tím "${finalTeamName}" sa nenašiel v kategórii ${categoryName} používateľa ${userId}.`,
-                    type: 'warning'
+                    message: `Používateľ ${userId} už neexistuje v databáze.`,
+                    type: 'error'
                 });
                 return;
             }
     
-            const teamToUpdate = teamsInCategory.splice(teamIndex, 1)[0];
-            
+            const userData = userSnap.data();
+            const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
+    
+            // Hľadáme tím podľa pôvodného názvu (pre istotu)
+            const teamIndex = teamsInCategory.findIndex(t => t.teamName === originalTeam.teamName);
+            if (teamIndex === -1) {
+                setNotification({
+                    id: Date.now(),
+                    message: `Tím "${originalTeam.teamName}" sa nenašiel v profile používateľa.`,
+                    type: 'error'
+                });
+                return;
+            }
+    
+            const teamToUpdate = teamsInCategory[teamIndex];
+    
+            // -------------------------------
+            // Bez spread operátora
             const updatedTeam = {
-                ...teamToUpdate,
                 id: teamToUpdate.id || crypto.randomUUID(),
                 teamName: finalTeamName,
-                groupName: newGroupName,
+                groupName: groupName || null,          // ← tu používame parameter groupName
+                order: null,                           // bude prepísané nižšie ak treba
+                // skopírujeme ostatné polia, ktoré chceme zachovať
+                // (pridaj ďalšie polia podľa potreby, napr. players, createdAt, atď.)
             };
-            
+    
+            // Logika poradia – rovnaká ako pri globálnych tímoch
             let newOrder = null;
-            
+            const newGroupName = groupName || null;
+            const originalGroupName = originalTeam.groupName || null;
+    
             if (newGroupName) {
                 if (originalGroupName === newGroupName) {
                     newOrder = originalTeam.order ?? null;
@@ -476,20 +490,24 @@ const AddGroupsApp = (props) => {
                     const maxOrder = teamsInTargetGroup.reduce((max, t) => Math.max(max, t.order || 0), 0);
                     newOrder = maxOrder + 1;
                 }
-            
+    
+                // Explicitne zadané poradie má prednosť
                 if (order !== undefined && order !== null && !isNaN(order)) {
                     newOrder = parseInt(order, 10);
                 }
             }
-            
+    
             updatedTeam.order = newOrder;
-            
+    
+            // Odstránime starý tím a vložíme aktualizovaný
+            teamsInCategory.splice(teamIndex, 1);
             teamsInCategory.push(updatedTeam);
-            
+    
+            // Uložíme celé pole naspäť
             await updateDoc(userRef, {
                 [`teams.${categoryName}`]: teamsInCategory
             });
-            
+    
             setNotification({
                 id: Date.now(),
                 message: `Používateľský tím ${finalTeamName} bol aktualizovaný (poradie: ${newOrder ?? 'bez poradia'})`,
