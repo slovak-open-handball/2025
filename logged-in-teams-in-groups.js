@@ -472,7 +472,11 @@ const AddGroupsApp = (props) => {
 
             const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
             if (teamIndex === -1) {
-                setNotification({ id: Date.now(), message: "Tím sa nenašiel v dátach používateľa", type: 'warning' });
+                setNotification({
+                    id: Date.now(),
+                    message: `Tím už nie je v zozname používateľa ${originalTeam.uid}. Možno bol odstránený.`,
+                    type: 'warning'
+                });
                 return;
             }
             
@@ -918,6 +922,8 @@ const AddGroupsApp = (props) => {
                     'button',
                     {
                         onClick: () => {
+                            console.log("Editujem tím:", team);
+                            console.log("uid:", team.uid);
                             setTeamToEdit(team);
                             setIsModalOpen(true);
                         },
