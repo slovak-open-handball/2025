@@ -414,7 +414,6 @@ const AddGroupsApp = (props) => {
                             className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${isDuplicate ? 'border-red-500' : 'border-gray-300'}`,
                             value: teamName,
                             onChange: (e) => setTeamName(e.target.value),
-                            placeholder: 'napr. Elita, Juniori A, Rezerva...',
                             required: true,
                             autoFocus: true
                         }),
