@@ -979,7 +979,6 @@ const AddGroupsApp = (props) => {
             defaultCategoryId: selectedCategoryId,
             defaultGroupName: selectedGroupName,
         })
-        ),
         React.createElement(
             'div',
             { className: 'w-full max-w-xs mx-auto mb-8' },
