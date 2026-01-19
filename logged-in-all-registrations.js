@@ -3746,17 +3746,17 @@ const clearFilter = (column) => {
         if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
             throw new Error(`Člen na indexe ${memberArrayIndex} neexistuje v poli ${memberArrayPath}`);
         }
-
+    
         const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
         let updatedMember = { ...originalMember };
-
+    
         // Aplikácia zmien z modálu
         for (const key in updatedDataFromModal) {
             if (key !== 'address') {
                 updatedMember[key] = updatedDataFromModal[key];
             }
         }
-
+    
         // Špeciálne spracovanie adresy
         updatedMember.address = { ...(originalMember.address || {}) };
         if (updatedDataFromModal.address) {
@@ -3774,37 +3774,62 @@ const clearFilter = (column) => {
                 updatedMember.address[key] = "";
             }
         }
-
-        // Normálny diff iba pri úprave
-        const generatedChanges = getChangesForNotification(
+    
+        // Vypočítať zmeny
+        const changes = getChangesForNotification(
             originalMember,
             updatedMember,
             formatDateToDMMYYYY
         );
-        
-        if (generatedChanges.length === 0) {
+    
+        if (changes.length === 0) {
             setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
             closeEditModal();
             return;
         }
-        
-        // ─── PRIDAŤ SPRÁVNY PREFIX PRE ČLENA ────────────────────────────────────────
-        const memberName = `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() || 'Bez mena';
-        const teamName   = teamToUpdate.teamName   || 'Bez názvu';
-        const teamCategory = category;  // ← toto je správna hodnota z cesty
-        
-        const prefix = `${memberName} (Tím: ${teamName}, ${teamCategory}): `;
-        
-        // Pridať prefix ku každému riadku zmeny
-        generatedChanges.forEach((change, i) => {
-            generatedChanges[i] = prefix + change;
-        });
-        // ──────────────────────────────────────────────────────────────────────────────
-        
+    
+        // ────────────────────────────────
+        // Vytvorenie pekného prefixu
+        // ────────────────────────────────
+        const firstName  = updatedMember.firstName  || originalMember.firstName  || '';
+        const lastName   = updatedMember.lastName   || originalMember.lastName   || '';
+        const memberName = `${firstName} ${lastName}`.trim() || 'bez mena';
+    
+        const teamName    = teamToUpdate.teamName   || 'bez názvu';
+        const teamCategory = category;  // hodnota získaná z cesty (Juniors, Kadeti, ...)
+    
+        // Typ člena – pekný text pre notifikáciu
+        let memberTypeLabel = 'člen tímu';
+        if (memberArrayPath === 'playerDetails')              memberTypeLabel = 'hráč';
+        if (memberArrayPath === 'menTeamMemberDetails')       memberTypeLabel = 'člen RT (muž)';
+        if (memberArrayPath === 'womenTeamMemberDetails')     memberTypeLabel = 'členka RT (žena)';
+        if (memberArrayPath === 'driverDetailsMale')          memberTypeLabel = 'šofér (muž)';
+        if (memberArrayPath === 'driverDetailsFemale')        memberTypeLabel = 'šoférka (žena)';
+    
+        // Finálny prefix pre KAŽDÝ riadok zmeny
+        const prefix = `${memberName} – ${memberTypeLabel} – tím „${teamName}“ (${teamCategory}): `;
+    
+        // Pridáme prefix ku každému riadku zmeny
+        const prefixedChanges = changes.map(change => prefix + change);
+    
+        // Uloženie notifikácie
+        const userEmail = window.auth.currentUser?.email;
+        if (userEmail && prefixedChanges.length > 0) {
+            const notificationsCollectionRef = collection(db, 'notifications');
+            await addDoc(notificationsCollectionRef, {
+                userEmail,
+                changes: prefixedChanges,
+                timestamp: serverTimestamp()
+            });
+            console.log("Notifikácia o úprave člena uložená s prefixom");
+        }
+    
+        // Zobrazenie používateľovi (môže byť aj kratšie)
+        setUserNotificationMessage(`Zmeny uložené (${memberName}, ${teamName}).`, 'success');
+    
         currentMemberArray[memberArrayIndex] = updatedMember;
-        setUserNotificationMessage("Zmeny člena boli uložené.", 'success');
     }
-
+    
     // ────────────────────────────────────────────────────────────────
     // Spoločný kód – uloženie zmien do Firestore
     // ────────────────────────────────────────────────────────────────
@@ -3820,7 +3845,7 @@ const clearFilter = (column) => {
     await updateDoc(targetDocRef, updates);
 
     closeEditModal();
-}else {
+  }else {
             // Všeobecná vnorená aktualizácia
             if (!originalDataPath) {
                 throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu. Zmeny neboli uložené.");
