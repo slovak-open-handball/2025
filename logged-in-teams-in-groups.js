@@ -1,12 +1,35 @@
+function initializeWhenReady() {
+    if (!window.React || typeof window.React.useState !== 'function') {
+        console.warn("React ešte nie je načítaný → čakáme 100 ms");
+        setTimeout(initializeWhenReady, 100);
+        return;
+    }
+
+    console.log("React je pripravený → spúšťame inicializáciu");
+
+    const { useState, useEffect, useRef } = React;
+
+    // sem vlož celý zvyšok kódu (NewTeamModal, TeamEditModal, AddGroupsApp, atď.)
+    // všetko od const NewTeamModal = ... až po koniec súboru
+}
+
+// Spustenie
+if (document.readyState === 'complete') {
+    initializeWhenReady();
+} else {
+    window.addEventListener('load', initializeWhenReady);
+}
+
 import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 // --- Komponent Modálne Okno pre Pridanie/Editáciu Tímu ---
 // Zjednotený Modál pre pridávanie (Add) a úpravu (Edit)
-const { useState, useEffect, useRef } = React;
 
-const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToNameMap, unifiedSaveHandler, teamToEdit, allTeams, defaultCategoryId, defaultGroupName }) => {
+const NewTeamModal = (props) => {
+    const { useState, useEffect, useRef } = React;
+
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [teamName, setTeamName] = useState('');
@@ -239,7 +262,8 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
     );
 };
 
-const TeamEditModal = ({ isOpen, onClose, team, allGroupsByCategoryId, categoryIdToNameMap, onSave }) => {
+const TeamEditModal = (props) => {
+    const { useState } = React;
     if (!isOpen || !team) return null;
 
     const isGlobal = team.isSuperstructureTeam;
@@ -427,7 +451,8 @@ const handleSaveTeamChanges = async ({ team, newTeamName, newGroupName, newOrder
     }
 };
 
-const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
+const AddGroupsApp = (props) => {
+    const { useState, useEffect } = React;
     const [allTeams, setAllTeams] = useState([]);
     const [userTeamsData, setUserTeamsData] = useState([]);
     const [superstructureTeams, setSuperstructureTeams] = useState({});
