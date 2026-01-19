@@ -825,7 +825,7 @@ const AddGroupsApp = (props) => {
                     ref: teamsWithoutGroupRef,
                     className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-6 mb-4 flex-shrink-0"
                 },
-                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny vu00A0kategórii: ${categoryName}`),
+                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`),
                 renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
             ),
             React.createElement(
