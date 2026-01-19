@@ -36,6 +36,7 @@ const handleUpdateTeam = async ({ categoryId, groupName, teamName, order, origin
         // Pripravíme aktualizovaný tím
         const updatedTeam = {
             ...teamToUpdate,
+            id: teamToUpdate.id || crypto.randomUUID(),
             teamName: finalTeamName,
             groupName: newGroupName,
         };
@@ -487,6 +488,7 @@ const AddGroupsApp = (props) => {
             
             const updatedTeam = {
                 ...teamToUpdate,
+                id: teamToUpdate.id || crypto.randomUUID(),
                 teamName: finalTeamName,
                 groupName: newGroupName,
             };
@@ -586,8 +588,7 @@ const AddGroupsApp = (props) => {
                                     userTeamsList.push({
                                         uid: doc.id,
                                         category: categoryName,
-                                        // UDRŽÍME LOKÁLNU ID GENERÁCIU PRE PRÍPADNÉ CHÝBAJÚCE ID V DB
-                                        id: team.id || `${doc.id}-${team.teamName}`,
+                                        id: team.id || crypto.randomUUID(),
                                         teamName: team.teamName,
                                         groupName: team.groupName || null,
                                         // FIX 2: Poradie je relevantné len ak má tím skupinu
@@ -943,19 +944,19 @@ const AddGroupsApp = (props) => {
                                         return;
                                     }
     
-                                    const data = snap.data();
-                                    const cat = team.category;
-                                    const teamsArr = data.teams?.[cat] || [];
-                                    const exists = teamsArr.some(t => t.id === team.id);
+//                                    const data = snap.data();
+//                                    const cat = team.category;
+//                                    const teamsArr = data.teams?.[cat] || [];
+//                                    const exists = teamsArr.some(t => t.id === team.id);
     
-                                    if (!exists) {
-                                        setNotification({
-                                            id: Date.now(),
-                                            message: `Tím "${team.teamName}" už nie je v profile používateľa. Zoznam sa aktualizuje.`,
-                                            type: 'warning'
-                                        });
-                                        return;
-                                    }
+//                                    if (!exists) {
+//                                        setNotification({
+//                                            id: Date.now(),
+//                                            message: `Tím "${team.teamName}" už nie je v profile používateľa. Zoznam sa aktualizuje.`,
+//                                            type: 'warning'
+//                                        });
+//                                        return;
+//                                    }
                                 } catch (err) {
                                     console.error("Chyba pri overovaní tímu:", err);
                                     setNotification({
