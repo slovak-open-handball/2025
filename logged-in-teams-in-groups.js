@@ -92,6 +92,30 @@ const NewTeamModal = ({
     defaultGroupName = '',
     unifiedSaveHandler
 }) => {
+
+    const [orderInputValue, setOrderInputValue] = useState(null);
+
+    // Automatické nastavenie poradia pri zmene skupiny alebo otvorení modálu
+    useEffect(() => {
+        if (!isOpen || !selectedGroup) {
+            setOrderInputValue(null);
+            return;
+        }
+    
+        // Ak editujeme tím, ktorý už má order → prednastavíme ho
+        if (teamToEdit && teamToEdit.groupName === selectedGroup && teamToEdit.order != null) {
+            setOrderInputValue(teamToEdit.order);
+            return;
+        }
+    
+        // Inak navrhneme poradie na konci aktuálnej skupiny
+        const teamsInGroup = allTeams.filter(
+            t => t.category === categoryIdToNameMap[selectedCategory] && t.groupName === selectedGroup
+        );
+        const maxOrder = teamsInGroup.reduce((max, t) => Math.max(max, t.order || 0), 0);
+        setOrderInputValue(maxOrder + 1);
+    }, [selectedGroup, isOpen, teamToEdit, allTeams, selectedCategory, categoryIdToNameMap]);
+    
     const { useState, useEffect, useRef } = React;
 
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -179,7 +203,8 @@ const NewTeamModal = ({
         unifiedSaveHandler({
             categoryId: selectedCategory,
             groupName: selectedGroup,
-            teamName: teamName,
+            teamName: teamName,              // stále posielame, ale už sa nepoužíva na zmenu
+            order: orderInputValue,          // ← NOVÉ
             isEdit: !!teamToEdit,
             originalTeam: teamToEdit
         });
@@ -228,12 +253,23 @@ const NewTeamModal = ({
                 className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transition-all transform scale-100',
                 onClick: (e) => e.stopPropagation()
             },
-            React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-6 border-b pb-2' }, modalTitle),
+            // Nadpis s názvom tímu (statický)
+            React.createElement(
+                'h2',
+                { className: 'text-2xl font-bold text-gray-800 mb-2' },
+                teamToEdit ? 'Upraviť tím' : 'Pridať nový tím'
+            ),
+            React.createElement(
+                'div',
+                { className: 'text-xl font-semibold text-indigo-700 mb-6' },
+                teamToEdit ? teamToEdit.teamName : 'Nový tím'
+            ),
+    
             React.createElement(
                 'form',
-                { onSubmit: handleSubmit, className: 'space-y-4' },
-               
-                // 1. Select Kategórie
+                { onSubmit: handleSubmit, className: 'space-y-6' },
+    
+                // 1. Kategória (zostáva rovnaká)
                 React.createElement(
                     'div',
                     { className: 'flex flex-col' },
@@ -245,7 +281,7 @@ const NewTeamModal = ({
                             value: selectedCategory,
                             onChange: handleCategoryChange,
                             required: true,
-                            disabled: isCategoryFixed || isCategoryDisabledInEdit // Zakázanie zmeny pri editácii
+                            disabled: isCategoryFixed || isCategoryDisabledInEdit
                         },
                         React.createElement('option', { value: '' }, '--- Vyberte kategóriu ---'),
                         sortedCategoryEntries.map(([id, name]) =>
@@ -253,13 +289,13 @@ const NewTeamModal = ({
                         )
                     ),
                     isCategoryDisabledInEdit && React.createElement('p', { className: 'text-xs text-red-600 mt-1' }, `Pri editácii tímu nemôžete zmeniť kategóriu.`),
-                    isCategoryFixed && !isCategoryDisabledInEdit && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Kategória je predvolená filtrom na stránke: ${categoryIdToNameMap[defaultCategoryId]}`)
+                    isCategoryFixed && !isCategoryDisabledInEdit && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Kategória je predvolená filtrom: ${categoryIdToNameMap[defaultCategoryId]}`)
                 ),
-                // 2. Select Skupiny
+    
+                // 2. Skupina (zostáva rovnaká)
                 React.createElement(
                     'div',
                     { className: 'flex flex-col' },
-                    // Skupina je teraz povinná!
                     React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Skupina:'),
                     React.createElement(
                         'select',
@@ -267,59 +303,50 @@ const NewTeamModal = ({
                             className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${!selectedCategory || isGroupFixed ? 'bg-gray-100 cursor-not-allowed' : ''}`,
                             value: selectedGroup,
                             onChange: (e) => setSelectedGroup(e.target.value),
-                            required: true, // Skupina je teraz povinná
+                            required: true,
                             disabled: !selectedCategory || isGroupFixed
                         },
                         React.createElement('option', { value: '' }, availableGroups.length > 0 ? '--- Vyberte skupinu ---' : 'Najprv vyberte kategóriu'),
                         availableGroups.map((group, index) =>
-                            // ZOBRAZENIE: Pridaný typ skupiny v zátvorkách
                             React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
                         )
                     ),
-                    // NOVÉ: Zobrazenie upozornenia, ak je skupina predvolená
-                    isGroupFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Skupina je predvolená filtrom na stránke: ${defaultGroupName}`)
+                    isGroupFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Skupina je predvolená: ${defaultGroupName}`)
                 ),
-                // 3. Input Názov Tímu
-                React.createElement(
+    
+                // 3. NOVÉ: Poradové číslo (order) – len ak je vybraná skupina
+                selectedGroup && React.createElement(
                     'div',
                     { className: 'flex flex-col' },
-                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 
-                        `Zadajte názov tímu (Uloží sa ako: "${categoryIdToNameMap[selectedCategory] || 'Kategória'} [Váš Názov])":`
-                    ),
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradové číslo v skupine (order):'),
                     React.createElement(
                         'input',
                         {
-                            type: 'text',
-                            className: `p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${
-                                teamToEdit && !teamToEdit.isSuperstructureTeam ? 'bg-gray-100 cursor-not-allowed' : ''
-                            }`,
-                            value: teamName,
-                            onChange: (e) => setTeamName(e.target.value),
+                            type: 'number',
+                            min: '1',
+                            className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-32',
+                            value: orderInputValue || '',  // ← pridáme nový stav nižšie
+                            onChange: (e) => setOrderInputValue(e.target.value ? parseInt(e.target.value, 10) : ''),
                             required: true,
-                            placeholder: 'Napr. Tím Alfa (Váš názov)',
-                            disabled: teamToEdit && !teamToEdit.isSuperstructureTeam   // ← ZAKÁZANÉ pre používateľské tímy
+                            placeholder: 'napr. 5'
                         }
                     ),
-                    // Upozornenie, ak je názov zakázaný na zmenu
-                    (teamToEdit && !teamToEdit.isSuperstructureTeam) && React.createElement(
+                    React.createElement(
                         'p',
-                        { className: 'text-xs text-amber-700 mt-1 bg-amber-50 p-2 rounded border border-amber-200' },
-                        'Názov používateľského tímu sa nedá meniť (slúži na identifikáciu v systéme).'
-                    ),
-                    // Zobrazenie upozornenia pre duplikát (zachované)
-                    isDuplicate && React.createElement('p', { className: 'text-sm text-red-600 mt-2 font-medium p-2 bg-red-50 rounded-lg border border-red-300' }, 
-                        `Tím s názvom "${categoryIdToNameMap[selectedCategory]} ${teamName.trim()}" už existuje. Zmeňte prosím názov.`
+                        { className: 'text-xs text-gray-500 mt-1' },
+                        'Číslo určuje poradie tímov v skupine. Vyššie číslo = nižšie v zozname.'
                     )
                 ),
+    
                 // Tlačidlá
                 React.createElement(
                     'div',
-                    { className: 'pt-4 flex justify-end space-x-3' },
+                    { className: 'pt-6 flex justify-end space-x-4' },
                     React.createElement(
                         'button',
                         {
                             type: 'button',
-                            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors',
+                            className: 'px-5 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors',
                             onClick: onClose
                         },
                         'Zrušiť'
@@ -727,7 +754,7 @@ const AddGroupsApp = (props) => {
             });
            
             // Nový tím je vždy s najvyšším poradím, ak má skupinu
-            const newOrder = groupName ? (maxOrder + 1) : null;
+            const newOrder = data.order != null ? parseInt(data.order, 10) : (newGroupName ? maxOrder + 1 : null);
            
             const newTeam = {
                 teamName: finalTeamName,
