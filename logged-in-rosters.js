@@ -82,7 +82,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                         } else if (newQ === 0) {
                             changes.push(`Odstránené tričká (${size}): ${oldQ} ks`);
                         } else {
-                            changes.push(`Zmena počtu tričiek (${size}): z ${oldQ} na ${newQ} ks`);
+                            changes.push(`Zmena počtu tričiek (${size}): z '${oldQ} ks' na '${newQ} ks'`);
                         }
                     }
                 }
@@ -114,7 +114,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 if (currentPath.includes('address.city'))         label = 'Mesto/obec';
                 if (currentPath.includes('address.country'))      label = 'Štát';
 
-                changes.push(`Zmena ${label}: z '${a || '-'}' na '${b || '-'}`);
+                changes.push(`Zmena ${label}: z '${a || '-'}' na '${b || '-'}'`);
             }
         }
     };
@@ -130,7 +130,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         : '';
 
     if (oa !== ua) {
-        changes.push(`Zmena dopravy: z '${oa || '-'}' na '${ua || '-'}`);
+        changes.push(`Zmena dopravy: z '${oa || '-'}' na '${ua || '-'}'`);
     }
 
     return changes;
