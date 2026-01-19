@@ -44,7 +44,7 @@ const AddGroupsApp = (props) => {
             let teams = globalTeamsData[teamToDelete.category] || [];
             const teamIndex = teams.findIndex(t => t.id === teamToDelete.id);
             if (teamIndex === -1) {
-                setNotification({ id: Date.now(), message: "Chyba: Odstraňovaný globálny tím sa nenašiel.", type: 'error' });
+                setNotification({ id: Date.now(), message: "Chyba: Odstraňovaný tím sa nenašiel.", type: 'error' });
                 return;
             }
             const originalGroup = teamToDelete.groupName;
@@ -62,7 +62,7 @@ const AddGroupsApp = (props) => {
             }, { merge: true });
             setNotification({
                 id: Date.now(),
-                message: `Globálny tím '${teamToDelete.teamName}' bol úspešne odstránený.`,
+                message: `Tím '${teamToDelete.teamName}' bol odstránený.`,
                 type: 'success'
             });
         } catch (error) {
@@ -106,7 +106,7 @@ const AddGroupsApp = (props) => {
 
     const handleRemoveOrDeleteTeam = (team) => {
         if (team.isSuperstructureTeam) {
-            if (!window.confirm(`Naozaj chcete úplne odstrániť globálny tím "${team.teamName}"?`)) return;
+            if (!window.confirm(`Naozaj chcete úplne odstrániť tím "${team.teamName}"?`)) return;
             handleDeleteTeam(team);
         } else {
             if (!window.confirm(`Presunúť tím "${team.teamName}" medzi tímy bez skupiny?`)) return;
@@ -178,7 +178,7 @@ const AddGroupsApp = (props) => {
         const finalTeamName = `${categoryName} ${teamName}`;
         const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
         if (isDuplicateFinal) {
-            setNotification({ id: Date.now(), message: `Globálny tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, type: 'error' });
+            setNotification({ id: Date.now(), message: `Tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, type: 'error' });
             return;
         }
         try {
@@ -205,7 +205,7 @@ const AddGroupsApp = (props) => {
             }, { merge: true });
             setNotification({
                 id: Date.now(),
-                message: `Globálny tím '${finalTeamName}' bol úspešne pridaný.`,
+                message: `Tím '${finalTeamName}' bol pridaný.`,
                 type: 'success'
             });
         } catch (error) {
@@ -737,7 +737,7 @@ const AddGroupsApp = (props) => {
                         {
                             onClick: () => handleRemoveOrDeleteTeam(team),
                             className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
-                            title: team.isSuperstructureTeam ? 'Odstrániť globálny tím' : 'Zrušiť zaradenie do skupiny'
+                            title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
                         },
                         React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                             React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
