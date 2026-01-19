@@ -479,7 +479,7 @@ function MemberDetailsModal({
                 ),
 
                 showAddressFields && React.createElement('div', { className: 'space-y-4 mt-6 border-t pt-4' },
-                React.createElement('h4', { className: 'text-md font-semibold text-gray-800' }, 'Adresa pre ubytovanie'),
+                React.createElement('h4', { className: 'text-md font-semibold text-gray-800' }, 'Adresa trvalého bydliska (pre účely ubytovania)'),
 
                 // Ulica
                 React.createElement('div', null,
