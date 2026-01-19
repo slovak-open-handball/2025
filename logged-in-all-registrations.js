@@ -920,75 +920,72 @@ const formatLabel = (key) => {
 };
 
 // Pomocná funkcia na porovnávanie zmien pre notifikácie
+// Pomocná funkcia na porovnávanie zmien pre notifikácie
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
-
-    // Keys that should NEVER trigger a notification (internal, derived, or sensitive)
+    
+    // Keys that should NEVER trigger a notification
     const universallyIgnoredKeys = new Set([
         '_userId', '_teamIndex', '_registeredBy', '_menTeamMembersCount',
         '_womenTeamMembersCount', '_menDriversCount', '_womenDriversCount', '_players',
         '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
         'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
-        'registrationDate', 'passwordLastChanged',
-        'teams', 'categories', 'timestamp',
-        'note' // Note is meant for internal use, not user-facing notification
+        'registrationDate', 'passwordLastChanged', 'teams', 'categories', 'timestamp',
+        'note'
     ]);
 
     const normalizeValueForComparison = (value, path) => {
-        if (value === null || value === undefined) {
-            return '';
-        }
-        // Specific handling for Firebase Timestamps
-        if (value && typeof value.toDate === 'function') {
-            const date = value.toDate();
-            // For date fields like 'dateOfBirth', use YYYY-MM-DD string
-            if (path.toLowerCase().includes('dateofbirth')) {
-                return date.toISOString().split('T')[0];
+        if (value === null || value === undefined) return '';
+
+        // ─── ŠPECIÁLNE SPRACOVANIE DÁTUMOV ───────────────────────────────
+        // Ak obsahuje "dateofbirth" alebo "registrationdate" v ceste → formátujeme
+        const lowerPath = path.toLowerCase();
+        const isDateField = 
+            lowerPath.includes('dateofbirth') || 
+            lowerPath.includes('registrationdate') ||
+            lowerPath.includes('date'); // prípadne iné dátumové polia
+
+        if (isDateField) {
+            // Firebase Timestamp
+            if (value && typeof value.toDate === 'function') {
+                return formatDateFn(value.toDate());           // ← tu používame DD.MM.RRRR
             }
-            // For other timestamps, use full ISO string or specific format if needed
-            return date.toISOString();
-        }
-        // For simple date strings (e.g., YYYY-MM-DD for dateOfBirth)
-        if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            return value;
+            // Plain string YYYY-MM-DD
+            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return formatDateFn(value);                    // ← tu používame DD.MM.RRRR
+            }
+            // Iný formát → ponecháme ako string
+            return String(value);
         }
 
-        // For objects like arrival, accommodation, packageDetails, use specific properties if available
+        // ─── Zvyšok pôvodnej logiky ──────────────────────────────────────
+        if (value && typeof value.toDate === 'function') {
+            return value.toDate().toISOString();
+        }
         if (typeof value === 'object' && !Array.isArray(value)) {
-            // Handle arrival.type and arrival.time
             if (path === 'arrival' && value.type) {
                 return formatArrivalTime(value.type, value.time);
             }
             if (value.type) return value.type;
             if (value.name) return value.name;
-            // Handle other generic objects by stringifying
             try {
                 return JSON.stringify(value);
             } catch (e) {
-                console.error("Error stringifying object for comparison:", value, e);
                 return '[OBJECT_ERROR]';
             }
         }
         return String(value);
     };
 
-
-    // Helper for deep comparison of objects
     const compareObjects = (origObj, updObj, pathPrefix = '') => {
         const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]);
-
         for (const key of nestedKeys) {
             const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
-
-            // Skip universally ignored keys at any level
-            if (universallyIgnoredKeys.has(key)) {
-                continue;
-            }
+            if (universallyIgnoredKeys.has(key)) continue;
 
             const origValue = origObj ? origObj[key] : undefined;
             const updValue = updObj ? updObj[key] : undefined;
 
-            // Handle nested objects recursively (excluding arrays and Firebase Timestamps)
             const isOrigObject = typeof origValue === 'object' && origValue !== null && !Array.isArray(origValue) && !(origValue.toDate && typeof origValue.toDate === 'function');
             const isUpdObject = typeof updValue === 'object' && updValue !== null && !Array.isArray(updValue) && !(updValue.toDate && typeof updValue.toDate === 'function');
 
@@ -997,65 +994,49 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 continue;
             }
 
-            // Special handling for tshirts array (must be here, as it's an array and not handled by recursive object comparison)
+            // špeciálne spracovanie tričiek
             if (currentPath === 'tshirts') {
                 const originalTshirtsMap = new Map((origValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
                 const updatedTshirtsMap = new Map((updValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
-
                 const allSizes = new Set([...Array.from(originalTshirtsMap.keys()), ...Array.from(updatedTshirtsMap.keys())]);
-
                 for (const size of allSizes) {
-                    const oldQuantity = originalTshirtsMap.get(size) || 0;
-                    const newQuantity = updatedTshirtsMap.get(size) || 0;
-
-                    if (oldQuantity !== newQuantity) {
-                        if (oldQuantity === 0 && newQuantity > 0) {
-                            changes.push(`Pridané tričko (${size}): ${newQuantity}`);
-                        } else if (newQuantity === 0 && oldQuantity > 0) {
-                            changes.push(`Odstránené tričko (${size}): ${oldQuantity}`);
+                    const oldQ = originalTshirtsMap.get(size) || 0;
+                    const newQ = updatedTshirtsMap.get(size) || 0;
+                    if (oldQ !== newQ) {
+                        if (oldQ === 0) {
+                            changes.push(`Pridané tričko (${size}): ${newQ}`);
+                        } else if (newQ === 0) {
+                            changes.push(`Odstránené tričko (${size}): ${oldQ}`);
                         } else {
-                            changes.push(`Zmena ${formatLabel('tshirts')}: z '${size} - ${oldQuantity}' na '${size} - ${newQuantity}'`);
+                            changes.push(`Zmena tričiek: ${size} z ${oldQ} na ${newQ}`);
                         }
                     }
                 }
                 continue;
             }
 
-
-            // Compare values after normalization
             const valueA = normalizeValueForComparison(origValue, currentPath);
             const valueB = normalizeValueForComparison(updValue, currentPath);
 
             if (valueA !== valueB) {
-                let changeDescription = '';
                 const label = formatLabel(currentPath);
-
-                // General case - use formatLabel for all fields
-                changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
-            
-                if (changeDescription && !changes.includes(changeDescription)) {
+                let changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}`;
+                if (!changes.includes(changeDescription)) {
                     changes.push(changeDescription);
                 }
             }
         }
     };
 
-    // Start comparison from the top-level
     compareObjects(original, updated);
 
-    // After recursive comparison, specifically handle consolidated changes for 'arrival'
-    const originalArrivalType = original?.arrival?.type;
-    const originalArrivalTime = original?.arrival?.time;
-    const updatedArrivalType = updated?.arrival?.type;
-    const updatedArrivalTime = updated?.arrival?.time;
+    // arrival špeciálne (pôvodná logika)
+    const originalArrival = formatArrivalTime(original?.arrival?.type, original?.arrival?.time);
+    const updatedArrival   = formatArrivalTime(updated?.arrival?.type,   updated?.arrival?.time);
+    if (originalArrival !== updatedArrival) {
+        changes.push(`Zmena ${formatLabel('arrival.type')}: z '${originalArrival}' na '${updatedArrival}'`);
+    }
 
-    const formattedOriginalArrival = formatArrivalTime(originalArrivalType, originalArrivalTime);
-    const formattedUpdatedArrival = formatArrivalTime(updatedArrivalType, updatedArrivalTime);
-
-    if (formattedOriginalArrival !== formattedUpdatedArrival && !changes.some(change => change.includes(`Zmena ${formatLabel('arrival.type')}:`))) {
-      changes.push(`Zmena ${formatLabel('arrival.type')}: z '${formattedOriginalArrival}' na '${formattedUpdatedArrival}'`);
-  }
-  
     return changes;
 };
 
