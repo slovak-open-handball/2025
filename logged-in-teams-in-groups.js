@@ -28,6 +28,7 @@ const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam 
         }
 
         const oldOrder = originalTeam.order;
+        const originalGroupName = originalTeam.groupName || null;
         const newGroupName = groupName || null;
         let newOrder = originalTeam.order;
 
@@ -45,16 +46,37 @@ const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam 
             ...teamToUpdate,
             teamName: finalTeamName,
             groupName: newGroupName,
-            order: newOrder,
-        };
+        };        
 
-        // Vrátime tím naspäť (buď na pôvodné miesto alebo na koniec)
-        if (originalGroupName === newGroupName) {
-            teams.splice(originalTeamIndex, 0, updatedTeam);
-        } else {
-            teams.push(updatedTeam);
-        }
+        let newOrder = null;
 
+        if (newGroupName) {
+            // Tím má (alebo bude mať) skupinu
+        
+            if (originalGroupName === newGroupName) {
+                // Rovnaká skupina → zachovávame pôvodný order (ak existoval)
+                newOrder = originalTeam.order ?? null;
+            } else {
+                // Nová skupina alebo priradenie z "bez skupiny"
+                const teamsInTargetGroup = teams.filter(t => t.groupName === newGroupName);
+                const maxOrder = teamsInTargetGroup.reduce((max, t) => Math.max(max, t.order || 0), 0);
+                newOrder = maxOrder + 1;
+            }
+        
+            // Ak admin explicitne niečo zadal v inpute → rešpektujeme to
+            if (order !== undefined && order !== null && !isNaN(order)) {
+                newOrder = parseInt(order, 10);
+            }
+        } 
+        // else → newGroupName je null → order zostane null (už je nastavené vyššie)
+        
+        updatedTeam.order = newOrder;
+        
+        // 4. Vložíme tím naspäť
+        teams.push(updatedTeam);   // zatiaľ jednoduché – na koniec
+        // prípadne: teams.sort((a,b) => (a.order||9999) - (b.order||9999)) ak chceš zoradiť pole
+        
+        // 5. Uložíme
         await setDoc(superstructureDocRef, {
             ...globalTeamsData,
             [originalTeam.category]: teams
@@ -309,25 +331,27 @@ const NewTeamModal = ({
                 selectedGroup && React.createElement(
                     'div',
                     { className: 'flex flex-col' },
-                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradové číslo v skupine (order):'),
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradové číslo v skupine:'),
                     React.createElement(
                         'input',
                         {
                             type: 'number',
                             min: '1',
                             className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-32',
-                            value: orderInputValue || '',  // ← pridáme nový stav nižšie
-                            onChange: (e) => setOrderInputValue(e.target.value ? parseInt(e.target.value, 10) : ''),
-                            required: true,
-                            placeholder: 'napr. 5'
+                            value: orderInputValue ?? '',  // ← dôležité: null → prázdne pole
+                            onChange: (e) => {
+                                const val = e.target.value;
+                                setOrderInputValue(val === '' ? null : parseInt(val, 10));
+                            },
+                            placeholder: 'napr. 5 (alebo prázdne = na koniec)'
                         }
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-xs text-gray-500 mt-1' },
-                        'Číslo určuje poradie tímov v skupine. Vyššie číslo = nižšie v zozname.'
+                        'Číslo určuje poradie v skupine. Necháš prázdne → tím sa zaradí na koniec.'
                     )
-                ),
+                )}
     
                 // Tlačidlá
                 React.createElement(
