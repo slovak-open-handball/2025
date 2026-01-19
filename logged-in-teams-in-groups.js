@@ -6,82 +6,81 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 // Zjednotený Modál pre pridávanie (Add) a úpravu (Edit)
 
 const handleUpdateTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
-    if (!window.db || !originalTeam) return;
+    if (!window.db || !originalTeam?.isSuperstructureTeam) return;
 
-    const categoryName = categoryIdToNameMap[categoryId];
-    if (!categoryName) return;
+    const newCategoryName = categoryIdToNameMap[categoryId];
+    if (!newCategoryName) return;
 
+    const finalTeamName = `${newCategoryName} ${teamName.trim()}`;
     const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-    const finalTeamName = `${categoryName} ${teamName.trim()}`;
 
     try {
         const docSnap = await getDoc(superstructureDocRef);
         if (!docSnap.exists()) return;
+        const data = docSnap.data() || {};
 
-        const globalTeamsData = docSnap.data();
-        let teams = [...(globalTeamsData[originalTeam.category] || [])];
+        const oldCategory = originalTeam.category;
+        let oldTeams = [...(data[oldCategory] || [])];
 
-        const originalTeamIndex = teams.findIndex(t => t.id === originalTeam.id);
-        if (originalTeamIndex === -1) {
-            setNotification({ id: Date.now(), message: "Tím sa nenašiel pri aktualizácii", type: 'error' });
+        // Nájdeme a odstránime starý tím
+        const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
+        if (idx === -1) {
+            setNotification({ message: "Pôvodný tím sa nenašiel", type: 'error' });
             return;
         }
+        oldTeams.splice(idx, 1);
 
-        // Odstránime starý tím
-        const teamToUpdate = teams.splice(originalTeamIndex, 1)[0];
+        const categoryChanged = oldCategory !== newCategoryName;
 
-        const originalGroupName = teamToUpdate.groupName || null;
-        const newGroupName = groupName || null;
+        // Cieľové pole
+        let targetTeams = categoryChanged 
+            ? [...(data[newCategoryName] || [])] 
+            : oldTeams;
 
-        // Pripravíme aktualizovaný tím
-        const updatedTeam = {
-            id: teamToUpdate.id || crypto.randomUUID(),
-            teamName: finalTeamName,
-            groupName: newGroupName,
-            order: newOrder
-        };
-
-        // Logika poradia
+        // Logika poradia (rovnaká ako máš, len na targetTeams)
         let newOrder = null;
-
-        if (newGroupName) {
-            // Tím má byť v skupine
-            if (originalGroupName === newGroupName) {
-                // Rovnaká skupina → zachováme pôvodné poradie (ak existovalo)
-                newOrder = originalTeam.order ?? null;
+        const newGroup = groupName || null;
+        if (newGroup) {
+            const inGroup = targetTeams.filter(t => t.groupName === newGroup);
+            const max = inGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
+            
+            if (!categoryChanged && originalTeam.groupName === newGroup) {
+                newOrder = originalTeam.order ?? max + 1;
             } else {
-                // Zmena skupiny alebo priradenie z "bez skupiny"
-                const teamsInTargetGroup = teams.filter(t => t.groupName === newGroupName);
-                const maxOrder = teamsInTargetGroup.reduce((max, t) => Math.max(max, t.order || 0), 0);
-                newOrder = maxOrder + 1;
+                newOrder = max + 1;
             }
 
-            // Ak admin niečo explicitne zadal → má prednosť
             if (order !== undefined && order !== null && !isNaN(order)) {
                 newOrder = parseInt(order, 10);
             }
         }
-        // ak newGroupName === null → newOrder zostane null
 
-        updatedTeam.order = newOrder;
+        const updatedTeam = {
+            id: originalTeam.id,
+            teamName: finalTeamName,
+            groupName: newGroup,
+            order: newOrder,
+        };
 
-        // Vložíme naspäť (na koniec – poradie riadi hodnota order, nie pozícia)
-        teams.push(updatedTeam);
+        targetTeams.push(updatedTeam);
 
-        // Uložíme
-        await setDoc(superstructureDocRef, {
-            ...globalTeamsData,
-            [originalTeam.category]: teams
-        }, { merge: true });
+        // Pripravíme update payload
+        const updatePayload = { [oldCategory]: oldTeams };
+        if (categoryChanged) {
+            updatePayload[newCategoryName] = targetTeams;
+        } else {
+            updatePayload[oldCategory] = targetTeams;
+        }
+
+        await updateDoc(superstructureDocRef, updatePayload);
 
         setNotification({
-            id: Date.now(),
-            message: `Tím ${finalTeamName} bol aktualizovaný (poradie: ${newOrder ?? 'bez poradia'})`,
+            message: `Tím aktualizovaný${categoryChanged ? ` (presunutý do ${newCategoryName})` : ''}`,
             type: 'success'
         });
     } catch (err) {
-        console.error("Chyba pri update globálneho tímu:", err);
-        setNotification({ id: Date.now(), message: "Chyba pri aktualizácii tímu", type: 'error' });
+        console.error(err);
+        setNotification({ message: "Chyba pri aktualizácii", type: 'error' });
     }
 };
 
@@ -229,7 +228,7 @@ const NewTeamModal = ({
     const isGroupFixed = !!defaultGroupName && !teamToEdit;
    
     // EDIT MÓD nastaví pole kategórie na disabled, aby sa tím nepresúval medzi kategóriami
-    const isCategoryDisabledInEdit = !!teamToEdit;
+    const isCategoryDisabledInEdit = !!teamToEdit && !teamToEdit.isSuperstructureTeam;
    
     const modalTitle = teamToEdit ? 'Upraviť Globálny Tím' : 'Pridať Nový Tím';
     const buttonText = teamToEdit ? 'Potvrdiť a Aktualizovať Tím' : 'Potvrdiť a Uložiť Tím';
@@ -430,6 +429,14 @@ const AddGroupsApp = (props) => {
     // Nová funkcia na aktualizáciu používateľského tímu
     const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
         if (!window.db || !originalTeam?.uid) return;
+
+        if (categoryIdToNameMap[categoryId] !== originalTeam.category) {
+            setNotification({
+                message: "Kategóriu používateľského tímu nemôžete meniť.",
+                type: 'error'
+            });
+            return;
+        }
 
         const userId = originalTeam.uid;
         const categoryName = categoryIdToNameMap[categoryId];
