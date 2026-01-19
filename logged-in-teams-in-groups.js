@@ -349,7 +349,7 @@ const NewTeamModal = ({
                         { className: 'text-xs text-gray-500 mt-1' },
                         'Číslo určuje poradie v skupine. Necháš prázdne → tím sa zaradí na koniec.'
                     )
-                )}
+                )},
     
                 // Tlačidlá
                 React.createElement(
