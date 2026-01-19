@@ -368,8 +368,13 @@ const AddGroupsApp = (props) => {
     // ZJEDNOTENÝ HANDLE SAVE/UPDATE:
     const unifiedSaveHandler = async (data) => {
         if (data.isEdit) {
-            await handleUpdateTeam(data);
+            if (data.originalTeam.isSuperstructureTeam) {
+                await handleUpdateTeam(data);
+            } else {
+                await handleUpdateUserTeam(data);
+            }
         } else {
+            // pridávanie zostáva len pre globálne tímy (alebo môžeš umožniť aj pre používateľa)
             await handleAddNewTeam(data);
         }
         closeModal();
@@ -765,16 +770,10 @@ const AddGroupsApp = (props) => {
                     'button',
                         {
                             onClick: () => {
-                                if (team.isSuperstructureTeam) {
-                                    setTeamToEdit(team);
+                                onClick: () => {
+                                    setTeamToEdit(team);         // ← odstrániť podmienku
                                     setIsModalOpen(true);
-                                } else {
-                                    setNotification({
-                                        id: Date.now(),
-                                        message: "Môžete upravovať len globálne (žlté) tímy.",
-                                        type: 'info'
-                                    });
-                                }
+                                },
                             },
                             className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
                             title: 'Upraviť tím'
@@ -1034,6 +1033,81 @@ const AddGroupsApp = (props) => {
         // NOVÉ: Floating Action Button (FAB)
         fabButton
     );
+};
+
+// Nová funkcia na aktualizáciu používateľského tímu
+const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, originalTeam }) => {
+    if (!window.db || !originalTeam.uid) return;
+
+    const userId = originalTeam.uid;
+    const categoryName = categoryIdToNameMap[categoryId];
+    const finalTeamName = `${categoryName} ${teamName}`;
+    const newGroupName = groupName || null;
+
+    try {
+        const userRef = doc(window.db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+            setNotification({ id: Date.now(), message: "Používateľ sa nenašiel", type: 'error' });
+            return;
+        }
+
+        const userData = userSnap.data();
+        let teamsInCategory = [...(userData.teams?.[categoryName] || [])];
+
+        const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
+        if (teamIndex === -1) {
+            setNotification({ id: Date.now(), message: "Tím sa nenašiel v používateľových dátach", type: 'error' });
+            return;
+        }
+
+        // Rovnaká logika re-orderingu ako pri globálnom tíme
+        const oldOrder = originalTeam.order;
+        const originalGroupName = originalTeam.groupName;
+        let newOrder = originalTeam.order;
+
+        const teamToUpdate = teamsInCategory.splice(teamIndex, 1)[0];
+
+        if (originalGroupName !== newGroupName) {
+            teamsInCategory = teamsInCategory.map(t => {
+                if (t.groupName === originalGroupName && t.order != null && t.order > oldOrder) {
+                    return { ...t, order: t.order - 1 };
+                }
+                return t;
+            });
+
+            const teamsInTarget = teamsInCategory.filter(t => t.groupName === newGroupName);
+            const maxOrder = teamsInTarget.reduce((max, t) => Math.max(max, t.order ?? 0), 0);
+            newOrder = newGroupName ? maxOrder + 1 : null;
+        }
+
+        const updatedTeam = {
+            ...teamToUpdate,
+            teamName: finalTeamName,
+            groupName: newGroupName,
+            order: newOrder,
+        };
+
+        if (originalGroupName === newGroupName) {
+            teamsInCategory.splice(teamIndex, 0, updatedTeam);
+        } else {
+            teamsInCategory.push(updatedTeam);
+        }
+
+        // Uložíme späť do používateľa
+        await updateDoc(userRef, {
+            [`teams.${categoryName}`]: teamsInCategory
+        });
+
+        setNotification({
+            id: Date.now(),
+            message: `Používateľský tím ${finalTeamName} bol aktualizovaný`,
+            type: 'success'
+        });
+    } catch (err) {
+        console.error("Chyba pri update používateľského tímu:", err);
+        setNotification({ id: Date.now(), message: "Chyba pri aktualizácii používateľského tímu", type: 'error' });
+    }
 };
 // Inicializácia aplikácie (štandardný kód)
 let isEmailSyncListenerSetup = false;
