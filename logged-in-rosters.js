@@ -2004,18 +2004,28 @@ const handleSaveTeam = async (updatedTeamData) => {
 
         // ─── NOTIFIKÁCIA pri ÚPRAVE TÍMU ───────────────────────────────────────
         const changes = getChangesForNotification(originalTeam, updatedTeamData, formatDateToDMMYYYY);
-
-        if (changes.length > 0 && userEmail) {
+        if (changes.length > 0) {
             const prefixed = changes.map(ch => `Tím "${teamName}" (${category}): ${ch}`);
-
-            const notificationsRef = collection(db, 'notifications');
-            await addDoc(notificationsRef, {
+            await addDoc(collection(db, 'notifications'), {
                 userEmail,
                 changes: prefixed,
                 timestamp: serverTimestamp()
             });
         }
         // ────────────────────────────────────────────────────────────────────────
+
+        // Pri úprave člena
+        const memberChanges = getChangesForNotification(originalMember, updatedMemberDetails, formatDateToDMMYYYY);
+        if (memberChanges.length > 0) {
+            const prefixed = memberChanges.map(ch => 
+                `${memberName} – ${memberTypeLabel} – tím „${teamName}“ (${category}): ${ch}`
+            );
+            await addDoc(collection(db, 'notifications'), {
+                userEmail,
+                changes: prefixed,
+                timestamp: serverTimestamp()
+            });
+        }
 
         showLocalNotification('Údaje tímu boli aktualizované!', 'success');
     } catch (error) {
