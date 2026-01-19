@@ -376,8 +376,8 @@ const AddGroupsApp = (props) => {
         const isGroupFixed = !!defaultGroupName && !teamToEdit;
         const isCategoryDisabledInEdit = !!teamToEdit && !teamToEdit.isSuperstructureTeam;
 
-        const modalTitle = teamToEdit ? 'Upraviť Globálny Tím' : 'Pridať Nový Globálny Tím';
-        const buttonText = teamToEdit ? 'Aktualizovať Tím' : 'Pridať Tím';
+        const modalTitle = teamToEdit ? 'Upraviť tím' : 'Pridať nový tím';
+        const buttonText = teamToEdit ? 'Aktualizovať tím' : 'Pridať tím';
         const buttonBaseClasses = 'px-4 py-2 rounded-lg transition-colors duration-200';
         const activeClasses = 'bg-indigo-600 text-white hover:bg-indigo-700';
         const disabledClasses = 'bg-white text-indigo-600 border border-indigo-600 cursor-not-allowed shadow-none';
