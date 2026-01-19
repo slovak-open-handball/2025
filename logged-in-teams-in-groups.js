@@ -5,74 +5,32 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 // --- Komponent Modálne Okno pre Pridanie/Editáciu Tímu ---
 // Zjednotený Modál pre pridávanie (Add) a úpravu (Edit)
 
-const handleRemoveOrDeleteTeam = (team) => {
-    if (team.isSuperstructureTeam) {
-        // Globálny tím → potvrdenie + úplné vymazanie
-        if (!window.confirm(`Naozaj chcete úplne odstrániť globálny tím "${team.teamName}"?\n\nTáto akcia sa nedá vrátiť späť.`)) {
-            return;
-        }
-        handleDeleteTeam(team);
-    } else {
-        // Používateľský tím → len odskupinovať
-        if (!window.confirm(`Chcete tím "${team.teamName}" presunúť medzi tímy bez skupiny?`)) {
-            return;
-        }
-        handleUnassignUserTeam(team);
-    }
-};
-
-const handleUnassignUserTeam = async (team) => {
+const handleUnassignUserTeam = async (team, setNotification) => {
     if (!window.db || !team?.uid) return;
 
     try {
-        const userRef = doc(window.db, 'users', team.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-            setNotification({
-                message: `Používateľ ${team.uid} už neexistuje.`,
-                type: 'error'
-            });
-            return;
-        }
-
-        const userData = userSnap.data();
-        const categoryName = team.category;
-        const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-
-        const teamIndex = teamsInCategory.findIndex(t => t.id === team.id);
-        if (teamIndex === -1) {
-            setNotification({
-                message: `Tím sa nenašiel v profile používateľa.`,
-                type: 'error'
-            });
-            return;
-        }
-
-        // Aktualizujeme tím - zrušíme groupName a order
-        const updatedTeam = {
-            ...teamsInCategory[teamIndex],
-            groupName: null,
-            order: null
-        };
-
-        teamsInCategory[teamIndex] = updatedTeam;
-
-        await updateDoc(userRef, {
-            [`teams.${categoryName}`]: teamsInCategory
-        });
+        // ... rovnaký kód ako vyššie ...
 
         setNotification({
             message: `Tím "${team.teamName}" bol presunutý medzi tímy bez skupiny.`,
             type: 'success'
         });
-
     } catch (err) {
         console.error("Chyba pri zrušení zaradenia tímu:", err);
         setNotification({
             message: "Nepodarilo sa zrušiť zaradenie tímu.",
             type: 'error'
         });
+    }
+};
+
+const handleRemoveOrDeleteTeam = (team) => {
+    if (team.isSuperstructureTeam) {
+        if (!window.confirm(`Naozaj chcete úplne odstrániť globálny tím "${team.teamName}"?`)) return;
+        handleDeleteTeam(team);
+    } else {
+        if (!window.confirm(`Presunúť tím "${team.teamName}" medzi tímy bez skupiny?`)) return;
+        handleUnassignUserTeam(team, setNotification);
     }
 };
 
@@ -510,7 +468,60 @@ const AddGroupsApp = (props) => {
         }
     }, [notification]);
    
-    // --- NOVÉ ZJEDNOTENÉ HANDLERY PRE MODÁL ---
+    const handleUnassignUserTeam = async (team) => {
+        if (!window.db || !team?.uid) return;
+
+        try {
+            const userRef = doc(window.db, 'users', team.uid);
+            const userSnap = await getDoc(userRef);
+    
+            if (!userSnap.exists()) {
+                setNotification({
+                    message: `Používateľ ${team.uid} už neexistuje.`,
+                    type: 'error'
+                });
+                return;
+            }
+    
+            const userData = userSnap.data();
+            const categoryName = team.category;
+            const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
+    
+            const teamIndex = teamsInCategory.findIndex(t => t.id === team.id);
+            if (teamIndex === -1) {
+                setNotification({
+                    message: `Tím sa nenašiel v profile používateľa.`,
+                    type: 'error'
+                });
+                return;
+            }
+    
+            // Aktualizujeme tím - zrušíme groupName a order
+            const updatedTeam = {
+                ...teamsInCategory[teamIndex],
+                groupName: null,
+                order: null
+            };
+    
+            teamsInCategory[teamIndex] = updatedTeam;
+    
+            await updateDoc(userRef, {
+                [`teams.${categoryName}`]: teamsInCategory
+            });
+    
+            setNotification({
+                message: `Tím "${team.teamName}" bol presunutý medzi tímy bez skupiny.`,
+                type: 'success'
+            });
+    
+        } catch (err) {
+            console.error("Chyba pri zrušení zaradenia tímu:", err);
+            setNotification({
+                message: "Nepodarilo sa zrušiť zaradenie tímu.",
+                type: 'error'
+            });
+        }
+    };
    
     // Zjednotený handler pre zatvorenie modálu
     const closeModal = () => {
