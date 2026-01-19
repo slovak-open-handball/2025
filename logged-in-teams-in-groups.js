@@ -890,7 +890,7 @@ const AddGroupsApp = (props) => {
             });
         }
     
-        cconst items = sortedTeams.map((team, idx) => {
+        const items = sortedTeams.map((team, idx) => {
             const hasDuplicateOrder = !isWithoutGroup && team.order != null && (orderCountMap.get(team.order) || 0) > 1;
             const textColor = hasDuplicateOrder ? 'text-red-600 font-medium' : 'text-gray-800';
     
