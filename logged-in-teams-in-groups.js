@@ -877,10 +877,28 @@ const AddGroupsApp = (props) => {
     const fabButton = React.createElement(
         'button',
         {
-            className: `${fabBaseClasses} bg-green-500 hover:bg-green-600 text-white focus:ring-green-400`,
-            onClick: openAddModal
+            className: `
+                fixed bottom-8 right-8 
+                w-16 h-16  
+                rounded-full
+                bg-green-600 
+                hover:bg-green-700 
+                text-white 
+                text-4xl 
+                font-bold 
+                shadow-2xl 
+                flex items-center justify-center
+                transition-all duration-200 
+                hover:scale-110 
+                focus:outline-none 
+                focus:ring-4 focus:ring-green-300
+                z-40
+            `,
+            onClick: openAddModal,
+            title: "Pridať nový tím",
+            'aria-label': "Pridať nový tím"
         },
-        React.createElement('span', { className: 'text-2xl font-bold' }, '+')
+        '+'
     );
 
     return React.createElement(
