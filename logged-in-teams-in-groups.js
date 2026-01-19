@@ -95,6 +95,18 @@ const NewTeamModal = ({
 
     const [orderInputValue, setOrderInputValue] = useState(null);
 
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedGroup, setSelectedGroup] = useState('');
+    const [teamName, setTeamName] = useState('');
+    const [isDuplicate, setIsDuplicate] = useState(false);
+    // Nové stavy na uchovanie pôvodných hodnôt pre Edit mód a kontrolu duplikátov
+    const [originalTeamName, setOriginalTeamName] = useState('');
+    const [originalCategory, setOriginalCategory] = useState('');
+    const [originalGroup, setOriginalGroup] = useState('');
+    
+    const { useState, useEffect, useRef } = React;
+
+        
     // Automatické nastavenie poradia pri zmene skupiny alebo otvorení modálu
     useEffect(() => {
         if (!isOpen || !selectedGroup) {
@@ -116,16 +128,6 @@ const NewTeamModal = ({
         setOrderInputValue(maxOrder + 1);
     }, [selectedGroup, isOpen, teamToEdit, allTeams, selectedCategory, categoryIdToNameMap]);
     
-    const { useState, useEffect, useRef } = React;
-
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedGroup, setSelectedGroup] = useState('');
-    const [teamName, setTeamName] = useState('');
-    const [isDuplicate, setIsDuplicate] = useState(false);
-    // Nové stavy na uchovanie pôvodných hodnôt pre Edit mód a kontrolu duplikátov
-    const [originalTeamName, setOriginalTeamName] = useState('');
-    const [originalCategory, setOriginalCategory] = useState('');
-    const [originalGroup, setOriginalGroup] = useState('');
     // Nastavenie/reset stavu pri otvorení/zatvorení modálu alebo zmene predvolených hodnôt
     useEffect(() => {
         if (isOpen) {
@@ -367,7 +369,6 @@ const NewTeamModal = ({
 };
 
 const AddGroupsApp = (props) => {
-    const { useState, useEffect, useRef } = React;
     const teamsWithoutGroupRef = React.useRef(null);
     const [allTeams, setAllTeams] = useState([]);
     const [userTeamsData, setUserTeamsData] = useState([]);
@@ -724,7 +725,7 @@ const AddGroupsApp = (props) => {
         }
     };
     // --- FUNKCIA: Uloženie nového Tímu do /settings/superstructureGroups ---
-    const handleAddNewTeam = async ({ categoryId, groupName, teamName }) => {
+    const handleAddNewTeam = async ({ categoryId, groupName, teamName, order }) => {
         if (!window.db) {
             setNotification({ id: Date.now(), message: "Firestore nie je inicializovaný.", type: 'error' });
             return;
@@ -754,7 +755,7 @@ const AddGroupsApp = (props) => {
             });
            
             // Nový tím je vždy s najvyšším poradím, ak má skupinu
-            const newOrder = data.order != null ? parseInt(data.order, 10) : (newGroupName ? maxOrder + 1 : null);
+            const newOrder = order != null ? parseInt(order, 10) : (groupName ? maxOrder + 1 : null);
            
             const newTeam = {
                 teamName: finalTeamName,
