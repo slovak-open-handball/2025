@@ -95,61 +95,58 @@ const NewTeamModal = ({
     defaultGroupName = '',
     unifiedSaveHandler
 }) => {
-        
-    const { useState, useEffect, useRef } = React;
-
+    const { useState, useEffect } = React;
     const [orderInputValue, setOrderInputValue] = useState(null);
-
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
-    const [teamName, setTeamName] = useState('');
+    const [teamName, setTeamName] = useState(''); // názov, ktorý zadáva používateľ
     const [isDuplicate, setIsDuplicate] = useState(false);
-    // Nové stavy na uchovanie pôvodných hodnôt pre Edit mód a kontrolu duplikátov
+
+    // Originálne hodnoty pre editáciu (aby sme správne kontrolovali duplikáty)
     const [originalTeamName, setOriginalTeamName] = useState('');
     const [originalCategory, setOriginalCategory] = useState('');
     const [originalGroup, setOriginalGroup] = useState('');
-        
-    // Automatické nastavenie poradia pri zmene skupiny alebo otvorení modálu
+
+    // Automatické nastavenie poradia pri zmene skupiny
     useEffect(() => {
         if (!isOpen || !selectedGroup) {
             setOrderInputValue(null);
             return;
         }
-    
-        // Ak editujeme tím, ktorý už má order → prednastavíme ho
+
         if (teamToEdit && teamToEdit.groupName === selectedGroup && teamToEdit.order != null) {
             setOrderInputValue(teamToEdit.order);
             return;
         }
-    
-        // Inak navrhneme poradie na konci aktuálnej skupiny
+
         const teamsInGroup = allTeams.filter(
             t => t.category === categoryIdToNameMap[selectedCategory] && t.groupName === selectedGroup
         );
         const maxOrder = teamsInGroup.reduce((max, t) => Math.max(max, t.order || 0), 0);
         setOrderInputValue(maxOrder + 1);
     }, [selectedGroup, isOpen, teamToEdit, allTeams, selectedCategory, categoryIdToNameMap]);
-    
-    // Nastavenie/reset stavu pri otvorení/zatvorení modálu alebo zmene predvolených hodnôt
+
+    // Inicializácia pri otvorení modálu (add / edit)
     useEffect(() => {
         if (isOpen) {
             if (teamToEdit) {
-                // --- EDIT MÓD ---
-                const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === teamToEdit.category) || '';
+                // EDIT MÓD
+                const categoryId = Object.keys(categoryIdToNameMap).find(
+                    id => categoryIdToNameMap[id] === teamToEdit.category
+                ) || '';
                 setSelectedCategory(categoryId);
-               
-                // Názov tímu bez prefixu kategórie
-                const teamNameWithoutPrefix = teamToEdit.teamName.replace(new RegExp(`^${teamToEdit.category} `), '');
+
+                const teamNameWithoutPrefix = teamToEdit.teamName.replace(
+                    new RegExp(`^${teamToEdit.category} `), ''
+                );
                 setTeamName(teamNameWithoutPrefix);
                 setSelectedGroup(teamToEdit.groupName || '');
-               
-                // Uloženie originálnych hodnôt pre logiku duplikátov/kontroly zmien
+
                 setOriginalTeamName(teamToEdit.teamName);
                 setOriginalCategory(categoryId);
                 setOriginalGroup(teamToEdit.groupName || '');
-               
             } else {
-                // --- ADD MÓD ---
+                // ADD MÓD
                 setSelectedCategory(defaultCategoryId || '');
                 setSelectedGroup(defaultGroupName || '');
                 setTeamName('');
@@ -158,25 +155,25 @@ const NewTeamModal = ({
                 setOriginalGroup('');
             }
         } else {
-             // Reset stavu pri zatvorení
-             setSelectedCategory('');
-             setSelectedGroup('');
-             setTeamName('');
-             setIsDuplicate(false);
-             setOriginalTeamName('');
-             setOriginalCategory('');
-             setOriginalGroup('');
+            // Reset pri zatvorení
+            setSelectedCategory('');
+            setSelectedGroup('');
+            setTeamName('');
+            setIsDuplicate(false);
+            setOriginalTeamName('');
+            setOriginalCategory('');
+            setOriginalGroup('');
+            setOrderInputValue(null);
         }
     }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap]);
-    // EFEKT: Kontrola duplicitného názvu tímu (upravená pre edit mód)
+
+    // Kontrola duplicitného názvu (s výnimkou pri editácii pôvodného tímu)
     useEffect(() => {
         if (!isOpen) return;
         const name = teamName.trim();
         const categoryName = categoryIdToNameMap[selectedCategory] || '';
         if (name && selectedCategory && categoryName) {
             const finalName = `${categoryName} ${name}`;
-           
-            // Kontrola duplikátu: V edit móde ignorujeme duplikát, ak je to pôvodný názov tímu, ktorý upravujeme
             const duplicate = allTeams.some(team =>
                 team.teamName === finalName && (!teamToEdit || team.teamName !== originalTeamName)
             );
@@ -185,66 +182,56 @@ const NewTeamModal = ({
             setIsDuplicate(false);
         }
     }, [teamName, selectedCategory, allTeams, isOpen, categoryIdToNameMap, teamToEdit, originalTeamName]);
+
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
         .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
+
     const availableGroups = selectedCategory && allGroupsByCategoryId[selectedCategory]
         ? allGroupsByCategoryId[selectedCategory].sort((a, b) => a.name.localeCompare(b.name))
         : [];
-       
+
     const handleCategoryChange = (e) => {
         setSelectedCategory(e.target.value);
-        // Ak sa zmení kategória, resetujeme skupinu, pokiaľ nebola nastavená filtrom
         if (!defaultGroupName) {
             setSelectedGroup('');
         }
     };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-       
-        if (isSubmitDisabled) {
-            return;
-        }
+        if (isSubmitDisabled) return;
+
         unifiedSaveHandler({
             categoryId: selectedCategory,
-            groupName: selectedGroup,
-            teamName: teamName,              // stále posielame, ale už sa nepoužíva na zmenu
-            order: orderInputValue,          // ← NOVÉ
+            groupName: selectedGroup || null,
+            teamName: teamName.trim(),
+            order: orderInputValue,
             isEdit: !!teamToEdit,
             originalTeam: teamToEdit
         });
     };
-   
-    // LOGIKA BLOKOVANIA TLAČIDLA:
+
     const isCategoryValid = !!selectedCategory;
-    const isGroupValid = !!selectedGroup; // KONTROLA SKUPINY (MUSÍ BYŤ VYBRANÁ)
+    const isGroupValid = !!selectedGroup;
     const isTeamNameValid = teamName.trim().length > 0;
-   
     const isSubmitDisabled = !isCategoryValid || !isGroupValid || !isTeamNameValid || isDuplicate;
-    if (!isOpen) return null;
-   
-    // Zistíme, či je pole kategórie disabled
-    const isCategoryFixed = !!defaultCategoryId && !teamToEdit; // Len ak pridávame a filter je aktívny
-    // NOVÉ: Zistíme, či je pole skupiny disabled
+
+    const isCategoryFixed = !!defaultCategoryId && !teamToEdit;
     const isGroupFixed = !!defaultGroupName && !teamToEdit;
-   
-    // EDIT MÓD nastaví pole kategórie na disabled, aby sa tím nepresúval medzi kategóriami
     const isCategoryDisabledInEdit = !!teamToEdit && !teamToEdit.isSuperstructureTeam;
-   
-    const modalTitle = teamToEdit ? 'Upraviť Globálny Tím' : 'Pridať Nový Tím';
-    const buttonText = teamToEdit ? 'Potvrdiť a Aktualizovať Tím' : 'Potvrdiť a Uložiť Tím';
+
+    const modalTitle = teamToEdit ? 'Upraviť Globálny Tím' : 'Pridať Nový Globálny Tím';
+    const buttonText = teamToEdit ? 'Aktualizovať Tím' : 'Pridať Tím';
+
     const buttonBaseClasses = 'px-4 py-2 rounded-lg transition-colors duration-200';
     const activeClasses = 'bg-indigo-600 text-white hover:bg-indigo-700';
-   
-    // UPRAVENÉ TRIEDY PRE ZABLOKOVANÉ TLAČIDLO
-    const disabledClasses = `
-        bg-white
-        text-indigo-600
-        border
-        border-indigo-600
-        cursor-default
-        shadow-none
-        cursor-not-allowed
-    `;
+    const disabledClasses = 'bg-white text-indigo-600 border border-indigo-600 cursor-not-allowed shadow-none';
+
+    if (!isOpen) return null;
+
+    const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
+    const finalTeamNamePreview = teamName.trim() ? `${currentCategoryName} ${teamName.trim()}` : '';
+
     return React.createElement(
         'div',
         {
@@ -254,26 +241,82 @@ const NewTeamModal = ({
         React.createElement(
             'div',
             {
-                className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transition-all transform scale-100',
+                className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg',
                 onClick: (e) => e.stopPropagation()
             },
-            // Nadpis s názvom tímu (statický)
             React.createElement(
                 'h2',
-                { className: 'text-2xl font-bold text-gray-800 mb-2' },
-                teamToEdit ? 'Upraviť tím' : 'Pridať nový tím'
+                { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
+                modalTitle
             ),
-            React.createElement(
-                'div',
-                { className: 'text-xl font-semibold text-indigo-700 mb-6' },
-                teamToEdit ? teamToEdit.teamName : 'Nový tím'
-            ),
-    
+
+            // ===== HLAVNÁ ZMENA: Namiesto "Nový tím" je input =====
+            !teamToEdit
+                ? React.createElement(
+                    'div',
+                    { className: 'mb-6' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Názov tímu (bez názvu kategórie):'
+                    ),
+                    React.createElement(
+                        'input',
+                        {
+                            type: 'text',
+                            className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${isDuplicate ? 'border-red-500' : 'border-gray-300'}`,
+                            value: teamName,
+                            onChange: (e) => setTeamName(e.target.value),
+                            placeholder: 'napr. Elita, Juniori A, Rezerva...',
+                            required: true,
+                            autoFocus: true
+                        }
+                    ),
+                    finalTeamNamePreview && React.createElement(
+                        'div',
+                        { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
+                        React.createElement(
+                            'p',
+                            { className: 'text-sm text-gray-600' },
+                            'Finálny názov v databáze bude:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-lg font-bold text-indigo-700 mt-1' },
+                            finalTeamNamePreview
+                        )
+                    ),
+                    isDuplicate && React.createElement(
+                        'p',
+                        { className: 'mt-2 text-sm text-red-600 font-medium' },
+                        '⚠️ Tím s týmto názvom už existuje!'
+                    )
+                )
+                : React.createElement(
+                    'div',
+                    { className: 'mb-6 text-center' },
+                    React.createElement(
+                        'p',
+                        { className: 'text-sm text-gray-600' },
+                        'Aktuálny názov tímu:'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-2xl font-bold text-indigo-700 mt-1' },
+                        teamToEdit.teamName
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-xs text-gray-500 mt-2 italic' },
+                        'Nový názov bude: ', currentCategoryName, ' ', teamName.trim() || '(zatiaľ prázdny)'
+                    )
+                ),
+
             React.createElement(
                 'form',
                 { onSubmit: handleSubmit, className: 'space-y-6' },
-    
-                // 1. Kategória (zostáva rovnaká)
+
+                // Kategória
                 React.createElement(
                     'div',
                     { className: 'flex flex-col' },
@@ -292,11 +335,10 @@ const NewTeamModal = ({
                             React.createElement('option', { key: id, value: id }, name)
                         )
                     ),
-                    isCategoryDisabledInEdit && React.createElement('p', { className: 'text-xs text-red-600 mt-1' }, `Pri editácii tímu nemôžete zmeniť kategóriu.`),
-                    isCategoryFixed && !isCategoryDisabledInEdit && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Kategória je predvolená filtrom: ${categoryIdToNameMap[defaultCategoryId]}`)
+                    isCategoryFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená kategória: ${categoryIdToNameMap[defaultCategoryId]}`)
                 ),
-    
-                // 2. Skupina (zostáva rovnaká)
+
+                // Skupina
                 React.createElement(
                     'div',
                     { className: 'flex flex-col' },
@@ -311,48 +353,48 @@ const NewTeamModal = ({
                             disabled: !selectedCategory || isGroupFixed
                         },
                         React.createElement('option', { value: '' }, availableGroups.length > 0 ? '--- Vyberte skupinu ---' : 'Najprv vyberte kategóriu'),
-                        availableGroups.map((group, index) =>
-                            React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
+                        availableGroups.map((group) =>
+                            React.createElement('option', { key: group.name, value: group.name }, `${group.name} (${group.type})`)
                         )
                     ),
-                    isGroupFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Skupina je predvolená: ${defaultGroupName}`)
+                    isGroupFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená skupina: ${defaultGroupName}`)
                 ),
-    
-                // 3. NOVÉ: Poradové číslo (order) – len ak je vybraná skupina
+
+                // Poradie v skupine
                 selectedGroup && React.createElement(
                     'div',
                     { className: 'flex flex-col' },
-                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradové číslo v skupine:'),
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradie v skupine:'),
                     React.createElement(
                         'input',
                         {
                             type: 'number',
                             min: '1',
                             className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-32',
-                            value: orderInputValue ?? '',  // ← dôležité: null → prázdne pole
+                            value: orderInputValue ?? '',
                             onChange: (e) => {
                                 const val = e.target.value;
                                 setOrderInputValue(val === '' ? null : parseInt(val, 10));
                             },
-                            placeholder: 'napr. 5 (alebo prázdne = na koniec)'
+                            placeholder: 'auto'
                         }
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-xs text-gray-500 mt-1' },
-                        'Číslo určuje poradie v skupine. Necháš prázdne → tím sa zaradí na koniec.'
+                        'Nechaj prázdne → tím sa pridá na koniec skupiny'
                     )
                 ),
-    
+
                 // Tlačidlá
                 React.createElement(
                     'div',
-                    { className: 'pt-6 flex justify-end space-x-4' },
+                    { className: 'pt-8 flex justify-end space-x-4' },
                     React.createElement(
                         'button',
                         {
                             type: 'button',
-                            className: 'px-5 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors',
+                            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors',
                             onClick: onClose
                         },
                         'Zrušiť'
