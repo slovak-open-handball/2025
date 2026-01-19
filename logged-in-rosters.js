@@ -494,9 +494,9 @@ function MemberDetailsModal({
                     })
                 ),
             
-                // Popisné/orientačné číslo
+                // Popisné číslo
                 React.createElement('div', null,
-                    React.createElement('label', { htmlFor: 'houseNumber', className: 'block text-sm font-medium text-gray-700' }, 'Popisné/orientačné číslo'),
+                    React.createElement('label', { htmlFor: 'houseNumber', className: 'block text-sm font-medium text-gray-700' }, 'Popisné číslo'),
                     React.createElement('input', {
                         type: 'text',
                         id: 'houseNumber',
