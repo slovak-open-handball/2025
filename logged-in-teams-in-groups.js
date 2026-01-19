@@ -899,102 +899,101 @@ const AddGroupsApp = (props) => {
         }
     
         const items = sortedTeams.map((team, idx) => {
-        const hasDuplicateOrder = !isWithoutGroup && team.order != null && (orderCountMap.get(team.order) || 0) > 1;
-       const textColor = hasDuplicateOrder ? 'text-red-600 font-medium' : 'text-gray-800';
-   
-       let display = team.order != null && !isWithoutGroup ? `${team.order}. ${team.teamName}` : team.teamName;
-       if (!selectedCategoryId && team.category) {
-           display = `${team.category}: ${display}`;
-       }
-   
-       return React.createElement(
-           'li',
-           {
-               key: team.id || `${team.uid || 'g'}-${team.teamName}-${team.groupName || ''}-${idx}`,
-               className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${
-                   team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'
-               }`
-           },
-           React.createElement('span', { className: `flex-grow ${textColor}` }, display),
-   
-           React.createElement(
-               'button',
-               {
-                   onClick: async () => {
-                       console.log("Pokus o editáciu tímu:", {
-                           uid: team.uid,
-                           id: team.id,
-                           name: team.teamName,
-                           category: team.category,
-                           group: team.groupName
-                       });
-   
-                       if (!team.isSuperstructureTeam && team.uid) {
-                           try {
-                               const userRef = doc(window.db, 'users', team.uid);
-                               const snap = await getDoc(userRef);
-   
-                               if (!snap.exists()) {
-                                   setNotification({
-                                       id: Date.now(),
-                                       message: `Profil používateľa ${team.uid} už neexistuje.`,
-                                       type: 'error'
-                                   });
-                                   return;
-                               }
-   
-                               const data = snap.data();
-                               const cat = team.category;
-                               const teamsArr = data.teams?.[cat] || [];
-                               const exists = teamsArr.some(t => t.id === team.id);
-   
-                               if (!exists) {
-                                   setNotification({
-                                       id: Date.now(),
-                                       message: `Tím "${team.teamName}" už nie je v profile používateľa. Zoznam sa aktualizuje.`,
-                                       type: 'warning'
-                                   });
-                                   return;
-                               }
-                           } catch (err) {
-                               console.error("Chyba pri overovaní tímu:", err);
-                               setNotification({
-                                   id: Date.now(),
-                                   message: "Nepodarilo sa overiť existenciu tímu. Skús neskôr.",
-                                   type: 'error'
-                               });
-                               return;
-                           }
-                       }
-   
-                       setTeamToEdit(team);
-                       setIsModalOpen(true);
-                   },
-                   className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
-                   title: 'Upraviť tím'
-               },
-               React.createElement(
-                   'svg',
-                   {
-                       className: 'w-5 h-5',
-                       fill: 'none',
-                       stroke: 'currentColor',
-                       viewBox: '0 0 24 24'
-                   },
-                   React.createElement('path', {
-                       strokeLinecap: 'round',
-                       strokeLinejoin: 'round',
-                       strokeWidth: '2',
-                       d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                   })
-               )
-           )
-       );
-   });
-};
+            const hasDuplicateOrder = !isWithoutGroup && team.order != null && (orderCountMap.get(team.order) || 0) > 1;
+            const textColor = hasDuplicateOrder ? 'text-red-600 font-medium' : 'text-gray-800';
     
-return React.createElement('ul', { className: 'space-y-2' }, ...items);
-};
+            let display = team.order != null && !isWithoutGroup ? `${team.order}. ${team.teamName}` : team.teamName;
+            if (!selectedCategoryId && team.category) {
+                display = `${team.category}: ${display}`;
+            }
+    
+            return React.createElement(
+                'li',
+                {
+                    key: team.id || `${team.uid || 'g'}-${team.teamName}-${team.groupName || ''}-${idx}`,
+                    className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${
+                        team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'
+                    }`
+                },
+                React.createElement('span', { className: `flex-grow ${textColor}` }, display),
+    
+                React.createElement(
+                    'button',
+                    {
+                        onClick: async () => {
+                            console.log("Pokus o editáciu tímu:", {
+                                uid: team.uid,
+                                id: team.id,
+                                name: team.teamName,
+                                category: team.category,
+                                group: team.groupName
+                            });
+    
+                            if (!team.isSuperstructureTeam && team.uid) {
+                                try {
+                                    const userRef = doc(window.db, 'users', team.uid);
+                                    const snap = await getDoc(userRef);
+    
+                                    if (!snap.exists()) {
+                                        setNotification({
+                                            id: Date.now(),
+                                            message: `Profil používateľa ${team.uid} už neexistuje.`,
+                                            type: 'error'
+                                        });
+                                        return;
+                                    }
+    
+                                    const data = snap.data();
+                                    const cat = team.category;
+                                    const teamsArr = data.teams?.[cat] || [];
+                                    const exists = teamsArr.some(t => t.id === team.id);
+    
+                                    if (!exists) {
+                                        setNotification({
+                                            id: Date.now(),
+                                            message: `Tím "${team.teamName}" už nie je v profile používateľa. Zoznam sa aktualizuje.`,
+                                            type: 'warning'
+                                        });
+                                        return;
+                                    }
+                                } catch (err) {
+                                    console.error("Chyba pri overovaní tímu:", err);
+                                    setNotification({
+                                        id: Date.now(),
+                                        message: "Nepodarilo sa overiť existenciu tímu. Skús neskôr.",
+                                        type: 'error'
+                                    });
+                                    return;
+                                }
+                            }
+    
+                            setTeamToEdit(team);
+                            setIsModalOpen(true);
+                        },
+                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                        title: 'Upraviť tím'
+                    },
+                    React.createElement(
+                        'svg',
+                        {
+                            className: 'w-5 h-5',
+                            fill: 'none',
+                            stroke: 'currentColor',
+                            viewBox: '0 0 24 24'
+                        },
+                        React.createElement('path', {
+                            strokeLinecap: 'round',
+                            strokeLinejoin: 'round',
+                            strokeWidth: '2',
+                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                        })
+                    )
+                )
+            );
+        });
+    
+        return React.createElement('ul', { className: 'space-y-2' }, ...items);
+    };
     const renderGroupedCategories = () => {
         if (Object.keys(allGroupsByCategoryId).length === 0) {
             return React.createElement(
