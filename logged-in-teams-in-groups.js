@@ -1087,7 +1087,7 @@ const AddGroupsApp = (props) => {
        
         return React.createElement(
             'div',
-            { className: 'flex flex-wrap gap-4 justify-center' },
+            { className: 'flex flex-wrap gap-2 sm:gap-2 justify-center' },
             sortedCategoryEntries.map(([categoryId, categoryName], index) => {
                 const groups = allGroupsByCategoryId[categoryId];
                 const teamsInThisCategory = allTeams.filter(team => team.category === categoryIdToNameMap[categoryId]);
@@ -1163,7 +1163,7 @@ const AddGroupsApp = (props) => {
             ),
             React.createElement(
                 'div',
-                { className: 'flex-grow min-w-0 flex flex-col gap-4' },
+                { className: 'flex-grow min-w-0 flex flex-col gap-2 sm:gap-2" },
                 sortedGroups.length > 0 ? (
                     sortedGroups.map((group, groupIndex) => {
                         let customStyle = {};
