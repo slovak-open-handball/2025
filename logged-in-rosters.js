@@ -1958,7 +1958,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
           React.createElement('div', { className: 'space-y-6 w-full' },
             teamCategories.map(([categoryName, teamsArray]) => (
               teamsArray.length > 0 && React.createElement('div', { key: categoryName, className: 'space-y-4 w-full' },
-                userProfileData && React.createElement(
+                userProfileData?.role === 'club' && React.createElement(
                     'div',
                     { className: 'flex justify-center mb-4' },
                     React.createElement(
@@ -2210,10 +2210,10 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
             ))
           )
         ) : (
-          React.createElement('p', { className: 'text-center text-gray-600 text-lg py-8' }, 'Zatiaľ neboli vytvorené žiadne tímy pre tohto používateľa.')
+          userProfileData?.role === 'club' && React.createElement('p', { className: 'text-center text-gray-600 text-lg py-8' }, 'Zatiaľ neboli vytvorené žiadne tímy pre tohto používateľa.')
         )
       ),
-      userProfileData && React.createElement(
+      userProfileData?.role === 'club' && React.createElement(
           'div',
           { className: 'flex justify-center mt-8 pb-8' },
           React.createElement(
