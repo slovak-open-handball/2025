@@ -1163,7 +1163,7 @@ const AddGroupsApp = (props) => {
             ),
             React.createElement(
                 'div',
-                { className: 'flex-grow min-w-0 flex flex-col gap-2 sm:gap-2" },
+                { className: 'flex-grow min-w-0 flex flex-col gap-2 sm:gap-2' },
                 sortedGroups.length > 0 ? (
                     sortedGroups.map((group, groupIndex) => {
                         let customStyle = {};
