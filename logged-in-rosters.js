@@ -479,6 +479,79 @@ function MemberDetailsModal({
                     }, regNumberError)
                 ),
 
+                showAddressFields && React.createElement('div', { className: 'space-y-4 mt-6 border-t pt-4' },
+                React.createElement('h4', { className: 'text-md font-semibold text-gray-800' }, 'Adresa pre ubytovanie'),
+
+                // Ulica
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'street', className: 'block text-sm font-medium text-gray-700' }, 'Ulica'),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'street',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: street,
+                        onChange: (e) => setStreet(e.target.value),
+                        disabled: isButtonDisabled
+                    })
+                ),
+            
+                // Popisné/orientačné číslo
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'houseNumber', className: 'block text-sm font-medium text-gray-700' }, 'Popisné/orientačné číslo'),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'houseNumber',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: houseNumber,
+                        onChange: (e) => setHouseNumber(e.target.value),
+                        disabled: isButtonDisabled
+                    })
+                ),
+            
+                // PSČ + Mesto vedľa seba
+                React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-4' },
+                    // PSČ
+                    React.createElement('div', null,
+                        React.createElement('label', { htmlFor: 'postalCode', className: 'block text-sm font-medium text-gray-700' }, 'PSČ'),
+                        React.createElement('input', {
+                            type: 'text',
+                            id: 'postalCode',
+                            className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                            value: postalCode,
+                            onChange: (e) => setPostalCode(e.target.value),
+                            placeholder: '123 45',
+                            disabled: isButtonDisabled
+                        })
+                    ),
+                    // Mesto
+                    React.createElement('div', null,
+                        React.createElement('label', { htmlFor: 'city', className: 'block text-sm font-medium text-gray-700' }, 'Mesto / Obec'),
+                        React.createElement('input', {
+                            type: 'text',
+                            id: 'city',
+                            className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                            value: city,
+                            onChange: (e) => setCity(e.target.value),
+                            disabled: isButtonDisabled
+                        })
+                    )
+                ),
+            
+                // Krajina
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'country', className: 'block text-sm font-medium text-gray-700' }, 'Krajina'),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'country',
+                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                        value: country,
+                        onChange: (e) => setCountry(e.target.value),
+                        placeholder: 'Slovensko',
+                        disabled: isButtonDisabled
+                    })
+                )
+            ),
+
                 // Tlačidlá
                 React.createElement(
                     'div',
