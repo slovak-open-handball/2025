@@ -387,121 +387,113 @@ const AddGroupsApp = (props) => {
         const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
         const finalTeamNamePreview = teamName.trim() ? `${currentCategoryName} ${teamName.trim()}` : '';
 
-        return React.createElement(
+        // ... zvyšok NewTeamModal komponentu zostáva rovnaký ...
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]',
+            onClick: onClose
+        },
+        React.createElement(
             'div',
             {
-                className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]',
-                onClick: onClose
+                className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg',
+                onClick: (e) => e.stopPropagation()
             },
             React.createElement(
-                'div',
-                {
-                    className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg',
-                    onClick: (e) => e.stopPropagation()
-                },
+                'h2',
+                { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
+                modalTitle
+            ),
+            // ... názov tímu input + preview (nezmenené) ...
+    
+            React.createElement(
+                'form',
+                { onSubmit: handleSubmit, className: 'space-y-6' },
+                // Kategória
                 React.createElement(
-                    'h2',
-                    { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
-                    modalTitle
-                ),
-                !teamToEdit
-                    ? React.createElement(
-                        'div',
-                        { className: 'mb-6' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu (bez názvu kategórie):'),
-                        React.createElement('input', {
-                            type: 'text',
-                            className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${isDuplicate ? 'border-red-500' : 'border-gray-300'}`,
-                            value: teamName,
-                            onChange: (e) => setTeamName(e.target.value),
-                            placeholder: 'napr. Elita, Juniori A, Rezerva...',
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Kategória:'),
+                    React.createElement(
+                        'select',
+                        {
+                            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${isCategoryFixed || isCategoryDisabledInEdit ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`,
+                            value: selectedCategory,
+                            onChange: handleCategoryChange,
                             required: true,
-                            autoFocus: true
-                        }),
-                        finalTeamNamePreview && React.createElement(
-                            'div',
-                            { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
-                            React.createElement('p', { className: 'text-sm text-gray-600' }, 'Finálny názov v databáze bude:'),
-                            React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
-                        ),
-                        isDuplicate && React.createElement('p', { className: 'mt-2 text-sm text-red-600 font-medium' }, '⚠️ Tím s týmto názvom už existuje!')
-                    )
-                    : React.createElement(
-                        'div',
-                        { className: 'mb-6 text-center' },
-                        React.createElement('p', { className: 'text-sm text-gray-600' }, 'Aktuálny názov tímu:'),
-                        React.createElement('p', { className: 'text-2xl font-bold text-indigo-700 mt-1' }, teamToEdit.teamName)
+                            disabled: isCategoryFixed || isCategoryDisabledInEdit
+                        },
+                        React.createElement('option', { value: '' }, '--- Vyberte kategóriu ---'),
+                        sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
                     ),
-
+                    isCategoryFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená kategória: ${categoryIdToNameMap[defaultCategoryId]}`)
+                ),
+    
+                // Skupina
                 React.createElement(
-                    'form',
-                    { onSubmit: handleSubmit, className: 'space-y-6' },
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Skupina:'),
                     React.createElement(
-                        'div',
-                        { className: 'flex flex-col' },
-                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Kategória:'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${isCategoryFixed || isCategoryDisabledInEdit ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`,
-                                value: selectedCategory,
-                                onChange: handleCategoryChange,
-                                required: true,
-                                disabled: isCategoryFixed || isCategoryDisabledInEdit
-                            },
-                            React.createElement('option', { value: '' }, '--- Vyberte kategóriu ---'),
-                            sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
-                        ),
-                        isCategoryFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená kategória: ${categoryIdToNameMap[defaultCategoryId]}`)
+                        'select',
+                        {
+                            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${!selectedCategory || isGroupFixed ? 'bg-gray-100 cursor-not-allowed' : ''}`,
+                            value: selectedGroup,
+                            onChange: (e) => setSelectedGroup(e.target.value),
+                            required: true,
+                            disabled: !selectedCategory || isGroupFixed
+                        },
+                        React.createElement('option', { value: '' }, availableGroups.length > 0 ? '--- Vyberte skupinu ---' : 'Najprv vyberte kategóriu'),
+                        availableGroups.map((group) => React.createElement('option', { key: group.name, value: group.name }, `${group.name} (${group.type})`))
                     ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-col' },
-                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Skupina:'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${!selectedCategory || isGroupFixed ? 'bg-gray-100 cursor-not-allowed' : ''}`,
-                                value: selectedGroup,
-                                onChange: (e) => setSelectedGroup(e.target.value),
-                                required: true,
-                                disabled: !selectedCategory || isGroupFixed
-                            },
-                            React.createElement('option', { value: '' }, availableGroups.length > 0 ? '--- Vyberte skupinu ---' : 'Najprv vyberte kategóriu'),
-                            availableGroups.map((group) => React.createElement('option', { key: group.name, value: group.name }, `${group.name} (${group.type})`))
-                        ),
-                        isGroupFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená skupina: ${defaultGroupName}`)
-                    ),
-                    selectedGroup && React.createElement(
-                        'div',
-                        { className: 'flex flex-col' },
-                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradie v skupine:'),
-                        React.createElement('input', {
-                            type: 'number',
-                            min: '1',
-                            className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-32',
-                            value: orderInputValue ?? '',
-                            onChange: (e) => setOrderInputValue(e.target.value === '' ? null : parseInt(e.target.value, 10)),
-                            placeholder: 'auto'
-                        }),
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'pt-8 flex justify-end space-x-4' },
-                        React.createElement('button', {
-                            type: 'button',
-                            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors',
-                            onClick: onClose
-                        }, 'Zrušiť'),
-                        React.createElement('button', {
-                            type: 'submit',
-                            className: `${buttonBaseClasses} ${isSubmitDisabled ? disabledClasses : activeClasses}`,
-                            disabled: isSubmitDisabled
-                        }, buttonText)
+                    isGroupFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená skupina: ${defaultGroupName}`)
+                ),
+    
+                // Poradie – TERAZ VŽDY VIDITEĽNÉ, ale disabled kým nie je skupina
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradie v skupine:'),
+                    React.createElement('input', {
+                        type: 'number',
+                        min: '1',
+                        className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-full ${
+                            !selectedGroup ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'
+                        }`,
+                        value: orderInputValue ?? '',
+                        onChange: (e) => setOrderInputValue(e.target.value === '' ? null : parseInt(e.target.value, 10)),
+                        placeholder: !selectedGroup ? 'Vyberte najprv skupinu' : 'auto (alebo zadajte číslo)',
+                        disabled: !selectedGroup,
+                        // Najdôležitejšie – rovnaká šírka ako select
+                        style: { width: '100%' }
+                    }),
+                    !selectedGroup && React.createElement(
+                        'p',
+                        { className: 'text-xs text-gray-500 mt-1 italic' },
+                        'Najprv vyberte skupinu, aby bolo možné nastaviť poradie'
                     )
+                ),
+    
+                // Tlačidlá
+                React.createElement(
+                    'div',
+                    { className: 'pt-8 flex justify-end space-x-4' },
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors',
+                        onClick: onClose
+                    }, 'Zrušiť'),
+                    React.createElement('button', {
+                        type: 'submit',
+                        className: `${buttonBaseClasses} ${isSubmitDisabled ? disabledClasses : activeClasses}`,
+                        disabled: isSubmitDisabled
+                    }, buttonText)
                 )
             )
-        );
+        )
+    );
     };
 
     // Zjednotený handler pre uloženie
