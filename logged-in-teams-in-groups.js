@@ -434,57 +434,31 @@ const AddGroupsApp = (props) => {
         const userId = originalTeam.uid;
     
         const categoryName = categoryIdToNameMap[categoryId];
-        if (!categoryName) {
-            setNotification({
-                id: Date.now(),
-                message: "Názov kategórie sa nepodarilo nájsť",
-                type: 'error'
-            });
-            return;
-        }
-    
-        const newGroupName = groupName || null;
+        const userId = originalTeam.uid;
         const finalTeamName = `${categoryName} ${teamName.trim() || ''}`;
-    
-        if (!finalTeamName.trim()) {
-            setNotification({
-                id: Date.now(),
-                message: "Názov tímu nemôže byť prázdny",
-                type: 'error'
-            });
-            return;
-        }
     
         try {
             const userRef = doc(window.db, 'users', userId);
             const userSnap = await getDoc(userRef);
     
-            if (!userSnap.exists()) {
-                setNotification({
-                    id: Date.now(),
-                    message: `Používateľ s ID ${userId} sa nenašiel v databáze`,
-                    type: 'error'
-                });
-                return;
-            }
+            if (!userSnap.exists()) { ... error ... }
     
             const userData = userSnap.data();
             let teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-
-            const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
+    
+            // NÁJDENIE TÍMU PODĽA NÁZVU (namiesto id)
+            const teamIndex = teamsInCategory.findIndex(t => t.teamName === finalTeamName);
+    
             if (teamIndex === -1) {
                 setNotification({
                     id: Date.now(),
-                    message: `Tím už nie je v zozname používateľa ${originalTeam.uid}. Možno bol odstránený.`,
+                    message: `Tím "${finalTeamName}" sa nenašiel v kategórii ${categoryName} používateľa ${userId}.`,
                     type: 'warning'
                 });
                 return;
             }
-            
+    
             const teamToUpdate = teamsInCategory.splice(teamIndex, 1)[0];
-            
-            const originalGroupName = teamToUpdate.groupName || null;
-            const newGroupName = groupName || null;
             
             const updatedTeam = {
                 ...teamToUpdate,
