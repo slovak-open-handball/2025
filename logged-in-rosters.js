@@ -10,6 +10,10 @@ const formatPostalCode = (value) => {
     return digits.slice(0, 3) + ' ' + digits.slice(3);
 };
 
+const cleanPostalCode = (value) => {
+    return value ? value.replace(/\D/g, '').slice(0, 5) : '';
+};
+
 function showLocalNotification(message, type = 'success') {
     let notificationElement = document.getElementById('local-notification');
     if (!notificationElement) {
@@ -203,10 +207,6 @@ function MemberDetailsModal({
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
     const showAddressFields = teamAccommodationType !== 'bez ubytovania';
     const isButtonDisabled = isEditMode ? isRosterEditDeadlinePassed : isDataEditDeadlinePassed;
-    
-    const cleanPostalCode = (value) => {
-        return value ? value.replace(/\D/g, '').slice(0, 5) : '';
-    };
     
     // V MemberDetailsModal pridaj tento handler:
     const handlePostalCodeChange = (e) => {
