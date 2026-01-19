@@ -2,6 +2,24 @@ import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, get
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
+const formatPostalCode = (value) => {
+    if (!value) return '';
+    // Len číslice, max 5
+    const digits = value.replace(/\D/g, '').slice(0, 5);
+    if (digits.length <= 3) return digits;
+    return digits.slice(0, 3) + ' ' + digits.slice(3);
+};
+
+const cleanPostalCode = (value) => {
+    return value ? value.replace(/\D/g, '').slice(0, 5) : '';
+};
+
+// V MemberDetailsModal pridaj tento handler:
+const handlePostalCodeChange = (e) => {
+    const cleaned = cleanPostalCode(e.target.value);
+    setPostalCode(cleaned);   // ukladáme vždy len čisté číslice!
+};
+
 function showLocalNotification(message, type = 'success') {
     let notificationElement = document.getElementById('local-notification');
     if (!notificationElement) {
@@ -513,12 +531,15 @@ function MemberDetailsModal({
                     React.createElement('div', null,
                         React.createElement('label', { htmlFor: 'postalCode', className: 'block text-sm font-medium text-gray-700' }, 'PSČ'),
                         React.createElement('input', {
-                            type: 'text',
-                            id: 'postalCode',
-                            className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                            value: postalCode,
-                            onChange: (e) => setPostalCode(e.target.value),
-                            disabled: isButtonDisabled
+                          type: 'text',
+                          id: 'postalCode',
+                          className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono',
+                          value: formatPostalCode(postalCode),
+                          onChange: handlePostalCodeChange,
+                          maxLength: 6,
+                          inputMode: 'numeric',
+                          pattern: '[0-9 ]*', 
+                          disabled: isButtonDisabled
                         })
                     ),
                     // Mesto
