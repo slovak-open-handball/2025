@@ -920,39 +920,73 @@ const AddGroupsApp = (props) => {
                 React.createElement(
                     'button',
                     {
-                    onClick: async () => { 
-                        console.log("Editujem tím:", team);
-                        console.log("uid:", team.uid);
-        
-                        if (!team.isSuperstructureTeam && team.uid) {
-                            try {
-                                const userRef = doc(window.db, 'users', team.uid);
-                                const snap = await getDoc(userRef);
-                                if (snap.exists()) {
+                        onClick: async () => {
+                            console.log("Pokus o editáciu tímu:", {
+                                uid: team.uid,
+                                id: team.id,
+                                name: team.teamName,
+                                category: team.category,
+                                group: team.groupName
+                            });
+                
+                            if (!team.isSuperstructureTeam && team.uid) {
+                                try {
+                                    const userRef = doc(window.db, 'users', team.uid);
+                                    const snap = await getDoc(userRef);
+                
+                                    if (!snap.exists()) {
+                                        setNotification({
+                                            id: Date.now(),
+                                            message: `Profil používateľa ${team.uid} už neexistuje.`,
+                                            type: 'error'
+                                        });
+                                        return;
+                                    }
+                
                                     const data = snap.data();
                                     const cat = team.category;
                                     const teams = data.teams?.[cat] || [];
                                     const exists = teams.some(t => t.id === team.id);
+                
                                     if (!exists) {
-                                        alert(`Tím "${team.teamName}" už v profile používateľa neexistuje. Zoznam sa čoskoro aktualizuje.`);
+                                        setNotification({
+                                            id: Date.now(),
+                                            message: `Tím "${team.teamName}" už nie je v profile používateľa. Zoznam sa aktualizuje.`,
+                                            type: 'warning'
+                                        });
                                         return;
                                     }
-                                } else {
-                                    alert("Profil používateľa už neexistuje.");
+                                } catch (err) {
+                                    console.error("Chyba pri overovaní tímu:", err);
+                                    setNotification({
+                                        id: Date.now(),
+                                        message: "Nepodarilo sa overiť existenciu tímu. Skús neskôr.",
+                                        type: 'error'
+                                    });
                                     return;
                                 }
-                            } catch (err) {
-                                console.error("Chyba pri overovaní existencie tímu:", err);
                             }
-                        }
-        
-                        setTeamToEdit(team);
-                        setIsModalOpen(true);
+                
+                            // ak všetko OK → otvoriť modál
+                            setTeamToEdit(team);
+                            setIsModalOpen(true);
                         },
-                    className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
-                    title: 'Upraviť tím'
+                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                        title: 'Upraviť tím'
                     },
-                React.createElement('svg', { ... }, ...)
+                    React.createElement('svg', {
+                        className: 'w-5 h-5',
+                        fill: 'none',
+                        stroke: 'currentColor',
+                        viewBox: '0 0 24 24'
+                    },
+                        React.createElement('path', {
+                            strokeLinecap: 'round',
+                            strokeLinejoin: 'round',
+                            strokeWidth: '2',
+                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                        })
+                    )
                 )
             );
         };
