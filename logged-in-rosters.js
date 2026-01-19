@@ -1609,7 +1609,7 @@ useEffect(() => {
             await updateDoc(userDocRef, {
                 teams: currentTeams
             });
-            showLocalNotification('Údaje tímu boli úspešne aktualizované!', 'success');
+            showLocalNotification('Údaje tímu boli aktualizované!', 'success');
         } catch (error) {
             console.error("Chyba pri aktualizácii tímu:", error);
             showLocalNotification('Nastala chyba pri aktualizácii údajov tímu.', 'error');
@@ -1713,7 +1713,7 @@ const handleDeleteTeam = async (teamToDelete) => {
         await updateDoc(userDocRef, {
             teams: currentTeamsCopy
         });
-        showLocalNotification('Tím bol úspešne vymazaný!', 'success');
+        showLocalNotification('Tím bol vymazaný!', 'success');
         setShowEditTeamModal(false);
         setSelectedTeam(null);
     } catch (error) {
@@ -1784,7 +1784,7 @@ const handleAddTeam = async (newTeamDataFromModal) => {
         await updateDoc(userDocRef, {
             teams: currentTeamsCopy
         });
-        showLocalNotification('Nový tím bol úspešne pridaný a názvy tímov aktualizované!', 'success');
+        showLocalNotification('Nový tím bol pridaný a názvy tímov aktualizované!', 'success');
     } catch (error) {
         console.error("Chyba pri pridávaní tímu a aktualizácii názvov:", error);
         showLocalNotification('Nastala chyba pri pridávaní tímu a aktualizácii názvov.', 'error');
@@ -1871,7 +1871,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
         await updateDoc(userDocRef, {
             teams: currentTeams
         });
-        showLocalNotification('Nový člen tímu bol úspešne pridaný!', 'success');
+        showLocalNotification('Nový člen tímu bol pridaný!', 'success');
         setTeamToAddMemberTo(null);
         setMemberTypeToAdd(null);
     } catch (error) {
@@ -1933,7 +1933,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
     try {
         await updateDoc(userDocRef, { teams: currentTeams });
-        showLocalNotification('Údaje člena tímu boli úspešne aktualizované!', 'success');
+        showLocalNotification('Údaje člena tímu boli aktualizované!', 'success');
         setMemberToEdit(null);
         setTeamOfMemberToEdit(null);
     } catch (error) {
