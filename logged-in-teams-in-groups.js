@@ -978,7 +978,7 @@ const AddGroupsApp = (props) => {
             allTeams: allTeams,
             defaultCategoryId: selectedCategoryId,
             defaultGroupName: selectedGroupName,
-        }),
+        })
         ),
         React.createElement(
             'div',
