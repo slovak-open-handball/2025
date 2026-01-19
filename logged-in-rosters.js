@@ -518,7 +518,6 @@ function MemberDetailsModal({
                             className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
                             value: postalCode,
                             onChange: (e) => setPostalCode(e.target.value),
-                            placeholder: '123 45',
                             disabled: isButtonDisabled
                         })
                     ),
