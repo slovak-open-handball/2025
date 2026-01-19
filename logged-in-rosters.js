@@ -1620,6 +1620,37 @@ useEffect(() => {
 };
 
 const handleDeleteTeam = async (teamToDelete) => {
+
+    // ------------------- NÚDZOVÝ OVERRIDE -------------------
+    if (true) {  // alebo napr. if (teamToDelete.teamName === "Problémový tím XYZ")
+        console.warn("POZOR! Používam núdzový delete bez kontroly clubName");
+        
+        const userDocRef = doc(db, 'users', user.uid);
+        const category = teamToDelete.categoryName;
+        
+        // veľmi jednoduchá verzia - len odfiltrujeme podľa mena tímu
+        const updatedTeams = { ...teamsData };
+        if (updatedTeams[category]) {
+            updatedTeams[category] = updatedTeams[category].filter(
+                t => t.teamName !== teamToDelete.teamName
+            );
+            if (updatedTeams[category].length === 0) {
+                delete updatedTeams[category];
+            }
+        }
+        
+        try {
+            await updateDoc(userDocRef, { teams: updatedTeams });
+            showLocalNotification('Tím bol NÚDZOVO vymazaný!', 'success');
+            setShowEditTeamModal(false);
+            return;  // ukončíme funkciu
+        } catch (err) {
+            console.error("Núdzový delete zlyhal:", err);
+            showLocalNotification('Aj núdzový delete zlyhal :-(', 'error');
+            return;
+        }
+    }
+    
     if (isDataEditDeadlinePassed) {
         showLocalNotification('Termín pre úpravu dát tímu už uplynul, tím nie je možné vymazať.', 'error');
         return;
