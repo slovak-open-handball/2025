@@ -460,7 +460,7 @@ function MemberDetailsModal({
                     React.createElement('label', { 
                         htmlFor: 'registrationNumber', 
                         className: 'block text-sm font-medium text-gray-700' 
-                    }, 'Číslo registrácie *'),
+                    }, 'Číslo registrácie'),
                     React.createElement('input', {
                         type: 'text',
                         id: 'registrationNumber',
