@@ -1178,7 +1178,7 @@ const AddGroupsApp = (props) => {
                             'div',
                             {
                                 key: groupIndex,
-                                className: `flex flex-col rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 ${getGroupColorClass(group.type)}`,
+                                className: `flex flex-col rounded-xl shadow-xl p-6 mb-4 flex-shrink-0 ${getGroupColorClass(group.type)}`,
                                 style: customStyle,
                             },
                             React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
