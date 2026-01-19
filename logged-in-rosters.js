@@ -1,6 +1,7 @@
 import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useMemo } = window.React || {};
+
 function showLocalNotification(message, type = 'success') {
     let notificationElement = document.getElementById('local-notification');
     if (!notificationElement) {
@@ -33,6 +34,7 @@ function showLocalNotification(message, type = 'success') {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 }
+
 const formatDateToDMMYYYY = (dateString) => {
     if (!dateString) return '-';
     const [year, month, day] = dateString.split('-');
@@ -41,8 +43,10 @@ const formatDateToDMMYYYY = (dateString) => {
     }
     return dateString;
 };
+
 // Pridajte do globálneho scope
 window.formatDateToDMMYYYY = formatDateToDMMYYYY;
+
 const mealTypeLabels = {
     breakfast: 'raňajky',
     lunch: 'obed',
@@ -51,6 +55,7 @@ const mealTypeLabels = {
 };
 const mealOrder = ['breakfast', 'lunch', 'dinner', 'refreshment'];
 const dayAbbreviations = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
+
 const getRoleColor = (role) => {
     switch (role) {
         case 'admin':
@@ -63,6 +68,7 @@ const getRoleColor = (role) => {
             return '#1D4ED8';
     }
 };
+
 function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData, isDataEditDeadlinePassed }) {
     const [selectedType, setSelectedType] = useState('');
     if (!show) return null;
@@ -153,6 +159,7 @@ function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData
         )
     );
 }
+
 function MemberDetailsModal({
     show,
     onClose,
@@ -176,8 +183,9 @@ function MemberDetailsModal({
     const [postalCode, setPostalCode] = useState('');
     const [city, setCity] = useState('');
     const [country, setCountry] = useState('');
-    const [dateOfBirthError, setDateOfBirthError] = useState('');
-    const [isDateOfBirthValid, setIsDateOfBirthValid] = useState(true);
+    const [dateOfBirthError, setDateOfBirthError] = useState(''); 
+    const [isDateOfBirthValid, setIsDateOfBirthValid] = useState(true); 
+
     useEffect(() => {
         if (show) {
             if (isEditMode && memberData) {
@@ -205,10 +213,13 @@ function MemberDetailsModal({
             }
         }
     }, [show, memberType, teamAccommodationType, memberData, isEditMode]);
+
     if (!show) return null;
+
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
     const showAddressFields = teamAccommodationType !== 'bez ubytovania';
     const isButtonDisabled = isEditMode ? isRosterEditDeadlinePassed : isDataEditDeadlinePassed;
+
     // Validácia dátumu narodenia
     const validateDateOfBirth = (dateString, categoryName) => {
         if (!dateString) {
@@ -244,6 +255,7 @@ function MemberDetailsModal({
         setIsDateOfBirthValid(true);
         return true;
     };
+
     const handleDateOfBirthChange = (e) => {
         const newDate = e.target.value;
         setDateOfBirth(newDate);
@@ -251,6 +263,7 @@ function MemberDetailsModal({
             validateDateOfBirth(newDate, teamCategoryName);
         }
     };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (isButtonDisabled) return;
@@ -276,6 +289,7 @@ function MemberDetailsModal({
         onSaveMember(memberDetails);
         onClose();
     };
+
     const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
         isButtonDisabled || !isDateOfBirthValid ? 'bg-white text-current border border-current' : 'text-white'
     }`;
@@ -285,6 +299,7 @@ function MemberDetailsModal({
         borderColor: isButtonDisabled || !isDateOfBirthValid ? roleColor : 'transparent',
         cursor: isButtonDisabled || !isDateOfBirthValid ? 'not-allowed' : 'pointer'
     };
+
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
@@ -381,6 +396,7 @@ function MemberDetailsModal({
         )
     );
 }
+
 function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, isDataEditDeadlinePassed }) {
     const [editedTeamName, setEditedTeamName] = useState(teamData ? teamData.teamName : '');
     const [editedCategoryName, setEditedCategoryName] = useState(teamData ? teamData.categoryName : '');
@@ -391,6 +407,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
     const [editedArrivalMinute, setEditedArrivalMinute] = useState('');
     const [tshirtEntries, setTshirtEntries] = useState([]);
     const [hasChanges, setHasChanges] = useState(false);
+
     useEffect(() => {
       if (teamData) {
         setEditedTeamName(teamData.teamName || '');
@@ -410,8 +427,11 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         setHasChanges(false);
       }
     }, [teamData]);
+
     if (!show) return null;
+
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+
     const totalMembersInTeam = useMemo(() => {
         if (!teamData) return 0;
         const players = teamData.playerDetails?.length || 0;
@@ -421,27 +441,36 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         const driverMale = teamData.driverDetailsMale?.length || 0;
         return players + menTeamMembers + womenTeamMembers + driverFemale + driverMale;
     }, [teamData]);
+
     const totalTshirtsQuantity = useMemo(() => {
         return tshirtEntries.reduce((sum, entry) => sum + (parseInt(entry.quantity, 10) || 0), 0);
     }, [tshirtEntries]);
+
     const allTshirtSizesSelected = useMemo(() => {
         if (tshirtEntries.length === 0) return true;
         return tshirtEntries.every(tshirt => tshirt.size !== '');
     }, [tshirtEntries]);
+
     const isSaveButtonDisabled = isDataEditDeadlinePassed || !hasChanges;
+
     const isAddTshirtButtonDisabled = isDataEditDeadlinePassed || totalTshirtsQuantity === totalMembersInTeam;
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (isDataEditDeadlinePassed) {
           showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
           return;
         }
+
         let finalArrivalTime = '';
         if (editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus') {
             finalArrivalTime = `${editedArrivalHour.padStart(2, '0')}:${editedArrivalMinute.padStart(2, '0')}`;
         }
+
         const filteredTshirtEntries = tshirtEntries.filter(t => t.size && t.quantity && parseInt(t.quantity, 10) > 0)
                                                     .map(t => ({ ...t, quantity: parseInt(t.quantity, 10) }));
+
         const updatedTeamData = {
             ...teamData,
             teamName: editedTeamName,
@@ -459,6 +488,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         setHasChanges(false);
         onClose();
     };
+
     const handleArrivalTypeChange = (e) => {
       setEditedArrivalType(e.target.value);
       setHasChanges(true);
@@ -471,37 +501,46 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
       setEditedPackageName(e.target.value);
       setHasChanges(true);
     };
+
     const handleArrivalHourChange = (e) => {
       setEditedArrivalHour(e.target.value);
       setHasChanges(true);
     };
+
     const handleArrivalMinuteChange = (e) => {
       setEditedArrivalMinute(e.target.value);
       setHasChanges(true);
     };
+
     const showArrivalTimeInputs = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
+
     const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
     const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+
     const handleAddTshirtEntry = () => {
         setTshirtEntries([...tshirtEntries, { size: '', quantity: 1 }]);
         setHasChanges(true);
     };
+
     const handleRemoveTshirtEntry = (index) => {
         setTshirtEntries(tshirtEntries.filter((_, i) => i !== index));
         setHasChanges(true);
     };
+
     const handleTshirtSizeChange = (index, newSize) => {
         const updatedEntries = [...tshirtEntries];
         updatedEntries[index].size = newSize;
         setTshirtEntries(updatedEntries);
         setHasChanges(true);
     };
+
     const handleTshirtQuantityChange = (index, newQuantity) => {
         const updatedEntries = [...tshirtEntries];
         updatedEntries[index].quantity = Math.max(1, parseInt(newQuantity, 10) || 1);
         setTshirtEntries(updatedEntries);
         setHasChanges(true);
     };
+
     const saveButtonClasses = `px-4 py-2 rounded-md transition-colors ${
         isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
     }`;
@@ -511,6 +550,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
         cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
     };
+
     const addTshirtButtonClasses = `flex items-center justify-center w-8 h-8 rounded-full transition-colors focus:outline-none focus:ring-2
         ${isAddTshirtButtonDisabled
             ? 'bg-white border border-solid'
@@ -521,6 +561,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         borderColor: isAddTshirtButtonDisabled ? roleColor : 'transparent',
         color: isAddTshirtButtonDisabled ? roleColor : 'white',
     };
+
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
@@ -548,6 +589,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
             React.createElement(
                 'form',
                 { onSubmit: handleSubmit, className: 'space-y-4' },
+
                 React.createElement(
                     'div',
                     null,
@@ -646,6 +688,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                     )
                     )
                 ),
+
                 React.createElement(
                     'div',
                     null,
@@ -661,10 +704,12 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                                 .map(entry => entry.size)
                                 .filter(Boolean)
                         );
+
                         const filteredAvailableSizes = availableTshirtSizes
                             .filter(size => !selectedSizesExcludingCurrent.has(size) || size === tshirt.size)
                             .slice()
                             .sort();
+
                         return React.createElement(
                             'div',
                             { key: index, className: 'flex items-center space-x-2 mb-2' },
@@ -718,6 +763,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         )
                     )
                 ),
+
                 React.createElement(
                     'div',
                     { className: 'flex justify-between space-x-2 mt-6' },
@@ -759,6 +805,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         )
     );
 }
+
 function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, teamsData, availableCategoriesFromSettings, isDataEditDeadlinePassed }) {
     const db = getFirestore();
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -769,8 +816,10 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     const [accommodationType, setAccommodationType] = useState('bez ubytovania');
     const [packageName, setPackageName] = useState(availablePackages.length > 0 ? availablePackages.sort()[0] : '');
     const [hasChanges, setHasChanges] = useState(false);
+
     const clubName = userProfileData?.billing?.clubName?.trim() || 'Neznámy klub';
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+
     useEffect(() => {
         if (show) {
             setSelectedCategory('');
@@ -783,12 +832,14 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             setHasChanges(false);
         }
     }, [show, availablePackages]);
+
     useEffect(() => {
         if (selectedCategory && teamsData && clubName !== 'Neznámy klub') {
             const allTeamsInCategory = teamsData[selectedCategory] || [];
             const existingClubTeamsForCategory = allTeamsInCategory.filter(
                 team => team.clubName?.trim() === clubName && team.categoryName === selectedCategory
             );
+
             let generatedName;
             if (existingClubTeamsForCategory.length === 0) {
                 generatedName = clubName;
@@ -801,25 +852,34 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             setTeamNamePreview('');
         }
     }, [selectedCategory, clubName, teamsData]);
+
     const isSaveButtonDisabled = isDataEditDeadlinePassed || !hasChanges || !selectedCategory;
+
     const showArrivalTimeInputs = arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus';
+
     const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
     const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (isDataEditDeadlinePassed) {
           showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
           return;
         }
+
         if (isSaveButtonDisabled) {
             showLocalNotification('Prosím, vyplňte kategóriu a názov tímu.', 'error');
             return;
         }
+
         let finalArrivalTime = '';
         if (arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus') {
             finalArrivalTime = `${arrivalHour.padStart(2, '0')}:${arrivalMinute.padStart(2, '0')}`;
         }
+
         const filteredTshirtEntries = [];
+
         let packageDetails = {};
         if (packageName) {
             try {
@@ -841,6 +901,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                 return;
             }
         }
+
         const newTeamData = {
             teamName: teamNamePreview,
             categoryName: selectedCategory,
@@ -862,7 +923,9 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         setHasChanges(false);
         onClose();
     };
+
     if (!show) return null;
+
     const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
         isSaveButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
     }`;
@@ -872,6 +935,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         borderColor: isSaveButtonDisabled ? roleColor : 'transparent',
         cursor: isSaveButtonDisabled ? 'not-allowed' : 'pointer'
     };
+
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
@@ -1037,6 +1101,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     )
                     )
                 ),
+
                 React.createElement(
                     'div',
                     { className: 'flex justify-end space-x-2 mt-6' },
@@ -1064,6 +1129,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         )
     );
 }
+
 function RostersApp() {
   const auth = getAuth();
   const db = getFirestore();
@@ -1092,12 +1158,15 @@ function RostersApp() {
   const [isDataEditDeadlinePassed, setIsDataEditDeadlinePassed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [categoriesWithDates, setCategoriesWithDates] = useState({}); // Pridané
+
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
       setIsAuthReady(true);
     });
+
     const handleGlobalDataUpdated = (event) => {
       setUserProfileData(event.detail);
       if (window.hideGlobalLoader) {
@@ -1105,6 +1174,7 @@ function RostersApp() {
       }
     };
     window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
+
     if (window.isGlobalAuthReady) {
         setIsAuthReady(true);
         setUser(auth.currentUser);
@@ -1115,14 +1185,17 @@ function RostersApp() {
             }
         }
     }
+
     return () => {
       unsubscribeAuth();
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
   }, []);
+
 useEffect(() => {
     let unsubscribeSettings;
     let unsubscribeUserDeadlines;
+
     const fetchDeadlines = async () => {
         try {
             const settingsDocRef = doc(db, 'settings', 'registration');
@@ -1131,34 +1204,42 @@ useEffect(() => {
                     const data = docSnapshot.data();
                     const settingsRosterDeadline = data.rosterEditDeadline?.toDate() || null;
                     const settingsDataDeadline = data.dataEditDeadline?.toDate() || null;
+
                     console.log("Načítané deadliny z nastavení (Timestamp → Date):", {
                         rosterEditDeadline: settingsRosterDeadline,
                         dataEditDeadline: settingsDataDeadline
                     });
+
                     if (user && user.uid) {
                         const userDocRef = doc(db, 'users', user.uid);
                         unsubscribeUserDeadlines = onSnapshot(userDocRef, (userDocSnapshot) => {
                             let userRosterDeadline = null;
                             let userDataDeadline = null;
+
                             if (userDocSnapshot.exists()) {
                                 const userData = userDocSnapshot.data();
                                 userRosterDeadline = userData.rosterEditDeadline?.toDate() || null;
                                 userDataDeadline = userData.dataEditDeadline?.toDate() || null;
+
                                 console.log("Načítané deadliny z používateľského profilu (Timestamp → Date):", {
                                     userRosterDeadline,
                                     userDataDeadline
                                 });
                             }
+
                             const finalRosterDeadline = !userRosterDeadline || !settingsRosterDeadline
                                 ? userRosterDeadline || settingsRosterDeadline
                                 : new Date(Math.max(userRosterDeadline.getTime(), settingsRosterDeadline.getTime()));
+
                             const finalDataDeadline = !userDataDeadline || !settingsDataDeadline
                                 ? userDataDeadline || settingsDataDeadline
                                 : new Date(Math.max(userDataDeadline.getTime(), settingsDataDeadline.getTime()));
+
                             console.log("Finálne deadliny (maximum z oboch zdrojov):", {
                                 rosterEditDeadline: finalRosterDeadline,
                                 dataEditDeadline: finalDataDeadline
                             });
+
                             setRosterEditDeadline(finalRosterDeadline);
                             setDataEditDeadline(finalDataDeadline);
                         }, (error) => {
@@ -1186,31 +1267,38 @@ useEffect(() => {
             setDataEditDeadline(null);
         }
     };
+
     if (db && isAuthReady) {
         fetchDeadlines();
     }
+
     return () => {
         if (unsubscribeSettings) unsubscribeSettings();
         if (unsubscribeUserDeadlines) unsubscribeUserDeadlines();
     };
 }, [db, user, isAuthReady]);
+
 useEffect(() => {
     console.log("Aktuálne deadliny v stave:", {
         rosterEditDeadline,
         dataEditDeadline
     });
 }, [rosterEditDeadline, dataEditDeadline]);
+
 useEffect(() => {
     const now = new Date();
     setIsRosterEditDeadlinePassed(rosterEditDeadline ? now > rosterEditDeadline : false);
     setIsDataEditDeadlinePassed(dataEditDeadline ? now > dataEditDeadline : false);
+
     const intervalId = setInterval(() => {
         const currentCheckTime = new Date();
         setIsRosterEditDeadlinePassed(rosterEditDeadline ? currentCheckTime > rosterEditDeadline : false);
         setIsDataEditDeadlinePassed(dataEditDeadline ? currentCheckTime > dataEditDeadline : false);
     }, 1000);
+
     return () => clearInterval(intervalId);
 }, [rosterEditDeadline, dataEditDeadline]);
+
   useEffect(() => {
       let unsubscribePackages;
       if (db) {
@@ -1238,6 +1326,7 @@ useEffect(() => {
           }
       };
   }, [db]);
+
   useEffect(() => {
       let unsubscribeAccommodation;
       if (db) {
@@ -1264,6 +1353,7 @@ useEffect(() => {
           }
       };
   }, [db]);
+
   useEffect(() => {
     let unsubscribeTshirtSizes;
     if (db) {
@@ -1290,6 +1380,7 @@ useEffect(() => {
         }
     };
   }, [db]);
+
   useEffect(() => {
     let unsubscribeCategories;
     if (db) {
@@ -1333,19 +1424,24 @@ useEffect(() => {
             }
         };
     }, [db]);
+
   useEffect(() => {
     let unsubscribeUserDoc;
+
     if (user && db && isAuthReady) {
       setLoading(true);
+
       try {
         const userDocRef = doc(db, 'users', user.uid);
         unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
             setUserProfileData(userData);
+
             if (userData.teams) {
                 const normalizedTeams = {};
                 const currentClubName = userData.billing?.clubName?.trim() || 'Neznámy klub';
+
                 for (const categoryKey in userData.teams) {
                     if (Object.prototype.hasOwnProperty.call(userData.teams, categoryKey)) {
                         normalizedTeams[categoryKey] = userData.teams[categoryKey].map(team => {
@@ -1378,17 +1474,21 @@ useEffect(() => {
         setUserProfileData(null);
         setTeamsData({});
     }
+
     return () => {
       if (unsubscribeUserDoc) {
         unsubscribeUserDoc();
       }
     };
   }, [user, db, isAuthReady, auth]);
+
   if (!isAuthReady || !userProfileData) {
     return null;
   }
+
   const getAllTeamMembers = (team) => {
     const members = [];
+
     if (team.playerDetails && team.playerDetails.length > 0) {
       team.playerDetails.forEach(player => {
         members.push({
@@ -1398,6 +1498,7 @@ useEffect(() => {
         });
       });
     }
+
     if (team.menTeamMemberDetails && team.menTeamMemberDetails.length > 0) {
       team.menTeamMemberDetails.forEach(member => {
         members.push({
@@ -1407,6 +1508,7 @@ useEffect(() => {
         });
       });
     }
+
     if (team.womenTeamMemberDetails && team.womenTeamMemberDetails.length > 0) {
       team.womenTeamMemberDetails.forEach(member => {
         members.push({
@@ -1416,6 +1518,7 @@ useEffect(() => {
         });
       });
     }
+
     if (team.driverDetailsFemale && team.driverDetailsFemale.length > 0) {
       team.driverDetailsFemale.forEach(driver => {
         members.push({
@@ -1425,6 +1528,7 @@ useEffect(() => {
         });
       });
     }
+
     if (team.driverDetailsMale && team.driverDetailsMale.length > 0) {
       team.driverDetailsMale.forEach(driver => {
         members.push({
@@ -1434,9 +1538,12 @@ useEffect(() => {
         });
       });
     }
+
     return members;
   };
+
   const teamCategories = Object.entries(teamsData).sort((a, b) => a[0].localeCompare(b[0]));
+
   const getTeamPluralization = (count) => {
     if (count === 1) {
       return 'tím';
@@ -1446,10 +1553,12 @@ useEffect(() => {
       return 'tímov';
     }
   };
+
   const handleOpenEditTeamModal = (team) => {
     setSelectedTeam({ ...team, categoryName: team.categoryName });
     setShowEditTeamModal(true);
   };
+
   const handleSaveTeam = async (updatedTeamData) => {
     if (isDataEditDeadlinePassed) {
         showLocalNotification('Termín pre úpravu dát tímu už uplynul.', 'error');
@@ -1459,13 +1568,16 @@ useEffect(() => {
         showLocalNotification('Chyba: Používateľ nie je prihlásený.', 'error');
         return;
     }
+
     const originalPackageName = selectedTeam?.packageDetails?.name || '';
     const newPackageName = updatedTeamData.packageDetails.name;
+
     if (newPackageName !== originalPackageName) {
         try {
             const packagesRef = collection(db, 'settings', 'packages', 'list');
             const q = query(packagesRef, where('name', '==', newPackageName));
             const querySnapshot = await getDocs(q);
+
             if (!querySnapshot.empty) {
                 const packageDoc = querySnapshot.docs[0];
                 const packageData = packageDoc.data();
@@ -1483,17 +1595,21 @@ useEffect(() => {
             return;
         }
     }
+
     const teamCategory = updatedTeamData.categoryName;
     const teamIndex = teamsData[teamCategory].findIndex(t => t.teamName === updatedTeamData.teamName);
+
     if (teamIndex !== -1) {
         const userDocRef = doc(db, 'users', user.uid);
         const currentTeams = { ...teamsData };
+
         currentTeams[teamCategory][teamIndex] = updatedTeamData;
+
         try {
             await updateDoc(userDocRef, {
                 teams: currentTeams
             });
-            showLocalNotification('Údaje tímu boli aktualizované!', 'success');
+            showLocalNotification('Údaje tímu boli úspešne aktualizované!', 'success');
         } catch (error) {
             console.error("Chyba pri aktualizácii tímu:", error);
             showLocalNotification('Nastala chyba pri aktualizácii údajov tímu.', 'error');
@@ -1502,6 +1618,7 @@ useEffect(() => {
         showLocalNotification('Chyba: Tím nebol nájdený pre aktualizáciu.', 'error');
     }
 };
+
 const handleDeleteTeam = async (teamToDelete) => {
     if (isDataEditDeadlinePassed) {
         showLocalNotification('Termín pre úpravu dát tímu už uplynul, tím nie je možné vymazať.', 'error');
@@ -1511,6 +1628,7 @@ const handleDeleteTeam = async (teamToDelete) => {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýba názov klubu.', 'error');
         return;
     }
+
     const confirmDelete = await new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]';
@@ -1525,6 +1643,7 @@ const handleDeleteTeam = async (teamToDelete) => {
             </div>
         `;
         document.body.appendChild(modal);
+
         document.getElementById('cancelDelete').onclick = () => {
             document.body.removeChild(modal);
             resolve(false);
@@ -1534,38 +1653,48 @@ const handleDeleteTeam = async (teamToDelete) => {
             resolve(true);
         };
     });
+
     if (!confirmDelete) {
         return;
     }
+
     const userDocRef = doc(db, 'users', user.uid);
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData));
+
     const categoryToDeleteFrom = teamToDelete.categoryName;
     const clubName = userProfileData.billing.clubName?.trim();
+
     if (!currentTeamsCopy[categoryToDeleteFrom]) {
         showLocalNotification('Chyba: Kategória tímu nebola nájdená.', 'error');
         return;
     }
+
     let teamsInCurrentCategory = currentTeamsCopy[categoryToDeleteFrom].filter(
         team => team.teamName !== teamToDelete.teamName
     );
+
     let clubTeamsInCategory = teamsInCurrentCategory.filter(
         team => team.clubName?.trim() === clubName && team.categoryName === categoryToDeleteFrom
     );
     let otherTeamsInCategories = teamsInCurrentCategory.filter(
         team => !(team.clubName?.trim() === clubName && team.categoryName === categoryToDeleteFrom)
     );
+
     clubTeamsInCategory.sort((a, b) => {
         const getSuffixPart = (teamName, baseClubName) => {
             const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
             const match = teamName.match(regex);
             return match ? match[1] : '';
         };
+
         const suffixA = getSuffixPart(a.teamName, clubName);
         const suffixB = getSuffixPart(b.teamName, clubName);
+
         if (suffixA === '' && suffixB !== '') return -1;
         if (suffixA !== '' && suffixB === '') return 1;
         return suffixA.localeCompare(suffixB);
     });
+
     if (clubTeamsInCategory.length === 0) {
         delete currentTeamsCopy[categoryToDeleteFrom];
     } else if (clubTeamsInCategory.length === 1) {
@@ -1575,14 +1704,16 @@ const handleDeleteTeam = async (teamToDelete) => {
             clubTeamsInCategory[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
         }
     }
+
     if (currentTeamsCopy[categoryToDeleteFrom]) {
         currentTeamsCopy[categoryToDeleteFrom] = [...otherTeamsInCategories, ...clubTeamsInCategory];
     }
+
     try {
         await updateDoc(userDocRef, {
             teams: currentTeamsCopy
         });
-        showLocalNotification('Tím bol vymazaný!', 'success');
+        showLocalNotification('Tím bol úspešne vymazaný!', 'success');
         setShowEditTeamModal(false);
         setSelectedTeam(null);
     } catch (error) {
@@ -1590,6 +1721,7 @@ const handleDeleteTeam = async (teamToDelete) => {
         showLocalNotification('Nastala chyba pri mazaní tímu.', 'error');
     }
 };
+
 const handleAddTeam = async (newTeamDataFromModal) => {
     if (isDataEditDeadlinePassed) {
         showLocalNotification('Termín pre pridanie nového tímu už uplynul.', 'error');
@@ -1599,32 +1731,41 @@ const handleAddTeam = async (newTeamDataFromModal) => {
         showLocalNotification('Chyba: Používateľ nie je prihlásený.', 'error');
         return;
     }
+
     const userDocRef = doc(db, 'users', user.uid);
     const currentTeamsCopy = JSON.parse(JSON.stringify(teamsData));
+
     const category = newTeamDataFromModal.categoryName;
     const clubName = newTeamDataFromModal.clubName;
+
     if (!currentTeamsCopy[category]) {
         currentTeamsCopy[category] = [];
     }
+
     let existingClubTeamsInThisCategory = currentTeamsCopy[category].filter(
         team => team.clubName?.trim() === clubName && team.categoryName === category
     );
+
     const allRelevantTeamsBeforeUpdate = [
         ...existingClubTeamsInThisCategory.map(team => ({ ...team, originalNameForSort: team.teamName })),
         { ...newTeamDataFromModal, originalNameForSort: newTeamDataFromModal.teamName }
     ];
+
     allRelevantTeamsBeforeUpdate.sort((a, b) => {
         const getSuffixPart = (teamName, baseClubName) => {
             const regex = new RegExp(`^${baseClubName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*([A-Z])$`);
             const match = teamName.match(regex);
             return match ? match[1] : '';
         };
+
         const suffixA = getSuffixPart(a.originalNameForSort, clubName);
         const suffixB = getSuffixPart(b.originalNameForSort, clubName);
+
         if (suffixA === '' && suffixB !== '') return -1;
         if (suffixA !== '' && suffixB === '') return 1;
         return suffixA.localeCompare(suffixB);
     });
+
     if (allRelevantTeamsBeforeUpdate.length === 1) {
         allRelevantTeamsBeforeUpdate[0].teamName = clubName;
     } else {
@@ -1632,20 +1773,24 @@ const handleAddTeam = async (newTeamDataFromModal) => {
             allRelevantTeamsBeforeUpdate[i].teamName = `${clubName} ${String.fromCharCode('A'.charCodeAt(0) + i)}`;
         }
     }
+
     const otherTeamsInCategories = currentTeamsCopy[category].filter(
         team => !(team.clubName?.trim() === clubName && team.categoryName === category)
     );
+
     currentTeamsCopy[category] = [...otherTeamsInCategories, ...allRelevantTeamsBeforeUpdate];
+
     try {
         await updateDoc(userDocRef, {
             teams: currentTeamsCopy
         });
-        showLocalNotification('Nový tím bol pridaný a názvy tímov aktualizované!', 'success');
+        showLocalNotification('Nový tím bol úspešne pridaný a názvy tímov aktualizované!', 'success');
     } catch (error) {
         console.error("Chyba pri pridávaní tímu a aktualizácii názvov:", error);
         showLocalNotification('Nastala chyba pri pridávaní tímu a aktualizácii názvov.', 'error');
     }
 };
+
 const handleOpenAddMemberTypeModal = (team) => {
     setTeamToAddMemberTo(team);
     setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || 'bez ubytovania');
@@ -1653,6 +1798,7 @@ const handleOpenAddMemberTypeModal = (team) => {
     setMemberToEdit(null);
     setShowAddMemberTypeModal(true);
 };
+
 const handleOpenEditMemberDetailsModal = (team, member) => {
     setTeamOfMemberToEdit(team);
     setMemberToEdit(member);
@@ -1661,11 +1807,13 @@ const handleOpenEditMemberDetailsModal = (team, member) => {
     setIsMemberEditMode(true);
     setShowMemberDetailsModal(true);
 };
+
 const handleSelectMemberType = (type) => {
     setMemberTypeToAdd(type);
     setShowAddMemberTypeModal(false);
     setShowMemberDetailsModal(true);
 };
+
 const handleSaveNewMember = async (newMemberDetails) => {
     if (isDataEditDeadlinePassed) {
         showLocalNotification('Termín pre pridanie nového člena tímu už uplynul.', 'error');
@@ -1675,15 +1823,19 @@ const handleSaveNewMember = async (newMemberDetails) => {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo tím nie je vybraný.', 'error');
         return;
     }
+
     const userDocRef = doc(db, 'users', user.uid);
     const currentTeams = { ...teamsData };
     const teamCategory = teamToAddMemberTo.categoryName;
     const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === teamToAddMemberTo.teamName);
+
     if (teamIndex === -1) {
         showLocalNotification('Chyba: Tím nebol nájdený.', 'error');
         return;
     }
+
     const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
+
     switch (memberTypeToAdd) {
         case 'player':
             if (!teamToUpdate.playerDetails) teamToUpdate.playerDetails = [];
@@ -1712,12 +1864,14 @@ const handleSaveNewMember = async (newMemberDetails) => {
             showLocalNotification('Neznámy typ člena tímu.', 'error');
             return;
     }
+
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
+
     try {
         await updateDoc(userDocRef, {
             teams: currentTeams
         });
-        showLocalNotification('Nový člen tímu bol pridaný!', 'success');
+        showLocalNotification('Nový člen tímu bol úspešne pridaný!', 'success');
         setTeamToAddMemberTo(null);
         setMemberTypeToAdd(null);
     } catch (error) {
@@ -1725,6 +1879,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
         showLocalNotification('Nastala chyba pri pridávaní člena tímu.', 'error');
     }
 };
+
 const handleSaveEditedMember = async (updatedMemberDetails) => {
     if (isRosterEditDeadlinePassed) {
         showLocalNotification('Termín pre úpravu členov tímu už uplynul.', 'error');
@@ -1734,17 +1889,21 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         showLocalNotification('Chyba: Používateľ nie je prihlásený alebo chýbajú údaje pre úpravu člena.', 'error');
         return;
     }
+
     const userDocRef = doc(db, 'users', user.uid);
     const currentTeams = { ...teamsData };
     const teamCategory = teamOfMemberToEdit.categoryName;
     const teamName = teamOfMemberToEdit.teamName;
     const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === teamName);
+
     if (teamIndex === -1) {
         showLocalNotification('Chyba: Tím nebol nájdený pre aktualizáciu člena.', 'error');
         return;
     }
+
     const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
     let memberArrayName;
+
     switch (memberToEdit.originalType) {
         case 'player': memberArrayName = 'playerDetails'; break;
         case 'womenTeamMember': memberArrayName = 'womenTeamMemberDetails'; break;
@@ -1755,22 +1914,26 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
             showLocalNotification('Neznámy typ člena tímu pre aktualizáciu.', 'error');
             return;
     }
+
     const memberArray = teamToUpdate[memberArrayName];
     const memberIndex = memberArray.findIndex(
         m => m.firstName === memberToEdit.firstName &&
              m.lastName === memberToEdit.lastName &&
              m.dateOfBirth === memberToEdit.dateOfBirth
     );
+
     if (memberIndex !== -1) {
         memberArray[memberIndex] = { ...memberArray[memberIndex], ...updatedMemberDetails };
     } else {
         showLocalNotification('Chyba: Člen tímu nebol nájdený pre aktualizáciu.', 'error');
         return;
     }
+
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
+
     try {
         await updateDoc(userDocRef, { teams: currentTeams });
-        showLocalNotification('Údaje člena tímu boli aktualizované!', 'success');
+        showLocalNotification('Údaje člena tímu boli úspešne aktualizované!', 'success');
         setMemberToEdit(null);
         setTeamOfMemberToEdit(null);
     } catch (error) {
@@ -1778,6 +1941,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         showLocalNotification('Nastala chyba pri aktualizácii údajov člena tímu.', 'error');
     }
 };
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto w-full' },
@@ -1787,6 +1951,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
       React.createElement(
         'div',
         { className: 'w-full' },
+
         teamCategories.length > 0 ? (
           React.createElement('div', { className: 'space-y-6 w-full' },
             teamCategories.map(([categoryName, teamsArray]) => (
@@ -1821,13 +1986,17 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                 React.createElement('div', { className: 'space-y-6 w-full' },
                   teamsArray.map((team, index) => {
                     const allMembers = getAllTeamMembers(team);
+
                     const arrivalType = team.arrival?.type || 'Nezadané';
                     const accommodationType = team.accommodation?.type || 'Nezadané';
                     const packageName = team.packageDetails?.name || 'Nezadané';
+
                     const arrivalTime = (
                         (arrivalType === "verejná doprava - autobus" || arrivalType === "verejná doprava - vlak") && team.arrival?.time
                     ) ? ` (čas: ${team.arrival.time} hod.)` : '';
+
                     const shouldShowAddressColumn = accommodationType !== 'bez ubytovania';
+
                     const formatAddress = (address) => {
                         if (!address) return '-';
                         const parts = [];
@@ -1850,6 +2019,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         }
                         return parts.length > 0 ? parts.join(', ') : '-';
                     };
+
                     const editTeamButtonClasses = `flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100 ${isDataEditDeadlinePassed ? 'border border-solid' : ''}`;
                     const editTeamButtonStyles = {
                         color: getRoleColor(userProfileData?.role),
@@ -1857,6 +2027,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         cursor: isDataEditDeadlinePassed ? 'not-allowed' : 'pointer',
                         backgroundColor: isDataEditDeadlinePassed ? 'white' : 'white'
                     };
+
                     return React.createElement('div', {
                         key: index,
                         className: 'bg-white pb-6 rounded-lg shadow-md border-l-4 border-[#9333EA] mb-4 w-full'
@@ -1880,6 +2051,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                             React.createElement('span', { className: 'font-medium' }, 'Upraviť')
                         )
                       ),
+
                       React.createElement('div', { className: 'px-6 pt-4 w-full' },
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Kategória: ${categoryName}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`),
@@ -1887,8 +2059,10 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Šoféri (ženy): ${team.driverDetailsFemale?.length || 0}`),
                         React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Šoféri (muži): ${team.driverDetailsMale?.length || 0}`),
+
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
+
                         team.packageDetails && React.createElement(
                             'div',
                             { className: 'mt-2 mb-4' },
@@ -1907,6 +2081,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                         const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(key);
                                         return isValidDate && key !== 'participantCard' && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
                                     });
+
                                     if (activeMealDates.length > 0) {
                                         return React.createElement(
                                             'div',
@@ -1916,10 +2091,13 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                                 const dateObj = new Date(date);
                                                 const dayIndex = dateObj.getDay();
                                                 const dayAbbr = dayAbbreviations[dayIndex];
+
                                                 const activeMeals = mealOrder
                                                     .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
                                                     .map(mealType => mealTypeLabels[mealType]);
+
                                                 const activeMealsString = activeMeals.join(', ');
+
                                                 return React.createElement(
                                                     'p',
                                                     { key: date, className: 'text-sm text-gray-600 ml-2' },
@@ -1943,6 +2121,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                             )
                         )
                       ),
+
                       React.createElement('div', { className: 'mt-4 px-6 w-full' },
                           React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
                           allMembers.length > 0 ? (
@@ -2058,6 +2237,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               React.createElement('span', { className: 'font-semibold' }, 'Pridať nový tím')
           )
       ),
+
       selectedTeam && React.createElement(
         EditTeamModal,
         {
@@ -2106,7 +2286,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               teamCategoryName: isMemberEditMode ? teamOfMemberToEdit?.categoryName : teamToAddMemberTo?.categoryName, // Pridané
           }
       ),
-   
+    
       React.createElement(
         AddTeamModal,
         {
@@ -2125,4 +2305,5 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
     )
   );
 }
+
 window.RostersApp = RostersApp;
