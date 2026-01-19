@@ -478,8 +478,6 @@ function MemberDetailsModal({
                         className: 'mt-1 text-sm text-red-600' 
                     }, regNumberError)
                 ),
-                // Adresa - ak je potrebné
-                showAddressFields && /* ... pole adresy ako predtým ... */,
 
                 // Tlačidlá
                 React.createElement(
