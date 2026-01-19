@@ -422,7 +422,7 @@ const AddGroupsApp = (props) => {
     };
 
     // Nová funkcia na aktualizáciu používateľského tímu
-    const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, originalTeam }) => {
+    const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
         if (!window.db || !originalTeam?.uid) return;
     
         const userId = originalTeam.uid;
@@ -477,10 +477,22 @@ const AddGroupsApp = (props) => {
     
             const oldOrder = originalTeam.order;
             const originalGroupName = originalTeam.groupName;
-            let newOrder = originalTeam.order;
+    
+            // === KĽÚČOVÁ ČASŤ – určenie novej hodnoty order ===
+            let newOrder;
+    
+            // Ak používateľ explicitne zadal hodnotu v inpute, použijeme ju
+            if (order !== undefined && order !== null && !isNaN(order)) {
+                newOrder = parseInt(order, 10);
+            } 
+            // Inak zachováme pôvodnú hodnotu (ak existovala)
+            else {
+                newOrder = originalTeam.order ?? null;
+            }
     
             const teamToUpdate = teamsInCategory.splice(teamIndex, 1)[0];
     
+            // Ak sa zmenila skupina → posunieme tímy v starej skupine
             if (originalGroupName !== newGroupName) {
                 teamsInCategory = teamsInCategory.map(t => {
                     if (t.groupName === originalGroupName && t.order != null && t.order > oldOrder) {
@@ -489,21 +501,23 @@ const AddGroupsApp = (props) => {
                     return t;
                 });
     
-                const teamsInTarget = teamsInCategory.filter(t => t.groupName === newGroupName);
-                const maxOrder = teamsInTarget.reduce((max, t) => Math.max(max, t.order ?? 0), 0);
-                newOrder = newGroupName ? maxOrder + 1 : null;
+                // NEpočítame maxOrder + 1 – rešpektujeme zadanú hodnotu používateľa
+                // newOrder zostáva buď z inputu, alebo pôvodná
             }
     
             const updatedTeam = {
                 ...teamToUpdate,
                 teamName: finalTeamName,
                 groupName: newGroupName,
-                order: newOrder,
+                order: newOrder,           // ← tu sa uloží buď zadaná hodnota, alebo pôvodná
             };
     
+            // Vloženie späť do poľa
             if (originalGroupName === newGroupName) {
+                // Ak sa skupina nemení → vložíme na pôvodný index (zachová poradie v zozname)
                 teamsInCategory.splice(teamIndex, 0, updatedTeam);
             } else {
+                // Ak sa zmení skupina → pridáme na koniec poľa (ale order je už nastavený)
                 teamsInCategory.push(updatedTeam);
             }
     
@@ -513,7 +527,7 @@ const AddGroupsApp = (props) => {
     
             setNotification({
                 id: Date.now(),
-                message: `Používateľský tím ${finalTeamName} bol aktualizovaný`,
+                message: `Používateľský tím ${finalTeamName} bol aktualizovaný (poradie: ${newOrder ?? 'bez poradia'})`,
                 type: 'success'
             });
     
