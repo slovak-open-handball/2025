@@ -425,7 +425,7 @@ const AddGroupsApp = (props) => {
     const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, originalTeam }) => {
         if (!window.db || !originalTeam?.uid) return;
     
-        const userId = originalTeam.uid;  // ← berieme UID z editovaného tímu, nie z prihláseného používateľa
+        const userId = originalTeam.uid;
     
         const categoryName = categoryIdToNameMap[categoryId];
         if (!categoryName) {
@@ -436,18 +436,28 @@ const AddGroupsApp = (props) => {
             });
             return;
         }
-
+    
         const newGroupName = groupName || null;
+        const finalTeamName = `${categoryName} ${teamName.trim() || ''}`;
+    
+        if (!finalTeamName.trim()) {
+            setNotification({
+                id: Date.now(),
+                message: "Názov tímu nemôže byť prázdny",
+                type: 'error'
+            });
+            return;
+        }
     
         try {
             const userRef = doc(window.db, 'users', userId);
             const userSnap = await getDoc(userRef);
     
             if (!userSnap.exists()) {
-                setNotification({ 
-                    id: Date.now(), 
-                    message: `Používateľ s ID ${userId} sa nenašiel v databáze`, 
-                    type: 'error' 
+                setNotification({
+                    id: Date.now(),
+                    message: `Používateľ s ID ${userId} sa nenašiel v databáze`,
+                    type: 'error'
                 });
                 return;
             }
@@ -457,15 +467,14 @@ const AddGroupsApp = (props) => {
     
             const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
             if (teamIndex === -1) {
-                setNotification({ 
-                    id: Date.now(), 
-                    message: "Tím sa nenašiel v dátach používateľa", 
-                    type: 'error' 
+                setNotification({
+                    id: Date.now(),
+                    message: "Tím sa nenašiel v dátach používateľa (možno bol medzitým odstránený)",
+                    type: 'warning'
                 });
                 return;
             }
     
-            // zvyšok logiky re-orderingu a aktualizácie bez zmeny
             const oldOrder = originalTeam.order;
             const originalGroupName = originalTeam.groupName;
             let newOrder = originalTeam.order;
@@ -510,10 +519,10 @@ const AddGroupsApp = (props) => {
     
         } catch (err) {
             console.error("Chyba pri update používateľského tímu:", err);
-            setNotification({ 
-                id: Date.now(), 
-                message: "Chyba pri aktualizácii používateľského tímu", 
-                type: 'error' 
+            setNotification({
+                id: Date.now(),
+                message: "Chyba pri aktualizácii používateľského tímu",
+                type: 'error'
             });
         }
     };
