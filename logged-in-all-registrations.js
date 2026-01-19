@@ -1032,9 +1032,10 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     // arrival špeciálne (pôvodná logika)
     const originalArrival = formatArrivalTime(original?.arrival?.type, original?.arrival?.time);
-    const updatedArrival   = formatArrivalTime(updated?.arrival?.type,   updated?.arrival?.time);
+    const updatedArrival = formatArrivalTime(updated?.arrival?.type, updated?.arrival?.time);
+
     if (originalArrival !== updatedArrival) {
-        changes.push(`Zmena ${formatLabel(arrival.type)}: z '${originalArrival}' na '${updatedArrival}'`);
+      changes.push(`Zmena dopravy: z '${originalArrival}' na '${updatedArrival}'`);
     }
 
     return changes;
