@@ -4486,7 +4486,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                 
                                     // Tričká: (textový stĺpec)
                                     React.createElement('td', {
-                                        className: 'py-3 px-2 text-left',
+                                        className: 'py-3 px-2 text-right',
                                         colSpan: 3
                                     }, 'Tričká:'),
                                 
