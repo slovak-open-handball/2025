@@ -768,16 +768,14 @@ const AddGroupsApp = (props) => {
                 // ceruzka pri KAŽDOM tíme
                 React.createElement(
                     'button',
-                        {
-                            onClick: () => {
-                                onClick: () => {
-                                    setTeamToEdit(team);         // ← odstrániť podmienku
-                                    setIsModalOpen(true);
-                                },
-                            },
-                            className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
-                            title: 'Upraviť tím'
+                    {
+                        onClick: () => {
+                            setTeamToEdit(team);
+                            setIsModalOpen(true);
                         },
+                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                        title: 'Upraviť tím'
+                    },
                     React.createElement('svg', {
                         className: 'w-5 h-5',
                         fill: 'none',
