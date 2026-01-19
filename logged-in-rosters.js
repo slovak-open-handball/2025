@@ -2206,7 +2206,10 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
                     const formatAddress = (address) => {
                         if (!address) return '-';
+
                         const parts = [];
+                
+                        // Ulica + popisné/orientačné číslo
                         if (address.street && address.houseNumber) {
                             parts.push(`${address.street} ${address.houseNumber}`);
                         } else if (address.street) {
@@ -2214,16 +2217,22 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         } else if (address.houseNumber) {
                             parts.push(address.houseNumber);
                         }
+                    
+                        // PSČ + mesto – tu použijeme formátovanie PSČ
                         if (address.postalCode && address.city) {
-                            parts.push(`${address.postalCode} ${address.city}`);
+                            const formattedPsc = formatPostalCode(address.postalCode);
+                            parts.push(`${formattedPsc} ${address.city}`);
                         } else if (address.postalCode) {
-                            parts.push(address.postalCode);
+                            parts.push(formatPostalCode(address.postalCode));
                         } else if (address.city) {
                             parts.push(address.city);
                         }
+    
+                        // Štát
                         if (address.country) {
                             parts.push(address.country);
                         }
+                    
                         return parts.length > 0 ? parts.join(', ') : '-';
                     };
 
