@@ -890,7 +890,7 @@ const AddGroupsApp = (props) => {
         { className: 'flex flex-col w-full relative' },
         React.createElement('div', { className: `${notificationClasses} ${typeClasses}` }, notification?.message),
         React.createElement(NewTeamModal, {
-            isOpen,
+            isOpen: isModalOpen,
             onClose: closeModal,
             teamToEdit,
             allTeams,
