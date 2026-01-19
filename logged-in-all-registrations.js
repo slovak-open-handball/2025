@@ -544,7 +544,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
         const street = addressData.street || '';
         const houseNumber = addressData.houseNumber || '';
-        const postalCode = addressData.postalCode || '';
+        const postalCode = formatPostalCode(addressData.postalCode);
         const city = addressData.city || '';
         const country = addressData.country || '';
 
@@ -1510,42 +1510,31 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     };
 
     // Handler pre PSČ (číslice, medzera po 3. číslici)
-    const handlePostalCodeChange = (e, path) => { // path pridaná
-        const input = e.target;
-        const originalInput = input.value;
-        let cursorPosition = input.selectionStart;
-
-        // Odstráni všetky nečíselné znaky
-        let cleanedValue = originalInput.replace(/\D/g, '');
-        cleanedValue = cleanedValue.substring(0, 5); // Maximálne 5 číslic
-
-        let formattedValue = cleanedValue;
-        if (cleanedValue.length > 3) {
-            formattedValue = cleanedValue.substring(0, 3) + ' ' + cleanedValue.substring(3);
-            if (cursorPosition === 4 && originalInput.charAt(3) !== ' ' && cleanedValue.length === 4) {
-                // Ak bola medzera práve vložená a kurzor je za ňou
-                cursorPosition++;
-            }
-        } else if (cursorPosition === 4 && originalInput.length === 5 && originalInput.charAt(3) === ' ' && e.nativeEvent.inputType === 'deleteContentBackward') {
-            // Edge case: "123| 4" -> backspace by user, remove "3 "
-            cursorPosition -= 2; // Move cursor back past the '3' and space
-        } else if (originalInput.length === 3 && formattedValue.length === 4 && e.nativeEvent.inputType === 'insertText') {
-            // Edge case: User typed 3 chars, then 4th char. Space was inserted. Cursor moves.
-            cursorPosition++;
-        }
-
-        handleChange(path, formattedValue); // Použijeme path
-
-        // React controlled components make setting cursor position directly problematic.
-        // Use setTimeout to allow state update to render, then set cursor.
-        // This is a common workaround for this scenario.
-        setTimeout(() => {
-            if (inputRefs.current[path]) { // Použijeme path
-                inputRefs.current[path].selectionStart = cursorPosition;
-                inputRefs.current[path].selectionEnd = cursorPosition;
-            }
-        }, 0);
-    };
+    const handlePostalCodeChange = (e, path) => {
+      const input = e.target;
+      const originalInput = input.value;
+      let cursorPosition = input.selectionStart;
+  
+      // Odstrániť všetko okrem číslic
+      let cleanedValue = originalInput.replace(/\D/g, '');
+      cleanedValue = cleanedValue.substring(0, 5); // max 5 číslic
+  
+      let formattedValue = cleanedValue;
+      if (cleanedValue.length > 3) {
+          formattedValue = cleanedValue.substring(0, 3) + ' ' + cleanedValue.substring(3);
+      }
+  
+      // Uložíme už naformátovanú hodnotu (s medzerou)
+      handleChange(path, formattedValue);
+  
+      // Oprava pozície kurzora
+      setTimeout(() => {
+          if (inputRefs.current[path]) {
+              inputRefs.current[path].selectionStart = cursorPosition;
+              inputRefs.current[path].selectionEnd = cursorPosition;
+          }
+      }, 0);
+  };
 
     const handlePostalCodeKeyDown = (e, path) => { // path pridaná
         const input = e.target;
@@ -1659,7 +1648,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
                     inputMode: 'numeric',
                     pattern: '[0-9 ]*',
-                    maxLength: 6 
+                    maxLength: 6,
+                    value: formatPostalCode(getNestedDataForInput(localEditedData, path))
                 };
             }
             
@@ -1769,7 +1759,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
                             inputMode: 'numeric',
                             pattern: '[0-9 ]*',
-                            maxLength: 6 
+                            maxLength: 6,
+                            value: formatPostalCode(getNestedDataForInput(localEditedData, path))
                         };
                     } else if (path === 'contactPhoneNumber') {
                         // Nezobrazovať tlačidlo a input pre admin/hall používateľov
@@ -4061,14 +4052,20 @@ const clearFilter = (column) => {
       return null;
   }
 
-  const formatPostalCode = (postalCode) => {
+const formatPostalCode = (postalCode) => {
     if (!postalCode) return '-';
-    const cleaned = String(postalCode).replace(/\s/g, '');
+
+    // Odstránime všetko okrem číslic
+    const cleaned = String(postalCode).replace(/\D/g, '');
+
+    // Ak máme presne 5 číslic → formát xxx xx
     if (cleaned.length === 5) {
-      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
+        return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
     }
-    return postalCode;
-  };
+
+    // Ak má menej alebo viac → vrátime tak, ako je (alebo len číslice)
+    return cleaned || '-';
+};
 
   const shouldShowExpander = (u) => {
       return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
@@ -4127,12 +4124,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
     return value ? 'Áno' : 'Nie';
   }
   else if (columnId === 'postalCode') {
-    if (!value) return '-';
-    const cleaned = String(value).replace(/\s/g, '');
-    if (cleaned.length === 5) {
-      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
-    }
-    return value;
+        return formatPostalCode(value);
   }
   else if (columnId === 'contactPhoneNumber') {
     const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value, countryDialCodes);
