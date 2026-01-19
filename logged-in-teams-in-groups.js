@@ -436,6 +436,8 @@ const AddGroupsApp = (props) => {
             });
             return;
         }
+
+        const newGroupName = groupName || null;
     
         try {
             const userRef = doc(window.db, 'users', userId);
