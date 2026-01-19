@@ -480,7 +480,7 @@ const AddGroupsApp = (props) => {
                 ...teamToUpdate,
                 teamName: finalTeamName,
                 groupName: newGroupName,
-                order: newOrder,           // ← presne to, čo zadal používateľ (alebo pôvodné)
+                order: newOrder,           // ← presne to, čo zadal admin (alebo pôvodné)
             };
     
             // === Vloženie späť ===
@@ -488,8 +488,8 @@ const AddGroupsApp = (props) => {
                 // Rovnaká skupina → vložíme na pôvodný index (zachová poradie v poli)
                 teamsInCategory.splice(teamIndex, 0, updatedTeam);
             } else {
-                // Iná skupina → jednoducho pridáme na koniec poľa
-                // (poradie určuje len hodnota order, nie pozícia v poli)
+                // Zmena skupiny → jednoducho pridáme na koniec poľa
+                // (poradie určuje výlučne hodnota order, nie pozícia v poli)
                 teamsInCategory.push(updatedTeam);
             }
     
@@ -512,7 +512,7 @@ const AddGroupsApp = (props) => {
             });
         }
     };
-        
+            
     // --- UPRAVENÉ POMOCNÉ FUNKCIE PRE URL SLUG ---
     const slugifyName = (name) => {
         if (!name) return '';
