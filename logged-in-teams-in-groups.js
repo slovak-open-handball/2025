@@ -92,6 +92,8 @@ const NewTeamModal = ({
     defaultGroupName = '',
     unifiedSaveHandler
 }) => {
+        
+    const { useState, useEffect, useRef } = React;
 
     const [orderInputValue, setOrderInputValue] = useState(null);
 
@@ -103,9 +105,6 @@ const NewTeamModal = ({
     const [originalTeamName, setOriginalTeamName] = useState('');
     const [originalCategory, setOriginalCategory] = useState('');
     const [originalGroup, setOriginalGroup] = useState('');
-    
-    const { useState, useEffect, useRef } = React;
-
         
     // Automatické nastavenie poradia pri zmene skupiny alebo otvorení modálu
     useEffect(() => {
