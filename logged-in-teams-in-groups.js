@@ -5,12 +5,60 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 // --- Komponent Modálne Okno pre Pridanie/Editáciu Tímu ---
 // Zjednotený Modál pre pridávanie (Add) a úpravu (Edit)
 
+// --- FUNKCIA: Odstránenie existujúceho Tímu z /settings/superstructureGroups ---
+    const handleDeleteTeam = async (teamToDelete) => {
+        if (!window.db || !teamToDelete || !teamToDelete.isSuperstructureTeam) {
+             setNotification({ id: Date.now(), message: "Chyba: Možno odstrániť len globálne tímy.", type: 'error' });
+             return;
+        }
+        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+       
+        try {
+            const docSnap = await getDoc(superstructureDocRef);
+            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+            let teams = globalTeamsData[teamToDelete.category] || [];
+           
+            // 1. Nájdeme tím, ktorý sa má odstrániť (používame ID pre istotu)
+            const teamIndex = teams.findIndex(t => t.id === teamToDelete.id);
+           
+            if (teamIndex === -1) {
+                setNotification({ id: Date.now(), message: `Chyba: Odstraňovaný globálny tím sa nenašiel.`, type: 'error' });
+                return;
+            }
+           
+            const originalGroup = teamToDelete.groupName;
+            const originalOrder = teamToDelete.order;
+           
+            // 2. Odstránime tím
+            teams.splice(teamIndex, 1);
+           
+            // 3. Reordering v PÔVODNEJ skupine (len ak mal tím skupinu)
+            const reorderedTeams = teams.map(t => {
+                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+                     return { ...t, order: t.order - 1 };
+                }
+                return t;
+            });
+            // 4. Zápis do databázy
+            await setDoc(superstructureDocRef, {
+                ...globalTeamsData,
+                [teamToDelete.category]: reorderedTeams
+            }, { merge: true });
+            setNotification({
+                id: Date.now(),
+                message: `Globálny tím '${teamToDelete.teamName}' bol úspešne odstránený.`,
+                type: 'success'
+            });
+        } catch (error) {
+            console.error("Chyba pri odstraňovaní globálneho tímu:", error);
+            setNotification({ id: Date.now(), message: "Chyba pri odstraňovaní tímu z globálneho dokumentu.", type: 'error' });
+        }
+    };
+
 const handleUnassignUserTeam = async (team, setNotification) => {
     if (!window.db || !team?.uid) return;
 
     try {
-        // ... rovnaký kód ako vyššie ...
-
         setNotification({
             message: `Tím "${team.teamName}" bol presunutý medzi tímy bez skupiny.`,
             type: 'success'
@@ -909,56 +957,6 @@ const AddGroupsApp = (props) => {
         } catch (error) {
             console.error("Chyba pri pridávaní nového globálneho tímu:", error);
             setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu do globálneho dokumentu.", type: 'error' });
-        }
-    };
-
-    // --- FUNKCIA: Odstránenie existujúceho Tímu z /settings/superstructureGroups ---
-    const handleDeleteTeam = async (teamToDelete) => {
-        if (!window.db || !teamToDelete || !teamToDelete.isSuperstructureTeam) {
-             setNotification({ id: Date.now(), message: "Chyba: Možno odstrániť len globálne tímy.", type: 'error' });
-             return;
-        }
-        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-       
-        try {
-            const docSnap = await getDoc(superstructureDocRef);
-            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
-            let teams = globalTeamsData[teamToDelete.category] || [];
-           
-            // 1. Nájdeme tím, ktorý sa má odstrániť (používame ID pre istotu)
-            const teamIndex = teams.findIndex(t => t.id === teamToDelete.id);
-           
-            if (teamIndex === -1) {
-                setNotification({ id: Date.now(), message: `Chyba: Odstraňovaný globálny tím sa nenašiel.`, type: 'error' });
-                return;
-            }
-           
-            const originalGroup = teamToDelete.groupName;
-            const originalOrder = teamToDelete.order;
-           
-            // 2. Odstránime tím
-            teams.splice(teamIndex, 1);
-           
-            // 3. Reordering v PÔVODNEJ skupine (len ak mal tím skupinu)
-            const reorderedTeams = teams.map(t => {
-                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                     return { ...t, order: t.order - 1 };
-                }
-                return t;
-            });
-            // 4. Zápis do databázy
-            await setDoc(superstructureDocRef, {
-                ...globalTeamsData,
-                [teamToDelete.category]: reorderedTeams
-            }, { merge: true });
-            setNotification({
-                id: Date.now(),
-                message: `Globálny tím '${teamToDelete.teamName}' bol úspešne odstránený.`,
-                type: 'success'
-            });
-        } catch (error) {
-            console.error("Chyba pri odstraňovaní globálneho tímu:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri odstraňovaní tímu z globálneho dokumentu.", type: 'error' });
         }
     };
    
