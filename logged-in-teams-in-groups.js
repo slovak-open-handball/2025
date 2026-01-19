@@ -1,25 +1,3 @@
-function initializeWhenReady() {
-    if (!window.React || typeof window.React.useState !== 'function') {
-        console.warn("React ešte nie je načítaný → čakáme 100 ms");
-        setTimeout(initializeWhenReady, 100);
-        return;
-    }
-
-    console.log("React je pripravený → spúšťame inicializáciu");
-
-    const { useState, useEffect, useRef } = React;
-
-    // sem vlož celý zvyšok kódu (NewTeamModal, TeamEditModal, AddGroupsApp, atď.)
-    // všetko od const NewTeamModal = ... až po koniec súboru
-}
-
-// Spustenie
-if (document.readyState === 'complete') {
-    initializeWhenReady();
-} else {
-    window.addEventListener('load', initializeWhenReady);
-}
-
 import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
