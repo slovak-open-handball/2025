@@ -210,9 +210,53 @@ function MemberDetailsModal({
     
     // V MemberDetailsModal pridaj tento handler:
     const handlePostalCodeChange = (e) => {
-        const cleaned = cleanPostalCode(e.target.value);
-        setPostalCode(cleaned);   // ukladáme vždy len čisté číslice!
-    };    
+        const input = e.target;
+        const cursorPosition = input.selectionStart; // pozícia kurzora PRED zmenou
+    
+        // 1. Vyčistíme vstup (len číslice, max 5)
+        const cleaned = cleanPostalCode(input.value);
+    
+        // 2. Uložíme novú "čistú" hodnotu
+        setPostalCode(cleaned);
+    
+        // 3. Po rerendere (keď sa input premaľuje s formátovanou hodnotou)
+        // sa pokúsime obnoviť pozíciu kurzora
+        setTimeout(() => {
+            if (!postalCodeInputRef.current) return;
+    
+            const formatted = formatPostalCode(cleaned);
+            const inputEl = postalCodeInputRef.current;
+    
+            // Jednoduchá heuristika – ak bolo mazanie jedného znaku,
+            // posunieme kurzor o 1 pozíciu doľava oproti pôvodnej pozícii
+            // (pretože sa často vymaže medzera alebo číslica)
+            let newPosition = cursorPosition;
+    
+            // Ak sa vymazal znak a predchádzajúca pozícia bola za medzerou,
+            // posunieme kurzor o 1 doľava
+            if (input.value.length > formatted.length) {
+                // Pravdepodobne backspace
+                if (cursorPosition > 3 && cursorPosition <= 4) {
+                    // mazanie medzery → posunieme pred medzeru
+                    newPosition = 3;
+                } else if (cursorPosition > 4) {
+                    newPosition = cursorPosition - 1;
+                }
+            } else {
+                // písanie znaku
+                if (cursorPosition > 3 && cursorPosition < 5) {
+                    // práve sme prešli cez medzeru → posunieme za medzeru
+                    newPosition = cursorPosition + 1;
+                }
+            }
+    
+            // Zabezpečíme, že pozícia neprekročí dĺžku
+            newPosition = Math.min(newPosition, formatted.length);
+            newPosition = Math.max(0, newPosition);
+    
+            inputEl.setSelectionRange(newPosition, newPosition);
+        }, 0);
+    };  
 
     // -------------------------------------------------------
     // Validácia dátumu narodenia (pôvodná funkcia)
@@ -533,6 +577,7 @@ function MemberDetailsModal({
                         React.createElement('input', {
                           type: 'text',
                           id: 'postalCode',
+                          ref: postalCodeInputRef,
                           className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono',
                           value: formatPostalCode(postalCode),
                           onChange: handlePostalCodeChange,
