@@ -4441,15 +4441,62 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                     'tr',
                                     { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
                                     React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 3 }, 'Súhrn:'),
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers),
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenTeamMembers),
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenTeamMembers),
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalWomenDrivers),
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalMenDrivers),
-                                    React.createElement('td', { className: 'py-3 px-2 text-center' }, teamSummary.totalPlayers + teamSummary.totalWomenTeamMembers + teamSummary.totalMenTeamMembers + teamSummary.totalWomenDrivers + teamSummary.totalMenDrivers),
-                                    React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Tričká:'),
-                                    (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                        React.createElement('td', { key: `summary-tshirt-${size}`, className: 'py-3 px-2 text-center' }, teamSummary.totalTshirtQuantities.get(size) || 0)
+                                
+                                    // Hráči
+                                    React.createElement('td', {
+                                        className: 'py-3 px-2 text-center cursor-default',
+                                        title: 'Celkový počet hráčov'
+                                    }, teamSummary.totalPlayers),
+                                
+                                    // R. tím (ž)
+                                    React.createElement('td', {
+                                        className: 'py-3 px-2 text-center cursor-default',
+                                        title: 'Celkový počet členov realizačného tímu – ženy'
+                                    }, teamSummary.totalWomenTeamMembers),
+                                
+                                    // R. tím (m)
+                                    React.createElement('td', {
+                                        className: 'py-3 px-2 text-center cursor-default',
+                                        title: 'Celkový počet členov realizačného tímu – muži'
+                                    }, teamSummary.totalMenTeamMembers),
+                                
+                                    // Šofér (ž)
+                                    React.createElement('td', {
+                                        className: 'py-3 px-2 text-center cursor-default',
+                                        title: 'Celkový počet šoférov – ženy'
+                                    }, teamSummary.totalWomenDrivers),
+                                
+                                    // Šofér (m)
+                                    React.createElement('td', {
+                                        className: 'py-3 px-2 text-center cursor-default',
+                                        title: 'Celkový počet šoférov – muži'
+                                    }, teamSummary.totalMenDrivers),
+                                
+                                    // Spolu
+                                    React.createElement('td', {
+                                        className: 'py-3 px-2 text-center cursor-default',
+                                        title: 'Celkový počet osôb (hráči + realizačný tím + šoféri)'
+                                    },
+                                        teamSummary.totalPlayers +
+                                        teamSummary.totalWomenTeamMembers +
+                                        teamSummary.totalMenTeamMembers +
+                                        teamSummary.totalWomenDrivers +
+                                        teamSummary.totalMenDrivers
+                                    ),
+                                
+                                    // Tričká: (textový stĺpec)
+                                    React.createElement('td', {
+                                        className: 'py-3 px-2 text-left',
+                                        colSpan: 3
+                                    }, 'Tričká:'),
+                                
+                                    // Veľkosti tričiek
+                                    (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS','XS','S','M','L','XL','XXL','XXXL']).map(size =>
+                                        React.createElement('td', {
+                                            key: `summary-tshirt-${size}`,
+                                            className: 'py-3 px-2 text-center cursor-default',
+                                            title: `Celkový počet tričiek veľkosti ${size}`
+                                        }, teamSummary.totalTshirtQuantities.get(size) || 0)
                                     )
                                 )
                             )
