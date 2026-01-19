@@ -271,6 +271,20 @@ function NotificationsApp() {
           snapshot.forEach(document => {
             const data = document.data();
             const isDeletedForCurrentUser = data.deletedBy && data.deletedBy.includes(user.uid);
+
+            let timestamp = null;
+              if (data.timestamp) {
+                if (typeof data.timestamp.toDate === 'function') {
+                  timestamp = data.timestamp.toDate();
+                } else if (typeof data.timestamp === 'number') {
+                  timestamp = new Date(data.timestamp);
+                } else if (typeof data.timestamp === 'string') {
+                  const parsed = new Date(data.timestamp);
+                  if (!isNaN(parsed.getTime())) {
+                    timestamp = parsed;
+                  }
+                }
+              }
             
             // Notifikácia sa načíta, aj keď je "vymazaná" pre aktuálneho používateľa,
             // aby sa dala zobraziť možnosť obnovenia.
@@ -281,7 +295,7 @@ function NotificationsApp() {
                 read: data.seenBy && data.seenBy.includes(user.uid), 
                 // Pridáme stav, či je vymazaná pre aktuálneho používateľa
                 deletedByMe: isDeletedForCurrentUser,
-                timestamp: data.timestamp ? data.timestamp.toDate() : null // Konvertujeme Timestamp na objekt Date
+                timestamp: data.timestamp?.toDate?.() ?? (typeof data.timestamp === 'number' ? new Date(data.timestamp) : null),
             });
           });
           // Zoraď notifikácie od najnovších po najstaršie
