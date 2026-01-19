@@ -310,7 +310,7 @@ const NewTeamModal = ({
                     isDuplicate && React.createElement('p', { className: 'text-sm text-red-600 mt-2 font-medium p-2 bg-red-50 rounded-lg border border-red-300' }, 
                         `Tím s názvom "${categoryIdToNameMap[selectedCategory]} ${teamName.trim()}" už existuje. Zmeňte prosím názov.`
                     )
-                )
+                ),
                 // Tlačidlá
                 React.createElement(
                     'div',
