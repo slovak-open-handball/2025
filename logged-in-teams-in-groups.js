@@ -1,12 +1,98 @@
-import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 // --- Komponent Modálne Okno pre Pridanie/Editáciu Tímu ---
 // Zjednotený Modál pre pridávanie (Add) a úpravu (Edit)
 
-const NewTeamModal = (props) => {
-    const { useState, useEffect, useRef } = React;
+const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam }) => {
+    if (!window.db || !originalTeam) return;
+
+    const categoryName = categoryIdToNameMap[categoryId];
+    const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+
+    const finalTeamName = `${categoryName} ${teamName}`;
+    const originalGroupName = originalTeam.groupName;
+
+    try {
+        const docSnap = await getDoc(superstructureDocRef);
+        if (!docSnap.exists()) return;
+        const globalTeamsData = docSnap.data();
+
+        let teams = [...(globalTeamsData[originalTeam.category] || [])];
+        const originalTeamIndex = teams.findIndex(t => t.id === originalTeam.id);
+
+        if (originalTeamIndex === -1) {
+            setNotification({ id: Date.now(), message: "Tím sa nenašiel pri aktualizácii", type: 'error' });
+            return;
+        }
+
+        const oldOrder = originalTeam.order;
+        const newGroupName = groupName || null;
+        let newOrder = originalTeam.order;
+
+        // Odstránime tím z pôvodného miesta
+        const teamToUpdate = teams.splice(originalTeamIndex, 1)[0];
+
+        // Ak sa zmenila skupina → reordering v starej aj novej
+        if (originalGroupName !== newGroupName) {
+            // Znížime poradie v pôvodnej skupine
+            teams = teams.map(t => {
+                if (t.groupName === originalGroupName && t.order != null && t.order > oldOrder) {
+                    return { ...t, order: t.order - 1 };
+                }
+                return t;
+            });
+
+            // Nové najvyššie poradie v cieľovej skupine
+            const teamsInTarget = teams.filter(t => t.groupName === newGroupName);
+            const maxOrder = teamsInTarget.reduce((max, t) => Math.max(max, t.order ?? 0), 0);
+            newOrder = newGroupName ? maxOrder + 1 : null;
+        }
+
+        // Aktualizovaný tím
+        const updatedTeam = {
+            ...teamToUpdate,
+            teamName: finalTeamName,
+            groupName: newGroupName,
+            order: newOrder,
+        };
+
+        // Vrátime tím naspäť (buď na pôvodné miesto alebo na koniec)
+        if (originalGroupName === newGroupName) {
+            teams.splice(originalTeamIndex, 0, updatedTeam);
+        } else {
+            teams.push(updatedTeam);
+        }
+
+        await setDoc(superstructureDocRef, {
+            ...globalTeamsData,
+            [originalTeam.category]: teams
+        }, { merge: true });
+
+        setNotification({
+            id: Date.now(),
+            message: `Tím ${finalTeamName} bol aktualizovaný`,
+            type: 'success'
+        });
+    } catch (err) {
+        console.error("Chyba pri update:", err);
+        setNotification({ id: Date.now(), message: "Chyba pri aktualizácii tímu", type: 'error' });
+    }
+};
+
+const NewTeamModal = ({
+    isOpen,
+    onClose,
+    teamToEdit,
+    allTeams = [],
+    categoryIdToNameMap = {},
+    allGroupsByCategoryId = {},
+    defaultCategoryId = '',
+    defaultGroupName = '',
+    unifiedSaveHandler
+}) => {
+    const { useState, useEffect } = React;
 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
@@ -240,197 +326,9 @@ const NewTeamModal = (props) => {
     );
 };
 
-const TeamEditModal = (props) => {
-    const { useState } = React;
-    if (!isOpen || !team) return null;
-
-    const isGlobal = team.isSuperstructureTeam;
-    const categoryName = team.category;
-    const categoryId = Object.keys(categoryIdToNameMap).find(
-        id => categoryIdToNameMap[id] === categoryName
-    ) || '';
-
-    const availableGroups = allGroupsByCategoryId[categoryId] || [];
-
-    const [teamName, setTeamName] = useState(isGlobal ? team.teamName : team.teamName);
-    const [selectedGroup, setSelectedGroup] = useState(team.groupName || '');
-    const [orderInput, setOrderInput] = useState(team.order != null ? String(team.order) : '');
-
-    const handleSave = () => {
-        const newOrder = orderInput.trim() === '' ? null : Number(orderInput.trim());
-        if (newOrder !== null && (isNaN(newOrder) || newOrder < 0)) {
-            alert("Poradové číslo musí byť celé nezáporné číslo alebo prázdne.");
-            return;
-        }
-
-        const newName = isGlobal ? teamName.trim() : team.teamName;
-
-        if (isGlobal && !newName) {
-            alert("Názov tímu nemôže byť prázdny.");
-            return;
-        }
-
-        onSave({
-            team,
-            newTeamName: newName,
-            newGroupName: selectedGroup || null,
-            newOrder,
-        });
-
-        onClose();
-    };
-
-    return React.createElement(
-        'div',
-        { className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[1000]', onClick: onClose },
-        React.createElement(
-            'div',
-            { className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg', onClick: e => e.stopPropagation() },
-            React.createElement('h2', { className: 'text-2xl font-bold mb-6' }, 'Upraviť tím'),
-
-            // Názov (iba pre globálne tímy)
-            isGlobal && React.createElement(
-                'div', { className: 'mb-6' },
-                React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Názov tímu:'),
-                React.createElement('input', {
-                    type: 'text',
-                    className: 'w-full p-3 border rounded-lg',
-                    value: teamName.replace(new RegExp(`^${categoryName} `), ''), // zobrazujeme bez prefixu
-                    onChange: e => setTeamName(`${categoryName} ${e.target.value.trim()}`)
-                })
-            ),
-
-            !isGlobal && React.createElement(
-                'div', { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
-                React.createElement('p', { className: 'font-semibold' }, team.teamName),
-                React.createElement('p', { className: 'text-sm text-gray-600' }, '(názov používateľského tímu sa nedá meniť)')
-            ),
-
-            // Skupina
-            React.createElement(
-                'div', { className: 'mb-6' },
-                React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Skupina:'),
-                React.createElement(
-                    'select',
-                    {
-                        className: 'w-full p-3 border rounded-lg',
-                        value: selectedGroup,
-                        onChange: e => setSelectedGroup(e.target.value)
-                    },
-                    React.createElement('option', { value: '' }, '— bez skupiny —'),
-                    availableGroups.map(g => React.createElement('option', { key: g.name, value: g.name }, `${g.name} (${g.type})`))
-                )
-            ),
-
-            // Order (iba ak je vybraná skupina)
-            selectedGroup && React.createElement(
-                'div', { className: 'mb-6' },
-                React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Poradové číslo (order):'),
-                React.createElement('input', {
-                    type: 'number',
-                    min: '0',
-                    step: '1',
-                    className: 'w-full p-3 border rounded-lg',
-                    value: orderInput,
-                    onChange: e => setOrderInput(e.target.value),
-                    placeholder: 'napr. 3 (alebo prázdne)'
-                })
-            ),
-
-            // Tlačidlá
-            React.createElement(
-                'div', { className: 'flex justify-end space-x-4 mt-8' },
-                React.createElement('button', {
-                    onClick: onClose,
-                    className: 'px-6 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg'
-                }, 'Zrušiť'),
-                React.createElement('button', {
-                    onClick: handleSave,
-                    className: 'px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg'
-                }, 'Uložiť zmeny')
-            )
-        )
-    );
-};
-
-const [editingTeam, setEditingTeam] = useState(null); // { team, isOpen: true }
-
-const handleSaveTeamChanges = async ({ team, newTeamName, newGroupName, newOrder }) => {
-    if (!window.db) return;
-
-    try {
-        if (team.isSuperstructureTeam) {
-            // ────────────────────────────────────────────────
-            //                GLOBÁLNY / SUPERSTRUCTURE
-            // ────────────────────────────────────────────────
-            const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-            const snap = await getDoc(docRef);
-            if (!snap.exists()) throw new Error("Globálny dokument neexistuje");
-
-            const data = snap.data();
-            const catTeams = [...(data[team.category] || [])];
-            const idx = catTeams.findIndex(t => t.id === team.id);
-
-            if (idx === -1) throw new Error("Tím sa nenašiel");
-
-            catTeams[idx] = {
-                ...catTeams[idx],
-                teamName: newTeamName,
-                groupName: newGroupName,
-                order: newOrder,
-            };
-
-            await setDoc(docRef, { ...data, [team.category]: catTeams }, { merge: true });
-
-            setNotification({
-                id: Date.now(),
-                message: `Globálny tím upravený: ${newTeamName}`,
-                type: 'success'
-            });
-        } else {
-            // ────────────────────────────────────────────────
-            //                POUŽÍVATEĽSKÝ TÍM
-            // ────────────────────────────────────────────────
-            const ownerUid = team.uid;
-            const userDocRef = doc(window.db, 'users', ownerUid);
-            const snap = await getDoc(userDocRef);
-            if (!snap.exists()) throw new Error("Používateľský dokument neexistuje");
-
-            const userData = snap.data();
-            const catTeams = [...(userData.teams?.[team.category] || [])];
-            const idx = catTeams.findIndex(t => t.teamName === team.teamName);
-
-            if (idx === -1) throw new Error("Tím sa nenašiel v profile používateľa");
-
-            catTeams[idx] = {
-                ...catTeams[idx],
-                groupName: newGroupName,
-                order: newOrder,
-                // názov nemeníme
-            };
-
-            await updateDoc(userDocRef, {
-                [`teams.${team.category}`]: catTeams
-            });
-
-            setNotification({
-                id: Date.now(),
-                message: `Tvoj tím ${team.teamName} bol presunutý/upravený`,
-                type: 'success'
-            });
-        }
-    } catch (err) {
-        console.error("Chyba pri ukladaní zmien:", err);
-        setNotification({
-            id: Date.now(),
-            message: "Nepodarilo sa uložiť zmeny",
-            type: 'error'
-        });
-    }
-};
-
 const AddGroupsApp = (props) => {
     const { useState, useEffect } = React;
+    const teamsWithoutGroupRef = React.useRef(null);
     const [allTeams, setAllTeams] = useState([]);
     const [userTeamsData, setUserTeamsData] = useState([]);
     const [superstructureTeams, setSuperstructureTeams] = useState({});
@@ -442,9 +340,7 @@ const AddGroupsApp = (props) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [teamToEdit, setTeamToEdit] = useState(null); // NOVÝ STAV pre tím, ktorý sa bude upravovať
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
-   
-    const [editingTeam, setEditingTeam] = useState(null); // { team, isOpen }
-   
+      
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
         if (notification) {
@@ -461,17 +357,6 @@ const AddGroupsApp = (props) => {
     const closeModal = () => {
         setIsModalOpen(false);
         setTeamToEdit(null); // Resetujeme tím na editáciu
-    };
-   
-    // Handler pre otvorenie modálu na editáciu
-    const openEditModal = (team) => {
-        // Kontrola, či je tím globálny (žltý)
-        if (team.isSuperstructureTeam) {
-            setTeamToEdit(team);
-            setIsModalOpen(true);
-        } else {
-            setNotification({ id: Date.now(), message: "Môžete upravovať len globálne (žlté) tímy.", type: 'info' });
-        }
     };
    
     // Handler pre otvorenie modálu na pridanie
@@ -774,86 +659,7 @@ const AddGroupsApp = (props) => {
             setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu do globálneho dokumentu.", type: 'error' });
         }
     };
-   
-    // --- FUNKCIA: Aktualizácia existujúceho Tímu v /settings/superstructureGroups ---
-    const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam }) => {
-        if (!window.db || !originalTeam) return;
-        const categoryName = categoryIdToNameMap[categoryId];
-        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-       
-        const finalTeamName = `${categoryName} ${teamName}`;
-        const originalGroupName = originalTeam.groupName;
-       
-        try {
-            const docSnap = await getDoc(superstructureDocRef);
-            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
-            // Tím by sa mal nachádzať v kategórii, v ktorej bol pôvodne
-            let teams = globalTeamsData[originalTeam.category] || [];
-           
-            // 1. Nájdeme pôvodný tím, ktorý sa má aktualizovať (používame ID pre istotu)
-            const originalTeamIndex = teams.findIndex(t => t.id === originalTeam.id);
-           
-            if (originalTeamIndex === -1) {
-                setNotification({ id: Date.now(), message: `Chyba: Aktualizovaný globálny tím sa nenašiel.`, type: 'error' });
-                return;
-            }
-           
-            const oldOrder = originalTeam.order;
-            const newGroupName = groupName || null;
-            let newOrder = originalTeam.order;
-            const teamToUpdate = teams[originalTeamIndex];
-            // 2. Odstránenie tímu z aktuálnej pozície
-            teams.splice(originalTeamIndex, 1);
-           
-            // 3. Logika presunu (vykoná sa len ak sa zmenila skupina)
-            if (originalGroupName !== newGroupName) {
-                // A. Reordering v PÔVODNEJ skupine
-                teams = teams.map(t => {
-                    if (t.groupName === originalGroupName && t.order != null && t.order > oldOrder) {
-                         return { ...t, order: t.order - 1 };
-                    }
-                    return t;
-                });
-               
-                // B. Nájdeme nové najvyššie poradie v CIEĽOVEJ skupine
-                const teamsInTargetGroup = teams.filter(t => t.groupName === newGroupName);
-                const maxOrder = teamsInTargetGroup.reduce((max, t) => (t.order != null ? Math.max(max, t.order) : max), 0);
-               
-                newOrder = newGroupName ? (maxOrder + 1) : null;
-            }
-           
-            // 4. Vytvoríme aktualizovaný tím
-            const updatedTeam = {
-                ...teamToUpdate,
-                teamName: finalTeamName,
-                groupName: newGroupName,
-                order: newOrder,
-            };
-           
-            // 5. Pridáme ho späť
-            if (originalGroupName !== newGroupName) {
-                // Ak sa zmenila skupina, pridáme ho na koniec (po reorderingu)
-                teams.push(updatedTeam);
-            } else {
-                 // Ak sa nezmenila skupina, vložíme ho naspäť na pôvodnú pozíciu
-                 teams.splice(originalTeamIndex, 0, updatedTeam);
-            }
-            // 6. Zápis do databázy (používame setDoc, ale len pre túto kategóriu)
-            await setDoc(superstructureDocRef, {
-                ...globalTeamsData,
-                [originalTeam.category]: teams
-            }, { merge: true });
-           
-            setNotification({
-                id: Date.now(),
-                message: `Globálny tím '${finalTeamName}' bol úspešne aktualizovaný.`,
-                type: 'success'
-            });
-        } catch (error) {
-            console.error("Chyba pri aktualizácii globálneho tímu:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri aktualizácii tímu v globálnom dokumente.", type: 'error' });
-        }
-    };
+
     // --- FUNKCIA: Odstránenie existujúceho Tímu z /settings/superstructureGroups ---
     const handleDeleteTeam = async (teamToDelete) => {
         if (!window.db || !teamToDelete || !teamToDelete.isSuperstructureTeam) {
@@ -920,47 +726,6 @@ const AddGroupsApp = (props) => {
         }
     };
    
-    const handleSaveTeamChanges = async ({ team, newGroupName, newOrder }) => {
-        if (!team.isSuperstructureTeam) return;
-
-        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-        try {
-            const docSnap = await getDoc(superstructureDocRef);
-            if (!docSnap.exists()) return;
-
-            const data = docSnap.data();
-            const categoryTeams = [...(data[team.category] || [])];
-
-            const index = categoryTeams.findIndex(t => t.id === team.id);
-            if (index === -1) return;
-
-            // aktualizujeme tím
-            categoryTeams[index] = {
-                ...categoryTeams[index],
-                groupName: newGroupName,
-                order: newOrder,
-            };
-
-            await setDoc(superstructureDocRef, {
-                ...data,
-                [team.category]: categoryTeams
-            }, { merge: true });
-
-            setNotification({
-                id: Date.now(),
-                message: `Tím ${team.teamName} upravený (skupina: ${newGroupName || 'bez skupiny'}, order: ${newOrder ?? '—'})`,
-                type: 'success'
-            });
-        } catch (err) {
-            console.error(err);
-            setNotification({
-                id: Date.now(),
-                message: 'Chyba pri ukladaní zmien tímu',
-                type: 'error'
-            });
-        }
-    };
-   
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             if (!isWithoutGroup && a.order != null && b.order != null) return a.order - b.order;
@@ -998,11 +763,22 @@ const AddGroupsApp = (props) => {
                 // ceruzka pri KAŽDOM tíme
                 React.createElement(
                     'button',
-                    {
-                        onClick: () => setEditingTeam({ team, isOpen: true }),
-                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
-                        title: 'Upraviť tím'
-                    },
+                        {
+                            onClick: () => {
+                                if (team.isSuperstructureTeam) {
+                                    setTeamToEdit(team);
+                                    setIsModalOpen(true);
+                                } else {
+                                    setNotification({
+                                        id: Date.now(),
+                                        message: "Môžete upravovať len globálne (žlté) tímy.",
+                                        type: 'info'
+                                    });
+                                }
+                            },
+                            className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                            title: 'Upraviť tím'
+                        },
                     React.createElement('svg', {
                         className: 'w-5 h-5',
                         fill: 'none',
@@ -1203,14 +979,7 @@ const AddGroupsApp = (props) => {
             defaultCategoryId: selectedCategoryId,
             defaultGroupName: selectedGroupName,
         }),
-        React.createElement(TeamEditModal, {
-            isOpen: !!editingTeam?.isOpen,
-            onClose: () => setEditingTeam(null),
-            team: editingTeam?.team || null,
-            allGroupsByCategoryId,
-            categoryIdToNameMap,
-            onSave: handleSaveTeamChanges
-        }),
+        ),
         React.createElement(
             'div',
             { className: 'w-full max-w-xs mx-auto mb-8' },
