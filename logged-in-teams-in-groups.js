@@ -423,18 +423,22 @@ const AddGroupsApp = (props) => {
 
     // Nová funkcia na aktualizáciu používateľského tímu
     const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, originalTeam }) => {
-        if (!window.db || !originalTeam.uid) return;
+        if (!window.db || !originalTeam?.uid) return;
     
-        const userId = originalTeam.uid;
-        const categoryName = categoryIdToNameMap[categoryId];
-        const finalTeamName = `${categoryName} ${teamName}`;
-        const newGroupName = groupName || null;
+        const userId = originalTeam.uid;  // ← berieme UID z editovaného tímu, nie z prihláseného používateľa
+    
+        // žiadna kontrola či je to môj tím – admin môže editovať všetko
     
         try {
             const userRef = doc(window.db, 'users', userId);
             const userSnap = await getDoc(userRef);
+    
             if (!userSnap.exists()) {
-                setNotification({ id: Date.now(), message: "Používateľ sa nenašiel", type: 'error' });
+                setNotification({ 
+                    id: Date.now(), 
+                    message: `Používateľ s ID ${userId} sa nenašiel v databáze`, 
+                    type: 'error' 
+                });
                 return;
             }
     
@@ -443,11 +447,15 @@ const AddGroupsApp = (props) => {
     
             const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
             if (teamIndex === -1) {
-                setNotification({ id: Date.now(), message: "Tím sa nenašiel v používateľových dátach", type: 'error' });
+                setNotification({ 
+                    id: Date.now(), 
+                    message: "Tím sa nenašiel v dátach používateľa", 
+                    type: 'error' 
+                });
                 return;
             }
     
-            // Rovnaká logika re-orderingu ako pri globálnom tíme
+            // zvyšok logiky re-orderingu a aktualizácie bez zmeny
             const oldOrder = originalTeam.order;
             const originalGroupName = originalTeam.groupName;
             let newOrder = originalTeam.order;
@@ -480,7 +488,6 @@ const AddGroupsApp = (props) => {
                 teamsInCategory.push(updatedTeam);
             }
     
-            // Uložíme späť do používateľa
             await updateDoc(userRef, {
                 [`teams.${categoryName}`]: teamsInCategory
             });
@@ -490,9 +497,14 @@ const AddGroupsApp = (props) => {
                 message: `Používateľský tím ${finalTeamName} bol aktualizovaný`,
                 type: 'success'
             });
+    
         } catch (err) {
             console.error("Chyba pri update používateľského tímu:", err);
-            setNotification({ id: Date.now(), message: "Chyba pri aktualizácii používateľského tímu", type: 'error' });
+            setNotification({ 
+                id: Date.now(), 
+                message: "Chyba pri aktualizácii používateľského tímu", 
+                type: 'error' 
+            });
         }
     };
     
