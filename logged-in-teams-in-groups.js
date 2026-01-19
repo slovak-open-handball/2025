@@ -427,7 +427,15 @@ const AddGroupsApp = (props) => {
     
         const userId = originalTeam.uid;  // ← berieme UID z editovaného tímu, nie z prihláseného používateľa
     
-        // žiadna kontrola či je to môj tím – admin môže editovať všetko
+        const categoryName = categoryIdToNameMap[categoryId];
+        if (!categoryName) {
+            setNotification({
+                id: Date.now(),
+                message: "Názov kategórie sa nepodarilo nájsť",
+                type: 'error'
+            });
+            return;
+        }
     
         try {
             const userRef = doc(window.db, 'users', userId);
