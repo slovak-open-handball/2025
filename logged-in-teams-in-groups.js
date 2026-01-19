@@ -989,8 +989,8 @@ const AddGroupsApp = (props) => {
                     )
                 )
             );
-        };
-    });
+        });
+    };
     
     return React.createElement('ul', { className: 'space-y-2' }, ...items);
 };
