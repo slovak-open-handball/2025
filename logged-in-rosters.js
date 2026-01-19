@@ -2401,7 +2401,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               isEditMode: isMemberEditMode,
               isRosterEditDeadlinePassed: isRosterEditDeadlinePassed,
               isDataEditDeadlinePassed: isDataEditDeadlinePassed,
-              teamCategoryName: isMemberEditMode ? teamOfMemberToEdit?.categoryName : teamToAddMemberTo?.categoryName, // Pridané
+              teamCategoryName: isMemberEditMode ? teamOfMemberToEdit?.categoryName : teamToAddMemberTo?.categoryName,
+              currentTeam: isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo
           }
       ),
     
