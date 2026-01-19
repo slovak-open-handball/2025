@@ -1441,7 +1441,7 @@ useEffect(() => {
             console.log("---------------- Načítaná rola používateľa:", userData.role);
 
             if (userData.role !== 'club') {
-                window.location.href = '/logged-in-my-data.html';
+                window.location.href = 'logged-in-my-data.html';
                 return; 
               }
 
