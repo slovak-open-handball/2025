@@ -241,9 +241,7 @@ const NewTeamModal = ({ isOpen, onClose, allGroupsByCategoryId, categoryIdToName
 const TeamEditModal = ({ isOpen, onClose, team, allGroupsByCategoryId, categoryIdToNameMap, onSave }) => {
     if (!isOpen || !team) return null;
 
-    const [selectedGroup, setSelectedGroup] = useState(team.groupName || '');
-    const [orderInput, setOrderInput] = useState(team.order != null ? String(team.order) : '');
-
+    const isGlobal = team.isSuperstructureTeam;
     const categoryName = team.category;
     const categoryId = Object.keys(categoryIdToNameMap).find(
         id => categoryIdToNameMap[id] === categoryName
@@ -251,19 +249,29 @@ const TeamEditModal = ({ isOpen, onClose, team, allGroupsByCategoryId, categoryI
 
     const availableGroups = allGroupsByCategoryId[categoryId] || [];
 
+    const [teamName, setTeamName] = useState(isGlobal ? team.teamName : team.teamName);
+    const [selectedGroup, setSelectedGroup] = useState(team.groupName || '');
+    const [orderInput, setOrderInput] = useState(team.order != null ? String(team.order) : '');
+
     const handleSave = () => {
         const newOrder = orderInput.trim() === '' ? null : Number(orderInput.trim());
-        const isValidOrder = newOrder === null || (!isNaN(newOrder) && newOrder >= 0);
+        if (newOrder !== null && (isNaN(newOrder) || newOrder < 0)) {
+            alert("Poradové číslo musí byť celé nezáporné číslo alebo prázdne.");
+            return;
+        }
 
-        if (!isValidOrder) {
-            alert("Poradové číslo musí byť celé nezáporné číslo alebo prázdne (bez skupiny).");
+        const newName = isGlobal ? teamName.trim() : team.teamName;
+
+        if (isGlobal && !newName) {
+            alert("Názov tímu nemôže byť prázdny.");
             return;
         }
 
         onSave({
             team,
+            newTeamName: newName,
             newGroupName: selectedGroup || null,
-            newOrder: newOrder,
+            newOrder,
         });
 
         onClose();
@@ -271,25 +279,33 @@ const TeamEditModal = ({ isOpen, onClose, team, allGroupsByCategoryId, categoryI
 
     return React.createElement(
         'div',
-        {
-            className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]',
-            onClick: onClose
-        },
+        { className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[1000]', onClick: onClose },
         React.createElement(
             'div',
-            {
-                className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-md',
-                onClick: e => e.stopPropagation()
-            },
+            { className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg', onClick: e => e.stopPropagation() },
             React.createElement('h2', { className: 'text-2xl font-bold mb-6' }, 'Upraviť tím'),
-            React.createElement('div', { className: 'mb-6' },
+
+            // Názov (iba pre globálne tímy)
+            isGlobal && React.createElement(
+                'div', { className: 'mb-6' },
+                React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Názov tímu:'),
+                React.createElement('input', {
+                    type: 'text',
+                    className: 'w-full p-3 border rounded-lg',
+                    value: teamName.replace(new RegExp(`^${categoryName} `), ''), // zobrazujeme bez prefixu
+                    onChange: e => setTeamName(`${categoryName} ${e.target.value.trim()}`)
+                })
+            ),
+
+            !isGlobal && React.createElement(
+                'div', { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
                 React.createElement('p', { className: 'font-semibold' }, team.teamName),
-                React.createElement('p', { className: 'text-sm text-gray-600' }, `Kategória: ${categoryName}`)
+                React.createElement('p', { className: 'text-sm text-gray-600' }, '(názov používateľského tímu sa nedá meniť)')
             ),
 
             // Skupina
             React.createElement(
-                'div', { className: 'mb-4' },
+                'div', { className: 'mb-6' },
                 React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Skupina:'),
                 React.createElement(
                     'select',
@@ -299,15 +315,11 @@ const TeamEditModal = ({ isOpen, onClose, team, allGroupsByCategoryId, categoryI
                         onChange: e => setSelectedGroup(e.target.value)
                     },
                     React.createElement('option', { value: '' }, '— bez skupiny —'),
-                    availableGroups.map(g =>
-                        React.createElement('option', { key: g.name, value: g.name },
-                            `${g.name} (${g.type})`
-                        )
-                    )
+                    availableGroups.map(g => React.createElement('option', { key: g.name, value: g.name }, `${g.name} (${g.type})`))
                 )
             ),
 
-            // Poradové číslo (iba ak je v skupine)
+            // Order (iba ak je vybraná skupina)
             selectedGroup && React.createElement(
                 'div', { className: 'mb-6' },
                 React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Poradové číslo (order):'),
@@ -318,33 +330,102 @@ const TeamEditModal = ({ isOpen, onClose, team, allGroupsByCategoryId, categoryI
                     className: 'w-full p-3 border rounded-lg',
                     value: orderInput,
                     onChange: e => setOrderInput(e.target.value),
-                    placeholder: 'Napr. 3  (alebo nechajte prázdne)'
+                    placeholder: 'napr. 3 (alebo prázdne)'
                 })
             ),
 
             // Tlačidlá
             React.createElement(
-                'div', { className: 'flex justify-end space-x-3 mt-8' },
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'px-5 py-2 bg-gray-300 rounded-lg hover:bg-gray-400'
-                    },
-                    'Zrušiť'
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: handleSave,
-                        className: 'px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700'
-                    },
-                    'Uložiť zmeny'
-                )
+                'div', { className: 'flex justify-end space-x-4 mt-8' },
+                React.createElement('button', {
+                    onClick: onClose,
+                    className: 'px-6 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg'
+                }, 'Zrušiť'),
+                React.createElement('button', {
+                    onClick: handleSave,
+                    className: 'px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg'
+                }, 'Uložiť zmeny')
             )
         )
     );
 };
+
+const [editingTeam, setEditingTeam] = useState(null); // { team, isOpen: true }
+
+const handleSaveTeamChanges = async ({ team, newTeamName, newGroupName, newOrder }) => {
+    if (!window.db) return;
+
+    try {
+        if (team.isSuperstructureTeam) {
+            // ────────────────────────────────────────────────
+            //                GLOBÁLNY / SUPERSTRUCTURE
+            // ────────────────────────────────────────────────
+            const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) throw new Error("Globálny dokument neexistuje");
+
+            const data = snap.data();
+            const catTeams = [...(data[team.category] || [])];
+            const idx = catTeams.findIndex(t => t.id === team.id);
+
+            if (idx === -1) throw new Error("Tím sa nenašiel");
+
+            catTeams[idx] = {
+                ...catTeams[idx],
+                teamName: newTeamName,
+                groupName: newGroupName,
+                order: newOrder,
+            };
+
+            await setDoc(docRef, { ...data, [team.category]: catTeams }, { merge: true });
+
+            setNotification({
+                id: Date.now(),
+                message: `Globálny tím upravený: ${newTeamName}`,
+                type: 'success'
+            });
+        } else {
+            // ────────────────────────────────────────────────
+            //                POUŽÍVATEĽSKÝ TÍM
+            // ────────────────────────────────────────────────
+            const ownerUid = team.uid;
+            const userDocRef = doc(window.db, 'users', ownerUid);
+            const snap = await getDoc(userDocRef);
+            if (!snap.exists()) throw new Error("Používateľský dokument neexistuje");
+
+            const userData = snap.data();
+            const catTeams = [...(userData.teams?.[team.category] || [])];
+            const idx = catTeams.findIndex(t => t.teamName === team.teamName);
+
+            if (idx === -1) throw new Error("Tím sa nenašiel v profile používateľa");
+
+            catTeams[idx] = {
+                ...catTeams[idx],
+                groupName: newGroupName,
+                order: newOrder,
+                // názov nemeníme
+            };
+
+            await updateDoc(userDocRef, {
+                [`teams.${team.category}`]: catTeams
+            });
+
+            setNotification({
+                id: Date.now(),
+                message: `Tvoj tím ${team.teamName} bol presunutý/upravený`,
+                type: 'success'
+            });
+        }
+    } catch (err) {
+        console.error("Chyba pri ukladaní zmien:", err);
+        setNotification({
+            id: Date.now(),
+            message: "Nepodarilo sa uložiť zmeny",
+            type: 'error'
+        });
+    }
+};
+
 const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [userTeamsData, setUserTeamsData] = useState([]);
@@ -877,64 +958,47 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
     };
    
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
-        // Najprv zoradíme
         const sortedTeams = [...teamsToRender].sort((a, b) => {
-            if (!isWithoutGroup && a.order != null && b.order != null) {
-                return a.order - b.order;
-            }
+            if (!isWithoutGroup && a.order != null && b.order != null) return a.order - b.order;
             return a.teamName.localeCompare(b.teamName);
         });
     
-        // Zistíme, ktoré order hodnoty sa duplikujú (iba v skupinách)
         const orderCountMap = new Map();
         if (!isWithoutGroup) {
-            sortedTeams.forEach(team => {
-                if (team.order != null) {
-                    const count = (orderCountMap.get(team.order) || 0) + 1;
-                    orderCountMap.set(team.order, count);
+            sortedTeams.forEach(t => {
+                if (t.order != null) {
+                    orderCountMap.set(t.order, (orderCountMap.get(t.order) || 0) + 1);
                 }
             });
         }
     
-        const listItems = sortedTeams.map((team, index) => {
-            const isGlobal = team.isSuperstructureTeam;
+        const items = sortedTeams.map((team, idx) => {
             const hasDuplicateOrder = !isWithoutGroup && team.order != null && (orderCountMap.get(team.order) || 0) > 1;
+            const textColor = hasDuplicateOrder ? 'text-red-600 font-medium' : 'text-gray-800';
     
-            let displayText = '';
-            if (!isWithoutGroup && team.order != null) {
-                displayText = `${team.order}. ${team.teamName}`;
-            } else {
-                displayText = team.teamName;
-            }
-    
-            // Ak nie je vybraná kategória, pridáme kategóriu do zobrazenia
+            let display = team.order != null && !isWithoutGroup ? `${team.order}. ${team.teamName}` : team.teamName;
             if (!selectedCategoryId && team.category) {
-                displayText = `${team.category}: ${displayText}`;
+                display = `${team.category}: ${display}`;
             }
-    
-            const textColorClass = hasDuplicateOrder ? 'text-red-600 font-medium' : 'text-gray-800';
     
             return React.createElement(
                 'li',
                 {
-                    key: team.id || `${team.uid}-${team.teamName}-${team.groupName || 'nogroup'}-${index}`,
-                    className: `flex justify-between items-center px-4 py-2 rounded-lg shadow-sm border ${
-                        isGlobal ? 'bg-yellow-50' : 'bg-white'
+                    key: team.id || `${team.uid || 'g'}-${team.teamName}-${team.groupName || ''}-${idx}`,
+                    className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${
+                        team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'
                     }`
                 },
+                React.createElement('span', { className: `flex-grow ${textColor}` }, display),
+    
+                // ceruzka pri KAŽDOM tíme
                 React.createElement(
-                    'span',
-                    { className: `flex-grow ${textColorClass}` },
-                    displayText
-                ),
-                isGlobal && React.createElement(
                     'button',
                     {
                         onClick: () => setEditingTeam({ team, isOpen: true }),
-                        className: 'text-gray-500 hover:text-indigo-600 p-1 rounded-full',
-                        title: 'Upraviť skupinu / poradie'
+                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                        title: 'Upraviť tím'
                     },
-                    // ceruzka SVG
                     React.createElement('svg', {
                         className: 'w-5 h-5',
                         fill: 'none',
@@ -952,7 +1016,7 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             );
         });
     
-        return React.createElement('ul', { className: 'space-y-2' }, ...listItems);
+        return React.createElement('ul', { className: 'space-y-2' }, ...items);
     };
     const renderGroupedCategories = () => {
         if (Object.keys(allGroupsByCategoryId).length === 0) {
@@ -1139,8 +1203,8 @@ const AddGroupsApp = ({ userProfileData: initialUserProfileData }) => {
             isOpen: !!editingTeam?.isOpen,
             onClose: () => setEditingTeam(null),
             team: editingTeam?.team || null,
-            allGroupsByCategoryId: allGroupsByCategoryId,
-            categoryIdToNameMap: categoryIdToNameMap,
+            allGroupsByCategoryId,
+            categoryIdToNameMap,
             onSave: handleSaveTeamChanges
         }),
         React.createElement(
