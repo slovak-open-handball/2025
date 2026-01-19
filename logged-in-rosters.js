@@ -1437,13 +1437,11 @@ useEffect(() => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
             setUserProfileData(userData);
-
-            console.log("---------------- Načítaná rola používateľa:", userData.role);
-
+              
             if (userData.role !== 'club') {
                 window.location.href = 'logged-in-my-data.html';
                 return; 
-              }
+            }
 
             if (userData.teams) {
                 const normalizedTeams = {};
