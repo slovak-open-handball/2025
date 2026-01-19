@@ -1903,11 +1903,13 @@ const handleSaveTeam = async (updatedTeamData) => {
         }
     }
 
-    const teamCategory = updatedTeamData.categoryName;
-    const teamIndex = teamsData[teamCategory]?.findIndex(t => t.teamName === updatedTeamData.teamName);
+    const teamCategory = selectedTeam.categoryName;
+    const originalTeamName = selectedTeam.teamName;
 
-    if (teamIndex === -1 || teamIndex === undefined) {
-        showLocalNotification('Chyba: Tím nebol nájdený pre aktualizáciu.', 'error');
+    const teamIndex = teamsData[teamCategory]?.findIndex(t => t.teamName === originalTeamName);
+    
+    if (teamIndex == null) {
+        showLocalNotification('Chyba: Pôvodný tím nebol nájdený.', 'error');
         return;
     }
 
