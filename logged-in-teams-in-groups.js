@@ -34,7 +34,6 @@ const handleUpdateTeam = async ({ categoryId, groupName, teamName, originalTeam 
         // Odstránime tím z pôvodného miesta
         const teamToUpdate = teams.splice(originalTeamIndex, 1)[0];
 
-        let newOrder;
         if (order !== undefined && order !== null && !isNaN(order)) {
             newOrder = parseInt(order, 10);
         } else {
