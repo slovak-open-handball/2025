@@ -92,7 +92,7 @@ const NewTeamModal = ({
     defaultGroupName = '',
     unifiedSaveHandler
 }) => {
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
@@ -327,7 +327,7 @@ const NewTeamModal = ({
 };
 
 const AddGroupsApp = (props) => {
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
     const teamsWithoutGroupRef = React.useRef(null);
     const [allTeams, setAllTeams] = useState([]);
     const [userTeamsData, setUserTeamsData] = useState([]);
