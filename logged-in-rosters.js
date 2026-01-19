@@ -1440,6 +1440,11 @@ useEffect(() => {
 
             console.log("---------------- Načítaná rola používateľa:", userData.role);
 
+            if (userData.role !== 'club') {
+                window.location.href = '/logged-in-my-data.html';
+                return; 
+              }
+
             if (userData.teams) {
                 const normalizedTeams = {};
                 const currentClubName = userData.billing?.clubName?.trim() || 'Neznámy klub';
