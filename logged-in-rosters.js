@@ -62,15 +62,30 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     const normalize = (value, path) => {
         if (value == null) return '';
+    
+        // Firebase Timestamp → dátum
         if (typeof value.toDate === 'function') {
             return formatDateFn(value.toDate());
         }
+    
         const lowerPath = path.toLowerCase();
-        if (lowerPath.endsWith('.arrival')) {
+    
+        // Špeciálne formátovanie arrival objektu – len keď porovnávame celý arrival
+        if (lowerPath === 'arrival') {
             return value.type
                 ? `${value.type}${value.time ? ` (${value.time})` : ''}`
                 : '';
         }
+    
+        // Nové: špeciálne ošetrenie jednotlivých polí arrival
+        if (lowerPath === 'arrival.type') {
+            return value || '';
+        }
+        if (lowerPath === 'arrival.time') {
+            return value || '';
+        }
+    
+        // Formátovanie dátumov
         if (lowerPath.includes('dateofbirth') ||
             lowerPath.includes('registrationdate') ||
             lowerPath.includes('date')) {
@@ -78,9 +93,12 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 return formatDateFn(value);
             }
         }
+    
+        // Objekty → JSON
         if (typeof value === 'object' && !Array.isArray(value)) {
             return JSON.stringify(value);
         }
+    
         return String(value);
     };
 
