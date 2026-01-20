@@ -4,8 +4,8 @@ const { useState, useEffect, useRef, useMemo } = window.React || {};
 
 function useRegistrationLimits() {
     const [limits, setLimits] = useState({
-        numberOfPlayers: 0,
-        numberOfImplementationTeam: 0
+        numberOfPlayers: Number(window.registrationLimits?.numberOfPlayers) || 0,
+        numberOfImplementationTeam: Number(window.registrationLimits?.numberOfImplementationTeam) || 0
     });
 
     useEffect(() => {
@@ -27,29 +27,29 @@ function useRegistrationLimits() {
 
             console.log(`[DEBUG useRegistrationLimits] Nové limity po parsovaní:`, newLimits);
 
-            if (
-                newLimits.numberOfPlayers !== limits.numberOfPlayers ||
-                newLimits.numberOfImplementationTeam !== limits.numberOfImplementationTeam
-            ) {
-                setLimits(newLimits);
-                console.log(`Limity AKTUALIZOVANÉ (${source}):`, newLimits);
-            } else {
-                console.log(`[DEBUG] Žiadna zmena limitov z ${source} – preskočené`);
-            }
+            setLimits(prev => {
+                if (newLimits.numberOfPlayers !== prev.numberOfPlayers ||
+                    newLimits.numberOfImplementationTeam !== prev.numberOfImplementationTeam) {
+                    console.log(`Limity AKTUALIZOVANÉ (${source}):`, newLimits);
+                    return newLimits;
+                }
+                console.log(`[DEBUG] Žiadna zmena z ${source} – preskočené`);
+                return prev;
+            });
         };
 
-        // 1. Okamžitá kontrola
+        // 1. Okamžitá inicializácia (ak už niečo je)
         if (window.registrationLimits?.numberOfPlayers !== undefined) {
             update("initial (sync)", window.registrationLimits);
         }
 
-        // 2. Event listener
+        // 2. Event listener (pre prípad, že príde neskôr)
         const handleEvent = (e) => {
             update("event registrationLimitsUpdated", e.detail);
         };
         window.addEventListener('registrationLimitsUpdated', handleEvent);
 
-        // 3. Polling (max ~10 sekúnd)
+        // 3. Polling ako záloha (max 10 sekúnd)
         const interval = setInterval(() => {
             if (window.registrationLimits?.numberOfPlayers !== undefined) {
                 update("polling (found)", window.registrationLimits);
@@ -57,12 +57,21 @@ function useRegistrationLimits() {
             }
         }, 400);
 
+        // 4. NOVÉ: priamy watcher na window.registrationLimits (najspoľahlivejšie)
+        const checkInterval = setInterval(() => {
+            if (window.registrationLimits?.numberOfPlayers !== undefined) {
+                update("direct watcher", window.registrationLimits);
+                // Môžeš clearInterval(checkInterval); ak chceš zastaviť po prvom nájdení
+            }
+        }, 1000); // každú sekundu kontrolujeme
+
         return () => {
             isMounted = false;
             window.removeEventListener('registrationLimitsUpdated', handleEvent);
             clearInterval(interval);
+            clearInterval(checkInterval);
         };
-    }, []); // ← závislosti prázdne = spustí sa iba raz
+    }, []);
 
     return limits;
 }
