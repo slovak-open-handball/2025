@@ -2870,22 +2870,35 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                     
                                       // Tlačidlo Upraviť
                                       React.createElement('button', {
-                                        onClick: () => canEdit && handleOpenEditMemberDetailsModal(team, member),
-                                        disabled: !canEdit,
-                                        className: `flex items-center space-x-1 px-3 py-1 rounded-md transition-colors text-sm font-medium ${
-                                          canEdit 
-                                            ? 'bg-blue-500 hover:bg-blue-600 text-white' 
-                                            : 'bg-gray-200 text-gray-500 cursor-not-allowed border border-gray-300'
-                                        }`,
-                                        style: {
-                                          cursor: canEdit ? 'pointer' : 'not-allowed'
-                                        }
-                                      },
-                                        React.createElement('svg', { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                                          onClick: () => canEdit && handleOpenEditMemberDetailsModal(team, member),
+                                          disabled: !canEdit,
+                                          className: `flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                            canEdit
+                                              ? 'text-white shadow-sm hover:shadow-md'
+                                              : 'border border-solid'
+                                          }`,
+                                          style: {
+                                            backgroundColor: canEdit ? getRoleColor(userProfileData?.role) : 'white',
+                                            color: canEdit ? 'white' : getRoleColor(userProfileData?.role),
+                                            borderColor: canEdit ? 'transparent' : getRoleColor(userProfileData?.role),
+                                            cursor: canEdit ? 'pointer' : 'not-allowed'
+                                          }
+                                        },
+                                          React.createElement('svg', { 
+                                            className: 'w-4 h-4', 
+                                            fill: 'none', 
+                                            stroke: 'currentColor', 
+                                            viewBox: '0 0 24 24' 
+                                          },
+                                            React.createElement('path', { 
+                                              strokeLinecap: 'round', 
+                                              strokeLinejoin: 'round', 
+                                              strokeWidth: '2', 
+                                              d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' 
+                                            })
+                                          ),
+                                          React.createElement('span', null, 'Upraviť')
                                         ),
-                                        React.createElement('span', null, 'Upraviť')
-                                      ),
                     
                                       // Tlačidlo Kôš (odstrániť)
                                       React.createElement('button', {
