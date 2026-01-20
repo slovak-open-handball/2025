@@ -57,6 +57,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         'passwordLastChanged', 'teams', 'categories', 'timestamp', 'note',
         '_category', '_menTeamMembersCount', '_womenTeamMembersCount',
         '_menDriversCount', '_womenDriversCount', '_players', '_teamTshirtsMap'
+        // arrival a accommodation už NIE sú ignorované!
     ]);
 
     const normalize = (value, path) => {
@@ -65,7 +66,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             return formatDateFn(value.toDate());
         }
         const lowerPath = path.toLowerCase();
-        if (lowerPath === 'arrival' || lowerPath.endsWith('.arrival')) {
+        if (lowerPath.endsWith('.arrival')) {
             return value.type
                 ? `${value.type}${value.time ? ` (${value.time})` : ''}`
                 : '';
@@ -86,14 +87,11 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     // ─── ŠPECIÁLNE SPRACOVANIE STRAVOVANIA (packageDetails.meals) ─────────────
     const processMealsChanges = (origMeals, updMeals) => {
         if (!origMeals || !updMeals) return;
-
         const allDates = new Set([
             ...Object.keys(origMeals || {}),
             ...Object.keys(updMeals || {})
         ]);
-
         allDates.forEach(date => {
-            // Účastnícka karta
             if (date === 'participantCard') {
                 const o = origMeals[date] === 1 ? 'Áno' : 'Nie';
                 const u = updMeals[date] === 1 ? 'Áno' : 'Nie';
@@ -102,24 +100,19 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 }
                 return;
             }
-
-            // Jednotlivé jedlá v daný deň
             const origDay = origMeals[date] || {};
             const updDay = updMeals[date] || {};
-
             const mealTranslations = {
-                breakfast:    'raňajky',
-                lunch:        'obed',
-                dinner:       'večera',
-                refreshment:  'občerstvenie'
+                breakfast: 'raňajky',
+                lunch: 'obed',
+                dinner: 'večera',
+                refreshment: 'občerstvenie'
             };
-
             Object.keys(mealTranslations).forEach(mealKey => {
                 const oVal = origDay[mealKey] === 1 ? 'Áno' :
                              origDay[mealKey] === 0 ? 'Nie' : '-';
                 const uVal = updDay[mealKey] === 1 ? 'Áno' :
                              updDay[mealKey] === 0 ? 'Nie' : '-';
-
                 if (oVal !== uVal) {
                     const slovakMeal = mealTranslations[mealKey];
                     const niceDate = formatDateFn(date);
@@ -131,7 +124,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         });
     };
 
-    // Spustenie špeciálneho spracovania stravovania
     if (original?.packageDetails?.meals || updated?.packageDetails?.meals) {
         processMealsChanges(
             original?.packageDetails?.meals,
@@ -139,7 +131,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         );
     }
 
-    // ─── NORMÁLNE POROVNANIE ostatných polí ──────────────────────────────────
+    // ─── NORMÁLNE POROVNANIE ───────────────────────────────────────────────
     const compare = (o, u, prefix = '') => {
         const keys = new Set([...Object.keys(o || {}), ...Object.keys(u || {})]);
         for (const key of keys) {
@@ -147,14 +139,15 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
             const currentPath = prefix ? `${prefix}.${key}` : key;
 
+            // Preskočíme meals – tie už spracovávame vyššie
             if (currentPath.startsWith('packageDetails.meals')) {
                 continue;
             }
-            
+
             const ov = o?.[key];
             const uv = u?.[key];
 
-            // Rekurzívne volanie pre vnorené objekty
+            // Rekurzívne volanie pre objekty
             if (typeof ov === 'object' && ov !== null && !Array.isArray(ov) &&
                 typeof uv === 'object' && uv !== null && !Array.isArray(uv)) {
                 compare(ov, uv, currentPath);
@@ -190,35 +183,27 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     .replace(/\./g, ' → ')
                     .replace(/\[(\d+)\]/g, ' [$1]');
 
-                // Slovenské pekné názvy polí
                 const niceLabels = {
+                    'teamName': 'Názov tímu',
                     'arrival.type': 'Typ dopravy',
                     'arrival.time': 'Čas príchodu',
                     'accommodation.type': 'Typ ubytovania',
-                    'teamName':                 'Názov tímu',
-                    'arrival.type':             'Typ dopravy',
-                    'arrival.time':             'Čas príchodu',
-                    'accommodation.type':       'Typ ubytovania',
-                    'packageDetails.name':      'Názov balíka',
-                    'packageDetails.price':     'Cena balíka',
-                    'packageDetails':           'Detail balíka',
-                    'firstName':                'Meno',
-                    'lastName':                 'Priezvisko',
-                    'dateOfBirth':              'Dátum narodenia',
-                    'jerseyNumber':             'Číslo dresu',
-                    'registrationNumber':       'Registračné číslo',
-                    'address.street':           'Ulica',
-                    'address.houseNumber':      'Popisné číslo',
-                    'address.postalCode':       'PSČ',
-                    'address.city':             'Mesto/obec',
-                    'address.country':          'Štát',
+                    'packageDetails.name': 'Názov balíka',
+                    'packageDetails.price': 'Cena balíka',
+                    'firstName': 'Meno',
+                    'lastName': 'Priezvisko',
+                    'dateOfBirth': 'Dátum narodenia',
+                    'jerseyNumber': 'Číslo dresu',
+                    'registrationNumber': 'Registračné číslo',
+                    'address.street': 'Ulica',
+                    'address.houseNumber': 'Popisné číslo',
+                    'address.postalCode': 'PSČ',
+                    'address.city': 'Mesto/obec',
+                    'address.country': 'Štát',
                 };
 
                 if (niceLabels[currentPath]) {
                     label = niceLabels[currentPath];
-                } else if (currentPath.startsWith('packageDetails.meals.')) {
-                    // Toto už spracovávame vyššie v processMealsChanges
-                    continue;
                 }
 
                 let displayA = a || '-';
@@ -236,16 +221,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     compare(original, updated);
 
-    // Špeciálne porovnanie arrival (pre istotu)
-    const oa = original?.arrival
-        ? `${original.arrival.type || ''}${original.arrival.time ? ` (${original.arrival.time})` : ''}`
-        : '';
-    const ua = updated?.arrival
-        ? `${updated.arrival.type || ''}${updated.arrival.time ? ` (${updated.arrival.time})` : ''}`
-        : '';
-    if (oa !== ua) {
-        changes.push(`Zmena dopravy: z '${oa || '-'}' na '${ua || '-'}'`);
-    }
+    // Žiadne špeciálne porovnanie arrival na konci už nepotrebujeme
+    // compare funkcia to už spracuje rekurzívne
 
     return changes;
 };
