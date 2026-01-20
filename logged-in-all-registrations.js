@@ -1189,7 +1189,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             setIsConfirmDeleteOpen(false);
             setIsConfirmDeleteTeamOpen(false);
         }
-    }, [isEditModalOpen]);
+    }, [isOpen]);
     
     React.useEffect(() => {
         const fetchTeamDataForSelects = async () => {
