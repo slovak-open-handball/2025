@@ -1433,7 +1433,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     };
                 }
             } catch (error) {
-//                console.error("Error fetching package details for new team:", error);
+                console.error("Error fetching package details for new team:", error);
                 showLocalNotification('Nastala chyba pri načítavaní detailov balíka.', 'error');
                 return;
             }
@@ -1709,7 +1709,7 @@ function RostersApp() {
             : "nedefinované"
     };
 
-//    console.log("[RostersApp] Aktuálne stavy limitov:", limitsInfo);
+    console.log("[RostersApp] Aktuálne stavy limitov:", limitsInfo);
 }, [maxPlayersPerTeam, maxImplementationMembers]);
     
   useEffect(() => {
@@ -1756,7 +1756,8 @@ useEffect(() => {
                     const settingsRosterDeadline = data.rosterEditDeadline?.toDate() || null;
                     const settingsDataDeadline = data.dataEditDeadline?.toDate() || null;
 
-//                    console.log("Načítané deadliny z nastavení (Timestamp → Date):", {
+                    console.log("Načítané deadliny z nastavení (Timestamp → Date):", 
+                    {
                         rosterEditDeadline: settingsRosterDeadline,
                         dataEditDeadline: settingsDataDeadline
                     });
@@ -1772,7 +1773,8 @@ useEffect(() => {
                                 userRosterDeadline = userData.rosterEditDeadline?.toDate() || null;
                                 userDataDeadline = userData.dataEditDeadline?.toDate() || null;
 
-//                                console.log("Načítané deadliny z používateľského profilu (Timestamp → Date):", {
+                                console.log("Načítané deadliny z používateľského profilu (Timestamp → Date):", 
+                                {
                                     userRosterDeadline,
                                     userDataDeadline
                                 });
@@ -1786,7 +1788,7 @@ useEffect(() => {
                                 ? userDataDeadline || settingsDataDeadline
                                 : new Date(Math.max(userDataDeadline.getTime(), settingsDataDeadline.getTime()));
 
-//                            console.log("Finálne deadliny (maximum z oboch zdrojov):", {
+                            console.log("Finálne deadliny (maximum z oboch zdrojov):", {
                                 rosterEditDeadline: finalRosterDeadline,
                                 dataEditDeadline: finalDataDeadline
                             });
@@ -1794,7 +1796,7 @@ useEffect(() => {
                             setRosterEditDeadline(finalRosterDeadline);
                             setDataEditDeadline(finalDataDeadline);
                         }, (error) => {
-//                            console.error("Chyba pri načítaní používateľských deadlinov:", error);
+                            console.error("Chyba pri načítaní používateľských deadlinov:", error);
                             setRosterEditDeadline(settingsRosterDeadline);
                             setDataEditDeadline(settingsDataDeadline);
                         });
@@ -1803,17 +1805,17 @@ useEffect(() => {
                         setDataEditDeadline(settingsDataDeadline);
                     }
                 } else {
-//                    console.log("Dokument s nastaveniami neexistuje.");
+                    console.log("Dokument s nastaveniami neexistuje.");
                     setRosterEditDeadline(null);
                     setDataEditDeadline(null);
                 }
             }, (error) => {
-//                console.error("Chyba pri načítaní deadlinov z nastavení:", error);
+                console.error("Chyba pri načítaní deadlinov z nastavení:", error);
                 setRosterEditDeadline(null);
                 setDataEditDeadline(null);
             });
         } catch (e) {
-//            console.error("Chyba pri nastavovaní onSnapshot pre deadliny:", e);
+            console.error("Chyba pri nastavovaní onSnapshot pre deadliny:", e);
             setRosterEditDeadline(null);
             setDataEditDeadline(null);
         }
@@ -1830,7 +1832,7 @@ useEffect(() => {
 }, [db, user, isAuthReady]);
 
 useEffect(() => {
-//    console.log("Aktuálne deadliny v stave:", {
+    console.log("Aktuálne deadliny v stave:", {
         rosterEditDeadline,
         dataEditDeadline
     });
@@ -1865,10 +1867,10 @@ useEffect(() => {
                   });
                   setAvailablePackages(packagesList);
               }, (error) => {
-//                  console.error("RostersApp: Error fetching packages:", error);
+                  console.error("RostersApp: Error fetching packages:", error);
               });
           } catch (e) {
-//              console.error("RostersApp: Error setting up onSnapshot for packages:", e);
+              console.error("RostersApp: Error setting up onSnapshot for packages:", e);
           }
       }
       return () => {
@@ -1892,10 +1894,10 @@ useEffect(() => {
                       setAvailableAccommodationTypes([]);
                   }
               }, (error) => {
-//                  console.error("RostersApp: Error fetching accommodation types:", error);
+                  console.error("RostersApp: Error fetching accommodation types:", error);
               });
           } catch (e) {
-//              console.error("RostersApp: Error setting up onSnapshot for accommodation types:", e);
+              console.error("RostersApp: Error setting up onSnapshot for accommodation types:", e);
           }
       }
       return () => {
@@ -1919,10 +1921,10 @@ useEffect(() => {
                     setAvailableTshirtSizes([]);
                 }
             }, (error) => {
-//                console.error("RostersApp: Error fetching tshirt sizes:", error);
+                console.error("RostersApp: Error fetching tshirt sizes:", error);
             });
         } catch (e) {
-//            console.error("RostersApp: Error setting up onSnapshot for tshirt sizes:", e);
+            console.error("RostersApp: Error setting up onSnapshot for tshirt sizes:", e);
         }
     }
     return () => {
@@ -1963,10 +1965,10 @@ useEffect(() => {
                         window.categoriesWithDates = {};
                     }
                 }, (error) => {
-//                    console.error("RostersApp: Error fetching categories from settings:", error);
+                    console.error("RostersApp: Error fetching categories from settings:", error);
                 });
             } catch (e) {
-//                console.error("RostersApp: Error setting up onSnapshot for categories from settings:", e);
+                console.error("RostersApp: Error setting up onSnapshot for categories from settings:", e);
             }
         }
         return () => {
@@ -2018,11 +2020,11 @@ useEffect(() => {
             setLoading(false);
           }
         }, error => {
-//          console.error("RostersApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+          console.error("RostersApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
           setLoading(false);
         });
       } catch (e) {
-//        console.error("RostersApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
+        console.error("RostersApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
         setLoading(false);
       }
     } else if (isAuthReady && user === null) {
@@ -2149,7 +2151,7 @@ const handleSaveTeam = async (updatedTeamData) => {
                 updatedTeamData.packageDetails.id = null;
             }
         } catch (err) {
-//            console.error("Chyba pri načítaní balíka:", err);
+            console.error("Cyba pri načítaní balíka:", err);
             showLocalNotification('Chyba pri načítaní detailov balíka.', 'error');
             return;
         }
@@ -2184,7 +2186,7 @@ const handleSaveTeam = async (updatedTeamData) => {
 
         showLocalNotification('Údaje tímu boli aktualizované!', 'success');
     } catch (error) {
-//        console.error("Chyba pri aktualizácii tímu:", error);
+        console.error("Chyba pri aktualizácii tímu:", error);
         showLocalNotification('Nastala chyba pri aktualizácii údajov tímu.', 'error');
     }
 };
@@ -2281,7 +2283,7 @@ const handleDeleteTeam = async (teamToDelete) => {
         setShowEditTeamModal(false);
         setSelectedTeam(null);
     } catch (error) {
-//        console.error("Chyba pri mazaní tímu:", error);
+        console.error("Chyba pri mazaní tímu:", error);
         showLocalNotification('Nastala chyba pri mazaní tímu.', 'error');
     }
 };
@@ -2362,7 +2364,7 @@ const handleAddTeam = async (newTeamDataFromModal) => {
 
         showLocalNotification('Nový tím bol pridaný a názvy tímov aktualizované!', 'success');
     } catch (error) {
-//        console.error("Chyba pri pridávaní tímu a aktualizácii názvov:", error);
+        console.error("Chyba pri pridávaní tímu a aktualizácii názvov:", error);
         showLocalNotification('Nastala chyba pri pridávaní tímu a aktualizácii názvov.', 'error');
     }
 };
@@ -2491,7 +2493,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
         setTeamToAddMemberTo(null);
         setMemberTypeToAdd(null);
     } catch (error) {
-//        console.error("Chyba pri pridávaní člena tímu:", error);
+        console.error("Chyba pri pridávaní člena tímu:", error);
         showLocalNotification('Nastala chyba pri pridávaní člena tímu.', 'error');
     }
 };
@@ -2614,7 +2616,7 @@ const handleDeleteMember = async (team, member) => {
 
     showLocalNotification('Člen bol odstránený.', 'success');
   } catch (error) {
-//    console.error('Chyba pri odstraňovaní člena:', error);
+    console.error('Chyba pri odstraňovaní člena:', error);
     showLocalNotification('Nepodarilo sa odstrániť člena.', 'error');
   }
 };    
@@ -2700,7 +2702,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         setMemberToEdit(null);
         setTeamOfMemberToEdit(null);
     } catch (error) {
-//        console.error("Chyba pri aktualizácii člena tímu:", error);
+        console.error("Chyba pri aktualizácii člena tímu:", error);
         showLocalNotification('Nastala chyba pri aktualizácii údajov člena tímu.', 'error');
     }
 };
