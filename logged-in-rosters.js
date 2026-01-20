@@ -215,95 +215,144 @@ const getRoleColor = (role) => {
     }
 };
 
-function AddMemberTypeModal({ show, onClose, onSelectMemberType, userProfileData, isDataEditDeadlinePassed }) {
-    const [selectedType, setSelectedType] = useState('');
-    if (!show) return null;
-    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
-    const handleAdd = () => {
-        if (selectedType) {
-            onSelectMemberType(selectedType);
-            setSelectedType('');
-            onClose();
-        } else {
-            showLocalNotification('Prosím, vyberte typ člena.', 'error');
-        }
-    };
-    const isButtonDisabled = isDataEditDeadlinePassed;
-    const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
-        isButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
-    }`;
-    const buttonStyles = {
-        backgroundColor: isButtonDisabled ? 'white' : roleColor,
-        color: isButtonDisabled ? roleColor : 'white',
-        borderColor: isButtonDisabled ? roleColor : 'transparent',
-        cursor: isButtonDisabled ? 'not-allowed' : 'pointer'
-    };
-    return React.createElement(
+function AddMemberTypeModal({ 
+  show, 
+  onClose, 
+  onSelectMemberType, 
+  userProfileData, 
+  isDataEditDeadlinePassed,
+  // Nové props – limity a aktuálny tím
+  maxPlayersPerTeam,
+  maxImplementationMembers,
+  currentTeam   // <= pridáme tento prop
+}) {
+  const [selectedType, setSelectedType] = useState('');
+
+  if (!show) return null;
+
+  const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+
+  // ─── VÝPOČET, ČI SÚ LIMITY DOSIAHNUTÉ ───────────────────────────────
+  const currentPlayersCount = currentTeam?.players || 0;
+  const currentImplCount = 
+    (currentTeam?.menTeamMembers  || 0) + 
+    (currentTeam?.womenTeamMembers || 0);
+
+  const playersLimitReached  = currentPlayersCount >= maxPlayersPerTeam;
+  const implLimitReached     = currentImplCount    >= maxImplementationMembers;
+  // ─────────────────────────────────────────────────────────────────────
+
+  const handleAdd = () => {
+    if (selectedType) {
+      onSelectMemberType(selectedType);
+      setSelectedType('');
+      onClose();
+    } else {
+      showLocalNotification('Prosím, vyberte typ člena.', 'error');
+    }
+  };
+
+  const isButtonDisabled = isDataEditDeadlinePassed;
+
+  const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
+    isButtonDisabled ? 'bg-white text-current border border-current' : 'text-white'
+  }`;
+
+  const buttonStyles = {
+    backgroundColor: isButtonDisabled ? 'white' : roleColor,
+    color: isButtonDisabled ? roleColor : 'white',
+    borderColor: isButtonDisabled ? roleColor : 'transparent',
+    cursor: isButtonDisabled ? 'not-allowed' : 'pointer'
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
+    React.createElement(
+      'div',
+      { className: 'relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg' },
+      React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
+        { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
+        React.createElement('h3', { className: 'text-xl font-semibold' }, 'Pridať člena tímu'),
         React.createElement(
-            'div',
-            { className: 'relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg' },
-            React.createElement(
-                'div',
-                { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
-                React.createElement('h3', { className: 'text-xl font-semibold' }, 'Pridať člena tímu'),
-                React.createElement(
-                    'button',
-                    { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
-                    '×'
-                )
-            ),
-            React.createElement(
-                'div',
-                { className: 'space-y-4' },
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'memberType', className: 'block text-sm font-medium text-gray-700' }, 'Typ člena'),
-                    React.createElement('select', {
-                        id: 'memberType',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: selectedType,
-                        onChange: (e) => setSelectedType(e.target.value),
-                        required: true,
-                        disabled: isButtonDisabled
-                    },
-                    React.createElement('option', { value: '' }, 'Vyberte typ'),
-                    React.createElement('option', { value: 'player' }, 'Hráč'),
-                    React.createElement('option', { value: 'womenTeamMember' }, 'Člen realizačného tímu (žena)'),
-                    React.createElement('option', { value: 'menTeamMember' }, 'Člen realizačného tímu (muž)'),
-                    React.createElement('option', { value: 'driverFemale' }, 'Šofér (žena)'),
-                    React.createElement('option', { value: 'driverMale' }, 'Šofér (muž)')
-                    )
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-end space-x-2 mt-6' },
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: onClose,
-                            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
-                        },
-                        'Zrušiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: handleAdd,
-                            disabled: isButtonDisabled,
-                            className: buttonClasses,
-                            style: buttonStyles
-                        },
-                        'Pridať'
-                    )
-                )
-            )
+          'button',
+          { onClick: onClose, className: 'text-white hover:text-gray-200 text-3xl leading-none font-semibold' },
+          '×'
         )
-    );
+      ),
+      React.createElement(
+        'div',
+        { className: 'space-y-4' },
+        React.createElement(
+          'div',
+          null,
+          React.createElement('label', { htmlFor: 'memberType', className: 'block text-sm font-medium text-gray-700' }, 'Typ člena'),
+          React.createElement('select', {
+            id: 'memberType',
+            className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+            value: selectedType,
+            onChange: (e) => setSelectedType(e.target.value),
+            required: true,
+            disabled: isButtonDisabled
+          },
+            React.createElement('option', { value: '' }, 'Vyberte typ'),
+
+            // Hráč – zakázaný ak je limit dosiahnutý
+            React.createElement('option', { 
+              value: 'player', 
+              disabled: playersLimitReached 
+            }, playersLimitReached 
+              ? `Hráč (limit ${maxPlayersPerTeam} dosiahnutý)` 
+              : 'Hráč'),
+
+            // Člen realizačného tímu (žena)
+            React.createElement('option', { 
+              value: 'womenTeamMember', 
+              disabled: implLimitReached 
+            }, implLimitReached 
+              ? `Člen realizačného tímu (žena) (limit ${maxImplementationMembers} dosiahnutý)` 
+              : 'Člen realizačného tímu (žena)'),
+
+            // Člen realizačného tímu (muž)
+            React.createElement('option', { 
+              value: 'menTeamMember', 
+              disabled: implLimitReached 
+            }, implLimitReached 
+              ? `Člen realizačného tímu (muž) (limit ${maxImplementationMembers} dosiahnutý)` 
+              : 'Člen realizačného tímu (muž)'),
+
+            React.createElement('option', { value: 'driverFemale' }, 'Šofér (žena)'),
+            React.createElement('option', { value: 'driverMale' }, 'Šofér (muž)')
+          )
+        ),
+        React.createElement(
+          'div',
+          { className: 'flex justify-end space-x-2 mt-6' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: onClose,
+              className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors'
+            },
+            'Zrušiť'
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleAdd,
+              disabled: isButtonDisabled,
+              className: buttonClasses,
+              style: buttonStyles
+            },
+            'Pridať'
+          )
+        )
+      )
+    )
+  );
 }
 
 function MemberDetailsModal({
@@ -2777,7 +2826,10 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
           onClose: () => setShowAddMemberTypeModal(false),
           onSelectMemberType: handleSelectMemberType,
           userProfileData: userProfileData,
-          isDataEditDeadlinePassed: isDataEditDeadlinePassed
+          isDataEditDeadlinePassed: isDataEditDeadlinePassed,
+          maxPlayersPerTeam: maxPlayersPerTeam,
+          maxImplementationMembers: maxImplementationMembers,
+          currentTeam: teamToAddMemberTo,
         }
       ),
       React.createElement(
