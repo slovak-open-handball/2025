@@ -3,6 +3,33 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
 function useRegistrationLimits() {
+
+    const update = (source, data) => {
+        if (!data || !isMounted) return;
+
+        console.log(`[DEBUG] Pokus o update limitov z ${source}:`, {
+            rawNumberOfPlayers: data.numberOfPlayers,
+            rawNumberOfImpl: data.numberOfImplementationTeam
+        });
+    
+        const newLimits = {
+            numberOfPlayers: Number(data.numberOfPlayers) || 0,
+            numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0,
+        };
+    
+        console.log(`[DEBUG] Nové limity po parsovaní:`, newLimits);
+    
+        if (
+            newLimits.numberOfPlayers !== limits.numberOfPlayers ||
+            newLimits.numberOfImplementationTeam !== limits.numberOfImplementationTeam
+        ) {
+            setLimits(newLimits);
+            console.log(`Limity aktualizované (${source}):`, newLimits);
+        } else {
+            console.log(`[DEBUG] Žiadna zmena limitov z ${source} – preskočené`);
+        }
+    };
+    
     const [limits, setLimits] = useState({
         numberOfPlayers: 0,
         numberOfImplementationTeam: 0
@@ -1658,13 +1685,12 @@ function RostersApp() {
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
   useEffect(() => {
-    // Logujeme len ak sú hodnoty už zmysluplné (nie fallback 0)
-    if (maxPlayersPerTeam > 0 || maxImplementationMembers > 0) {
-        console.log("---------------------- Použité limity z registrationLimits:", {
-            maxHracovVTyme: maxPlayersPerTeam,
-            maxClenovRealizacnehoTimu: maxImplementationMembers,
-        });
-    }
+    console.log("[RostersApp] Aktuálne stavy limitov:", {
+        maxPlayersPerTeam,
+        maxImplementationMembers,
+        window.registrationLimits_exists: !!window.registrationLimits,
+        window.registrationLimits_value: window.registrationLimits ? { ...window.registrationLimits } : "nedefinované"
+    });
 }, [maxPlayersPerTeam, maxImplementationMembers]);
     
   useEffect(() => {
