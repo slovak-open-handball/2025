@@ -1514,6 +1514,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 function RostersApp() {
   const auth = getAuth();
   const db = getFirestore();
+  const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(0);
+  const [maxImplementationMembers, setMaxImplementationMembers] = useState(0);
   const [user, setUser] = useState(null);
   const [userProfileData, setUserProfileData] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -1541,6 +1543,39 @@ function RostersApp() {
   const [categoriesWithDates, setCategoriesWithDates] = useState({}); // Pridané
 
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+  useEffect(() => {
+    if (!db || !isAuthReady) return;
+
+    const settingsRef = doc(db, 'settings', 'registration');
+
+    const unsubscribe = onSnapshot(settingsRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const players = Number(data.numberOfPlayers) || 0;
+        const impl = Number(data.numberOfImplementationTeam) || 0;
+
+        setMaxPlayersPerTeam(players);
+        setMaxImplementationMembers(impl);
+
+        // Výpis do konzoly – ako si žiadal
+        console.log("Načítané limity z settings/registration:", {
+          maxHracovVTyme: players,
+          maxClenovRealizacnehoTimu: impl,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        console.warn("Dokument settings/registration neexistuje → limity = 0");
+        setMaxPlayersPerTeam(0);
+        setMaxImplementationMembers(0);
+      }
+    }, (err) => {
+      console.error("Chyba pri načítaní limitov:", err);
+      showLocalNotification("Nepodarilo sa načítať maximálne počty členov", "error");
+    });
+
+    return () => unsubscribe();
+  }, [db, isAuthReady]);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
