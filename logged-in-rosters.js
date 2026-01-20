@@ -1685,12 +1685,16 @@ function RostersApp() {
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
   useEffect(() => {
-    console.log("[RostersApp] Aktuálne stavy limitov:", {
+    const limitsInfo = {
         maxPlayersPerTeam,
         maxImplementationMembers,
-        window.registrationLimits_exists: !!window.registrationLimits,
-        window.registrationLimits_value: window.registrationLimits ? { ...window.registrationLimits } : "nedefinované"
-    });
+        hasWindowRegistrationLimits: !!window.registrationLimits,
+        registrationLimitsContent: window.registrationLimits 
+            ? { ...window.registrationLimits } 
+            : "nedefinované"
+    };
+
+    console.log("[RostersApp] Aktuálne stavy limitov:", limitsInfo);
 }, [maxPlayersPerTeam, maxImplementationMembers]);
     
   useEffect(() => {
