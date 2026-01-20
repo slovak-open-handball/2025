@@ -22,21 +22,21 @@ function useRegistrationLimits() {
                     numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0
                 };
 
-//                console.log("[useRegistrationLimits] Načítané limity priamo z Firestore:", newLimits);
+                console.log("[useRegistrationLimits] Načítané limity priamo z Firestore:", newLimits);
 
                 setLimits(prev => {
                     if (newLimits.numberOfPlayers !== prev.numberOfPlayers ||
                         newLimits.numberOfImplementationTeam !== prev.numberOfImplementationTeam) {
-//                        console.log("[useRegistrationLimits] Limity aktualizované z Firestore:", newLimits);
+                        console.log("[useRegistrationLimits] Limity aktualizované z Firestore:", newLimits);
                     }
                     return newLimits;
                 });
             } else {
-//                console.log("[useRegistrationLimits] Dokument settings/registration neexistuje → limity zostávajú 0");
+                console.log("[useRegistrationLimits] Dokument settings/registration neexistuje → limity zostávajú 0");
                 setLimits({ numberOfPlayers: 0, numberOfImplementationTeam: 0 });
             }
         }, (error) => {
-//            console.error("[useRegistrationLimits] Chyba pri onSnapshot settings/registration:", error);
+            console.error("[useRegistrationLimits] Chyba pri onSnapshot settings/registration:", error);
             // fallback – necháme 0, ale môžeme pridať notifikáciu ak chceš
         });
 
