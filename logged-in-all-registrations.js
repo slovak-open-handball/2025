@@ -1184,7 +1184,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
 
     React.useEffect(() => {
-        if (isEditModalOpen) {
+        if (isOpen) {
             // Keď sa otvorí nové edit modal → istota, že potvrdenia sú zatvorené
             setIsConfirmDeleteOpen(false);
             setIsConfirmDeleteTeamOpen(false);
