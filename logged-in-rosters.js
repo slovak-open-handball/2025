@@ -722,7 +722,7 @@ function MemberDetailsModal({
                 'div',
                 { className: `flex justify-between items-center text-white p-4 -mx-8 -mt-8 mb-4 rounded-t-lg`, style: { backgroundColor: roleColor } },
                 React.createElement('h3', { className: 'text-xl font-semibold' }, 
-                    `${isEditMode ? 'Upraviť' : 'Pridať'} ${memberType === 'player' ? 'hráča' : memberType === 'womenTeamMember' ? 'členku realizačného tímu' : memberType === 'menTeamMember' ? 'člena realizačného tímu' : memberType === 'driverFemale' ? 'šoférku' : memberType === 'driverMale' ? 'šoféra' : 'člena'}`
+                    `${isEditMode ? 'Upraviť' : 'Pridať'} ${memberType === 'player' ? 'hráč' : memberType === 'womenTeamMember' ? 'člen realizačného tímu (žena)' : memberType === 'menTeamMember' ? 'člena realizačného tímu (muž)' : memberType === 'driverFemale' ? 'šofér (žena)' : memberType === 'driverMale' ? 'šofér (muž)' : 'člena'}`
                 ),
                 React.createElement(
                     'button',
