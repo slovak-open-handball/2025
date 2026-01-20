@@ -3,33 +3,6 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
 function useRegistrationLimits() {
-
-    const update = (source, data) => {
-        if (!data || !isMounted) return;
-
-        console.log(`[DEBUG] Pokus o update limitov z ${source}:`, {
-            rawNumberOfPlayers: data.numberOfPlayers,
-            rawNumberOfImpl: data.numberOfImplementationTeam
-        });
-    
-        const newLimits = {
-            numberOfPlayers: Number(data.numberOfPlayers) || 0,
-            numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0,
-        };
-    
-        console.log(`[DEBUG] Nové limity po parsovaní:`, newLimits);
-    
-        if (
-            newLimits.numberOfPlayers !== limits.numberOfPlayers ||
-            newLimits.numberOfImplementationTeam !== limits.numberOfImplementationTeam
-        ) {
-            setLimits(newLimits);
-            console.log(`Limity aktualizované (${source}):`, newLimits);
-        } else {
-            console.log(`[DEBUG] Žiadna zmena limitov z ${source} – preskočené`);
-        }
-    };
-    
     const [limits, setLimits] = useState({
         numberOfPlayers: 0,
         numberOfImplementationTeam: 0
@@ -41,47 +14,55 @@ function useRegistrationLimits() {
         const update = (source, data) => {
             if (!data || !isMounted) return;
 
+            console.log(`[DEBUG useRegistrationLimits] Pokus o update z ${source}:`, {
+                rawNumberOfPlayers: data.numberOfPlayers,
+                rawNumberOfImpl: data.numberOfImplementationTeam,
+                rawData: data
+            });
+
             const newLimits = {
                 numberOfPlayers: Number(data.numberOfPlayers) || 0,
                 numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0,
             };
 
-            // Len ak sa niečo zmení, aktualizujeme a logujeme
+            console.log(`[DEBUG useRegistrationLimits] Nové limity po parsovaní:`, newLimits);
+
             if (
                 newLimits.numberOfPlayers !== limits.numberOfPlayers ||
                 newLimits.numberOfImplementationTeam !== limits.numberOfImplementationTeam
             ) {
                 setLimits(newLimits);
-                console.log(`Limity aktualizované (${source}):`, newLimits);
+                console.log(`Limity AKTUALIZOVANÉ (${source}):`, newLimits);
+            } else {
+                console.log(`[DEBUG] Žiadna zmena limitov z ${source} – preskočené`);
             }
         };
 
-        // 1. Skúsime okamžite, ak už niečo je (zriedkavé, ale možné)
+        // 1. Okamžitá kontrola
         if (window.registrationLimits?.numberOfPlayers !== undefined) {
             update("initial (sync)", window.registrationLimits);
         }
 
-        // 2. Počúvame event z header.js
+        // 2. Event listener
         const handleEvent = (e) => {
             update("event registrationLimitsUpdated", e.detail);
         };
         window.addEventListener('registrationLimitsUpdated', handleEvent);
 
-        // 3. Polling ako posledná záchrana – beží max ~10 sekúnd
+        // 3. Polling (max ~10 sekúnd)
         const interval = setInterval(() => {
             if (window.registrationLimits?.numberOfPlayers !== undefined) {
                 update("polling (found)", window.registrationLimits);
-                clearInterval(interval); // zastavíme polling hneď ako nájdeme dáta
+                clearInterval(interval);
             }
-        }, 400); // častejší polling, aby to bolo rýchlejšie
+        }, 400);
 
-        // Cleanup
         return () => {
             isMounted = false;
             window.removeEventListener('registrationLimitsUpdated', handleEvent);
             clearInterval(interval);
         };
-    }, []); // závislosti prázdne → spustí sa iba raz
+    }, []); // ← závislosti prázdne = spustí sa iba raz
 
     return limits;
 }
