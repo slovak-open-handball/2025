@@ -1626,16 +1626,6 @@ function RostersApp() {
 
     window.addEventListener('registrationLimitsUpdated', handleEvent);
 
-    // 3. Voliteľný krátky fallback polling (max 6 sekúnd)
-    const interval = setInterval(() => {
-        if (window.registrationLimits?.numberOfPlayers !== undefined) {
-            updateLimits("polling – našlo sa");
-            clearInterval(interval);
-        }
-    }, 600);
-
-    setTimeout(() => clearInterval(interval), 6000); // poistka
-
     return () => {
         window.removeEventListener('registrationLimitsUpdated', handleEvent);
         clearInterval(interval);
