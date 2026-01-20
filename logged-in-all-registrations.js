@@ -1184,6 +1184,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
 
     React.useEffect(() => {
+        if (!isOpen) {
+            // Modal sa práve zatvoril → vyčistíme aj potvrdenia vymazania
+            setIsConfirmDeleteOpen(false);
+            setDeleteConfirmMessage('');
+            setIsConfirmDeleteTeamOpen(false);
+            setDeleteTeamConfirmMessage('');
+        }
+    }, [isOpen]);    
+
+    React.useEffect(() => {
         if (isOpen) {
             // Keď sa otvorí nové edit modal → istota, že potvrdenia sú zatvorené
             setIsConfirmDeleteOpen(false);
@@ -2642,12 +2652,6 @@ function AllRegistrationsApp() {
       setEditingDocRef(null);
       setEditingDataPath('');
       setIsNewEntry(false); // Resetovať príznak
-
-      setIsConfirmDeleteOpen(false);
-      setDeleteConfirmMessage('');
-      setIsConfirmDeleteTeamOpen(false);
-      setDeleteTeamConfirmMessage('');
-      // console.log("closeEditModal: Closing modal."); // Debug log
   };
 
   // Handler pre otvorenie modálneho okna na výber typu člena
@@ -3985,9 +3989,6 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
         setUserNotificationMessage(`${memberName} bol úspešne odstránený z tímu.`, 'success');
         closeEditModal();
 
-        // Zatvoríme modálne okno úpravy (ak bolo otvorené)
-        closeEditModal();
-
     } catch (e) {
         console.error("Chyba pri odstraňovaní člena tímu:", e);
         setError(`Chyba pri odstraňovaní člena: ${e.message}`);
@@ -4062,7 +4063,6 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
 
             setUserNotificationMessage(`Tím '${teamName}' bol úspešne odstránený.`, 'success');
             closeEditModal();
-            closeEditModal(); // Zatvoriť modálne okno po odstránení
         } else {
             throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
         }
