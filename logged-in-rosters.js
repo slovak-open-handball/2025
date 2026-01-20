@@ -1149,49 +1149,76 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                     )
                 ),
                 showArrivalTimeInputs && React.createElement(
+                  'div',
+                  null,
+                  React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Plánovaný čas príchodu na turnaj'),
+                  React.createElement(
                     'div',
-                    null,
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Plánovaný čas príchodu na turnaj'),
+                    { className: 'flex space-x-3 items-center' },
                     React.createElement(
-                        'div',
-                        { className: 'flex space-x-2' },
-                        React.createElement(
-                            'div',
-                            { className: 'w-1/2' },
-                            React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700' }, 'Hodina'),
-                            React.createElement('select', {
-                                id: 'arrivalHour',
-                                className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                                value: editedArrivalHour,
-                                onChange: handleArrivalHourChange,
-                                required: true,
-                                disabled: isDataEditDeadlinePassed
-                            },
-                            React.createElement('option', { value: '' }, '-- Hodina --'),
-                            hourOptions.map((hour) =>
-                                React.createElement('option', { key: hour, value: hour }, hour)
-                            )
-                            )
-                        ),
-                        React.createElement(
-                            'div',
-                            { className: 'w-1/2' },
-                            React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700' }, 'Minúta'),
-                            React.createElement('select', {
-                                id: 'arrivalMinute',
-                                className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                                value: editedArrivalMinute,
-                                onChange: handleArrivalMinuteChange,
-                                required: true,
-                                disabled: isDataEditDeadlinePassed
-                            },
-                            React.createElement('option', { value: '' }, '-- Minúta --'),
-                            minuteOptions.map((minute) =>
-                                React.createElement('option', { key: minute, value: minute }, minute)
-                            )
-                            )
-                        )
+                      'div',
+                      { className: 'w-24' },
+                      React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-xs text-gray-600 mb-1' }, 'Hodina'),
+                      React.createElement('input', {
+                        id: 'arrivalHour',
+                        type: 'text',
+                        maxLength: 2,
+                        className: 'block w-full border border-gray-300 rounded-md shadow-sm p-2 text-center font-mono text-lg',
+                        value: editedArrivalHour,
+                        onChange: (e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                          setEditedArrivalHour(val);
+                          setHasChanges(true);
+                        },
+                        onBlur: () => {
+                          if (editedArrivalHour !== '') {
+                            const num = parseInt(editedArrivalHour, 10);
+                            if (!isNaN(num) && num >= 0 && num <= 23) {
+                              setEditedArrivalHour(num.toString().padStart(2, '0'));
+                            } else {
+                              setEditedArrivalHour('');
+                            }
+                          }
+                        },
+                        placeholder: '00–23',
+                        pattern: '[0-9]*',
+                        inputMode: 'numeric',
+                        disabled: isDataEditDeadlinePassed,
+                      })
+                    ),
+                    React.createElement('span', { className: 'text-gray-500 text-xl mt-6' }, ':'),
+                    React.createElement(
+                      'div',
+                      { className: 'w-24' },
+                      React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-xs text-gray-600 mb-1' }, 'Minúta'),
+                      React.createElement('input', {
+                        id: 'arrivalMinute',
+                        type: 'text',
+                        maxLength: 2,
+                        className: 'block w-full border border-gray-300 rounded-md shadow-sm p-2 text-center font-mono text-lg',
+                        value: editedArrivalMinute,
+                        onChange: (e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                          setEditedArrivalMinute(val);
+                          setHasChanges(true);
+                        },
+                        onBlur: () => {
+                          if (editedArrivalMinute !== '') {
+                            const num = parseInt(editedArrivalMinute, 10);
+                            if (!isNaN(num) && num >= 0 && num <= 59) {
+                              setEditedArrivalMinute(num.toString().padStart(2, '0'));
+                            } else {
+                              setEditedArrivalMinute('');
+                            }
+                          }
+                        },
+                        placeholder: '00–59',
+                        pattern: '[0-9]*',
+                        inputMode: 'numeric',
+                        disabled: isDataEditDeadlinePassed,
+                      })
                     )
+                  )
                 ),
                 React.createElement(
                     'div',
@@ -1550,56 +1577,77 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     )
                 ),
                 showArrivalTimeInputs && React.createElement(
+                  'div',
+                  null,
+                  React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Plánovaný čas príchodu na turnaj'),
+                  React.createElement(
                     'div',
-                    null,
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Plánovaný čas príchodu na turnaj'),
+                    { className: 'flex space-x-3 items-center' },
                     React.createElement(
-                        'div',
-                        { className: 'flex space-x-2' },
-                        React.createElement(
-                            'div',
-                            { className: 'w-1/2' },
-                            React.createElement('label', { htmlFor: 'arrivalHour', className: 'block text-sm font-medium text-gray-700' }, 'Hodina'),
-                            React.createElement('select', {
-                                id: 'arrivalHour',
-                                className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                                value: arrivalHour,
-                                onChange: (e) => {
-                                    setArrivalHour(e.target.value);
-                                    setHasChanges(true);
-                                },
-                                required: true,
-                                disabled: isDataEditDeadlinePassed
-                            },
-                            React.createElement('option', { value: '' }, '-- Hodina --'),
-                            hourOptions.map((hour) =>
-                                React.createElement('option', { key: hour, value: hour }, hour)
-                            )
-                            )
-                        ),
-                        React.createElement(
-                            'div',
-                            { className: 'w-1/2' },
-                            React.createElement('label', { htmlFor: 'arrivalMinute', className: 'block text-sm font-medium text-gray-700' }, 'Minúta'),
-                            React.createElement('select', {
-                                id: 'arrivalMinute',
-                                className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                                value: arrivalMinute,
-                                onChange: (e) => {
-                                    setArrivalMinute(e.target.value);
-                                    setHasChanges(true);
-                                },
-                                required: true,
-                                disabled: isDataEditDeadlinePassed
-                            },
-                            React.createElement('option', { value: '' }, '-- Minúta --'),
-                            minuteOptions.map((minute) =>
-                                React.createElement('option', { key: minute, value: minute }, minute)
-                            )
-                            )
-                        )
+                      'div',
+                      { className: 'w-24' },
+                      React.createElement('label', { htmlFor: 'arrivalHourAdd', className: 'block text-xs text-gray-600 mb-1' }, 'Hodina'),
+                      React.createElement('input', {
+                        id: 'arrivalHourAdd',
+                        type: 'text',
+                        maxLength: 2,
+                        className: 'block w-full border border-gray-300 rounded-md shadow-sm p-2 text-center font-mono text-lg',
+                        value: arrivalHour,
+                        onChange: (e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                          setArrivalHour(val);
+                          setHasChanges(true);
+                        },
+                        onBlur: () => {
+                          if (arrivalHour !== '') {
+                            const num = parseInt(arrivalHour, 10);
+                            if (!isNaN(num) && num >= 0 && num <= 23) {
+                              setArrivalHour(num.toString().padStart(2, '0'));
+                            } else {
+                              setArrivalHour('');
+                            }
+                          }
+                        },
+                        placeholder: '00–23',
+                        pattern: '[0-9]*',
+                        inputMode: 'numeric',
+                        disabled: isDataEditDeadlinePassed,
+                      })
+                    ),
+                    React.createElement('span', { className: 'text-gray-500 text-xl mt-6' }, ':'),
+                    React.createElement(
+                      'div',
+                      { className: 'w-24' },
+                      React.createElement('label', { htmlFor: 'arrivalMinuteAdd', className: 'block text-xs text-gray-600 mb-1' }, 'Minúta'),
+                      React.createElement('input', {
+                        id: 'arrivalMinuteAdd',
+                        type: 'text',
+                        maxLength: 2,
+                        className: 'block w-full border border-gray-300 rounded-md shadow-sm p-2 text-center font-mono text-lg',
+                        value: arrivalMinute,
+                        onChange: (e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                          setArrivalMinute(val);
+                          setHasChanges(true);
+                        },
+                        onBlur: () => {
+                          if (arrivalMinute !== '') {
+                            const num = parseInt(arrivalMinute, 10);
+                            if (!isNaN(num) && num >= 0 && num <= 59) {
+                              setArrivalMinute(num.toString().padStart(2, '0'));
+                            } else {
+                              setArrivalMinute('');
+                            }
+                          }
+                        },
+                        placeholder: '00–59',
+                        pattern: '[0-9]*',
+                        inputMode: 'numeric',
+                        disabled: isDataEditDeadlinePassed,
+                      })
                     )
-                ),
+                  )
+                )
                 React.createElement(
                     'div',
                     null,
