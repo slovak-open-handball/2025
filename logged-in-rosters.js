@@ -410,6 +410,8 @@ function MemberDetailsModal({
     isDataEditDeadlinePassed,
     teamCategoryName,
     currentTeam,
+    maxPlayersPerTeam,
+    maxImplementationMembers,
 }) {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -579,11 +581,10 @@ function MemberDetailsModal({
         checkRegistrationDuplicate(value);
     };
 
-
     useEffect(() => {
         setMaxPlayersPerTeam(numberOfPlayers);
         setMaxImplementationMembers(numberOfImplementationTeam);
-    }, [numberOfPlayers, numberOfImplementationTeam]);
+      }, [numberOfPlayers, numberOfImplementationTeam]);
 
     // Inicializácia hodnôt pri otvorení modálu
     useEffect(() => {
@@ -2918,7 +2919,9 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               isRosterEditDeadlinePassed: isRosterEditDeadlinePassed,
               isDataEditDeadlinePassed: isDataEditDeadlinePassed,
               teamCategoryName: isMemberEditMode ? teamOfMemberToEdit?.categoryName : teamToAddMemberTo?.categoryName,
-              currentTeam: isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo
+              currentTeam: isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo,
+              maxPlayersPerTeam: maxPlayersPerTeam,
+              maxImplementationMembers: maxImplementationMembers,
           }
       ),
     
