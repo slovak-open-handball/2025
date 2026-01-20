@@ -3864,10 +3864,10 @@ const clearFilter = (column) => {
   }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle, editingData, getChangesForNotification]); // REMOVED MODAL-SPECIFIC STATES FROM DEPENDENCY ARRAY
 
 
-  const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPath) => {
+const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPath) => {
     if (!targetDocRef || !originalDataPath) {
         console.error("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie člena.");
-        setUserNotificationMessage("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie. Zmeny neboli uložené.", 'error');
+        setUserNotificationMessage("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie.", 'error');
         return;
     }
 
@@ -3876,66 +3876,80 @@ const clearFilter = (column) => {
 
         const pathParts = originalDataPath.split('.');
         if (pathParts.length !== 3) {
-            throw new Error(`Neplatný formát cesty člena pre odstránenie. Očakáva sa 3 segmenty (teams.category[index].memberArray[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
+            throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty, našlo sa ${pathParts.length}.`);
         }
 
         const categoryAndIndexPart = pathParts[1];
         const memberArrayAndIndexPart = pathParts[2];
 
         const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-        const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-
-        if (!categoryMatch) {
-            throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
-        }
-        if (!memberArrayMatch) {
-            throw new Error(`Neplatný formát poľa člena tímu a indexu: ${memberArrayAndIndexPart}.`);
-        }
+        if (!categoryMatch) throw new Error("Neplatný formát kategórie a indexu tímu");
 
         const category = categoryMatch[1];
         const teamIndex = parseInt(categoryMatch[2]);
+
+        const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+        if (!memberArrayMatch) throw new Error("Neplatný formát poľa člena a indexu");
+
         const memberArrayPath = memberArrayMatch[1];
         const memberArrayIndex = parseInt(memberArrayMatch[2]);
 
+        // Načítame aktuálny dokument
         const docSnapshot = await getDoc(targetDocRef);
         if (!docSnapshot.exists()) {
-            throw new Error("Dokument používateľa sa nenašiel pre odstránenie.");
+            throw new Error("Dokument používateľa sa nenašiel.");
         }
+
         const currentDocData = docSnapshot.data();
+        const teamsInCategory = currentDocData.teams?.[category] || [];
 
-        const teams = currentDocData.teams?.[category] || [];
-        const teamToUpdate = { ...teams[teamIndex] }; // Hlboká kópia tímu na úpravu
-
-        if (teamToUpdate && teamToUpdate[memberArrayPath] && teamToUpdate[memberArrayPath][memberArrayIndex] !== undefined) {
-            const memberToRemove = teamToUpdate[memberArrayPath][memberArrayIndex];
-            const memberName = `${memberToRemove.firstName || ''} ${memberToRemove.lastName || ''}`.trim();
-
-            const updatedMemberArray = [...teamToUpdate[memberArrayPath]];
-            updatedMemberArray.splice(memberArrayIndex, 1); // Odstráni člena z poľa
-            
-            teamToUpdate[memberArrayPath] = updatedMemberArray; // Aktualizujeme pole
-            const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate); // Prepočítať počty
-
-            const updatedTeamsForCategory = [...teams];
-            updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
-
-            const updates = {};
-            updates[`teams.${category}`] = updatedTeamsForCategory;
-            await updateDoc(targetDocRef, updates);
-
-            setUserNotificationMessage(`${memberName} bol úspešne odstránený z tímu.`, 'success');
-            closeEditModal();
-        } else {
-            throw new Error(`Člen tímu na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
+        if (teamIndex < 0 || teamIndex >= teamsInCategory.length) {
+            throw new Error(`Tím s indexom ${teamIndex} v kategórii ${category} neexistuje.`);
         }
+
+        // Hlboká kópia tímu, ktorý ideme upravovať
+        const teamToUpdate = JSON.parse(JSON.stringify(teamsInCategory[teamIndex]));
+
+        let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
+
+        if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
+            throw new Error(`Člen na indexe ${memberArrayIndex} neexistuje v poli ${memberArrayPath}`);
+        }
+
+        const memberToRemove = currentMemberArray[memberArrayIndex];
+        const memberName = `${memberToRemove.firstName || ''} ${memberToRemove.lastName || ''}`.trim() || 'bez mena';
+
+        // Odstránime člena
+        currentMemberArray.splice(memberArrayIndex, 1);
+        teamToUpdate[memberArrayPath] = currentMemberArray;
+
+        // === Kľúčová časť – prepočítame a uložíme počty ===
+        const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
+
+        // Pripravíme aktualizované pole tímov v danej kategórii
+        const updatedTeamsForCategory = [...teamsInCategory];
+        updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
+
+        // Uložíme celé pole naspäť
+        const updates = {};
+        updates[`teams.${category}`] = updatedTeamsForCategory;
+
+        await updateDoc(targetDocRef, updates);
+
+        // Notifikácia používateľovi
+        setUserNotificationMessage(`${memberName} bol úspešne odstránený z tímu.`, 'success');
+
+        // Zatvoríme modálne okno úpravy (ak bolo otvorené)
+        closeEditModal();
+
     } catch (e) {
-        console.error("Chyba pri odstraňovaní člena tímu z Firestore:", e);
-        setError(`Chyba pri odstraňovaní člena tímu: ${e.message}`);
-        setUserNotificationMessage(`Chyba pri odstraňovaní člena tímu: ${e.message}`, 'error');
+        console.error("Chyba pri odstraňovaní člena tímu:", e);
+        setError(`Chyba pri odstraňovaní člena: ${e.message}`);
+        setUserNotificationMessage(`Chyba: ${e.message}`, 'error');
     } finally {
         window.hideGlobalLoader();
     }
-  }, [db, closeEditModal, setUserNotificationMessage, setError]);
+}, [db, closeEditModal, setUserNotificationMessage, setError]);
 
   // Nová funkcia na odstránenie tímu
   const handleDeleteTeam = React.useCallback(async (targetDocRef, originalDataPath) => {
