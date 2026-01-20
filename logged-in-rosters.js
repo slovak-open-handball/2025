@@ -234,8 +234,7 @@ function AddMemberTypeModal({
   // Výpočet aktuálneho stavu limitov
   const currentPlayersCount = Number(currentTeam?.players) || 0;
   const currentImplCount = 
-    (Number(currentTeam?.menTeamMembers) || 0) + 
-    (Number(currentTeam?.womenTeamMembers) || 0);
+    (Number(currentTeam?.menTeamMembers ?? 0) + Number(currentTeam?.womenTeamMembers ?? 0));
 
   const playersLimitReached = currentPlayersCount >= maxPlayersPerTeam;
   const implLimitReached    = currentImplCount    >= maxImplementationMembers;
