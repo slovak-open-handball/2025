@@ -2436,6 +2436,129 @@ const handleSaveNewMember = async (newMemberDetails) => {
     }
 };
 
+const handleDeleteMember = async (team, member) => {
+  if (isDataEditDeadlinePassed) {
+    showLocalNotification('Termín na úpravu členov tímu uplynul.', 'error');
+    return;
+  }
+
+  const confirmDelete = await new Promise(resolve => {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1002] flex justify-center items-center p-4';
+    modal.innerHTML = `
+      <div class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg">
+        <h3 class="text-xl font-semibold mb-4 text-gray-800">Odstrániť člena tímu</h3>
+        <p class="mb-6 text-gray-700">
+          Naozaj chcete odstrániť člena 
+          <strong>${member.firstName || ''} ${member.lastName || ''}</strong> 
+          (${member.type || 'člen'}) z tímu 
+          <strong>${team.teamName || 'Neznámy tím'}</strong>?
+        </p>
+        <div class="flex justify-end space-x-3">
+          <button id="cancel" class="px-5 py-2.5 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition">
+            Zrušiť
+          </button>
+          <button id="confirm" class="px-5 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
+            Áno, odstrániť
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('#cancel').onclick = () => {
+      document.body.removeChild(modal);
+      resolve(false);
+    };
+    modal.querySelector('#confirm').onclick = () => {
+      document.body.removeChild(modal);
+      resolve(true);
+    };
+  });
+
+  if (!confirmDelete) return;
+
+  const userEmail = user.email;
+  const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'bez mena';
+  const teamName = team.teamName || 'bez názvu';
+  const category = team.categoryName || '?';
+  const memberTypeLabel = member.type || 'člen';
+
+  const userDocRef = doc(db, 'users', user.uid);
+  const currentTeams = { ...teamsData };
+  const teamCategory = team.categoryName;
+  const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === team.teamName);
+
+  if (teamIndex === -1) {
+    showLocalNotification('Tím nebol nájdený.', 'error');
+    return;
+  }
+
+  const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
+  let arrayName;
+
+  switch (member.originalType) {
+    case 'player': arrayName = 'playerDetails'; break;
+    case 'womenTeamMember': arrayName = 'womenTeamMemberDetails'; break;
+    case 'menTeamMember': arrayName = 'menTeamMemberDetails'; break;
+    case 'driverFemale': arrayName = 'driverDetailsFemale'; break;
+    case 'driverMale': arrayName = 'driverDetailsMale'; break;
+    default:
+      showLocalNotification('Neznámy typ člena.', 'error');
+      return;
+  }
+
+  const memberArray = teamToUpdate[arrayName] || [];
+  const memberIndex = memberArray.findIndex(m =>
+    m.firstName === member.firstName &&
+    m.lastName === member.lastName &&
+    m.dateOfBirth === member.dateOfBirth
+  );
+
+  if (memberIndex === -1) {
+    showLocalNotification('Člen nebol nájdený.', 'error');
+    return;
+  }
+
+  // Odstránime člena z poľa
+  memberArray.splice(memberIndex, 1);
+
+  // Aktualizujeme počty
+  switch (member.originalType) {
+    case 'player':
+      teamToUpdate.players = Math.max(0, (teamToUpdate.players || 0) - 1);
+      break;
+    case 'womenTeamMember':
+      teamToUpdate.womenTeamMembers = Math.max(0, (teamToUpdate.womenTeamMembers || 0) - 1);
+      break;
+    case 'menTeamMember':
+      teamToUpdate.menTeamMembers = Math.max(0, (teamToUpdate.menTeamMembers || 0) - 1);
+      break;
+    // šoféri nemajú počítadlo, iba pole
+  }
+
+  currentTeams[teamCategory][teamIndex] = teamToUpdate;
+
+  try {
+    await updateDoc(userDocRef, { teams: currentTeams });
+
+    // Notifikácia adminovi
+    if (userEmail) {
+      const changes = [`Odstránený člen: ${memberName} (${memberTypeLabel})`, `Tím: ${teamName} (${category})`];
+      await addDoc(collection(db, 'notifications'), {
+        userEmail,
+        changes,
+        timestamp: serverTimestamp()
+      });
+    }
+
+    showLocalNotification('Člen bol úspešne odstránený.', 'success');
+  } catch (error) {
+    console.error('Chyba pri odstraňovaní člena:', error);
+    showLocalNotification('Nepodarilo sa odstrániť člena.', 'error');
+  }
+};    
+
 const handleSaveEditedMember = async (updatedMemberDetails) => {
     if (isRosterEditDeadlinePassed) {
         showLocalNotification('Termín pre úpravu členov tímu už uplynul.', 'error');
@@ -2712,83 +2835,114 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                       ),
 
                       React.createElement('div', { className: 'mt-4 px-6 w-full' },
-                          React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
-                          allMembers.length > 0 ? (
-                          React.createElement('div', { className: 'overflow-x-auto w-full' },
-                            React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
-                              React.createElement('thead', null,
-                                React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
-                                  [
-                                    React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Akcie'),
-                                    React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Typ člena'),
-                                    React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu'),
-                                    React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Meno'),
-                                    React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Priezvisko'),
-                                    React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Dátum narodenia'),
-                                    React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo registrácie'),
-                                    shouldShowAddressColumn && React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Adresa'),
-                                  ].filter(Boolean)
-                                )
-                              ),
-                              React.createElement('tbody', { className: 'divide-y divide-gray-200' },
-                                allMembers.map((member, mIndex) => {
-                                    const editMemberButtonClasses = `flex items-center space-x-1 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors ${isRosterEditDeadlinePassed ? 'bg-white border border-solid' : ''}`;
-                                    const editMemberButtonStyles = {
-                                        color: isRosterEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white',
-                                        borderColor: isRosterEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'transparent',
-                                        cursor: isRosterEditDeadlinePassed ? 'not-allowed' : 'pointer',
-                                        backgroundColor: isRosterEditDeadlinePassed ? 'white' : getRoleColor(userProfileData?.role)
-                                    };
-                                    return (
-                                        React.createElement('tr', { key: mIndex, className: 'hover:bg-gray-50' },
-                                            [
-                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' },
-                                                React.createElement('button', {
-                                                    onClick: () => handleOpenEditMemberDetailsModal(team, member),
-                                                    disabled: isRosterEditDeadlinePassed,
-                                                    className: editMemberButtonClasses,
-                                                    style: editMemberButtonStyles,
-                                                    'aria-label': 'Upraviť člena'
-                                                },
-                                                    React.createElement('svg', { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg', style: { color: isRosterEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white' } }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z` })),
-                                                    React.createElement('span', null, 'Upraviť')
-                                                )
-                                            ),
-                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type),
-                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
-                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
-                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
-                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.dateOfBirth ? formatDateToDMMYYYY(member.dateOfBirth) : '-'),
-                                            React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.registrationNumber || '-'),
-                                            shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, formatAddress(member.address)),
-                                            ].filter(Boolean)
-                                        )
-                                    );
-                                })
+                      React.createElement('h4', { className: 'text-lg font-bold text-gray-800 mb-3' }, 'Zoznam členov:'),
+  
+                      allMembers.length > 0 ? (
+                        React.createElement('div', { className: 'overflow-x-auto w-full' },
+                          React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
+                            
+                            // HLAVIČKA TABUĽKY
+                            React.createElement('thead', null,
+                              React.createElement('tr', { className: 'bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider' },
+                                [
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Akcie'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Typ člena'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Meno'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Priezvisko'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Dátum narodenia'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo registrácie'),
+                                  shouldShowAddressColumn && React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Adresa'),
+                                ].filter(Boolean)
                               )
+                            ),
+                    
+                            // TELO TABUĽKY – riadky členov
+                            React.createElement('tbody', { className: 'divide-y divide-gray-200' },
+                              allMembers.map((member, mIndex) => {
+                                const canEdit = !isRosterEditDeadlinePassed;
+                                const canDelete = !isDataEditDeadlinePassed;
+                    
+                                return React.createElement('tr', { key: mIndex, className: 'hover:bg-gray-50' },
+                                  [
+                                    // Stĺpec Akcie – obe tlačidlá vedľa seba
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm flex items-center space-x-2' },
+                    
+                                      // Tlačidlo Upraviť
+                                      React.createElement('button', {
+                                        onClick: () => canEdit && handleOpenEditMemberDetailsModal(team, member),
+                                        disabled: !canEdit,
+                                        className: `flex items-center space-x-1 px-3 py-1 rounded-md transition-colors text-sm font-medium ${
+                                          canEdit 
+                                            ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                                            : 'bg-gray-200 text-gray-500 cursor-not-allowed border border-gray-300'
+                                        }`,
+                                        style: {
+                                          cursor: canEdit ? 'pointer' : 'not-allowed'
+                                        }
+                                      },
+                                        React.createElement('svg', { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                                        ),
+                                        React.createElement('span', null, 'Upraviť')
+                                      ),
+                    
+                                      // Tlačidlo Kôš (odstrániť)
+                                      React.createElement('button', {
+                                        onClick: () => canDelete && handleDeleteMember(team, member),
+                                        disabled: !canDelete,
+                                        className: `flex items-center justify-center w-9 h-9 rounded-full transition-colors focus:outline-none focus:ring-2 ${
+                                          canDelete
+                                            ? 'bg-red-100 hover:bg-red-200 text-red-700 focus:ring-red-400'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        }`,
+                                        'aria-label': 'Odstrániť člena'
+                                      },
+                                        React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                                          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                                        )
+                                      )
+                                    ),
+                    
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type || '-'),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' },
+                                      member.dateOfBirth ? formatDateToDMMYYYY(member.dateOfBirth) : '-'
+                                    ),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.registrationNumber || '-'),
+                                    shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, formatAddress(member.address)),
+                                  ].filter(Boolean)
+                                );
+                              })
                             )
-                          )) : (
-                            React.createElement('p', { className: 'text-center text-gray-600 text-sm py-4' }, 'V tomto tíme zatiaľ nie sú žiadni členovia.')
-                          ),
-                          React.createElement(
-                            'div',
-                            { className: 'flex justify-center mt-4' },
-                            React.createElement(
-                                'button',
-                                {
-                                    type: 'button',
-                                    onClick: () => handleOpenAddMemberTypeModal({ ...team, categoryName: categoryName }),
-                                    disabled: isDataEditDeadlinePassed,
-                                    className: `flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDataEditDeadlinePassed ? 'bg-white border border-solid' : ''}`,
-                                    style: {
-                                        backgroundColor: isDataEditDeadlinePassed ? 'white' : getRoleColor(userProfileData?.role),
-                                        color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white',
-                                        borderColor: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'transparent',
-                                        cursor: isDataEditDeadlinePassed ? 'not-allowed' : 'pointer'
-                                    },
-                                    'aria-label': 'Pridať člena tímu'
-                                },
-                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg', style: { color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white' } }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M12 6v6m0 0v6m0-6h6m-6 0H6` }))
+                          )
+                        )
+                      ) : (
+                        React.createElement('p', { className: 'text-center text-gray-600 text-sm py-4' }, 'V tomto tíme zatiaľ nie sú žiadni členovia.')
+                      ),
+                    
+                      // Tlačidlo Pridať člena (nezmenené)
+                      React.createElement(
+                        'div',
+                        { className: 'flex justify-center mt-4' },
+                        React.createElement(
+                          'button',
+                          {
+                            type: 'button',
+                            onClick: () => handleOpenAddMemberTypeModal({ ...team, categoryName: categoryName }),
+                            disabled: isDataEditDeadlinePassed,
+                            className: `flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDataEditDeadlinePassed ? 'bg-white border border-solid' : ''}`,
+                            style: {
+                              backgroundColor: isDataEditDeadlinePassed ? 'white' : getRoleColor(userProfileData?.role),
+                              color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white',
+                              borderColor: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'transparent',
+                              cursor: isDataEditDeadlinePassed ? 'not-allowed' : 'pointer'
+                            },
+                            'aria-label': 'Pridať člena tímu'
+                          },
+                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg', style: { color: isDataEditDeadlinePassed ? getRoleColor(userProfileData?.role) : 'white' } }, React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: `M12 6v6m0 0v6m0-6h6m-6 0H6` }))
                             )
                           )
                         )
