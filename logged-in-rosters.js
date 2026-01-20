@@ -1647,7 +1647,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                       })
                     )
                   )
-                )
+                ),
                 React.createElement(
                     'div',
                     null,
