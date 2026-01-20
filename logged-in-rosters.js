@@ -2552,7 +2552,7 @@ const handleDeleteMember = async (team, member) => {
       });
     }
 
-    showLocalNotification('Člen bol úspešne odstránený.', 'success');
+    showLocalNotification('Člen bol odstránený.', 'success');
   } catch (error) {
     console.error('Chyba pri odstraňovaní člena:', error);
     showLocalNotification('Nepodarilo sa odstrániť člena.', 'error');
