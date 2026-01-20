@@ -581,11 +581,6 @@ function MemberDetailsModal({
         checkRegistrationDuplicate(value);
     };
 
-    useEffect(() => {
-        setMaxPlayersPerTeam(numberOfPlayers);
-        setMaxImplementationMembers(numberOfImplementationTeam);
-      }, [numberOfPlayers, numberOfImplementationTeam]);
-
     // Inicializácia hodnôt pri otvorení modálu
     useEffect(() => {
         if (show) {
@@ -1649,40 +1644,6 @@ function RostersApp() {
   const [categoriesWithDates, setCategoriesWithDates] = useState({}); // Pridané
 
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-  useEffect(() => {
-    const updateLimits = (source = "initial", dataSource = window.registrationLimits) => {
-        if (!dataSource) return;
-
-        const players = Number(dataSource.numberOfPlayers) || 0;
-        const impl = Number(dataSource.numberOfImplementationTeam) || 0;
-
-        setMaxPlayersPerTeam(players);
-        setMaxImplementationMembers(impl);
-
-        console.log(`Limity aktualizované (${source}):`, {
-            maxHracovVTyme: players,
-            maxClenovRealizacnehoTimu: impl,
-        });
-    };
-
-    // 1. Okamžité načítanie, ak už niečo je
-    if (window.registrationLimits) {
-        updateLimits("okamžité načítanie z window");
-    }
-
-    // 2. Počúvanie na event z header.js
-    const handleEvent = (e) => {
-        updateLimits("event registrationLimitsUpdated", e.detail);
-    };
-
-    window.addEventListener('registrationLimitsUpdated', handleEvent);
-
-    return () => {
-        window.removeEventListener('registrationLimitsUpdated', handleEvent);
-        clearInterval(interval);
-    };
-}, []);
 
   useEffect(() => {
     if (!window.registrationLimits) {
