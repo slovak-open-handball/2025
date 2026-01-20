@@ -57,7 +57,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         'passwordLastChanged', 'teams', 'categories', 'timestamp', 'note',
         '_category', '_menTeamMembersCount', '_womenTeamMembersCount',
         '_menDriversCount', '_womenDriversCount', '_players', '_teamTshirtsMap'
-        // arrival a accommodation už NIE sú ignorované!
     ]);
 
     const normalize = (value, path) => {
