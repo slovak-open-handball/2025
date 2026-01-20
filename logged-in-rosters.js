@@ -221,10 +221,9 @@ function AddMemberTypeModal({
   onSelectMemberType, 
   userProfileData, 
   isDataEditDeadlinePassed,
-  // Nové props – limity a aktuálny tím
   maxPlayersPerTeam,
   maxImplementationMembers,
-  currentTeam   // <= pridáme tento prop
+  currentTeam   // aktuálny tím, z ktorého čítame počty
 }) {
   const [selectedType, setSelectedType] = useState('');
 
@@ -232,15 +231,14 @@ function AddMemberTypeModal({
 
   const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
-  // ─── VÝPOČET, ČI SÚ LIMITY DOSIAHNUTÉ ───────────────────────────────
+  // Výpočet aktuálneho stavu limitov
   const currentPlayersCount = currentTeam?.players || 0;
   const currentImplCount = 
     (currentTeam?.menTeamMembers  || 0) + 
     (currentTeam?.womenTeamMembers || 0);
 
-  const playersLimitReached  = currentPlayersCount >= maxPlayersPerTeam;
-  const implLimitReached     = currentImplCount    >= maxImplementationMembers;
-  // ─────────────────────────────────────────────────────────────────────
+  const playersLimitReached = currentPlayersCount >= maxPlayersPerTeam;
+  const implLimitReached    = currentImplCount    >= maxImplementationMembers;
 
   const handleAdd = () => {
     if (selectedType) {
@@ -298,29 +296,23 @@ function AddMemberTypeModal({
           },
             React.createElement('option', { value: '' }, 'Vyberte typ'),
 
-            // Hráč – zakázaný ak je limit dosiahnutý
+            // Hráč – disabled ak limit dosiahnutý
             React.createElement('option', { 
               value: 'player', 
               disabled: playersLimitReached 
-            }, playersLimitReached 
-              ? `Hráč (limit ${maxPlayersPerTeam} dosiahnutý)` 
-              : 'Hráč'),
+            }, 'Hráč'),
 
-            // Člen realizačného tímu (žena)
+            // Člen realizačného tímu (žena) – disabled ak limit dosiahnutý
             React.createElement('option', { 
               value: 'womenTeamMember', 
               disabled: implLimitReached 
-            }, implLimitReached 
-              ? `Člen realizačného tímu (žena) (limit ${maxImplementationMembers} dosiahnutý)` 
-              : 'Člen realizačného tímu (žena)'),
+            }, 'Člen realizačného tímu (žena)'),
 
-            // Člen realizačného tímu (muž)
+            // Člen realizačného tímu (muž) – disabled ak limit dosiahnutý
             React.createElement('option', { 
               value: 'menTeamMember', 
               disabled: implLimitReached 
-            }, implLimitReached 
-              ? `Člen realizačného tímu (muž) (limit ${maxImplementationMembers} dosiahnutý)` 
-              : 'Člen realizačného tímu (muž)'),
+            }, 'Člen realizačného tímu (muž)'),
 
             React.createElement('option', { value: 'driverFemale' }, 'Šofér (žena)'),
             React.createElement('option', { value: 'driverMale' }, 'Šofér (muž)')
