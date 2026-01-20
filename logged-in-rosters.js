@@ -593,6 +593,15 @@ function MemberDetailsModal({
         checkRegistrationDuplicate(value);
     };
 
+    useEffect(() => {
+    if (maxPlayersPerTeam > 0 || maxImplementationMembers > 0) {
+        console.log("---------------------- Použité limity z registrationLimits:", {
+            maxHracovVTyme: maxPlayersPerTeam,
+            maxClenovRealizacnehoTimu: maxImplementationMembers,
+        });
+    }
+}, [maxPlayersPerTeam, maxImplementationMembers]);
+
     // Inicializácia hodnôt pri otvorení modálu
     useEffect(() => {
         if (show) {
@@ -1656,15 +1665,6 @@ function RostersApp() {
   const [categoriesWithDates, setCategoriesWithDates] = useState({}); // Pridané
 
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    
-  useEffect(() => {
-    if (maxPlayersPerTeam > 0 || maxImplementationMembers > 0) {
-        console.log("---------------------- Použité limity z registrationLimits:", {
-            maxHracovVTyme: maxPlayersPerTeam,
-            maxClenovRealizacnehoTimu: maxImplementationMembers,
-        });
-    }
-  }, [maxPlayersPerTeam, maxImplementationMembers]);
     
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
