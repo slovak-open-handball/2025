@@ -625,7 +625,7 @@ function UsersManagementApp() {
       
       await updateDoc(userDocRef, updateData);
       
-      setNotification({ message: `Rola používateľa bola úspešne zmenená na ${getTranslatedRole(newRole)}.`, type: 'success' });
+      setNotification({ message: `Rola používateľa bola zmenená na ${getTranslatedRole(newRole)}.`, type: 'success' });
       
       // Log notification s preloženými názvami
       await logChanges([`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${getTranslatedRole(oldRole)}' na '${getTranslatedRole(newRole)}'`]);
@@ -668,7 +668,7 @@ function UsersManagementApp() {
         console.error("Firebase projectId nie je k dispozícii. Uistite sa, že 'firebaseConfig' je globálne definovaný.");
       }
 
-      setNotification({ message: `Používateľ ${userToDelete.firstName} bol úspešne odstránený.`, type: 'success' });
+      setNotification({ message: `Používateľ ${userToDelete.firstName} bol odstránený.`, type: 'success' });
 
       // Log changes
       await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}.`]);
@@ -741,7 +741,7 @@ function UsersManagementApp() {
       
       await sendApprovalEmail(userEmail);
       
-      setNotification({ message: `Admin bol úspešne schválený a e-mail bol odoslaný.`, type: 'success' });
+      setNotification({ message: `Admin bol schválený a e-mail bol odoslaný.`, type: 'success' });
       
       // Log changes
       const userToApprove = users.find(u => u.id === userId);
@@ -825,7 +825,7 @@ function UsersManagementApp() {
       await updateDoc(userDocRef, {
         [dateType]: newDate // Dynamicky nastaví názov poľa
       });
-      setNotification({ message: `Dátum bol úspešne aktualizovaný pre ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
+      setNotification({ message: `Dátum bol aktualizovaný pre ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
 
       // Log changes s pôvodnou a novou hodnotou
       const dateTypeString = dateType === 'dataEditDeadline' ? 'údajov' : 'súpisiek';
