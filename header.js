@@ -467,7 +467,15 @@ const setupFirestoreListeners = () => {
         onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
-                console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
+                
+              window.dispatchEvent(new CustomEvent('registrationLimitsUpdated', {
+                detail: {
+                numberOfPlayers: data.numberOfPlayers,
+                numberOfImplementationTeam: data.numberOfImplementationTeam,
+              }
+            }));              
+              
+              console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
             } else {
                 window.registrationDates = null;
                 console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
