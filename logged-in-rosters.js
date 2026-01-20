@@ -3,75 +3,45 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
 function useRegistrationLimits() {
+    const db = getFirestore();
     const [limits, setLimits] = useState({
-        numberOfPlayers: Number(window.registrationLimits?.numberOfPlayers) || 0,
-        numberOfImplementationTeam: Number(window.registrationLimits?.numberOfImplementationTeam) || 0
+        numberOfPlayers: 0,
+        numberOfImplementationTeam: 0
     });
 
     useEffect(() => {
-        let isMounted = true;
+        if (!db) return;
 
-        const update = (source, data) => {
-            if (!data || !isMounted) return;
+        const settingsDocRef = doc(db, 'settings', 'registration');
 
-            console.log(`[DEBUG useRegistrationLimits] Pokus o update z ${source}:`, {
-                rawNumberOfPlayers: data.numberOfPlayers,
-                rawNumberOfImpl: data.numberOfImplementationTeam,
-                rawData: data
-            });
+        const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const newLimits = {
+                    numberOfPlayers: Number(data.numberOfPlayers) || 0,
+                    numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0
+                };
 
-            const newLimits = {
-                numberOfPlayers: Number(data.numberOfPlayers) || 0,
-                numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0,
-            };
+                console.log("[useRegistrationLimits] Načítané limity priamo z Firestore:", newLimits);
 
-            console.log(`[DEBUG useRegistrationLimits] Nové limity po parsovaní:`, newLimits);
-
-            setLimits(prev => {
-                if (newLimits.numberOfPlayers !== prev.numberOfPlayers ||
-                    newLimits.numberOfImplementationTeam !== prev.numberOfImplementationTeam) {
-                    console.log(`Limity AKTUALIZOVANÉ (${source}):`, newLimits);
+                setLimits(prev => {
+                    if (newLimits.numberOfPlayers !== prev.numberOfPlayers ||
+                        newLimits.numberOfImplementationTeam !== prev.numberOfImplementationTeam) {
+                        console.log("[useRegistrationLimits] Limity aktualizované z Firestore:", newLimits);
+                    }
                     return newLimits;
-                }
-                console.log(`[DEBUG] Žiadna zmena z ${source} – preskočené`);
-                return prev;
-            });
-        };
-
-        // 1. Okamžitá inicializácia (ak už niečo je)
-        if (window.registrationLimits?.numberOfPlayers !== undefined) {
-            update("initial (sync)", window.registrationLimits);
-        }
-
-        // 2. Event listener (pre prípad, že príde neskôr)
-        const handleEvent = (e) => {
-            update("event registrationLimitsUpdated", e.detail);
-        };
-        window.addEventListener('registrationLimitsUpdated', handleEvent);
-
-        // 3. Polling ako záloha (max 10 sekúnd)
-        const interval = setInterval(() => {
-            if (window.registrationLimits?.numberOfPlayers !== undefined) {
-                update("polling (found)", window.registrationLimits);
-                clearInterval(interval);
+                });
+            } else {
+                console.log("[useRegistrationLimits] Dokument settings/registration neexistuje → limity zostávajú 0");
+                setLimits({ numberOfPlayers: 0, numberOfImplementationTeam: 0 });
             }
-        }, 400);
+        }, (error) => {
+            console.error("[useRegistrationLimits] Chyba pri onSnapshot settings/registration:", error);
+            // fallback – necháme 0, ale môžeme pridať notifikáciu ak chceš
+        });
 
-        // 4. NOVÉ: priamy watcher na window.registrationLimits (najspoľahlivejšie)
-        const checkInterval = setInterval(() => {
-            if (window.registrationLimits?.numberOfPlayers !== undefined) {
-                update("direct watcher", window.registrationLimits);
-                // Môžeš clearInterval(checkInterval); ak chceš zastaviť po prvom nájdení
-            }
-        }, 1000); // každú sekundu kontrolujeme
-
-        return () => {
-            isMounted = false;
-            window.removeEventListener('registrationLimitsUpdated', handleEvent);
-            clearInterval(interval);
-            clearInterval(checkInterval);
-        };
-    }, []);
+        return () => unsubscribe();
+    }, [db]);  // závislosť na db, aby sa re-subscribovalo ak sa db zmení (zriedkavé)
 
     return limits;
 }
