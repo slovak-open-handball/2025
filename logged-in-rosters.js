@@ -197,7 +197,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     'arrival.time':             'Čas príchodu',
                     'accommodation.type':       'Typ ubytovania',
                     'packageDetails.name':      'Názov balíka',
-                    'packageDetails':           'Detail balíka',      // fallback
+                    'packageDetails.price':     'Cena balíka',
+                    'packageDetails':           'Detail balíka',
                     'firstName':                'Meno',
                     'lastName':                 'Priezvisko',
                     'dateOfBirth':              'Dátum narodenia',
