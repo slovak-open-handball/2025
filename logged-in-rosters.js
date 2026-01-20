@@ -2936,7 +2936,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                 React.createElement('p', { className: 'text-md text-gray-700 font-semibold mb-1' }, 'Tričká:'),
                                 team.tshirts.map((tshirt, tIndex) => (
                                     React.createElement('p', { key: tIndex, className: 'text-md text-gray-700 ml-4' },
-                                        `Veľkosť: ${tshirt.size}, Počet: ${tshirt.quantity}×`
+                                        `Veľkosť: ${tshirt.size}, počet: ${tshirt.quantity}×`
                                     )
                                 ))
                             )
