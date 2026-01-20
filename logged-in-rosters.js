@@ -347,6 +347,8 @@ function AddMemberTypeModal({
 
   const playersLimitReached = currentPlayersCount >= maxPlayersPerTeam;
   const implLimitReached    = currentImplCount    >= maxImplementationMembers;
+  
+  const isOwnTransport = currentTeam?.arrival?.type === 'vlastná doprava';
 
   const handleAdd = () => {
     if (selectedType) {
@@ -404,26 +406,33 @@ function AddMemberTypeModal({
           },
             React.createElement('option', { value: '' }, 'Vyberte typ'),
 
-            // Hráč – disabled ak limit dosiahnutý
-            React.createElement('option', { 
-              value: 'player', 
-              disabled: playersLimitReached 
+            // Hráč
+            React.createElement('option', {
+              value: 'player',
+              disabled: playersLimitReached
             }, 'Hráč'),
 
-            // Člen realizačného tímu (žena) – disabled ak limit dosiahnutý
-            React.createElement('option', { 
-              value: 'womenTeamMember', 
-              disabled: implLimitReached 
+            // Člen realizačného tímu (žena)
+            React.createElement('option', {
+              value: 'womenTeamMember',
+              disabled: implLimitReached
             }, 'Člen realizačného tímu (žena)'),
 
-            // Člen realizačného tímu (muž) – disabled ak limit dosiahnutý
-            React.createElement('option', { 
-              value: 'menTeamMember', 
-              disabled: implLimitReached 
+            // Člen realizačného tímu (muž)
+            React.createElement('option', {
+              value: 'menTeamMember',
+              disabled: implLimitReached
             }, 'Člen realizačného tímu (muž)'),
 
-            React.createElement('option', { value: 'driverFemale' }, 'Šofér (žena)'),
-            React.createElement('option', { value: 'driverMale' }, 'Šofér (muž)')
+            // Šofér (žena) – LEN ak je vlastná doprava
+            isOwnTransport && React.createElement('option', {
+              value: 'driverFemale'
+            }, 'Šofér (žena)'),
+
+            // Šofér (muž) – LEN ak je vlastná doprava
+            isOwnTransport && React.createElement('option', {
+              value: 'driverMale'
+            }, 'Šofér (muž)')
           )
         ),
         React.createElement(
