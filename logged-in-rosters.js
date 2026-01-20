@@ -2,6 +2,47 @@ import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, get
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
+function useRegistrationLimits() {
+    const [limits, setLimits] = useState({
+        numberOfPlayers: 0,
+        numberOfImplementationTeam: 0
+    });
+
+    useEffect(() => {
+        const update = (source, data) => {
+            if (!data) return;
+            const newLimits = {
+                numberOfPlayers: Number(data.numberOfPlayers) || 0,
+                numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0,
+            };
+            setLimits(newLimits);
+            console.log(`Limity aktualizované (${source}):`, newLimits);
+        };
+
+        if (window.registrationLimits) {
+            update("initial", window.registrationLimits);
+        }
+
+        const handleEvent = (e) => update("event", e.detail);
+        window.addEventListener('registrationLimitsUpdated', handleEvent);
+
+        // polling ako poistka
+        const interval = setInterval(() => {
+            if (window.registrationLimits?.numberOfPlayers !== undefined) {
+                update("polling", window.registrationLimits);
+                clearInterval(interval);
+            }
+        }, 500);
+
+        return () => {
+            window.removeEventListener('registrationLimitsUpdated', handleEvent);
+            clearInterval(interval);
+        };
+    }, []);
+
+    return limits;
+}
+
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
 
@@ -384,6 +425,10 @@ function MemberDetailsModal({
     const [dateOfBirthError, setDateOfBirthError] = useState('');
     const [isDateOfBirthValid, setIsDateOfBirthValid] = useState(true);
 
+    const { numberOfPlayers, numberOfImplementationTeam } = useRegistrationLimits();
+    const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(numberOfPlayers);
+    const [maxImplementationMembers, setMaxImplementationMembers] = useState(numberOfImplementationTeam);
+
     // Nové stavy pre kontrolu registračného čísla
     const [regNumberError, setRegNumberError] = useState('');
     const [isRegNumberUnique, setIsRegNumberUnique] = useState(true);
@@ -532,7 +577,13 @@ function MemberDetailsModal({
         const value = e.target.value;
         setRegistrationNumber(value);
         checkRegistrationDuplicate(value);
-    };    
+    };
+
+
+    useEffect(() => {
+        setMaxPlayersPerTeam(numberOfPlayers);
+        setMaxImplementationMembers(numberOfImplementationTeam);
+    }, [numberOfPlayers, numberOfImplementationTeam]);
 
     // Inicializácia hodnôt pri otvorení modálu
     useEffect(() => {
