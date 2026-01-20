@@ -1609,13 +1609,8 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 
 function RostersApp() {
   const auth = getAuth();
-  const db = getFirestore();
-  const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(
-    Number(window.registrationLimits?.numberOfPlayers) || 0
-  );
-  const [maxImplementationMembers, setMaxImplementationMembers] = useState(
-    Number(window.registrationLimits?.numberOfImplementationTeam) || 0
-  );    
+  const db = getFirestore();  
+  const { numberOfPlayers: maxPlayersPerTeam, numberOfImplementationTeam: maxImplementationMembers } = useRegistrationLimits();
   const [user, setUser] = useState(null);
   const [userProfileData, setUserProfileData] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
