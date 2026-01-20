@@ -218,7 +218,15 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     continue;
                 }
 
-                changes.push(`Zmena ${label}: z '${a || '-'}' na '${b || '-'}`);
+                let displayA = a || '-';
+                let displayB = b || '-';
+
+                if (currentPath === 'packageDetails.price') {
+                    displayA = a ? `${a} €` : '-';
+                    displayB = b ? `${b} €` : '-';
+                }
+
+                changes.push(`Zmena ${label}: z '${displayA}' na '${displayB}'`);
             }
         }
     };
