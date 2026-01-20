@@ -3325,7 +3325,7 @@ const clearFilter = (column) => {
         window.showGlobalLoader();
       }
       await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
+      setUserNotificationMessage("Odhlásený.");
       window.location.href = 'login.html';
       setUser(null);
       setUserProfileData(null);
@@ -3512,7 +3512,7 @@ const clearFilter = (column) => {
                 updates[`teams.${actualCategory}`] = newCategoryTeams;
                 await updateDoc(targetDocRef, updates);
         
-                console.log("DEBUG: Nový tím úspešne pridaný do kategórie", actualCategory);
+                console.log("DEBUG: Nový tím pridaný do kategórie", actualCategory);
             } 
             else {
                 // ─── ÚPRAVA EXISTUJÚCEHO TÍMU ─────────────────────────────────────
@@ -3986,7 +3986,7 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
         await updateDoc(targetDocRef, updates);
 
         // Notifikácia používateľovi
-        setUserNotificationMessage(`${memberName} bol úspešne odstránený z tímu.`, 'success');
+        setUserNotificationMessage(`${memberName} bol odstránený z tímu.`, 'success');
         closeEditModal();
 
     } catch (e) {
@@ -4061,7 +4061,7 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
                 console.log("Notifikácia o odstránení tímu uložená do Firestore.");
             }
 
-            setUserNotificationMessage(`Tím '${teamName}' bol úspešne odstránený.`, 'success');
+            setUserNotificationMessage(`Tím '${teamName}' bol odstránený.`, 'success');
             closeEditModal();
         } else {
             throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
