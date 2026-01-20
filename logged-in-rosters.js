@@ -2418,7 +2418,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
     let memberTypeLabel = '';
     switch (memberTypeToAdd) {
         case 'player':          memberTypeLabel = 'hráč'; break;
-        case 'womenTeamMember': memberTypeLabel = 'členka realizačného tímu (žena)'; break;
+        case 'womenTeamMember': memberTypeLabel = 'člen realizačného tímu (žena)'; break;
         case 'menTeamMember':   memberTypeLabel = 'člen realizačného tímu (muž)'; break;
         case 'driverFemale':    memberTypeLabel = 'šoférka (žena)'; break;
         case 'driverMale':      memberTypeLabel = 'šofér (muž)'; break;
