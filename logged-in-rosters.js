@@ -9,36 +9,52 @@ function useRegistrationLimits() {
     });
 
     useEffect(() => {
+        let isMounted = true;
+
         const update = (source, data) => {
-            if (!data) return;
+            if (!data || !isMounted) return;
+
             const newLimits = {
                 numberOfPlayers: Number(data.numberOfPlayers) || 0,
                 numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0,
             };
-            setLimits(newLimits);
-            console.log(`Limity aktualizované (${source}):`, newLimits);
+
+            // Len ak sa niečo zmení, aktualizujeme a logujeme
+            if (
+                newLimits.numberOfPlayers !== limits.numberOfPlayers ||
+                newLimits.numberOfImplementationTeam !== limits.numberOfImplementationTeam
+            ) {
+                setLimits(newLimits);
+                console.log(`Limity aktualizované (${source}):`, newLimits);
+            }
         };
 
-        if (window.registrationLimits) {
-            update("initial", window.registrationLimits);
+        // 1. Skúsime okamžite, ak už niečo je (zriedkavé, ale možné)
+        if (window.registrationLimits?.numberOfPlayers !== undefined) {
+            update("initial (sync)", window.registrationLimits);
         }
 
-        const handleEvent = (e) => update("event", e.detail);
+        // 2. Počúvame event z header.js
+        const handleEvent = (e) => {
+            update("event registrationLimitsUpdated", e.detail);
+        };
         window.addEventListener('registrationLimitsUpdated', handleEvent);
 
-        // polling ako poistka
+        // 3. Polling ako posledná záchrana – beží max ~10 sekúnd
         const interval = setInterval(() => {
             if (window.registrationLimits?.numberOfPlayers !== undefined) {
-                update("polling", window.registrationLimits);
-                clearInterval(interval);
+                update("polling (found)", window.registrationLimits);
+                clearInterval(interval); // zastavíme polling hneď ako nájdeme dáta
             }
-        }, 500);
+        }, 400); // častejší polling, aby to bolo rýchlejšie
 
+        // Cleanup
         return () => {
+            isMounted = false;
             window.removeEventListener('registrationLimitsUpdated', handleEvent);
             clearInterval(interval);
         };
-    }, []);
+    }, []); // závislosti prázdne → spustí sa iba raz
 
     return limits;
 }
@@ -1640,18 +1656,16 @@ function RostersApp() {
   const [categoriesWithDates, setCategoriesWithDates] = useState({}); // Pridané
 
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
+    
   useEffect(() => {
-    if (!window.registrationLimits) {
-      console.warn("window.registrationLimits nie je definované → používam fallback hodnoty");
-    } else {
-      console.log("---------------------- Použité limity z window.registrationLimits:", {
-        maxHracovVTyme: maxPlayersPerTeam,
-        maxClenovRealizacnehoTimu: maxImplementationMembers,
-      });
+    if (maxPlayersPerTeam > 0 || maxImplementationMembers > 0) {
+        console.log("---------------------- Použité limity z registrationLimits:", {
+            maxHracovVTyme: maxPlayersPerTeam,
+            maxClenovRealizacnehoTimu: maxImplementationMembers,
+        });
     }
-  }, []);
-
+  }, [maxPlayersPerTeam, maxImplementationMembers]);
+    
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
