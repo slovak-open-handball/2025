@@ -192,6 +192,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
                 // Slovenské pekné názvy polí
                 const niceLabels = {
+                    'arrival.type': 'Typ dopravy',
+                    'arrival.time': 'Čas príchodu',
+                    'accommodation.type': 'Typ ubytovania',
                     'teamName':                 'Názov tímu',
                     'arrival.type':             'Typ dopravy',
                     'arrival.time':             'Čas príchodu',
