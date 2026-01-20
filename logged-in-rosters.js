@@ -1180,7 +1180,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                             }
                           }
                         },
-                        placeholder: '00–23',
                         pattern: '[0-9]*',
                         inputMode: 'numeric',
                         disabled: isDataEditDeadlinePassed,
@@ -1212,7 +1211,6 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                             }
                           }
                         },
-                        placeholder: '00–59',
                         pattern: '[0-9]*',
                         inputMode: 'numeric',
                         disabled: isDataEditDeadlinePassed,
@@ -1608,7 +1606,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                             }
                           }
                         },
-                        placeholder: '00–23',
                         pattern: '[0-9]*',
                         inputMode: 'numeric',
                         disabled: isDataEditDeadlinePassed,
@@ -1640,7 +1637,6 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                             }
                           }
                         },
-                        placeholder: '00–59',
                         pattern: '[0-9]*',
                         inputMode: 'numeric',
                         disabled: isDataEditDeadlinePassed,
