@@ -49,53 +49,99 @@ function useRegistrationLimits() {
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
 
-    // Kľúče, ktoré nikdy nespúšťajú notifikáciu
+    // Ignorované kľúče – žiadna notifikácia
     const ignoredKeys = new Set([
         '_userId', '_teamIndex', '_registeredBy', 'id', 'uniqueId', 'type',
         'originalArray', 'originalIndex', 'password', 'emailVerified',
         'isMenuToggled', 'role', 'approved', 'registrationDate',
         'passwordLastChanged', 'teams', 'categories', 'timestamp', 'note',
-        // interné poľa pre flattened tímy
         '_category', '_menTeamMembersCount', '_womenTeamMembersCount',
         '_menDriversCount', '_womenDriversCount', '_players', '_teamTshirtsMap'
     ]);
 
     const normalize = (value, path) => {
         if (value == null) return '';
-
-        // Dátumy
         if (typeof value.toDate === 'function') {
             return formatDateFn(value.toDate());
         }
-
-        // Špeciálne formáty podľa cesty
         const lowerPath = path.toLowerCase();
-
         if (lowerPath === 'arrival' || lowerPath.endsWith('.arrival')) {
-            return value.type 
-                ? `${value.type}${value.time ? ` (${value.time})` : ''}` 
+            return value.type
+                ? `${value.type}${value.time ? ` (${value.time})` : ''}`
                 : '';
         }
-
-        if (lowerPath.includes('dateofbirth') || 
-            lowerPath.includes('registrationdate') || 
+        if (lowerPath.includes('dateofbirth') ||
+            lowerPath.includes('registrationdate') ||
             lowerPath.includes('date')) {
             if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
                 return formatDateFn(value);
             }
         }
-
-        // Objekty
         if (typeof value === 'object' && !Array.isArray(value)) {
             return JSON.stringify(value);
         }
-
         return String(value);
     };
 
+    // ─── ŠPECIÁLNE SPRACOVANIE STRAVOVANIA (packageDetails.meals) ─────────────
+    const processMealsChanges = (origMeals, updMeals) => {
+        if (!origMeals || !updMeals) return;
+
+        const allDates = new Set([
+            ...Object.keys(origMeals || {}),
+            ...Object.keys(updMeals || {})
+        ]);
+
+        allDates.forEach(date => {
+            // Účastnícka karta
+            if (date === 'participantCard') {
+                const o = origMeals[date] === 1 ? 'Áno' : 'Nie';
+                const u = updMeals[date] === 1 ? 'Áno' : 'Nie';
+                if (o !== u) {
+                    changes.push(`Detail balíka → Účastnícka karta: z "${o}" na "${u}"`);
+                }
+                return;
+            }
+
+            // Jednotlivé jedlá v daný deň
+            const origDay = origMeals[date] || {};
+            const updDay = updMeals[date] || {};
+
+            const mealTranslations = {
+                breakfast:    'raňajky',
+                lunch:        'obed',
+                dinner:       'večera',
+                refreshment:  'občerstvenie'
+            };
+
+            Object.keys(mealTranslations).forEach(mealKey => {
+                const oVal = origDay[mealKey] === 1 ? 'Áno' :
+                             origDay[mealKey] === 0 ? 'Nie' : '-';
+                const uVal = updDay[mealKey] === 1 ? 'Áno' :
+                             updDay[mealKey] === 0 ? 'Nie' : '-';
+
+                if (oVal !== uVal) {
+                    const slovakMeal = mealTranslations[mealKey];
+                    const niceDate = formatDateFn(date);
+                    changes.push(
+                        `Detail balíka → Stravovanie ${niceDate} – ${slovakMeal}: z "${oVal}" na "${uVal}"`
+                    );
+                }
+            });
+        });
+    };
+
+    // Spustenie špeciálneho spracovania stravovania
+    if (original?.packageDetails?.meals || updated?.packageDetails?.meals) {
+        processMealsChanges(
+            original?.packageDetails?.meals,
+            updated?.packageDetails?.meals
+        );
+    }
+
+    // ─── NORMÁLNE POROVNANIE ostatných polí ──────────────────────────────────
     const compare = (o, u, prefix = '') => {
         const keys = new Set([...Object.keys(o || {}), ...Object.keys(u || {})]);
-
         for (const key of keys) {
             if (ignoredKeys.has(key)) continue;
 
@@ -103,7 +149,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             const ov = o?.[key];
             const uv = u?.[key];
 
-            // Rekurzívne porovnanie vnorených objektov
+            // Rekurzívne volanie pre vnorené objekty
             if (typeof ov === 'object' && ov !== null && !Array.isArray(ov) &&
                 typeof uv === 'object' && uv !== null && !Array.isArray(uv)) {
                 compare(ov, uv, currentPath);
@@ -115,18 +161,16 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 const origMap = new Map((ov || []).map(t => [String(t.size).trim(), t.quantity || 0]));
                 const updMap = new Map((uv || []).map(t => [String(t.size).trim(), t.quantity || 0]));
                 const allSizes = new Set([...origMap.keys(), ...updMap.keys()]);
-
                 for (const size of allSizes) {
                     const oldQ = origMap.get(size) || 0;
                     const newQ = updMap.get(size) || 0;
-
                     if (oldQ !== newQ) {
                         if (oldQ === 0) {
                             changes.push(`Pridané tričká (${size}): ${newQ} ks`);
                         } else if (newQ === 0) {
                             changes.push(`Odstránené tričká (${size}): ${oldQ} ks`);
                         } else {
-                            changes.push(`Zmena počtu tričiek (${size}): z '${oldQ} ks' na '${newQ} ks'`);
+                            changes.push(`Zmena počtu tričiek (${size}): z ${oldQ} ks na ${newQ} ks`);
                         }
                     }
                 }
@@ -141,40 +185,49 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     .replace(/\./g, ' → ')
                     .replace(/\[(\d+)\]/g, ' [$1]');
 
-                // Pekné pomenovania najčastejších polí
-                if (currentPath === 'teamName')              label = 'Názov tímu';
-                if (currentPath === 'arrival.type')          label = 'Typ dopravy';
-                if (currentPath === 'arrival.time')          label = 'Čas príchodu';
-                if (currentPath === 'accommodation.type')    label = 'Typ ubytovania';
-                if (currentPath === 'packageDetails.name')   label = 'Balík';
-                if (currentPath === 'firstName')             label = 'Meno';
-                if (currentPath === 'lastName')              label = 'Priezvisko';
-                if (currentPath === 'dateOfBirth')           label = 'Dátum narodenia';
-                if (currentPath === 'jerseyNumber')          label = 'Číslo dresu';
-                if (currentPath === 'registrationNumber')    label = 'Registračné číslo';
-                if (currentPath.includes('address.street'))       label = 'Ulica';
-                if (currentPath.includes('address.houseNumber'))  label = 'Popisné číslo';
-                if (currentPath.includes('address.postalCode'))   label = 'PSČ';
-                if (currentPath.includes('address.city'))         label = 'Mesto/obec';
-                if (currentPath.includes('address.country'))      label = 'Štát';
+                // Slovenské pekné názvy polí
+                const niceLabels = {
+                    'teamName':                 'Názov tímu',
+                    'arrival.type':             'Typ dopravy',
+                    'arrival.time':             'Čas príchodu',
+                    'accommodation.type':       'Typ ubytovania',
+                    'packageDetails.name':      'Názov balíka',
+                    'packageDetails':           'Detail balíka',      // fallback
+                    'firstName':                'Meno',
+                    'lastName':                 'Priezvisko',
+                    'dateOfBirth':              'Dátum narodenia',
+                    'jerseyNumber':             'Číslo dresu',
+                    'registrationNumber':       'Registračné číslo',
+                    'address.street':           'Ulica',
+                    'address.houseNumber':      'Popisné číslo',
+                    'address.postalCode':       'PSČ',
+                    'address.city':             'Mesto/obec',
+                    'address.country':          'Štát',
+                };
 
-                changes.push(`Zmena ${label}: z '${a || '-'}' na '${b || '-'}'`);
+                if (niceLabels[currentPath]) {
+                    label = niceLabels[currentPath];
+                } else if (currentPath.startsWith('packageDetails.meals.')) {
+                    // Toto už spracovávame vyššie v processMealsChanges
+                    continue;
+                }
+
+                changes.push(`Zmena ${label}: z '${a || '-'}' na '${b || '-'}`);
             }
         }
     };
 
     compare(original, updated);
 
-    // Špeciálne porovnanie arrival (pre istotu, keby vyššie neprešlo)
-    const oa = original?.arrival 
-        ? `${original.arrival.type || ''}${original.arrival.time ? ` (${original.arrival.time})` : ''}` 
+    // Špeciálne porovnanie arrival (pre istotu)
+    const oa = original?.arrival
+        ? `${original.arrival.type || ''}${original.arrival.time ? ` (${original.arrival.time})` : ''}`
         : '';
-    const ua = updated?.arrival 
-        ? `${updated.arrival.type || ''}${updated.arrival.time ? ` (${updated.arrival.time})` : ''}` 
+    const ua = updated?.arrival
+        ? `${updated.arrival.type || ''}${updated.arrival.time ? ` (${updated.arrival.time})` : ''}`
         : '';
-
     if (oa !== ua) {
-        changes.push(`Zmena dopravy: z '${oa || '-'}' na '${ua || '-'}'`);
+        changes.push(`Zmena dopravy: z '${oa || '-'}' na '${ua || '-'}`);
     }
 
     return changes;
