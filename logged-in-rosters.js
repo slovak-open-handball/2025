@@ -51,7 +51,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     // Ignorované kľúče – žiadna notifikácia
     const ignoredKeys = new Set([
-        '_userId', '_teamIndex', '_registeredBy', 'id', 'uniqueId', 'type',
+        '_userId', '_teamIndex', '_registeredBy', 'id', 'uniqueId',
         'originalArray', 'originalIndex', 'password', 'emailVerified',
         'isMenuToggled', 'role', 'approved', 'registrationDate',
         'passwordLastChanged', 'teams', 'categories', 'timestamp', 'note',
