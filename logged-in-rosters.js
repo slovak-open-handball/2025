@@ -1564,8 +1564,12 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 function RostersApp() {
   const auth = getAuth();
   const db = getFirestore();
-  const maxPlayersPerTeam = Number(window.registrationLimits?.numberOfPlayers);
-  const maxImplementationMembers = Number(window.registrationLimits?.numberOfImplementationTeam);
+  const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(
+    Number(window.registrationLimits?.numberOfPlayers) || 0
+  );
+  const [maxImplementationMembers, setMaxImplementationMembers] = useState(
+    Number(window.registrationLimits?.numberOfImplementationTeam) || 0
+  );    
   const [user, setUser] = useState(null);
   const [userProfileData, setUserProfileData] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -1593,6 +1597,52 @@ function RostersApp() {
   const [categoriesWithDates, setCategoriesWithDates] = useState({}); // Pridané
 
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+  useEffect(() => {
+    const handleLimitsUpdate = () => {
+      const players = Number(window.registrationLimits?.numberOfPlayers) || 0;
+      const impl    = Number(window.registrationLimits?.numberOfImplementationTeam) || 0;
+
+      setMaxPlayersPerTeam(players);
+      setMaxImplementationMembers(impl);
+
+      if (players > 0 || impl > 0) {
+        console.log("Limity aktualizované z window.registrationLimits:", {
+          maxHracovVTyme: players,
+          maxClenovRealizacnehoTimu: impl,
+        });
+      }
+    };
+
+    // okamžite skúsime načítať (pre prípad, že už sú nastavené)
+    handleLimitsUpdate();
+
+    // Pridáme listener na event, ktorý header.js môže vysielať
+    window.addEventListener('registrationLimitsUpdated', handleLimitsUpdate);
+
+    // Prípadne aj fallback: periodicky kontrolujeme (napr. každých 800 ms max 10×)
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (
+        window.registrationLimits?.numberOfPlayers ||
+        window.registrationLimits?.numberOfImplementationTeam
+      ) {
+        handleLimitsUpdate();
+        clearInterval(interval);
+      }
+      if (attempts >= 12) {  // ~10 sekúnd
+        clearInterval(interval);
+        console.warn("window.registrationLimits sa nepodarilo načítať ani po 10 s");
+      }
+    }, 800);
+
+    return () => {
+      window.removeEventListener('registrationLimitsUpdated', handleLimitsUpdate);
+      clearInterval(interval);
+    };
+  }, []);
+    
 
   useEffect(() => {
     if (!window.registrationLimits) {
