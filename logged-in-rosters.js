@@ -532,7 +532,7 @@ function MemberDetailsModal({
         const value = e.target.value;
         setRegistrationNumber(value);
         checkRegistrationDuplicate(value);
-    };
+    };    
 
     // Inicializácia hodnôt pri otvorení modálu
     useEffect(() => {
@@ -1599,50 +1599,48 @@ function RostersApp() {
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
   useEffect(() => {
-    const handleLimitsUpdate = () => {
-      const players = Number(window.registrationLimits?.numberOfPlayers) || 0;
-      const impl    = Number(window.registrationLimits?.numberOfImplementationTeam) || 0;
+    const updateLimits = (source = "initial", dataSource = window.registrationLimits) => {
+        if (!dataSource) return;
 
-      setMaxPlayersPerTeam(players);
-      setMaxImplementationMembers(impl);
+        const players = Number(dataSource.numberOfPlayers) || 0;
+        const impl = Number(dataSource.numberOfImplementationTeam) || 0;
 
-      if (players > 0 || impl > 0) {
-        console.log("Limity aktualizované z window.registrationLimits:", {
-          maxHracovVTyme: players,
-          maxClenovRealizacnehoTimu: impl,
+        setMaxPlayersPerTeam(players);
+        setMaxImplementationMembers(impl);
+
+        console.log(`Limity aktualizované (${source}):`, {
+            maxHracovVTyme: players,
+            maxClenovRealizacnehoTimu: impl,
         });
-      }
     };
 
-    // okamžite skúsime načítať (pre prípad, že už sú nastavené)
-    handleLimitsUpdate();
+    // 1. Okamžité načítanie, ak už niečo je
+    if (window.registrationLimits) {
+        updateLimits("okamžité načítanie z window");
+    }
 
-    // Pridáme listener na event, ktorý header.js môže vysielať
-    window.addEventListener('registrationLimitsUpdated', handleLimitsUpdate);
+    // 2. Počúvanie na event z header.js
+    const handleEvent = (e) => {
+        updateLimits("event registrationLimitsUpdated", e.detail);
+    };
 
-    // Prípadne aj fallback: periodicky kontrolujeme (napr. každých 800 ms max 10×)
-    let attempts = 0;
+    window.addEventListener('registrationLimitsUpdated', handleEvent);
+
+    // 3. Voliteľný krátky fallback polling (max 6 sekúnd)
     const interval = setInterval(() => {
-      attempts++;
-      if (
-        window.registrationLimits?.numberOfPlayers ||
-        window.registrationLimits?.numberOfImplementationTeam
-      ) {
-        handleLimitsUpdate();
-        clearInterval(interval);
-      }
-      if (attempts >= 12) {  // ~10 sekúnd
-        clearInterval(interval);
-        console.warn("window.registrationLimits sa nepodarilo načítať ani po 10 s");
-      }
-    }, 800);
+        if (window.registrationLimits?.numberOfPlayers !== undefined) {
+            updateLimits("polling – našlo sa");
+            clearInterval(interval);
+        }
+    }, 600);
+
+    setTimeout(() => clearInterval(interval), 6000); // poistka
 
     return () => {
-      window.removeEventListener('registrationLimitsUpdated', handleLimitsUpdate);
-      clearInterval(interval);
+        window.removeEventListener('registrationLimitsUpdated', handleEvent);
+        clearInterval(interval);
     };
-  }, []);
-    
+}, []);
 
   useEffect(() => {
     if (!window.registrationLimits) {
