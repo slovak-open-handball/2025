@@ -98,7 +98,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 const o = origMeals[date] === 1 ? 'Áno' : 'Nie';
                 const u = updMeals[date] === 1 ? 'Áno' : 'Nie';
                 if (o !== u) {
-                    changes.push(`Detail balíka → Účastnícka karta: z "${o}" na "${u}"`);
+                    changes.push(`Detail balíka → Účastnícka karta: z '${o}' na '${u}'`);
                 }
                 return;
             }
@@ -124,7 +124,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     const slovakMeal = mealTranslations[mealKey];
                     const niceDate = formatDateFn(date);
                     changes.push(
-                        `Detail balíka → Stravovanie ${niceDate} – ${slovakMeal}: z "${oVal}" na "${uVal}"`
+                        `Detail balíka → Stravovanie ${niceDate} – ${slovakMeal}: z '${oVal}' na '${uVal}'`
                     );
                 }
             });
@@ -175,7 +175,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                         } else if (newQ === 0) {
                             changes.push(`Odstránené tričká (${size}): ${oldQ} ks`);
                         } else {
-                            changes.push(`Zmena počtu tričiek (${size}): z ${oldQ} ks na ${newQ} ks`);
+                            changes.push(`Zmena počtu tričiek (${size}): z '${oldQ} ks' na '${newQ} ks'`);
                         }
                     }
                 }
@@ -241,7 +241,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         ? `${updated.arrival.type || ''}${updated.arrival.time ? ` (${updated.arrival.time})` : ''}`
         : '';
     if (oa !== ua) {
-        changes.push(`Zmena dopravy: z '${oa || '-'}' na '${ua || '-'}`);
+        changes.push(`Zmena dopravy: z '${oa || '-'}' na '${ua || '-'}'`);
     }
 
     return changes;
