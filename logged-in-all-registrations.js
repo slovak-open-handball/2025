@@ -1183,7 +1183,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     // Utility to generate a unique ID for new t-shirt entries
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
 
-
+    React.useEffect(() => {
+        if (isEditModalOpen) {
+            // Keď sa otvorí nové edit modal → istota, že potvrdenia sú zatvorené
+            setIsConfirmDeleteOpen(false);
+            setIsConfirmDeleteTeamOpen(false);
+        }
+    }, [isEditModalOpen]);
+    
     React.useEffect(() => {
         const fetchTeamDataForSelects = async () => {
             if (db && (title.includes('Upraviť tím') || title.includes('Pridať nový tím'))) { // Changed for Add team modal
@@ -2635,6 +2642,11 @@ function AllRegistrationsApp() {
       setEditingDocRef(null);
       setEditingDataPath('');
       setIsNewEntry(false); // Resetovať príznak
+
+      setIsConfirmDeleteOpen(false);
+      setDeleteConfirmMessage('');
+      setIsConfirmDeleteTeamOpen(false);
+      setDeleteTeamConfirmMessage('');
       // console.log("closeEditModal: Closing modal."); // Debug log
   };
 
@@ -3718,6 +3730,22 @@ const clearFilter = (column) => {
             console.log("Notifikácia o pridaní nového člena uložená (bez diffu).");
         }
 
+        teamToUpdate[memberArrayPath] = currentMemberArray;
+
+        // VŽDY prepočítať počty
+        const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
+    
+        // Aktualizovať pole tímov v kategórii
+        const updatedTeamsForCategory = [...teamsInCategory];
+        updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
+    
+        // Uložiť celé pole naspäť
+        const updates = {};
+        updates[`teams.${category}`] = updatedTeamsForCategory;
+    
+        await updateDoc(targetDocRef, updates);
+        // console.log(`→ Uložené: teams.${category}[${teamIndex}] s prepočítanými počtami`);
+
         // Zobrazenie používateľovi
         setUserNotificationMessage(
             `Pridaný ${memberType} ${memberName} do tímu ${teamName} (${teamCategory})`,
@@ -3816,6 +3844,23 @@ const clearFilter = (column) => {
         setUserNotificationMessage(`Zmeny uložené (${memberName}, ${teamName}).`, 'success');
     
         currentMemberArray[memberArrayIndex] = updatedMember;
+
+        teamToUpdate[memberArrayPath] = currentMemberArray;
+    
+        // VŽDY prepočítať počty
+        const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
+    
+        // Aktualizovať pole tímov v kategórii
+        const updatedTeamsForCategory = [...teamsInCategory];
+        updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
+    
+        // Uložiť celé pole naspäť
+        const updates = {};
+        updates[`teams.${category}`] = updatedTeamsForCategory;
+    
+        await updateDoc(targetDocRef, updates);
+        // console.log(`→ Uložené: teams.${category}[${teamIndex}] s prepočítanými počtami`);
+        
     }
     
     // ────────────────────────────────────────────────────────────────
@@ -3938,6 +3983,7 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
 
         // Notifikácia používateľovi
         setUserNotificationMessage(`${memberName} bol úspešne odstránený z tímu.`, 'success');
+        closeEditModal();
 
         // Zatvoríme modálne okno úpravy (ak bolo otvorené)
         closeEditModal();
@@ -4015,6 +4061,7 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
             }
 
             setUserNotificationMessage(`Tím '${teamName}' bol úspešne odstránený.`, 'success');
+            closeEditModal();
             closeEditModal(); // Zatvoriť modálne okno po odstránení
         } else {
             throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
