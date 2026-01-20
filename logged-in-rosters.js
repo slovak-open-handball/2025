@@ -427,10 +427,6 @@ function MemberDetailsModal({
     const [dateOfBirthError, setDateOfBirthError] = useState('');
     const [isDateOfBirthValid, setIsDateOfBirthValid] = useState(true);
 
-    const { numberOfPlayers, numberOfImplementationTeam } = useRegistrationLimits();
-    const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(numberOfPlayers);
-    const [maxImplementationMembers, setMaxImplementationMembers] = useState(numberOfImplementationTeam);
-
     // Nové stavy pre kontrolu registračného čísla
     const [regNumberError, setRegNumberError] = useState('');
     const [isRegNumberUnique, setIsRegNumberUnique] = useState(true);
