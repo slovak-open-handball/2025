@@ -146,6 +146,11 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             if (ignoredKeys.has(key)) continue;
 
             const currentPath = prefix ? `${prefix}.${key}` : key;
+
+            if (currentPath.startsWith('packageDetails.meals')) {
+                continue;
+            }
+            
             const ov = o?.[key];
             const uv = u?.[key];
 
