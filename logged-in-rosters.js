@@ -232,10 +232,10 @@ function AddMemberTypeModal({
   const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
   // Výpočet aktuálneho stavu limitov
-  const currentPlayersCount = currentTeam?.players || 0;
+  const currentPlayersCount = Number(currentTeam?.players) || 0;
   const currentImplCount = 
-    (currentTeam?.menTeamMembers  || 0) + 
-    (currentTeam?.womenTeamMembers || 0);
+    (Number(currentTeam?.menTeamMembers) || 0) + 
+    (Number(currentTeam?.womenTeamMembers) || 0);
 
   const playersLimitReached = currentPlayersCount >= maxPlayersPerTeam;
   const implLimitReached    = currentImplCount    >= maxImplementationMembers;
