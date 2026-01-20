@@ -262,6 +262,16 @@ function AddMemberTypeModal({
     cursor: isButtonDisabled ? 'not-allowed' : 'pointer'
   };
 
+  console.log("=== AddMemberTypeModal DEBUG ===", {
+      teamName: currentTeam?.teamName || "neznámy",
+      menTeamMembers: currentTeam?.menTeamMembers,     // malo by byť číslo, napr. 1
+      womenTeamMembers: currentTeam?.womenTeamMembers, // malo by byť číslo, napr. 1
+      currentImplCount: currentImplCount,
+      maxImpl: maxImplementationMembers,
+      implLimitReached: implLimitReached,
+      shouldBeEnabled: currentImplCount < maxImplementationMembers
+    });
+
   return React.createElement(
     'div',
     { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]' },
