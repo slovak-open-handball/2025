@@ -200,33 +200,62 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         let mealsHtml = null;
                         if (pkg.meals) {
                             const mealDates = Object.keys(pkg.meals).filter(key => key !== 'participantCard').sort();
-                            mealsHtml = React.createElement('div', { className: 'ml-4 text-sm text-gray-600' },
-                                React.createElement('strong', null, 'Stravovanie:'),
-                                mealDates.length > 0 ? (
-                                    mealDates.map(date => {
-                                        const dateObj = new Date(date + 'T00:00:00');
-                                        const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
-                                        const mealsForDay = pkg.meals[date];
-                                        const includedItems = [];
-                                        if (mealsForDay?.breakfast === 1) includedItems.push('raňajky');
-                                        if (mealsForDay?.lunch === 1) includedItems.push('obed');
-                                        if (mealsForDay?.dinner === 1) includedItems.push('večera');
-                                        if (mealsForDay?.refreshment === 1) includedItems.push('občerstvenie');
 
-                                        if (includedItems.length > 0) {
-                                            return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
-                                        }
-                                        return null;
-                                    })
-                                ) : React.createElement('p', null, 'Žiadne stravovanie definované.')
-                            );
-                            if (pkg.meals.participantCard === 1) {
-                                mealsHtml = React.createElement(React.Fragment, null,
-                                    mealsHtml,
-                                    React.createElement('p', { className: 'font-bold text-gray-700 ml-4 mt-1' }, 'Zahŕňa účastnícku kartu.')
+                            let mealsHtml = null;
+                            if (pkg.meals) {
+                                const mealDates = Object.keys(pkg.meals)
+                                    .filter(key => key !== 'participantCard')
+                                    .sort();
+                            
+                                const hasAnyMealSelected = mealDates.some(date => {
+                                    const day = pkg.meals[date];
+                                    return (
+                                        day?.breakfast === 1 ||
+                                        day?.lunch === 1 ||
+                                        day?.dinner === 1 ||
+                                        day?.refreshment === 1
+                                    );
+                                });
+
+                                mealsHtml = React.createElement(
+                                    'div',
+                                    { className: 'ml-4 text-sm text-gray-600' },
+                                    React.createElement('strong', null, 'Stravovanie: '),
+                                    hasAnyMealSelected ? (
+                                        mealDates.map(date => {
+                                            const dateObj = new Date(date + 'T00:00:00');
+                                            const displayDate = dateObj.toLocaleDateString('sk-SK', {
+                                                weekday: 'short',
+                                                day: 'numeric',
+                                                month: 'numeric'
+                                            });
+                                            const day = pkg.meals[date];
+                                            const included = [];
+                                            if (day?.breakfast === 1) included.push('raňajky');
+                                            if (day?.lunch === 1) included.push('obed');
+                                            if (day?.dinner === 1) included.push('večera');
+                                            if (day?.refreshment === 1) included.push('občerstvenie');
+                            
+                                            return included.length > 0
+                                                ? React.createElement('p', { key: date }, `${displayDate}: ${included.join(', ')}`)
+                                                : null;
+                                        }).filter(Boolean)
+                                    ) : React.createElement('span', null, 'bez stravovania')
                                 );
+                            
+                                if (pkg.meals.participantCard === 1) {
+                                    mealsHtml = React.createElement(
+                                        React.Fragment,
+                                        null,
+                                        mealsHtml,
+                                        React.createElement(
+                                            'p',
+                                            { className: 'font-bold text-gray-700 ml-4 mt-1' },
+                                            'Zahŕňa účastnícku kartu.'
+                                        )
+                                    );
+                                }
                             }
-                        }
 
                         packageDetailsHtml = React.createElement(React.Fragment, null,
                             React.createElement('p', null, React.createElement('strong', null, 'Balíček: '), `${pkg.name || '-'} (${pkg.price || 0} € / osoba)`),
