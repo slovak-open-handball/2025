@@ -238,7 +238,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                             ? React.createElement('p', { key: date }, `${displayDate}: ${included.join(', ')}`)
                                             : null;
                                     }).filter(Boolean)
-                                ) : React.createElement('span', null, 'bez stravovania')
+                                ) : React.createElement('span', null, 'bez stravy')
                             );
                     
                             if (pkg.meals.participantCard === 1) {
