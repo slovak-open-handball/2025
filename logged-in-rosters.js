@@ -2875,11 +2875,11 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
                       React.createElement('div', { className: 'px-6 pt-4 w-full' },
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Kategória: ${categoryName}`),
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Počet hráčov: ${team.players || 0}`),
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}`),
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Členovia realizačného tímu (muži): ${team.menTeamMembers || 0}`),
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Šoféri (ženy): ${team.driverDetailsFemale?.length || 0}`),
-                        React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Šoféri (muži): ${team.driverDetailsMale?.length || 0}`),
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Hráči: ${team.players || 0}`),
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Člen realizačného tímu (žena): ${team.womenTeamMembers || 0}`),
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Člen realizačného tímu (muž): ${team.menTeamMembers || 0}`),
+                        React.createElement('p', { className: 'text-md text-gray-700' }, `Šofér (žena): ${team.driverDetailsFemale?.length || 0}`),
+                        React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Šofér (muž): ${team.driverDetailsMale?.length || 0}`),
 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
