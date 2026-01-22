@@ -6,7 +6,24 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 const currentUserEmail = window.globalUserProfileData?.email || null;
 
-const createTeamAssignmentNotification = async (action, team) => {
+const AddGroupsApp = (props) => {
+    const { useState, useEffect, useRef } = React;
+    const teamsWithoutGroupRef = React.useRef(null);
+
+    const [allTeams, setAllTeams] = useState([]);
+    const [userTeamsData, setUserTeamsData] = useState([]);
+    const [superstructureTeams, setSuperstructureTeams] = useState({});
+    const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
+    const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
+    const [selectedCategoryId, setSelectedCategoryId] = useState('');
+    const [selectedGroupName, setSelectedGroupName] = useState('');
+    const [notification, setNotification] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [teamToEdit, setTeamToEdit] = useState(null);
+    const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
+
+
+    const createTeamAssignmentNotification = async (action, team) => {
         if (!window.db) return;
 
         if (!currentUserEmail) {
@@ -61,23 +78,6 @@ const createTeamAssignmentNotification = async (action, team) => {
             console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
         }
     };
-};
-
-const AddGroupsApp = (props) => {
-    const { useState, useEffect, useRef } = React;
-    const teamsWithoutGroupRef = React.useRef(null);
-
-    const [allTeams, setAllTeams] = useState([]);
-    const [userTeamsData, setUserTeamsData] = useState([]);
-    const [superstructureTeams, setSuperstructureTeams] = useState({});
-    const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
-    const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
-    const [selectedCategoryId, setSelectedCategoryId] = useState('');
-    const [selectedGroupName, setSelectedGroupName] = useState('');
-    const [notification, setNotification] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [teamToEdit, setTeamToEdit] = useState(null);
-    const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
 
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
