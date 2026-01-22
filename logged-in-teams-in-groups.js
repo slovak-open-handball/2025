@@ -768,7 +768,7 @@ const AddGroupsApp = (props) => {
                         finalTeamNamePreview && React.createElement(
                             'div',
                             { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
-                            React.createElement('p', { className: 'text-sm text-gray-600' }, 'Finálny názov v databáze bude:'),
+                            React.createElement('p', { className: 'text-sm text-gray-600' }, 'Finálny názov bude:'),
                             React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
                         ),
                         isDuplicate && React.createElement('p', { className: 'mt-2 text-sm text-red-600 font-medium' }, '⚠️ Tím s týmto názvom už existuje!')
