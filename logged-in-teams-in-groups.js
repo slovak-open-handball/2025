@@ -224,140 +224,137 @@ const AddGroupsApp = (props) => {
         }
     };
 
-    const handleUpdateTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
-      if (!window.db || !originalTeam) return;
-
-      const categoryName = categoryIdToNameMap[categoryId];
-      if (!categoryName) return;
+    const handleUpdateAnyTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
+        if (!window.db || !originalTeam) return;
+        const categoryName = categoryIdToNameMap[categoryId];
+        if (!categoryName) return;
     
-      const finalTeamName = `${categoryName} ${teamName.trim()}`;
+        const finalTeamName = `${categoryName} ${teamName.trim()}`;
     
-      // === Globálny tím (superštruktúra) ===
-      if (originalTeam.isSuperstructureTeam) {
-        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+        // === Globálny tím (superštruktúra) ===
+        if (originalTeam.isSuperstructureTeam) {
+            const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
     
-        try {
-          const docSnap = await getDoc(superstructureDocRef);
-          if (!docSnap.exists()) return;
-          const data = docSnap.data() || {};
-          const oldCategory = originalTeam.category;
-          let oldTeams = [...(data[oldCategory] || [])];
-          const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
-          if (idx === -1) {
-            setUiNotification({ id: Date.now() + Math.random(), message: "Pôvodný tím sa nenašiel", type: 'error' });
-            return;
-          }
-          oldTeams.splice(idx, 1);
+            try {
+                const docSnap = await getDoc(superstructureDocRef);
+                if (!docSnap.exists()) return;
+                const data = docSnap.data() || {};
+                const oldCategory = originalTeam.category;
+                let oldTeams = [...(data[oldCategory] || [])];
+                const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
+                if (idx === -1) {
+                    setUiNotification({ id: Date.now() + Math.random(), message: "Pôvodný tím sa nenašiel", type: 'error' });
+                    return;
+                }
+                oldTeams.splice(idx, 1);
     
-          const categoryChanged = oldCategory !== categoryName;
-          let targetTeams = categoryChanged ? [...(data[categoryName] || [])] : oldTeams;
+                const categoryChanged = oldCategory !== categoryName;
+                let targetTeams = categoryChanged ? [...(data[categoryName] || [])] : oldTeams;
     
-          let newOrder = null;
-          const newGroup = groupName || null;
-          if (newGroup) {
-            const inGroup = targetTeams.filter(t => t.groupName === newGroup);
-            const max = inGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
-            newOrder = (originalTeam.groupName === newGroup && !categoryChanged)
-              ? (originalTeam.order ?? max + 1)
-              : max + 1;
-            if (order != null && !isNaN(order)) newOrder = parseInt(order, 10);
-          }
+                let newOrder = null;
+                const newGroup = groupName || null;
+                if (newGroup) {
+                    const inGroup = targetTeams.filter(t => t.groupName === newGroup);
+                    const max = inGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
+                    newOrder = (originalTeam.groupName === newGroup && !categoryChanged)
+                        ? (originalTeam.order ?? max + 1)
+                        : max + 1;
+                    if (order != null && !isNaN(order)) newOrder = parseInt(order, 10);
+                }
     
-          const updatedTeam = {
-            id: originalTeam.id,
-            teamName: finalTeamName,
-            groupName: newGroup,
-            order: newOrder,
-          };
+                const updatedTeam = {
+                    id: originalTeam.id,
+                    teamName: finalTeamName,
+                    groupName: newGroup,
+                    order: newOrder,
+                };
     
-          targetTeams.push(updatedTeam);
+                targetTeams.push(updatedTeam);
     
-          const updatePayload = { [oldCategory]: oldTeams };
-          if (categoryChanged) updatePayload[categoryName] = targetTeams;
-          else updatePayload[oldCategory] = targetTeams;
+                const updatePayload = { [oldCategory]: oldTeams };
+                if (categoryChanged) updatePayload[categoryName] = targetTeams;
+                else updatePayload[oldCategory] = targetTeams;
     
-          await updateDoc(superstructureDocRef, updatePayload);
+                await updateDoc(superstructureDocRef, updatePayload);
     
-          const action = originalTeam.groupName === groupName ? 'change_group_global' : 'assign_global';
-          await createTeamAssignmentNotification(action, {
-            id: originalTeam.id,
-            teamName: finalTeamName,
-            category: categoryName,
-            groupName: newGroup || null
-          });
+                const action = originalTeam.groupName === groupName ? 'change_group_global' : 'assign_global';
+                await createTeamAssignmentNotification(action, {
+                    id: originalTeam.id,
+                    teamName: finalTeamName,
+                    category: categoryName,
+                    groupName: newGroup || null
+                });
     
-          setUiNotification({
-            id: Date.now() + Math.random(),
-            message: `Globálny tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii ${categoryName}.`,
-            type: 'success'
-          });
-        } catch (err) {
-          console.error("Chyba pri aktualizácii globálneho tímu:", err);
-          setUiNotification({ id: Date.now() + Math.random(), message: "Nepodarilo sa aktualizovať globálny tím.", type: 'error' });
+                setUiNotification({
+                    id: Date.now() + Math.random(),
+                    message: `Globálny tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii ${categoryName}.`,
+                    type: 'success'
+                });
+            } catch (err) {
+                console.error("Chyba pri aktualizácii globálneho tímu:", err);
+                setUiNotification({ id: Date.now() + Math.random(), message: "Nepodarilo sa aktualizovať globálny tím.", type: 'error' });
+            }
         }
-      }
     
-      // === Používateľský tím (ktokoľvek) ===
-      else {
-        if (!originalTeam?.uid || !originalTeam?.id) return;
+        // === Používateľský tím (ktokoľvek) ===
+        else {
+            if (!originalTeam?.uid || !originalTeam?.id) return;
     
-        // Môžeš sem dať potvrdenie, ak chceš varovať pri zmene cudzieho tímu
-        // if (originalTeam.uid !== currentUserUid) {
-        //   if (!window.confirm(`Naozaj chceš upraviť tím cudzieho používateľa (${originalTeam.uid})?`)) return;
-        // }
+            // Voliteľné potvrdenie pri cudzieho tíme
+            // if (!window.confirm(`Naozaj chceš upraviť tím používateľa ${originalTeam.uid}?`)) return;
     
-        const userRef = doc(window.db, 'users', originalTeam.uid);
+            const userRef = doc(window.db, 'users', originalTeam.uid);
     
-        try {
-          const userSnap = await getDoc(userRef);
-          if (!userSnap.exists()) {
-            setUiNotification({ id: Date.now() + Math.random(), message: "Používateľ už neexistuje.", type: 'error' });
-            return;
-          }
+            try {
+                const userSnap = await getDoc(userRef);
+                if (!userSnap.exists()) {
+                    setUiNotification({ id: Date.now() + Math.random(), message: "Používateľ už neexistuje.", type: 'error' });
+                    return;
+                }
     
-          const userData = userSnap.data();
-          const teamsInCategory = [...(userData.teams?.[originalTeam.category] || [])];
-          const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
-          if (teamIndex === -1) {
-            setUiNotification({ id: Date.now() + Math.random(), message: "Tím sa nenašiel v profile používateľa.", type: 'error' });
-            return;
-          }
+                const userData = userSnap.data();
+                const teamsInCategory = [...(userData.teams?.[originalTeam.category] || [])];
+                const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
+                if (teamIndex === -1) {
+                    setUiNotification({ id: Date.now() + Math.random(), message: "Tím sa nenašiel v profile používateľa.", type: 'error' });
+                    return;
+                }
     
-          let newOrder = null;
-          const newGroup = groupName || null;
-          if (newGroup) {
-            const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.id !== originalTeam.id);
-            const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
-            newOrder = order != null ? parseInt(order, 10) : max + 1;
-          }
+                let newOrder = null;
+                const newGroup = groupName || null;
+                if (newGroup) {
+                    const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.id !== originalTeam.id);
+                    const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
+                    newOrder = order != null ? parseInt(order, 10) : max + 1;
+                }
     
-          teamsInCategory[teamIndex] = {
-            ...teamsInCategory[teamIndex],
-            teamName: finalTeamName,
-            groupName: newGroup,
-            order: newOrder
-          };
+                teamsInCategory[teamIndex] = {
+                    ...teamsInCategory[teamIndex],
+                    teamName: finalTeamName,
+                    groupName: newGroup,
+                    order: newOrder
+                };
     
-          await updateDoc(userRef, { [`teams.${originalTeam.category}`]: teamsInCategory });
+                await updateDoc(userRef, { [`teams.${originalTeam.category}`]: teamsInCategory });
     
-          const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
-          await createTeamAssignmentNotification(action, {
-            id: originalTeam.id,
-            teamName: finalTeamName,
-            category: originalTeam.category,
-            groupName: newGroup || null
-          });
+                const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
+                await createTeamAssignmentNotification(action, {
+                    id: originalTeam.id,
+                    teamName: finalTeamName,
+                    category: originalTeam.category,
+                    groupName: newGroup || null
+                });
     
-          setUiNotification({
-            id: Date.now() + Math.random(),
-            message: `Tím '${finalTeamName}' (${originalTeam.uid}) bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`,
-            type: 'success'
-          });
-        } catch (err) {
-          console.error("Chyba pri aktualizácii používateľského tímu:", err);
-          setUiNotification({ id: Date.now() + Math.random(), message: "Nepodarilo sa aktualizovať používateľský tím.", type: 'error' });
+                setUiNotification({
+                    id: Date.now() + Math.random(),
+                    message: `Tím '${finalTeamName}' (${originalTeam.uid}) bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`,
+                    type: 'success'
+                });
+            } catch (err) {
+                console.error("Chyba pri aktualizácii používateľského tímu:", err);
+                setUiNotification({ id: Date.now() + Math.random(), message: "Nepodarilo sa aktualizovať používateľský tím.", type: 'error' });
+            }
         }
-      }
     };
 
     const handleAddNewTeam = async ({ categoryId, groupName, teamName, order }) => {
