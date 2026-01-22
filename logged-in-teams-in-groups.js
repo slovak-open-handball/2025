@@ -6,8 +6,6 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 const listeners = new Set();
 
-
-
 export const notify = (message, type = 'info') => {
   const id = Date.now() + Math.random();
   listeners.forEach(cb => cb({ id, message, type }));
@@ -98,8 +96,16 @@ const AddGroupsApp = (props) => {
     useEffect(() => {
         const unsubscribe = subscribe((notification) => {
             setUiNotification(notification);
-            // voliteľne: môžeš tu aj automaticky clear po 5 s, ale nie je nutné
+    
+            // automaticky zmizne po 5 sekundách
+            const timer = setTimeout(() => {
+                setUiNotification(null);
+            }, 5000);
+    
+            // cleanup – ak by prišla nová notifikácia skôr
+            return () => clearTimeout(timer);
         });
+    
         return unsubscribe;
     }, []);
 
@@ -147,7 +153,7 @@ const AddGroupsApp = (props) => {
                 groupName: teamToDelete.groupName
             });
     
-            notify("Tím '${teamToDelete.teamName}' bol odstránený zo skupiny.", "success");
+            notify(`Tím '${teamToDelete.teamName}' bol odstránený zo skupiny.`, "success");
         } catch (error) {
             console.error("Chyba pri odstraňovaní globálneho tímu:", error);
             notify("Nepodarilo sa odstrániť tím zo skupiny.",   "error");  
@@ -161,7 +167,7 @@ const AddGroupsApp = (props) => {
             const userRef = doc(window.db, 'users', team.uid);
             const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) {
-                  notify("Používateľ ${team.uid} už neexistuje.",   "error");
+                  notify(`Používateľ '${team.uid}' už neexistuje.`,   "error");
                 return;
             }
     
@@ -189,7 +195,7 @@ const AddGroupsApp = (props) => {
                 groupName: team.groupName
             });
     
-            notify("Tím ${team.teamName} bol presunutý medzi tímy bez skupiny.", "success");
+            notify(`Tím '${team.teamName}' bol presunutý medzi tímy bez skupiny.`, "success");
         } catch (err) {
             console.error("Chyba pri zrušení zaradenia tímu:", err);
             notify("Nepodarilo sa presunúť tím medzi tímy bez skupiny.",   "error");
@@ -267,7 +273,7 @@ const AddGroupsApp = (props) => {
                     groupName: newGroup || null
                 });
     
-                notify("Globálny tím ${finalTeamName} bol ${groupName ? zaradený/upravený : odstránený zo skupiny} v kategórii ${categoryName}.", "success");
+                notify(`Globálny tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
             } catch (err) {
                 console.error("Chyba pri aktualizácii globálneho tímu:", err);
                 notify("Nepodarilo sa aktualizovať globálny tím.", "error");
@@ -323,7 +329,7 @@ const AddGroupsApp = (props) => {
                     groupName: newGroup || null
                 });
     
-                notify("Tím ${finalTeamName} (${originalTeam.uid}) bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.", "success");
+                notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`, "success");
             } catch (err) {
                 console.error("Chyba pri aktualizácii používateľského tímu:", err);
                 notify("Nepodarilo sa aktualizovať používateľský tím.","error");
@@ -340,7 +346,7 @@ const AddGroupsApp = (props) => {
         const finalTeamName = `${categoryName} ${teamName}`;
         const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
         if (isDuplicateFinal) {
-            notify("Tím ${finalTeamName} už existuje. Ukladanie zrušené.", "error");
+            notify(`Tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, "error");
             return;
         }
         try {
@@ -373,7 +379,7 @@ const AddGroupsApp = (props) => {
                 groupName: groupName || null
             });
     
-            notify("Nový tím ${finalTeamName} bol pridaný ${groupName ? ` do skupiny ${groupName}` : ' bez skupiny'}.", "success");
+            notify(`Nový tím '${finalTeamName}' bol pridaný ${groupName ? `do skupiny ${groupName}` : `bez skupiny`}.`, "success");
         } catch (error) {
             console.error("Chyba pri pridávaní nového globálneho tímu:", error);
             notify("Nepodarilo sa pridať nový tím do skupiny.", "error");
@@ -431,7 +437,7 @@ const AddGroupsApp = (props) => {
                 groupName: groupName || null
             });
     
-            notify("Tím ${finalTeamName} bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.", "success");
+            notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`, "success");
         } catch (err) {
             console.error("Chyba pri aktualizácii používateľského tímu:", err);
             notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
@@ -1048,8 +1054,10 @@ const AddGroupsApp = (props) => {
 
     const availableGroupsForSelect = (allGroupsByCategoryId[selectedCategoryId] || []).sort((a, b) => a.name.localeCompare(b.name));
 
-    const uiNotificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center ${
-        uiNotification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+    const uiNotificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out ${
+        uiNotification 
+            ? 'opacity-100 scale-100 translate-y-0' 
+            : 'opacity-0 scale-95 -translate-y-4 pointer-events-none'
     }`;
 
     let typeClasses = '';
