@@ -2781,7 +2781,15 @@ function AllRegistrationsApp() {
                 });
             }
         });
-        return teams;
+        return teams.sort((a, b) => {
+            // Najprv podľa kategórie (alfabeticky)
+            if (a._category !== b._category) {
+                return a._category.localeCompare(b._category);
+            }
+            const nameA = (a.teamName || '').toLowerCase();
+            const nameB = (b.teamName || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
     }
     return [];
   }, [filteredUsers, showUsers, showTeams]);
