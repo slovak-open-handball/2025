@@ -140,7 +140,7 @@ const AddGroupsApp = (props) => {
     
             setNotification({
                 id: Date.now(),
-                message: `Tím '${teamToDelete.teamName}' bol úspešne odstránený zo skupiny.`,
+                message: `Tím '${teamToDelete.teamName}' bol odstránený zo skupiny.`,
                 type: 'success'
             });
         } catch (error) {
@@ -198,7 +198,7 @@ const AddGroupsApp = (props) => {
     
             setNotification({
                 id: Date.now(),
-                message: `Tím "${team.teamName}" bol úspešne presunutý medzi tímy bez skupiny.`,
+                message: `Tím "${team.teamName}" bol presunutý medzi tímy bez skupiny.`,
                 type: 'success'
             });
         } catch (err) {
@@ -278,7 +278,7 @@ const AddGroupsApp = (props) => {
     
             setNotification({
                 id: Date.now(),
-                message: `Tím '${finalTeamName}' bol úspešne ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii ${newCategoryName}.`,
+                message: `Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii ${newCategoryName}.`,
                 type: 'success'
             });
         } catch (err) {
@@ -335,7 +335,7 @@ const AddGroupsApp = (props) => {
     
             setNotification({
                 id: Date.now(),
-                message: `Nový tím '${finalTeamName}' bol úspešne pridaný${groupName ? ` do skupiny "${groupName}"` : ' bez skupiny'}.`,
+                message: `Nový tím '${finalTeamName}' bol pridaný${groupName ? ` do skupiny "${groupName}"` : ' bez skupiny'}.`,
                 type: 'success'
             });
         } catch (error) {
@@ -393,7 +393,7 @@ const AddGroupsApp = (props) => {
 
         setNotification({
             id: Date.now(),
-            message: `Tím '${finalTeamName}' bol úspešne ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`,
+            message: `Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`,
             type: 'success'
         });
     } catch (err) {
