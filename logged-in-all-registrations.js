@@ -1,30 +1,39 @@
 import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs, serverTimestamp, addDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from './countryDialCodes.js'; 
 
-function getSmartCursorPosition(oldStr, newStr, oldPos) {
-    // Prípad 1: Práve sme napísali 3. číslicu → posunieme za medzeru
-    if (oldPos === 3 && newStr.length === 4 && newStr[3] !== ' ') {
-        return 4; // za medzerou
+function getSmartCursorPosition(oldDisplay, newDisplay, oldPos) {
+    // 1. Práve sme napísali 3. číslicu → posun za medzeru
+    if (oldPos === 3 && newDisplay.length === 4 && newDisplay[3] === ' ') {
+        return 4;
     }
 
-    // Prípad 2: Mazanie cez medzeru (kurzor na pozícii 4 a mažeme)
-    if (oldStr.length > newStr.length && oldPos === 4 && oldStr[3] === ' ') {
+    // 2. Mazanie späť cez medzeru
+    if (oldDisplay.length > newDisplay.length && oldPos === 4 && oldDisplay[3] === ' ') {
         return 3;
     }
 
-    // Prípad 3: Bežné písanie/mazanie – počítame podľa počtu číslic
+    // 3. Všeobecný prípad – počítame podľa počtu číslic
     let digitCount = 0;
-    for (let i = 0; i < newStr.length && digitCount < oldPos; i++) {
-        if (/\d/.test(newStr[i])) digitCount++;
+    for (let i = 0; i < newDisplay.length && digitCount < oldPos; i++) {
+        if (/\d/.test(newDisplay[i])) digitCount++;
     }
 
-    // Ak sme za 3. číslicou, pridáme +1 za medzeru
-    if (digitCount >= 3 && newStr.length > 3) {
+    // Ak sme už za 3. číslicou, pridáme +1 za medzeru
+    if (digitCount >= 3 && newDisplay.length > 3) {
         return digitCount + 1;
     }
 
     return digitCount;
 }
+
+const getFormattedPostalCodeForInput = (rawValue) => {
+    if (!rawValue) return '';
+    const digits = String(rawValue).replace(/\D/g, '').slice(0, 5);
+    if (digits.length > 3) {
+        return digits.slice(0, 3) + ' ' + digits.slice(3);
+    }
+    return digits;
+};
 
 // 1. Pre editovacie polia (inputy v modálnom okne) – bez pomlčky
 const formatPostalCodeForInput = (postalCode) => {
@@ -1570,27 +1579,27 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     // Handler pre PSČ (číslice, medzera po 3. číslici)
     const handlePostalCodeChange = (e, path) => {
         const input = e.target;
-        const oldValue = input.value;           // čo bolo pred zmenou
-        const cursorPos = input.selectionStart; // kde bol kurzor
+        const oldDisplay = input.value;           // čo videl používateľ
+        const cursorPos = input.selectionStart;
     
-        // a. Získame iba číslice
-        let digits = oldValue.replace(/\D/g, '').slice(0, 5);
+        // 1. extrahujeme iba číslice (max 5)
+        let digits = oldDisplay.replace(/\D/g, '').slice(0, 5);
     
-        // b. Vytvoríme zobrazenú hodnotu (s medzerou ak treba)
-        let displayValue = digits;
+        // 2. vytvoríme novú zobrazenú hodnotu (s medzerou)
+        let newDisplay = digits;
         if (digits.length > 3) {
-            displayValue = digits.slice(0, 3) + ' ' + digits.slice(3);
+            newDisplay = digits.slice(0, 3) + ' ' + digits.slice(3);
         }
     
-        // c. Uložíme do stavu **iba čisté čísla**
+        // 3. uložíme do stavu ČISTÉ ČÍSLICE
         handleChange(path, digits);
     
-        // d. Nastavíme kurzor na správne miesto (veľmi dôležité!)
+        // 4. inteligentne posunieme kurzor
         requestAnimationFrame(() => {
             if (inputRefs.current[path]) {
-                const newPos = getSmartCursorPosition(oldValue, displayValue, cursorPos);
-                inputRefs.current[path].selectionStart = newPos;
-                inputRefs.current[path].selectionEnd = newPos;
+                const newCursor = getSmartCursorPosition(oldDisplay, newDisplay, cursorPos);
+                inputRefs.current[path].selectionStart = newCursor;
+                inputRefs.current[path].selectionEnd = newCursor;
             }
         });
     };
@@ -1711,7 +1720,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     inputMode: 'numeric',
                     pattern: '[0-9 ]*',
                     maxLength: 6,
-                    value: formatPostalCodeForInput(getNestedDataForInput(localEditedData, path))
+                    value={getFormattedPostalCodeForInput(getNestedValue(localEditedData, path))}
+                    onChange={(e) => handlePostalCodeChange(e, path)}
+                    onKeyDown={(e) => handlePostalCodeKeyDown(e, path)}
+                    readOnly={!isSavable}
                 };
             }
             
@@ -1822,7 +1834,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             inputMode: 'numeric',
                             pattern: '[0-9 ]*',
                             maxLength: 6,
-                            value: formatPostalCodeForInput(getNestedDataForInput(localEditedData, path))
+                            value={getFormattedPostalCodeForInput(getNestedValue(localEditedData, path))}
+                            onChange={(e) => handlePostalCodeChange(e, path)}
+                            onKeyDown={(e) => handlePostalCodeKeyDown(e, path)}
+                            readOnly={!isSavable}
                         };
                     } else if (path === 'contactPhoneNumber') {
                         // Nezobrazovať tlačidlo a input pre admin/hall používateľov
