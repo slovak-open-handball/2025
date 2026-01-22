@@ -36,25 +36,25 @@ const AddGroupsApp = (props) => {
 
         switch (action) {
             case 'assign_global':
-                message = `Globálny tím "${teamName}" priradený do skupiny "${group}" (kat.: ${category})`;
+                message = `Globálny tím "${teamName}" priradený do skupiny "${group}" (${category})`;
                 break;
             case 'change_group_global':
-                message = `Zmena skupiny globálneho tímu "${teamName}" → "${group}" (kat.: ${category})`;
+                message = `Zmena skupiny globálneho tímu "${teamName}" → "${group}" (${category})`;
                 break;
             case 'unassign_global':
-                message = `Globálny tím "${teamName}" odstránený zo skupiny (kat.: ${category})`;
+                message = `Globálny tím "${teamName}" odstránený zo skupiny (${category})`;
                 break;
             case 'assign_user':
-                message = `Používateľský tím "${teamName}" zaradený do skupiny "${group}" (kat.: ${category})`;
+                message = `Používateľský tím "${teamName}" zaradený do skupiny "${group}" (${category})`;
                 break;
             case 'change_group_user':
-                message = `Zmena skupiny používateľského tímu "${teamName}" → "${group}" (kat.: ${category})`;
+                message = `Zmena skupiny používateľského tímu "${teamName}" → "${group}" (${category})`;
                 break;
             case 'unassign_user':
-                message = `Používateľský tím "${teamName}" presunutý medzi tímy bez skupiny (kat.: ${category})`;
+                message = `Používateľský tím "${teamName}" presunutý medzi tímy bez skupiny (${category})`;
                 break;
             case 'add_new_global':
-                message = `Nový globálny tím "${teamName}" vytvorený a zaradený do "${group}" (kat.: ${category})`;
+                message = `Nový globálny tím "${teamName}" vytvorený a zaradený do "${group}" (${category})`;
                 break;
             default:
                 message = `Zmena tímu "${teamName}" (${action})`;
