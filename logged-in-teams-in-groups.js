@@ -393,7 +393,7 @@ const AddGroupsApp = (props) => {
         else {
             // ... (tu je podobná logika, len pre používateľa)
     
-            if (!originalTeam?.uid || !originalTeam?.id) return;
+            if (!originalTeam?.uid) return;
     
             const userRef = doc(window.db, 'users', originalTeam.uid);
     
@@ -416,7 +416,7 @@ const AddGroupsApp = (props) => {
                 const newGroup = groupName || null;
     
                 if (newGroup) {
-                    const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.id !== originalTeam.id);
+                    const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.teamName !== originalTeam.teamName);
                     const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
                     newOrder = order != null ? parseInt(order, 10) : max + 1;
                 }
@@ -541,7 +541,7 @@ const AddGroupsApp = (props) => {
     
             let newOrder = null;
             if (groupName) {
-                const othersInGroup = teamsInCategory.filter(t => t.groupName === groupName && t.id !== originalTeam.id);
+                const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.teamName !== originalTeam.teamName);
                 const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
                 newOrder = order != null ? parseInt(order, 10) : max + 1;
             }
