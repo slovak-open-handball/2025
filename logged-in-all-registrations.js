@@ -927,8 +927,8 @@ const formatLabel = (key) => {
     if (key === 'packageDetails.meals') return 'Stravovanie';
     if (key === 'teamName') return 'Názov tímu';
     if (key === 'playerDetails') return 'Detaily hráčov';
-    if (key === 'menTeamMemberDetails') return 'Detaily členov R. tímu (muži)';
-    if (key === 'womenTeamMemberDetails') return 'Detaily členov R. tímu (ženy)';
+    if (key === 'menTeamMemberDetails') return 'Detail člen realizačného tímu (muž)';
+    if (key === 'womenTeamMemberDetails') return 'Detail člen realizačného tímu (žena)';
     if (key === 'driverDetailsMale') return 'Detaily šoféra (muž)'; 
     if (key === 'driverDetailsFemale') return 'Detaily šoféra (žena)'; 
     if (key === 'tshirts') return 'Tričká';
@@ -2713,23 +2713,23 @@ function AllRegistrationsApp() {
     switch (memberType) {
         case 'Hráč':
             memberArrayPath = 'playerDetails';
-            resolvedTitle = 'Pridať nového hráča';
+            resolvedTitle = 'Pridať nový hráč';
             break;
         case 'Člen realizačného tímu (žena)':
             memberArrayPath = 'womenTeamMemberDetails';
-            resolvedTitle = 'Pridať novú členku R. tímu (žena)';
+            resolvedTitle = 'Pridať nový člen realizačného tímu (žena)';
             break;
         case 'Člen realizačného tímu (muž)':
             memberArrayPath = 'menTeamMemberDetails';
-            resolvedTitle = 'Pridať nového člena R. tímu (muž)';
+            resolvedTitle = 'Pridať nový člen realizačného tímu (muž)';
             break;
         case 'Šofér (žena)':
             memberArrayPath = 'driverDetailsFemale';
-            resolvedTitle = 'Pridať novú šoférku (žena)';
+            resolvedTitle = 'Pridať nový šofér (žena)';
             break;
         case 'Šofér (muž)':
             memberArrayPath = 'driverDetailsMale';
-            resolvedTitle = 'Pridať nového šoféra (muž)';
+            resolvedTitle = 'Pridať nový šofér (muž)';
             break;
         default:
             setUserNotificationMessage("Neplatný typ člena tímu.", 'error');
