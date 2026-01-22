@@ -570,7 +570,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
         const street = addressData.street || '';
         const houseNumber = addressData.houseNumber || '';
-        const postalCode = formatPostalCode(addressData.postalCode);
+        const postalCode = formatPostalCodeForDisplay(addressData.postalCode);
         const city = addressData.city || '';
         const country = addressData.country || '';
 
@@ -1803,7 +1803,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             inputMode: 'numeric',
                             pattern: '[0-9 ]*',
                             maxLength: 6,
-                            value: formatPostalCode(getNestedDataForInput(localEditedData, path))
+                            value: formatPostalCodeForInput(getNestedDataForInput(localEditedData, path))
                         };
                     } else if (path === 'contactPhoneNumber') {
                         // Nezobrazovať tlačidlo a input pre admin/hall používateľov
