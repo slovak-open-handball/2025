@@ -18,6 +18,70 @@ export const subscribe = (cb) => {
 };
 
 
+// ----------------- Nové stavy -----------------
+const [confirmModal, setConfirmModal] = useState(null);
+// príklad: { team, isDelete: true/false, open: true }
+
+// ----------------- Nový komponent -----------------
+const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team }) => {
+  if (!isOpen || !team) return null;
+
+  const isGlobal = team.isSuperstructureTeam;
+  const actionText = isGlobal ? "úplne odstrániť" : "presunúť medzi tímy bez skupiny";
+  const title = isGlobal ? "Odstrániť globálny tím" : "Zrušiť zaradenie tímu do skupiny";
+
+  return React.createElement(
+    'div',
+    {
+      className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
+      onClick: onClose
+    },
+    React.createElement(
+      'div',
+      {
+        className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
+        onClick: e => e.stopPropagation()
+      },
+      React.createElement(
+        'h2',
+        { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
+        title
+      ),
+      React.createElement(
+        'p',
+        { className: 'text-gray-700 mb-8 text-center' },
+        isGlobal
+          ? `Naozaj chcete natrvalo odstrániť tím "${team.teamName}"?`
+          : `Naozaj chcete presunúť tím "${team.teamName}" medzi tímy bez skupiny?`
+      ),
+      React.createElement(
+        'div',
+        { className: 'flex justify-end space-x-4' },
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: () => {
+              onConfirm();
+              onClose();
+            },
+            className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
+              isGlobal ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
+            }`
+          },
+          isGlobal ? 'Áno, odstrániť' : 'Áno, presunúť'
+        )
+      )
+    )
+  );
+};
 
 const AddGroupsApp = (props) => {
     const { useState, useEffect, useRef } = React;
@@ -203,13 +267,25 @@ const AddGroupsApp = (props) => {
     };
 
     const handleRemoveOrDeleteTeam = (team) => {
-        if (team.isSuperstructureTeam) {
-            if (!window.confirm(`Naozaj chcete úplne odstrániť tím "${team.teamName}"?`)) return;
-            handleDeleteTeam(team);
-        } else {
-            if (!window.confirm(`Presunúť tím "${team.teamName}" medzi tímy bez skupiny?`)) return;
-            handleUnassignUserTeam(team);
-        }
+      setConfirmModal({
+        team,
+        isDelete: team.isSuperstructureTeam,
+        open: true
+      });
+    };
+
+    const handleConfirmRemove = async () => {
+      if (!confirmModal?.team) return;
+
+      const team = confirmModal.team;
+    
+      if (team.isSuperstructureTeam) {
+        await handleDeleteTeam(team);
+      } else {
+        await handleUnassignUserTeam(team);
+      }
+    
+      setConfirmModal(null);
     };
 
     const handleUpdateAnyTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
@@ -1112,6 +1188,12 @@ const AddGroupsApp = (props) => {
             defaultGroupName: selectedGroupName,
             unifiedSaveHandler
         }),
+        React.createElement(ConfirmDeleteModal, {
+          isOpen: !!confirmModal?.open,
+          onClose: () => setConfirmModal(null),
+          onConfirm: handleConfirmRemove,
+          team: confirmModal?.team
+        }),      
         React.createElement(
             'div',
             { className: 'w-full max-w-xs mx-auto mb-8' },
