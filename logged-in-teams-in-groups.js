@@ -350,61 +350,69 @@ const AddGroupsApp = (props) => {
 
     const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
         if (!window.db || !originalTeam?.uid || !originalTeam?.id) return;
+    
         const categoryName = categoryIdToNameMap[categoryId];
         if (categoryName !== originalTeam.category) {
             setNotification({ message: "Kategóriu používateľského tímu nemôžete meniť.", type: 'error' });
             return;
         }
+    
         const finalTeamName = `${categoryName} ${teamName.trim()}`;
         const userRef = doc(window.db, 'users', originalTeam.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-            setNotification({ message: "Používateľ už neexistuje.", type: 'error' });
-            return;
-        }
-        const userData = userSnap.data();
-        const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-        const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
-        if (teamIndex === -1) {
-            setNotification({ message: "Tím sa nenašiel v profile používateľa.", type: 'error' });
-            return;
-        }
-        let newOrder = null;
-        if (groupName) {
-            const othersInGroup = teamsInCategory.filter(t => t.groupName === groupName && t.id !== originalTeam.id);
-            const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
-            newOrder = order != null ? parseInt(order, 10) : max + 1;
-        }
-        teamsInCategory[teamIndex] = {
-            ...teamsInCategory[teamIndex],
-            teamName: finalTeamName,
-            groupName: groupName || null,
-            order: newOrder
-        };
-        await updateDoc(userRef, { [`teams.${categoryName}`]: teamsInCategory });
+    
+        try { 
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) {
+                setNotification({ message: "Používateľ už neexistuje.", type: 'error' });
+                return;
+            }
 
-        const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
-        await createTeamAssignmentNotification(action, {
-            id: originalTeam.id,
-            teamName: finalTeamName,
-            category: categoryName,
-            groupName: groupName || null
-        });
+            const userData = userSnap.data();
+            const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
+            const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
+            if (teamIndex === -1) {
+                setNotification({ message: "Tím sa nenašiel v profile používateľa.", type: 'error' });
+                return;
+            }
+    
+            let newOrder = null;
+            if (groupName) {
+                const othersInGroup = teamsInCategory.filter(t => t.groupName === groupName && t.id !== originalTeam.id);
+                const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
+                newOrder = order != null ? parseInt(order, 10) : max + 1;
+            }
+    
+            teamsInCategory[teamIndex] = {
+                ...teamsInCategory[teamIndex],
+                teamName: finalTeamName,
+                groupName: groupName || null,
+                order: newOrder
+            };
 
-        setNotification({
-            id: Date.now(),
-            message: `Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`,
-            type: 'success'
-        });
-    } catch (err) {
-        console.error("Chyba pri aktualizácii používateľského tímu:", err);
-        setNotification({ 
-            id: Date.now(), 
-            message: "Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", 
-            type: 'error' 
-        });
-    }
-};
+            await updateDoc(userRef, { [`teams.${categoryName}`]: teamsInCategory });
+    
+            const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
+            await createTeamAssignmentNotification(action, {
+                id: originalTeam.id,
+                teamName: finalTeamName,
+                category: categoryName,
+                groupName: groupName || null
+            });
+    
+            setNotification({
+                id: Date.now(),
+                message: `Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`,
+                type: 'success'
+            });
+        } catch (err) {
+            console.error("Chyba pri aktualizácii používateľského tímu:", err);
+            setNotification({
+                id: Date.now(),
+                message: "Nepodarilo sa aktualizovať zaradenie tímu do skupiny.",
+                type: 'error'
+            });
+        }
+    };
 
     // ===================================================================
     // MODÁLNE OKNO (ako vnútorný komponent)
