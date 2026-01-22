@@ -575,104 +575,103 @@ const AddGroupsApp = (props) => {
     // ===================================================================
 
     const NewTeamModal = ({
-        isOpen,
-        onClose,
-        teamToEdit,
-        allTeams = [],
-        categoryIdToNameMap = {},
-        allGroupsByCategoryId = {},
-        defaultCategoryId = '',
-        defaultGroupName = '',
-        unifiedSaveHandler
+      isOpen,
+      onClose,
+      teamToEdit,
+      allTeams = [],
+      categoryIdToNameMap = {},
+      allGroupsByCategoryId = {},
+      defaultCategoryId = '',
+      defaultGroupName = '',
+      unifiedSaveHandler
     }) => {
-        const { useState, useEffect } = React;
-        const [orderInputValue, setOrderInputValue] = useState(null);
-        const [selectedCategory, setSelectedCategory] = useState('');
-        const [selectedGroup, setSelectedGroup] = useState('');
-        const [teamName, setTeamName] = useState('');
-        const [isDuplicate, setIsDuplicate] = useState(false);
-        const [originalTeamName, setOriginalTeamName] = useState('');
-        const [originalCategory, setOriginalCategory] = useState('');
-        const [originalGroup, setOriginalGroup] = useState('');
-
-        useEffect(() => {
-            if (!isOpen || !selectedGroup) {
-              setOrderInputValue(null);
-              return;
-            }
-        
-            // Pri editácii – zachovať pôvodnú hodnotu, ak existuje
-            if (teamToEdit && teamToEdit.groupName === selectedGroup && teamToEdit.order != null) {
-              setOrderInputValue(teamToEdit.order);
-              return;
-            }
-        
-            // Pri NOVOM tíme – nájsť najmenšiu voľnú hodnotu
-            const currentCategoryName = categoryIdToNameMap[selectedCategory];
-            if (!currentCategoryName) return;
-        
-            const teamsInThisGroup = allTeams.filter(
-              t => t.category === currentCategoryName && t.groupName === selectedGroup
+      const { useState, useEffect } = React;
+      const [orderInputValue, setOrderInputValue] = useState(null);
+      const [selectedCategory, setSelectedCategory] = useState('');
+      const [selectedGroup, setSelectedGroup] = useState('');
+      const [teamName, setTeamName] = useState('');
+      const [isDuplicate, setIsDuplicate] = useState(false);
+      const [originalTeamName, setOriginalTeamName] = useState('');
+      const [originalCategory, setOriginalCategory] = useState('');
+      const [originalGroup, setOriginalGroup] = useState('');
+    
+      // Nová premenná – či je kategória zafixovaná (nemenná)
+      const isCategoryLocked = !!teamToEdit && !teamToEdit.isSuperstructureTeam;
+    
+      useEffect(() => {
+        if (!isOpen || !selectedGroup) {
+          setOrderInputValue(null);
+          return;
+        }
+    
+        if (teamToEdit && teamToEdit.groupName === selectedGroup && teamToEdit.order != null) {
+          setOrderInputValue(teamToEdit.order);
+          return;
+        }
+    
+        const currentCategoryName = categoryIdToNameMap[selectedCategory];
+        if (!currentCategoryName) return;
+    
+        const teamsInThisGroup = allTeams.filter(
+          t => t.category === currentCategoryName && t.groupName === selectedGroup
+        );
+    
+        if (teamsInThisGroup.length === 0) {
+          setOrderInputValue(1);
+          return;
+        }
+    
+        const usedOrders = new Set(
+          teamsInThisGroup
+            .map(t => t.order)
+            .filter(o => typeof o === 'number' && o > 0)
+        );
+    
+        const maxOrder = Math.max(...usedOrders, 0);
+        let freeOrder = 1;
+        while (usedOrders.has(freeOrder)) freeOrder++;
+    
+        setOrderInputValue(freeOrder);
+      }, [selectedGroup, isOpen, teamToEdit, allTeams, selectedCategory, categoryIdToNameMap]);
+    
+      useEffect(() => {
+        if (isOpen) {
+          if (teamToEdit) {
+            const categoryId = Object.keys(categoryIdToNameMap).find(
+              id => categoryIdToNameMap[id] === teamToEdit.category
+            ) || '';
+    
+            // Ak je kategória locked, nastavíme ju raz a už sa nebude dať meniť
+            setSelectedCategory(categoryId);
+            setSelectedGroup(teamToEdit.groupName || '');
+    
+            const teamNameWithoutPrefix = teamToEdit.teamName.replace(
+              new RegExp(`^${teamToEdit.category} `), ''
             );
-        
-            if (teamsInThisGroup.length === 0) {
-              // Skupina je prázdna → 1
-              setOrderInputValue(1);
-              return;
-            }
-        
-            // Získame všetky použité poradia (iba čísla > 0)
-            const usedOrders = new Set(
-              teamsInThisGroup
-                .map(t => t.order)
-                .filter(o => typeof o === 'number' && o > 0)
-            );
-        
-            // Najmenšie možné poradie = 1 až max+1
-            const maxOrder = Math.max(...usedOrders, 0);
-            let freeOrder = 1;
-        
-            while (usedOrders.has(freeOrder)) {
-              freeOrder++;
-            }
-        
-            setOrderInputValue(freeOrder);
-        }, [selectedGroup, isOpen, teamToEdit, allTeams, selectedCategory, categoryIdToNameMap]);
-
-        useEffect(() => {
-            if (isOpen) {
-                if (teamToEdit) {
-                    const categoryId = Object.keys(categoryIdToNameMap).find(
-                        id => categoryIdToNameMap[id] === teamToEdit.category
-                    ) || '';
-                    setSelectedCategory(categoryId);
-                    const teamNameWithoutPrefix = teamToEdit.teamName.replace(
-                        new RegExp(`^${teamToEdit.category} `), ''
-                    );
-                    setTeamName(teamNameWithoutPrefix);
-                    setSelectedGroup(teamToEdit.groupName || '');
-                    setOriginalTeamName(teamToEdit.teamName);
-                    setOriginalCategory(categoryId);
-                    setOriginalGroup(teamToEdit.groupName || '');
-                } else {
-                    setSelectedCategory(defaultCategoryId || '');
-                    setSelectedGroup(defaultGroupName || '');
-                    setTeamName('');
-                    setOriginalTeamName('');
-                    setOriginalCategory('');
-                    setOriginalGroup('');
-                }
-            } else {
-                setSelectedCategory('');
-                setSelectedGroup('');
-                setTeamName('');
-                setIsDuplicate(false);
-                setOriginalTeamName('');
-                setOriginalCategory('');
-                setOriginalGroup('');
-                setOrderInputValue(null);
-            }
-        }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap]);
+            setTeamName(teamNameWithoutPrefix);
+    
+            setOriginalTeamName(teamToEdit.teamName);
+            setOriginalCategory(categoryId);
+            setOriginalGroup(teamToEdit.groupName || '');
+          } else {
+            setSelectedCategory(defaultCategoryId || '');
+            setSelectedGroup(defaultGroupName || '');
+            setTeamName('');
+            setOriginalTeamName('');
+            setOriginalCategory('');
+            setOriginalGroup('');
+          }
+        } else {
+          setSelectedCategory('');
+          setSelectedGroup('');
+          setTeamName('');
+          setIsDuplicate(false);
+          setOriginalTeamName('');
+          setOriginalCategory('');
+          setOriginalGroup('');
+          setOrderInputValue(null);
+        }
+  }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap]);
 
         useEffect(() => {
             if (!isOpen) return;
@@ -692,14 +691,16 @@ const AddGroupsApp = (props) => {
         const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
             .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
 
-        const availableGroups = selectedCategory && allGroupsByCategoryId[selectedCategory]
+          const availableGroups = selectedCategory && allGroupsByCategoryId[selectedCategory]
             ? allGroupsByCategoryId[selectedCategory].sort((a, b) => a.name.localeCompare(b.name))
             : [];
-
-        const handleCategoryChange = (e) => {
+        
+          const handleCategoryChange = (e) => {
+            // Ak je kategória locked, zmena sa ignoruje
+            if (isCategoryLocked) return;
             setSelectedCategory(e.target.value);
             if (!defaultGroupName) setSelectedGroup('');
-        };
+          };
 
         const handleSubmit = (e) => {
             e.preventDefault();
@@ -718,40 +719,33 @@ const AddGroupsApp = (props) => {
         const isGroupValid = !!selectedGroup;
         const isTeamNameValid = teamName.trim().length > 0;
         const isSubmitDisabled = !isCategoryValid || !isGroupValid || !isTeamNameValid || isDuplicate;
-
-        const isCategoryFixed = !!defaultCategoryId && !teamToEdit;
-        const isGroupFixed = !!defaultGroupName && !teamToEdit;
-        const isCategoryDisabledInEdit = false;
-
+      
         const modalTitle = teamToEdit ? 'Upraviť tím' : 'Pridať nový tím';
         const buttonText = teamToEdit ? 'Aktualizovať tím' : 'Pridať tím';
-        const buttonBaseClasses = 'px-4 py-2 rounded-lg transition-colors duration-200';
-        const activeClasses = 'bg-indigo-600 text-white hover:bg-indigo-700';
-        const disabledClasses = 'bg-white text-indigo-600 border border-indigo-600 cursor-not-allowed shadow-none';
-
+      
         if (!isOpen) return null;
-
+      
         const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
         const finalTeamNamePreview = teamName.trim() ? `${currentCategoryName} ${teamName.trim()}` : '';
-
+      
         return React.createElement(
+          'div',
+          {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]',
+            onClick: onClose
+          },
+          React.createElement(
             'div',
             {
-                className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]',
-                onClick: onClose
+              className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg',
+              onClick: (e) => e.stopPropagation()
             },
             React.createElement(
-                'div',
-                {
-                    className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg',
-                    onClick: (e) => e.stopPropagation()
-                },
-                React.createElement(
-                    'h2',
-                    { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
-                    modalTitle
-                ),
-                !teamToEdit
+              'h2',
+              { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
+              modalTitle
+            ),
+            !teamToEdit
                     ? React.createElement(
                         'div',
                         { className: 'mb-6' },
@@ -783,22 +777,35 @@ const AddGroupsApp = (props) => {
                     'form',
                     { onSubmit: handleSubmit, className: 'space-y-6' },
                     React.createElement(
-                        'div',
-                        { className: 'flex flex-col' },
-                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Kategória:'),
+                      'div',
+                      { className: 'flex flex-col' },
+                      React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Kategória:'),
+                      React.createElement(
+                        'select',
+                        {
+                          className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${
+                            isCategoryLocked || isCategoryFixed
+                              ? 'bg-gray-100 cursor-not-allowed'
+                              : 'border-gray-300'
+                          }`,
+                          value: selectedCategory,
+                          onChange: handleCategoryChange,
+                          required: true,
+                          disabled: isCategoryLocked || isCategoryFixed
+                        },
+                        React.createElement('option', { value: '' }, '--- Vyberte kategóriu ---'),
+                        sortedCategoryEntries.map(([id, name]) =>
+                          React.createElement('option', { key: id, value: id }, name)
+                        )
+                      ),
+                      (isCategoryLocked || isCategoryFixed) &&
                         React.createElement(
-                            'select',
-                            {
-                                className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${isCategoryFixed || isCategoryDisabledInEdit ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`,
-                                value: selectedCategory,
-                                onChange: handleCategoryChange,
-                                required: true,
-                                disabled: isCategoryFixed || isCategoryDisabledInEdit
-                            },
-                            React.createElement('option', { value: '' }, '--- Vyberte kategóriu ---'),
-                            sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
-                        ),
-                        isCategoryFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená kategória: ${categoryIdToNameMap[defaultCategoryId]}`)
+                          'p',
+                          { className: 'text-xs text-indigo-600 mt-1 italic' },
+                          isCategoryLocked
+                            ? 'Kategóriu používateľského tímu nemožno meniť.'
+                            : `Predvolená kategória: ${categoryIdToNameMap[defaultCategoryId]}`
+                        )
                     ),
                     React.createElement(
                         'div',
