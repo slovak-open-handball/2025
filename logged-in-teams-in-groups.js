@@ -849,7 +849,17 @@ const AddGroupsApp = (props) => {
                         }, 'Zrušiť'),
                         React.createElement('button', {
                             type: 'submit',
-                            className: `${buttonBaseClasses} ${isSubmitDisabled ? disabledClasses : activeClasses}`,
+                            className: `
+                                px-6 py-2.5 
+                                rounded-lg 
+                                text-white 
+                                font-medium 
+                                transition-colors 
+                                duration-200
+                                ${isSubmitDisabled 
+                                    ? 'bg-gray-400 cursor-not-allowed opacity-60' 
+                                    : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'}
+                            `,
                             disabled: isSubmitDisabled
                         }, buttonText)
                     )
