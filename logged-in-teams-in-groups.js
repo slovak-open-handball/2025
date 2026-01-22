@@ -4,6 +4,16 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
+const [uiNotification, setUiNotification] = useState(null);
+
+useEffect(() => {
+  if (uiNotification) {
+    console.log("UI notifikácia →", uiNotification);
+    const timer = setTimeout(() => setUiNotification(null), 5000);
+    return () => clearTimeout(timer);
+  }
+}, [uiNotification]);
+
 const AddGroupsApp = (props) => {
     const { useState, useEffect, useRef } = React;
     const teamsWithoutGroupRef = React.useRef(null);
@@ -15,7 +25,7 @@ const AddGroupsApp = (props) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState('');
-    const [notification, setNotification] = useState(null);
+    const [notification, setUiNotification] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [teamToEdit, setTeamToEdit] = useState(null);
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
@@ -83,19 +93,19 @@ const AddGroupsApp = (props) => {
       if (notification) {
         console.log("Notifikácia nastavená →", notification); // ← pridaj toto na debug
         const timer = setTimeout(() => {
-          setNotification(null);
+          setUiNotification(null);
         }, 5000);
         return () => clearTimeout(timer);
       }
     }, [notification]);
 
     // ===================================================================
-    // VNÚTORNÉ FUNKCIE – všetky majú prístup k setNotification, categoryIdToNameMap atď.
+    // VNÚTORNÉ FUNKCIE – všetky majú prístup k setUiNotification, categoryIdToNameMap atď.
     // ===================================================================
 
     const handleDeleteTeam = async (teamToDelete) => {
         if (!window.db || !teamToDelete || !teamToDelete.isSuperstructureTeam) {
-            setNotification({ 
+            setUiNotification({ 
                 id: Date.now() + Math.random(), 
                 message: "Chyba: Možno odstrániť len globálne tímy.", 
                 type: 'error' 
@@ -110,7 +120,7 @@ const AddGroupsApp = (props) => {
             let teams = globalTeamsData[teamToDelete.category] || [];
             const teamIndex = teams.findIndex(t => t.id === teamToDelete.id);
             if (teamIndex === -1) {
-                setNotification({ 
+                setUiNotification({ 
                     id: Date.now() + Math.random(), 
                     message: "Chyba: Odstraňovaný tím sa nenašiel.", 
                     type: 'error' 
@@ -141,14 +151,14 @@ const AddGroupsApp = (props) => {
                 groupName: teamToDelete.groupName
             });
     
-            setNotification({
+            setUiNotification({
                 id: Date.now() + Math.random(),
                 message: `Tím '${teamToDelete.teamName}' bol odstránený zo skupiny.`,
                 type: 'success'
             });
         } catch (error) {
             console.error("Chyba pri odstraňovaní globálneho tímu:", error);
-            setNotification({ 
+            setUiNotification({ 
                 id: Date.now() + Math.random(), 
                 message: "Nepodarilo sa odstrániť tím zo skupiny.", 
                 type: 'error' 
@@ -163,7 +173,7 @@ const AddGroupsApp = (props) => {
             const userRef = doc(window.db, 'users', team.uid);
             const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) {
-                setNotification({ 
+                setUiNotification({ 
                     id: Date.now() + Math.random(), 
                     message: `Používateľ ${team.uid} už neexistuje.`, 
                     type: 'error' 
@@ -176,7 +186,7 @@ const AddGroupsApp = (props) => {
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
             const teamIndex = teamsInCategory.findIndex(t => t.id === team.id);
             if (teamIndex === -1) {
-                setNotification({ 
+                setUiNotification({ 
                     id: Date.now() + Math.random(), 
                     message: "Tím sa nenašiel v profile používateľa.", 
                     type: 'error' 
@@ -199,14 +209,14 @@ const AddGroupsApp = (props) => {
                 groupName: team.groupName
             });
     
-            setNotification({
+            setUiNotification({
                 id: Date.now() + Math.random(),
                 message: `Tím "${team.teamName}" bol presunutý medzi tímy bez skupiny.`,
                 type: 'success'
             });
         } catch (err) {
             console.error("Chyba pri zrušení zaradenia tímu:", err);
-            setNotification({ 
+            setUiNotification({ 
                 id: Date.now() + Math.random(), 
                 message: "Nepodarilo sa presunúť tím medzi tímy bez skupiny.", 
                 type: 'error' 
@@ -238,7 +248,7 @@ const AddGroupsApp = (props) => {
             let oldTeams = [...(data[oldCategory] || [])];
             const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
             if (idx === -1) {
-                setNotification({ 
+                setUiNotification({ 
                     id: Date.now() + Math.random(), 
                     message: "Pôvodný tím sa nenašiel", 
                     type: 'error' 
@@ -283,14 +293,14 @@ const AddGroupsApp = (props) => {
                 groupName: groupName || null
             });
     
-            setNotification({
+            setUiNotification({
                 id: Date.now() + Math.random(),
                 message: `Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii ${newCategoryName}.`,
                 type: 'success'
             });
         } catch (err) {
             console.error("Chyba pri aktualizácii globálneho tímu:", err);
-            setNotification({ 
+            setUiNotification({ 
                 id: Date.now() + Math.random(), 
                 message: "Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", 
                 type: 'error' 
@@ -300,7 +310,7 @@ const AddGroupsApp = (props) => {
 
     const handleAddNewTeam = async ({ categoryId, groupName, teamName, order }) => {
         if (!window.db) {
-            setNotification({ 
+            setUiNotification({ 
                 id: Date.now() + Math.random(), 
                 message: "Firestore nie je inicializovaný.", 
                 type: 'error' });
@@ -310,7 +320,7 @@ const AddGroupsApp = (props) => {
         const finalTeamName = `${categoryName} ${teamName}`;
         const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
         if (isDuplicateFinal) {
-            setNotification({ 
+            setUiNotification({ 
                 id: Date.now() + Math.random(), 
                 message: `Tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, 
                 type: 'error' 
@@ -347,14 +357,14 @@ const AddGroupsApp = (props) => {
                 groupName: groupName || null
             });
     
-            setNotification({
+            setUiNotification({
                 id: Date.now() + Math.random(),
                 message: `Nový tím '${finalTeamName}' bol pridaný${groupName ? ` do skupiny "${groupName}"` : ' bez skupiny'}.`,
                 type: 'success'
             });
         } catch (error) {
             console.error("Chyba pri pridávaní nového globálneho tímu:", error);
-            setNotification({ 
+            setUiNotification({ 
                 id: Date.now() + Math.random(), 
                 message: "Nepodarilo sa pridať nový tím do skupiny.", 
                 type: 'error' 
@@ -367,7 +377,7 @@ const AddGroupsApp = (props) => {
     
         const categoryName = categoryIdToNameMap[categoryId];
         if (categoryName !== originalTeam.category) {
-            setNotification({ 
+            setUiNotification({ 
                 id: Date.now() + Math.random(), 
                 message: "Kategóriu používateľského tímu nemôžete meniť.", 
                 type: 'error' 
@@ -381,7 +391,7 @@ const AddGroupsApp = (props) => {
         try { 
             const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) {
-                setNotification({ 
+                setUiNotification({ 
                     id: Date.now() + Math.random(), 
                     message: "Používateľ už neexistuje.", 
                     type: 'error' 
@@ -393,7 +403,7 @@ const AddGroupsApp = (props) => {
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
             const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
             if (teamIndex === -1) {
-                setNotification({ 
+                setUiNotification({ 
                     id: Date.now() + Math.random(), 
                     message: "Tím sa nenašiel v profile používateľa.", 
                     type: 'error' 
@@ -425,14 +435,14 @@ const AddGroupsApp = (props) => {
                 groupName: groupName || null
             });
     
-            setNotification({
+            setUiNotification({
                 id: Date.now() + Math.random(),
                 message: `Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`,
                 type: 'success'
             });
         } catch (err) {
             console.error("Chyba pri aktualizácii používateľského tímu:", err);
-            setNotification({
+            setUiNotification({
                 id: Date.now() + Math.random(),
                 message: "Nepodarilo sa aktualizovať zaradenie tímu do skupiny.",
                 type: 'error'
@@ -1098,7 +1108,7 @@ const AddGroupsApp = (props) => {
     return React.createElement(
         'div',
         { className: 'flex flex-col w-full relative' },
-        React.createElement('div', { key: notification?.id || 'no-notification', className: `${notificationClasses} ${typeClasses}` }, notification?.message),
+        React.createElement('div', { key: uiNotification?.id || 'no-notification', className: `${notificationClasses} ${typeClasses}` }, notification?.message),
         React.createElement(NewTeamModal, {
             isOpen: isModalOpen,
             onClose: closeModal,
