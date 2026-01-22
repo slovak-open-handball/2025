@@ -1170,7 +1170,7 @@ const AddGroupsApp = (props) => {
                             React.createElement(
                                 'span',
                                 { className: `flex-grow ${textColor}` },
-                                `${pos}. ${displayName}${hasDuplicate ? ' (duplicitné poradové číslo!)' : ''}`
+                                `${pos}. ${displayName}${hasDuplicate ? '' : ''}`
                             ),
                             React.createElement(
                                 'div',
