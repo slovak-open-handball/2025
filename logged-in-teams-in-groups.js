@@ -506,7 +506,8 @@ const AddGroupsApp = (props) => {
                 id: newTeam.id,
                 teamName: finalTeamName,
                 category: categoryName,
-                groupName: groupName || null
+                groupName: groupName || null,
+                order: newOrder
             });
     
             notify(`Nový tím '${finalTeamName}' bol pridaný ${groupName ? `do skupiny '${groupName}'` : 'bez skupiny'}.`, "success");
