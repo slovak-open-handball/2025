@@ -1146,7 +1146,7 @@ const AddGroupsApp = (props) => {
                         React.createElement(
                             'span',
                             { className: 'flex-grow text-center' },
-                            `${pos}. V skupine chýba tím s poradovým číslom`
+                            `V skupine chýba tím s poradovým číslom ${pos}.`
                         )
                     )
                 );
