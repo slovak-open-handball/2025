@@ -113,34 +113,34 @@ const AddGroupsApp = (props) => {
 
         switch (action) {
             case 'assign_global':
-                message = `Tím "${teamName}" priradený do skupiny "${group}" (${category})`;
+                message = `Tím "${teamName}" priradený do skupiny "${group}" (${category}).`;
                 break;
             case 'change_group_global':
-                message = `Zmena skupiny tímu "${teamName}" → "${group}" (${category})`;
+                message = `Zmena skupiny tímu "${teamName}" → "${group}" (${category}).`;
                 break;
             case 'unassign_global':
-                message = `Tím "${teamName}" odstránený zo skupiny (${category})`;
+                message = `Tím "${teamName}" odstránený zo skupiny (${category}).`;
                 break;
             case 'assign_user':
-                message = `Tím "${teamName}" zaradený do skupiny "${group}" (${category})`;
+                message = `Tím "${teamName}" zaradený do skupiny "${group}" (${category}).`;
                 break;
             case 'change_group_user':
-                message = `Zmena skupiny tímu "${teamName}" → "${group}" (${category})`;
+                message = `Zmena skupiny tímu "${teamName}" → "${group}" (${category}).`;
                 break;
             case 'unassign_user':
-                message = `Tím "${teamName}" presunutý medzi tímy bez skupiny (${category})`;
+                message = `Tím "${teamName}" presunutý medzi tímy bez skupiny (${category}).`;
                 break;
             case 'add_new_global':
-                message = `Nový tím "${teamName}" vytvorený a zaradený do "${group}" (${category})`;
+                message = `Nový tím "${teamName}" vytvorený a zaradený do "${group}" (${category}).`;
                 break;
             case 'change_order_global':
-                message = `Poradie tímu "${teamName}" v skupine "${group}" (${category}) zmenené z ${team.oldOrder} na ${team.newOrder}`;
+                message = `Poradie tímu "${teamName}" v skupine "${group}" (${category}) zmenené z '${team.oldOrder}' na '${team.newOrder}'.`;
                 break;
             case 'change_order_user':
-                message = `Poradie tímu "${teamName}" v skupine "${group}" (${category}) zmenené z ${team.oldOrder} na ${team.newOrder}`;
+                message = `Poradie tímu "${teamName}" v skupine "${group}" (${category}) zmenené z '${team.oldOrder}' na '${team.newOrder}'.`;
                 break;
             default:
-                message = `Zmena tímu "${teamName}" (${action})`;
+                message = `Zmena tímu "${teamName}" (${action}).`;
         }
 
         try {
