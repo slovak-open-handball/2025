@@ -4,8 +4,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
-const [uiNotification, setUiNotification] = useState(null);
-
 const AddGroupsApp = (props) => {
     const { useState, useEffect, useRef } = React;
     const teamsWithoutGroupRef = React.useRef(null);
