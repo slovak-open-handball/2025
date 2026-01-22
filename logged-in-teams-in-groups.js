@@ -1216,7 +1216,10 @@ if (window.globalUserProfileData) {
 
 
 // Nový komponent – stabilná notifikácia
+// Stabilná notifikácia cez portál
 const NotificationPortal = () => {
+  const { useState, useEffect } = React;
+
   const [notification, setNotification] = React.useState(null);
 
   useEffect(() => {
@@ -1230,10 +1233,11 @@ const NotificationPortal = () => {
 
   if (!notification) return null;
 
+  // Farby pozadia podľa typu
   const typeClasses = {
     success: 'bg-green-600',
-    error: 'bg-red-600',
-    info: 'bg-blue-600',
+    error:   'bg-red-600',
+    info:    'bg-blue-600',
     default: 'bg-gray-700'
   }[notification.type || 'default'];
 
@@ -1242,7 +1246,7 @@ const NotificationPortal = () => {
       'div',
       {
         key: notification.id,
-        className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0`
+        className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
       },
       notification.message
     ),
