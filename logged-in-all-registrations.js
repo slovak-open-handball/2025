@@ -1714,10 +1714,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     inputMode: 'numeric',
                     pattern: '[0-9 ]*',
                     maxLength: 6,
-                    value={getFormattedPostalCodeForInput(getNestedValue(localEditedData, path))}
-                    onChange={(e) => handlePostalCodeChange(e, path)}
-                    onKeyDown={(e) => handlePostalCodeKeyDown(e, path)}
-                    readOnly={!isSavable}
+                    value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
+                    onChange: (e) => handlePostalCodeChange(e, path),
+                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
+                    readOnly: !isSavable
                 };
             }
             
@@ -1828,10 +1828,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             inputMode: 'numeric',
                             pattern: '[0-9 ]*',
                             maxLength: 6,
-                            value={getFormattedPostalCodeForInput(getNestedValue(localEditedData, path))}
-                            onChange={(e) => handlePostalCodeChange(e, path)}
-                            onKeyDown={(e) => handlePostalCodeKeyDown(e, path)}
-                            readOnly={!isSavable}
+                            value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
+                            onChange: (e) => handlePostalCodeChange(e, path),
+                            onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
+                            readOnly: !isSavable
                         };
                     } else if (path === 'contactPhoneNumber') {
                         // Nezobrazovať tlačidlo a input pre admin/hall používateľov
