@@ -1,23 +1,29 @@
 import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs, serverTimestamp, addDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from './countryDialCodes.js'; 
 
-function calculateNewCursorPosition(oldStr, newStr, oldPos, addedChars = 0) {
-    // Ak sme pridali medzeru a kurzor bol za 3. číslicou → posunieme o 1 dopredu
-    if (addedChars > 0 && oldPos === 3) {
-        return oldPos + addedChars;
+function getSmartCursorPosition(oldStr, newStr, oldPos) {
+    // Prípad 1: Práve sme napísali 3. číslicu → posunieme za medzeru
+    if (oldPos === 3 && newStr.length === 4 && newStr[3] !== ' ') {
+        return 4; // za medzerou
     }
 
-    // Ak mažeme a kurzor je za medzerou → posunieme späť
+    // Prípad 2: Mazanie cez medzeru (kurzor na pozícii 4 a mažeme)
     if (oldStr.length > newStr.length && oldPos === 4 && oldStr[3] === ' ') {
         return 3;
     }
 
-    // Inak sa snažíme zachovať pozíciu čo najviac
+    // Prípad 3: Bežné písanie/mazanie – počítame podľa počtu číslic
     let digitCount = 0;
     for (let i = 0; i < newStr.length && digitCount < oldPos; i++) {
         if (/\d/.test(newStr[i])) digitCount++;
     }
-    return digitCount + (newStr.length > 3 && digitCount >= 3 ? 1 : 0);
+
+    // Ak sme za 3. číslicou, pridáme +1 za medzeru
+    if (digitCount >= 3 && newStr.length > 3) {
+        return digitCount + 1;
+    }
+
+    return digitCount;
 }
 
 // 1. Pre editovacie polia (inputy v modálnom okne) – bez pomlčky
@@ -31,7 +37,7 @@ const formatPostalCodeForDisplay = (postalCode) => {
     if (!postalCode) return '-';
     const cleaned = String(postalCode).replace(/\D/g, '');
     if (cleaned.length === 5) {
-        return `${cleaned.substring(0,3)} ${cleaned.substring(3)}`;
+        return `${cleaned.slice(0,3)} ${cleaned.slice(3)}`;
     }
     return cleaned || '-';
 };
@@ -1564,35 +1570,27 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     // Handler pre PSČ (číslice, medzera po 3. číslici)
     const handlePostalCodeChange = (e, path) => {
         const input = e.target;
-        const originalValue = input.value;
-        let cursorPos = input.selectionStart;
+        const oldValue = input.value;           // čo bolo pred zmenou
+        const cursorPos = input.selectionStart; // kde bol kurzor
     
-        // 1. Odstránime všetko okrem číslic
-        let digits = originalValue.replace(/\D/g, '');
+        // a. Získame iba číslice
+        let digits = oldValue.replace(/\D/g, '').slice(0, 5);
     
-        // 2. Obmedzíme na max 5 číslic
-        digits = digits.substring(0, 5);
-    
-        // 3. Vytvoríme formátovaný reťazec pre zobrazenie
-        let formatted = digits;
+        // b. Vytvoríme zobrazenú hodnotu (s medzerou ak treba)
+        let displayValue = digits;
         if (digits.length > 3) {
-            formatted = digits.substring(0, 3) + ' ' + digits.substring(3);
+            displayValue = digits.slice(0, 3) + ' ' + digits.slice(3);
         }
     
-        // 4. Uložíme čistú hodnotu (bez medzery) do stavu
-        handleChange(path, digits);   // ← ukladáme iba číslice!
+        // c. Uložíme do stavu **iba čisté čísla**
+        handleChange(path, digits);
     
-        // 5. Opravíme pozíciu kurzora (veľmi dôležité pre plynulosť)
+        // d. Nastavíme kurzor na správne miesto (veľmi dôležité!)
         requestAnimationFrame(() => {
             if (inputRefs.current[path]) {
-                const newCursorPos = calculateNewCursorPosition(
-                    originalValue,
-                    formatted,
-                    cursorPos,
-                    digits.length > 3 ? 1 : 0   // +1 ak sme pridali medzeru
-                );
-                inputRefs.current[path].selectionStart = newCursorPos;
-                inputRefs.current[path].selectionEnd = newCursorPos;
+                const newPos = getSmartCursorPosition(oldValue, displayValue, cursorPos);
+                inputRefs.current[path].selectionStart = newPos;
+                inputRefs.current[path].selectionEnd = newPos;
             }
         });
     };
@@ -1602,11 +1600,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             const input = e.target;
             const pos = input.selectionStart;
     
-            // Ak je kurzor za medzerou (pozícia 4) a pred ňou je medzera → posunieme kurzor pred medzeru
             if (pos === 4 && input.value[3] === ' ') {
                 e.preventDefault();
-                const newValue = input.value.substring(0, 3) + input.value.substring(4);
-                handleChange(path, newValue.replace(/\D/g, ''));
+                const newDisplay = input.value.slice(0, 3) + input.value.slice(4);
+                const newDigits = newDisplay.replace(/\D/g, '');
+                handleChange(path, newDigits);
     
                 requestAnimationFrame(() => {
                     if (inputRefs.current[path]) {
