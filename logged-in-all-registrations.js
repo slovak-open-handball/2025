@@ -1663,7 +1663,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         const memberElements = [];
         
         // Určiť, či ide o hráča (zobrazujeme jerseyNumber a registrationNumber) alebo iného člena tímu
-        const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nového hráča');
+        const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nový hráč');
         
         // Základné polia pre všetkých členov
         let memberFieldsOrder = [
@@ -2354,11 +2354,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 // ────────────────────────────────────────────────────────────────
                     
                                 const isAddingNewMember = isNewEntry && (
-                                    editModalTitle.toLowerCase().includes('pridať nového hráča') ||
-                                    editModalTitle.toLowerCase().includes('pridať novú členku') ||
-                                    editModalTitle.toLowerCase().includes('pridať nového člena') ||
-                                    editModalTitle.toLowerCase().includes('pridať novú šoférku') ||
-                                    editModalTitle.toLowerCase().includes('pridať nového šoféra')
+                                    editModalTitle.toLowerCase().includes('pridať nový hráč') ||
+                                    editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (žena)') ||
+                                    editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (muž)') ||
+                                    editModalTitle.toLowerCase().includes('pridať nový šofér (žena)') ||
+                                    editModalTitle.toLowerCase().includes('pridať nový šofér (muž)')
                                 );
                     
                                 const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
