@@ -1,8 +1,9 @@
 import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import ReactDOM from "https://www.gstatic.com/firebasejs/11.6.1/react-dom.js";   // alebo správna cesta
 
 const { useState, useEffect, useRef } = React;
-// Referencia na globálny konfiguračný dokument pre nadstavbové tímy
+
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 const listeners = new Set();
@@ -17,13 +18,7 @@ export const subscribe = (cb) => {
   return () => listeners.delete(cb);
 };
 
-
-// ----------------- Nové stavy -----------------
-const [confirmModal, setConfirmModal] = useState(null);
-// príklad: { team, isDelete: true/false, open: true }
-
-// ----------------- Nový komponent -----------------
-const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team }) => {
+const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team, isConfirming }) => {
   if (!isOpen || !team) return null;
 
   const isGlobal = team.isSuperstructureTeam;
@@ -72,11 +67,12 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team }) => {
               onConfirm();
               onClose();
             },
+            disabled: isConfirming,
             className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
               isGlobal ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
-            }`
+            } ${isConfirming ? 'opacity-50 cursor-wait' : ''}`
           },
-          isGlobal ? 'Áno, odstrániť' : 'Áno, presunúť'
+          isConfirming ? 'Spracúvam...' : isGlobal ? 'Áno, odstrániť' : 'Áno, presunúť'
         )
       )
     )
@@ -98,6 +94,7 @@ const AddGroupsApp = (props) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [teamToEdit, setTeamToEdit] = useState(null);
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
+    const [confirmModal, setConfirmModal] = useState(null);
     
     const currentUserEmail = window.globalUserProfileData?.email || null;
 
@@ -274,18 +271,26 @@ const AddGroupsApp = (props) => {
       });
     };
 
+    const [isConfirming, setIsConfirming] = useState(false);
+  
     const handleConfirmRemove = async () => {
       if (!confirmModal?.team) return;
-
-      const team = confirmModal.team;
+      setIsConfirming(true);
     
-      if (team.isSuperstructureTeam) {
-        await handleDeleteTeam(team);
-      } else {
-        await handleUnassignUserTeam(team);
+      try {
+        const team = confirmModal.team;
+        if (team.isSuperstructureTeam) {
+          await handleDeleteTeam(team);
+        } else {
+          await handleUnassignUserTeam(team);
+        }
+        setConfirmModal(null);
+      } catch (err) {
+        console.error(err);
+        notify("Operácia zlyhala", "error");
+      } finally {
+        setIsConfirming(false);
       }
-    
-      setConfirmModal(null);
     };
 
     const handleUpdateAnyTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
@@ -1192,7 +1197,8 @@ const AddGroupsApp = (props) => {
           isOpen: !!confirmModal?.open,
           onClose: () => setConfirmModal(null),
           onConfirm: handleConfirmRemove,
-          team: confirmModal?.team
+          team: confirmModal?.team,
+          isConfirming: isConfirming
         }),      
         React.createElement(
             'div',
@@ -1335,6 +1341,3 @@ const NotificationPortal = () => {
     document.body
   );
 };
-
-// V hlavnom return AddGroupsApp odstráň starý <div> notifikácie a namiesto neho pridaj:
-React.createElement(NotificationPortal, null)
