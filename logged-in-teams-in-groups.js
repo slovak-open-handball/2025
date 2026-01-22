@@ -150,7 +150,7 @@ const AddGroupsApp = (props) => {
                 performedBy: currentUserEmail || null,  
                 changes: [message],
                 timestamp: serverTimestamp(),
-                relatedTeamId: team.id,
+                relatedTeamId: team.id ?? null,
                 relatedCategory: category,
                 relatedGroup: group || null,
                 actionType: action
