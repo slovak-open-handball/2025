@@ -1387,7 +1387,7 @@ const AddGroupsApp = (props) => {
         default: typeClasses = 'bg-gray-700';
     }
 
-    const fabBaseClasses = 'fixed bottom-8 right-8 p-5 rounded-full shadow-2xl transition-all duration-300 transform focus:outline-none';
+    const fabBaseClasses = 'fixed bottom-8 right-8 p-5 rounded-full shadow-2xl transform focus:outline-none';
 
     const fabButton = React.createElement(
         'button',
@@ -1403,7 +1403,6 @@ const AddGroupsApp = (props) => {
                 font-bold 
                 shadow-2xl 
                 flex items-center justify-center
-                transition-all duration-200 
                 focus:outline-none 
                 focus:ring-4 focus:ring-green-300
                 z-40
