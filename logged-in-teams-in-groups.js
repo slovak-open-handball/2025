@@ -329,7 +329,7 @@ const AddGroupsApp = (props) => {
                     groupName: newGroup || null
                 });
     
-                notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`, "success");
+                notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
             } catch (err) {
                 console.error("Chyba pri aktualizácii používateľského tímu:", err);
                 notify("Nepodarilo sa aktualizovať používateľský tím.","error");
@@ -437,7 +437,7 @@ const AddGroupsApp = (props) => {
                 groupName: groupName || null
             });
     
-            notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`, "success");
+            notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
         } catch (err) {
             console.error("Chyba pri aktualizácii používateľského tímu:", err);
             notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
