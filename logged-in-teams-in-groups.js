@@ -1055,11 +1055,11 @@ const AddGroupsApp = (props) => {
     const availableGroupsForSelect = (allGroupsByCategoryId[selectedCategoryId] || []).sort((a, b) => a.name.localeCompare(b.name));
 
     const uiNotificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl text-white text-center transition-opacity duration-300 transform z-50 flex items-center justify-center ${
-        notification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+        uiNotification ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
     }`;
 
     let typeClasses = '';
-    switch (uiuiNotification?.type) {
+    switch (uiNotification?.type) {
         case 'success': typeClasses = 'bg-green-500'; break;
         case 'error': typeClasses = 'bg-red-500'; break;
         case 'info': typeClasses = 'bg-blue-500'; break;
