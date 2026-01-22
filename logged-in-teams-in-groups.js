@@ -235,7 +235,11 @@ const AddGroupsApp = (props) => {
             let oldTeams = [...(data[oldCategory] || [])];
             const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
             if (idx === -1) {
-                setNotification({ message: "Pôvodný tím sa nenašiel", type: 'error' });
+                setNotification({ 
+                    id: Date.now(), 
+                    message: "Pôvodný tím sa nenašiel", 
+                    type: 'error' 
+                });
                 return;
             }
             oldTeams.splice(idx, 1);
@@ -293,14 +297,21 @@ const AddGroupsApp = (props) => {
 
     const handleAddNewTeam = async ({ categoryId, groupName, teamName, order }) => {
         if (!window.db) {
-            setNotification({ id: Date.now(), message: "Firestore nie je inicializovaný.", type: 'error' });
+            setNotification({ 
+                id: Date.now(), 
+                message: "Firestore nie je inicializovaný.", 
+                type: 'error' });
             return;
         }
         const categoryName = categoryIdToNameMap[categoryId];
         const finalTeamName = `${categoryName} ${teamName}`;
         const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
         if (isDuplicateFinal) {
-            setNotification({ id: Date.now(), message: `Tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, type: 'error' });
+            setNotification({ 
+                id: Date.now(), 
+                message: `Tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, 
+                type: 'error' 
+            });
             return;
         }
         try {
@@ -353,7 +364,11 @@ const AddGroupsApp = (props) => {
     
         const categoryName = categoryIdToNameMap[categoryId];
         if (categoryName !== originalTeam.category) {
-            setNotification({ message: "Kategóriu používateľského tímu nemôžete meniť.", type: 'error' });
+            setNotification({ 
+                id: Date.now(), 
+                message: "Kategóriu používateľského tímu nemôžete meniť.", 
+                type: 'error' 
+            });
             return;
         }
     
@@ -363,7 +378,11 @@ const AddGroupsApp = (props) => {
         try { 
             const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) {
-                setNotification({ message: "Používateľ už neexistuje.", type: 'error' });
+                setNotification({ 
+                    id: Date.now(), 
+                    message: "Používateľ už neexistuje.", 
+                    type: 'error' 
+                });
                 return;
             }
 
@@ -371,7 +390,11 @@ const AddGroupsApp = (props) => {
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
             const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
             if (teamIndex === -1) {
-                setNotification({ message: "Tím sa nenašiel v profile používateľa.", type: 'error' });
+                setNotification({ 
+                    id: Date.now(), 
+                    message: "Tím sa nenašiel v profile používateľa.", 
+                    type: 'error' 
+                });
                 return;
             }
     
