@@ -597,6 +597,7 @@ const AddGroupsApp = (props) => {
     
       // Nová premenná – či je kategória zafixovaná (nemenná)
       const isCategoryLocked = !!teamToEdit && !teamToEdit.isSuperstructureTeam;
+      const isGroupFixed = !!defaultGroupName && !teamToEdit;
     
       useEffect(() => {
         if (!isOpen || !selectedGroup) {
