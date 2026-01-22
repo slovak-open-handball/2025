@@ -1,8 +1,58 @@
-import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
+
+const createTeamAssignmentNotification = async (action, team, userId = null) => {
+    if (!window.db) return;
+
+    let message = '';
+    let category = team.category || '?';
+    let group = team.groupName || 'bez skupiny';
+    let teamName = team.teamName || 'Neznámy tím';
+
+    switch (action) {
+        case 'assign_global':
+            message = `Globálny tím "${teamName}" bol priradený do skupiny "${group}" (kategória: ${category})`;
+            break;
+        case 'change_group_global':
+            message = `Skupina globálneho tímu "${teamName}" zmenená na "${group}" (kategória: ${category})`;
+            break;
+        case 'unassign_global':
+            message = `Globálny tím "${teamName}" bol odstránený zo skupiny (kategória: ${category})`;
+            break;
+        case 'assign_user':
+            message = `Používateľský tím "${teamName}" (UID: ${userId}) bol priradený do skupiny "${group}" (kategória: ${category})`;
+            break;
+        case 'change_group_user':
+            message = `Skupina používateľského tímu "${teamName}" (UID: ${userId}) zmenená na "${group}" (kategória: ${category})`;
+            break;
+        case 'unassign_user':
+            message = `Používateľský tím "${teamName}" (UID: ${userId}) bol presunutý medzi tímy bez skupiny (kategória: ${category})`;
+            break;
+        case 'add_new_global':
+            message = `Nový globálny tím "${teamName}" bol vytvorený a zaradený do skupiny "${group}" (kategória: ${category})`;
+            break;
+        default:
+            message = `Zmena týkajúca sa tímu "${teamName}" (${action})`;
+    }
+
+    try {
+        const notificationsRef = collection(window.db, 'notifications');
+        await addDoc(notificationsRef, {
+            changes: [message],
+            timestamp: serverTimestamp(),
+            relatedTeamId: team.id,
+            relatedCategory: category,
+            relatedGroup: group,
+            actionType: action
+        });
+        console.log("Notifikácia uložená:", message);
+    } catch (err) {
+        console.error("Chyba pri ukladaní notifikácie:", err);
+    }
+};
 
 const AddGroupsApp = (props) => {
     const { useState, useEffect, useRef } = React;
@@ -60,6 +110,14 @@ const AddGroupsApp = (props) => {
                 ...globalTeamsData,
                 [teamToDelete.category]: reorderedTeams
             }, { merge: true });
+            
+            await createTeamAssignmentNotification('unassign_global', {
+                id: teamToDelete.id,
+                teamName: teamToDelete.teamName,
+                category: teamToDelete.category,
+                groupName: teamToDelete.groupName
+            });
+            
             setNotification({
                 id: Date.now(),
                 message: `Tím '${teamToDelete.teamName}' bol odstránený.`,
@@ -94,6 +152,14 @@ const AddGroupsApp = (props) => {
                 order: null
             };
             await updateDoc(userRef, { [`teams.${categoryName}`]: teamsInCategory });
+            
+            await createTeamAssignmentNotification('unassign_user', {
+                id: team.id,
+                teamName: team.teamName,
+                category: team.category,
+                groupName: team.groupName
+            }, team.uid);
+            
             setNotification({
                 message: `Tím "${team.teamName}" bol presunutý medzi tímy bez skupiny.`,
                 type: 'success'
@@ -159,6 +225,16 @@ const AddGroupsApp = (props) => {
             if (categoryChanged) updatePayload[newCategoryName] = targetTeams;
             else updatePayload[oldCategory] = targetTeams;
             await updateDoc(superstructureDocRef, updatePayload);
+
+            const action = originalTeam.groupName === groupName ? 'change_group_global' : 'assign_global';
+            
+            await createTeamAssignmentNotification(action, {
+                id: originalTeam.id,
+                teamName: finalTeamName,
+                category: newCategoryName,
+                groupName: groupName || null
+            }, null);
+            
             setNotification({
                 message: `Tím aktualizovaný${categoryChanged ? ` (presunutý do ${newCategoryName})` : ''}`,
                 type: 'success'
@@ -203,6 +279,17 @@ const AddGroupsApp = (props) => {
                 ...globalTeamsData,
                 [categoryName]: updatedTeamsArray
             }, { merge: true });
+
+            await createTeamAssignmentNotification(
+                'add_new_global',
+                {
+                    id: newTeam.id,
+                    teamName: finalTeamName,
+                    category: categoryName,
+                    groupName: groupName || null
+                }
+            );
+            
             setNotification({
                 id: Date.now(),
                 message: `Tím '${finalTeamName}' bol pridaný.`,
@@ -248,6 +335,16 @@ const AddGroupsApp = (props) => {
             order: newOrder
         };
         await updateDoc(userRef, { [`teams.${categoryName}`]: teamsInCategory });
+
+        const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
+
+        await createTeamAssignmentNotification(action, {
+            id: originalTeam.id,
+            teamName: finalTeamName,
+            category: categoryName,
+            groupName: groupName || null
+        }, originalTeam.uid);
+        
         setNotification({ message: `Tím ${finalTeamName} bol aktualizovaný.`, type: 'success' });
     };
 
