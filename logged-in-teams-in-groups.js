@@ -597,18 +597,46 @@ const AddGroupsApp = (props) => {
 
         useEffect(() => {
             if (!isOpen || !selectedGroup) {
-                setOrderInputValue(null);
-                return;
+              setOrderInputValue(null);
+              return;
             }
+        
+            // Pri editácii – zachovať pôvodnú hodnotu, ak existuje
             if (teamToEdit && teamToEdit.groupName === selectedGroup && teamToEdit.order != null) {
-                setOrderInputValue(teamToEdit.order);
-                return;
+              setOrderInputValue(teamToEdit.order);
+              return;
             }
-            const teamsInGroup = allTeams.filter(
-                t => t.category === categoryIdToNameMap[selectedCategory] && t.groupName === selectedGroup
+        
+            // Pri NOVOM tíme – nájsť najmenšiu voľnú hodnotu
+            const currentCategoryName = categoryIdToNameMap[selectedCategory];
+            if (!currentCategoryName) return;
+        
+            const teamsInThisGroup = allTeams.filter(
+              t => t.category === currentCategoryName && t.groupName === selectedGroup
             );
-            const maxOrder = teamsInGroup.reduce((max, t) => Math.max(max, t.order || 0), 0);
-            setOrderInputValue(maxOrder + 1);
+        
+            if (teamsInThisGroup.length === 0) {
+              // Skupina je prázdna → 1
+              setOrderInputValue(1);
+              return;
+            }
+        
+            // Získame všetky použité poradia (iba čísla > 0)
+            const usedOrders = new Set(
+              teamsInThisGroup
+                .map(t => t.order)
+                .filter(o => typeof o === 'number' && o > 0)
+            );
+        
+            // Najmenšie možné poradie = 1 až max+1
+            const maxOrder = Math.max(...usedOrders, 0);
+            let freeOrder = 1;
+        
+            while (usedOrders.has(freeOrder)) {
+              freeOrder++;
+            }
+        
+            setOrderInputValue(freeOrder);
         }, [selectedGroup, isOpen, teamToEdit, allTeams, selectedCategory, categoryIdToNameMap]);
 
         useEffect(() => {
