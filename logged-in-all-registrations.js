@@ -937,11 +937,11 @@ const formatLabel = (key) => {
     if (key === 'address.street') return 'Ulica';
     if (key === 'address.houseNumber') return 'Popisné číslo';
     if (key === 'address.postalCode') return 'PSČ';
-    if (key === 'address.city') return 'Mesto/Obec';
+    if (key === 'address.city') return 'Mesto/obec';
     if (key === 'address.country') return 'Krajina';
     if (key === 'street') return 'Ulica';
     if (key === 'houseNumber') return 'Popisné číslo';
-    if (key === 'city') return 'Mesto/Obec';
+    if (key === 'city') return 'Mesto/obec';
     if (key === 'postalCode') return 'PSČ';
     if (key === 'country') return 'Krajina';
     if (key === 'approved') return 'Schválený';
@@ -2629,7 +2629,7 @@ function AllRegistrationsApp() {
     { id: 'billing.icDph', label: 'IČ DPH', type: true },
     { id: 'street', label: 'Ulica', type: 'string', visible: true },
     { id: 'houseNumber', label: 'Popisné číslo', type: 'string', visible: true },
-    { id: 'city', label: 'Mesto/Obec', type: true },
+    { id: 'city', label: 'Mesto/obec', type: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
     { id: 'country', label: 'Krajina', type: 'string', visible: true },
 
