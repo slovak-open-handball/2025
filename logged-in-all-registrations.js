@@ -2,7 +2,7 @@ import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy,
 import { countryDialCodes } from './countryDialCodes.js'; 
 
 const formatPostalCode = (postalCode) => {
-    if (!postalCode) return '-';
+    if (!postalCode) return '';
 
     // Odstránime všetko okrem číslic
     const cleaned = String(postalCode).replace(/\D/g, '');
@@ -13,7 +13,7 @@ const formatPostalCode = (postalCode) => {
     }
 
     // Ak má menej alebo viac → vrátime tak, ako je (alebo len číslice)
-    return cleaned || '-';
+    return cleaned;
 };
 
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
