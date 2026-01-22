@@ -92,9 +92,14 @@ const AddGroupsApp = (props) => {
 
     const handleDeleteTeam = async (teamToDelete) => {
         if (!window.db || !teamToDelete || !teamToDelete.isSuperstructureTeam) {
-            setNotification({ id: Date.now(), message: "Chyba: Možno odstrániť len globálne tímy.", type: 'error' });
+            setNotification({ 
+                id: Date.now(), 
+                message: "Chyba: Možno odstrániť len globálne tímy.", 
+                type: 'error' 
+            });
             return;
         }
+    
         const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
         try {
             const docSnap = await getDoc(superstructureDocRef);
@@ -102,79 +107,107 @@ const AddGroupsApp = (props) => {
             let teams = globalTeamsData[teamToDelete.category] || [];
             const teamIndex = teams.findIndex(t => t.id === teamToDelete.id);
             if (teamIndex === -1) {
-                setNotification({ id: Date.now(), message: "Chyba: Odstraňovaný tím sa nenašiel.", type: 'error' });
+                setNotification({ 
+                    id: Date.now(), 
+                    message: "Chyba: Odstraňovaný tím sa nenašiel.", 
+                    type: 'error' 
+                });
                 return;
             }
+    
             const originalGroup = teamToDelete.groupName;
             const originalOrder = teamToDelete.order;
             teams.splice(teamIndex, 1);
+    
             const reorderedTeams = teams.map(t => {
                 if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
                     return { ...t, order: t.order - 1 };
                 }
                 return t;
             });
+    
             await setDoc(superstructureDocRef, {
                 ...globalTeamsData,
                 [teamToDelete.category]: reorderedTeams
             }, { merge: true });
-            
+    
             await createTeamAssignmentNotification('unassign_global', {
                 id: teamToDelete.id,
                 teamName: teamToDelete.teamName,
                 category: teamToDelete.category,
                 groupName: teamToDelete.groupName
             });
-            
+    
             setNotification({
                 id: Date.now(),
-                message: `Tím '${teamToDelete.teamName}' bol odstránený.`,
+                message: `Tím '${teamToDelete.teamName}' bol úspešne odstránený zo skupiny.`,
                 type: 'success'
             });
         } catch (error) {
             console.error("Chyba pri odstraňovaní globálneho tímu:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri odstraňovaní tímu z globálneho dokumentu.", type: 'error' });
+            setNotification({ 
+                id: Date.now(), 
+                message: "Nepodarilo sa odstrániť tím zo skupiny.", 
+                type: 'error' 
+            });
         }
     };
 
     const handleUnassignUserTeam = async (team) => {
         if (!window.db || !team?.uid) return;
+    
         try {
             const userRef = doc(window.db, 'users', team.uid);
             const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) {
-                setNotification({ message: `Používateľ ${team.uid} už neexistuje.`, type: 'error' });
+                setNotification({ 
+                    id: Date.now(), 
+                    message: `Používateľ ${team.uid} už neexistuje.`, 
+                    type: 'error' 
+                });
                 return;
             }
+    
             const userData = userSnap.data();
             const categoryName = team.category;
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
             const teamIndex = teamsInCategory.findIndex(t => t.id === team.id);
             if (teamIndex === -1) {
-                setNotification({ message: "Tím sa nenašiel v profile používateľa.", type: 'error' });
+                setNotification({ 
+                    id: Date.now(), 
+                    message: "Tím sa nenašiel v profile používateľa.", 
+                    type: 'error' 
+                });
                 return;
             }
+    
             teamsInCategory[teamIndex] = {
                 ...teamsInCategory[teamIndex],
                 groupName: null,
                 order: null
             };
+    
             await updateDoc(userRef, { [`teams.${categoryName}`]: teamsInCategory });
-            
+    
             await createTeamAssignmentNotification('unassign_user', {
                 id: team.id,
                 teamName: team.teamName,
                 category: team.category,
                 groupName: team.groupName
-            }, team.uid);
-            
+            });
+    
             setNotification({
-                message: `Tím "${team.teamName}" bol presunutý medzi tímy bez skupiny.`,
+                id: Date.now(),
+                message: `Tím "${team.teamName}" bol úspešne presunutý medzi tímy bez skupiny.`,
                 type: 'success'
             });
         } catch (err) {
             console.error("Chyba pri zrušení zaradenia tímu:", err);
-            setNotification({ message: "Nepodarilo sa zrušiť zaradenie tímu.", type: 'error' });
+            setNotification({ 
+                id: Date.now(), 
+                message: "Nepodarilo sa presunúť tím medzi tímy bez skupiny.", 
+                type: 'error' 
+            });
         }
     };
 
@@ -235,21 +268,26 @@ const AddGroupsApp = (props) => {
             await updateDoc(superstructureDocRef, updatePayload);
 
             const action = originalTeam.groupName === groupName ? 'change_group_global' : 'assign_global';
-            
+
             await createTeamAssignmentNotification(action, {
                 id: originalTeam.id,
                 teamName: finalTeamName,
                 category: newCategoryName,
                 groupName: groupName || null
-            }, null);
-            
+            });
+    
             setNotification({
-                message: `Tím aktualizovaný${categoryChanged ? ` (presunutý do ${newCategoryName})` : ''}`,
+                id: Date.now(),
+                message: `Tím '${finalTeamName}' bol úspešne ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii ${newCategoryName}.`,
                 type: 'success'
             });
         } catch (err) {
-            console.error(err);
-            setNotification({ message: "Chyba pri aktualizácii", type: 'error' });
+            console.error("Chyba pri aktualizácii globálneho tímu:", err);
+            setNotification({ 
+                id: Date.now(), 
+                message: "Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", 
+                type: 'error' 
+            });
         }
     };
 
@@ -288,24 +326,25 @@ const AddGroupsApp = (props) => {
                 [categoryName]: updatedTeamsArray
             }, { merge: true });
 
-            await createTeamAssignmentNotification(
-                'add_new_global',
-                {
-                    id: newTeam.id,
-                    teamName: finalTeamName,
-                    category: categoryName,
-                    groupName: groupName || null
-                }
-            );
-            
+            await createTeamAssignmentNotification('add_new_global', {
+                id: newTeam.id,
+                teamName: finalTeamName,
+                category: categoryName,
+                groupName: groupName || null
+            });
+    
             setNotification({
                 id: Date.now(),
-                message: `Tím '${finalTeamName}' bol pridaný.`,
+                message: `Nový tím '${finalTeamName}' bol úspešne pridaný${groupName ? ` do skupiny "${groupName}"` : ' bez skupiny'}.`,
                 type: 'success'
             });
         } catch (error) {
             console.error("Chyba pri pridávaní nového globálneho tímu:", error);
-            setNotification({ id: Date.now(), message: "Chyba pri ukladaní nového tímu.", type: 'error' });
+            setNotification({ 
+                id: Date.now(), 
+                message: "Nepodarilo sa pridať nový tím do skupiny.", 
+                type: 'error' 
+            });
         }
     };
 
@@ -345,16 +384,27 @@ const AddGroupsApp = (props) => {
         await updateDoc(userRef, { [`teams.${categoryName}`]: teamsInCategory });
 
         const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
-
         await createTeamAssignmentNotification(action, {
             id: originalTeam.id,
             teamName: finalTeamName,
             category: categoryName,
             groupName: groupName || null
-        }, originalTeam.uid);
-        
-        setNotification({ message: `Tím ${finalTeamName} bol aktualizovaný.`, type: 'success' });
-    };
+        });
+
+        setNotification({
+            id: Date.now(),
+            message: `Tím '${finalTeamName}' bol úspešne ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'}.`,
+            type: 'success'
+        });
+    } catch (err) {
+        console.error("Chyba pri aktualizácii používateľského tímu:", err);
+        setNotification({ 
+            id: Date.now(), 
+            message: "Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", 
+            type: 'error' 
+        });
+    }
+};
 
     // ===================================================================
     // MODÁLNE OKNO (ako vnútorný komponent)
