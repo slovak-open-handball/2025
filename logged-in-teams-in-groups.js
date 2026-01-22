@@ -1,6 +1,5 @@
 import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import ReactDOM from "https://www.gstatic.com/firebasejs/11.6.1/react-dom.js";   // alebo správna cesta
 
 const { useState, useEffect, useRef } = React;
 
