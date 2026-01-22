@@ -4,54 +4,63 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 // Referencia na globálny konfiguračný dokument pre nadstavbové tímy
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
-const createTeamAssignmentNotification = async (action, team, userId = null) => {
-    if (!window.db) return;
+const currentUserEmail = window.globalUserProfileData?.email || null;
 
-    let message = '';
-    let category = team.category || '?';
-    let group = team.groupName || 'bez skupiny';
-    let teamName = team.teamName || 'Neznámy tím';
+const createTeamAssignmentNotification = async (action, team) => {
+        if (!window.db) return;
 
-    switch (action) {
-        case 'assign_global':
-            message = `Globálny tím "${teamName}" bol priradený do skupiny "${group}" (kategória: ${category})`;
-            break;
-        case 'change_group_global':
-            message = `Skupina globálneho tímu "${teamName}" zmenená na "${group}" (kategória: ${category})`;
-            break;
-        case 'unassign_global':
-            message = `Globálny tím "${teamName}" bol odstránený zo skupiny (kategória: ${category})`;
-            break;
-        case 'assign_user':
-            message = `Používateľský tím "${teamName}" (UID: ${userId}) bol priradený do skupiny "${group}" (kategória: ${category})`;
-            break;
-        case 'change_group_user':
-            message = `Skupina používateľského tímu "${teamName}" (UID: ${userId}) zmenená na "${group}" (kategória: ${category})`;
-            break;
-        case 'unassign_user':
-            message = `Používateľský tím "${teamName}" (UID: ${userId}) bol presunutý medzi tímy bez skupiny (kategória: ${category})`;
-            break;
-        case 'add_new_global':
-            message = `Nový globálny tím "${teamName}" bol vytvorený a zaradený do skupiny "${group}" (kategória: ${category})`;
-            break;
-        default:
-            message = `Zmena týkajúca sa tímu "${teamName}" (${action})`;
-    }
+        if (!currentUserEmail) {
+            console.warn("Nie je dostupný e-mail prihláseného používateľa → notifikácia nebude mať userEmail");
+        }
 
-    try {
-        const notificationsRef = collection(window.db, 'notifications');
-        await addDoc(notificationsRef, {
-            changes: [message],
-            timestamp: serverTimestamp(),
-            relatedTeamId: team.id,
-            relatedCategory: category,
-            relatedGroup: group,
-            actionType: action
-        });
-        console.log("Notifikácia uložená:", message);
-    } catch (err) {
-        console.error("Chyba pri ukladaní notifikácie:", err);
-    }
+        let message = '';
+        let category = team.category || '?';
+        let group = team.groupName || 'bez skupiny';
+        let teamName = team.teamName || 'Neznámy tím';
+
+        switch (action) {
+            case 'assign_global':
+                message = `Globálny tím "${teamName}" priradený do skupiny "${group}" (kat.: ${category})`;
+                break;
+            case 'change_group_global':
+                message = `Zmena skupiny globálneho tímu "${teamName}" → "${group}" (kat.: ${category})`;
+                break;
+            case 'unassign_global':
+                message = `Globálny tím "${teamName}" odstránený zo skupiny (kat.: ${category})`;
+                break;
+            case 'assign_user':
+                message = `Používateľský tím "${teamName}" zaradený do skupiny "${group}" (kat.: ${category})`;
+                break;
+            case 'change_group_user':
+                message = `Zmena skupiny používateľského tímu "${teamName}" → "${group}" (kat.: ${category})`;
+                break;
+            case 'unassign_user':
+                message = `Používateľský tím "${teamName}" presunutý medzi tímy bez skupiny (kat.: ${category})`;
+                break;
+            case 'add_new_global':
+                message = `Nový globálny tím "${teamName}" vytvorený a zaradený do "${group}" (kat.: ${category})`;
+                break;
+            default:
+                message = `Zmena tímu "${teamName}" (${action})`;
+        }
+
+        try {
+            const notificationsRef = collection(window.db, 'notifications');
+            await addDoc(notificationsRef, {
+                userEmail: currentUserEmail || "", 
+                performedBy: currentUserEmail || null,  
+                changes: [message],
+                timestamp: serverTimestamp(),
+                relatedTeamId: team.id,
+                relatedCategory: category,
+                relatedGroup: group || null,
+                actionType: action
+            });
+            console.log("[NOTIFIKÁCIA] Uložená:", message);
+        } catch (err) {
+            console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
+        }
+    };
 };
 
 const AddGroupsApp = (props) => {
