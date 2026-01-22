@@ -314,9 +314,13 @@ const AddGroupsApp = (props) => {
     
                 const userData = userSnap.data();
                 const teamsInCategory = [...(userData.teams?.[originalTeam.category] || [])];
-                const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
+                const teamIndex = teamsInCategory.findIndex(t => t.teamName === originalTeam.teamName);
                 if (teamIndex === -1) {
-                    setUiNotification({ id: Date.now() + Math.random(), message: "Tím sa nenašiel v profile používateľa.", type: 'error' });
+                    setUiNotification({
+                        id: Date.now() + Math.random(),
+                        message: "Tím sa nenašiel v profile používateľa (podľa názvu).",
+                        type: 'error'
+                    });
                     return;
                 }
     
@@ -450,12 +454,12 @@ const AddGroupsApp = (props) => {
 
             const userData = userSnap.data();
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-            const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
+            const teamIndex = teamsInCategory.findIndex(t => t.teamName === originalTeam.teamName);
             if (teamIndex === -1) {
-                setUiNotification({ 
-                    id: Date.now() + Math.random(), 
-                    message: "Tím sa nenašiel v profile používateľa.", 
-                    type: 'error' 
+                setUiNotification({
+                    id: Date.now() + Math.random(),
+                    message: "Tím sa nenašiel v profile používateľa (podľa názvu).",
+                    type: 'error'
                 });
                 return;
             }
