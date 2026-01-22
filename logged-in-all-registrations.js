@@ -35,12 +35,6 @@ const getFormattedPostalCodeForInput = (rawValue) => {
     return digits;
 };
 
-// 1. Pre editovacie polia (inputy v modálnom okne) – bez pomlčky
-const formatPostalCodeForInput = (postalCode) => {
-    if (!postalCode) return '';
-    return String(postalCode).replace(/\D/g, '');
-};
-
 // 2. Pre zobrazenie v tabuľke – s pomlčkou ak je prázdne
 const formatPostalCodeForDisplay = (postalCode) => {
     if (!postalCode) return '-';
