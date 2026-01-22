@@ -242,7 +242,7 @@ const AddGroupsApp = (props) => {
             const userData = userSnap.data();
             const categoryName = team.category;
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-            const teamIndex = teamsInCategory.findIndex(t => t.id === team.id);
+            const teamIndex = teamsInCategory.findIndex(t => t.teamName === team.teamName);
             if (teamIndex === -1) {
                 notify("Tím sa nenašiel v profile používateľa.",   "error");  
                 return;
