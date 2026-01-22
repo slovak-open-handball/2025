@@ -94,19 +94,18 @@ const AddGroupsApp = (props) => {
 
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
+        let timer;
         const unsubscribe = subscribe((notification) => {
             setUiNotification(notification);
-    
-            // automaticky zmizne po 5 sekundách
-            const timer = setTimeout(() => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
                 setUiNotification(null);
             }, 5000);
-    
-            // cleanup – ak by prišla nová notifikácia skôr
-            return () => clearTimeout(timer);
         });
-    
-        return unsubscribe;
+        return () => {
+            unsubscribe();
+            clearTimeout(timer);
+        };
     }, []);
 
     // ===================================================================
