@@ -116,22 +116,28 @@ const AddGroupsApp = (props) => {
                 message = `Tím "${teamName}" priradený do skupiny "${group}" (${category})`;
                 break;
             case 'change_group_global':
-                message = `Zmena skupiny globálneho tímu "${teamName}" → "${group}" (${category})`;
+                message = `Zmena skupiny tímu "${teamName}" → "${group}" (${category})`;
                 break;
             case 'unassign_global':
                 message = `Tím "${teamName}" odstránený zo skupiny (${category})`;
                 break;
             case 'assign_user':
-                message = `Používateľský tím "${teamName}" zaradený do skupiny "${group}" (${category})`;
+                message = `Tím "${teamName}" zaradený do skupiny "${group}" (${category})`;
                 break;
             case 'change_group_user':
-                message = `Zmena skupiny používateľského tímu "${teamName}" → "${group}" (${category})`;
+                message = `Zmena skupiny tímu "${teamName}" → "${group}" (${category})`;
                 break;
             case 'unassign_user':
-                message = `Používateľský tím "${teamName}" presunutý medzi tímy bez skupiny (${category})`;
+                message = `Tím "${teamName}" presunutý medzi tímy bez skupiny (${category})`;
                 break;
             case 'add_new_global':
                 message = `Nový tím "${teamName}" vytvorený a zaradený do "${group}" (${category})`;
+                break;
+            case 'change_order_global':
+                message = `Poradie tímu "${teamName}" v skupine "${group}" (${category}) zmenené z ${team.oldOrder} na ${team.newOrder}`;
+                break;
+            case 'change_order_user':
+                message = `Poradie tímu "${teamName}" v skupine "${group}" (${category}) zmenené z ${team.oldOrder} na ${team.newOrder}`;
                 break;
             default:
                 message = `Zmena tímu "${teamName}" (${action})`;
@@ -177,7 +183,7 @@ const AddGroupsApp = (props) => {
 
     const handleDeleteTeam = async (teamToDelete) => {
         if (!window.db || !teamToDelete || !teamToDelete.isSuperstructureTeam) {
-            notify("Možno odstrániť len globálne tímy",   "error");
+            notify("Možno odstrániť len nadstavbové tímy",   "error");
             return;
         }
     
@@ -217,7 +223,7 @@ const AddGroupsApp = (props) => {
     
             notify(`Tím '${teamToDelete.teamName}' bol odstránený zo skupiny.`, "success");
         } catch (error) {
-            console.error("Chyba pri odstraňovaní globálneho tímu:", error);
+            console.error("Chyba pri odstraňovaní tímu:", error);
             notify("Nepodarilo sa odstrániť tím zo skupiny.",   "error");  
         }
     };
@@ -319,17 +325,24 @@ const AddGroupsApp = (props) => {
                 oldTeams.splice(idx, 1);
     
                 const categoryChanged = oldCategory !== categoryName;
+                const groupChanged = originalTeam.groupName !== (groupName || null);
+    
                 let targetTeams = categoryChanged ? [...(data[categoryName] || [])] : oldTeams;
     
                 let newOrder = null;
                 const newGroup = groupName || null;
+    
                 if (newGroup) {
                     const inGroup = targetTeams.filter(t => t.groupName === newGroup);
                     const max = inGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
-                    newOrder = (originalTeam.groupName === newGroup && !categoryChanged)
+                    newOrder = (originalTeam.groupName === newGroup && !categoryChanged && !groupChanged)
                         ? (originalTeam.order ?? max + 1)
                         : max + 1;
-                    if (order != null && !isNaN(order)) newOrder = parseInt(order, 10);
+    
+                    // Ak prišla nová hodnota order a je platná
+                    if (order != null && !isNaN(order)) {
+                        newOrder = parseInt(order, 10);
+                    }
                 }
     
                 const updatedTeam = {
@@ -347,27 +360,40 @@ const AddGroupsApp = (props) => {
     
                 await updateDoc(superstructureDocRef, updatePayload);
     
-                const action = originalTeam.groupName === groupName ? 'change_group_global' : 'assign_global';
-                await createTeamAssignmentNotification(action, {
+                // Detekcia, čo sa zmenilo
+                let action;
+                let notificationData = {
                     id: originalTeam.id,
                     teamName: finalTeamName,
                     category: categoryName,
                     groupName: newGroup || null
-                });
+                };
+    
+                if (groupChanged || categoryChanged) {
+                    action = originalTeam.groupName ? 'change_group_global' : 'assign_global';
+                } else if (newOrder !== originalTeam.order && newGroup === originalTeam.groupName) {
+                    // Zmena iba poradia v rovnakej skupine
+                    action = 'change_order_global';
+                    notificationData.oldOrder = originalTeam.order;
+                    notificationData.newOrder = newOrder;
+                } else {
+                    action = 'change_group_global'; // fallback
+                }
+    
+                await createTeamAssignmentNotification(action, notificationData);
     
                 notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
             } catch (err) {
-                console.error("Chyba pri aktualizácii globálneho tímu:", err);
+                console.error("Chyba pri aktualizácii tímu:", err);
                 notify("Nepodarilo sa aktualizovať tím.", "error");
             }
         }
     
-        // === Používateľský tím (ktokoľvek) ===
+        // === Používateľský tím ===
         else {
-            if (!originalTeam?.uid || !originalTeam?.id) return;
+            // ... (tu je podobná logika, len pre používateľa)
     
-            // Voliteľné potvrdenie pri cudzieho tíme
-            // if (!window.confirm(`Naozaj chceš upraviť tím používateľa ${originalTeam.uid}?`)) return;
+            if (!originalTeam?.uid || !originalTeam?.id) return;
     
             const userRef = doc(window.db, 'users', originalTeam.uid);
     
@@ -382,17 +408,21 @@ const AddGroupsApp = (props) => {
                 const teamsInCategory = [...(userData.teams?.[originalTeam.category] || [])];
                 const teamIndex = teamsInCategory.findIndex(t => t.id === originalTeam.id);
                 if (teamIndex === -1) {
-                    notify("Tím sa nenašiel v profile používateľa (podľa názvu).", "error");
+                    notify("Tím sa nenašiel v profile používateľa.", "error");
                     return;
                 }
     
                 let newOrder = null;
                 const newGroup = groupName || null;
+    
                 if (newGroup) {
                     const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.id !== originalTeam.id);
                     const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
                     newOrder = order != null ? parseInt(order, 10) : max + 1;
                 }
+    
+                const oldOrder = teamsInCategory[teamIndex].order;
+                const oldGroup = teamsInCategory[teamIndex].groupName;
     
                 teamsInCategory[teamIndex] = {
                     ...teamsInCategory[teamIndex],
@@ -403,18 +433,32 @@ const AddGroupsApp = (props) => {
     
                 await updateDoc(userRef, { [`teams.${originalTeam.category}`]: teamsInCategory });
     
-                const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
-                await createTeamAssignmentNotification(action, {
+                let action;
+                let notificationData = {
                     id: originalTeam.id,
                     teamName: finalTeamName,
                     category: originalTeam.category,
                     groupName: newGroup || null
-                });
+                };
+    
+                const groupChanged = oldGroup !== newGroup;
+    
+                if (groupChanged) {
+                    action = oldGroup ? 'change_group_user' : 'assign_user';
+                } else if (newOrder !== oldOrder && newGroup === oldGroup) {
+                    action = 'change_order_user';
+                    notificationData.oldOrder = oldOrder;
+                    notificationData.newOrder = newOrder;
+                } else {
+                    action = 'change_group_user'; // fallback
+                }
+    
+                await createTeamAssignmentNotification(action, notificationData);
     
                 notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
             } catch (err) {
-                console.error("Chyba pri aktualizácii používateľského tímu:", err);
-                notify("Nepodarilo sa aktualizovať používateľský tím.", "error");
+                console.error("Chyba pri aktualizácii tímu:", err);
+                notify("Nepodarilo sa aktualizovať tím.", "error");
             }
         }
     };
@@ -463,7 +507,7 @@ const AddGroupsApp = (props) => {
     
             notify(`Nový tím '${finalTeamName}' bol pridaný ${groupName ? `do skupiny '${groupName}'` : 'bez skupiny'}.`, "success");
         } catch (error) {
-            console.error("Chyba pri pridávaní nového globálneho tímu:", error);
+            console.error("Chyba pri pridávaní nového tímu:", error);
             notify("Nepodarilo sa pridať nový tím do skupiny.", "error");
         }
     };
@@ -473,7 +517,7 @@ const AddGroupsApp = (props) => {
     
         const categoryName = categoryIdToNameMap[categoryId];
         if (categoryName !== originalTeam.category) {
-            notify("Kategóriu používateľského tímu nemôžete meniť.", "error");
+            notify("Kategóriu tímu nemôžete meniť.", "error");
             return;
         }
     
@@ -521,7 +565,7 @@ const AddGroupsApp = (props) => {
     
             notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
         } catch (err) {
-            console.error("Chyba pri aktualizácii používateľského tímu:", err);
+            console.error("Chyba pri aktualizácii tímu:", err);
             notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
         }
     };
