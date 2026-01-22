@@ -101,37 +101,41 @@ const AddGroupsApp = (props) => {
 
     const createTeamAssignmentNotification = async (action, team) => {
         if (!window.db) return;
-
         if (!currentUserEmail) {
             console.warn("Nie je dostupný e-mail prihláseného používateľa → notifikácia nebude mať userEmail");
         }
-
+    
         let message = '';
         let category = team.category || '?';
         let group = team.groupName || 'bez skupiny';
         let teamName = team.teamName || 'Neznámy tím';
-
+        let orderText = (team.order != null && group !== 'bez skupiny') 
+            ? ` (poradie: ${team.order})` 
+            : '';
+    
         switch (action) {
             case 'assign_global':
-                message = `Tím ${teamName} priradený do skupiny ${group} (${category}).`;
+                message = `Tím ${teamName} priradený do skupiny ${group} (${category})${orderText}.`;
                 break;
             case 'change_group_global':
-                message = `Zmena skupiny tímu ${teamName} → ${group} (${category}).`;
+                message = `Zmena skupiny tímu ${teamName} → ${group} (${category})${orderText}.`;
                 break;
+            case 'assign_user':
+                message = `Tím ${teamName} zaradený do skupiny ${group} (${category})${orderText}.`;
+                break;
+            case 'change_group_user':
+                message = `Zmena skupiny tímu ${teamName} → ${group} (${category})${orderText}.`;
+                break;
+            case 'add_new_global':
+                message = `Nový tím ${teamName} vytvorený a zaradený do ${group} (${category})${orderText}.`;
+                break;
+    
+            // ostatné akcie bez zmeny (nemajú poradie)
             case 'unassign_global':
                 message = `Tím ${teamName} odstránený zo skupiny (${category}).`;
                 break;
-            case 'assign_user':
-                message = `Tím ${teamName} zaradený do skupiny ${group} (${category}).`;
-                break;
-            case 'change_group_user':
-                message = `Zmena skupiny tímu ${teamName} → ${group} (${category}).`;
-                break;
             case 'unassign_user':
                 message = `Tím ${teamName} presunutý medzi tímy bez skupiny (${category}).`;
-                break;
-            case 'add_new_global':
-                message = `Nový tím ${teamName} vytvorený a zaradený do ${group} (${category}).`;
                 break;
             case 'change_order_global':
                 message = `Poradie tímu ${teamName} v skupine ${group} (${category}) zmenené z '${team.oldOrder}' na '${team.newOrder}'.`;
@@ -142,12 +146,12 @@ const AddGroupsApp = (props) => {
             default:
                 message = `Zmena tímu ${teamName} (${action}).`;
         }
-
+    
         try {
             const notificationsRef = collection(window.db, 'notifications');
             await addDoc(notificationsRef, {
-                userEmail: currentUserEmail || "", 
-                performedBy: currentUserEmail || null,  
+                userEmail: currentUserEmail || "",
+                performedBy: currentUserEmail || null,
                 changes: [message],
                 timestamp: serverTimestamp(),
                 relatedTeamId: team.id ?? null,
