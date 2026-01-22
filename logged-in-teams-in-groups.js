@@ -1040,78 +1040,220 @@ const AddGroupsApp = (props) => {
     };
 
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
-        const sortedTeams = [...teamsToRender].sort((a, b) => {
-            if (!isWithoutGroup && a.order != null && b.order != null) return a.order - b.order;
-            return a.teamName.localeCompare(b.teamName);
-        });
-
-        const orderCountMap = new Map();
-        if (!isWithoutGroup) {
-            sortedTeams.forEach(t => {
-                if (t.order != null) orderCountMap.set(t.order, (orderCountMap.get(t.order) || 0) + 1);
-            });
-        }
-
-        const items = sortedTeams.map((team, idx) => {
-            const hasDuplicateOrder = !isWithoutGroup && team.order != null && (orderCountMap.get(team.order) || 0) > 1;
-            const textColor = hasDuplicateOrder ? 'text-red-600 font-bold' : 'text-gray-800';
-    
-            let displayName = team.teamName;
-            if (!team.isSuperstructureTeam && team.category && displayName.startsWith(team.category + ' ')) {
-                displayName = displayName.substring(team.category.length + 1).trim();
+        // Pomocná funkcia na získanie "čistého" mena bez prefixu kategórie
+        const getCleanDisplayName = (team) => {
+            let name = team.teamName;
+            if (!team.isSuperstructureTeam && team.category && name.startsWith(team.category + ' ')) {
+                name = name.substring(team.category.length + 1).trim();
             }
+            return name;
+        };
     
-            let display = team.order != null && !isWithoutGroup
-                ? `${team.order}. ${displayName}`
-                : displayName;
+        if (isWithoutGroup) {
+            // Tímy bez skupiny → triedime len podľa názvu, bez čísel a placeholderov
+            const sortedTeams = [...teamsToRender].sort((a, b) =>
+                a.teamName.localeCompare(b.teamName)
+            );
     
-            if (!selectedCategoryId && !team.groupName && team.category) {
-                display = `${team.category}: ${display}`;
-            }
+            const items = sortedTeams.map((team, idx) => {
+                let display = getCleanDisplayName(team);
+                if (!selectedCategoryId) {
+                    // ak zobrazujeme všetky kategórie → ukážeme aj názov kategórie
+                    display = `${team.category}: ${display}`;
+                }
     
-            // Rozhodnutie, či vôbec zobrazíme tlačidlo s košom
-            const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
+                const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
     
-            return React.createElement(
-                'li',
-                {
-                    key: team.id || `${team.uid || 'g'}-${team.teamName}-${team.groupName || ''}-${idx}`,
-                    className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'}`
-                },
-                React.createElement('span', { className: `flex-grow ${textColor}` }, display),
-                React.createElement(
-                    'div',
-                    { className: 'flex items-center space-x-1' },
+                return React.createElement(
+                    'li',
+                    {
+                        key: team.id || `${team.uid || 'g'}-${team.teamName}-${team.groupName || ''}-${idx}`,
+                        className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'}`
+                    },
+                    React.createElement('span', { className: 'flex-grow text-gray-800' }, display),
+    
                     React.createElement(
-                        'button',
-                        {
-                            onClick: () => {
-                                setTeamToEdit(team);
-                                setIsModalOpen(true);
+                        'div',
+                        { className: 'flex items-center space-x-1' },
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => {
+                                    setTeamToEdit(team);
+                                    setIsModalOpen(true);
+                                },
+                                className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                                title: 'Upraviť tím'
                             },
-                            className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
-                            title: 'Upraviť tím'
-                        },
-                        React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                        )
-                    ),
-                    // Ikonka koša sa zobrazí LEN ak showDeleteButton === true
-                    showDeleteButton &&
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => handleRemoveOrDeleteTeam(team),
-                            className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
-                            title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
-                        },
-                        React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                            )
+                        ),
+                        showDeleteButton &&
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => handleRemoveOrDeleteTeam(team),
+                                className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
+                                title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
+                            },
+                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                            )
                         )
                     )
-                )
-            );
+                );
+            });
+    
+            return React.createElement('ul', { className: 'space-y-2' }, ...items);
+        }
+    
+        // ────────────────────────────────────────────────
+        // Skupina → zoradíme podľa order + doplníme missing placeholder-y
+        // ────────────────────────────────────────────────
+    
+        const sortedTeams = [...teamsToRender].sort((a, b) => {
+            const oa = typeof a.order === 'number' ? a.order : Infinity;
+            const ob = typeof b.order === 'number' ? b.order : Infinity;
+            return oa - ob;
         });
+    
+        // Zoznam všetkých použitých poradových čísel (iba platné celé čísla ≥ 1)
+        const usedOrders = new Set(
+            sortedTeams
+                .map(t => t.order)
+                .filter(o => Number.isInteger(o) && o >= 1)
+        );
+    
+        const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
+    
+        const items = [];
+    
+        // Vytvoríme riadky od 1 po maxOrder (vrátane dier)
+        for (let pos = 1; pos <= maxOrder; pos++) {
+            const teamsAtThisPosition = sortedTeams.filter(t => t.order === pos);
+            const hasDuplicate = teamsAtThisPosition.length > 1;
+    
+            if (teamsAtThisPosition.length === 0) {
+                // CHÝBAJÚCI tím → placeholder
+                items.push(
+                    React.createElement(
+                        'li',
+                        {
+                            key: `missing-${targetGroupId || 'global'}-${pos}`,
+                            className: 'flex items-center px-4 py-3 rounded-lg border-2 border-dashed border-gray-400 bg-gray-50/60 italic text-gray-500 text-sm'
+                        },
+                        React.createElement(
+                            'span',
+                            { className: 'flex-grow text-center' },
+                            `${pos}. V skupine chýba tím s poradovým číslom`
+                        )
+                    )
+                );
+            } else {
+                // Jeden alebo viac tímov na tomto poradovom čísle
+                teamsAtThisPosition.forEach((team, teamIdx) => {
+                    const displayName = getCleanDisplayName(team);
+                    const textColor = hasDuplicate ? 'text-red-700 font-semibold' : 'text-gray-800';
+    
+                    items.push(
+                        React.createElement(
+                            'li',
+                            {
+                                key: team.id || `team-${pos}-${team.teamName}-${teamIdx}`,
+                                className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'} ${hasDuplicate ? 'border-red-300' : ''}`
+                            },
+                            React.createElement(
+                                'span',
+                                { className: `flex-grow ${textColor}` },
+                                `${pos}. ${displayName}${hasDuplicate ? ' (duplicitné poradové číslo!)' : ''}`
+                            ),
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center space-x-1' },
+                                React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => {
+                                            setTeamToEdit(team);
+                                            setIsModalOpen(true);
+                                        },
+                                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                                        title: 'Upraviť tím'
+                                    },
+                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                                    )
+                                ),
+                                React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => handleRemoveOrDeleteTeam(team),
+                                        className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
+                                        title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
+                                    },
+                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                                    )
+                                )
+                            )
+                        )
+                    );
+                });
+            }
+        }
+    
+        // Extra tímy s order > maxOrder (napr. ručne nastavené vysoké číslo)
+        sortedTeams
+            .filter(t => typeof t.order === 'number' && t.order > maxOrder)
+            .forEach(team => {
+                const displayName = getCleanDisplayName(team);
+                items.push(
+                    React.createElement(
+                        'li',
+                        {
+                            key: team.id || `extra-${team.order}-${team.teamName}`,
+                            className: 'flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm bg-orange-50/70 border-orange-300'
+                        },
+                        React.createElement(
+                            'span',
+                            { className: 'flex-grow text-orange-800' },
+                            `${team.order}. ${displayName} (vyššie ako aktuálne maximum)`
+                        ),
+                        // tlačidlá edit / delete (rovnaké ako vyššie)
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center space-x-1' },
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center space-x-1' },
+                                React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => { setTeamToEdit(team); setIsModalOpen(true); },
+                                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
+                                        title: 'Upraviť tím'
+                                    },
+                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                                    )
+                                ),
+                                React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => handleRemoveOrDeleteTeam(team),
+                                        className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
+                                        title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
+                                    },
+                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                                    )
+                                )
+                            )
+                        )
+                    )
+                );
+            });
     
         return React.createElement('ul', { className: 'space-y-2' }, ...items);
     };
