@@ -6,14 +6,6 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 const [uiNotification, setUiNotification] = useState(null);
 
-useEffect(() => {
-  if (uiNotification) {
-    console.log("UI notifikácia →", uiNotification);
-    const timer = setTimeout(() => setUiNotification(null), 5000);
-    return () => clearTimeout(timer);
-  }
-}, [uiNotification]);
-
 const AddGroupsApp = (props) => {
     const { useState, useEffect, useRef } = React;
     const teamsWithoutGroupRef = React.useRef(null);
@@ -1069,7 +1061,7 @@ const AddGroupsApp = (props) => {
     }`;
 
     let typeClasses = '';
-    switch (notification?.type) {
+    switch (uiNotification?.type) {
         case 'success': typeClasses = 'bg-green-500'; break;
         case 'error': typeClasses = 'bg-red-500'; break;
         case 'info': typeClasses = 'bg-blue-500'; break;
