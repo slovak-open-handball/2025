@@ -25,7 +25,7 @@ const AddGroupsApp = (props) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState('');
-    const [notification, setUiNotification] = useState(null);
+    const [uiNotification, setUiNotification] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [teamToEdit, setTeamToEdit] = useState(null);
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
@@ -90,14 +90,14 @@ const AddGroupsApp = (props) => {
 
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
-      if (notification) {
-        console.log("Notifikácia nastavená →", notification); // ← pridaj toto na debug
-        const timer = setTimeout(() => {
-          setUiNotification(null);
-        }, 5000);
-        return () => clearTimeout(timer);
-      }
-    }, [notification]);
+        if (uiNotification) {
+          console.log("UI notifikácia nastavená →", uiNotification);
+          const timer = setTimeout(() => {
+            setUiNotification(null);
+          }, 5000);
+          return () => clearTimeout(timer);
+        }
+      }, [uiNotification]);
 
     // ===================================================================
     // VNÚTORNÉ FUNKCIE – všetky majú prístup k setUiNotification, categoryIdToNameMap atď.
@@ -1108,7 +1108,7 @@ const AddGroupsApp = (props) => {
     return React.createElement(
         'div',
         { className: 'flex flex-col w-full relative' },
-        React.createElement('div', { key: uiNotification?.id || 'no-notification', className: `${notificationClasses} ${typeClasses}` }, notification?.message),
+        React.createElement('div', { key: uiNotification?.id || 'no-notification', className: `${notificationClasses} ${typeClasses}` }, uiNotification?.message),
         React.createElement(NewTeamModal, {
             isOpen: isModalOpen,
             onClose: closeModal,
