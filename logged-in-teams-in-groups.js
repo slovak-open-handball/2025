@@ -197,56 +197,66 @@ const AddGroupsApp = (props) => {
     const currentUserEmail = window.globalUserProfileData?.email || null;
     const [deleteGapModal, setDeleteGapModal] = useState(null);
 
-    const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
-      if (!window.db || !categoryName || !groupName || !gapPosition) return;
+const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
+  if (!window.db || !categoryName || !groupName || !gapPosition) return;
 
-      try {
-        // 1. Globálne (superštruktúra)
-        const isGlobalGroup = true; // zatiaľ predpokladáme, že diery riešime hlavne v globálnych skupinách
+  try {
+    const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return;
 
-        if (isGlobalGroup) {
-          const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-          const snap = await getDoc(docRef);
-          if (!snap.exists()) return;
+    const data = snap.data() || {};
+    const teamsInCategory = [...(data[categoryName] || [])];
 
-          const data = snap.data() || {};
-          const teamsInCategory = [...(data[categoryName] || [])];
+    // 1. Najprv si oddelíme tímy v danej skupine
+    const teamsInThisGroup = teamsInCategory.filter(t => t.groupName === groupName);
 
-          // nájdeme všetky tímy v danej skupine s order >= gapPosition + 1
-          const teamsToShift = teamsInCategory
-            .filter(t => t.groupName === groupName && typeof t.order === 'number' && t.order >= gapPosition + 1)
-            .map(t => ({
-              ...t,
-              order: t.order - 1
-            }));
-
-          // aktualizujeme len tímy, ktoré sa menia
-          const updatedTeams = teamsInCategory.map(t => {
-            const shifted = teamsToShift.find(s => s.id === t.id);
-            return shifted || t;
-          });
-
-          await updateDoc(docRef, {
-            [categoryName]: updatedTeams
-          });
-
-          notify(`Voľné miesto na pozícii ${gapPosition} v skupine „${groupName}“ bolo odstránené.`, 'success');
-
-          // voliteľne: notifikácia do changes / notifications
-          await createTeamAssignmentNotification('remove_gap_global', {
-            category: categoryName,
-            groupName,
-            position: gapPosition
-          });
-        }
-
-        // TODO: ak by si chcel podporiť aj používateľské tímy → podobná logika pre userRef
-
-      } catch (err) {
-        console.error("Chyba pri odstraňovaní diery v poradí:", err);
-        notify("Nepodarilo sa odstrániť voľné miesto v poradí.", "error");
+    // 2. Vytvoríme nové pole s posunutým poradím
+    const updatedTeamsInGroup = teamsInThisGroup.map(team => {
+      // Ak je order >= gapPosition + 1 → posunieme dole
+      if (typeof team.order === 'number' && team.order >= gapPosition + 1) {
+        return {
+          ...team,
+          order: team.order - 1
+        };
       }
-    };  
+      return team;
+    });
+
+    // 3. Zostavíme nové pole pre celú kategóriu:
+    //    - tímy mimo tejto skupiny ostávajú bez zmeny
+    //    - tímy v tejto skupine nahradíme aktualizovanou verziou
+    const finalTeams = teamsInCategory.map(team => {
+      if (team.groupName !== groupName) return team;
+
+      // Nájdeme aktualizovanú verziu tohto tímu
+      const updated = updatedTeamsInGroup.find(
+        ut => ut.teamName === team.teamName && ut.order === team.order // fallback ak chýba id
+        // prípadne lepšie: ut.id && team.id && ut.id === team.id
+      );
+
+      return updated || team;
+    });
+
+    // 4. Uložíme späť celú kategóriu
+    await updateDoc(docRef, {
+      [categoryName]: finalTeams
+    });
+
+    notify(`Voľné miesto na pozícii ${gapPosition} v skupine „${groupName}“ bolo odstránené. Tímy za ním sa posunuli.`, 'success');
+
+    // notifikácia (voliteľné)
+    await createTeamAssignmentNotification('remove_gap_global', {
+      category: categoryName,
+      groupName,
+      position: gapPosition
+    });
+
+  } catch (err) {
+    console.error("Chyba pri odstraňovaní diery v poradí:", err);
+    notify("Nepodarilo sa odstrániť voľné miesto v poradí.", "error");
+  }
+}; 
 
     const createTeamAssignmentNotification = async (action, team) => {
         if (!window.db) return;
