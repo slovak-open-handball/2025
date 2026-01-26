@@ -727,95 +727,118 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 // Poslucháč pre `/users/` kolekciu
                 const usersCollectionRef = collection(window.db, 'users');
                 unsubscribeUsers = onSnapshot(usersCollectionRef, async (querySnapshot) => {
-                    console.log("-----------------------------------------");
-                    console.log("Aktualizácia dát z '/users/':");
-                    
-                    if (querySnapshot.empty) {
-                        console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
-                    } else {
-                        const teamsDataForTable = [];
-                        querySnapshot.forEach((doc) => {
-                            const data = doc.data();
-                            const teams = data.teams || {};
-                            
-                            Object.values(teams).forEach(teamsArray => {
-                                teamsArray.forEach(team => {
-                                    // Výpočet celkového počtu osôb v tíme
-                                    const playersCount = team.players || 0;
-                                    const menCount = team.menTeamMembers || 0;
-                                    const womenCount = team.womenTeamMembers || 0;
-                                    const maleDriversCount = (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) ? team.driverDetailsMale.length : 0;
-                                    const femaleDriversCount = (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) ? team.driverDetailsFemale.length : 0;
-                                    const totalCount = playersCount + menCount + womenCount + maleDriversCount + femaleDriversCount;
-                                    
-                                    teamsDataForTable.push({
-                                        teamName: team.teamName || '', 
-                                        accommodationType: team.accommodation?.type || '', 
-                                        players: team.players || 0, 
-                                        menTeamMembers: team.menTeamMembers || 0, 
-                                        womenTeamMembers: team.womenTeamMembers || 0, 
-                                        driverDetailsMale: maleDriversCount, 
-                                        driverDetailsFemale: femaleDriversCount,
-                                        totalMembers: totalCount // Nový stĺpec s celkovým počtom
-                                    });
-                                });
-                            });
-                        });
-                        
-                        console.table(teamsDataForTable);
+// ... vnútri onSnapshot(usersCollectionRef, async (querySnapshot) => {
 
-                        // Vytvorenie a výpis súhrnnej tabuľky podľa typu ubytovania
-                        const accommodationSummary = {};
-                        teamsDataForTable.forEach(team => {
-                            const accType = team.accommodationType || 'Nezadané';
-                            const totalMembers = team.totalMembers || 0;
-                            if (!accommodationSummary[accType]) {
-                                accommodationSummary[accType] = 0;
-                            }
-                            accommodationSummary[accType] += totalMembers;
-                        });
+console.log("-----------------------------------------");
+console.log("Aktualizácia dát z '/users/':");
 
-                        // Aktualizácia lokálneho stavu s počtami obsadenosti
-                        setAccommodationCounts(accommodationSummary);
+if (querySnapshot.empty) {
+    console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
+} else {
+    const teamsDataForTable = [];
+    const categoryTeamCount = {};       // počet tímov podľa kategórie
+    const categoryPersonCount = {};     // počet OSÔB podľa kategórie
 
-                        const summaryTableData = Object.keys(accommodationSummary).map(type => ({
-                            "Typ ubytovania": type,
-                            "Počet osôb": accommodationSummary[type]
-                        }));
+    querySnapshot.forEach((userDoc) => {
+        const userData = userDoc.data();
+        const userEmail = userData.email || userDoc.id;
+        const teams = userData.teams || {};
 
-                        console.log("-----------------------------------------");
-                        console.log("Súhrn podľa ubytovania:");
-                        console.table(summaryTableData);
+        console.log(`Používateľ: ${userEmail} (${userDoc.id})`);
 
-                        // NOVINKA: Načítanie a porovnanie s kapacitami ubytovania
-                        const accommodationDoc = await getDoc(accommodationDocRef);
-                        const accommodationData = accommodationDoc.exists() ? accommodationDoc.data() : { types: [] };
-                        const comparisonTableData = accommodationData.types.map(acc => {
-                            const occupied = accommodationSummary[acc.type] || 0;
-                            const remaining = acc.capacity - occupied;
-                            return {
-                                "Typ ubytovania": acc.type,
-                                "Obsadenosť": occupied,
-                                "Kapacita": acc.capacity,
-                                "Zostáva": remaining,
-                            };
-                        });
+        Object.entries(teams).forEach(([categoryName, teamsArray]) => {
+            if (!Array.isArray(teamsArray)) return;
 
-                        // Pridanie riadku pre "bez ubytovania" do porovnávacej tabuľky
-                        if (accommodationSummary['bez ubytovania']) {
-                             comparisonTableData.unshift({
-                                "Typ ubytovania": "bez ubytovania",
-                                "Obsadenosť": accommodationSummary['bez ubytovania'],
-                                "Kapacita": "N/A",
-                                "Zostáva": "N/A",
-                             });
-                        }
-                        
-                        console.log("-----------------------------------------");
-                        console.log("Súhrnné porovnanie obsadenosti a kapacity:");
-                        console.table(comparisonTableData);
+            const teamCountInCategory = teamsArray.filter(t => t).length;
+
+            if (teamCountInCategory > 0) {
+                // Počet tímov
+                if (!categoryTeamCount[categoryName]) {
+                    categoryTeamCount[categoryName] = 0;
+                }
+                categoryTeamCount[categoryName] += teamCountInCategory;
+
+                // Počet OSÔB – spočítame dĺžky všetkých relevantných polí
+                let personsInCategory = 0;
+
+                teamsArray.filter(t => t).forEach(team => {
+                    let personCountInTeam = 0;
+
+                    // === HLAVNÉ POĽA – spočítavame len tieto 5 polí ===
+                    if (team.playerDetails && Array.isArray(team.playerDetails)) {
+                        personCountInTeam += team.playerDetails.length;
                     }
-                    console.log("-----------------------------------------");
+                    if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+                        personCountInTeam += team.menTeamMemberDetails.length;
+                    }
+                    if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+                        personCountInTeam += team.womenTeamMemberDetails.length;
+                    }
+                    if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
+                        personCountInTeam += team.driverDetailsMale.length;
+                    }
+                    if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
+                        personCountInTeam += team.driverDetailsFemale.length;
+                    }
+
+                    personsInCategory += personCountInTeam;
+
+                    // Pre prehľadnú tabuľku v konzole (voliteľné)
+                    teamsDataForTable.push({
+                        teamName: team.teamName || '',
+                        accommodationType: team.accommodation?.type || '',
+                        playerDetails: team.playerDetails?.length || 0,
+                        menTeamMemberDetails: team.menTeamMemberDetails?.length || 0,
+                        womenTeamMemberDetails: team.womenTeamMemberDetails?.length || 0,
+                        driverDetailsMale: team.driverDetailsMale?.length || 0,
+                        driverDetailsFemale: team.driverDetailsFemale?.length || 0,
+                        totalPersons: personCountInTeam
+                    });
+                });
+
+                // Celkový počet osôb v kategórii
+                if (!categoryPersonCount[categoryName]) {
+                    categoryPersonCount[categoryName] = 0;
+                }
+                categoryPersonCount[categoryName] += personsInCategory;
+            }
+        });
+    });
+
+    // Výpis do konzoly – počet tímov
+    console.log("=== Celkový počet tímov podľa kategórií ===");
+    Object.entries(categoryTeamCount).forEach(([category, count]) => {
+        console.log(`Kategória "${category}": ${count} tímov`);
+    });
+    console.log(`Celkový počet všetkých tímov: ${Object.values(categoryTeamCount).reduce((sum, c) => sum + c, 0)}`);
+
+    // Výpis do konzoly – počet OSÔB (zo súčtu 5 polí)
+    console.log("=== Celkový počet osôb podľa kategórií (súčet playerDetails + menTeamMemberDetails + womenTeamMemberDetails + driverDetailsMale + driverDetailsFemale) ===");
+    Object.entries(categoryPersonCount).forEach(([category, count]) => {
+        console.log(`Kategória "${category}": ${count} osôb`);
+    });
+    console.log(`Celkový počet všetkých osôb: ${Object.values(categoryPersonCount).reduce((sum, c) => sum + c, 0)}`);
+
+    // Detailná tabuľka pre každého používateľa a tím (voliteľné, ale veľmi užitočné na ladenie)
+    console.log("=== Detailný prehľad tímov a počtu osôb ===");
+    console.table(teamsDataForTable);
+
+    console.log("======================================");
+
+    // Ak stále používaš accommodationCounts, aktualizuje sa tu
+    const accommodationSummary = {};
+    teamsDataForTable.forEach(team => {
+        const accType = team.accommodationType || 'Nezadané';
+        if (!accommodationSummary[accType]) {
+            accommodationSummary[accType] = 0;
+        }
+        accommodationSummary[accType] += team.totalPersons || 0;
+    });
+    setAccommodationCounts(accommodationSummary);
+}
+
+// ... zvyšok callbacku (console.log("-----------------------------------------"); atď.)
+                    
                 }, (error) => {
                     console.error("Chyba pri načítaní a výpise dát z '/users/':", error);
                     setNotificationMessage("Chyba pri načítaní a výpise dát z '/users/'.", 'error');
