@@ -133,9 +133,60 @@ const AddGroupsApp = (props) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [teamToEdit, setTeamToEdit] = useState(null);
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
-    const [confirmModal, setConfirmModal] = useState(null);
-    
+    const [confirmModal, setConfirmModal] = useState(null);    
     const currentUserEmail = window.globalUserProfileData?.email || null;
+    const [deleteGapModal, setDeleteGapModal] = useState(null);
+
+    const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
+      if (!window.db || !categoryName || !groupName || !gapPosition) return;
+
+      try {
+        // 1. Globálne (superštruktúra)
+        const isGlobalGroup = true; // zatiaľ predpokladáme, že diery riešime hlavne v globálnych skupinách
+
+        if (isGlobalGroup) {
+          const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+          const snap = await getDoc(docRef);
+          if (!snap.exists()) return;
+
+          const data = snap.data() || {};
+          const teamsInCategory = [...(data[categoryName] || [])];
+
+          // nájdeme všetky tímy v danej skupine s order >= gapPosition + 1
+          const teamsToShift = teamsInCategory
+            .filter(t => t.groupName === groupName && typeof t.order === 'number' && t.order >= gapPosition + 1)
+            .map(t => ({
+              ...t,
+              order: t.order - 1
+            }));
+
+          // aktualizujeme len tímy, ktoré sa menia
+          const updatedTeams = teamsInCategory.map(t => {
+            const shifted = teamsToShift.find(s => s.id === t.id);
+            return shifted || t;
+          });
+
+          await updateDoc(docRef, {
+            [categoryName]: updatedTeams
+          });
+
+          notify(`Voľné miesto na pozícii ${gapPosition} v skupine „${groupName}“ bolo odstránené.`, 'success');
+
+          // voliteľne: notifikácia do changes / notifications
+          await createTeamAssignmentNotification('remove_gap_global', {
+            category: categoryName,
+            groupName,
+            position: gapPosition
+          });
+        }
+
+        // TODO: ak by si chcel podporiť aj používateľské tímy → podobná logika pre userRef
+
+      } catch (err) {
+        console.error("Chyba pri odstraňovaní diery v poradí:", err);
+        notify("Nepodarilo sa odstrániť voľné miesto v poradí.", "error");
+      }
+    };  
 
     const createTeamAssignmentNotification = async (action, team) => {
         if (!window.db) return;
@@ -858,6 +909,66 @@ const AddGroupsApp = (props) => {
         const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
         const finalTeamNamePreview = teamName.trim() ? `${currentCategoryName} ${teamName.trim()}` : '';
 
+      const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName, categoryName, isConfirming }) => {
+        if (!isOpen) return null;
+
+        return React.createElement(
+          'div',
+          {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
+            onClick: onClose
+          },
+          React.createElement(
+            'div',
+            {
+              className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
+              onClick: e => e.stopPropagation()
+            },
+            React.createElement(
+              'h2',
+              { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
+              'Odstrániť voľné miesto v poradí'
+            ),
+            React.createElement(
+              'p',
+              { className: 'text-gray-700 mb-4 text-center' },
+              `Naozaj chcete odstrániť voľné miesto na pozícii ${position} v skupine ${groupName} (${categoryName})?`
+            ),
+            React.createElement(
+              'p',
+              { className: 'text-sm text-amber-700 mb-8 text-center font-medium' },
+              'Všetky tímy s vyšším poradím sa posunú o 1 nižšie.'
+            ),
+            React.createElement(
+              'div',
+              { className: 'flex justify-end space-x-4' },
+              React.createElement(
+                'button',
+                {
+                  onClick: onClose,
+                  className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
+                },
+                'Zrušiť'
+              ),
+              React.createElement(
+                'button',
+                {
+                  onClick: () => {
+                    onConfirm();
+                    onClose();
+                  },
+                  disabled: isConfirming,
+                  className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
+                    isConfirming ? 'bg-gray-400 cursor-wait opacity-60' : 'bg-amber-600 hover:bg-amber-700'
+                  }`
+                },
+                isConfirming ? 'Spracúvam...' : 'Áno, odstrániť miesto'
+              )
+            )
+          )
+        );
+      };      
+
         return React.createElement(
           'div',
           {
@@ -1285,21 +1396,44 @@ const AddGroupsApp = (props) => {
             const hasDuplicate = teamsAtThisPosition.length > 1;
     
             if (teamsAtThisPosition.length === 0) {
-                // CHÝBAJÚCI tím → placeholder
-                items.push(
+              // CHÝBAJÚCI tím → placeholder + kôš
+              items.push(
+                React.createElement(
+                  'li',
+                  {
+                    key: `missing-${targetGroupId || 'global'}-${pos}`,
+                    className: 'flex items-center justify-between px-4 py-3 rounded-lg border-2 border-dashed border-gray-400 bg-gray-50/60 italic text-gray-500 text-sm'
+                  },
+                  React.createElement(
+                    'div',
+                    { className: 'flex items-center space-x-3 flex-grow' },
                     React.createElement(
-                        'li',
-                        {
-                            key: `missing-${targetGroupId || 'global'}-${pos}`,
-                            className: 'flex items-center px-4 py-3 rounded-lg border-2 border-dashed border-gray-400 bg-gray-50/60 italic text-gray-500 text-sm'
-                        },
-                        React.createElement(
-                            'span',
-                            { className: 'flex-grow text-center' },
-                            `V skupine chýba tím s poradovým číslom ${pos}.`
-                        )
+                      'span',
+                      { className: 'text-center flex-grow' },
+                      `V skupine chýba tím s poradovým číslom ${pos}.`
                     )
-                );
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => {
+                        // otvoríme modálne okno na potvrdenie odstránenia diery
+                        setDeleteGapModal({
+                          categoryName: categoryIdToNameMap[targetCategoryId],
+                          groupName: targetGroupId,
+                          position: pos,
+                          open: true
+                        });
+                      },
+                      className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
+                      title: 'Odstrániť voľné miesto (posunúť nasledujúce tímy)'
+                    },
+                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                      React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                    )
+                  )
+                )
+              );
             } else {
                 // Jeden alebo viac tímov na tomto poradovom čísle
                 teamsAtThisPosition.forEach((team, teamIdx) => {
@@ -1580,7 +1714,25 @@ const AddGroupsApp = (props) => {
           onConfirm: handleConfirmRemove,
           team: confirmModal?.team,
           isConfirming: isConfirming
-        }),      
+        }),  
+        React.createElement(ConfirmDeleteGapModal, {
+          isOpen: !!deleteGapModal?.open,
+          onClose: () => setDeleteGapModal(null),
+          onConfirm: () => {
+            if (deleteGapModal) {
+              handleDeleteGap(
+                deleteGapModal.categoryName,
+                deleteGapModal.groupName,
+                deleteGapModal.position
+              );
+            }
+            setDeleteGapModal(null);
+          },
+          position: deleteGapModal?.position,
+          groupName: deleteGapModal?.groupName,
+          categoryName: deleteGapModal?.categoryName,
+          isConfirming: false // prípadne pridaj loading stav ak chceš
+        }),
         React.createElement(
             'div',
             { className: 'w-full max-w-xs mx-auto mb-8' },
