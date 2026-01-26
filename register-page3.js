@@ -194,10 +194,14 @@ const getCategoryOptionsForSelect = (currentIndex = -1) => {
 
   const handleAddRow = () => {
     const last = selectedCategoryRows[selectedCategoryRows.length - 1];
-    if (last.categoryId && getCategoryOptionsForSelect().length > 0) {
+  
+    // Používame -1 → globálne dostupné možnosti (bez ohľadu na konkrétny riadok)
+    const availableCount = getCategoryOptionsForSelect(-1).filter(opt => !opt.disabled).length;
+
+    if (last.categoryId && availableCount > 0) {
       setSelectedCategoryRows(prev => [...prev, { categoryId: '', teams: 1 }]);
-    } else if (getCategoryOptionsForSelect().length === 0) {
-      setNotificationMessage?.('Nie je možné pridať ďalší tím – všetky kategórie sú už obsadené alebo plné.');
+    } else if (availableCount === 0) {
+      setNotificationMessage?.('Nie je možné pridať ďalší riadok – už nie sú žiadne voľné kategórie.');
       setShowNotification?.(true);
       setNotificationType?.('error');
     }
@@ -221,9 +225,12 @@ const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid || !hasAt
   ? 'px-12 py-3 rounded-lg font-bold transition-colors bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
   : 'px-12 py-3 rounded-lg font-bold transition-colors bg-blue-500 hover:bg-blue-700 text-white border-2 border-blue-500';
 
-const addButtonClasses = loading || isAnyCategoryUnselected || getCategoryOptionsForSelect().length === 0
-  ? 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
-  : 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-blue-500 hover:bg-blue-700 text-white border-2 border-blue-500';
+const addButtonClasses = 
+  loading || 
+  isAnyCategoryUnselected || 
+  getCategoryOptionsForSelect(-1).filter(opt => !opt.disabled).length === 0
+    ? 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
+    : 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-blue-500 hover:bg-blue-700 text-white border-2 border-blue-500';
 
   return React.createElement(
     React.Fragment,
