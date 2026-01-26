@@ -9,6 +9,45 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 const listeners = new Set();
 
+// Nový komponent – stabilná notifikácia
+// Stabilná notifikácia cez portál
+const NotificationPortal = () => {
+  const { useState, useEffect } = React;
+
+  const [notification, setNotification] = React.useState(null);
+
+  useEffect(() => {
+    const unsubscribe = subscribe((notif) => {
+      setNotification(notif);
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (!notification) return null;
+
+  // Farby pozadia podľa typu
+  const typeClasses = {
+    success: 'bg-green-600',
+    error:   'bg-red-600',
+    info:    'bg-blue-600',
+    default: 'bg-gray-700'
+  }[notification.type || 'default'];
+
+  return ReactDOM.createPortal(
+    React.createElement(
+      'div',
+      {
+        key: notification.id,
+        className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
+      },
+      notification.message
+    ),
+    document.body
+  );
+};
+
 export const notify = (message, type = 'info') => {
   const id = Date.now() + Math.random();
   listeners.forEach(cb => cb({ id, message, type }));
@@ -81,7 +120,6 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team, isConfirming }) 
 };
 
 const AddGroupsApp = (props) => {
-    const { useState, useEffect, useRef } = React;
     const teamsWithoutGroupRef = React.useRef(null);
 
     const [allTeams, setAllTeams] = useState([]);
@@ -623,36 +661,46 @@ const AddGroupsApp = (props) => {
         const lastChar = trimmed.slice(-1).toLowerCase();
 
         const groups = allGroupsByCategoryId[selectedCategory] || [];
-        const hasMatchingGroup = groups.some(g => g.name.slice(-1).toLowerCase() === lastChar);
 
-        setGroupEndingMismatch(!hasMatchingGroup);
+        // Iba základné skupiny
+        const basicGroups = groups.filter(g => g.type === 'základná skupina');
 
-        // Ak koncovka sedí a je pred ňou aspoň 1 znak → skontrolujeme číslo
-        if (hasMatchingGroup && trimmed.length >= 2) {
+        // Existuje aspoň jedna základná skupina končiaca na dané písmeno?
+        const hasMatchingBasicGroup = basicGroups.some(
+          g => g.name.slice(-1).toLowerCase() === lastChar
+        );
+
+        setGroupEndingMismatch(!hasMatchingBasicGroup);
+
+        // Ak existuje základná skupina a je pred písmenom aspoň 1 znak → kontrola čísla
+        if (hasMatchingBasicGroup && trimmed.length >= 2) {
           const numberPart = trimmed.slice(0, -1).trim();
           const requestedOrder = parseInt(numberPart, 10);
-    
+
           if (!isNaN(requestedOrder) && requestedOrder >= 1) {
-            // nájdeme skupinu končiacu na lastChar (prvá zhoda)
-            const matchingGroup = groups.find(g => g.name.slice(-1).toLowerCase() === lastChar);
-            if (!matchingGroup) {
+            // nájdeme prvú základnú skupinu končiacu na lastChar
+            const matchingBasicGroup = basicGroups.find(
+              g => g.name.slice(-1).toLowerCase() === lastChar
+            );
+
+            if (!matchingBasicGroup) {
               setOrderMismatchMessage(null);
               return;
             }
 
-            const groupName = matchingGroup.name;
+            const groupName = matchingBasicGroup.name;
             const categoryName = categoryIdToNameMap[selectedCategory];
 
-            // počet tímov v danej skupine
+            // počet tímov iba v tejto základnej skupine
             const teamsInGroup = allTeams.filter(
               t => t.category === categoryName && t.groupName === groupName
             );
 
             const currentCount = teamsInGroup.length;
-    
+
             if (currentCount < requestedOrder) {
               setOrderMismatchMessage(
-                `V skupine "${groupName}" nie je tím s poradovým číslom ${requestedOrder}.`
+                `V základnej skupine "${groupName}" nie je tím s poradovým číslom ${requestedOrder}.`
               );
             } else {
               setOrderMismatchMessage(null);
@@ -672,25 +720,6 @@ const AddGroupsApp = (props) => {
         allGroupsByCategoryId,
         categoryIdToNameMap
       ]);
-
-      useEffect(() => {
-        if (!isOpen || teamToEdit || !selectedCategory || !teamName.trim()) {
-          setGroupEndingMismatch(false);
-          return;
-        }
-
-        const trimmed = teamName.trim();
-        const lastChar = trimmed.slice(-1).toLowerCase();
-        if (!lastChar) {
-          setGroupEndingMismatch(false);
-          return;
-        }
-
-        const groups = allGroupsByCategoryId[selectedCategory] || [];
-        const hasMatch = groups.some(g => g.name.slice(-1).toLowerCase() === lastChar);
-
-        setGroupEndingMismatch(!hasMatch);
-      }, [teamName, selectedCategory, isOpen, teamToEdit, allGroupsByCategoryId]);   
     
       useEffect(() => {
         if (!isOpen || !selectedGroup) {
@@ -879,7 +908,7 @@ const AddGroupsApp = (props) => {
                   groupEndingMismatch && React.createElement(
                     'p',
                     { className: 'mt-2 text-sm text-red-600 font-medium' },
-                    `⚠️ V tejto kategórii neexistuje žiadna skupina končiaca na „${teamName.trim().slice(-1)}“`
+                    `⚠️ V tejto kategórii neexistuje žiadna základná skupina končiaca na „${teamName.trim().slice(-1).toUpperCase()}“`
                   ),
 
                   orderMismatchMessage && React.createElement(
@@ -1000,8 +1029,8 @@ const AddGroupsApp = (props) => {
     };
 
     const closeModal = () => {
-        setIsModalOpen(false);
-        setTeamToEdit(null);
+      setIsModalOpen(false);
+      setTeamToEdit(null);
     };
 
     const openAddModal = () => {
@@ -1654,42 +1683,3 @@ if (window.globalUserProfileData) {
     }
 }
 
-
-// Nový komponent – stabilná notifikácia
-// Stabilná notifikácia cez portál
-const NotificationPortal = () => {
-  const { useState, useEffect } = React;
-
-  const [notification, setNotification] = React.useState(null);
-
-  useEffect(() => {
-    const unsubscribe = subscribe((notif) => {
-      setNotification(notif);
-      const timer = setTimeout(() => setNotification(null), 5000);
-      return () => clearTimeout(timer);
-    });
-    return unsubscribe;
-  }, []);
-
-  if (!notification) return null;
-
-  // Farby pozadia podľa typu
-  const typeClasses = {
-    success: 'bg-green-600',
-    error:   'bg-red-600',
-    info:    'bg-blue-600',
-    default: 'bg-gray-700'
-  }[notification.type || 'default'];
-
-  return ReactDOM.createPortal(
-    React.createElement(
-      'div',
-      {
-        key: notification.id,
-        className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
-      },
-      notification.message
-    ),
-    document.body
-  );
-};
