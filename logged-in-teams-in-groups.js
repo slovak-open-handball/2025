@@ -12,7 +12,7 @@ const listeners = new Set();
 const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName, categoryName, isConfirming }) => {
   if (!isOpen) return null;
 
-  return React.createElement(
+  return React.createElement(z
     'div',
       {
       className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
@@ -1805,7 +1805,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
 
     return React.createElement(
         'div',
-        { className: 'flex flex-col w-full relative' },
+        { className: 'flex flex-col w-full relative text-sm' },
         React.createElement(NotificationPortal, null),
         React.createElement(NewTeamModal, {
             isOpen: isModalOpen,
