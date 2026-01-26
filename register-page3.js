@@ -207,11 +207,11 @@ React.useEffect(() => {
 
 const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid || !hasAtLeastOneFreeCategory
   ? 'px-12 py-3 rounded-lg font-bold transition-colors bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
-  : 'px-12 py-3 rounded-lg font-bold transition-colors bg-blue-500 hover:bg-green-700 text-white border-2 border-blue-500';
+  : 'px-12 py-3 rounded-lg font-bold transition-colors bg-blue-500 hover:bg-blue-700 text-white border-2 border-blue-500';
 
 const addButtonClasses = loading || isAnyCategoryUnselected || getAvailableCategoryOptions().length === 0
   ? 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
-  : 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-blue-500 hover:bg-green-700 text-white border-2 border-blue-500';
+  : 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-blue-500 hover:bg-blue-700 text-white border-2 border-blue-500';
 
   return React.createElement(
     React.Fragment,
