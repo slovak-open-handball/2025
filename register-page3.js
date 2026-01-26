@@ -134,43 +134,46 @@ React.useEffect(() => {
   };
 
   // Dostupné kategórie pre konkrétny riadok (bez duplicitných výberov)
-  const getCategoryOptionsForSelect = (currentIndex = -1) => {
-    const allCategoryIds = Object.keys(categoriesData);
+const getCategoryOptionsForSelect = (currentIndex = -1) => {
+  const allCategoryIds = Object.keys(categoriesData);
 
-    // Získame ID kategórií vybraných v iných riadkoch (aby sa neduplicitne vyberali)
-    const selectedInOtherRows = selectedCategoryRows
-      .filter((_, idx) => idx !== currentIndex)
-      .map(row => row.categoryId)
-      .filter(id => id);
+  // ID kategórií vybraných v iných riadkoch
+  const selectedInOtherRows = selectedCategoryRows
+    .filter((_, idx) => idx !== currentIndex)
+    .map(row => row.categoryId)
+    .filter(id => id && id.trim() !== ''); // pre istotu
 
-    return allCategoryIds
-      .map(catId => {
-        const cat = categoriesData[catId];
-        const name = cat?.name || "Bez názvu";
-        const isFull = isCategoryFull(catId);
-        const isAlreadySelectedInAnotherRow = selectedInOtherRows.includes(catId);
+  return allCategoryIds
+    .filter(catId => {
+      // Ak je už vybraná v inom riadku → úplne vynecháme
+      if (selectedInOtherRows.includes(catId)) {
+        return false;
+      }
+      return true;
+    })
+    .map(catId => {
+      const cat = categoriesData[catId];
+      const name = cat?.name || "Bez názvu";
+      const isFull = isCategoryFull(catId);
 
-        let displayName = name;
-        let disabled = false;
+      let displayName = name;
+      let disabled = false;
 
-        if (isFull) {
-          displayName += " (naplnená kapacita)";
-          disabled = true;
-        } else if (isAlreadySelectedInAnotherRow) {
-          disabled = true;
-          // displayName += " (už vybrané)";
-        }
+      if (isFull) {
+        displayName += " (naplnená kapacita)";
+        disabled = true;
+      }
 
-        return {
-          id: catId,
-          name: displayName,
-          disabled: disabled,
-          isFull,
-          originalName: name,
-        };
-      })
-      .sort((a, b) => a.originalName.localeCompare(b.originalName));
-  };
+      return {
+        id: catId,
+        name: displayName,
+        disabled: disabled,
+        isFull,
+        originalName: name,
+      };
+    })
+    .sort((a, b) => a.originalName.localeCompare(b.originalName));
+};
 
   const handleCategoryChange = (index, value) => {
     setSelectedCategoryRows(prev => {
