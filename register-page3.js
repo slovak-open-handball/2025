@@ -105,8 +105,20 @@ export function Page3Form({
       setCategoryTeamCounts(counts);
     });
 
-    return () => unsubscribe();
-  }, []);
+    console.log("=== AKTUALIZOVANÝ POČET PRIHLÁSENÝCH TÍMOV PODĽA KATEGÓRIÍ ===");
+    if (Object.keys(counts).length === 0) {
+      console.log("Zatiaľ žiadne tímy v žiadnej kategórii.");
+    } else {
+      Object.entries(counts).forEach(([catName, count]) => {
+        console.log(`Kategória: ${catName} → ${count} tím${count === 1 ? '' : 'ov'}`);
+      });
+      console.log(`Celkový počet prihlásených tímov: ${Object.values(counts).reduce((a, b) => a + b, 0)}`);
+    }
+    console.log("======================================");
+  });
+
+  return () => unsubscribe();
+}, []);
 
   // Je kategória plná?
   const isCategoryFull = (catId) => {
