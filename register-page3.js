@@ -192,9 +192,9 @@ React.useEffect(() => {
 
   const handleAddRow = () => {
     const last = selectedCategoryRows[selectedCategoryRows.length - 1];
-    if (last.categoryId && getAvailableCategoryOptions().length > 0) {
+    if (last.categoryId && getCategoryOptionsForSelect().length > 0) {
       setSelectedCategoryRows(prev => [...prev, { categoryId: '', teams: 1 }]);
-    } else if (getAvailableCategoryOptions().length === 0) {
+    } else if (getCategoryOptionsForSelect().length === 0) {
       setNotificationMessage?.('Nie je možné pridať ďalší tím – všetky kategórie sú už obsadené alebo plné.');
       setShowNotification?.(true);
       setNotificationType?.('error');
@@ -219,7 +219,7 @@ const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid || !hasAt
   ? 'px-12 py-3 rounded-lg font-bold transition-colors bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
   : 'px-12 py-3 rounded-lg font-bold transition-colors bg-blue-500 hover:bg-blue-700 text-white border-2 border-blue-500';
 
-const addButtonClasses = loading || isAnyCategoryUnselected || getAvailableCategoryOptions().length === 0
+const addButtonClasses = loading || isAnyCategoryUnselected || getCategoryOptionsForSelect().length === 0
   ? 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
   : 'w-12 h-12 rounded-full text-2xl font-bold mx-auto block mt-6 transition-colors bg-blue-500 hover:bg-blue-700 text-white border-2 border-blue-500';
 
@@ -346,7 +346,7 @@ const addButtonClasses = loading || isAnyCategoryUnselected || getAvailableCateg
               {
                 type: 'button',
                 onClick: handleAddRow,
-                disabled: loading || isAnyCategoryUnselected || getAvailableCategoryOptions().length === 0,
+                disabled: loading || isAnyCategoryUnselected || getCategoryOptionsForSelect().length === 0,
                 className: addButtonClasses,
                 tabIndex: 22 + selectedCategoryRows.length * 2
               },
