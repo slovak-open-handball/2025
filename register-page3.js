@@ -64,41 +64,43 @@ export function Page3Form({
   }, [availableCategoriesMap, categoryTeamCounts]); // ← pridali sme categoryTeamCounts ako závislosť
 
   // Načítanie aktuálneho počtu tímov z /users/
-  React.useEffect(() => {
-    if (!window.db) return;
-    const usersCollectionRef = collection(window.db, 'users');
-    const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
-      const counts = {};
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const teams = data.teams || {};
-        Object.entries(teams).forEach(([catName, teamArray]) => {
-          if (Array.isArray(teamArray)) {
-            const count = teamArray.filter(Boolean).length;
-            if (count > 0) {
-              counts[catName] = (counts[catName] || 0) + count;
-            }
+React.useEffect(() => {
+  if (!window.db) return;
+  const usersCollectionRef = collection(window.db, 'users');
+  const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
+    const counts = {}; // { catId: počet tímov }
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const teams = data.teams || {}; // predpokladáme, že teams je objekt { categoryId: [tímy] }
+
+      Object.entries(teams).forEach(([catId, teamArray]) => { // ← tu je catId, nie catName
+        if (Array.isArray(teamArray)) {
+          const count = teamArray.filter(Boolean).length;
+          if (count > 0) {
+            counts[catId] = (counts[catId] || 0) + count; // ← ukladáme pod catId
           }
-        });
+        }
       });
-
-      setCategoryTeamCounts(counts);
-
-      // Výpis aktualizovaných počtov tímov
-      console.log("=== AKTUALIZOVANÝ POČET PRIHLÁSENÝCH TÍMOV ===");
-      if (Object.keys(counts).length === 0) {
-        console.log("Zatiaľ žiadne tímy v žiadnej kategórii.");
-      } else {
-        Object.entries(counts).forEach(([catName, count]) => {
-          console.log(`%c${catName} → ${count} tím${count === 1 ? '' : 'ov'}`, "color: #333;");
-        });
-        console.log(`%cCelkový počet tímov: ${Object.values(counts).reduce((a, b) => a + b, 0)}`, "color: #006600; font-weight: bold;");
-      }
-      console.log("======================================");
     });
 
-    return () => unsubscribe();
-  }, []);
+    setCategoryTeamCounts(counts);
+
+    // Výpis (pre kontrolu)
+    console.log("%c=== AKTUALIZOVANÝ POČET TÍMOV (podľa ID) ===", "color: #0066cc; font-weight: bold;");
+    if (Object.keys(counts).length === 0) {
+      console.log("Žiadne tímy.");
+    } else {
+      Object.entries(counts).forEach(([catId, count]) => {
+        const catName = categoriesData[catId]?.name || catId;
+        console.log(`${catId} (${catName}) → ${count} tímov`);
+      });
+    }
+    console.log("======================================");
+  });
+
+  return () => unsubscribe();
+}, [categoriesData]); // ← pridaj závislosť, aby sa vedelo meno kategórie
 
   // Je kategória plná?
   const isCategoryFull = (catId) => {
