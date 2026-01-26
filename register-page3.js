@@ -20,7 +20,7 @@ const getRecaptchaToken = async (action) => {
 export function Page3Form({
   formData,
   handlePrev,
-  handleNextPage3,
+  handleNextPage3ToPage4,
   loading,
   setLoading,
   setNotificationMessage,
