@@ -119,29 +119,35 @@ export function Page3Form({
 const getAvailableCategoryOptions = (currentIndex = -1) => {
   const allCategoryIds = Object.keys(categoriesData);
 
-  // Kategórie už vybrané v INÝCH riadkoch → úplne vylúčime z ponuky
+  // Zoznam všetkých vybraných kategórií v INÝCH riadkoch (okrem aktuálneho riadku)
   const selectedInOtherRows = selectedCategoryRows
-    .filter((_, idx) => idx !== currentIndex)
+    .filter((_, idx) => idx !== currentIndex)           // vynechaj aktuálny riadok
     .map(row => row.categoryId)
-    .filter(id => id);
+    .filter(id => id);                                  // len neprázdne
 
   return allCategoryIds
-    .filter(catId => !selectedInOtherRows.includes(catId)) // vylúčime už vybrané inde
+    .filter(catId => {
+      // 1. Ak je kategória plná → vylúč
+      if (isCategoryFull(catId)) return false;
+
+      // 2. Ak je už vybraná v inom riadku → vylúč (žiadne duplicity!)
+      if (selectedInOtherRows.includes(catId)) return false;
+
+      // Ak prejde oboma podmienkami → zobraz ju
+      return true;
+    })
     .map(catId => {
       const cat = categoriesData[catId];
       let name = cat?.name || "Bez názvu";
-
-      const isFull = isCategoryFull(catId);
-
-      // Ak je plná → pridáme text priamo do názvu v selecte
+      const isFull = isCategoryFull(catId); // už vieme, že nie je plná, ale pre istotu
       const displayName = isFull ? `${name} (plná kapacita)` : name;
 
       return {
         id: catId,
         name: displayName,
-        disabled: isFull, // plné budú zablokované
+        disabled: isFull,
         isFull: isFull,
-        originalName: name // pre sortovanie
+        originalName: name
       };
     })
     .sort((a, b) => a.originalName.localeCompare(b.originalName));
@@ -178,9 +184,7 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
   const isFormValidPage3 = selectedCategoryRows.every(r => r.categoryId && r.teams >= 1);
 
   const hasAtLeastOneFreeCategory = Object.keys(categoriesData).some(catId => {
-    const isFull = isCategoryFull(catId);
-    const isSelectedSomewhere = selectedCategoryRows.some(row => row.categoryId === catId);
-    return !isFull && !isSelectedSomewhere;
+    return !isCategoryFull(catId);   // stačí, aby nebola plná – aj keby už bola vybraná
   });
 
   const isAnyCategoryUnselected = selectedCategoryRows.some(row => !row.categoryId);
