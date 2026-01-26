@@ -205,9 +205,9 @@ React.useEffect(() => {
 
   const isAnyCategoryUnselected = selectedCategoryRows.some(row => !row.categoryId);
 
-  const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid || !hasAtLeastOneFreeCategory
-    ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
-    : 'bg-blue-500 hover:bg-blue-700 text-white';
+const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid || !hasAtLeastOneFreeCategory
+  ? 'px-12 py-3 rounded-lg font-bold transition-colors bg-white text-green-700 border-2 border-green-600 cursor-not-allowed'
+  : 'px-12 py-3 rounded-lg font-bold transition-colors bg-green-600 hover:bg-green-700 text-white';
 
   return React.createElement(
     React.Fragment,
@@ -369,22 +369,19 @@ React.useEffect(() => {
             'Späť'
           ),
           React.createElement(
+            React.createElement(
             'button',
             {
               type: 'submit',
               disabled: loading || !isRecaptchaReady || !isFormValid || !hasAtLeastOneFreeCategory,
-              className: `px-12 py-3 rounded-lg font-bold transition-colors ${
-                loading || !isRecaptchaReady || !isFormValid || !hasAtLeastOneFreeCategory
-                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`,
+              className: nextButtonClasses,
               tabIndex: 21
             },
             loading ? React.createElement(
               'div',
               { className: 'flex items-center justify-center' },
               React.createElement('svg', {
-                className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-white',
+                className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-current',  // text-current = farba podľa rodiča (tu green-700)
                 xmlns: 'http://www.w3.org/2000/svg',
                 fill: 'none',
                 viewBox: '0 0 24 24'
