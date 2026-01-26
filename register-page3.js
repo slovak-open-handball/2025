@@ -183,6 +183,8 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
     return !isFull && !isSelectedSomewhere;
   });
 
+  const isAnyCategoryUnselected = selectedCategoryRows.some(row => !row.categoryId);
+
   const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid
     ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
     : 'bg-blue-500 hover:bg-blue-700 text-white';
