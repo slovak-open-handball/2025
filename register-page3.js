@@ -17,32 +17,33 @@ const getRecaptchaToken = async (action) => {
   }
 };
 
-export function Page3Form({ 
-  formData, 
-  handlePrev, 
-  handleNextPage3, 
-  loading, 
-  setLoading, 
-  setNotificationMessage, 
-  setShowNotification, 
-  setNotificationType, 
-  setRegistrationSuccess, 
-  isRecaptchaReady, 
-  selectedCountryDialCode, 
-  NotificationModal, 
-  notificationMessage, 
-  closeNotification, 
-  availableCategoriesMap, 
-  selectedCategoryRows, 
-  setSelectedCategoryRows, 
-  notificationType 
+export function Page3Form({
+  formData,
+  handlePrev,
+  handleNextPage3,
+  loading,
+  setLoading,
+  setNotificationMessage,
+  setShowNotification,
+  setNotificationType,
+  setRegistrationSuccess,
+  isRecaptchaReady,
+  selectedCountryDialCode,
+  NotificationModal,
+  notificationMessage,
+  closeNotification,
+  availableCategoriesMap,
+  selectedCategoryRows,
+  setSelectedCategoryRows,
+  notificationType
 }) {
   const [categoriesData, setCategoriesData] = React.useState({});
   const [isCategoriesLoaded, setIsCategoriesLoaded] = React.useState(false);
+  const [categoryTeamCounts, setCategoryTeamCounts] = React.useState({}); // { categoryId: aktuálny počet tímov }
 
+  // 1. Načítanie kategórií + maxTeams
   React.useEffect(() => {
     if (availableCategoriesMap && Object.keys(availableCategoriesMap).length > 0) {
-      // Spracovanie availableCategoriesMap
       const formattedCategories = {};
       Object.entries(availableCategoriesMap).forEach(([id, value]) => {
         if (typeof value === 'object' && value !== null && value.name) {
@@ -55,14 +56,12 @@ export function Page3Form({
       setCategoriesData(formattedCategories);
       setIsCategoriesLoaded(true);
 
-      // Výpis maximálneho počtu tímov pre každú kategóriu do konzoly
       console.log("=== Maximálny počet tímov v jednotlivých kategóriách ===");
       Object.entries(formattedCategories).forEach(([id, cat]) => {
         const maxTeams = cat.maxTeams ?? "nie je definovaný";
-        console.log(`Kategória: ${cat.name || "bez názvu"}  |  ID: ${id}  |  Max tímov: ${maxTeams}`);
+        console.log(`Kategória: ${cat.name || "bez názvu"} | ID: ${id} | Max tímov: ${maxTeams}`);
       });
       console.log("======================================");
-
     } else if (availableCategoriesMap) {
       setCategoriesData({});
       setIsCategoriesLoaded(true);
@@ -80,54 +79,52 @@ export function Page3Form({
     }
   }, [availableCategoriesMap, setNotificationMessage, setShowNotification, setNotificationType, selectedCategoryRows, setSelectedCategoryRows]);
 
-  // === NOVÉ === Načítanie všetkých používateľov a počítanie tímov podľa kategórií
+  // 2. Načítanie aktuálneho počtu tímov v každej kategórii (z /users/)
   React.useEffect(() => {
     if (!window.db) return;
 
     const usersCollectionRef = collection(window.db, 'users');
 
     const unsubscribeUsers = onSnapshot(usersCollectionRef, (querySnapshot) => {
-      console.log("=== Načítané dokumenty používateľov z kolekcie /users/ ===");
-      console.log(`Celkový počet používateľov: ${querySnapshot.size}`);
-
-      const categoryTeamCount = {}; // { "Kadeti": 5, "Juniori": 3, ... }
+      const newCounts = {};
 
       querySnapshot.forEach((userDoc) => {
         const userData = userDoc.data();
-        const userEmail = userData.email || userDoc.id;
         const teams = userData.teams || {};
-
-        console.log(`Používateľ: ${userEmail} (${userDoc.id})`);
 
         Object.entries(teams).forEach(([categoryName, teamsArray]) => {
           if (!Array.isArray(teamsArray)) return;
 
-          const teamCountInCategory = teamsArray.filter(t => t).length;
-          if (teamCountInCategory > 0) {
-            if (!categoryTeamCount[categoryName]) {
-              categoryTeamCount[categoryName] = 0;
-            }
-            categoryTeamCount[categoryName] += teamCountInCategory;
-
-            console.log(`  → Kategória: ${categoryName} → ${teamCountInCategory} tímov`);
+          const teamCount = teamsArray.filter(t => t).length;
+          if (teamCount > 0) {
+            // Tu predpokladáme, že categoryName je rovnaký ako ID kategórie
+            // Ak máš mapovanie categoryName → categoryId, musíš ho sem doplniť
+            newCounts[categoryName] = (newCounts[categoryName] || 0) + teamCount;
           }
         });
       });
 
-      console.log("=== Celkový počet tímov podľa kategórií ===");
-      Object.entries(categoryTeamCount).forEach(([category, count]) => {
-        console.log(`Kategória "${category}": ${count} tímov`);
+      setCategoryTeamCounts(newCounts);
+
+      console.log("=== Aktuálny počet tímov v kategóriách (z /users/) ===");
+      Object.entries(newCounts).forEach(([catId, count]) => {
+        console.log(`Kategória ID: ${catId} → ${count} tímov`);
       });
-      console.log(`Celkový počet všetkých tímov vo všetkých kategóriách: ${Object.values(categoryTeamCount).reduce((sum, c) => sum + c, 0)}`);
       console.log("======================================");
     }, (error) => {
-      console.error("Chyba pri načítaní používateľov a tímov:", error);
+      console.error("Chyba pri načítaní počtu tímov:", error);
     });
 
-    return () => {
-      unsubscribeUsers();
-    };
-  }, []); // spustí sa iba raz pri načítaní komponentu
+    return () => unsubscribeUsers();
+  }, []);
+
+  // Pomocná funkcia: je kategória plná?
+  const isCategoryFull = (categoryId) => {
+    if (!categoryId) return false;
+    const currentCount = categoryTeamCounts[categoryId] || 0;
+    const max = categoriesData[categoryId]?.maxTeams ?? Infinity;
+    return currentCount >= max;
+  };
 
   const handleCategoryChange = (index, value) => {
     setSelectedCategoryRows(prevRows => {
@@ -156,26 +153,37 @@ export function Page3Form({
     setSelectedCategoryRows(prevRows => prevRows.filter((_, index) => index !== indexToRemove));
   };
 
-  const getAvailableCategoryOptions = (currentIndex = -1) => {
-    const allCategoryIds = Object.keys(categoriesData);
-    const selectedIdsInOtherRows = selectedCategoryRows
-      .filter((row, idx) => idx !== currentIndex && row.categoryId !== '')
-      .map(row => row.categoryId);
+const getAvailableCategoryOptions = (currentIndex = -1) => {
+  const allCategoryIds = Object.keys(categoriesData);
+  const selectedIdsInOtherRows = selectedCategoryRows
+    .filter((row, idx) => idx !== currentIndex && row.categoryId !== '')
+    .map(row => row.categoryId);
 
-    return allCategoryIds
-      .filter(catId => !selectedIdsInOtherRows.includes(catId))
-      .map(catId => {
-        const categoryValue = categoriesData[catId];
-        if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
-          return { id: catId, name: categoryValue.name };
-        } else if (typeof categoryValue === 'string') {
-          return { id: catId, name: categoryValue };
-        }
+  return allCategoryIds
+    .map(catId => {
+      const categoryValue = categoriesData[catId];
+      let name = '';
+      if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
+        name = categoryValue.name;
+      } else if (typeof categoryValue === 'string') {
+        name = categoryValue;
+      } else {
         return null;
-      })
-      .filter(cat => cat !== null)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  };
+      }
+
+      const isFull = isCategoryFull(catId);
+      const isAlreadySelected = selectedIdsInOtherRows.includes(catId);
+
+      return {
+        id: catId,
+        name: name,
+        disabled: isFull || isAlreadySelected, // zablokujeme aj plné, aj už vybrané inde
+        fullMessage: isFull ? "Kapacita turnaja v tejto kategórii je už naplnená" : null
+      };
+    })
+    .filter(cat => cat !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+};
 
   const isFormValidPage3 = selectedCategoryRows.every(row => row.categoryId !== '' && row.teams >= 1);
   const isLastRowCategorySelected = selectedCategoryRows.length > 0 ? selectedCategoryRows[selectedCategoryRows.length - 1].categoryId !== '' : false;
@@ -259,45 +267,60 @@ export function Page3Form({
           selectedCategoryRows.map((row, index) => (
             React.createElement(
               'div',
-              { key: index, className: 'flex items-center space-x-2' },
+              { key: index, className: 'flex flex-col space-y-1' }, // zmenené na flex-col pre lepšie zobrazenie message
               React.createElement(
-                'select',
-                {
-                  className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
-                  value: row.categoryId,
-                  onChange: (e) => handleCategoryChange(index, e.target.value),
+                'div',
+                { className: 'flex items-center space-x-2' },
+                React.createElement(
+                  'select',
+                  {
+                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
+                    value: row.categoryId,
+                    onChange: (e) => handleCategoryChange(index, e.target.value),
+                    required: true,
+                    disabled: loading,
+                    tabIndex: 22 + index * 2
+                  },
+                  React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
+                  getAvailableCategoryOptions(index).map(cat => (
+                    React.createElement('option', {
+                      key: cat.id,
+                      value: cat.id,
+                      disabled: cat.disabled
+                    }, cat.name)
+                  ))
+                ),
+                React.createElement('input', {
+                  type: 'number',
+                  className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-28 text-left',
+                  value: row.teams,
+                  onChange: (e) => handleTeamsChange(index, e.target.value),
+                  min: 1,
                   required: true,
                   disabled: loading,
-                  tabIndex: 22 + index * 2
-                },
-                React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
-                getAvailableCategoryOptions(index).map(cat => (
-                  React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
-                ))
+                  tabIndex: 23 + index * 2
+                }),
+                React.createElement(
+                  'button',
+                  {
+                    type: 'button',
+                    onClick: () => handleRemoveRow(index),
+                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${selectedCategoryRows.length === 1 ? 'invisible' : ''}`,
+                    disabled: loading || selectedCategoryRows.length === 1,
+                    tabIndex: 24 + index * 2
+                  },
+                  '-'
+                )
               ),
-              React.createElement('input', {
-                type: 'number',
-                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-28 text-left',
-                value: row.teams,
-                onChange: (e) => handleTeamsChange(index, e.target.value),
-                min: 1,
-                required: true,
-                disabled: loading,
-                tabIndex: 23 + index * 2
-              }),
-              React.createElement(
-                'button',
-                {
-                  type: 'button',
-                  onClick: () => handleRemoveRow(index),
-                  className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${selectedCategoryRows.length === 1 ? 'invisible' : ''}`,
-                  disabled: loading || selectedCategoryRows.length === 1,
-                  tabIndex: 24 + index * 2
-                },
-                '-'
+              // === NOVÉ === Zobrazenie správy pod selectom, ak je kategória plná
+              row.categoryId && isCategoryFull(row.categoryId) && React.createElement(
+                'p',
+                { className: 'text-sm text-red-600 mt-1 ml-3' },
+                "Kapacita turnaja v tejto kategórii je už naplnená."
               )
             )
-          )),
+          ))
+        ),
           React.createElement(
             'button',
             {
