@@ -37,15 +37,18 @@ export function Page3Form({
       setCategoriesData(formattedCategories);
       setIsCategoriesLoaded(true);
 
+      
       // Výpis načítaných kategórií + aktuálne počty (ak už máme counts)
-      console.log("=== NAČÍTANÉ KATEGÓRIE + AKTUÁLNY POČET TÍMOV ===");
-      Object.entries(formattedCategories).forEach(([id, cat]) => {
-        const catName = cat.name || "Bez názvu";
-        const currentTeams = categoryTeamCounts[catName] || 0;
-        const maxTeams = cat.maxTeams ?? "neurčené";
-        console.log(`ID: ${id} | ${catName} | Max: ${maxTeams} | Aktuálne: ${currentTeams}`);
-      });
-      console.log("======================================");
+//      console.log("=== NAČÍTANÉ KATEGÓRIE + AKTUÁLNY POČET TÍMOV ===");
+//      Object.entries(formattedCategories).forEach(([id, cat]) => {
+//        const catName = cat.name || "Bez názvu";
+//        const currentTeams = categoryTeamCounts[catName] || 0;
+//        const maxTeams = cat.maxTeams ?? "neurčené";
+//        console.log(`ID: ${id} | ${catName} | Max: ${maxTeams} | Aktuálne: ${currentTeams}`);
+//      });
+//      console.log("======================================");
+
+    
     } else if (availableCategoriesMap) {
       setCategoriesData({});
       setIsCategoriesLoaded(true);
@@ -103,16 +106,16 @@ React.useEffect(() => {
     setCategoryTeamCounts(countsById);
 
     // Výpis pre kontrolu
-    console.log("%c=== AKTUALIZOVANÝ POČET TÍMOV (podľa ID) ===", "color: #0066cc; font-weight: bold;");
-    if (Object.keys(countsById).length === 0) {
-      console.log("Žiadne tímy.");
-    } else {
-      Object.entries(countsById).forEach(([catId, count]) => {
-        const catName = categoriesData[catId]?.name || catId;
-        console.log(`${catId} (${catName}) → ${count} tímov`);
-      });
-    }
-    console.log("======================================");
+//    console.log("%c=== AKTUALIZOVANÝ POČET TÍMOV (podľa ID) ===", "color: #0066cc; font-weight: bold;");
+//    if (Object.keys(countsById).length === 0) {
+//      console.log("Žiadne tímy.");
+//    } else {
+//      Object.entries(countsById).forEach(([catId, count]) => {
+//        const catName = categoriesData[catId]?.name || catId;
+//        console.log(`${catId} (${catName}) → ${count} tímov`);
+//      });
+//    }
+//    console.log("======================================");
   });
 
   return () => unsubscribe();
