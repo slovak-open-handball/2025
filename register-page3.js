@@ -63,35 +63,51 @@ export function Page3Form({
     }
   }, [availableCategoriesMap, categoryTeamCounts]); // ← pridali sme categoryTeamCounts ako závislosť
 
-  // Načítanie aktuálneho počtu tímov z /users/
 React.useEffect(() => {
   if (!window.db) return;
-  const usersCollectionRef = collection(window.db, 'users');
-  const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
-    const counts = {}; // { catId: počet tímov }
 
+  const usersCollectionRef = collection(window.db, 'users');
+
+  const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
+    const countsById = {}; // finálny objekt { catId: počet }
+
+    // 1. Vytvoríme mapu názov → ID (z categoriesData)
+    const nameToIdMap = {};
+    Object.entries(categoriesData).forEach(([id, cat]) => {
+      if (cat?.name) {
+        nameToIdMap[cat.name.trim()] = id; // trim pre istotu
+      }
+    });
+
+    // 2. Prechádzame všetky users dokumenty
     snapshot.forEach((doc) => {
       const data = doc.data();
-      const teams = data.teams || {}; // predpokladáme, že teams je objekt { categoryId: [tímy] }
+      const teams = data.teams || {};
 
-      Object.entries(teams).forEach(([catId, teamArray]) => { // ← tu je catId, nie catName
+      Object.entries(teams).forEach(([catName, teamArray]) => {
         if (Array.isArray(teamArray)) {
           const count = teamArray.filter(Boolean).length;
           if (count > 0) {
-            counts[catId] = (counts[catId] || 0) + count; // ← ukladáme pod catId
+            const catId = nameToIdMap[catName.trim()];
+            if (catId) {
+              // Ukladáme pod ID
+              countsById[catId] = (countsById[catId] || 0) + count;
+            } else {
+              console.warn(`Nenašlo sa ID pre kategóriu s názvom: "${catName}"`);
+            }
           }
         }
       });
     });
 
-    setCategoryTeamCounts(counts);
+    setCategoryTeamCounts(countsById);
 
-    // Výpis (pre kontrolu)
+    // Výpis pre kontrolu
     console.log("%c=== AKTUALIZOVANÝ POČET TÍMOV (podľa ID) ===", "color: #0066cc; font-weight: bold;");
-    if (Object.keys(counts).length === 0) {
+    if (Object.keys(countsById).length === 0) {
       console.log("Žiadne tímy.");
     } else {
-      Object.entries(counts).forEach(([catId, count]) => {
+      Object.entries(countsById).forEach(([catId, count]) => {
         const catName = categoriesData[catId]?.name || catId;
         console.log(`${catId} (${catName}) → ${count} tímov`);
       });
@@ -100,7 +116,7 @@ React.useEffect(() => {
   });
 
   return () => unsubscribe();
-}, [categoriesData]); // ← pridaj závislosť, aby sa vedelo meno kategórie
+}, [categoriesData]); // závislosť na categoriesData, aby sa mapa aktualizovala
 
   // Je kategória plná?
   const isCategoryFull = (catId) => {
