@@ -134,30 +134,40 @@ React.useEffect(() => {
   };
 
   // Dostupné kategórie pre konkrétny riadok (bez duplicitných výberov)
-  const getAvailableCategoryOptions = (currentIndex = -1) => {
+  const getCategoryOptionsForSelect = (currentIndex = -1) => {
     const allCategoryIds = Object.keys(categoriesData);
+
+    // Získame ID kategórií vybraných v iných riadkoch (aby sa neduplicitne vyberali)
     const selectedInOtherRows = selectedCategoryRows
       .filter((_, idx) => idx !== currentIndex)
       .map(row => row.categoryId)
       .filter(id => id);
 
     return allCategoryIds
-      .filter(catId => {
-        if (isCategoryFull(catId)) return false;
-        if (selectedInOtherRows.includes(catId)) return false;
-        return true;
-      })
       .map(catId => {
         const cat = categoriesData[catId];
-        let name = cat?.name || "Bez názvu";
+        const name = cat?.name || "Bez názvu";
         const isFull = isCategoryFull(catId);
-        const displayName = isFull ? `${name} (plná kapacita)` : name;
+        const isAlreadySelectedInAnotherRow = selectedInOtherRows.includes(catId);
+
+        let displayName = name;
+        let disabled = false;
+
+        if (isFull) {
+          displayName += " (naplnená kapacita)";
+          disabled = true;
+        } else if (isAlreadySelectedInAnotherRow) {
+          // voliteľné: ak chceš zakázať aj duplicitný výber v inom riadku
+          // disabled = true;
+          // displayName += " (už vybrané)";
+        }
+
         return {
           id: catId,
           name: displayName,
-          disabled: isFull,
+          disabled: disabled,
           isFull,
-          originalName: name
+          originalName: name,
         };
       })
       .sort((a, b) => a.originalName.localeCompare(b.originalName));
@@ -266,7 +276,7 @@ const addButtonClasses = loading || isAnyCategoryUnselected || getAvailableCateg
             React.Fragment,
             null,
             selectedCategoryRows.map((row, index) => {
-              const options = getAvailableCategoryOptions(index);
+              const options = getCategoryOptionsForSelect(index);
               const selectedCatId = row.categoryId;
               const remaining = getRemainingTeamsForCategory(selectedCatId);
               const requested = parseInt(row.teams, 10) || 0;
