@@ -200,73 +200,151 @@ const AddGroupsApp = (props) => {
 const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
 
+    const trimmedGroup = (groupName || "").trim();
+
     try {
-        const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-        const snap = await getDoc(docRef);
-        if (!snap.exists()) {
-            notify("Dokument so skupinami sa nenašiel", "error");
-            return;
-        }
-
-        const data = snap.data() || {};
-        let teams = [...(data[categoryName] || [])];
-
-        // Log pred zmenou (pre debug)
-        console.log("Pred odstránením diery:", 
-            teams
-                .filter(t => t.groupName === groupName)
-                .map(t => `${t.teamName || "?"} #${t.order ?? "-"}`)
+        // 1. Zistíme, či ide o nadstavbovú skupinu
+        const categoryId = Object.keys(categoryIdToNameMap).find(
+            id => categoryIdToNameMap[id] === categoryName
         );
 
-        console.log("Všetky groupName v kategórii " + categoryName + ":");
-        const uniqueGroups = [...new Set(teams.map(t => t.groupName))];
-        console.table(uniqueGroups);
-        console.log("Hľadaný groupName:", JSON.stringify(groupName));
+        const groupInfo = categoryId && allGroupsByCategoryId[categoryId]
+            ? allGroupsByCategoryId[categoryId].find(g => g.name.trim() === trimmedGroup)
+            : null;
 
-        // filtrovať iba tímy v danej skupine
-        const inGroup = teams.filter(t => t.groupName === groupName);
+        const isSuperstructureGroup = groupInfo?.type === 'nadstavbová skupina';
 
-        // vytvoriť nové zoradené pole s posunom
-        const newInGroup = [];
-        let currentPos = 1;
+        let affectedCount = 0;
 
-        inGroup.forEach(team => {
-            if (typeof team.order !== 'number' || team.order < gapPosition) {
-                // tímy pred dierou + bez poradia → ostávajú
-                newInGroup.push({ ...team, order: team.order ?? null });
-            } else if (team.order === gapPosition) {
-                // preskočíme dieru (nič nepridávame)
-            } else {
-                // tímy za dierou → posunieme o 1 dole
-                newInGroup.push({ ...team, order: currentPos });
-                currentPos++;
+        if (isSuperstructureGroup) {
+            // ────────────────────────────────────────────────
+            // Nadstavbová skupina → settings/superstructureGroups
+            // ────────────────────────────────────────────────
+            const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) {
+                notify("Dokument nadstavbových skupín sa nenašiel", "error");
+                return;
             }
-        });
 
-        // aktualizujeme len tímy v danej skupine
-        const finalTeams = teams.map(t => {
-            if (t.groupName !== groupName) return t;
+            const data = snap.data() || {};
+            let teams = [...(data[categoryName] || [])];
 
-            const replacement = newInGroup.find(
-                nt => nt.teamName === t.teamName && (nt.order ?? null) === (t.order ?? null)
+            const inGroup = teams.filter(t => 
+                t.groupName && t.groupName.trim() === trimmedGroup
             );
 
-            return replacement || t;
-        });
+            if (inGroup.length === 0) {
+                notify(`V nadstavbovej skupine „${trimmedGroup}“ neboli nájdené žiadne tímy.`, "info");
+                return;
+            }
 
-        await updateDoc(docRef, { [categoryName]: finalTeams });
+            // nové pole s posunom
+            const newInGroup = [];
+            let currentPos = 1;
 
-        notify(`Voľné miesto na pozícii ${gapPosition} v skupine „${groupName}“ bolo odstránené. Tímy za ním sa posunuli.`, 'success');
+            inGroup.forEach(team => {
+                const order = typeof team.order === 'number' ? team.order : null;
+                if (order === null || order < gapPosition) {
+                    newInGroup.push({ ...team, order });
+                } else if (order === gapPosition) {
+                    // preskočíme dieru
+                } else {
+                    newInGroup.push({ ...team, order: currentPos });
+                    currentPos++;
+                    affectedCount++;
+                }
+            });
 
-        // Log po zmene (pre debug)
-        console.log("Po odstránení diery:", 
-            finalTeams
-                .filter(t => t.groupName === groupName)
-                .map(t => `${t.teamName || "?"} #${t.order ?? "-"}`)
-        );
+            // aktualizujeme pole
+            const finalTeams = teams.map(t => {
+                if (!t.groupName || t.groupName.trim() !== trimmedGroup) return t;
+                const replacement = newInGroup.find(
+                    nt => nt.teamName === t.teamName && 
+                          (nt.order ?? null) === (t.order ?? null)
+                );
+                return replacement || t;
+            });
+
+            await updateDoc(docRef, { [categoryName]: finalTeams });
+
+        } else {
+            // ────────────────────────────────────────────────
+            // Základná skupina → users/{uid}/teams.{categoryName}
+            // ────────────────────────────────────────────────
+            const usersSnap = await getDocs(collection(window.db, "users"));
+
+            const updates = [];
+
+            for (const userDoc of usersSnap.docs) {
+                const userData = userDoc.data();
+                const teamsInCategory = userData.teams?.[categoryName] || [];
+
+                if (teamsInCategory.length === 0) continue;
+
+                const inGroup = teamsInCategory.filter(t => 
+                    t.groupName && t.groupName.trim() === trimmedGroup
+                );
+
+                if (inGroup.length === 0) continue;
+
+                const newInGroup = [];
+                let currentPos = 1;
+
+                inGroup.forEach(team => {
+                    const order = typeof team.order === 'number' ? team.order : null;
+                    if (order === null || order < gapPosition) {
+                        newInGroup.push({ ...team, order });
+                    } else if (order === gapPosition) {
+                        // preskočíme dieru
+                    } else {
+                        newInGroup.push({ ...team, order: currentPos });
+                        currentPos++;
+                        affectedCount++;
+                    }
+                });
+
+                const updatedTeams = teamsInCategory.map(t => {
+                    if (!t.groupName || t.groupName.trim() !== trimmedGroup) return t;
+                    const replacement = newInGroup.find(
+                        nt => nt.teamName === t.teamName && 
+                              (nt.order ?? null) === (t.order ?? null)
+                    );
+                    return replacement || t;
+                });
+
+                updates.push({
+                    uid: userDoc.id,
+                    updatedTeamsArray: updatedTeams
+                });
+            }
+
+            // uložíme zmeny
+            for (const { uid, updatedTeamsArray } of updates) {
+                const userRef = doc(window.db, "users", uid);
+                await updateDoc(userRef, {
+                    [`teams.${categoryName}`]: updatedTeamsArray
+                });
+            }
+        }
+
+        // ────────────────────────────────────────────────
+        // Spoločná notifikácia
+        // ────────────────────────────────────────────────
+        if (affectedCount > 0) {
+            notify(
+                `Voľné miesto na pozícii ${gapPosition} v skupine „${trimmedGroup}“ (${categoryName}) bolo odstránené. Posunulo sa ${affectedCount} tímov.`,
+                "success"
+            );
+        } else {
+            notify(
+                `V skupine „${trimmedGroup}“ (${categoryName}) neboli nájdené žiadne tímy na posunutie.`,
+                "info"
+            );
+        }
 
     } catch (err) {
-        console.error("Chyba pri odstraňovaní diery v poradí:", err);
+        console.error("Chyba pri odstraňovaní diery:", err);
         notify("Nepodarilo sa odstrániť voľné miesto v poradí.", "error");
     }
 };
