@@ -198,6 +198,7 @@ const AddGroupsApp = (props) => {
     const [deleteGapModal, setDeleteGapModal] = useState(null);
 
 const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
+  console.log("Pred:", teamsInCategory.map(t => `${t.teamName} #${t.order}`));
   if (!window.db || !categoryName || !groupName || gapPosition == null) return;
 
   try {
@@ -240,6 +241,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     await updateDoc(docRef, { [categoryName]: finalTeams });
 
     notify(`Diery na pozícii ${gapPosition} v skupine ${groupName} bola odstránená.`, 'success');
+    console.log("Po posune:", finalTeams.map(t => `${t.teamName} #${t.order}`));
 
   } catch (err) {
     console.error(err);
