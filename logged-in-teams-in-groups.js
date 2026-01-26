@@ -782,7 +782,7 @@ const AddGroupsApp = (props) => {
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu (bez názvu kategórie):'),
                         React.createElement('input', {
                             type: 'text',
-                            className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${isDuplicate || groupEndingMismatch ? 'border-red-500' : 'border-gray-300'}`
+                            className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${isDuplicate || groupEndingMismatch ? 'border-red-500' : 'border-gray-300'}`,
                             value: teamName,
                             onChange: (e) => setTeamName(e.target.value),
                             required: true,
