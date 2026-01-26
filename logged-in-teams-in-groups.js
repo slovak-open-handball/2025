@@ -260,13 +260,16 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             const finalTeams = teams.map(t => {
                 if (!t.groupName || t.groupName.trim() !== trimmedGroup) return t;
                 const replacement = newInGroup.find(
-                    nt => nt.teamName === t.teamName && 
-                          (nt.order ?? null) === (t.order ?? null)
+                    nt => 
+                        nt.teamName === t.teamName &&
+                        (nt.id && t.id ? nt.id === t.id : true) &&  // ak existuje id, použije sa
+                        (nt.order ?? null) === (t.order ?? null)
                 );
                 return replacement || t;
             });
 
             await updateDoc(docRef, { [categoryName]: finalTeams });
+            console.log("[SUCCESS] Aktualizovaný superstructure dokument");
 
         } else {
             // ────────────────────────────────────────────────
@@ -325,7 +328,9 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
                 await updateDoc(userRef, {
                     [`teams.${categoryName}`]: updatedTeamsArray
                 });
-            }
+                console.log(`[SUCCESS] Aktualizovaný používateľ ${uid}`);
+            } catch (updateErr) {
+                console.error(`[CHYBA] Aktualizácia používateľa ${uid} zlyhala:`, updateErr);
         }
 
         // ────────────────────────────────────────────────
