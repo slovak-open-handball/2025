@@ -126,6 +126,10 @@ export function Page3Form({
     return currentCount >= max;
   };
 
+  const hasAtLeastOneFreeCategory = React.useMemo(() => {
+    return Object.keys(categoriesData).some(catId => !isCategoryFull(catId));
+  }, [categoriesData, categoryTeamCounts]);
+
   const handleCategoryChange = (index, value) => {
     setSelectedCategoryRows(prevRows => {
       const newRows = [...prevRows];
@@ -153,37 +157,37 @@ export function Page3Form({
     setSelectedCategoryRows(prevRows => prevRows.filter((_, index) => index !== indexToRemove));
   };
 
-const getAvailableCategoryOptions = (currentIndex = -1) => {
-  const allCategoryIds = Object.keys(categoriesData);
-  const selectedIdsInOtherRows = selectedCategoryRows
-    .filter((row, idx) => idx !== currentIndex && row.categoryId !== '')
-    .map(row => row.categoryId);
+  const getAvailableCategoryOptions = (currentIndex = -1) => {
+    const allCategoryIds = Object.keys(categoriesData);
+    const selectedIdsInOtherRows = selectedCategoryRows
+      .filter((row, idx) => idx !== currentIndex && row.categoryId !== '')
+      .map(row => row.categoryId);
 
-  return allCategoryIds
-    .map(catId => {
-      const categoryValue = categoriesData[catId];
-      let name = '';
-      if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
-        name = categoryValue.name;
-      } else if (typeof categoryValue === 'string') {
-        name = categoryValue;
-      } else {
-        return null;
-      }
+    return allCategoryIds
+      .map(catId => {
+        const categoryValue = categoriesData[catId];
+        let name = '';
+        if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
+          name = categoryValue.name;
+        } else if (typeof categoryValue === 'string') {
+          name = categoryValue;
+        } else {
+          return null;
+        }
 
-      const isFull = isCategoryFull(catId);
-      const isAlreadySelected = selectedIdsInOtherRows.includes(catId);
+        const isFull = isCategoryFull(catId);
+        const isAlreadySelected = selectedIdsInOtherRows.includes(catId);
 
-      return {
-        id: catId,
-        name: name,
-        disabled: isFull || isAlreadySelected, // zablokujeme aj plné, aj už vybrané inde
-        fullMessage: isFull ? "Kapacita turnaja v tejto kategórii je už naplnená" : null
-      };
-    })
-    .filter(cat => cat !== null)
-    .sort((a, b) => a.name.localeCompare(b.name));
-};
+        return {
+          id: catId,
+          name: name,
+          disabled: isFull || isAlreadySelected,
+          fullMessage: isFull ? "Kapacita turnaja v tejto kategórii je už naplnená." : null
+        };
+      })
+      .filter(cat => cat !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  };
 
   const isFormValidPage3 = selectedCategoryRows.every(row => row.categoryId !== '' && row.teams >= 1);
   const isLastRowCategorySelected = selectedCategoryRows.length > 0 ? selectedCategoryRows[selectedCategoryRows.length - 1].categoryId !== '' : false;
@@ -230,142 +234,162 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
   };
 
   return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
-    React.createElement(
-      'h2',
-      { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-      'Registrácia - strana 3'
-    ),
-    React.createElement(
-      'form',
-      { onSubmit: handleNextPage3ToPage4, className: 'space-y-4' },
-      !isCategoriesLoaded ? (
-        React.createElement('div', { className: 'text-center py-8' }, 'Načítavam kategórie...')
-      ) : Object.keys(categoriesData).length === 0 ? (
-        React.createElement(
-          'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
-          React.createElement(
-            'p',
-            { className: 'text-red-600 text-lg font-semibold' },
-            'V systéme nie sú definované žiadne kategórie. Registrácia nie je možná.'
-          )
-        )
-      ) : (
-        React.createElement(
-          'div',
-          { className: 'space-y-4' },
-          React.createElement(
-            'div',
-            { className: 'flex items-center font-bold mb-2 space-x-2' },
-            React.createElement('span', { className: 'flex-1 text-gray-700' }, 'Kategória'),
-            React.createElement('span', { className: 'w-28 text-left text-gray-700' }, 'Počet tímov'),
-            React.createElement('span', { className: 'w-8' })
-          ),
-          selectedCategoryRows.map((row, index) => (
-            React.createElement(
-              'div',
-              { key: index, className: 'flex flex-col space-y-1' }, // zmenené na flex-col pre lepšie zobrazenie message
-              React.createElement(
-                'div',
-                { className: 'flex items-center space-x-2' },
-                React.createElement(
-                  'select',
-                  {
-                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
-                    value: row.categoryId,
-                    onChange: (e) => handleCategoryChange(index, e.target.value),
-                    required: true,
-                    disabled: loading,
-                    tabIndex: 22 + index * 2
-                  },
-                  React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
-                  getAvailableCategoryOptions(index).map(cat => (
-                    React.createElement('option', {
-                      key: cat.id,
-                      value: cat.id,
-                      disabled: cat.disabled
-                    }, cat.name)
-                  ))
-                ),
-                React.createElement('input', {
-                  type: 'number',
-                  className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-28 text-left',
-                  value: row.teams,
-                  onChange: (e) => handleTeamsChange(index, e.target.value),
-                  min: 1,
-                  required: true,
-                  disabled: loading,
-                  tabIndex: 23 + index * 2
-                }),
-                React.createElement(
-                  'button',
-                  {
-                    type: 'button',
-                    onClick: () => handleRemoveRow(index),
-                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${selectedCategoryRows.length === 1 ? 'invisible' : ''}`,
-                    disabled: loading || selectedCategoryRows.length === 1,
-                    tabIndex: 24 + index * 2
-                  },
-                  '-'
-                )
-              ),
-              // === NOVÉ === Zobrazenie správy pod selectom, ak je kategória plná
-              row.categoryId && isCategoryFull(row.categoryId) && React.createElement(
-                'p',
-                { className: 'text-sm text-red-600 mt-1 ml-3' },
-                "Kapacita turnaja v tejto kategórii je už naplnená."
-              )
-            )
-          ))
-        ),
-          React.createElement(
-            'button',
-            {
-              type: 'button',
-              onClick: handleAddRow,
-              className: addButtonClasses,
-              disabled: loading || isAnyCategoryUnselected || getAvailableCategoryOptions().length === 0,
-              tabIndex: 22 + selectedCategoryRows.length * 2
-            },
-            '+'
-          )
-        )
-      ),
+  React.Fragment,
+  null,
+  React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
+  React.createElement(
+    'h2',
+    { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
+    'Registrácia - strana 3'
+  ),
+  React.createElement(
+    'form',
+    { onSubmit: handleNextPage3ToPage4, className: 'space-y-4' },
+    !isCategoriesLoaded ? (
+      React.createElement('div', { className: 'text-center py-8' }, 'Načítavam kategórie...')
+    ) : Object.keys(categoriesData).length === 0 ? (
       React.createElement(
         'div',
-        { className: 'flex justify-between mt-6' },
+        { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
         React.createElement(
-          'button',
-          {
-            type: 'button',
-            onClick: handlePrev,
-            className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-            disabled: loading,
-            tabIndex: 20
-          },
-          'Späť'
-        ),
-        React.createElement(
-          'button',
-          {
-            type: 'submit',
-            className: nextButtonClasses,
-            disabled: loading || !isRecaptchaReady || !isFormValidPage3 || Object.keys(categoriesData).length === 0,
-            tabIndex: 21
-          },
-          loading ? React.createElement(
-            'div',
-            { className: 'flex items-center justify-center' },
-            React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
-              React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
-              React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
-            ),
-            'Ďalej...'
-          ) : 'Ďalej'
+          'p',
+          { className: 'text-red-600 text-lg font-semibold' },
+          'V systéme nie sú definované žiadne kategórie. Registrácia nie je možná.'
         )
       )
-    );
+    ) : (
+      React.createElement(
+        'div',
+        { className: 'space-y-6' },
+        React.createElement(
+          'div',
+          { className: 'flex items-center font-bold mb-2 space-x-2' },
+          React.createElement('span', { className: 'flex-1 text-gray-700' }, 'Kategória'),
+          React.createElement('span', { className: 'w-28 text-left text-gray-700' }, 'Počet tímov'),
+          React.createElement('span', { className: 'w-8' })
+        ),
+
+        // === HLAVNÁ ZMENA: ak existuje aspoň jedna voľná kategória, zobrazíme riadky ===
+        hasAtLeastOneFreeCategory ? (
+          React.createElement(
+            React.Fragment,
+            null,
+            selectedCategoryRows.map((row, index) => (
+              React.createElement(
+                'div',
+                { key: index, className: 'flex flex-col space-y-1' },
+                React.createElement(
+                  'div',
+                  { className: 'flex items-center space-x-2' },
+                  React.createElement(
+                    'select',
+                    {
+                      className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
+                      value: row.categoryId,
+                      onChange: (e) => handleCategoryChange(index, e.target.value),
+                      required: true,
+                      disabled: loading,
+                      tabIndex: 22 + index * 2
+                    },
+                    React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
+                    getAvailableCategoryOptions(index).map(cat => (
+                      React.createElement('option', {
+                        key: cat.id,
+                        value: cat.id,
+                        disabled: cat.disabled
+                      }, cat.name)
+                    ))
+                  ),
+                  React.createElement('input', {
+                    type: 'number',
+                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-28 text-left',
+                    value: row.teams,
+                    onChange: (e) => handleTeamsChange(index, e.target.value),
+                    min: 1,
+                    required: true,
+                    disabled: loading,
+                    tabIndex: 23 + index * 2
+                  }),
+                  React.createElement(
+                    'button',
+                    {
+                      type: 'button',
+                      onClick: () => handleRemoveRow(index),
+                      className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${selectedCategoryRows.length === 1 ? 'invisible' : ''}`,
+                      disabled: loading || selectedCategoryRows.length === 1,
+                      tabIndex: 24 + index * 2
+                    },
+                    '-'
+                  )
+                ),
+                // Správa pod selectom iba ak je vybraná plná kategória
+                row.categoryId && isCategoryFull(row.categoryId) && React.createElement(
+                  'p',
+                  { className: 'text-sm text-red-600 mt-1 ml-3' },
+                  "Kapacita turnaja v tejto kategórii je už naplnená."
+                )
+              )
+            )),
+            React.createElement(
+              'button',
+              {
+                type: 'button',
+                onClick: handleAddRow,
+                className: addButtonClasses,
+                disabled: loading || isAnyCategoryUnselected || getAvailableCategoryOptions().length === 0,
+                tabIndex: 22 + selectedCategoryRows.length * 2
+              },
+              '+'
+            )
+          )
+        ) : (
+          // Ak NIE JE ŽIADNA voľná kategória
+          React.createElement(
+            'div',
+            { className: 'bg-red-50 p-6 rounded-lg text-center border border-red-200' },
+            React.createElement(
+              'p',
+              { className: 'text-red-700 font-semibold text-lg' },
+              'Všetky kategórie sú už plné. Registrácia nie je možná.'
+            )
+          )
+        )
+      )
+    ),
+
+    React.createElement(
+      'div',
+      { className: 'flex justify-between mt-8' },
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: handlePrev,
+          className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+          disabled: loading,
+          tabIndex: 20
+        },
+        'Späť'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'submit',
+          className: nextButtonClasses,
+          disabled: loading || !isRecaptchaReady || !isFormValidPage3 || Object.keys(categoriesData).length === 0 || !hasAtLeastOneFreeCategory,
+          tabIndex: 21
+        },
+        loading ? React.createElement(
+          'div',
+          { className: 'flex items-center justify-center' },
+          React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+            React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
+            React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
+          ),
+          'Ďalej...'
+        ) : 'Ďalej'
+      )
+    )
+  )
+);
 }
