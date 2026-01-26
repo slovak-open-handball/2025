@@ -604,6 +604,27 @@ const AddGroupsApp = (props) => {
       const isCategoryLocked = !!teamToEdit && !teamToEdit.isSuperstructureTeam;
       const isCategoryFixed = !!defaultCategoryId && !teamToEdit;
       const isGroupFixed = !!defaultGroupName && !teamToEdit;
+
+      const [groupEndingMismatch, setGroupEndingMismatch] = useState(false);
+
+      useEffect(() => {
+        if (!isOpen || teamToEdit || !selectedCategory || !teamName.trim()) {
+          setGroupEndingMismatch(false);
+          return;
+        }
+
+        const trimmed = teamName.trim();
+        const lastChar = trimmed.slice(-1).toLowerCase();
+        if (!lastChar) {
+          setGroupEndingMismatch(false);
+          return;
+        }
+
+        const groups = allGroupsByCategoryId[selectedCategory] || [];
+        const hasMatch = groups.some(g => g.name.slice(-1).toLowerCase() === lastChar);
+
+        setGroupEndingMismatch(!hasMatch);
+      }, [teamName, selectedCategory, isOpen, teamToEdit, allGroupsByCategoryId]);   
     
       useEffect(() => {
         if (!isOpen || !selectedGroup) {
@@ -725,7 +746,7 @@ const AddGroupsApp = (props) => {
         const isCategoryValid = !!selectedCategory;
         const isGroupValid = !!selectedGroup;
         const isTeamNameValid = teamName.trim().length > 0;
-        const isSubmitDisabled = !isCategoryValid || !isGroupValid || !isTeamNameValid || isDuplicate;
+        const isSubmitDisabled = !isCategoryValid || !isGroupValid || !isTeamNameValid || isDuplicate || groupEndingMismatch;;
       
         const modalTitle = teamToEdit ? 'Upraviť tím' : 'Pridať nový tím';
         const buttonText = teamToEdit ? 'Aktualizovať tím' : 'Pridať tím';
@@ -759,7 +780,7 @@ const AddGroupsApp = (props) => {
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu (bez názvu kategórie):'),
                         React.createElement('input', {
                             type: 'text',
-                            className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${isDuplicate ? 'border-red-500' : 'border-gray-300'}`,
+                            className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${isDuplicate || groupEndingMismatch ? 'border-red-500' : 'border-gray-300'}`
                             value: teamName,
                             onChange: (e) => setTeamName(e.target.value),
                             required: true,
@@ -771,7 +792,12 @@ const AddGroupsApp = (props) => {
                             React.createElement('p', { className: 'text-sm text-gray-600' }, 'Finálny (dočasný) názov bude:'),
                             React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
                         ),
-                        isDuplicate && React.createElement('p', { className: 'mt-2 text-sm text-red-600 font-medium' }, '⚠️ Tím s týmto názvom už existuje!')
+                        isDuplicate && React.createElement('p', { className: 'mt-2 text-sm text-red-600 font-medium' }, '⚠️ Tím s týmto názvom už existuje!'),
+                        groupEndingMismatch && React.createElement(
+                          'p',
+                          { className: 'mt-2 text-sm text-red-600 font-medium' },
+                          '⚠️ Skupina neexistuje'
+                        ),
                     )
                     : React.createElement(
                         'div',
