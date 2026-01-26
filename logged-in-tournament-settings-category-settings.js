@@ -2,7 +2,7 @@
 
 import { doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-export function CategorySettings({ db, userProfileData, showNotification, sendAdminNotification }) {
+export function CategorySettings({ db, userProfileData, showNotification }) {
     const [categories, setCategories] = React.useState([]);
     const [showModal, setShowModal] = React.useState(false);
     const [currentCategory, setCurrentCategory] = React.useState(null);
@@ -66,17 +66,7 @@ export function CategorySettings({ db, userProfileData, showNotification, sendAd
                 }
             }, { merge: true });
 
-            showNotification(`Max. počet tímov pre „${currentCategory.name}“ zmenený na ${newMaxTeams}.`, 'success');
-
-            // voliteľná notifikácia adminom
-            await sendAdminNotification?.({
-                type: 'updateCategoryMaxTeams',
-                data: {
-                    categoryName: currentCategory.name,
-                    oldValue: currentCategory.maxTeams,
-                    newValue: newMaxTeams
-                }
-            });
+            showNotification(`Maximálny počet tímov pre kategóriu „${currentCategory.name}“ zmenený na ${newMaxTeams}.`, 'success');
 
             closeModal();
         } catch (err) {
@@ -84,7 +74,7 @@ export function CategorySettings({ db, userProfileData, showNotification, sendAd
         }
     };
 
-    // Farba podľa počtu tímov (voliteľné – môžeš odstrániť, ak sa ti nepáči)
+    // Farba podľa počtu tímov (voliteľné – môžeš odstrániť riadok s getMaxTeamsColor ak nechceš)
     const getMaxTeamsColor = (count) => {
         if (count <= 6) return 'text-red-600';
         if (count <= 10) return 'text-orange-600';
