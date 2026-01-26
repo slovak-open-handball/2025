@@ -99,12 +99,12 @@ return React.createElement(
             ) :
             React.createElement(
                 'div',
-                { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+                { className: 'space-y-5' },  // ← iba vertikálne odsadenie, žiadny grid
                 categories.map(cat => React.createElement(
                     'div',
                     {
                         key: cat.id,
-                        className: 'bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden flex flex-col min-h-[180px]'
+                        className: 'bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden flex flex-col'
                     },
                     React.createElement(
                         'div',
@@ -151,5 +151,48 @@ return React.createElement(
                 ))
             )
     ),
+
+    // Modal zostáva rovnaký ako predtým
+    showModal && React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4' },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden' },
+            React.createElement(
+                'div',
+                { className: 'p-8' },
+                React.createElement('h3', {
+                    className: 'text-2xl font-bold text-gray-800 mb-8 text-center'
+                }, currentCategory?.name || 'Kategória'),
+
+                React.createElement('label', {
+                    className: 'block text-gray-700 font-medium mb-4 text-center text-lg'
+                }, 'Maximálny počet tímov v kategórii'),
+
+                React.createElement('input', {
+                    type: 'number',
+                    min: 1,
+                    className: 'w-full border border-gray-300 rounded-lg px-5 py-4 text-center text-4xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                    value: newMaxTeams,
+                    onChange: e => setNewMaxTeams(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1)),
+                    autoFocus: true
+                }),
+
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-center gap-6 mt-10' },
+                    React.createElement('button', {
+                        onClick: closeModal,
+                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 px-10 py-4 rounded-lg font-medium min-w-[140px] transition-colors text-lg'
+                    }, 'Zrušiť'),
+                    React.createElement('button', {
+                        onClick: handleSave,
+                        className: 'bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-lg font-medium min-w-[140px] transition-colors text-lg'
+                    }, 'Uložiť')
+                )
+            )
+        )
+    )
 );
 }
