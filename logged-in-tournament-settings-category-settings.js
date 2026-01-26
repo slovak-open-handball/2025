@@ -1,6 +1,6 @@
 // logged-in-tournament-settings-category-settings.js
 
-import { doc, onSnapshot, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export function CategorySettings({ db, userProfileData, showNotification, sendAdminNotification }) {
     const [categories, setCategories] = React.useState([]);
@@ -8,7 +8,7 @@ export function CategorySettings({ db, userProfileData, showNotification, sendAd
     const [currentCategory, setCurrentCategory] = React.useState(null);
     const [newMaxTeams, setNewMaxTeams] = React.useState(12);
 
-    // Načítanie kategórií
+    // Načítavanie kategórií
     React.useEffect(() => {
         if (!db || !userProfileData || userProfileData.role !== 'admin') return;
 
@@ -63,14 +63,14 @@ export function CategorySettings({ db, userProfileData, showNotification, sendAd
             const catRef = doc(db, 'settings', 'categories');
             await setDoc(catRef, {
                 [currentCategory.id]: {
-                    ...currentCategory,           // zachováme name, dateFrom, dateTo, ...
-                    maxTeams: Number(newMaxTeams) // zmeníme len toto pole
+                    ...currentCategory,
+                    maxTeams: Number(newMaxTeams)
                 }
             }, { merge: true });
 
-            showNotification(`Maximálny počet tímov pre „${currentCategory.name}“ zmenený na ${newMaxTeams}.`, 'success');
+            showNotification(`Max. počet tímov pre „${currentCategory.name}“ zmenený na ${newMaxTeams}.`, 'success');
 
-            // voliteľná notifikácia adminom
+            // voliteľná admin notifikácia
             await sendAdminNotification?.({
                 type: 'updateCategoryMaxTeams',
                 data: {
@@ -86,9 +86,13 @@ export function CategorySettings({ db, userProfileData, showNotification, sendAd
         }
     };
 
-    // ────────────────────────────────────────────────
-    // RENDER
-    // ────────────────────────────────────────────────
+    // Farba podľa počtu tímov (voliteľné vizuálne vylepšenie)
+    const getMaxTeamsColor = (count) => {
+        if (count <= 6) return 'text-red-600';
+        if (count <= 10) return 'text-orange-600';
+        if (count <= 14) return 'text-yellow-600';
+        return 'text-green-600';
+    };
 
     return React.createElement(
         React.Fragment,
@@ -96,82 +100,106 @@ export function CategorySettings({ db, userProfileData, showNotification, sendAd
 
         React.createElement(
             'div',
-            { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' },
-            React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia kategórií'),
+            { className: 'space-y-6 p-6 border border-gray-200 rounded-lg shadow-sm mt-8 bg-white' },
+            React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-6' }, 'Nastavenia kategórií'),
 
-            React.createElement(
-                'div',
-                { className: 'space-y-3' },
-                categories.length > 0 ?
+            categories.length === 0 ?
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-500 text-center py-12 italic' },
+                    'Momentálne nie sú načítané žiadne kategórie.'
+                ) :
+                React.createElement(
+                    'div',
+                    { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' },
                     categories.map(cat => React.createElement(
                         'div',
                         {
                             key: cat.id,
-                            className: 'flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 p-4 rounded-md shadow-sm gap-3'
+                            className: 'bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden'
                         },
                         React.createElement(
                             'div',
-                            { className: 'flex-1' },
-                            React.createElement('div', { className: 'font-medium text-gray-800 text-lg' }, cat.name),
-                            React.createElement('div', { className: 'text-sm text-gray-600 mt-1 space-x-3' },
-                                React.createElement('span', null, `Max. tímov: ${cat.maxTeams}`),
+                            { className: 'p-5' },
+                            React.createElement('h3', {
+                                className: 'text-xl font-semibold text-gray-800 mb-3 truncate'
+                            }, cat.name),
+
+                            React.createElement(
+                                'div',
+                                { className: 'space-y-2 text-gray-700' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex justify-between items-center' },
+                                    React.createElement('span', { className: 'font-medium' }, 'Max. tímov:'),
+                                    React.createElement(
+                                        'span',
+                                        { className: `font-bold text-lg ${getMaxTeamsColor(cat.maxTeams)}` },
+                                        cat.maxTeams
+                                    )
+                                ),
                                 (cat.dateFrom || cat.dateTo) && React.createElement(
-                                    'span',
-                                    null,
-                                    `• Narodení ${cat.dateFrom ? `od ${cat.dateFrom}` : ''}${cat.dateTo ? ` do ${cat.dateTo}` : ''}`
+                                    'div',
+                                    { className: 'text-sm text-gray-600' },
+                                    `Narodení ${cat.dateFrom ? `od ${cat.dateFrom}` : ''}${cat.dateTo ? ` do ${cat.dateTo}` : ''}`
                                 )
                             )
                         ),
                         React.createElement(
-                            'button',
-                            {
-                                onClick: () => openEditModal(cat),
-                                className: 'bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-1 px-4 rounded transition-colors'
-                            },
-                            'Upraviť max. tímov'
+                            'div',
+                            { className: 'px-5 pb-5 pt-2 border-t border-gray-100 bg-gray-50' },
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: () => openEditModal(cat),
+                                    className: 'w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors duration-200'
+                                },
+                                'Upraviť maximálny počet tímov'
+                            )
                         )
-                    )) :
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-500 text-center py-8 italic' },
-                        'Zatiaľ nie sú načítané žiadne kategórie (alebo dokument categories je prázdny).'
-                    )
-            )
+                    ))
+                )
         ),
 
-        // ─── MODAL – iba úprava max tímov ────────────────
+        // ─── MODAL na úpravu max tímov ───────────────────
         showModal && React.createElement(
-            'div', { className: 'fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50' },
+            'div',
+            { className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4' },
             React.createElement(
-                'div', { className: 'bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl' },
-                React.createElement('h3', { className: 'text-xl font-bold mb-5 text-center' },
-                    `Max. počet tímov – ${currentCategory?.name}`
-                ),
-
-                React.createElement('label', {
-                    className: 'block text-gray-700 font-medium mb-2 text-center'
-                }, 'Zadajte nový maximálny počet tímov'),
-
-                React.createElement('input', {
-                    type: 'number',
-                    min: 1,
-                    className: 'border border-gray-300 rounded w-full px-4 py-3 text-center text-2xl font-bold mb-6 focus:outline-none focus:ring-2 focus:ring-blue-400',
-                    value: newMaxTeams,
-                    onChange: e => setNewMaxTeams(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1)),
-                    autoFocus: true
-                }),
-
+                'div',
+                { className: 'bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden' },
                 React.createElement(
                     'div',
-                    { className: 'flex justify-center gap-4' },
-                    React.createElement('button', {
-                        onClick: closeModal,
-                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2.5 rounded font-medium transition-colors min-w-[100px]'
-                    }, 'Zrušiť'),
-                    React.createElement('button', {
-                        onClick: handleSave,
-                        className: 'bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded font-medium transition-colors min-w-[100px]'
-                    }, 'Uložiť')
+                    { className: 'p-6' },
+                    React.createElement('h3', {
+                        className: 'text-xl font-bold text-gray-800 mb-6 text-center'
+                    }, currentCategory?.name || 'Kategória'),
+
+                    React.createElement('label', {
+                        className: 'block text-gray-700 font-medium mb-3 text-center'
+                    }, 'Maximálny počet tímov v kategórii'),
+
+                    React.createElement('input', {
+                        type: 'number',
+                        min: 1,
+                        className: 'w-full border border-gray-300 rounded-lg px-4 py-3 text-center text-3xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                        value: newMaxTeams,
+                        onChange: e => setNewMaxTeams(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1)),
+                        autoFocus: true
+                    }),
+
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-center gap-4 mt-8' },
+                        React.createElement('button', {
+                            onClick: closeModal,
+                            className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 px-8 py-3 rounded-lg font-medium min-w-[120px] transition-colors'
+                        }, 'Zrušiť'),
+                        React.createElement('button', {
+                            onClick: handleSave,
+                            className: 'bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium min-w-[120px] transition-colors'
+                        }, 'Uložiť')
+                    )
                 )
             )
         )
