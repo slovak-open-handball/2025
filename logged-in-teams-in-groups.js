@@ -209,121 +209,147 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             ? allGroupsByCategoryId[categoryId].find(g => g.name.trim() === trimmedGroup)
             : null;
         const isSuperstructureGroup = groupInfo?.type === 'nadstavbová skupina';
+
         let affectedCount = 0;
 
         if (isSuperstructureGroup) {
-            // Nadstavbová skupina
+            // Nadstavbová skupina – settings/superstructureGroups
             const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
             const snap = await getDoc(docRef);
             if (!snap.exists()) {
                 notify("Dokument nadstavbových skupín sa nenašiel", "error");
                 return;
             }
+
             const data = snap.data() || {};
             let teams = [...(data[categoryName] || [])];
 
-            const inGroup = teams.filter(t => t.groupName && t.groupName.trim() === trimmedGroup);
+            const inGroup = teams.filter(t => 
+                t.groupName && t.groupName.trim() === trimmedGroup
+            );
+
             if (inGroup.length === 0) {
                 notify(`V nadstavbovej skupine „${trimmedGroup}“ neboli nájdené žiadne tímy.`, "info");
                 return;
             }
 
-            const newInGroup = [];
-            let currentPos = 1;
-            inGroup.forEach(team => {
-                const order = typeof team.order === 'number' ? team.order : null;
-                if (order === null || order < gapPosition) {
-                    newInGroup.push({ ...team, order });
-                } else if (order === gapPosition) {
-                    // preskočíme dieru
-                } else {
-                    newInGroup.push({ ...team, order: currentPos });
-                    currentPos++;
-                    affectedCount++;
-                }
-            });
+            // Získame tímy, ktoré treba posunúť (order > gapPosition)
+            const teamsToShift = inGroup
+                .filter(t => typeof t.order === 'number' && t.order > gapPosition)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-            const finalTeams = teams.map(t => {
-                if (!t.groupName || t.groupName.trim() !== trimmedGroup) return t;
-                const replacement = newInGroup.find(nt =>
-                    nt.teamName === t.teamName &&
-                    (nt.id && t.id ? nt.id === t.id : true) &&
-                    (nt.order ?? null) === (t.order ?? null)
+            affectedCount = teamsToShift.length;
+
+            // Pre každý tím spustíme logiku manuálnej zmeny poradia
+            for (const team of teamsToShift) {
+                const newOrder = (team.order || 0) - 1;
+
+                // Tu simulujeme to, čo robí ceruzka/editácia
+                // Predpokladáme, že máš nejakú funkciu na zmenu poradia
+                // Ak nemáš samostatnú funkciu, použijeme podobnú logiku ako v handleUpdateAnyTeam
+                const updatedTeam = { ...team, order: newOrder };
+
+                // Aktualizujeme tím v poli
+                const teamIndex = teams.findIndex(t => 
+                    t.teamName === team.teamName && 
+                    (t.id && team.id ? t.id === team.id : true)
                 );
-                return replacement || t;
-            });
+
+                if (teamIndex !== -1) {
+                    teams[teamIndex] = updatedTeam;
+                }
+
+                // Vytvoríme notifikáciu ako pri zmene poradia
+                await createTeamAssignmentNotification('change_order_global', {
+                    id: team.id,
+                    teamName: team.teamName,
+                    category: categoryName,
+                    groupName: trimmedGroup,
+                    oldOrder: team.order,
+                    newOrder: newOrder
+                });
+            }
 
             try {
-                await updateDoc(docRef, { [categoryName]: finalTeams });
-                console.log("[SUCCESS] Aktualizovaný superstructure dokument");
-            } catch (updateErr) {
-                console.error("[CHYBA pri zápise superstructure]:", updateErr);
+                await updateDoc(docRef, { [categoryName]: teams });
+                console.log("[SUCCESS] Nadstavbová skupina aktualizovaná – posunuté tímy");
+            } catch (err) {
+                console.error("[CHYBA superstructure update]:", err);
             }
 
         } else {
-            // Základná skupina – používatelia
+            // Základné skupiny – používatelia
             const usersSnap = await getDocs(collection(window.db, "users"));
-            const updates = [];
 
             for (const userDoc of usersSnap.docs) {
                 const userData = userDoc.data();
-                const teamsInCategory = userData.teams?.[categoryName] || [];
+                let teamsInCategory = userData.teams?.[categoryName] || [];
                 if (teamsInCategory.length === 0) continue;
 
-                const inGroup = teamsInCategory.filter(t =>
+                const inGroup = teamsInCategory.filter(t => 
                     t.groupName && t.groupName.trim() === trimmedGroup
                 );
+
                 if (inGroup.length === 0) continue;
 
-                const newInGroup = [];
-                let currentPos = 1;
-                inGroup.forEach(team => {
-                    const order = typeof team.order === 'number' ? team.order : null;
-                    if (order === null || order < gapPosition) {
-                        newInGroup.push({ ...team, order });
-                    } else if (order === gapPosition) {
-                        // preskočíme dieru
-                    } else {
-                        newInGroup.push({ ...team, order: currentPos });
-                        currentPos++;
-                        affectedCount++;
-                    }
-                });
+                // Tímy na posunutie
+                const teamsToShift = inGroup
+                    .filter(t => typeof t.order === 'number' && t.order > gapPosition)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-                const updatedTeams = teamsInCategory.map(t => {
-                    if (!t.groupName || t.groupName.trim() !== trimmedGroup) return t;
-                    const replacement = newInGroup.find(nt =>
-                        nt.teamName === t.teamName &&
-                        (nt.order ?? null) === (t.order ?? null)
+                if (teamsToShift.length === 0) continue;
+
+                affectedCount += teamsToShift.length;
+
+                // Pre každý tím posunieme order o -1 a uložíme
+                for (const team of teamsToShift) {
+                    const newOrder = (team.order || 0) - 1;
+
+                    // Nájdeme index v poli používateľa
+                    const teamIndex = teamsInCategory.findIndex(t => 
+                        t.teamName === team.teamName &&
+                        (t.order ?? null) === (team.order ?? null)
                     );
-                    return replacement || t;
-                });
 
-                updates.push({ uid: userDoc.id, updatedTeamsArray: updatedTeams });
-            }
+                    if (teamIndex !== -1) {
+                        teamsInCategory[teamIndex] = {
+                            ...teamsInCategory[teamIndex],
+                            order: newOrder
+                        };
 
-            // Uložíme s individuálnym try/catch
-            for (const { uid, updatedTeamsArray } of updates) {
+                        // Notifikácia ako pri manuálnej zmene
+                        await createTeamAssignmentNotification('change_order_user', {
+                            id: team.id,
+                            teamName: team.teamName,
+                            category: categoryName,
+                            groupName: trimmedGroup,
+                            oldOrder: team.order,
+                            newOrder: newOrder
+                        });
+                    }
+                }
+
+                // Uložíme aktualizované pole pre tohto používateľa
                 try {
-                    const userRef = doc(window.db, "users", uid);
+                    const userRef = doc(window.db, "users", userDoc.id);
                     await updateDoc(userRef, {
-                        [`teams.${categoryName}`]: updatedTeamsArray
+                        [`teams.${categoryName}`]: teamsInCategory
                     });
-                    console.log(`[SUCCESS] Aktualizovaný používateľ ${uid}`);
-                } catch (updateErr) {
-                    console.error(`[CHYBA] Aktualizácia používateľa ${uid} zlyhala:`, updateErr);
+                    console.log(`[SUCCESS] Používateľ ${userDoc.id} – posunuté tímy`);
+                } catch (err) {
+                    console.error(`[CHYBA] Používateľ ${userDoc.id}:`, err);
                 }
             }
         }
 
-        // Notifikácia
+        // Finálna notifikácia
         if (affectedCount > 0) {
             notify(
-                `Voľné miesto na pozícii ${gapPosition} v skupine „${trimmedGroup}“ (${categoryName}) bolo odstránené. Posunulo sa ${affectedCount} tímov.`,
+                `Voľné miesto na pozícii ${gapPosition} v skupine „${trimmedGroup}“ (${categoryName}) bolo odstránené. Posunulo sa ${affectedCount} tímov (ako pri manuálnej editácii).`,
                 "success"
             );
         } else {
-            notify(`V skupine „${trimmedGroup}“ (${categoryName}) neboli nájdené žiadne tímy na posunutie.`, "info");
+            notify(`V skupine „${trimmedGroup}“ (${categoryName}) neboli nájdené tímy na posunutie.`, "info");
         }
 
     } catch (err) {
