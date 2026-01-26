@@ -175,7 +175,7 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
     setSelectedCategoryRows(prev => prev.filter((_, i) => i !== index));
   };
 
-  const isFormValid = selectedCategoryRows.every(r => r.categoryId && r.teams >= 1);
+  const isFormValidPage3 = selectedCategoryRows.every(r => r.categoryId && r.teams >= 1);
 
   const hasAtLeastOneFreeCategory = Object.keys(categoriesData).some(catId => {
     const isFull = isCategoryFull(catId);
@@ -185,7 +185,7 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
 
   const isAnyCategoryUnselected = selectedCategoryRows.some(row => !row.categoryId);
 
-  const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid
+  const nextButtonClasses = loading || !isRecaptchaReady || !isFormValidPage3
     ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
     : 'bg-blue-500 hover:bg-blue-700 text-white';
 
