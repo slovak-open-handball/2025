@@ -369,7 +369,6 @@ const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid || !hasAt
             'Späť'
           ),
           React.createElement(
-            React.createElement(
             'button',
             {
               type: 'submit',
