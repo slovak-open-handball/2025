@@ -193,6 +193,14 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
     ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
     : 'bg-blue-500 hover:bg-blue-700 text-white';
 
+  // Pomocná funkcia: koľko tímov ešte môže pridať v danej kategórii
+  const getRemainingTeamsForCategory = (catId) => {
+    if (!catId) return Infinity; // ak nič nevybrané, nekontrolujeme
+    const current = categoryTeamCounts[catId] || 0;
+    const max = categoriesData[catId]?.maxTeams ?? Infinity;
+    return Math.max(0, max - current);
+  };
+
   return React.createElement(
   React.Fragment,
   null,
@@ -240,6 +248,10 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
           null,
           selectedCategoryRows.map((row, index) => {
             const options = getAvailableCategoryOptions(index);
+            const selectedCatId = row.categoryId;
+            const remaining = getRemainingTeamsForCategory(selectedCatId);
+            const requested = parseInt(row.teams, 10) || 0;
+            const isOverLimit = selectedCatId && remaining < requested && requested > 0;
 
             return React.createElement(
               'div',
@@ -265,7 +277,7 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
                       value: cat.id,
                       disabled: cat.disabled
                     },
-                    cat.name  // tu je názov + "(plná kapacita)" ak je plná
+                    cat.name
                   ))
                 ),
                 React.createElement('input', {
@@ -291,7 +303,16 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
                 )
               ),
 
-              // Červený text pod riadkom iba ak je aktuálne vybraná kategória plná
+              // Červený text pre prekročenie kapacity (ak je vybraná kategória a prekročenie)
+              isOverLimit && React.createElement(
+                'p',
+                { className: 'text-sm text-red-600 mt-1 ml-3' },
+                `Pozor: v tejto kategórii už je prihlásených ${categoryTeamCounts[selectedCatId] || 0} tímov. `,
+                `Maximálna kapacita je ${categoriesData[selectedCatId]?.maxTeams ?? 'neurčená'}. `,
+                `Môžete prihlásiť maximálne ${remaining} tím${remaining === 1 ? '' : 'ov'}.`
+              ),
+
+              //Pôvodný červený text pre plnú kategóriu (zachovaný)
               row.categoryId && isCategoryFull(row.categoryId) && React.createElement(
                 'p',
                 { className: 'text-sm text-red-600 mt-1 ml-3' },
