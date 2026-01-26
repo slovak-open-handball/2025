@@ -197,20 +197,6 @@ const AddGroupsApp = (props) => {
     const currentUserEmail = window.globalUserProfileData?.email || null;
     const [deleteGapModal, setDeleteGapModal] = useState(null);
 
-✅ Tu je celý upravený kód s opravenou funkciou handleDeleteGap (správne umiestnený try/catch, logovanie úspechu/chyby a lepšia identifikácia tímov):
-JavaScriptimport React from "https://esm.sh/react@18.2.0";
-import ReactDOM from "https://esm.sh/react-dom@18.2.0";
-import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-const { useState, useEffect, useRef } = React;
-
-const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
-const listeners = new Set();
-
-// ... (všetky komponenty ConfirmDeleteGapModal, NotificationPortal, ConfirmDeleteModal ostávajú rovnaké ako máš)
-
-// === HLAVNÁ FUNKCIA handleDeleteGap (OPRAVENÁ) ===
 const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
     const trimmedGroup = (groupName || "").trim();
