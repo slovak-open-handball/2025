@@ -544,7 +544,9 @@ const AddGroupsApp = (props) => {
                 return;
             }
     
-            let newOrder = null;
+          const newGroup = groupName || null;  
+          let newOrder = null;
+          
             if (groupName) {
                 const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.teamName !== originalTeam.teamName);
                 const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
