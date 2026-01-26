@@ -170,7 +170,7 @@ return React.createElement(
                                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             }`
                         },
-                        saving ? 'Ukladám...' : 'Uložiť všetky zmeny'
+                        saving ? 'Ukladám...' : 'Uložiť'
                     )
                 )
             )
