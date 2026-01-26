@@ -9,6 +9,66 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 const listeners = new Set();
 
+const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName, categoryName, isConfirming }) => {
+  if (!isOpen) return null;
+
+  return React.createElement(
+    'div',
+      {
+      className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
+      onClick: onClose
+      },
+    React.createElement(
+      'div',
+      {
+        className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
+        onClick: e => e.stopPropagation()
+      },
+      React.createElement(
+        'h2',
+        { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
+          'Odstrániť voľné miesto v poradí'
+        ),
+        React.createElement(
+          'p',
+          { className: 'text-gray-700 mb-4 text-center' },
+            `Naozaj chcete odstrániť voľné miesto na pozícii ${position} v skupine ${groupName} (${categoryName})?`
+        ),
+          React.createElement(
+            'p',
+            { className: 'text-sm text-amber-700 mb-8 text-center font-medium' },
+            'Všetky tímy s vyšším poradím sa posunú o 1 nižšie.'
+          ),
+            React.createElement(
+              'div',
+              { className: 'flex justify-end space-x-4' },
+              React.createElement(
+                'button',
+                {
+                  onClick: onClose,
+                  className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
+                },
+                'Zrušiť'
+              ),
+              React.createElement(
+                'button',
+                {
+                  onClick: () => {
+                    onConfirm();
+                    onClose();
+                  },
+                  disabled: isConfirming,
+                  className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
+                    isConfirming ? 'bg-gray-400 cursor-wait opacity-60' : 'bg-amber-600 hover:bg-amber-700'
+                  }`
+                },
+                isConfirming ? 'Spracúvam...' : 'Áno, odstrániť miesto'
+        )
+      )
+    )
+  );
+};  
+
 // Nový komponent – stabilná notifikácia
 // Stabilná notifikácia cez portál
 const NotificationPortal = () => {
@@ -907,67 +967,7 @@ const AddGroupsApp = (props) => {
         if (!isOpen) return null;
 
         const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
-        const finalTeamNamePreview = teamName.trim() ? `${currentCategoryName} ${teamName.trim()}` : '';
-
-      const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName, categoryName, isConfirming }) => {
-        if (!isOpen) return null;
-
-        return React.createElement(
-          'div',
-          {
-            className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
-            onClick: onClose
-          },
-          React.createElement(
-            'div',
-            {
-              className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
-              onClick: e => e.stopPropagation()
-            },
-            React.createElement(
-              'h2',
-              { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
-              'Odstrániť voľné miesto v poradí'
-            ),
-            React.createElement(
-              'p',
-              { className: 'text-gray-700 mb-4 text-center' },
-              `Naozaj chcete odstrániť voľné miesto na pozícii ${position} v skupine ${groupName} (${categoryName})?`
-            ),
-            React.createElement(
-              'p',
-              { className: 'text-sm text-amber-700 mb-8 text-center font-medium' },
-              'Všetky tímy s vyšším poradím sa posunú o 1 nižšie.'
-            ),
-            React.createElement(
-              'div',
-              { className: 'flex justify-end space-x-4' },
-              React.createElement(
-                'button',
-                {
-                  onClick: onClose,
-                  className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
-                },
-                'Zrušiť'
-              ),
-              React.createElement(
-                'button',
-                {
-                  onClick: () => {
-                    onConfirm();
-                    onClose();
-                  },
-                  disabled: isConfirming,
-                  className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
-                    isConfirming ? 'bg-gray-400 cursor-wait opacity-60' : 'bg-amber-600 hover:bg-amber-700'
-                  }`
-                },
-                isConfirming ? 'Spracúvam...' : 'Áno, odstrániť miesto'
-              )
-            )
-          )
-        );
-      };      
+        const finalTeamNamePreview = teamName.trim() ? `${currentCategoryName} ${teamName.trim()}` : '';   
 
         return React.createElement(
           'div',
