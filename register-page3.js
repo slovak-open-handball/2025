@@ -177,6 +177,12 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
 
   const isFormValid = selectedCategoryRows.every(r => r.categoryId && r.teams >= 1);
 
+  const hasAtLeastOneFreeCategory = Object.keys(categoriesData).some(catId => {
+    const isFull = isCategoryFull(catId);
+    const isSelectedSomewhere = selectedCategoryRows.some(row => row.categoryId === catId);
+    return !isFull && !isSelectedSomewhere;
+  });
+
   const nextButtonClasses = loading || !isRecaptchaReady || !isFormValid
     ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
     : 'bg-blue-500 hover:bg-blue-700 text-white';
