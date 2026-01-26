@@ -58,7 +58,7 @@ export function Page3Form({
         setNotificationType('error');
       }
     } else {
-      console.warn("availableCategoriesMap ešte nie je k dispozícii v Page3Form.");
+//      console.warn("availableCategoriesMap ešte nie je k dispozícii v Page3Form.");
     }
 
     if (!selectedCategoryRows || selectedCategoryRows.length === 0) {
@@ -96,7 +96,7 @@ React.useEffect(() => {
               // Ukladáme pod ID
               countsById[catId] = (countsById[catId] || 0) + count;
             } else {
-              console.warn(`Nenašlo sa ID pre kategóriu s názvom: "${catName}"`);
+//              console.warn(`Nenašlo sa ID pre kategóriu s názvom: "${catName}"`);
             }
           }
         }
