@@ -218,6 +218,11 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
                 .map(t => `${t.teamName || "?"} #${t.order ?? "-"}`)
         );
 
+        console.log("Všetky groupName v kategórii " + categoryName + ":");
+        const uniqueGroups = [...new Set(teams.map(t => t.groupName))];
+        console.table(uniqueGroups);
+        console.log("Hľadaný groupName:", JSON.stringify(groupName));
+
         // filtrovať iba tímy v danej skupine
         const inGroup = teams.filter(t => t.groupName === groupName);
 
