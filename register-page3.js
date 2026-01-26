@@ -321,7 +321,7 @@ const addButtonClasses =
                     onChange: (e) => handleTeamsChange(index, e.target.value),
                     required: true,
                     disabled: loading,
-                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-32 text-center',
+                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-16 text-center',
                     tabIndex: 23 + index * 2
                   }),
                   React.createElement(
