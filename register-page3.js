@@ -38,7 +38,7 @@ export function Page3Form({
       setIsCategoriesLoaded(true);
 
       // Výpis načítaných kategórií + aktuálne počty (ak už máme counts)
-      console.log("%c=== NAČÍTANÉ KATEGÓRIE + AKTUÁLNY POČET TÍMOV ===", "color: #0066cc; font-weight: bold;");
+      console.log("=== NAČÍTANÉ KATEGÓRIE + AKTUÁLNY POČET TÍMOV ===");
       Object.entries(formattedCategories).forEach(([id, cat]) => {
         const catName = cat.name || "Bez názvu";
         const currentTeams = categoryTeamCounts[catName] || 0;
@@ -85,7 +85,7 @@ export function Page3Form({
       setCategoryTeamCounts(counts);
 
       // Výpis aktualizovaných počtov tímov
-      console.log("%c=== AKTUALIZOVANÝ POČET PRIHLÁSENÝCH TÍMOV ===", "color: #0066cc; font-weight: bold;");
+      console.log("=== AKTUALIZOVANÝ POČET PRIHLÁSENÝCH TÍMOV ===");
       if (Object.keys(counts).length === 0) {
         console.log("Zatiaľ žiadne tímy v žiadnej kategórii.");
       } else {
