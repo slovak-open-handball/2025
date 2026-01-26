@@ -151,11 +151,6 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         className: `w-24 text-center border border-gray-300 rounded-lg py-2 px-3 font-bold text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 ${getMaxTeamsColor(editedMaxTeams[cat.id] ?? cat.maxTeams)}`
                                     })
                                 )
-                            ),
-                            React.createElement(
-                                'div',
-                                { className: 'px-6 pb-6 pt-3 bg-gray-50 border-t border-gray-100 mt-auto text-sm text-gray-500 text-center' },
-                                'Zmeny sa uložia až po kliknutí na tlačidlo dole.'
                             )
                         ))
                     ),
