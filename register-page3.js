@@ -367,6 +367,5 @@ const getAvailableCategoryOptions = (currentIndex = -1) => {
           ) : 'Ďalej'
         )
       )
-    )
-  );
+    );
 }
