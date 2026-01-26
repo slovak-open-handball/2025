@@ -179,6 +179,7 @@ import { GeneralRegistrationSettings } from './logged-in-tournament-settings-gen
 import { TShirtSizeSettings } from './logged-in-tournament-settings-t-shirt-size-settings.js';
 import { AccommodationSettings } from './logged-in-tournament-settings-accommodation-settings.js';
 import { PackageSettings } from './logged-in-tournament-settings-package-settings.js';
+import { CategorySettings } from './logged-in-tournament-settings-category-settings.js';
 
 
 function TournamentSettingsApp() {
@@ -198,6 +199,7 @@ function TournamentSettingsApp() {
     { id: 'tshirt', title: 'Nastavenia veľkostí tričiek', component: TShirtSizeSettings },
     { id: 'accommodation', title: 'Nastavenia ubytovania', component: AccommodationSettings },
     { id: 'package', title: 'Nastavenia balíčkov', component: PackageSettings },
+    { id: 'categories', title: 'Nastavenia kategórií', component: CategorySettings },
   ];
 
 
