@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, onSnapshot, setDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -55,14 +55,13 @@ export function Page3Form({
       setCategoriesData(formattedCategories);
       setIsCategoriesLoaded(true);
 
-      // === NOVÉ === Výpis maximálneho počtu tímov pre každú kategóriu do konzoly
+      // Výpis maximálneho počtu tímov pre každú kategóriu do konzoly
       console.log("=== Maximálny počet tímov v jednotlivých kategóriách ===");
       Object.entries(formattedCategories).forEach(([id, cat]) => {
         const maxTeams = cat.maxTeams ?? "nie je definovaný";
         console.log(`Kategória: ${cat.name || "bez názvu"}  |  ID: ${id}  |  Max tímov: ${maxTeams}`);
       });
       console.log("======================================");
-      // === KONIEC NOVÉHO ===
 
     } else if (availableCategoriesMap) {
       setCategoriesData({});
@@ -80,6 +79,55 @@ export function Page3Form({
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
     }
   }, [availableCategoriesMap, setNotificationMessage, setShowNotification, setNotificationType, selectedCategoryRows, setSelectedCategoryRows]);
+
+  // === NOVÉ === Načítanie všetkých používateľov a počítanie tímov podľa kategórií
+  React.useEffect(() => {
+    if (!window.db) return;
+
+    const usersCollectionRef = collection(window.db, 'users');
+
+    const unsubscribeUsers = onSnapshot(usersCollectionRef, (querySnapshot) => {
+      console.log("=== Načítané dokumenty používateľov z kolekcie /users/ ===");
+      console.log(`Celkový počet používateľov: ${querySnapshot.size}`);
+
+      const categoryTeamCount = {}; // { "Kadeti": 5, "Juniori": 3, ... }
+
+      querySnapshot.forEach((userDoc) => {
+        const userData = userDoc.data();
+        const userEmail = userData.email || userDoc.id;
+        const teams = userData.teams || {};
+
+        console.log(`Používateľ: ${userEmail} (${userDoc.id})`);
+
+        Object.entries(teams).forEach(([categoryName, teamsArray]) => {
+          if (!Array.isArray(teamsArray)) return;
+
+          const teamCountInCategory = teamsArray.filter(t => t).length;
+          if (teamCountInCategory > 0) {
+            if (!categoryTeamCount[categoryName]) {
+              categoryTeamCount[categoryName] = 0;
+            }
+            categoryTeamCount[categoryName] += teamCountInCategory;
+
+            console.log(`  → Kategória: ${categoryName} → ${teamCountInCategory} tímov`);
+          }
+        });
+      });
+
+      console.log("=== Celkový počet tímov podľa kategórií ===");
+      Object.entries(categoryTeamCount).forEach(([category, count]) => {
+        console.log(`Kategória "${category}": ${count} tímov`);
+      });
+      console.log(`Celkový počet všetkých tímov vo všetkých kategóriách: ${Object.values(categoryTeamCount).reduce((sum, c) => sum + c, 0)}`);
+      console.log("======================================");
+    }, (error) => {
+      console.error("Chyba pri načítaní používateľov a tímov:", error);
+    });
+
+    return () => {
+      unsubscribeUsers();
+    };
+  }, []); // spustí sa iba raz pri načítaní komponentu
 
   const handleCategoryChange = (index, value) => {
     setSelectedCategoryRows(prevRows => {
