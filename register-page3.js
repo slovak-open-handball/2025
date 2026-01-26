@@ -157,8 +157,7 @@ React.useEffect(() => {
           displayName += " (naplnená kapacita)";
           disabled = true;
         } else if (isAlreadySelectedInAnotherRow) {
-          // voliteľné: ak chceš zakázať aj duplicitný výber v inom riadku
-          // disabled = true;
+          disabled = true;
           // displayName += " (už vybrané)";
         }
 
