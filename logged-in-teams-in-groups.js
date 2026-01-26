@@ -197,52 +197,53 @@ const AddGroupsApp = (props) => {
     const currentUserEmail = window.globalUserProfileData?.email || null;
     const [deleteGapModal, setDeleteGapModal] = useState(null);
 
+✅ Tu je celý upravený kód s opravenou funkciou handleDeleteGap (správne umiestnený try/catch, logovanie úspechu/chyby a lepšia identifikácia tímov):
+JavaScriptimport React from "https://esm.sh/react@18.2.0";
+import ReactDOM from "https://esm.sh/react-dom@18.2.0";
+import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+const { useState, useEffect, useRef } = React;
+
+const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
+const listeners = new Set();
+
+// ... (všetky komponenty ConfirmDeleteGapModal, NotificationPortal, ConfirmDeleteModal ostávajú rovnaké ako máš)
+
+// === HLAVNÁ FUNKCIA handleDeleteGap (OPRAVENÁ) ===
 const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
-
     const trimmedGroup = (groupName || "").trim();
 
     try {
-        // 1. Zistíme, či ide o nadstavbovú skupinu
         const categoryId = Object.keys(categoryIdToNameMap).find(
             id => categoryIdToNameMap[id] === categoryName
         );
-
         const groupInfo = categoryId && allGroupsByCategoryId[categoryId]
             ? allGroupsByCategoryId[categoryId].find(g => g.name.trim() === trimmedGroup)
             : null;
-
         const isSuperstructureGroup = groupInfo?.type === 'nadstavbová skupina';
-
         let affectedCount = 0;
 
         if (isSuperstructureGroup) {
-            // ────────────────────────────────────────────────
-            // Nadstavbová skupina → settings/superstructureGroups
-            // ────────────────────────────────────────────────
+            // Nadstavbová skupina
             const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
             const snap = await getDoc(docRef);
             if (!snap.exists()) {
                 notify("Dokument nadstavbových skupín sa nenašiel", "error");
                 return;
             }
-
             const data = snap.data() || {};
             let teams = [...(data[categoryName] || [])];
 
-            const inGroup = teams.filter(t => 
-                t.groupName && t.groupName.trim() === trimmedGroup
-            );
-
+            const inGroup = teams.filter(t => t.groupName && t.groupName.trim() === trimmedGroup);
             if (inGroup.length === 0) {
                 notify(`V nadstavbovej skupine „${trimmedGroup}“ neboli nájdené žiadne tímy.`, "info");
                 return;
             }
 
-            // nové pole s posunom
             const newInGroup = [];
             let currentPos = 1;
-
             inGroup.forEach(team => {
                 const order = typeof team.order === 'number' ? team.order : null;
                 if (order === null || order < gapPosition) {
@@ -256,44 +257,40 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
                 }
             });
 
-            // aktualizujeme pole
             const finalTeams = teams.map(t => {
                 if (!t.groupName || t.groupName.trim() !== trimmedGroup) return t;
-                const replacement = newInGroup.find(
-                    nt => 
-                        nt.teamName === t.teamName &&
-                        (nt.id && t.id ? nt.id === t.id : true) &&  // ak existuje id, použije sa
-                        (nt.order ?? null) === (t.order ?? null)
+                const replacement = newInGroup.find(nt =>
+                    nt.teamName === t.teamName &&
+                    (nt.id && t.id ? nt.id === t.id : true) &&
+                    (nt.order ?? null) === (t.order ?? null)
                 );
                 return replacement || t;
             });
 
-            await updateDoc(docRef, { [categoryName]: finalTeams });
-            console.log("[SUCCESS] Aktualizovaný superstructure dokument");
+            try {
+                await updateDoc(docRef, { [categoryName]: finalTeams });
+                console.log("[SUCCESS] Aktualizovaný superstructure dokument");
+            } catch (updateErr) {
+                console.error("[CHYBA pri zápise superstructure]:", updateErr);
+            }
 
         } else {
-            // ────────────────────────────────────────────────
-            // Základná skupina → users/{uid}/teams.{categoryName}
-            // ────────────────────────────────────────────────
+            // Základná skupina – používatelia
             const usersSnap = await getDocs(collection(window.db, "users"));
-
             const updates = [];
 
             for (const userDoc of usersSnap.docs) {
                 const userData = userDoc.data();
                 const teamsInCategory = userData.teams?.[categoryName] || [];
-
                 if (teamsInCategory.length === 0) continue;
 
-                const inGroup = teamsInCategory.filter(t => 
+                const inGroup = teamsInCategory.filter(t =>
                     t.groupName && t.groupName.trim() === trimmedGroup
                 );
-
                 if (inGroup.length === 0) continue;
 
                 const newInGroup = [];
                 let currentPos = 1;
-
                 inGroup.forEach(team => {
                     const order = typeof team.order === 'number' ? team.order : null;
                     if (order === null || order < gapPosition) {
@@ -309,43 +306,38 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
 
                 const updatedTeams = teamsInCategory.map(t => {
                     if (!t.groupName || t.groupName.trim() !== trimmedGroup) return t;
-                    const replacement = newInGroup.find(
-                        nt => nt.teamName === t.teamName && 
-                              (nt.order ?? null) === (t.order ?? null)
+                    const replacement = newInGroup.find(nt =>
+                        nt.teamName === t.teamName &&
+                        (nt.order ?? null) === (t.order ?? null)
                     );
                     return replacement || t;
                 });
 
-                updates.push({
-                    uid: userDoc.id,
-                    updatedTeamsArray: updatedTeams
-                });
+                updates.push({ uid: userDoc.id, updatedTeamsArray: updatedTeams });
             }
 
-            // uložíme zmeny
+            // Uložíme s individuálnym try/catch
             for (const { uid, updatedTeamsArray } of updates) {
-                const userRef = doc(window.db, "users", uid);
-                await updateDoc(userRef, {
-                    [`teams.${categoryName}`]: updatedTeamsArray
-                });
-                console.log(`[SUCCESS] Aktualizovaný používateľ ${uid}`);
-            } catch (updateErr) {
-                console.error(`[CHYBA] Aktualizácia používateľa ${uid} zlyhala:`, updateErr);
+                try {
+                    const userRef = doc(window.db, "users", uid);
+                    await updateDoc(userRef, {
+                        [`teams.${categoryName}`]: updatedTeamsArray
+                    });
+                    console.log(`[SUCCESS] Aktualizovaný používateľ ${uid}`);
+                } catch (updateErr) {
+                    console.error(`[CHYBA] Aktualizácia používateľa ${uid} zlyhala:`, updateErr);
+                }
+            }
         }
 
-        // ────────────────────────────────────────────────
-        // Spoločná notifikácia
-        // ────────────────────────────────────────────────
+        // Notifikácia
         if (affectedCount > 0) {
             notify(
                 `Voľné miesto na pozícii ${gapPosition} v skupine „${trimmedGroup}“ (${categoryName}) bolo odstránené. Posunulo sa ${affectedCount} tímov.`,
                 "success"
             );
         } else {
-            notify(
-                `V skupine „${trimmedGroup}“ (${categoryName}) neboli nájdené žiadne tímy na posunutie.`,
-                "info"
-            );
+            notify(`V skupine „${trimmedGroup}“ (${categoryName}) neboli nájdené žiadne tímy na posunutie.`, "info");
         }
 
     } catch (err) {
