@@ -76,6 +76,16 @@ export function Page3Form({
     if (!selectedCategoryRows || selectedCategoryRows.length === 0) {
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
     }
+  
+    console.log("=== NAČÍTANÉ KATEGÓRIE + AKTUÁLNY POČET TÍMOV ===");
+      Object.entries(formattedCategories).forEach(([id, cat]) => {
+        const catName = cat.name || "Bez názvu";
+        const currentTeams = categoryTeamCounts[catName] || 0;
+        const maxTeams = cat.maxTeams ?? "neurčené";
+        console.log(`ID: ${id} | Názov: ${catName} | Max tímov: ${maxTeams} | Aktuálne: ${currentTeams}`);
+      });
+      console.log("======================================");
+    } 
   }, [availableCategoriesMap]);
 
   // Načítanie aktuálneho počtu tímov z /users/
