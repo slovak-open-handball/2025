@@ -513,7 +513,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
         const categoryName = categoryIdToNameMap[categoryId];
         if (!categoryName) return;
    
-        const finalTeamName = `${teamName.trim()}`;
+        const finalTeamName = originalTeam?.isSuperstructureTeam ? `${categoryName} ${teamName.trim()}` : `${teamName.trim()}`;
    
         // === Globálny tím (superštruktúra) ===
         if (originalTeam.isSuperstructureTeam) {
@@ -676,7 +676,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             return;
         }
         const categoryName = categoryIdToNameMap[categoryId];
-        const finalTeamName = `${teamName}`;
+        const finalTeamName = teamToEdit?.isSuperstructureTeam ? `${categoryName} ${teamName.trim()}` : `${teamName.trim()}`;
         const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
         if (isDuplicateFinal) {
             notify(`Tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, "error");
