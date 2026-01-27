@@ -1708,6 +1708,11 @@ const renderSingleCategoryView = () => {
     const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
     const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
     
+    // Získaj tímy bez skupiny pre túto kategóriu
+    const teamsWithoutGroupForCategory = selectedCategoryId
+        ? allTeams.filter(t => t.category === categoryName && !t.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
+        : [];
+    
     return React.createElement(
         'div',
         { 
@@ -1729,21 +1734,23 @@ const renderSingleCategoryView = () => {
                 }
             },
             
-            // ĽAVÝ STĹPEC - Tímy bez skupiny
-            React.createElement(
+            // ĽAVÝ STĹPEC - Tímy bez skupiny (LEN AK SÚ NEKTORÉ)
+            teamsWithoutGroupForCategory.length > 0 && React.createElement(
                 'div',
                 {
                     ref: teamsWithoutGroupRef,
                     className: "w-80 min-w-80 bg-white rounded-xl shadow-xl p-6 mr-8 flex-shrink-0"
                 },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`),
-                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
+                renderTeamList(teamsWithoutGroupForCategory, null, selectedCategoryId, true)
             ),
             
             // PRAVÁ ČASŤ - Skupiny (základné + nadstavbové)
             React.createElement(
                 'div',
-                { className: 'flex-grow min-w-0 flex flex-col' },
+                { 
+                    className: `flex-grow min-w-0 flex flex-col ${teamsWithoutGroupForCategory.length === 0 ? 'pl-4' : ''}`
+                },
                 
                 // ZÁKLADNÉ SKUPINY - NIE sú zalamované
                 sortedBasicGroups.length > 0 && React.createElement(
