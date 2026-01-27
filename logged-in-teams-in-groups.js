@@ -513,9 +513,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
         const categoryName = categoryIdToNameMap[categoryId];
         if (!categoryName) return;
    
-        const finalTeamName = originalTeam.isSuperstructureTeam
-          ? `${categoryName} ${teamName.trim()}`
-          : teamName.trim();   
+        const finalTeamName = originalTeam.isSuperstructureTeam ? teamName.trim() : teamName.trim();  
         // === Globálny tím (superštruktúra) ===
         if (originalTeam.isSuperstructureTeam) {
             const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
@@ -919,10 +917,10 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             setSelectedCategory(categoryId);
             setSelectedGroup(teamToEdit.groupName || '');
    
-            const teamNameWithoutPrefix = teamToEdit.teamName.replace(
-              new RegExp(`^${teamToEdit.category} `), ''
-            );
-            setTeamName(teamNameWithoutPrefix);
+            const initialTeamName = teamToEdit.isSuperstructureTeam
+              ? teamToEdit.teamName
+              : teamToEdit.teamName.replace(new RegExp(`^${teamToEdit.category} `), '');
+            setTeamName(initialTeamName);
    
             setOriginalTeamName(teamToEdit.teamName);
             setOriginalCategory(categoryId);
@@ -988,18 +986,24 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             setSelectedCategory(e.target.value);
             if (!defaultGroupName) setSelectedGroup('');
           };
-        const handleSubmit = (e) => {
+          const handleSubmit = (e) => {
             e.preventDefault();
             if (isSubmitDisabled) return;
+
+            // Pro superstructure týmy odešleme jen část za názvem kategorie
+            const teamNameToSave = teamToEdit?.isSuperstructureTeam
+              ? teamName.trim() // Celý název (včetně kategorie) se odešle, ale v handleUpdateAnyTeam se to zpracuje správně
+              : teamName.trim();
+
             unifiedSaveHandler({
-                categoryId: selectedCategory,
-                groupName: selectedGroup || null,
-                teamName: teamName.trim(),
-                order: orderInputValue,
-                isEdit: !!teamToEdit,
-                originalTeam: teamToEdit
+              categoryId: selectedCategory,
+              groupName: selectedGroup || null,
+              teamName: teamNameToSave,
+              order: orderInputValue,
+              isEdit: !!teamToEdit,
+              originalTeam: teamToEdit
             });
-        };
+          };
         const isCategoryValid = !!selectedCategory;
         const isGroupValid = !!selectedGroup;
         const isTeamNameValid = teamName.trim().length > 0;
@@ -1015,7 +1019,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
      
         if (!isOpen) return null;
         const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
-        const finalTeamNamePreview = teamName.trim() ? (teamToEdit?.isSuperstructureTeam || !teamToEdit) ? `${currentCategoryName} ${teamName.trim()}` : teamName.trim() : '';
+        const finalTeamNamePreview = teamName.trim() ? teamToEdit?.isSuperstructureTeam ? teamName.trim() : `${currentCategoryName} ${teamName.trim()}` : '';
         return React.createElement(
           'div',
           {
