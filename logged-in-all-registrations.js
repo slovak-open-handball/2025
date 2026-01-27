@@ -4561,8 +4561,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenDriversCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menDriversCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players + team._womenTeamMembersCount + team._menTeamMembersCount + team._womenDriversCount + team._menDriversCount || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
                                             React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyHomeColor && team.jerseyAwayColor ? `${team.jerseyHomeColor} / ${team.jerseyAwayColor}` : (team.jerseyHomeColor || team.jerseyAwayColor || '-')),
+                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'),
                                             (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
