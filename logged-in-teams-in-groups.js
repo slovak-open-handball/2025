@@ -671,52 +671,57 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
         }
     };
     const handleAddNewTeam = async ({ categoryId, groupName, teamName, order }) => {
-        if (!window.db) {
-            notify("Firestore nie je inicializovaný.", "error");
-            return;
-        }
-        const categoryName = categoryIdToNameMap[categoryId];
-        const finalTeamName = teamToEdit?.isSuperstructureTeam ? `${categoryName} ${teamName.trim()}` : `${teamName.trim()}`;
-        const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
-        if (isDuplicateFinal) {
-            notify(`Tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, "error");
-            return;
-        }
-        try {
-            const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-            const docSnap = await getDoc(superstructureDocRef);
-            const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
-            const currentTeamsForCategory = globalTeamsData[categoryName] || [];
-            const teamsInTargetGroup = currentTeamsForCategory.filter(t => t.groupName === groupName);
-            let maxOrder = 0;
-            teamsInTargetGroup.forEach(t => {
-                if (t.order > maxOrder) maxOrder = t.order;
-            });
-            const newOrder = order != null ? parseInt(order, 10) : (groupName ? maxOrder + 1 : null);
-            const newTeam = {
-                teamName: teamName.trim(),
-                groupName: groupName || null,
-                order: newOrder,
-                id: crypto.randomUUID()
-            };
-            const updatedTeamsArray = [...currentTeamsForCategory, newTeam];
-            await setDoc(superstructureDocRef, {
-                ...globalTeamsData,
-                [categoryName]: updatedTeamsArray
-            }, { merge: true });
-            await createTeamAssignmentNotification('add_new_global', {
-                id: newTeam.id,
-                teamName: teamName.trim(),
-                category: categoryName,
-                groupName: groupName || null,
-                order: newOrder
-            });
-   
-            notify(`Nový tím '${finalTeamName}' bol pridaný ${groupName ? `do skupiny '${groupName}'` : 'bez skupiny'}.`, "success");
-        } catch (error) {
-            console.error("Chyba pri pridávaní nového tímu:", error);
-            notify("Nepodarilo sa pridať nový tím do skupiny.", "error");
-        }
+      if (!window.db) {
+        notify("Firestore nie je inicializovaný.", "error");
+        return;
+      }
+      const categoryName = categoryIdToNameMap[categoryId];
+
+      // Tu pridávame kontrolu, či je tím superštruktúrny
+      const fullTeamName = teamToEdit?.isSuperstructureTeam
+        ? `${categoryName} ${teamName.trim()}`
+        : `${teamName.trim()}`;
+
+      const isDuplicateFinal = allTeams.some(team => team.teamName === fullTeamName);
+      if (isDuplicateFinal) {
+        notify(`Tím '${fullTeamName}' už existuje. Ukladanie zrušené.`, "error");
+        return;
+      }
+      try {
+        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+        const docSnap = await getDoc(superstructureDocRef);
+        const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
+        const currentTeamsForCategory = globalTeamsData[categoryName] || [];
+        const teamsInTargetGroup = currentTeamsForCategory.filter(t => t.groupName === groupName);
+        let maxOrder = 0;
+        teamsInTargetGroup.forEach(t => {
+          if (t.order > maxOrder) maxOrder = t.order;
+        });
+        const newOrder = order != null ? parseInt(order, 10) : (groupName ? maxOrder + 1 : null);
+        const newTeam = {
+          teamName: fullTeamName,
+          groupName: groupName || null,
+          order: newOrder,
+          id: crypto.randomUUID()
+        };
+        const updatedTeamsArray = [...currentTeamsForCategory, newTeam];
+        await setDoc(superstructureDocRef, {
+          ...globalTeamsData,
+          [categoryName]: updatedTeamsArray
+        }, { merge: true });
+        await createTeamAssignmentNotification('add_new_global', {
+          id: newTeam.id,
+          teamName: teamName.trim(),
+          category: categoryName,
+          groupName: groupName || null,
+          order: newOrder
+        });
+
+        notify(`Nový tím '${fullTeamName}' bol pridaný ${groupName ? `do skupiny '${groupName}'` : 'bez skupiny'}.`, "success");
+      } catch (error) {
+        console.error("Chyba pri pridávaní nového tímu:", error);
+        notify("Nepodarilo sa pridať nový tím do skupiny.", "error");
+      }
     };
     const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
         if (!window.db || !originalTeam?.uid || !originalTeam?.id) return;
