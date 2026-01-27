@@ -66,15 +66,19 @@ const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName
 // Nový komponent – stabilná notifikácia
 // Stabilná notifikácia cez portál
 const NotificationPortal = () => {
-  const { useState, useEffect } = React;
   const [notification, setNotification] = React.useState(null);
   useEffect(() => {
+    let timer;
     const unsubscribe = subscribe((notif) => {
       setNotification(notif);
-      const timer = setTimeout(() => setNotification(null), 5000);
-      return () => clearTimeout(timer);
+      clearTimeout(timer); // Vymaž predchádzajúci timer
+      timer = setTimeout(() => setNotification(null), 5000);
     });
-    return unsubscribe;
+    
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
   if (!notification) return null;
   // Farby pozadia podľa typu
@@ -335,13 +339,13 @@ const createTeamAssignmentNotification = async (action, team) => {
 
         switch (action) {
             case 'assign_global':
-                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder}'`;
+                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder})'`;
                 break;
             case 'change_group_global':
                 message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
                 break;
             case 'assign_user':
-                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder}'`;
+                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder})'`;
                 break;
             case 'change_group_user':
                 message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
@@ -394,26 +398,21 @@ const createTeamAssignmentNotification = async (action, team) => {
 
       useEffect(() => {
         const handleResize = () => {
-            // Táto funkcia spustí re-render, čo aktualizuje boxWidth
-            setAllTeams(prev => [...prev]); // Trigger re-render
+          setAllTeams(prev => [...prev]);
         };
-        
+  
+        const handleZoomChange = () => {
+          setAllTeams(prev => [...prev]);
+        };
+  
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-    
-    // ===================================================================
-    // LISTENER PRE ZOOM ZMENY
-    // ===================================================================
-    useEffect(() => {
-        const handleZoomChange = (event) => {
-            // Trigger re-render s novými rozmermi
-            setAllTeams(prev => [...prev]);
-        };
-        
         window.addEventListener('zoomchange', handleZoomChange);
-        return () => window.removeEventListener('zoomchange', handleZoomChange);
-    }, []);
+  
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          window.removeEventListener('zoomchange', handleZoomChange);
+        };
+      }, []);
   
 
     // Efekt pre manažovanie notifikácií
@@ -497,6 +496,9 @@ const createTeamAssignmentNotification = async (action, team) => {
                   notify(`Používateľ '${team.uid}' už neexistuje.`, "error");
                 return;
             }
+
+            const oldGroup = originalTeam.groupName;
+            const oldOrder = originalTeam.order;
    
             const userData = userSnap.data();
             const categoryName = team.category;
@@ -506,6 +508,8 @@ const createTeamAssignmentNotification = async (action, team) => {
                 notify("Tím sa nenašiel v profile používateľa.", "error");
                 return;
             }
+
+            const originalTeam = teamsInCategory[teamIndex];
    
             teamsInCategory[teamIndex] = {
                 ...teamsInCategory[teamIndex],
@@ -519,7 +523,10 @@ const createTeamAssignmentNotification = async (action, team) => {
                 id: team.id,
                 teamName: team.teamName,
                 category: team.category,
-                groupName: team.groupName
+                groupName: oldGroup,
+                oldGroup: oldGroup,
+                oldOrder: oldOrder,
+                order: oldOrder
             });
    
             notify(`Tím '${team.teamName}' bol presunutý medzi tímy bez skupiny.`, "success");
@@ -872,7 +879,6 @@ const NewTeamModal = ({
   unifiedSaveHandler,
   showCategoryPrefix = true
 }) => {
-  const { useState, useEffect } = React;
   const [orderInputValue, setOrderInputValue] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
