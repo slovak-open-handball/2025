@@ -1327,8 +1327,13 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         // Pomocná funkcia na získanie "čistého" mena bez prefixu kategórie
         const getCleanDisplayName = (team) => {
+          // Pre superstructure tímy vrátime celý názov (vrátane kategórie)
+          if (team.isSuperstructureTeam) {
+            return team.teamName;
+          }
+          // Pre ostatné tímy odstránime prefix kategórie, ak existuje
           let name = team.teamName;
-          if (team.isSuperstructureTeam && team.category && name.startsWith(team.category + ' ')) {
+          if (team.category && name.startsWith(team.category + ' ')) {
             name = name.substring(team.category.length + 1).trim();
           }
           return name;
