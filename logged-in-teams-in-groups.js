@@ -477,7 +477,8 @@ const createTeamAssignmentNotification = async (action, team) => {
                 teamName: teamToDelete.teamName,
                 category: teamToDelete.category,
                 groupName: teamToDelete.groupName,
-                order: teamToDelete.order // pridáme informáciu o pôvodnom order
+                order: teamToDelete.order,
+                oldOrder: originalOrder,
             });
 
             notify(`Tím '${teamToDelete.teamName}' bol odstránený zo skupiny. Ostatné tímy zostávajú s pôvodnými poradovými číslami.`, "success");
