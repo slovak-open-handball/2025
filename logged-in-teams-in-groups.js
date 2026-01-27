@@ -496,10 +496,6 @@ const createTeamAssignmentNotification = async (action, team) => {
                   notify(`Používateľ '${team.uid}' už neexistuje.`, "error");
                 return;
             }
-
-            const originalTeam = teamsInCategory[teamIndex];
-            const oldGroup = originalTeam.groupName;
-            const oldOrder = originalTeam.order;
    
             const userData = userSnap.data();
             const categoryName = team.category;
@@ -509,6 +505,10 @@ const createTeamAssignmentNotification = async (action, team) => {
                 notify("Tím sa nenašiel v profile používateľa.", "error");
                 return;
             }
+
+            const originalTeam = teamsInCategory[teamIndex];
+            const oldGroup = originalTeam.groupName;
+            const oldOrder = originalTeam.order;
    
             teamsInCategory[teamIndex] = {
                 ...teamsInCategory[teamIndex],
