@@ -1215,7 +1215,7 @@ const NewTeamModal = ({
           React.createElement('input', {
             type: 'number',
             min: '1',
-            className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-32',
+            className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-full',
             value: orderInputValue ?? '',
             onChange: (e) => setOrderInputValue(e.target.value === '' ? null : parseInt(e.target.value, 10)),
             placeholder: 'auto'
