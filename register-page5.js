@@ -51,6 +51,86 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
+function TeamJerseyColors({
+  team,
+  categoryName,
+  teamIndex,
+  onGranularTeamsDataChange,
+  loading
+}) {
+  const [color1, setColor1] = React.useState(team.jerseyColors?.color1 || '');
+  const [color2, setColor2] = React.useState(team.jerseyColors?.color2 || '');
+
+  // synchronizácia pri zmene teamu zvonku
+  React.useEffect(() => {
+    setColor1(team.jerseyColors?.color1 || '');
+    setColor2(team.jerseyColors?.color2 || '');
+  }, [team.jerseyColors]);
+
+  const handleColorChange = (field, value) => {
+    const newColors = {
+      color1: field === 'color1' ? value : color1,
+      color2: field === 'color2' ? value : color2
+    };
+
+    if (field === 'color1') setColor1(value);
+    if (field === 'color2') setColor2(value);
+
+    onGranularTeamsDataChange(categoryName, teamIndex, 'jerseyColors', newColors);
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'border-t border-gray-200 pt-4 mt-4' },
+    React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Farba dresov'),
+    React.createElement(
+      'div',
+      { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', {
+          className: 'block text-gray-700 text-sm font-bold mb-2',
+          htmlFor: `jerseyColor1-${categoryName}-${teamIndex}`
+        }, 'Farba dresov 1:'),
+        React.createElement('input', {
+          type: 'text',
+          id: `jerseyColor1-${categoryName}-${teamIndex}`,
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: color1,
+          onChange: (e) => handleColorChange('color1', e.target.value),
+          placeholder: 'napr. červená / red / #FF0000',
+          disabled: loading,
+          maxLength: 50
+        })
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', {
+          className: 'block text-gray-700 text-sm font-bold mb-2',
+          htmlFor: `jerseyColor2-${categoryName}-${teamIndex}`
+        }, 'Farba dresov 2:'),
+        React.createElement('input', {
+          type: 'text',
+          id: `jerseyColor2-${categoryName}-${teamIndex}`,
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: color2,
+          onChange: (e) => handleColorChange('color2', e.target.value),
+          placeholder: 'napr. biela / white / #FFFFFF',
+          disabled: loading,
+          maxLength: 50
+        })
+      )
+    ),
+    React.createElement(
+      'p',
+      { className: 'text-sm text-gray-500 mt-2' },
+      'Uveďte hlavnú farbu a prípadnú doplnkovú farbu alebo vzor. Môžete použiť názvy farieb, hex kód alebo akýkoľvek popis.'
+    )
+  );
+}
+
 // Komponent pre nastavenia ubytovania a príchodu tímu
 function TeamAccommodationAndArrival({
     team,
@@ -1238,68 +1318,69 @@ if (querySnapshot.empty) {
         React.Fragment,
         null,
         React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
-
         React.createElement(
-            'h2',
-            { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-            'Registrácia - strana 5'
+          'h2',
+          { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
+          'Registrácia - strana 5'
         ),
-
         React.createElement(
-            'form',
-            { onSubmit: handlePage5Submit, className: 'space-y-4' },
-            Object.keys(teamsDataFromPage4).length === 0 ? (
-                React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a zadajte tímy.')
-            ) : (
-                // Filter categories that might be undefined or null and ensure they are objects and have teams
-                Object.keys(teamsDataFromPage4).filter(categoryName => {
-                    const categoryData = teamsDataFromPage4[categoryName];
-                    // Ensure categoryName is a valid non-empty string
-                    if (typeof categoryName !== 'string' || categoryName.trim() === '') {
-                        return false;
-                    }
-                    // Ensure categoryData exists, is an object (not null), and is an array
-                    if (!categoryData || typeof categoryData !== 'object' || !Array.isArray(categoryData)) {
-                        return false;
-                    }
-                    // Ensure the array contains at least one non-null/non-undefined team
-                    return categoryData.some(team => team !== null && team !== undefined);
-                }).map(categoryName => (
+          'form',
+          { onSubmit: handlePage5Submit, className: 'space-y-4' },
+          Object.keys(teamsDataFromPage4).length === 0 ? (
+            React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a zadajte tímy.')
+          ) : (
+            Object.keys(teamsDataFromPage4)
+              .filter(categoryName => {
+                const categoryData = teamsDataFromPage4[categoryName];
+                if (typeof categoryName !== 'string' || categoryName.trim() === '') return false;
+                if (!categoryData || typeof categoryData !== 'object' || !Array.isArray(categoryData)) return false;
+                return categoryData.some(team => team !== null && team !== undefined);
+              })
+              .map(categoryName => (
+                React.createElement(
+                  'div',
+                  { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
+                  React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
+                  (teamsDataFromPage4[categoryName] || []).filter(t => t).map((team, teamIndex) => (
                     React.createElement(
-                        'div',
-                        { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
-                        React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
-                        (teamsDataFromPage4[categoryName] || []).filter(t => t).map((team, teamIndex) => (
-                            React.createElement(
-                                'div',
-                                { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
-                                React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
+                      'div',
+                      { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
+                      React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
 
-                                React.createElement(TeamAccommodationAndArrival, {
-                                    team: team,
-                                    categoryName: categoryName,
-                                    teamIndex: teamIndex,
-                                    onGranularTeamsDataChange: onGranularTeamsDataChange, // Volá onGranularTeamsDataChange z Page5Form props
-                                    loading: loading,
-                                    accommodationTypes: accommodationTypes,
-                                    accommodationCounts: accommodationCounts,
-                                    tournamentStartDate: localTournamentStartDate, // ZMENA: Používame lokálny stav z DB
-                                    generateTimeOptions: generateTimeOptions,
-                                }),
+                      // ← NOVÉ: Farby dresov – vložené pred ubytovaním
+                      React.createElement(TeamJerseyColors, {
+                        team: team,
+                        categoryName: categoryName,
+                        teamIndex: teamIndex,
+                        onGranularTeamsDataChange: onGranularTeamsDataChange,
+                        loading: loading
+                      }),
 
-                                React.createElement(TeamPackageSettings, {
-                                    team: team,
-                                    categoryName: categoryName,
-                                    teamIndex: teamIndex,
-                                    onGranularTeamsDataChange: onGranularTeamsDataChange, // Volá onGranularTeamsDataChange z Page5Form props
-                                    loading: loading,
-                                    packages: packages,
-                                    tournamentDays: tournamentDays, // Používame lokálny stav z DB
-                                })
-                            )
-                        ))
+                      React.createElement(TeamAccommodationAndArrival, {
+                        team: team,
+                        categoryName: categoryName,
+                        teamIndex: teamIndex,
+                        onGranularTeamsDataChange: onGranularTeamsDataChange,
+                        loading: loading,
+                        accommodationTypes: accommodationTypes,
+                        accommodationCounts: accommodationCounts,
+                        tournamentStartDate: localTournamentStartDate,
+                        generateTimeOptions: generateTimeOptions,
+                      }),
+
+                      React.createElement(TeamPackageSettings, {
+                        team: team,
+                        categoryName: categoryName,
+                        teamIndex: teamIndex,
+                        onGranularTeamsDataChange: onGranularTeamsDataChange,
+                        loading: loading,
+                        packages: packages,
+                        tournamentDays: tournamentDays,
+                      })
                     )
-                ))
+                  ))
+                )
+              ))
             ),
 
             teamsWithOwnTransport.length > 0 && (
