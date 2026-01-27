@@ -1038,49 +1038,43 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
               { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
               modalTitle
             ),
-            !teamToEdit
-              ? React.createElement(
-                  'div',
-                  { className: 'mb-6' },
-                  React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu (bez názvu kategórie):'),
-                  React.createElement('input', {
-                    type: 'text',
-                    className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
-                      isDuplicate || groupEndingMismatch || orderMismatchMessage ? 'border-red-500' : 'border-gray-300'
-                    }`,
-                    value: teamName,
-                    onChange: (e) => setTeamName(e.target.value),
-                    required: true,
-                    autoFocus: true
-                  }),
-                  finalTeamNamePreview && React.createElement(
-                    'div',
-                    { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
-                    React.createElement('p', { className: 'text-sm text-gray-600' }, 'Finálny (dočasný) názov bude:'),
-                    React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
-                  ),
-                  isDuplicate && React.createElement(
-                    'p',
-                    { className: 'mt-2 text-sm text-red-600 font-medium' },
-                    '⚠️ Tím s týmto názvom už existuje!'
-                  ),
-                  groupEndingMismatch && React.createElement(
-                    'p',
-                    { className: 'mt-2 text-sm text-red-600 font-medium' },
-                    `⚠️ V tejto kategórii neexistuje žiadna základná skupina končiaca na „${teamName.trim().slice(-1).toUpperCase()}“`
-                  ),
-                  orderMismatchMessage && React.createElement(
-                    'p',
-                    { className: 'mt-2 text-sm text-red-600 font-medium' },
-                    `⚠️ ${orderMismatchMessage}`
-                  )
-                )
-              : React.createElement(
-                  'div',
-                  { className: 'mb-6 text-center' },
-                  React.createElement('p', { className: 'text-sm text-gray-600' }, 'Aktuálny názov tímu:'),
-                  React.createElement('p', { className: 'text-2xl font-bold text-indigo-700 mt-1' }, teamToEdit.teamName)
-                ),
+            React.createElement(
+              'div',
+              { className: 'mb-6' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu (bez názvu kategórie):'),
+              React.createElement('input', {
+                type: 'text',
+                className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
+                  isDuplicate || groupEndingMismatch || orderMismatchMessage ? 'border-red-500' : 'border-gray-300'
+                }`,
+                value: teamName,
+                onChange: (e) => setTeamName(e.target.value),
+                required: true,
+                autoFocus: true
+              }),
+              finalTeamNamePreview && React.createElement(
+                'div',
+                { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
+                React.createElement('p', { className: 'text-sm text-gray-600' }, 'Finálny (dočasný) názov bude:'),
+                React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
+              ),
+              isDuplicate && React.createElement(
+                'p',
+                { className: 'mt-2 text-sm text-red-600 font-medium' },
+                '⚠️ Tím s týmto názvom už existuje!'
+              ),
+              groupEndingMismatch && React.createElement(
+                'p',
+                { className: 'mt-2 text-sm text-red-600 font-medium' },
+                `⚠️ V tejto kategórii neexistuje žiadna základná skupina končiaca na „${teamName.trim().slice(-1).toUpperCase()}“`
+              ),
+              orderMismatchMessage && React.createElement(
+                'p',
+                { className: 'mt-2 text-sm text-red-600 font-medium' },
+                `⚠️ ${orderMismatchMessage}`
+              )
+            ),
+
                 React.createElement(
                     'form',
                     { onSubmit: handleSubmit, className: 'space-y-6' },
