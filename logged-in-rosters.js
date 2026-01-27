@@ -2958,25 +2958,25 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         // ─── FARBY DRESOV ────────────────────────────────────────────────────────
                         React.createElement(
                           'div',
-                          { className: 'mt-3 text-md text-gray-700' },
+                          { className: 'mt-3 text-gray-700' }, 
                           React.createElement(
                             'p',
-                            { className: 'mb-0' },
+                            { className: 'mb-1' },
                             'Farby dresov:'
                           ),
                           React.createElement(
                             'p',
-                            { className: 'ml-4' },
+                            { className: 'ml-4 text-sm text-gray-600' },
                             React.createElement('span', null, 'Farba dresov 1: '),
                             team.jerseyHomeColor?.trim() || '-'
                           ),
                           React.createElement(
                             'p',
-                            { className: 'ml-4' },
+                            { className: 'ml-4 text-sm text-gray-600' },
                             React.createElement('span', null, 'Farba dresov 2: '),
                             team.jerseyAwayColor?.trim() || '-'
                           )
-                        ),                                      
+                        ),                                  
 
                         team.packageDetails && React.createElement(
                             'div',
