@@ -964,6 +964,11 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
           setEditedArrivalMinute('');
         }
         setTshirtEntries(teamData.tshirts && Array.isArray(teamData.tshirts) ? teamData.tshirts.map(t => ({...t})) : []);
+        setEditedTeamData({
+          ...teamData,
+          jerseyHomeColor: teamData.jerseyHomeColor || '',
+          jerseyAwayColor: teamData.jerseyAwayColor || ''
+        });
         setHasChanges(false);
       }
     }, [teamData]);
@@ -1022,7 +1027,9 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
             },
             packageDetails: { ...teamData.packageDetails, name: editedPackageName },
             accommodation: { ...teamData.accommodation, type: editedAccommodationType },
-            tshirts: filteredTshirtEntries
+            tshirts: filteredTshirtEntries,
+            jerseyHomeColor: editedTeamData.jerseyHomeColor?.trim() || '',
+            jerseyAwayColor: editedTeamData.jerseyAwayColor?.trim() || ''
         };
         await onSaveTeam(updatedTeamData);
         setHasChanges(false);
@@ -1236,6 +1243,64 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                     )
                     )
                 ),
+
+                React.createElement(
+  'div',
+  { className: 'mb-6 border-t border-gray-200 pt-4' },
+  React.createElement('label', {
+    className: 'block text-base font-semibold text-gray-800 mb-3'
+  }, 'Farby dresov'),
+  React.createElement(
+    'div',
+    { className: 'grid grid-cols-1 sm:grid-cols-2 gap-6' },
+
+    // Domáce farby
+    React.createElement(
+      'div',
+      null,
+      React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 1)'),
+      React.createElement('input', {
+        type: 'text',
+        className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+        value: editedTeamData.jerseyHomeColor || '',
+        onChange: (e) => {
+          setEditedTeamData(prev => ({
+            ...prev,
+            jerseyHomeColor: e.target.value
+          }));
+          setHasChanges(true);
+        },
+        placeholder: 'napr. červená',
+        disabled: isDataEditDeadlinePassed
+      })
+    ),
+
+    // Vonku farby
+    React.createElement(
+      'div',
+      null,
+      React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 2'),
+      React.createElement('input', {
+        type: 'text',
+        className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+        value: editedTeamData.jerseyAwayColor || '',
+        onChange: (e) => {
+          setEditedTeamData(prev => ({
+            ...prev,
+            jerseyAwayColor: e.target.value
+          }));
+          setHasChanges(true);
+        },
+        placeholder: 'napr. modrá',
+        disabled: isDataEditDeadlinePassed
+      })
+    )
+  ),
+  React.createElement('p', {
+    className: 'mt-2 text-sm text-gray-500'
+  }, 'Zadajte hex kód (#rrggbb) alebo názov farby')
+),
+                
                 React.createElement(
                     'div',
                     null,
@@ -2932,31 +2997,31 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                             )
                         ),
 
-                        // ─── FARBY DRESOV ────────────────────────────────────────────────────────
-team.jerseyColors && (team.jerseyColors.color1 || team.jerseyColors.color2) && React.createElement(
+// ─── FARBY DRESOV ────────────────────────────────────────────────────────
+team.jerseyHomeColor || team.jerseyAwayColor ? React.createElement(
   'p',
   { className: 'text-md text-gray-700 mt-1' },
   'Farby dresov: ',
-  team.jerseyColors.color1 && React.createElement(
+  team.jerseyHomeColor && React.createElement(
     React.Fragment,
     null,
     React.createElement('span', {
       className: 'inline-block w-5 h-5 rounded-full border border-gray-300 align-middle mr-1',
-      style: { backgroundColor: team.jerseyColors.color1 }
+      style: { backgroundColor: team.jerseyHomeColor }
     }),
-    team.jerseyColors.color1,
+    team.jerseyHomeColor
   ),
-  team.jerseyColors.color1 && team.jerseyColors.color2 && ' + ',
-  team.jerseyColors.color2 && React.createElement(
+  (team.jerseyHomeColor && team.jerseyAwayColor) && ' / ',
+  team.jerseyAwayColor && React.createElement(
     React.Fragment,
     null,
     React.createElement('span', {
       className: 'inline-block w-5 h-5 rounded-full border border-gray-300 align-middle mr-1',
-      style: { backgroundColor: team.jerseyColors.color2 }
+      style: { backgroundColor: team.jerseyAwayColor }
     }),
-    team.jerseyColors.color2
+    team.jerseyAwayColor
   )
-),
+) : null,
                                           
                         team.tshirts && team.tshirts.length > 0 && (
                             React.createElement('div', { className: 'mb-4 w-full' },
