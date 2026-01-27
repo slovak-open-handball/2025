@@ -1808,8 +1808,8 @@ const renderSingleCategoryView = () => {
     const maxSuperTeams = calculateMaxTeamCount(superstructureGroups);
     
     // Výška na jeden tím (v px) + padding
-    const teamHeight = 70; // približná výška jedného tímu s paddingom
-    const baseCardHeight = 160; // výška hlavičky karty + paddingy
+    const teamHeight = 65; // približná výška jedného tímu s paddingom
+    const baseCardHeight = 140; // výška hlavičky karty + paddingy
     
     return React.createElement(
         'div',
