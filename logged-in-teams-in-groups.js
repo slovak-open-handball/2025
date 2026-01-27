@@ -335,7 +335,7 @@ const createTeamAssignmentNotification = async (action, team) => {
 
         switch (action) {
             case 'assign_global':
-                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'${team.oldOrder ? ` | Pôvodné poradie: ${team.oldOrder}` : ''}`;
+                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder}'`;
                 break;
             case 'change_group_global':
                 message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
@@ -719,7 +719,7 @@ const createTeamAssignmentNotification = async (action, team) => {
             if (groupChanged) {
                 action = oldGroup ? 'change_group_user' : 'assign_user';
                 // UPRAVENÉ: Pridáme informácie o pôvodnom a novom poradí
-                notificationData.message = `Pre tím ${teamName.trim()} zmena: Skupina z '${oldGroup || 'bez skupiny'}' na '${newGroup || 'bez skupiny'}' | Poradie: z ${oldOrder || '?'} na ${newOrder || '?'}`;
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Skupina z '${oldGroup || 'bez skupiny'} (poradie: ${oldOrder || '-'})' na '${newGroup || 'bez skupiny'} (poradie: ${newOrder || '?'})'`;
             } else if (newOrder !== oldOrder && newGroup === oldGroup) {
                 action = 'change_order_user';
                 notificationData.oldOrder = oldOrder;
