@@ -938,6 +938,7 @@ function MemberDetailsModal({
 }
 
 function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, userProfileData, availablePackages, availableAccommodationTypes, availableTshirtSizes, isDataEditDeadlinePassed }) {
+    const [editedTeamData, setEditedTeamData] = React.useState(null);
     const [editedTeamName, setEditedTeamName] = useState(teamData ? teamData.teamName : '');
     const [editedCategoryName, setEditedCategoryName] = useState(teamData ? teamData.categoryName : '');
     const [editedArrivalType, setEditedArrivalType] = useState(teamData ? teamData.arrival?.type || 'bez dopravy' : 'bez dopravy');
