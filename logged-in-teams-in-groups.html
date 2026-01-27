@@ -21,7 +21,20 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            overflow-x: auto; /* Povolenie horizontálneho scrollu pri zmenšení */
         }
+        
+        #main-content-area {
+            overflow-x: auto;
+            width: 100%;
+        }
+        
+        .content-wrapper {
+            min-width: fit-content;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
         .notification {
           position: fixed;
           top: 20px;
@@ -33,16 +46,51 @@
           color: white;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
+        
+        /* Plynulé rozširovanie pri zmenšení */
+        @media screen and (max-width: 1200px) {
+            .content-wrapper {
+                padding: 0 1rem;
+            }
+        }
+        
+        @media screen and (max-width: 768px) {
+            body {
+                overflow-x: auto;
+            }
+            #main-content-area {
+                min-width: 100%;
+            }
+        }
+        
+        /* Štýly pre zoom */
+        .zoom-80 {
+            transform: scale(0.8);
+            transform-origin: top left;
+            width: 125%; /* Kompenzácia pre 80% zoom */
+        }
+        
+        .zoom-67 {
+            transform: scale(0.67);
+            transform-origin: top left;
+            width: 150%; /* Kompenzácia pre 67% zoom */
+        }
+        
+        .zoom-50 {
+            transform: scale(0.5);
+            transform-origin: top left;
+            width: 200%; /* Kompenzácia pre 50% zoom */
+        }
     </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
     <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
     <div id="menu-placeholder"></div>
-    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
+    <main id="main-content-area" class="flex-grow flex">
         <!-- Sem sme pridali triedu pre plynulú animáciu -->
-        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
-        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+        <div id="root" class="content-wrapper flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Obsah aplikácie bude vykreslený tu -->
             <div class="flex justify-center pt-16">
                 <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
