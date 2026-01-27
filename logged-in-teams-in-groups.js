@@ -1100,7 +1100,8 @@ const NewTeamModal = ({
         modalTitle
       ),
       
-      canEditTeamName && React.createElement(
+      // Pole pre názov tímu - ZOBRAZÍ SA LEN AK MÔŽEME MENIŤ NÁZOV
+      canEditTeamName ? React.createElement(
         'div',
         { className: 'mb-6' },
         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
@@ -1118,33 +1119,36 @@ const NewTeamModal = ({
           disabled: !canEditTeamName // Vypnuté, ak nemôžeme meniť
         }),
         
-        {shouldShowPreview && finalTeamNamePreview && React.createElement(
+        // NÁHĽAD - ZOBRAZÍ SA LEN PRE SUPERSTRUCTURE TÍMY A NOVÉ TÍMY
+        (shouldShowPreview && finalTeamNamePreview) ? React.createElement(
           'div',
           { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
           React.createElement('p', { className: 'text-sm text-gray-600' }, 'Finálny názov bude:'),
           React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
-        )},
+        ) : null,
         
-        {isDuplicate && React.createElement(
+        // Chybové hlášky
+        isDuplicate ? React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
           '⚠️ Tím s týmto názvom už existuje!'
-        )},
+        ) : null,
         
-        {groupEndingMismatch && React.createElement(
+        groupEndingMismatch ? React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
           `⚠️ V tejto kategórii neexistuje žiadna základná skupina končiaca na „${teamName.trim().slice(-1).toUpperCase()}“`
-        )},
+        ) : null,
         
-        {orderMismatchMessage && React.createElement(
+        orderMismatchMessage ? React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
           `⚠️ ${orderMismatchMessage}`
-        )}
-      ),
+        ) : null
+      ) : null,
       
-      {!canEditTeamName && teamToEdit && React.createElement(
+      // AK NEMÔŽEME MENIŤ NÁZOV, ZOBRAZÍME LEN INFORMÁCIU
+      (!canEditTeamName && teamToEdit) ? React.createElement(
         'div',
         { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
         React.createElement('p', { className: 'text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu:'),
@@ -1152,7 +1156,7 @@ const NewTeamModal = ({
         React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' },
           'Názov používateľského tímu nie je možné meniť.'
         )
-      )},
+      ) : null,
 
       React.createElement(
         'form',
@@ -1179,14 +1183,14 @@ const NewTeamModal = ({
               React.createElement('option', { key: id, value: id }, name)
             )
           ),
-          (isCategoryLocked || isCategoryFixed) &&
+          (isCategoryLocked || isCategoryFixed) ?
             React.createElement(
               'p',
               { className: 'text-xs text-indigo-600 mt-1 italic' },
               isCategoryLocked
                 ? 'Kategóriu používateľského tímu nemožno meniť.'
                 : `Predvolená kategória: ${categoryIdToNameMap[defaultCategoryId]}`
-            )
+            ) : null
         ),
 
         React.createElement(
@@ -1205,10 +1209,10 @@ const NewTeamModal = ({
             React.createElement('option', { value: '' }, availableGroups.length > 0 ? '--- Vyberte skupinu ---' : 'Najprv vyberte kategóriu'),
             availableGroups.map((group) => React.createElement('option', { key: group.name, value: group.name }, `${group.name} (${group.type})`))
           ),
-          isGroupFixed && React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená skupina: ${defaultGroupName}`)
+          isGroupFixed ? React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená skupina: ${defaultGroupName}`) : null
         ),
 
-        selectedGroup && React.createElement(
+        selectedGroup ? React.createElement(
           'div',
           { className: 'flex flex-col' },
           React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradie v skupine:'),
@@ -1219,8 +1223,8 @@ const NewTeamModal = ({
             value: orderInputValue ?? '',
             onChange: (e) => setOrderInputValue(e.target.value === '' ? null : parseInt(e.target.value, 10)),
             placeholder: 'auto'
-          }),
-        ),
+          })
+        ) : null,
 
         React.createElement(
           'div',
