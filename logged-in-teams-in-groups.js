@@ -178,6 +178,7 @@ const AddGroupsApp = (props) => {
     const [confirmModal, setConfirmModal] = useState(null);
     const currentUserEmail = window.globalUserProfileData?.email || null;
     const [deleteGapModal, setDeleteGapModal] = useState(null);
+    const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
@@ -1057,11 +1058,11 @@ const NewTeamModal = ({
     e.preventDefault();
     if (isSubmitDisabled) return;
     
-    // Pre superstructure tímy pridáme späť kategóriu k názvu
-    // Pre používateľské tímy použijeme pôvodný názov
     const teamNameToSave = teamToEdit?.isSuperstructureTeam
-      ? `${teamToEdit.category} ${teamName.trim()}` // Pridáme kategóriu späť pre superstructure
-      : teamName.trim(); // Pre používateľské tímy necháme pôvodný názov
+        ? (showCategoryPrefix 
+            ? `${teamToEdit.category} ${teamName.trim()}` 
+            : teamName.trim())
+        : teamName.trim();
 
     unifiedSaveHandler({
       categoryId: selectedCategory,
@@ -1078,16 +1079,20 @@ const NewTeamModal = ({
   // Vytvoríme náhľad názvu
   let finalTeamNamePreview = '';
   if (teamName.trim()) {
-    if (teamToEdit?.isSuperstructureTeam) {
-      // Pre superstructure: Kategória + názov
-      finalTeamNamePreview = `${teamToEdit.category} ${teamName.trim()}`;
-    } else if (!teamToEdit) {
-      // Pre nové tímy: Kategória + názov
-      finalTeamNamePreview = `${currentCategoryName} ${teamName.trim()}`;
-    } else {
-      // Pre používateľské tímy pri editácii: iba názov
-      finalTeamNamePreview = teamName.trim();
-    }
+      if (teamToEdit?.isSuperstructureTeam) {
+          // Pre superstructure: Ak má byť zobrazený prefix, pridáme ho
+          finalTeamNamePreview = showCategoryPrefix 
+              ? `${teamToEdit.category} ${teamName.trim()}`
+              : teamName.trim();
+      } else if (!teamToEdit) {
+          // Pre nové tímy: Zobrazíme podľa nastavenia
+          finalTeamNamePreview = showCategoryPrefix 
+              ? `${currentCategoryName} ${teamName.trim()}`
+              : teamName.trim();
+      } else {
+          // Pre používateľské tímy pri editácii: iba názov
+          finalTeamNamePreview = teamName.trim();
+      }
   }
 
   const isCategoryValid = !!selectedCategory;
@@ -1433,16 +1438,24 @@ const NewTeamModal = ({
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         // Pomocná funkcia na získanie "čistého" mena bez prefixu kategórie
         const getCleanDisplayName = (team) => {
-          // Pre superstructure tímy vrátime celý názov (vrátane kategórie)
-          if (team.isSuperstructureTeam) {
-            return team.teamName;
-          }
-          // Pre ostatné tímy odstránime prefix kategórie, ak existuje
-          let name = team.teamName;
-          if (team.category && name.startsWith(team.category + ' ')) {
-            name = name.substring(team.category.length + 1).trim();
-          }
-          return name;
+            // Pre superstructure tímy
+            if (team.isSuperstructureTeam) {
+                // Ak má byť zobrazený prefix, vrátime celý názov
+                if (showCategoryPrefix) {
+                    return team.teamName;
+                }
+                // Ak nemá byť zobrazený prefix, odstránime ho
+                if (team.category && team.teamName.startsWith(team.category + ' ')) {
+                    return team.teamName.substring(team.category.length + 1).trim();
+                }
+                return team.teamName;
+            }
+            // Pre ostatné tímy odstránime prefix kategórie, ak existuje
+            let name = team.teamName;
+            if (team.category && name.startsWith(team.category + ' ')) {
+                name = name.substring(team.category.length + 1).trim();
+            }
+            return name;
         };
    
         if (isWithoutGroup) {
@@ -2037,7 +2050,30 @@ const renderSingleCategoryView = () => {
                 availableGroupsForSelect.map((group, index) =>
                     React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
                 )
+            ),
+          React.createElement(
+            'div',
+            { className: 'mt-4 flex items-center justify-center' },
+            React.createElement(
+                'label',
+                { 
+                    className: 'flex items-center space-x-2 cursor-pointer',
+                    title: 'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
+                },
+                React.createElement('input', {
+                    type: 'checkbox',
+                    checked: showCategoryPrefix,
+                    onChange: (e) => setShowCategoryPrefix(e.target.checked),
+                    className: 'w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+                }),
+                React.createElement(
+                    'span',
+                    { className: 'text-sm font-medium text-gray-700' },
+                    'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
+                )
             )
+        ),
+          
         ),
         selectedCategoryId
             ? renderSingleCategoryView()
