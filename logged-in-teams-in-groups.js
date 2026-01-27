@@ -1124,7 +1124,7 @@ const NewTeamModal = ({
           'div',
           { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
           React.createElement('p', { className: 'text-sm text-gray-600' }, 'Výsledný názov:'),
-          React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
+          React.createElement('p', { className: 'text-base font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
         ) : null,
         
         // Chybové hlášky
@@ -1151,7 +1151,7 @@ const NewTeamModal = ({
         'div',
         { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
         React.createElement('p', { className: 'text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu:'),
-        React.createElement('p', { className: 'text-lg font-bold text-gray-800' }, teamToEdit.teamName),
+        React.createElement('p', { className: 'text-base font-bold text-gray-800' }, teamToEdit.teamName),
       ) : null,
 
       React.createElement(
