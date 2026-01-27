@@ -217,6 +217,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     'address.postalCode': 'PSČ',
                     'address.city': 'Mesto/obec',
                     'address.country': 'Štát',
+                    'jerseyHomeColor': 'Farba dresov 1',
+                    'jerseyAwayColor': 'Farba dresov 2'
                 };
 
                 if (niceLabels[currentPath]) {
