@@ -1254,7 +1254,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                   'div',
                   { className: 'mb-6 border-t border-gray-200 pt-4' },
                   React.createElement('label', {
-                    className: 'block text-base font-semibold text-gray-800 mb-3'
+                    className: 'block text-base text-gray-800 mb-3'
                   }, 'Farby dresov'),
                   React.createElement(
                     'div',
@@ -1264,7 +1264,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                     React.createElement(
                       'div',
                       null,
-                      React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 1'),
+                      React.createElement('label', { className: 'block text-sm text-gray-700 mb-1' }, 'Farba dresov 1'),
                       React.createElement('input', {
                         type: 'text',
                         className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
@@ -1285,7 +1285,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                     React.createElement(
                       'div',
                       null,
-                      React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 2'),
+                      React.createElement('label', { className: 'block text-sm text-gray-700 mb-1' }, 'Farba dresov 2'),
                       React.createElement('input', {
                         type: 'text',
                         className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
