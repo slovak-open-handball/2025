@@ -336,22 +336,19 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         });
                     });
 
-/*
-                    {
-                      team.jerseyColors && (team.jerseyColors.color1 || team.jerseyColors.color2) && 
-                        React.createElement('div', { className: 'text-gray-700 mb-3' },
-                          React.createElement('p', { className: 'font-medium mb-1' }, 'Farby dresov:'),
-                          React.createElement('div', { className: 'space-y-1 ml-4' },
-                            team.jerseyColors.color1 && React.createElement('p', null, 'Farba dresov 1: ', 
-                              React.createElement('span', { className: 'font-semibold' }, team.jerseyColors.color1)
-                            ),
-                            team.jerseyColors.color2 && React.createElement('p', null, 'Farba dresov 2: ', 
-                              React.createElement('span', { className: 'font-semibold' }, team.jerseyColors.color2)
-                            )
-                          )
-                        )
-                    }
-*/                                               
+
+                    return React.createElement('div', { key: index, className: 'mb-4 p-4 bg-gray-50 rounded-lg shadow-sm' },
+                        React.createElement('p', { className: 'font-semibold text-blue-800 mb-2' }, `Tím ${index + 1}: ${team.teamName || '-'}`),
+
+                        team.jerseyColors && (team.jerseyColors.color1 || team.jerseyColors.color2) && 
+                            React.createElement('p', { className: 'text-gray-700 mb-2' },
+                            React.createElement('strong', null, 'Farby dresov: '),
+                              [
+                                team.jerseyColors.color1 && `1: ${team.jerseyColors.color1}`,
+                                team.jerseyColors.color2 && `2: ${team.jerseyColors.color2}`
+                            ].filter(Boolean).join(' • ')
+                        ),
+                                               
                         React.createElement('p', { className: 'text-sm text-gray-700 mb-4' }, `Počet hráčov: ${team.players || 0}, členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}, členovia realizačného tímu (muži): ${team.menTeamMembers || 0}, šoféri (ženy): ${team.arrival?.drivers?.female || 0}, šoféri (muži): ${team.arrival?.drivers?.male || 0}`),
                         
                         // Zobrazenie tabuľky pre všetkých účastníkov
