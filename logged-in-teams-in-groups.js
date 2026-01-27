@@ -1123,7 +1123,7 @@ const NewTeamModal = ({
         (shouldShowPreview && finalTeamNamePreview) ? React.createElement(
           'div',
           { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
-          React.createElement('p', { className: 'text-sm text-gray-600' }, 'Finálny názov bude:'),
+          React.createElement('p', { className: 'text-sm text-gray-600' }, 'Výsledný názov:'),
           React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
         ) : null,
         
