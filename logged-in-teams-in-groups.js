@@ -427,7 +427,7 @@ const createTeamAssignmentNotification = async (action, team) => {
             notify("Možno odstrániť len nadstavbové tímy", "error");
             return;
         }
-   
+
         const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
         try {
             const docSnap = await getDoc(superstructureDocRef);
@@ -438,31 +438,37 @@ const createTeamAssignmentNotification = async (action, team) => {
                 notify("Odstraňovaný tím sa nenašiel", "error");
                 return;
             }
-   
+
+            // Získame informácie o tíme pred odstránením
             const originalGroup = teamToDelete.groupName;
             const originalOrder = teamToDelete.order;
+
+            // Odstránime tím bez prečíslovania ostatných
             teams.splice(teamIndex, 1);
-   
-            const reorderedTeams = teams.map(t => {
-                if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
-                    return { ...t, order: t.order - 1 };
-                }
-                return t;
-            });
-   
+
+            // ODSTRANENÉ: Automatické prečíslovanie zostávajúcich tímov
+            // const reorderedTeams = teams.map(t => {
+            //     if (t.groupName === originalGroup && t.order != null && t.order > originalOrder) {
+            //         return { ...t, order: t.order - 1 };
+            //     }
+            //     return t;
+            // });
+    
+            // Namiesto toho ukladáme tím bez zmeny order ostatných
             await setDoc(superstructureDocRef, {
                 ...globalTeamsData,
-                [teamToDelete.category]: reorderedTeams
+                [teamToDelete.category]: teams // použijeme pôvodné pole bez prečíslovania
             }, { merge: true });
-   
+
             await createTeamAssignmentNotification('unassign_global', {
                 id: teamToDelete.id,
                 teamName: teamToDelete.teamName,
                 category: teamToDelete.category,
-                groupName: teamToDelete.groupName
+                groupName: teamToDelete.groupName,
+                order: teamToDelete.order // pridáme informáciu o pôvodnom order
             });
-   
-            notify(`Tím '${teamToDelete.teamName}' bol odstránený zo skupiny.`, "success");
+
+            notify(`Tím '${teamToDelete.teamName}' bol odstránený zo skupiny. Ostatné tímy zostávajú s pôvodnými poradovými číslami.`, "success");
         } catch (error) {
             console.error("Chyba pri odstraňovaní tímu:", error);
             notify("Nepodarilo sa odstrániť tím zo skupiny.", "error");
