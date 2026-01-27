@@ -1708,134 +1708,131 @@ const renderSingleCategoryView = () => {
     const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
     const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
     
-    const teamsWithoutGroupHeight = teamsWithoutGroupRef.current?.offsetHeight || null;
-    
     return React.createElement(
         'div',
-        { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-3 w-full px-4 min-h-0' },
+        { 
+            className: 'w-full min-w-0',
+            style: { 
+                overflowX: 'auto',
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#cbd5e0 #f1f5f9'
+            }
+        },
         
-        // ĽAVÝ STĹPEC - Tímy bez skupiny
-        React.createElement(
-            'div',
-            {
-                ref: teamsWithoutGroupRef,
-                className: "w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-6 mb-4 flex-shrink-0"
-            },
-            React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`),
-            renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
-        ),
-        
-        // PRAVÁ ČASŤ - Skupiny (základné + nadstavbové) - JEDEN POSUVNÍK
+        // CELÝ OBSAH V JEDNOM FLEX KONTAJNERI - horizontálne posúvanie
         React.createElement(
             'div',
             { 
-                className: 'flex-grow min-w-0 flex flex-col',
+                className: 'flex min-w-max px-4 pb-6',
                 style: { 
-                    overflowX: 'auto',
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: '#cbd5e0 #f1f5f9'
+                    minWidth: 'min-content'
                 }
             },
             
-            // ZÁKLADNÉ SKUPINY - NIE sú zalamované
-            sortedBasicGroups.length > 0 && React.createElement(
-                React.Fragment,
-                null,
-                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Základné skupiny'),
-                React.createElement(
-                    'div',
-                    { 
-                        className: 'flex pb-4 mb-6',
-                        style: { 
-                            flexWrap: 'nowrap', // ZABRÁNI zalamovaniu
-                            overflowX: 'visible'
-                        }
-                    },
-                    sortedBasicGroups.map((group, groupIndex) => {
-                        const customStyle = selectedGroupName && teamsWithoutGroupHeight
-                            ? { minHeight: `${teamsWithoutGroupHeight}px` }
-                            : {};
-                        
-                        return React.createElement(
-                            'div',
-                            {
-                                key: `basic-${groupIndex}`,
-                                className: 'flex-shrink-0 mr-4 last:mr-0',
-                                style: { 
-                                    width: '320px', // Pevná šírka karty
-                                    minWidth: '320px',
-                                    maxWidth: '320px'
-                                }
-                            },
-                            React.createElement(
-                                'div',
-                                {
-                                    className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100',
-                                    style: customStyle
-                                },
-                                React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
-                                React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
-                                React.createElement('div', { className: 'mt-2 space-y-1' },
-                                    renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
-                                )
-                            )
-                        );
-                    })
-                )
+            // ĽAVÝ STĹPEC - Tímy bez skupiny
+            React.createElement(
+                'div',
+                {
+                    ref: teamsWithoutGroupRef,
+                    className: "w-80 min-w-80 bg-white rounded-xl shadow-xl p-6 mr-8 flex-shrink-0"
+                },
+                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`),
+                renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
             ),
             
-            // NADSTAVBOVÉ SKUPINY - NIE sú zalamované
-            sortedSuperstructureGroups.length > 0 && React.createElement(
-                React.Fragment,
-                null,
-                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Nadstavbové skupiny'),
-                React.createElement(
-                    'div',
-                    { 
-                        className: 'flex pb-4',
-                        style: { 
-                            flexWrap: 'nowrap', // ZABRÁNI zalamovaniu
-                            overflowX: 'visible'
-                        }
-                    },
-                    sortedSuperstructureGroups.map((group, groupIndex) => {
-                        const customStyle = selectedGroupName && teamsWithoutGroupHeight
-                            ? { minHeight: `${teamsWithoutGroupHeight}px` }
-                            : {};
-                        
-                        return React.createElement(
-                            'div',
-                            {
-                                key: `super-${groupIndex}`,
-                                className: 'flex-shrink-0 mr-4 last:mr-0',
-                                style: { 
-                                    width: '320px', // Pevná šírka karty
-                                    minWidth: '320px',
-                                    maxWidth: '320px'
-                                }
-                            },
-                            React.createElement(
+            // PRAVÁ ČASŤ - Skupiny (základné + nadstavbové)
+            React.createElement(
+                'div',
+                { className: 'flex-grow min-w-0 flex flex-col' },
+                
+                // ZÁKLADNÉ SKUPINY - NIE sú zalamované
+                sortedBasicGroups.length > 0 && React.createElement(
+                    React.Fragment,
+                    null,
+                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Základné skupiny'),
+                    React.createElement(
+                        'div',
+                        { 
+                            className: 'flex mb-8',
+                            style: { 
+                                flexWrap: 'nowrap', // ZABRÁNI zalamovaniu
+                            }
+                        },
+                        sortedBasicGroups.map((group, groupIndex) => {
+                            return React.createElement(
                                 'div',
                                 {
-                                    className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100',
-                                    style: customStyle
+                                    key: `basic-${groupIndex}`,
+                                    className: 'flex-shrink-0 mr-6 last:mr-0',
+                                    style: { 
+                                        width: '340px',
+                                        minWidth: '340px',
+                                        maxWidth: '340px'
+                                    }
                                 },
-                                React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
-                                React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
-                                React.createElement('div', { className: 'mt-2 space-y-1' },
-                                    renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                                React.createElement(
+                                    'div',
+                                    {
+                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-full'
+                                    },
+                                    React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
+                                    React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
+                                    React.createElement('div', { className: 'mt-2 space-y-1 flex-grow' },
+                                        renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                                    )
                                 )
-                            )
-                        );
-                    })
+                            );
+                        })
+                    )
+                ),
+                
+                // NADSTAVBOVÉ SKUPINY - NIE sú zalamované
+                sortedSuperstructureGroups.length > 0 && React.createElement(
+                    React.Fragment,
+                    null,
+                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Nadstavbové skupiny'),
+                    React.createElement(
+                        'div',
+                        { 
+                            className: 'flex',
+                            style: { 
+                                flexWrap: 'nowrap', // ZABRÁNI zalamovaniu
+                            }
+                        },
+                        sortedSuperstructureGroups.map((group, groupIndex) => {
+                            return React.createElement(
+                                'div',
+                                {
+                                    key: `super-${groupIndex}`,
+                                    className: 'flex-shrink-0 mr-6 last:mr-0',
+                                    style: { 
+                                        width: '340px',
+                                        minWidth: '340px',
+                                        maxWidth: '340px'
+                                    }
+                                },
+                                React.createElement(
+                                    'div',
+                                    {
+                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-full'
+                                    },
+                                    React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
+                                    React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
+                                    React.createElement('div', { className: 'mt-2 space-y-1 flex-grow' },
+                                        renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                                    )
+                                )
+                            );
+                        })
+                    )
+                ),
+                
+                // AK NIE SÚ ŽIADNE SKUPINY
+                sortedBasicGroups.length === 0 && sortedSuperstructureGroups.length === 0 && React.createElement(
+                    'div',
+                    { className: 'min-w-96' },
+                    React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 'Žiadne skupiny v tejto kategórii.')
                 )
-            ),
-            
-            // AK NIE SÚ ŽIADNE SKUPINY
-            sortedBasicGroups.length === 0 && sortedSuperstructureGroups.length === 0 && React.createElement(
-                'p',
-                { className: 'text-center text-gray-500 py-8' },
-                'Žiadne skupiny v tejto kategórii.'
             )
         )
     );
