@@ -357,7 +357,7 @@ const createTeamAssignmentNotification = async (action, team) => {
             message = `Pre tím ${teamName} zmena: Názov tímu z '${team.oldTeamName}' na '${teamName}'`;
             break;
         default:
-            message = `zmena: tímu ${teamName} (${action}).`;
+            message = `zmena tímu ${teamName} (${action}).`;
     }
 
     try {
