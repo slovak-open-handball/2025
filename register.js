@@ -630,7 +630,7 @@ function App() {
                     firstName: '', lastName: '', dateOfBirth: '',
                     address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                 })),
-                jerseyColors: { color1: '', color2: '' }
+                jerseyColors: existingTeamData.jerseyColors || { color1: '', color2: '' }
             };
         });
     });
