@@ -99,7 +99,7 @@ function TeamJerseyColors({
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
           value: color1,
           onChange: (e) => handleColorChange('color1', e.target.value),
-          placeholder: 'napr. červená / red / #FF0000',
+          placeholder: 'Zadajte farbu',
           disabled: loading,
           maxLength: 50
         })
@@ -117,7 +117,7 @@ function TeamJerseyColors({
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
           value: color2,
           onChange: (e) => handleColorChange('color2', e.target.value),
-          placeholder: 'napr. biela / white / #FFFFFF',
+          placeholder: 'Zadajte farbu',
           disabled: loading,
           maxLength: 50
         })
@@ -126,7 +126,7 @@ function TeamJerseyColors({
     React.createElement(
       'p',
       { className: 'text-sm text-gray-500 mt-2' },
-      'Uveďte hlavnú farbu a prípadnú doplnkovú farbu alebo vzor. Môžete použiť názvy farieb, hex kód alebo akýkoľvek popis.'
+      'Uveďte dve farby dresov.'
     )
   );
 }
