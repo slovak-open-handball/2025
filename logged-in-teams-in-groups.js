@@ -1125,7 +1125,6 @@ const NewTeamModal = ({
           React.createElement('p', { className: 'text-lg font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
         )},
         
-        {/* Chybové hlášky */}
         {isDuplicate && React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
