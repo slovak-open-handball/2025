@@ -513,7 +513,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
         const categoryName = categoryIdToNameMap[categoryId];
         if (!categoryName) return;
    
-        const finalTeamName = `${categoryName} ${teamName.trim()}`;
+        const finalTeamName = `${teamName.trim()}`;
    
         // === Globálny tím (superštruktúra) ===
         if (originalTeam.isSuperstructureTeam) {
@@ -676,7 +676,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             return;
         }
         const categoryName = categoryIdToNameMap[categoryId];
-        const finalTeamName = `${categoryName} ${teamName}`;
+        const finalTeamName = `${teamName}`;
         const isDuplicateFinal = allTeams.some(team => team.teamName === finalTeamName);
         if (isDuplicateFinal) {
             notify(`Tím '${finalTeamName}' už existuje. Ukladanie zrušené.`, "error");
@@ -727,7 +727,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             return;
         }
    
-        const finalTeamName = `${categoryName} ${teamName.trim()}`;
+        const finalTeamName = `${teamName.trim()}`;
         const userRef = doc(window.db, 'users', originalTeam.uid);
    
         try {
