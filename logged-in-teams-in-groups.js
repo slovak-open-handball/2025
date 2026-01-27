@@ -513,8 +513,9 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
         const categoryName = categoryIdToNameMap[categoryId];
         if (!categoryName) return;
    
-        const finalTeamName = originalTeam?.isSuperstructureTeam ? `${categoryName} ${teamName.trim()}` : `${teamName.trim()}`;
-   
+        const finalTeamName = originalTeam.isSuperstructureTeam
+          ? `${categoryName} ${teamName.trim()}`
+          : teamName.trim();   
         // === Globálny tím (superštruktúra) ===
         if (originalTeam.isSuperstructureTeam) {
             const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
@@ -678,9 +679,10 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
       const categoryName = categoryIdToNameMap[categoryId];
 
       // Tu pridávame kontrolu, či je tím superštruktúrny
-      const fullTeamName = teamToEdit?.isSuperstructureTeam
+      const isSuperstructureTeam = true; // Pretože táto funkcia sa volá len pre superstructure tímy
+      const fullTeamName = isSuperstructureTeam
         ? `${categoryName} ${teamName.trim()}`
-        : `${teamName.trim()}`;
+        : teamName.trim();
 
       const isDuplicateFinal = allTeams.some(team => team.teamName === fullTeamName);
       if (isDuplicateFinal) {
@@ -1008,7 +1010,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
      
         if (!isOpen) return null;
         const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
-        const finalTeamNamePreview = teamName.trim() ? `${currentCategoryName} ${teamName.trim()}` : '';
+        const finalTeamNamePreview = teamName.trim() ? (teamToEdit?.isSuperstructureTeam || !teamToEdit) ? `${currentCategoryName} ${teamName.trim()}` : teamName.trim() : '';
         return React.createElement(
           'div',
           {
@@ -1320,11 +1322,11 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         // Pomocná funkcia na získanie "čistého" mena bez prefixu kategórie
         const getCleanDisplayName = (team) => {
-            let name = team.teamName;
-            if (!team.isSuperstructureTeam && team.category && name.startsWith(team.category + ' ')) {
-                name = name.substring(team.category.length + 1).trim();
-            }
-            return name;
+          let name = team.teamName;
+          if (team.isSuperstructureTeam && team.category && name.startsWith(team.category + ' ')) {
+            name = name.substring(team.category.length + 1).trim();
+          }
+          return name;
         };
    
         if (isWithoutGroup) {
