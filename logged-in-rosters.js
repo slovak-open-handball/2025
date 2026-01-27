@@ -2951,34 +2951,33 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
 
                         // ─── FARBY DRESOV ────────────────────────────────────────────────────────
-team.jerseyHomeColor || team.jerseyAwayColor ? React.createElement(
-  'div',
-  { className: 'mt-3 text-md text-gray-700' },
+                        team.jerseyHomeColor || team.jerseyAwayColor ? React.createElement(
+                          'div',
+                          { className: 'mt-3 text-md text-gray-700' },
+                        
+                          // Hlavný nadpis
+                          React.createElement(
+                            'p',
+                            { className: 'font-semibold mb-2' },
+                            'Farby dresov:'
+                          ),
 
-  // Hlavný nadpis
-  React.createElement(
-    'p',
-    { className: 'font-semibold mb-2' },
-    'Farby dresov:'
-  ),
-
-  // Farba dresov 1
-  team.jerseyHomeColor && React.createElement(
-    'p',
-    { className: 'ml-4' },
-    React.createElement('span', { className: 'font-medium' }, 'Farba dresov 1: '),
-    team.jerseyHomeColor
-  ),
-
-  // Farba dresov 2
-  team.jerseyAwayColor && React.createElement(
-    'p',
-    { className: 'ml-4' },
-    React.createElement('span', { className: 'font-medium' }, 'Farba dresov 2: '),
-    team.jerseyAwayColor
-  )
-) : null
-                                          
+                          // Farba dresov 1
+                          team.jerseyHomeColor && React.createElement(
+                            'p',
+                            { className: 'ml-4' },
+                            React.createElement('span', { className: 'font-medium' }, 'Farba dresov 1: '),
+                            team.jerseyHomeColor
+                          ),
+                        
+                          // Farba dresov 2
+                          team.jerseyAwayColor && React.createElement(
+                            'p',
+                            { className: 'ml-4' },
+                            React.createElement('span', { className: 'font-medium' }, 'Farba dresov 2: '),
+                            team.jerseyAwayColor
+                          )
+                        ) : null,                                          
 
                         team.packageDetails && React.createElement(
                             'div',
