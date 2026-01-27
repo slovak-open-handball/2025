@@ -1254,6 +1254,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     console.error("Chyba pri načítaní kategórií z Firestore:", error);
                 }
 
+                const teamElements = [];
+
                 teamElements.push(
                   React.createElement(
                     'div',
