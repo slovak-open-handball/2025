@@ -967,7 +967,6 @@ const formatLabel = (key) => {
 };
 
 // Pomocná funkcia na porovnávanie zmien pre notifikácie
-// Pomocná funkcia na porovnávanie zmien pre notifikácie
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
     
@@ -2499,7 +2498,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         const teamName = finalDataToSave.teamName || 'Bez názvu';
                                         const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
                                         generatedChanges = generatedChanges.map(change => 
-                                            `Tím '${teamName}' (${teamCategory}): ${change}`
+                                            `Tím ${teamName} (${teamCategory}): ${change}`
                                         );
                                     }
                                     else if (editModalTitle.toLowerCase().includes('upraviť hráč') ||
@@ -4196,13 +4195,13 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
                 const notificationsCollectionRef = collection(db, 'notifications');
                 await addDoc(notificationsCollectionRef, {
                     userEmail,
-                    changes: [`Tím '${teamName}' bol odstránený z kategórie '${category}'.`],
+                    changes: [`Tím ${teamName} bol odstránený z kategórie '''${category}'.`],
                     timestamp: serverTimestamp()
                 });
                 console.log("Notifikácia o odstránení tímu uložená do Firestore.");
             }
 
-            setUserNotificationMessage(`Tím '${teamName}' bol odstránený.`, 'success');
+            setUserNotificationMessage(`Tím ${teamName} bol odstránený.`, 'success');
             closeEditModal();
         } else {
             throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
