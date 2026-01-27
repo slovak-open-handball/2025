@@ -630,6 +630,7 @@ function App() {
                     firstName: '', lastName: '', dateOfBirth: '',
                     address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                 })),
+                jerseyColors: { color1: '', color2: '' }
             };
         });
     });
@@ -677,17 +678,19 @@ function App() {
   };
 
   const handlePrev = (dataToPreserve = null) => {
-    if (dataToPreserve && dataToPreserve.currentFormData) {
+    if (dataToPreserve) {
+      if (dataToPreserve.currentFormData) {
         setFormData(dataToPreserve.currentFormData);
-    }
-    if (dataToPreserve && dataToPreserve.currentTeamsDataFromPage4) {
-        setTeamsDataFromPage4(dataToPreserve.currentTeamsDataFromPage4);
-    }
-    // NOVINKA: Ak sa vraciame zo stránky s poznámkou, aktualizujeme globalNote
-    if (dataToPreserve && dataToPreserve.currentGlobalNote !== undefined) {
+      }
+      if (dataToPreserve.currentTeamsDataFromPage4) {
+        // Deep copy – veľmi dôležité!
+        setTeamsDataFromPage4(JSON.parse(JSON.stringify(dataToPreserve.currentTeamsDataFromPage4)));
+      }
+      if (dataToPreserve.currentGlobalNote !== undefined) {
         setGlobalNote(dataToPreserve.currentGlobalNote);
+      }
     }
-    setPage(prevPage => prevPage - 1);
+    setPage(prev => prev - 1);
     dispatchAppNotification('', 'info');
   };
 
@@ -864,6 +867,13 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
                       city: d.address?.city || '', postalCode: d.address?.postalCode || '', country: d.address?.country || '',
                   }
               })) || [];
+
+              if (team.jerseyColors) {
+                updatedTeam.jerseyColors = {
+                  color1: team.jerseyColors.color1 || '',
+                  color2: team.jerseyColors.color2 || ''
+                };
+              }
 
               return updatedTeam;
           });
