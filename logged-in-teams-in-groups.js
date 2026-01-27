@@ -497,6 +497,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                 return;
             }
 
+            const originalTeam = teamsInCategory[teamIndex];
             const oldGroup = originalTeam.groupName;
             const oldOrder = originalTeam.order;
    
@@ -508,8 +509,6 @@ const createTeamAssignmentNotification = async (action, team) => {
                 notify("Tím sa nenašiel v profile používateľa.", "error");
                 return;
             }
-
-            const originalTeam = teamsInCategory[teamIndex];
    
             teamsInCategory[teamIndex] = {
                 ...teamsInCategory[teamIndex],
