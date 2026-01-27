@@ -809,8 +809,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeUsers = onSnapshot(usersCollectionRef, async (querySnapshot) => {
 // ... vnútri onSnapshot(usersCollectionRef, async (querySnapshot) => {
 
-console.log("-----------------------------------------");
-console.log("Aktualizácia dát z '/users/':");
+// console.log("-----------------------------------------");
+// console.log("Aktualizácia dát z '/users/':");
 
 if (querySnapshot.empty) {
     console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
@@ -824,7 +824,7 @@ if (querySnapshot.empty) {
         const userEmail = userData.email || userDoc.id;
         const teams = userData.teams || {};
 
-        console.log(`Používateľ: ${userEmail} (${userDoc.id})`);
+//        console.log(`Používateľ: ${userEmail} (${userDoc.id})`);
 
         Object.entries(teams).forEach(([categoryName, teamsArray]) => {
             if (!Array.isArray(teamsArray)) return;
@@ -886,24 +886,24 @@ if (querySnapshot.empty) {
     });
 
     // Výpis do konzoly – počet tímov
-    console.log("=== Celkový počet tímov podľa kategórií ===");
+//    console.log("=== Celkový počet tímov podľa kategórií ===");
     Object.entries(categoryTeamCount).forEach(([category, count]) => {
-        console.log(`Kategória "${category}": ${count} tímov`);
+//        console.log(`Kategória "${category}": ${count} tímov`);
     });
-    console.log(`Celkový počet všetkých tímov: ${Object.values(categoryTeamCount).reduce((sum, c) => sum + c, 0)}`);
+//    console.log(`Celkový počet všetkých tímov: ${Object.values(categoryTeamCount).reduce((sum, c) => sum + c, 0)}`);
 
     // Výpis do konzoly – počet OSÔB (zo súčtu 5 polí)
-    console.log("=== Celkový počet osôb podľa kategórií (súčet playerDetails + menTeamMemberDetails + womenTeamMemberDetails + driverDetailsMale + driverDetailsFemale) ===");
+//    console.log("=== Celkový počet osôb podľa kategórií (súčet playerDetails + menTeamMemberDetails + womenTeamMemberDetails + driverDetailsMale + driverDetailsFemale) ===");
     Object.entries(categoryPersonCount).forEach(([category, count]) => {
-        console.log(`Kategória "${category}": ${count} osôb`);
+//        console.log(`Kategória "${category}": ${count} osôb`);
     });
-    console.log(`Celkový počet všetkých osôb: ${Object.values(categoryPersonCount).reduce((sum, c) => sum + c, 0)}`);
+//    console.log(`Celkový počet všetkých osôb: ${Object.values(categoryPersonCount).reduce((sum, c) => sum + c, 0)}`);
 
     // Detailná tabuľka pre každého používateľa a tím (voliteľné, ale veľmi užitočné na ladenie)
-    console.log("=== Detailný prehľad tímov a počtu osôb ===");
-    console.table(teamsDataForTable);
+//    console.log("=== Detailný prehľad tímov a počtu osôb ===");
+//    console.table(teamsDataForTable);
 
-    console.log("======================================");
+//    console.log("======================================");
 
     // Ak stále používaš accommodationCounts, aktualizuje sa tu
     const accommodationSummary = {};
