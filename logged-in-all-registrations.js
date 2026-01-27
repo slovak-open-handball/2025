@@ -435,6 +435,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (ž): ${womenDriversCount}`)); 
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (m): ${menDriversCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Spolu: ${playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount}`));
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-3 whitespace-nowrap' }, 'Farby dresov: ' + (team.jerseyHomeColor || '—') + ' / ' + (team.jerseyAwayColor || '—')));        
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${formatArrivalTime(team.arrival?.type, team.arrival?.time)}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
@@ -1252,6 +1253,53 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 } catch (error) {
                     console.error("Chyba pri načítaní kategórií z Firestore:", error);
                 }
+
+                teamElements.push(
+                  React.createElement(
+                    'div',
+                    { key: 'jerseyColors', className: 'mb-6 border-t border-gray-200 pt-4' },
+                    React.createElement('label', {
+                      className: 'block text-base font-semibold text-gray-800 mb-3'
+                    }, 'Farby dresov'),
+                    React.createElement(
+                      'div',
+                      { className: 'grid grid-cols-1 sm:grid-cols-2 gap-6' },
+      
+                      // Domáce farby
+                      React.createElement(
+                        'div',
+                        null,
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Domáce (home)'),
+                        React.createElement('input', {
+                          type: 'text',
+                          className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                          value: localEditedData.jerseyHomeColor || '',
+                          onChange: (e) => handleChange('jerseyHomeColor', e.target.value),
+                          placeholder: 'Zadajte farbu',
+                          disabled: !isSavable
+                        })
+                      ),
+      
+                      // Vonku farby
+                      React.createElement(
+                        'div',
+                        null,
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Vonku (away)'),
+                        React.createElement('input', {
+                          type: 'text',
+                          className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                          value: localEditedData.jerseyAwayColor || '',
+                          onChange: (e) => handleChange('jerseyAwayColor', e.target.value),
+                          placeholder: 'Zadajte farbu',
+                          disabled: !isSavable
+                        })
+                      )
+                    ),
+                    React.createElement('p', {
+                      className: 'mt-2 text-sm text-gray-500'
+                    }, 'Zadajte farbu')
+                  )
+                );
 
                 // Načítanie typov ubytovania
                 try {
@@ -4411,7 +4459,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (m)'),
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (ž)'), 
                                 React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (m)'), 
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Spolu'), 
+                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Spolu'),
+                                React.createElement('th', { className: 'py-2 px-3 text-center whitespace-nowrap min-w-max' }, 'Farby dresov'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
@@ -4513,6 +4562,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menDriversCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players + team._womenTeamMembersCount + team._menTeamMembersCount + team._womenDriversCount + team._menDriversCount || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
+                                            React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyHomeColor && team.jerseyAwayColor ? `${team.jerseyHomeColor} / ${team.jerseyAwayColor}` : (team.jerseyHomeColor || team.jerseyAwayColor || '—')),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'),
                                             (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
