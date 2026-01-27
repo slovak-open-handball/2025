@@ -841,7 +841,8 @@ const NewTeamModal = ({
   allGroupsByCategoryId = {},
   defaultCategoryId = '',
   defaultGroupName = '',
-  unifiedSaveHandler
+  unifiedSaveHandler,
+  showCategoryPrefix = true
 }) => {
   const { useState, useEffect } = React;
   const [orderInputValue, setOrderInputValue] = useState(null);
@@ -1738,6 +1739,7 @@ const NewTeamModal = ({
         );
     };
   
+// Upravená funkcia renderSingleCategoryView()
 const renderSingleCategoryView = () => {
     const categoryName = categoryIdToNameMap[selectedCategoryId] || "Neznáma kategória";
     let groups = allGroupsByCategoryId[selectedCategoryId] || [];
@@ -1775,6 +1777,40 @@ const renderSingleCategoryView = () => {
     // Zistíme, či existujú tímy bez skupiny
     const hasTeamsWithoutGroup = teamsWithoutGroupForCategory.length > 0;
     
+    // Počítač maximálnej výšky pre karty v riadku
+    const calculateMaxTeamCount = (groupList) => {
+        if (groupList.length === 0) return 0;
+        
+        let maxCount = 0;
+        groupList.forEach(group => {
+            const teamsInGroup = allTeams.filter(t => 
+                t.category === categoryName && 
+                t.groupName === group.name
+            );
+            
+            // Spočítame rôzne pozície (vrátane dier)
+            const usedOrders = new Set(
+                teamsInGroup
+                    .map(t => t.order)
+                    .filter(o => Number.isInteger(o) && o >= 1)
+            );
+            
+            const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
+            const count = Math.max(teamsInGroup.length, maxOrder);
+            maxCount = Math.max(maxCount, count);
+        });
+        
+        return maxCount;
+    };
+    
+    // Vypočítame maximálny počet tímov pre základné a nadstavbové skupiny
+    const maxBasicTeams = calculateMaxTeamCount(basicGroups);
+    const maxSuperTeams = calculateMaxTeamCount(superstructureGroups);
+    
+    // Výška na jeden tím (v px) + padding
+    const teamHeight = 60; // približná výška jedného tímu s paddingom
+    const baseCardHeight = 140; // výška hlavičky karty + paddingy
+    
     return React.createElement(
         'div',
         { 
@@ -1802,7 +1838,7 @@ const renderSingleCategoryView = () => {
                 'div',
                 {
                     ref: teamsWithoutGroupRef,
-                    className: "bg-white rounded-xl shadow-xl p-6 mr-8 flex-shrink-0 zoom-box",
+                    className: "bg-white rounded-xl shadow-xl p-6 mr-8 flex-shrink-0 zoom-box flex flex-col",
                     style: { 
                         width: boxWidth,
                         minWidth: boxWidth,
@@ -1810,10 +1846,12 @@ const renderSingleCategoryView = () => {
                         transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
                     }
                 },
-                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center truncate' }, 
-                    `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`
-                ),
-                renderTeamList(teamsWithoutGroupForCategory, null, selectedCategoryId, true)
+                React.createElement('h3', { 
+                    className: 'text-2xl font-semibold mb-4 text-center truncate flex-shrink-0' 
+                }, `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`),
+                React.createElement('div', { 
+                    className: 'flex-grow overflow-y-auto min-h-0'
+                }, renderTeamList(teamsWithoutGroupForCategory, null, selectedCategoryId, true))
             ),
             
             // PRAVÁ ČASŤ - Skupiny (základné + nadstavbové)
@@ -1836,10 +1874,20 @@ const renderSingleCategoryView = () => {
                             className: `flex mb-8 overflow-x-auto pb-4 zoom-groups-container ${!hasTeamsWithoutGroup ? 'justify-center' : ''}`,
                             style: { 
                                 flexWrap: 'nowrap',
-                                gap: '1.5rem'
+                                gap: '1.5rem',
+                                alignItems: 'stretch' // Dôležité: všetky karty rovnako vysoké
                             }
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
+                            const teamsInGroup = allTeams.filter(t => 
+                                t.category === categoryName && 
+                                t.groupName === group.name
+                            );
+                            
+                            // Dynamická výška na základe maximálneho počtu tímov v tomto type skupiny
+                            const calculatedHeight = baseCardHeight + (maxBasicTeams * teamHeight);
+                            const minHeight = Math.max(calculatedHeight, 300); // Minimálna výška
+                            
                             return React.createElement(
                                 'div',
                                 {
@@ -1849,25 +1897,26 @@ const renderSingleCategoryView = () => {
                                         width: boxWidth,
                                         minWidth: boxWidth,
                                         maxWidth: boxWidth,
-                                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
+                                        height: `${minHeight}px`,
+                                        minHeight: `${minHeight}px`,
+                                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease, height 0.3s ease'
                                     }
                                 },
                                 React.createElement(
                                     'div',
                                     {
-                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-full'
+                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100'
                                     },
                                     React.createElement('h3', { 
-                                        className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap truncate' 
+                                        className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
                                     }, group.name),
                                     React.createElement('p', { 
-                                        className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
+                                        className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap flex-shrink-0' 
                                     }, group.type),
                                     React.createElement('div', { 
-                                        className: 'mt-2 space-y-1 flex-grow overflow-y-auto max-h-[500px]'
+                                        className: 'mt-2 space-y-1 flex-grow overflow-hidden'
                                     },
-                                        renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), 
-                                        group.name, selectedCategoryId)
+                                        renderTeamList(teamsInGroup, group.name, selectedCategoryId)
                                     )
                                 )
                             );
@@ -1888,10 +1937,20 @@ const renderSingleCategoryView = () => {
                             className: `flex overflow-x-auto pb-4 zoom-groups-container ${!hasTeamsWithoutGroup ? 'justify-center' : ''}`,
                             style: { 
                                 flexWrap: 'nowrap',
-                                gap: '1.5rem'
+                                gap: '1.5rem',
+                                alignItems: 'stretch' // Dôležité: všetky karty rovnako vysoké
                             }
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
+                            const teamsInGroup = allTeams.filter(t => 
+                                t.category === categoryName && 
+                                t.groupName === group.name
+                            );
+                            
+                            // Dynamická výška na základe maximálneho počtu tímov v tomto type skupiny
+                            const calculatedHeight = baseCardHeight + (maxSuperTeams * teamHeight);
+                            const minHeight = Math.max(calculatedHeight, 300); // Minimálna výška
+                            
                             return React.createElement(
                                 'div',
                                 {
@@ -1901,25 +1960,26 @@ const renderSingleCategoryView = () => {
                                         width: boxWidth,
                                         minWidth: boxWidth,
                                         maxWidth: boxWidth,
-                                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
+                                        height: `${minHeight}px`,
+                                        minHeight: `${minHeight}px`,
+                                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease, height 0.3s ease'
                                     }
                                 },
                                 React.createElement(
                                     'div',
                                     {
-                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-full'
+                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100'
                                     },
                                     React.createElement('h3', { 
-                                        className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap truncate' 
+                                        className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
                                     }, group.name),
                                     React.createElement('p', { 
-                                        className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
+                                        className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap flex-shrink-0' 
                                     }, group.type),
                                     React.createElement('div', { 
-                                        className: 'mt-2 space-y-1 flex-grow overflow-y-auto max-h-[500px]'
+                                        className: 'mt-2 space-y-1 flex-grow overflow-hidden'
                                     },
-                                        renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), 
-                                        group.name, selectedCategoryId)
+                                        renderTeamList(teamsInGroup, group.name, selectedCategoryId)
                                     )
                                 )
                             );
@@ -1988,6 +2048,63 @@ const renderSingleCategoryView = () => {
         },
         '+'
     );
+
+    useEffect(() => {
+        const addGlobalStyles = () => {
+            if (document.getElementById('group-cards-styles')) return;
+            
+            const style = document.createElement('style');
+            style.id = 'group-cards-styles';
+            style.textContent = `
+                .zoom-group-box > div > div:last-child {
+                    overflow: visible !important;
+                    max-height: none !important;
+                }
+                
+                .zoom-groups-container {
+                    align-items: stretch !important;
+                }
+            
+                .zoom-group-box {
+                    display: flex !important;
+                    flex-direction: column !important;
+                }
+            
+                .zoom-group-box > div {
+                    flex: 1 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    min-height: 0 !important;
+                }
+            
+                .zoom-group-box ul {
+                    flex-grow: 1 !important;
+                    overflow: visible !important;
+                    max-height: none !important;
+                }
+            
+                .overflow-y-auto,
+                .overflow-y-scroll {
+                    overflow-y: visible !important;
+                }
+                
+                .flex-grow {
+                    flex-grow: 1 !important;
+                }
+            `;
+            document.head.appendChild(style);
+        };
+    
+        addGlobalStyles();
+    
+        return () => {
+            const style = document.getElementById('group-cards-styles');
+            if (style) {
+                document.head.removeChild(style);
+            }
+        };
+    }, []);
+  
     // Pôvodný kód pred return v komponente AddGroupsApp:
     return React.createElement(
         'div',
