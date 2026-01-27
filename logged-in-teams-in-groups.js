@@ -327,16 +327,16 @@ const createTeamAssignmentNotification = async (action, team) => {
 
     switch (action) {
         case 'assign_global':
-            message = `Pre tím ${teamName} zmena Skupina z 'bez skupiny' na '${group}'`;
+            message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'`;
             break;
         case 'change_group_global':
-            message = `Pre tím ${teamName} zmena Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
+            message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
             break;
         case 'assign_user':
-            message = `Pre tím ${teamName} zmena Skupina z 'bez skupiny' na '${group}'`;
+            message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'`;
             break;
         case 'change_group_user':
-            message = `Pre tím ${teamName} zmena Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
+            message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
             break;
         case 'add_new_global':
             message = `V kategórii ${category} vytvorený nový tím ${teamName} a priradený do skupiny '''${group}'`;
@@ -348,16 +348,16 @@ const createTeamAssignmentNotification = async (action, team) => {
             message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím '''${teamName}'`;
             break;
         case 'change_order_global':
-            message = `Pre tím ${teamName} zmena Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
+            message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
             break;
         case 'change_order_user':
-            message = `Pre tím ${teamName} zmena Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
+            message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
             break;
         case 'change_team_name':
-            message = `Pre tím ${teamName} zmena Názov tímu z '${team.oldTeamName}' na '${teamName}'`;
+            message = `Pre tím ${teamName} zmena: Názov tímu z '${team.oldTeamName}' na '${teamName}'`;
             break;
         default:
-            message = `Zmena tímu ${teamName} (${action}).`;
+            message = `zmena: tímu ${teamName} (${action}).`;
     }
 
     try {
@@ -585,12 +585,12 @@ const createTeamAssignmentNotification = async (action, team) => {
                 if (groupChanged || categoryChanged) {
                     action = originalTeam.groupName ? 'change_group_global' : 'assign_global';
                 } else if (newOrder !== originalTeam.order && newGroup === originalTeam.groupName) {
-                    // Zmena iba poradia v rovnakej skupine
+                    // zmena: iba poradia v rovnakej skupine
                     action = 'change_order_global';
                     notificationData.oldOrder = originalTeam.order;
                     notificationData.newOrder = newOrder;
                 } else if (teamName.trim() !== originalTeam.teamName.replace(new RegExp(`^${originalTeam.category} `), '')) {
-                    // Zmena názvu tímu
+                    // zmena: názvu tímu
                     action = 'change_team_name';
                     notificationData.oldTeamName = originalTeam.teamName;
                 } else {
@@ -670,7 +670,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                     notificationData.oldOrder = oldOrder;
                     notificationData.newOrder = newOrder;
                 } else if (teamName.trim() !== originalTeam.teamName) {
-                    // Zmena názvu tímu
+                    // zmena: názvu tímu
                     action = 'change_team_name';
                     notificationData.oldTeamName = originalTeam.teamName;
                 } else {
@@ -1022,7 +1022,7 @@ const NewTeamModal = ({
     : [];
 
   const handleCategoryChange = (e) => {
-    // Ak je kategória locked, zmena sa ignoruje
+    // Ak je kategória locked, zmena: sa ignoruje
     if (isCategoryLocked) return;
     setSelectedCategory(e.target.value);
     if (!defaultGroupName) setSelectedGroup('');
@@ -1897,7 +1897,7 @@ const handleDataUpdateAndRender = (event) => {
                                     const notificationsCollectionRef = collection(window.db, 'notifications');
                                     await addDoc(notificationsCollectionRef, {
                                         userEmail: user.email,
-                                        changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                        changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
                                         timestamp: new Date(),
                                     });
                                 }
