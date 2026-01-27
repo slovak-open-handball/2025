@@ -2949,6 +2949,36 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
 
+                        // ─── FARBY DRESOV ────────────────────────────────────────────────────────
+team.jerseyHomeColor || team.jerseyAwayColor ? React.createElement(
+  'div',
+  { className: 'mt-3 text-md text-gray-700' },
+
+  // Hlavný nadpis
+  React.createElement(
+    'p',
+    { className: 'font-semibold mb-2' },
+    'Farby dresov:'
+  ),
+
+  // Farba dresov 1
+  team.jerseyHomeColor && React.createElement(
+    'p',
+    { className: 'ml-4' },
+    React.createElement('span', { className: 'font-medium' }, 'Farba dresov 1: '),
+    team.jerseyHomeColor
+  ),
+
+  // Farba dresov 2
+  team.jerseyAwayColor && React.createElement(
+    'p',
+    { className: 'ml-4' },
+    React.createElement('span', { className: 'font-medium' }, 'Farba dresov 2: '),
+    team.jerseyAwayColor
+  )
+) : null
+                                          
+
                         team.packageDetails && React.createElement(
                             'div',
                             { className: 'mt-2 mb-4' },
@@ -2996,32 +3026,6 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                 })()
                             )
                         ),
-
-// ─── FARBY DRESOV ────────────────────────────────────────────────────────
-team.jerseyHomeColor || team.jerseyAwayColor ? React.createElement(
-  'p',
-  { className: 'text-md text-gray-700 mt-1' },
-  'Farby dresov: ',
-  team.jerseyHomeColor && React.createElement(
-    React.Fragment,
-    null,
-    React.createElement('span', {
-      className: 'inline-block w-5 h-5 rounded-full border border-gray-300 align-middle mr-1',
-      style: { backgroundColor: team.jerseyHomeColor }
-    }),
-    team.jerseyHomeColor
-  ),
-  (team.jerseyHomeColor && team.jerseyAwayColor) && ' / ',
-  team.jerseyAwayColor && React.createElement(
-    React.Fragment,
-    null,
-    React.createElement('span', {
-      className: 'inline-block w-5 h-5 rounded-full border border-gray-300 align-middle mr-1',
-      style: { backgroundColor: team.jerseyAwayColor }
-    }),
-    team.jerseyAwayColor
-  )
-) : null,
                                           
                         team.tshirts && team.tshirts.length > 0 && (
                             React.createElement('div', { className: 'mb-4 w-full' },
