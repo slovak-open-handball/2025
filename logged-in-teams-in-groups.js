@@ -962,11 +962,16 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
           }
 
           // Kontrola duplicity podľa čistého mena + kategória
-          const isDuplicate = allTeams.some(team => 
-              team.category === categoryName &&
-              team.teamName.trim() === trimmedName &&
-              (!teamToEdit || team.teamName.trim() !== originalTeamName.trim())
-          );
+          const isDuplicate = allTeams.some(team => {
+              const teamNameToCompare = team.isSuperstructureTeam
+                  ? team.teamName.replace(new RegExp(`^${categoryName} `), '').trim()
+                  : team.teamName.trim();
+              return (
+                  team.category === categoryName &&
+                  teamNameToCompare === trimmedName &&
+                  (!teamToEdit || team.teamName.trim() !== originalTeamName.trim())
+              );
+          });
 
           setIsDuplicate(isDuplicate);
       }, [teamName, selectedCategory, allTeams, categoryIdToNameMap, teamToEdit, originalTeamName]);
