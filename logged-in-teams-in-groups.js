@@ -1729,21 +1729,28 @@ const renderSingleCategoryView = () => {
         React.createElement(
             'div',
             { 
-                className: 'flex-grow min-w-0 flex flex-col overflow-x-auto',
+                className: 'flex-grow min-w-0 flex flex-col',
                 style: { 
+                    overflowX: 'auto',
                     scrollbarWidth: 'thin',
                     scrollbarColor: '#cbd5e0 #f1f5f9'
                 }
             },
             
-            // ZÁKLADNÉ SKUPINY
+            // ZÁKLADNÉ SKUPINY - NIE sú zalamované
             sortedBasicGroups.length > 0 && React.createElement(
                 React.Fragment,
                 null,
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Základné skupiny'),
                 React.createElement(
                     'div',
-                    { className: 'flex flex-wrap gap-4 pb-4 mb-6' },
+                    { 
+                        className: 'flex pb-4 mb-6',
+                        style: { 
+                            flexWrap: 'nowrap', // ZABRÁNI zalamovaniu
+                            overflowX: 'visible'
+                        }
+                    },
                     sortedBasicGroups.map((group, groupIndex) => {
                         const customStyle = selectedGroupName && teamsWithoutGroupHeight
                             ? { minHeight: `${teamsWithoutGroupHeight}px` }
@@ -1753,8 +1760,12 @@ const renderSingleCategoryView = () => {
                             'div',
                             {
                                 key: `basic-${groupIndex}`,
-                                className: 'flex-shrink-0',
-                                style: { minWidth: '300px', maxWidth: '350px' }
+                                className: 'flex-shrink-0 mr-4 last:mr-0',
+                                style: { 
+                                    width: '320px', // Pevná šírka karty
+                                    minWidth: '320px',
+                                    maxWidth: '320px'
+                                }
                             },
                             React.createElement(
                                 'div',
@@ -1773,14 +1784,20 @@ const renderSingleCategoryView = () => {
                 )
             ),
             
-            // NADSTAVBOVÉ SKUPINY
+            // NADSTAVBOVÉ SKUPINY - NIE sú zalamované
             sortedSuperstructureGroups.length > 0 && React.createElement(
                 React.Fragment,
                 null,
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Nadstavbové skupiny'),
                 React.createElement(
                     'div',
-                    { className: 'flex flex-wrap gap-4 pb-4' },
+                    { 
+                        className: 'flex pb-4',
+                        style: { 
+                            flexWrap: 'nowrap', // ZABRÁNI zalamovaniu
+                            overflowX: 'visible'
+                        }
+                    },
                     sortedSuperstructureGroups.map((group, groupIndex) => {
                         const customStyle = selectedGroupName && teamsWithoutGroupHeight
                             ? { minHeight: `${teamsWithoutGroupHeight}px` }
@@ -1790,8 +1807,12 @@ const renderSingleCategoryView = () => {
                             'div',
                             {
                                 key: `super-${groupIndex}`,
-                                className: 'flex-shrink-0',
-                                style: { minWidth: '300px', maxWidth: '350px' }
+                                className: 'flex-shrink-0 mr-4 last:mr-0',
+                                style: { 
+                                    width: '320px', // Pevná šírka karty
+                                    minWidth: '320px',
+                                    maxWidth: '320px'
+                                }
                             },
                             React.createElement(
                                 'div',
