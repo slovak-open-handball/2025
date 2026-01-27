@@ -1728,16 +1728,22 @@ const renderSingleCategoryView = () => {
         // PRAVÁ ČASŤ - Skupiny (základné + nadstavbové)
         React.createElement(
             'div',
-            { className: 'flex-grow min-w-0' },
+            { className: 'flex-grow min-w-0 flex flex-col' },
             
-            // ZÁKLADNÉ SKUPINY - PRVÝ RIADOK
+            // ZÁKLADNÉ SKUPINY - PRVÝ RIADOK (s horizontálnym posuvníkom)
             sortedBasicGroups.length > 0 && React.createElement(
                 'div',
                 { className: 'mb-6' },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Základné skupiny'),
                 React.createElement(
                     'div',
-                    { className: 'flex flex-wrap gap-3 justify-center' },
+                    { 
+                        className: 'flex overflow-x-auto pb-4 -mx-2 px-2',
+                        style: { 
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: '#cbd5e0 #f1f5f9'
+                        }
+                    },
                     sortedBasicGroups.map((group, groupIndex) => {
                         const customStyle = selectedGroupName && teamsWithoutGroupHeight
                             ? { minHeight: `${teamsWithoutGroupHeight}px` }
@@ -1747,27 +1753,40 @@ const renderSingleCategoryView = () => {
                             'div',
                             {
                                 key: `basic-${groupIndex}`,
-                                className: 'flex flex-col rounded-xl shadow-xl p-6 mb-3 flex-shrink-0 bg-gray-100',
-                                style: customStyle
+                                className: 'flex-shrink-0 w-full sm:w-auto mx-2',
+                                style: { minWidth: '300px' } // Minimálna šírka karty
                             },
-                            React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
-                            React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
-                            React.createElement('div', { className: 'mt-2 space-y-1' },
-                                renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                            React.createElement(
+                                'div',
+                                {
+                                    className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100',
+                                    style: customStyle
+                                },
+                                React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
+                                React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
+                                React.createElement('div', { className: 'mt-2 space-y-1' },
+                                    renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                                )
                             )
                         );
                     })
                 )
             ),
             
-            // NADSTAVBOVÉ SKUPINY - DRUHÝ RIADOK
+            // NADSTAVBOVÉ SKUPINY - DRUHÝ RIADOK (s horizontálnym posuvníkom)
             sortedSuperstructureGroups.length > 0 && React.createElement(
                 'div',
                 { className: 'mb-6' },
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Nadstavbové skupiny'),
                 React.createElement(
                     'div',
-                    { className: 'flex flex-wrap gap-3 justify-center' },
+                    { 
+                        className: 'flex overflow-x-auto pb-4 -mx-2 px-2',
+                        style: { 
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: '#cbd5e0 #f1f5f9'
+                        }
+                    },
                     sortedSuperstructureGroups.map((group, groupIndex) => {
                         const customStyle = selectedGroupName && teamsWithoutGroupHeight
                             ? { minHeight: `${teamsWithoutGroupHeight}px` }
@@ -1777,13 +1796,20 @@ const renderSingleCategoryView = () => {
                             'div',
                             {
                                 key: `super-${groupIndex}`,
-                                className: 'flex flex-col rounded-xl shadow-xl p-6 mb-3 flex-shrink-0 bg-blue-100',
-                                style: customStyle
+                                className: 'flex-shrink-0 w-full sm:w-auto mx-2',
+                                style: { minWidth: '300px' } // Minimálna šírka karty
                             },
-                            React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
-                            React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
-                            React.createElement('div', { className: 'mt-2 space-y-1' },
-                                renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                            React.createElement(
+                                'div',
+                                {
+                                    className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100',
+                                    style: customStyle
+                                },
+                                React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
+                                React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
+                                React.createElement('div', { className: 'mt-2 space-y-1' },
+                                    renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                                )
                             )
                         );
                     })
