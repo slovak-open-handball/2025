@@ -720,7 +720,7 @@ function NotificationsApp() {
         onConfirm: confirmDeleteAllNotifications,
         onCancel: () => setShowDeleteAllConfirmationModal(false),
         loading: loading,
-        showCheckbox: hasUnreadNotifications, // Show checkbox only if unread, not-deleted notifications exist
+        showCheckbox: hasUnreadNotifications,
         checkboxLabel: "Odstrániť aj neprečítané upozornenia",
         onCheckboxChange: (e) => setDeleteUnreadToo(e.target.checked),
         checkboxChecked: deleteUnreadToo
@@ -739,7 +739,7 @@ function NotificationsApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Upozornenia'
         ),
-        // NOVÝ PRÍDAVOK: Toggle switch pre notifikácie
+        // Toggle switch pre notifikácie
         React.createElement(
           'div',
           { className: 'flex items-center justify-between mb-6' },
@@ -771,7 +771,7 @@ function NotificationsApp() {
             },
             'Označiť všetky ako prečítané'
           ),
-          hasActiveNotifications && !showRestoreView && React.createElement( // ZMENA: "Vymazať všetky" sa nezobrazí v režime obnovy
+          hasActiveNotifications && !showRestoreView && React.createElement(
             'button',
             {
               onClick: handleDeleteAllNotificationsClick,
@@ -786,11 +786,15 @@ function NotificationsApp() {
                 onClick: handleRestoreButtonAction,
                 className: 'text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                 disabled: loading,
-                style: { backgroundColor: '#47b3ff', hover: { backgroundColor: '#3A9ACD' }}
+                // ZMENA: Podmienená farba podľa textu tlačidla
+                style: { 
+                  backgroundColor: restoreButtonText === 'Zatvoriť obnovu' ? '#ef4444' : '#47b3ff',
+                  hover: { backgroundColor: restoreButtonText === 'Zatvoriť obnovu' ? '#dc2626' : '#3A9ACD' }
+                }
             },
             restoreButtonText
           ),
-          // NOVÉ: Tlačidlo "Označiť všetky / Odznač všetky" pre režim obnovy
+          // Tlačidlo "Označiť všetky / Odznač všetky" pre režim obnovy
           showRestoreView && displayedNotifications.length > 0 && React.createElement(
             'button',
             {
