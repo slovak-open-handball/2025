@@ -2956,33 +2956,30 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
 
                         // ─── FARBY DRESOV ────────────────────────────────────────────────────────
-                        team.jerseyHomeColor || team.jerseyAwayColor ? React.createElement(
+                        React.createElement(
                           'div',
                           { className: 'mt-3 text-md text-gray-700' },
-                        
-                          // Hlavný nadpis
+
                           React.createElement(
                             'p',
-                            { className: 'mb-2' },
+                            { className: 'font-semibold mb-2' },
                             'Farby dresov:'
                           ),
 
-                          // Farba dresov 1
-                          team.jerseyHomeColor && React.createElement(
+                          React.createElement(
                             'p',
                             { className: 'ml-4' },
-                            React.createElement('span', 'Farba dresov 1: '),
-                            team.jerseyHomeColor
+                            React.createElement('span', { className: 'font-medium' }, 'Farba dresov 1: '),
+                            team.jerseyHomeColor?.trim() || '-'
                           ),
-                        
-                          // Farba dresov 2
-                          team.jerseyAwayColor && React.createElement(
+
+                          React.createElement(
                             'p',
                             { className: 'ml-4' },
-                            React.createElement('span', 'Farba dresov 2: '),
-                            team.jerseyAwayColor
+                            React.createElement('span', { className: 'font-medium' }, 'Farba dresov 2: '),
+                            team.jerseyAwayColor?.trim() || '-'
                           )
-                        ) : null,                                          
+                        ),                                        
 
                         team.packageDetails && React.createElement(
                             'div',
