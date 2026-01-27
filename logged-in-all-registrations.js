@@ -2707,7 +2707,7 @@ function AllRegistrationsApp() {
   const [filterColumn, setFilterColumn] = React.useState('');
   const [activeFilters, setActiveFilters] = React.useState({});
   const [uniqueColumnValues, setUniqueColumnValues] = React.useState([]);
-
+    
   const defaultColumnOrder = [
     { id: 'role', label: 'Rola', type: 'string', visible: true },
     { id: 'approved', label: 'Schválený', type: 'boolean', visible: true },
@@ -2744,6 +2744,33 @@ function AllRegistrationsApp() {
 
   const [showUsers, setShowUsers] = React.useState(true);
   const [showTeams, setShowTeams] = React.useState(true);
+
+  const getHashFromState = () => {
+    if (showUsers && showTeams) return '#both';
+    if (showUsers && !showTeams) return '#users';
+    if (!showUsers && showTeams) return '#teams';
+    return '#none';
+  };
+
+  const setStateFromHash = () => {
+      const hash = window.location.hash || '';
+      if (hash === '#users') {
+        setShowUsers(true);
+        setShowTeams(false);
+      } else if (hash === '#teams') {
+        setShowUsers(false);
+        setShowTeams(true);
+      } else if (hash === '#both') {
+        setShowUsers(true);
+        setShowTeams(true);
+      } else if (hash === '#none') {
+        setShowUsers(false);
+        setShowTeams(false);
+      } else {
+        setShowUsers(true);
+        setShowTeams(true);
+      }
+  };
 
   // Stavy pre modálne okno na úpravu
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
@@ -2975,6 +3002,31 @@ const calculateVolunteerTshirtSummary = () => {
         setExpandedRows(newExpandedState);
     }
   };
+
+  React.useEffect(() => {
+      setStateFromHash();
+
+      const handleHashChange = () => {
+        setStateFromHash();
+      };
+
+      window.addEventListener('hashchange', handleHashChange);
+
+      return () => {
+        window.removeEventListener('hashchange', handleHashChange);
+      };
+  }, []);
+
+  React.useEffect(() => {
+      // Ak sa zmení niektorý z checkboxov → aktualizuj hash
+      const newHash = getHashFromState();
+
+      // Len ak sa hash naozaj zmenil → zabránime zbytočným zápisom
+      if (window.location.hash !== newHash) {
+        // Použijeme replace, aby sme nezapisovali do histórie (lepšie UX)
+        window.history.replaceState(null, '', newHash);
+      }
+  }, [showUsers, showTeams]);
 
   React.useEffect(() => {
     const checkGlobalAuthReady = () => {
