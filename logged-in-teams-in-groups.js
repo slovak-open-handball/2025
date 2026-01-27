@@ -1147,15 +1147,11 @@ const NewTeamModal = ({
         ) : null
       ) : null,
       
-      // AK NEMÔŽEME MENIŤ NÁZOV, ZOBRAZÍME LEN INFORMÁCIU
       (!canEditTeamName && teamToEdit) ? React.createElement(
         'div',
         { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
         React.createElement('p', { className: 'text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu:'),
         React.createElement('p', { className: 'text-lg font-bold text-gray-800' }, teamToEdit.teamName),
-        React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' },
-          'Názov používateľského tímu nie je možné meniť.'
-        )
       ) : null,
 
       React.createElement(
