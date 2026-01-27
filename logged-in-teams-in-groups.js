@@ -1765,9 +1765,9 @@ const renderSingleCategoryView = () => {
                                     key: `basic-${groupIndex}`,
                                     className: 'flex-shrink-0 mr-6 last:mr-0',
                                     style: { 
-                                        width: '360px',
-                                        minWidth: '360px',
-                                        maxWidth: '360px'
+                                        width: '380px',
+                                        minWidth: '380px',
+                                        maxWidth: '380px'
                                     }
                                 },
                                 React.createElement(
@@ -1806,9 +1806,9 @@ const renderSingleCategoryView = () => {
                                     key: `super-${groupIndex}`,
                                     className: 'flex-shrink-0 mr-6 last:mr-0',
                                     style: { 
-                                        width: '360px',
-                                        minWidth: '360px',
-                                        maxWidth: '360px'
+                                        width: '380px',
+                                        minWidth: '380px',
+                                        maxWidth: '380px'
                                     }
                                 },
                                 React.createElement(
