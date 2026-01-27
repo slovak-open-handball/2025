@@ -1752,6 +1752,9 @@ const renderSingleCategoryView = () => {
     
     const boxWidth = getBoxWidth();
     
+    // Zistíme, či existujú tímy bez skupiny
+    const hasTeamsWithoutGroup = teamsWithoutGroupForCategory.length > 0;
+    
     return React.createElement(
         'div',
         { 
@@ -1767,7 +1770,7 @@ const renderSingleCategoryView = () => {
         React.createElement(
             'div',
             { 
-                className: 'flex min-w-max px-4 pb-6 zoom-content',
+                className: `flex min-w-max px-4 pb-6 zoom-content ${!hasTeamsWithoutGroup ? 'justify-center' : ''}`,
                 style: { 
                     minWidth: 'min-content',
                     transition: 'all 0.3s ease'
@@ -1775,7 +1778,7 @@ const renderSingleCategoryView = () => {
             },
             
             // ĽAVÝ STĹPEC - Tímy bez skupiny (LEN AK SÚ NEKTORÉ)
-            teamsWithoutGroupForCategory.length > 0 && React.createElement(
+            hasTeamsWithoutGroup && React.createElement(
                 'div',
                 {
                     ref: teamsWithoutGroupRef,
@@ -1797,7 +1800,7 @@ const renderSingleCategoryView = () => {
             React.createElement(
                 'div',
                 { 
-                    className: `flex-grow min-w-0 flex flex-col ${teamsWithoutGroupForCategory.length === 0 ? 'pl-4' : ''}`
+                    className: `flex-grow min-w-0 flex flex-col ${!hasTeamsWithoutGroup ? 'items-center' : ''}`
                 },
                 
                 // ZÁKLADNÉ SKUPINY
@@ -1805,12 +1808,12 @@ const renderSingleCategoryView = () => {
                     React.Fragment,
                     null,
                     React.createElement('h3', { 
-                        className: 'text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap'
+                        className: `text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap ${!hasTeamsWithoutGroup ? 'text-center' : ''}`
                     }, 'Základné skupiny'),
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex mb-8 overflow-x-auto pb-4 zoom-groups-container',
+                            className: `flex mb-8 overflow-x-auto pb-4 zoom-groups-container ${!hasTeamsWithoutGroup ? 'justify-center' : ''}`,
                             style: { 
                                 flexWrap: 'nowrap',
                                 gap: '1.5rem'
@@ -1857,12 +1860,12 @@ const renderSingleCategoryView = () => {
                     React.Fragment,
                     null,
                     React.createElement('h3', { 
-                        className: 'text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap'
+                        className: `text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap ${!hasTeamsWithoutGroup ? 'text-center' : ''}`
                     }, 'Nadstavbové skupiny'),
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex overflow-x-auto pb-4 zoom-groups-container',
+                            className: `flex overflow-x-auto pb-4 zoom-groups-container ${!hasTeamsWithoutGroup ? 'justify-center' : ''}`,
                             style: { 
                                 flexWrap: 'nowrap',
                                 gap: '1.5rem'
