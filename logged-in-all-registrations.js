@@ -2172,9 +2172,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 })
                             )
                         ),
-                        React.createElement('p', {
-                            className: 'mt-2 text-sm text-gray-500'
-                        }, 'Zadajte farby dresov')
                     )
                 );
 
