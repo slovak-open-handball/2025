@@ -2133,6 +2133,51 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     )
                 );
 
+                teamElements.push(
+                    React.createElement(
+                        'div',
+                        { key: 'jerseyColors', className: 'mb-6 border-t border-gray-200 pt-4' },
+                        React.createElement('label', {
+                            className: 'block text-base font-semibold text-gray-800 mb-3'
+                        }, 'Farby dresov'),
+                        React.createElement(
+                            'div',
+                            { className: 'grid grid-cols-1 sm:grid-cols-2 gap-6' },
+                            // Domáce farby
+                            React.createElement(
+                                'div',
+                                null,
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 1'),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                                    value: localEditedData.jerseyHomeColor || '',
+                                    onChange: (e) => handleChange('jerseyHomeColor', e.target.value),
+                                    placeholder: 'Zadajte farbu',
+                                    disabled: !isSavable
+                                })
+                            ),
+                            // Vonku farby
+                            React.createElement(
+                                'div',
+                                null,
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 2'),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                                    value: localEditedData.jerseyAwayColor || '',
+                                    onChange: (e) => handleChange('jerseyAwayColor', e.target.value),
+                                    placeholder: 'Zadajte farbu',
+                                    disabled: !isSavable
+                                })
+                            )
+                        ),
+                        React.createElement('p', {
+                            className: 'mt-2 text-sm text-gray-500'
+                        }, 'Zadajte farby dresov')
+                    )
+                );
+
                 // 6. Tričká
                 if (availableTshirtSizes.length > 0) {
                     const usedSizes = teamTshirts.map(entry => entry.size); // Get all sizes currently selected across all rows
