@@ -323,43 +323,50 @@ const createTeamAssignmentNotification = async (action, team) => {
     let category = team.category || '?';
     let group = team.groupName || 'bez skupiny';
     let teamName = team.teamName || 'Neznámy tím';
-    let orderText = (team.order != null && group !== 'bez skupiny')
-        ? ` (poradie: ${team.order})`
-        : '';
 
-    switch (action) {
-        case 'assign_global':
-            message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'`;
-            break;
-        case 'change_group_global':
-            message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
-            break;
-        case 'assign_user':
-            message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'`;
-            break;
-        case 'change_group_user':
-            message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
-            break;
-        case 'add_new_global':
-            message = `V kategórii ${category} vytvorený nový tím ${teamName} a priradený do skupiny '''${group}'`;
-            break;
-        case 'unassign_global':
-            message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím '''${teamName}'`;
-            break;
-        case 'unassign_user':
-            message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím '''${teamName}'`;
-            break;
-        case 'change_order_global':
-            message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
-            break;
-        case 'change_order_user':
-            message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
-            break;
-        case 'change_team_name':
-            message = `Pre tím ${teamName} zmena: Názov tímu z '${team.oldTeamName}' na '${teamName}'`;
-            break;
-        default:
-            message = `zmena tímu ${teamName} (${action}).`;
+    // UPRAVENÉ: Ak už máme správu v dátach, použijeme ju
+    if (team.message) {
+        message = team.message;
+    } else {
+        // Pôvodná logika pre spätnú kompatibilitu
+        let orderText = (team.order != null && group !== 'bez skupiny')
+            ? ` (poradie: ${team.order})`
+            : '';
+
+        switch (action) {
+            case 'assign_global':
+                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'${team.oldOrder ? ` | Pôvodné poradie: ${team.oldOrder}` : ''}`;
+                break;
+            case 'change_group_global':
+                message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}' | Poradie: z ${team.oldOrder || '?'} na ${team.newOrder || '?'}`;
+                break;
+            case 'assign_user':
+                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'${team.oldOrder ? ` | Pôvodné poradie: ${team.oldOrder}` : ''}`;
+                break;
+            case 'change_group_user':
+                message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}' | Poradie: z ${team.oldOrder || '?'} na ${team.newOrder || '?'}`;
+                break;
+            case 'add_new_global':
+                message = `V kategórii ${category} vytvorený nový tím ${teamName} a priradený do skupiny '''${group}'${team.order ? ` s poradím: ${team.order}` : ''}`;
+                break;
+            case 'unassign_global':
+                message = `Z kategórie ${category} a skupiny ${team.oldGroup || group} bol odstránený tím '''${teamName}'${team.oldOrder ? ` (pôvodné poradie: ${team.oldOrder})` : ''}`;
+                break;
+            case 'unassign_user':
+                message = `Z kategórie ${category} a skupiny ${team.oldGroup || group} bol odstránený tím '''${teamName}'${team.oldOrder ? ` (pôvodné poradie: ${team.oldOrder})` : ''}`;
+                break;
+            case 'change_order_global':
+                message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder || '?'}' na '${team.newOrder || '?'}'`;
+                break;
+            case 'change_order_user':
+                message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder || '?'}' na '${team.newOrder || '?'}'`;
+                break;
+            case 'change_team_name':
+                message = `Pre tím ${teamName} zmena: Názov tímu z '${team.oldTeamName}' na '${teamName}'`;
+                break;
+            default:
+                message = `zmena tímu ${teamName} (${action}).`;
+        }
     }
 
     try {
@@ -372,7 +379,12 @@ const createTeamAssignmentNotification = async (action, team) => {
             relatedTeamId: team.id ?? null,
             relatedCategory: category,
             relatedGroup: group || null,
-            actionType: action
+            actionType: action,
+            // Pridáme dodatočné informácie pre lepšie sledovanie zmien
+            oldGroup: team.oldGroup || null,
+            newGroup: team.groupName || null,
+            oldOrder: team.oldOrder || null,
+            newOrder: team.newOrder || team.order || null
         });
         console.log("[NOTIFIKÁCIA] Uložená:", message);
     } catch (err) {
@@ -543,181 +555,196 @@ const createTeamAssignmentNotification = async (action, team) => {
         setIsConfirming(false);
       }
     };
-    const handleUpdateAnyTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
-        if (!window.db || !originalTeam) return;
-        const categoryName = categoryIdToNameMap[categoryId];
-        if (!categoryName) return;
-   
-        const finalTeamName = originalTeam.isSuperstructureTeam ? teamName.trim() : teamName.trim();  
-        // === Globálny tím (superštruktúra) ===
-        if (originalTeam.isSuperstructureTeam) {
-            const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-   
-            try {
-                const docSnap = await getDoc(superstructureDocRef);
-                if (!docSnap.exists()) return;
-                const data = docSnap.data() || {};
-                const oldCategory = originalTeam.category;
-                let oldTeams = [...(data[oldCategory] || [])];
-                const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
-                if (idx === -1) {
-                    notify("Pôvodný tím sa nenašiel", "error");
-                    return;
-                }
-                oldTeams.splice(idx, 1);
-   
-                const categoryChanged = oldCategory !== categoryName;
-                const groupChanged = originalTeam.groupName !== (groupName || null);
-   
-                let targetTeams = categoryChanged ? [...(data[categoryName] || [])] : oldTeams;
-   
-                let newOrder = null;
-                const newGroup = groupName || null;
-   
-                if (newGroup) {
-                    const inGroup = targetTeams.filter(t => t.groupName === newGroup);
-                    const max = inGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
-                    newOrder = (originalTeam.groupName === newGroup && !categoryChanged && !groupChanged)
-                        ? (originalTeam.order ?? max + 1)
-                        : max + 1;
-   
-                    // Ak prišla nová hodnota order a je platná
-                    if (order != null && !isNaN(order)) {
-                        newOrder = parseInt(order, 10);
-                    }
-                }
-   
-                const updatedTeam = {
-                    id: originalTeam.id,
-                    teamName: teamName.trim(),
-                    groupName: newGroup,
-                    order: newOrder,
-                };
-   
-                targetTeams.push(updatedTeam);
-   
-                const updatePayload = { [oldCategory]: oldTeams };
-                if (categoryChanged) updatePayload[categoryName] = targetTeams;
-                else updatePayload[oldCategory] = targetTeams;
-   
-                await updateDoc(superstructureDocRef, updatePayload);
-   
-                // Detekcia, čo sa zmenilo
-                let action;
-                let notificationData = {
-                    id: originalTeam.id,
-                    teamName: teamName.trim(),
-                    category: categoryName,
-                    groupName: newGroup || null,
-                    oldGroup: originalTeam.groupName || null,
-                    oldOrder: originalTeam.order || null,
-                    oldTeamName: originalTeam.teamName || null
-                };
 
-                if (groupChanged || categoryChanged) {
-                    action = originalTeam.groupName ? 'change_group_global' : 'assign_global';
-                } else if (newOrder !== originalTeam.order && newGroup === originalTeam.groupName) {
-                    // zmena: iba poradia v rovnakej skupine
-                    action = 'change_order_global';
-                    notificationData.oldOrder = originalTeam.order;
-                    notificationData.newOrder = newOrder;
-                } else if (teamName.trim() !== originalTeam.teamName.replace(new RegExp(`^${originalTeam.category} `), '')) {
-                    // zmena: názvu tímu
-                    action = 'change_team_name';
-                    notificationData.oldTeamName = originalTeam.teamName;
-                } else {
-                    action = 'change_group_global'; // fallback
-                }
+  const handleUpdateAnyTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
+    if (!window.db || !originalTeam) return;
+    const categoryName = categoryIdToNameMap[categoryId];
+    if (!categoryName) return;
 
-                await createTeamAssignmentNotification(action, notificationData);
-   
-                notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
-            } catch (err) {
-                console.error("Chyba pri aktualizácii tímu:", err);
-                notify("Nepodarilo sa aktualizovať tím.", "error");
+    const finalTeamName = originalTeam.isSuperstructureTeam ? teamName.trim() : teamName.trim();  
+    // === Globálny tím (superštruktúra) ===
+    if (originalTeam.isSuperstructureTeam) {
+        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+
+        try {
+            const docSnap = await getDoc(superstructureDocRef);
+            if (!docSnap.exists()) return;
+            const data = docSnap.data() || {};
+            const oldCategory = originalTeam.category;
+            let oldTeams = [...(data[oldCategory] || [])];
+            const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
+            if (idx === -1) {
+                notify("Pôvodný tím sa nenašiel", "error");
+                return;
             }
-        }
-   
-        // === Používateľský tím ===
-        else {
-            // ... (tu je podobná logika, len pre používateľa)
-   
-            if (!originalTeam?.uid) return;
-   
-            const userRef = doc(window.db, 'users', originalTeam.uid);
-   
-            try {
-                const userSnap = await getDoc(userRef);
-                if (!userSnap.exists()) {
-                    notify("Používateľ už neexistuje.", "error");
-                    return;
-                }
-   
-                const userData = userSnap.data();
-                const teamsInCategory = [...(userData.teams?.[originalTeam.category] || [])];
-                const teamIndex = teamsInCategory.findIndex(t => t.teamName === originalTeam.teamName);
-                if (teamIndex === -1) {
-                    notify("Tím sa nenašiel v profile používateľa.", "error");
-                    return;
-                }
-   
-                let newOrder = null;
-                const newGroup = groupName || null;
-   
-                if (newGroup) {
-                    const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.teamName !== originalTeam.teamName);
-                    const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
-                    newOrder = order != null ? parseInt(order, 10) : max + 1;
-                }
-   
-                const oldOrder = teamsInCategory[teamIndex].order;
-                const oldGroup = teamsInCategory[teamIndex].groupName;
-   
-                teamsInCategory[teamIndex] = {
-                    ...teamsInCategory[teamIndex],
-                    teamName: teamName.trim(),
-                    groupName: newGroup,
-                    order: newOrder
-                };
-   
-                await updateDoc(userRef, { [`teams.${originalTeam.category}`]: teamsInCategory });
-   
-                let action;
-                let notificationData = {
-                    id: originalTeam.id,
-                    teamName: teamName.trim(),
-                    category: originalTeam.category,
-                    groupName: newGroup || null,
-                    oldGroup: originalTeam.groupName || null,
-                    oldOrder: originalTeam.order || null,
-                    oldTeamName: originalTeam.teamName || null
-                };
+            oldTeams.splice(idx, 1);
 
-                const groupChanged = oldGroup !== newGroup;
+            const categoryChanged = oldCategory !== categoryName;
+            const groupChanged = originalTeam.groupName !== (groupName || null);
 
-                if (groupChanged) {
-                    action = oldGroup ? 'change_group_user' : 'assign_user';
-                } else if (newOrder !== oldOrder && newGroup === oldGroup) {
-                    action = 'change_order_user';
-                    notificationData.oldOrder = oldOrder;
-                    notificationData.newOrder = newOrder;
-                } else if (teamName.trim() !== originalTeam.teamName) {
-                    // zmena: názvu tímu
-                    action = 'change_team_name';
-                    notificationData.oldTeamName = originalTeam.teamName;
-                } else {
-                    action = 'change_group_user'; // fallback
+            let targetTeams = categoryChanged ? [...(data[categoryName] || [])] : oldTeams;
+
+            let newOrder = null;
+            const newGroup = groupName || null;
+
+            // Zistíme maximálne poradie v novej skupine
+            if (newGroup) {
+                const inGroup = targetTeams.filter(t => t.groupName === newGroup);
+                const max = inGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
+                newOrder = (originalTeam.groupName === newGroup && !categoryChanged && !groupChanged)
+                    ? (originalTeam.order ?? max + 1)
+                    : max + 1;
+
+                // Ak prišla nová hodnota order a je platná
+                if (order != null && !isNaN(order)) {
+                    newOrder = parseInt(order, 10);
                 }
-
-                await createTeamAssignmentNotification(action, notificationData);
-   
-                notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
-            } catch (err) {
-                console.error("Chyba pri aktualizácii tímu:", err);
-                notify("Nepodarilo sa aktualizovať tím.", "error");
             }
+
+            const updatedTeam = {
+                id: originalTeam.id,
+                teamName: teamName.trim(),
+                groupName: newGroup,
+                order: newOrder,
+            };
+
+            targetTeams.push(updatedTeam);
+
+            const updatePayload = { [oldCategory]: oldTeams };
+            if (categoryChanged) updatePayload[categoryName] = targetTeams;
+            else updatePayload[oldCategory] = targetTeams;
+
+            await updateDoc(superstructureDocRef, updatePayload);
+
+            // Detekcia, čo sa zmenilo
+            let action;
+            let notificationData = {
+                id: originalTeam.id,
+                teamName: teamName.trim(),
+                category: categoryName,
+                groupName: newGroup || null,
+                oldGroup: originalTeam.groupName || null,
+                oldOrder: originalTeam.order || null, // Pôvodné poradie
+                newOrder: newOrder, // Nové poradie
+                oldTeamName: originalTeam.teamName || null
+            };
+
+            if (groupChanged || categoryChanged) {
+                action = originalTeam.groupName ? 'change_group_global' : 'assign_global';
+                
+                // UPRAVENÉ: Pridáme informácie o pôvodnom a novom poradí
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Skupina z '${originalTeam.groupName || 'bez skupiny'} (poradie: ${originalTeam.order || '-'})' na '${newGroup || 'bez skupiny'}  (poradie: ${newOrder || '-'})'`;
+            } else if (newOrder !== originalTeam.order && newGroup === originalTeam.groupName) {
+                // zmena: iba poradia v rovnakej skupine
+                action = 'change_order_global';
+                notificationData.oldOrder = originalTeam.order;
+                notificationData.newOrder = newOrder;
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Poradie z '${originalTeam.order || '?'}' na '${newOrder || '?'}'`;
+            } else if (teamName.trim() !== originalTeam.teamName.replace(new RegExp(`^${originalTeam.category} `), '')) {
+                // zmena: názvu tímu
+                action = 'change_team_name';
+                notificationData.oldTeamName = originalTeam.teamName;
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Názov tímu z '${originalTeam.teamName}' na '${teamName.trim()}'`;
+            } else {
+                action = 'change_group_global'; // fallback
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Skupina z '${originalTeam.groupName || 'bez skupiny'}' na '${newGroup || 'bez skupiny'}'`;
+            }
+
+            await createTeamAssignmentNotification(action, notificationData);
+
+            notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
+        } catch (err) {
+            console.error("Chyba pri aktualizácii tímu:", err);
+            notify("Nepodarilo sa aktualizovať tím.", "error");
         }
-    };
+    }
+
+    // === Používateľský tím ===
+    else {
+        if (!originalTeam?.uid) return;
+
+        const userRef = doc(window.db, 'users', originalTeam.uid);
+
+        try {
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) {
+                notify("Používateľ už neexistuje.", "error");
+                return;
+            }
+
+            const userData = userSnap.data();
+            const teamsInCategory = [...(userData.teams?.[originalTeam.category] || [])];
+            const teamIndex = teamsInCategory.findIndex(t => t.teamName === originalTeam.teamName);
+            if (teamIndex === -1) {
+                notify("Tím sa nenašiel v profile používateľa (podľa názvu).", "error");
+                return;
+            }
+
+            const oldGroup = teamsInCategory[teamIndex].groupName;
+            const oldOrder = teamsInCategory[teamIndex].order;
+            
+            let newOrder = null;
+            const newGroup = groupName || null;
+
+            if (groupName) {
+                const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.teamName !== originalTeam.teamName);
+                const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
+                newOrder = order != null ? parseInt(order, 10) : max + 1;
+            }
+
+            teamsInCategory[teamIndex] = {
+                ...teamsInCategory[teamIndex],
+                teamName: teamName.trim(),
+                groupName: newGroup,
+                order: newOrder
+            };
+
+            await updateDoc(userRef, { [`teams.${originalTeam.category}`]: teamsInCategory });
+
+            // Detekcia typu zmeny
+            let action;
+            let notificationData = {
+                id: originalTeam.id,
+                teamName: teamName.trim(),
+                category: originalTeam.category,
+                groupName: newGroup || null,
+                oldGroup: oldGroup || null,
+                oldOrder: oldOrder || null, // Pôvodné poradie
+                newOrder: newOrder, // Nové poradie
+                oldTeamName: originalTeam.teamName || null
+            };
+
+            const groupChanged = oldGroup !== newGroup;
+
+            if (groupChanged) {
+                action = oldGroup ? 'change_group_user' : 'assign_user';
+                // UPRAVENÉ: Pridáme informácie o pôvodnom a novom poradí
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Skupina z '${oldGroup || 'bez skupiny'}' na '${newGroup || 'bez skupiny'}' | Poradie: z ${oldOrder || '?'} na ${newOrder || '?'}`;
+            } else if (newOrder !== oldOrder && newGroup === oldGroup) {
+                action = 'change_order_user';
+                notificationData.oldOrder = oldOrder;
+                notificationData.newOrder = newOrder;
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Poradie z '${oldOrder || '?'}' na '${newOrder || '?'}'`;
+            } else if (teamName.trim() !== originalTeam.teamName) {
+                // zmena: názvu tímu
+                action = 'change_team_name';
+                notificationData.oldTeamName = originalTeam.teamName;
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Názov tímu z '${originalTeam.teamName}' na '${teamName.trim()}'`;
+            } else {
+                action = 'change_group_user'; // fallback
+                notificationData.message = `Pre tím ${teamName.trim()} zmena: Skupina z '${oldGroup || 'bez skupiny'}' na '${newGroup || 'bez skupiny'}'`;
+            }
+
+            await createTeamAssignmentNotification(action, notificationData);
+
+            notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
+        } catch (err) {
+            console.error("Chyba pri aktualizácii tímu:", err);
+            notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
+        }
+    }
+};
+  
     const handleAddNewTeam = async ({ categoryId, groupName, teamName, order }) => {
       if (!window.db) {
         notify("Firestore nie je inicializovaný.", "error");
