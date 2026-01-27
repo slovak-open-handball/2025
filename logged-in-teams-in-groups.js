@@ -1100,7 +1100,6 @@ const NewTeamModal = ({
         modalTitle
       ),
       
-      {/* Pole pre názov tímu - ZOBRAZÍ SA LEN AK MÔŽEME MENIŤ NÁZOV */}
       canEditTeamName && React.createElement(
         'div',
         { className: 'mb-6' },
@@ -1119,7 +1118,6 @@ const NewTeamModal = ({
           disabled: !canEditTeamName // Vypnuté, ak nemôžeme meniť
         }),
         
-        {/* NÁHĽAD - ZOBRAZÍ SA LEN PRE SUPERSTRUCTURE TÍMY A NOVÉ TÍMY */}
         {shouldShowPreview && finalTeamNamePreview && React.createElement(
           'div',
           { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
@@ -1147,7 +1145,6 @@ const NewTeamModal = ({
         )}
       ),
       
-      {/* AK NEMÔŽEME MENIŤ NÁZOV, ZOBRAZÍME LEN INFORMÁCIU */}
       {!canEditTeamName && teamToEdit && React.createElement(
         'div',
         { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
