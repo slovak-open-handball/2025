@@ -1968,6 +1968,7 @@ const renderSingleCategoryView = () => {
         },
         '+'
     );
+    // Pôvodný kód pred return v komponente AddGroupsApp:
     return React.createElement(
         'div',
         { className: 'flex flex-col w-full relative text-[87.5%]' },
@@ -2043,13 +2044,16 @@ const renderSingleCategoryView = () => {
             : React.createElement(
                 'div',
                 { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
-                React.createElement(
+                // Zobrazujeme ľavý obdĺžnik LEN AK EXISTUJÚ TÍMY BEZ SKUPINY
+                teamsWithoutGroup.length > 0 && React.createElement(
                     'div',
                     { className: 'w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0' },
                     React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
                     renderTeamList(teamsWithoutGroup, null, null, true)
                 ),
-                React.createElement('div', { className: 'flex-grow min-w-0' }, renderGroupedCategories())
+                React.createElement('div', { 
+                    className: `flex-grow min-w-0 ${teamsWithoutGroup.length === 0 ? 'w-full' : ''}` 
+                }, renderGroupedCategories())
             ),
         fabButton
     );
