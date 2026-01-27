@@ -1712,7 +1712,7 @@ const renderSingleCategoryView = () => {
     
     return React.createElement(
         'div',
-        { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-3 w-full px-4' },
+        { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-3 w-full px-4 min-h-0' },
         
         // ĽAVÝ STĹPEC - Tímy bez skupiny
         React.createElement(
@@ -1725,25 +1725,25 @@ const renderSingleCategoryView = () => {
             renderTeamList(teamsWithoutGroup, null, selectedCategoryId, true)
         ),
         
-        // PRAVÁ ČASŤ - Skupiny (základné + nadstavbové)
+        // PRAVÁ ČASŤ - Skupiny (základné + nadstavbové) - JEDEN POSUVNÍK
         React.createElement(
             'div',
-            { className: 'flex-grow min-w-0 flex flex-col' },
+            { 
+                className: 'flex-grow min-w-0 flex flex-col overflow-x-auto',
+                style: { 
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#cbd5e0 #f1f5f9'
+                }
+            },
             
-            // ZÁKLADNÉ SKUPINY - PRVÝ RIADOK (s horizontálnym posuvníkom)
+            // ZÁKLADNÉ SKUPINY
             sortedBasicGroups.length > 0 && React.createElement(
-                'div',
-                { className: 'mb-6' },
+                React.Fragment,
+                null,
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Základné skupiny'),
                 React.createElement(
                     'div',
-                    { 
-                        className: 'flex overflow-x-auto pb-4 -mx-2 px-2',
-                        style: { 
-                            scrollbarWidth: 'thin',
-                            scrollbarColor: '#cbd5e0 #f1f5f9'
-                        }
-                    },
+                    { className: 'flex flex-wrap gap-4 pb-4 mb-6' },
                     sortedBasicGroups.map((group, groupIndex) => {
                         const customStyle = selectedGroupName && teamsWithoutGroupHeight
                             ? { minHeight: `${teamsWithoutGroupHeight}px` }
@@ -1753,8 +1753,8 @@ const renderSingleCategoryView = () => {
                             'div',
                             {
                                 key: `basic-${groupIndex}`,
-                                className: 'flex-shrink-0 w-full sm:w-auto mx-2',
-                                style: { minWidth: '300px' } // Minimálna šírka karty
+                                className: 'flex-shrink-0',
+                                style: { minWidth: '300px', maxWidth: '350px' }
                             },
                             React.createElement(
                                 'div',
@@ -1773,20 +1773,14 @@ const renderSingleCategoryView = () => {
                 )
             ),
             
-            // NADSTAVBOVÉ SKUPINY - DRUHÝ RIADOK (s horizontálnym posuvníkom)
+            // NADSTAVBOVÉ SKUPINY
             sortedSuperstructureGroups.length > 0 && React.createElement(
-                'div',
-                { className: 'mb-6' },
+                React.Fragment,
+                null,
                 React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Nadstavbové skupiny'),
                 React.createElement(
                     'div',
-                    { 
-                        className: 'flex overflow-x-auto pb-4 -mx-2 px-2',
-                        style: { 
-                            scrollbarWidth: 'thin',
-                            scrollbarColor: '#cbd5e0 #f1f5f9'
-                        }
-                    },
+                    { className: 'flex flex-wrap gap-4 pb-4' },
                     sortedSuperstructureGroups.map((group, groupIndex) => {
                         const customStyle = selectedGroupName && teamsWithoutGroupHeight
                             ? { minHeight: `${teamsWithoutGroupHeight}px` }
@@ -1796,8 +1790,8 @@ const renderSingleCategoryView = () => {
                             'div',
                             {
                                 key: `super-${groupIndex}`,
-                                className: 'flex-shrink-0 w-full sm:w-auto mx-2',
-                                style: { minWidth: '300px' } // Minimálna šírka karty
+                                className: 'flex-shrink-0',
+                                style: { minWidth: '300px', maxWidth: '350px' }
                             },
                             React.createElement(
                                 'div',
@@ -1819,7 +1813,7 @@ const renderSingleCategoryView = () => {
             // AK NIE SÚ ŽIADNE SKUPINY
             sortedBasicGroups.length === 0 && sortedSuperstructureGroups.length === 0 && React.createElement(
                 'p',
-                { className: 'text-center text-gray-500' },
+                { className: 'text-center text-gray-500 py-8' },
                 'Žiadne skupiny v tejto kategórii.'
             )
         )
