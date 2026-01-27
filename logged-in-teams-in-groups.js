@@ -1055,23 +1055,24 @@ const NewTeamModal = ({
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isSubmitDisabled) return;
+      e.preventDefault();
+      if (isSubmitDisabled) return;
     
-    const teamNameToSave = teamToEdit?.isSuperstructureTeam
-        ? (showCategoryPrefix 
-            ? `${teamToEdit.category} ${teamName.trim()}` 
-            : teamName.trim())
-        : teamName.trim();
+      // Použi prop showCategoryPrefix namiesto neexistujúcej premennej
+      const teamNameToSave = teamToEdit?.isSuperstructureTeam
+          ? (showCategoryPrefix 
+              ? `${teamToEdit.category} ${teamName.trim()}` 
+              : teamName.trim())
+          : teamName.trim();
 
-    unifiedSaveHandler({
-      categoryId: selectedCategory,
-      groupName: selectedGroup || null,
-      teamName: teamNameToSave,
-      order: orderInputValue,
-      isEdit: !!teamToEdit,
-      originalTeam: teamToEdit
-    });
+      unifiedSaveHandler({
+          categoryId: selectedCategory,
+          groupName: selectedGroup || null,
+          teamName: teamNameToSave,
+          order: orderInputValue,
+          isEdit: !!teamToEdit,
+          originalTeam: teamToEdit
+      });
   };
 
   const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
@@ -1995,7 +1996,8 @@ const renderSingleCategoryView = () => {
             allGroupsByCategoryId,
             defaultCategoryId: selectedCategoryId,
             defaultGroupName: selectedGroupName,
-            unifiedSaveHandler
+            unifiedSaveHandler,
+            showCategoryPrefix: showCategoryPrefix
         }),
         React.createElement(ConfirmDeleteModal, {
           isOpen: !!confirmModal?.open,
