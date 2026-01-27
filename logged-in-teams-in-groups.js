@@ -339,13 +339,13 @@ const createTeamAssignmentNotification = async (action, team) => {
             message = `Pre tím ${teamName} zmena Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
             break;
         case 'add_new_global':
-            message = `V kategórii ${category} vytvorený nový tím ${teamName} a priradený do skupiny '${group}'`;
+            message = `V kategórii ${category} vytvorený nový tím ${teamName} a priradený do skupiny '''${group}'`;
             break;
         case 'unassign_global':
-            message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím ${teamName}`;
+            message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím '''${teamName}'`;
             break;
         case 'unassign_user':
-            message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím ${teamName}`;
+            message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím '''${teamName}'`;
             break;
         case 'change_order_global':
             message = `Pre tím ${teamName} zmena Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
