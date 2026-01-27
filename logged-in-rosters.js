@@ -2963,7 +2963,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                           // Hlavný nadpis
                           React.createElement(
                             'p',
-                            { className: 'font-semibold mb-2' },
+                            { className: 'mb-2' },
                             'Farby dresov:'
                           ),
 
@@ -2971,7 +2971,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                           team.jerseyHomeColor && React.createElement(
                             'p',
                             { className: 'ml-4' },
-                            React.createElement('span', { className: 'font-medium' }, 'Farba dresov 1: '),
+                            React.createElement('span', 'Farba dresov 1: '),
                             team.jerseyHomeColor
                           ),
                         
@@ -2979,7 +2979,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                           team.jerseyAwayColor && React.createElement(
                             'p',
                             { className: 'ml-4' },
-                            React.createElement('span', { className: 'font-medium' }, 'Farba dresov 2: '),
+                            React.createElement('span', 'Farba dresov 2: '),
                             team.jerseyAwayColor
                           )
                         ) : null,                                          
