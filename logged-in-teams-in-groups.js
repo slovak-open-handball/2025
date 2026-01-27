@@ -338,22 +338,22 @@ const createTeamAssignmentNotification = async (action, team) => {
                 message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'${team.oldOrder ? ` | Pôvodné poradie: ${team.oldOrder}` : ''}`;
                 break;
             case 'change_group_global':
-                message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}' | Poradie: z ${team.oldOrder || '?'} na ${team.newOrder || '?'}`;
+                message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
                 break;
             case 'assign_user':
-                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group}'${team.oldOrder ? ` | Pôvodné poradie: ${team.oldOrder}` : ''}`;
+                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder}'`;
                 break;
             case 'change_group_user':
-                message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}' | Poradie: z ${team.oldOrder || '?'} na ${team.newOrder || '?'}`;
+                message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
                 break;
             case 'add_new_global':
                 message = `V kategórii ${category} vytvorený nový tím ${teamName} a priradený do skupiny '''${group}'${team.order ? ` s poradím: ${team.order}` : ''}`;
                 break;
             case 'unassign_global':
-                message = `Z kategórie ${category} a skupiny ${team.oldGroup || group} bol odstránený tím '''${teamName}'${team.oldOrder ? ` (pôvodné poradie: ${team.oldOrder})` : ''}`;
+                message = `Z kategórie ${category} a skupiny ${team.oldGroup || group} (poradie: ${team.oldOrder}) bol odstránený tím '''${teamName}'`;
                 break;
             case 'unassign_user':
-                message = `Z kategórie ${category} a skupiny ${team.oldGroup || group} bol odstránený tím '''${teamName}'${team.oldOrder ? ` (pôvodné poradie: ${team.oldOrder})` : ''}`;
+                message = `Z kategórie ${category} a skupiny ${team.oldGroup || group} (poradie: ${team.oldOrder}) bol odstránený tím '''${teamName}'`;
                 break;
             case 'change_order_global':
                 message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder || '?'}' na '${team.newOrder || '?'}'`;
