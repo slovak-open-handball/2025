@@ -940,19 +940,30 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
         }
   }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap]);
         useEffect(() => {
-            if (!isOpen) return;
-            const name = teamName.trim();
-            const categoryName = categoryIdToNameMap[selectedCategory] || '';
-            if (name && selectedCategory && categoryName) {
-                const finalName = `${categoryName} ${name}`;
-                const duplicate = allTeams.some(team =>
-                    team.teamName === finalName && (!teamToEdit || team.teamName !== originalTeamName)
-                );
-                setIsDuplicate(duplicate);
-            } else {
-                setIsDuplicate(false);
-            }
-        }, [teamName, selectedCategory, allTeams, isOpen, categoryIdToNameMap, teamToEdit, originalTeamName]);
+          if (!isOpen) return;
+
+          const trimmedName = teamName.trim();
+          if (!trimmedName || !selectedCategory) {
+              setIsDuplicate(false);
+              return;
+          }
+
+          const categoryName = categoryIdToNameMap[selectedCategory];
+          if (!categoryName) {
+              setIsDuplicate(false);
+              return;
+          }
+
+          // Kontrola duplicity podľa čistého mena + kategória
+          const isDuplicate = allTeams.some(team => 
+              team.category === categoryName &&
+              team.teamName.trim() === trimmedName &&
+              (!teamToEdit || team.teamName.trim() !== originalTeamName.trim())
+          );
+
+          setIsDuplicate(isDuplicate);
+      }, [teamName, selectedCategory, allTeams, categoryIdToNameMap, teamToEdit, originalTeamName]);
+      
         const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
             .sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB));
           const availableGroups = selectedCategory && allGroupsByCategoryId[selectedCategory]
