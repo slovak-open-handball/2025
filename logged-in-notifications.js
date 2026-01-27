@@ -784,13 +784,12 @@ function NotificationsApp() {
             'button',
             {
                 onClick: handleRestoreButtonAction,
-                className: 'text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+                className: `text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 ${
+                    restoreButtonText === 'Zatvoriť obnovu' 
+                    ? 'bg-red-500 hover:bg-red-600' 
+                    : 'bg-[#47b3ff] hover:bg-[#3A9ACD]'
+                }`,
                 disabled: loading,
-                // ZMENA: Podmienená farba podľa textu tlačidla
-                style: { 
-                  backgroundColor: restoreButtonText === 'Zatvoriť obnovu' ? '#ef4444' : '#47b3ff',
-                  hover: { backgroundColor: restoreButtonText === 'Zatvoriť obnovu' ? '#dc2626' : '#3A9ACD' }
-                }
             },
             restoreButtonText
           ),
