@@ -1810,7 +1810,7 @@ const renderSingleCategoryView = () => {
                         transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
                     }
                 },
-                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap truncate' }, 
+                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center truncate' }, 
                     `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`
                 ),
                 renderTeamList(teamsWithoutGroupForCategory, null, selectedCategoryId, true)
