@@ -310,71 +310,74 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
         notify("Nepodarilo sa odstrániť voľné miesto v poradí.", "error");
     }
 };
-    const createTeamAssignmentNotification = async (action, team) => {
-        if (!window.db) return;
-        if (!currentUserEmail) {
-            console.warn("Nie je dostupný e-mail prihláseného používateľa → notifikácia nebude mať userEmail");
-        }
-   
-        let message = '';
-        let category = team.category || '?';
-        let group = team.groupName || 'bez skupiny';
-        let teamName = team.teamName || 'Neznámy tím';
-        let orderText = (team.order != null && group !== 'bez skupiny')
-            ? ` (poradie: ${team.order})`
-            : '';
-   
-        switch (action) {
-            case 'assign_global':
-                message = `Tím ${teamName} priradený do skupiny ${group} (${category})${orderText}.`;
-                break;
-            case 'change_group_global':
-                message = `Zmena skupiny tímu ${teamName} → ${group} (${category})${orderText}.`;
-                break;
-            case 'assign_user':
-                message = `Tím ${teamName} zaradený do skupiny ${group} (${category})${orderText}.`;
-                break;
-            case 'change_group_user':
-                message = `Zmena skupiny tímu ${teamName} → ${group} (${category})${orderText}.`;
-                break;
-            case 'add_new_global':
-                message = `Nový tím ${teamName} vytvorený a zaradený do ${group} (${category})${orderText}.`;
-                break;
-   
-            // ostatné akcie bez zmeny (nemajú poradie)
-            case 'unassign_global':
-                message = `Tím ${teamName} odstránený zo skupiny (${category}).`;
-                break;
-            case 'unassign_user':
-                message = `Tím ${teamName} presunutý medzi tímy bez skupiny (${category}).`;
-                break;
-            case 'change_order_global':
-                message = `Poradie tímu ${teamName} v skupine ${group} (${category}) zmenené z '${team.oldOrder}' na '${team.newOrder}'.`;
-                break;
-            case 'change_order_user':
-                message = `Poradie tímu ${teamName} v skupine ${group} (${category}) zmenené z '${team.oldOrder}' na '${team.newOrder}'.`;
-                break;
-            default:
-                message = `Zmena tímu ${teamName} (${action}).`;
-        }
-   
-        try {
-            const notificationsRef = collection(window.db, 'notifications');
-            await addDoc(notificationsRef, {
-                userEmail: currentUserEmail || "",
-                performedBy: currentUserEmail || null,
-                changes: [message],
-                timestamp: serverTimestamp(),
-                relatedTeamId: team.id ?? null,
-                relatedCategory: category,
-                relatedGroup: group || null,
-                actionType: action
-            });
-            console.log("[NOTIFIKÁCIA] Uložená:", message);
-        } catch (err) {
-            console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
-        }
-    };
+  
+const createTeamAssignmentNotification = async (action, team) => {
+    if (!window.db) return;
+    if (!currentUserEmail) {
+        console.warn("Nie je dostupný e-mail prihláseného používateľa → notifikácia nebude mať userEmail");
+    }
+
+    let message = '';
+    let category = team.category || '?';
+    let group = team.groupName || 'bez skupiny';
+    let teamName = team.teamName || 'Neznámy tím';
+    let orderText = (team.order != null && group !== 'bez skupiny')
+        ? ` (poradie: ${team.order})`
+        : '';
+
+    switch (action) {
+        case 'assign_global':
+            message = `Pre tím ${teamName} zmena Skupina z 'bez skupiny' na '${group}'`;
+            break;
+        case 'change_group_global':
+            message = `Pre tím ${teamName} zmena Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
+            break;
+        case 'assign_user':
+            message = `Pre tím ${teamName} zmena Skupina z 'bez skupiny' na '${group}'`;
+            break;
+        case 'change_group_user':
+            message = `Pre tím ${teamName} zmena Skupina z '${team.oldGroup || 'bez skupiny'}' na '${group}'`;
+            break;
+        case 'add_new_global':
+            message = `V kategórii ${category} vytvorený nový tím ${teamName} a priradený do skupiny '${group}'`;
+            break;
+        case 'unassign_global':
+            message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím ${teamName}`;
+            break;
+        case 'unassign_user':
+            message = `Z kategórie ${category} a skupiny ${group} bol odstránený tím ${teamName}`;
+            break;
+        case 'change_order_global':
+            message = `Pre tím ${teamName} zmena Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
+            break;
+        case 'change_order_user':
+            message = `Pre tím ${teamName} zmena Poradie z '${team.oldOrder}' na '${team.newOrder}'`;
+            break;
+        case 'change_team_name':
+            message = `Pre tím ${teamName} zmena Názov tímu z '${team.oldTeamName}' na '${teamName}'`;
+            break;
+        default:
+            message = `Zmena tímu ${teamName} (${action}).`;
+    }
+
+    try {
+        const notificationsRef = collection(window.db, 'notifications');
+        await addDoc(notificationsRef, {
+            userEmail: currentUserEmail || "",
+            performedBy: currentUserEmail || null,
+            changes: [message],
+            timestamp: serverTimestamp(),
+            relatedTeamId: team.id ?? null,
+            relatedCategory: category,
+            relatedGroup: group || null,
+            actionType: action
+        });
+        console.log("[NOTIFIKÁCIA] Uložená:", message);
+    } catch (err) {
+        console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
+    }
+};
+
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
         let timer;
@@ -573,9 +576,12 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
                     id: originalTeam.id,
                     teamName: teamName.trim(),
                     category: categoryName,
-                    groupName: newGroup || null
+                    groupName: newGroup || null,
+                    oldGroup: originalTeam.groupName || null,
+                    oldOrder: originalTeam.order || null,
+                    oldTeamName: originalTeam.teamName || null
                 };
-   
+
                 if (groupChanged || categoryChanged) {
                     action = originalTeam.groupName ? 'change_group_global' : 'assign_global';
                 } else if (newOrder !== originalTeam.order && newGroup === originalTeam.groupName) {
@@ -583,10 +589,14 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
                     action = 'change_order_global';
                     notificationData.oldOrder = originalTeam.order;
                     notificationData.newOrder = newOrder;
+                } else if (teamName.trim() !== originalTeam.teamName.replace(new RegExp(`^${originalTeam.category} `), '')) {
+                    // Zmena názvu tímu
+                    action = 'change_team_name';
+                    notificationData.oldTeamName = originalTeam.teamName;
                 } else {
                     action = 'change_group_global'; // fallback
                 }
-   
+
                 await createTeamAssignmentNotification(action, notificationData);
    
                 notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
@@ -645,21 +655,28 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
                     id: originalTeam.id,
                     teamName: teamName.trim(),
                     category: originalTeam.category,
-                    groupName: newGroup || null
+                    groupName: newGroup || null,
+                    oldGroup: originalTeam.groupName || null,
+                    oldOrder: originalTeam.order || null,
+                    oldTeamName: originalTeam.teamName || null
                 };
-   
+
                 const groupChanged = oldGroup !== newGroup;
-   
+
                 if (groupChanged) {
                     action = oldGroup ? 'change_group_user' : 'assign_user';
                 } else if (newOrder !== oldOrder && newGroup === oldGroup) {
                     action = 'change_order_user';
                     notificationData.oldOrder = oldOrder;
                     notificationData.newOrder = newOrder;
+                } else if (teamName.trim() !== originalTeam.teamName) {
+                    // Zmena názvu tímu
+                    action = 'change_team_name';
+                    notificationData.oldTeamName = originalTeam.teamName;
                 } else {
                     action = 'change_group_user'; // fallback
                 }
-   
+
                 await createTeamAssignmentNotification(action, notificationData);
    
                 notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
