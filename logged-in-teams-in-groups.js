@@ -555,7 +555,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
    
                 const updatedTeam = {
                     id: originalTeam.id,
-                    teamName: finalTeamName,
+                    teamName: teamName.trim(),
                     groupName: newGroup,
                     order: newOrder,
                 };
@@ -572,7 +572,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
                 let action;
                 let notificationData = {
                     id: originalTeam.id,
-                    teamName: finalTeamName,
+                    teamName: teamName.trim(),
                     category: categoryName,
                     groupName: newGroup || null
                 };
@@ -634,7 +634,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
    
                 teamsInCategory[teamIndex] = {
                     ...teamsInCategory[teamIndex],
-                    teamName: finalTeamName,
+                    teamName: teamName.trim(),
                     groupName: newGroup,
                     order: newOrder
                 };
@@ -644,7 +644,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
                 let action;
                 let notificationData = {
                     id: originalTeam.id,
-                    teamName: finalTeamName,
+                    teamName: teamName.trim(),
                     category: originalTeam.category,
                     groupName: newGroup || null
                 };
@@ -694,7 +694,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             });
             const newOrder = order != null ? parseInt(order, 10) : (groupName ? maxOrder + 1 : null);
             const newTeam = {
-                teamName: finalTeamName,
+                teamName: teamName.trim(),
                 groupName: groupName || null,
                 order: newOrder,
                 id: crypto.randomUUID()
@@ -706,7 +706,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             }, { merge: true });
             await createTeamAssignmentNotification('add_new_global', {
                 id: newTeam.id,
-                teamName: finalTeamName,
+                teamName: teamName.trim(),
                 category: categoryName,
                 groupName: groupName || null,
                 order: newOrder
@@ -755,7 +755,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
    
             teamsInCategory[teamIndex] = {
                 ...teamsInCategory[teamIndex],
-                teamName: finalTeamName,
+                teamName: teamName.trim(),
                 groupName: groupName || null,
                 order: newOrder
             };
@@ -764,7 +764,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
             await createTeamAssignmentNotification(action, {
                 id: originalTeam.id,
-                teamName: finalTeamName,
+                teamName: teamName.trim(),
                 category: categoryName,
                 groupName: groupName || null
             });
