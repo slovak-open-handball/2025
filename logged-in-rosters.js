@@ -1262,7 +1262,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                     React.createElement(
                       'div',
                       null,
-                      React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 1)'),
+                      React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 1'),
                       React.createElement('input', {
                         type: 'text',
                         className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
