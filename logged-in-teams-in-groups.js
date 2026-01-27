@@ -178,7 +178,8 @@ const AddGroupsApp = (props) => {
     const [confirmModal, setConfirmModal] = useState(null);
     const currentUserEmail = window.globalUserProfileData?.email || null;
     const [deleteGapModal, setDeleteGapModal] = useState(null);
-const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
+  
+    const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
     const trimmedGroup = (groupName || "").trim();
     try {
@@ -377,6 +378,30 @@ const createTeamAssignmentNotification = async (action, team) => {
         console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
     }
 };
+
+      useEffect(() => {
+        const handleResize = () => {
+            // Táto funkcia spustí re-render, čo aktualizuje boxWidth
+            setAllTeams(prev => [...prev]); // Trigger re-render
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+    
+    // ===================================================================
+    // LISTENER PRE ZOOM ZMENY
+    // ===================================================================
+    useEffect(() => {
+        const handleZoomChange = (event) => {
+            // Trigger re-render s novými rozmermi
+            setAllTeams(prev => [...prev]);
+        };
+        
+        window.addEventListener('zoomchange', handleZoomChange);
+        return () => window.removeEventListener('zoomchange', handleZoomChange);
+    }, []);
+  
 
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
@@ -1713,10 +1738,24 @@ const renderSingleCategoryView = () => {
         ? allTeams.filter(t => t.category === categoryName && !t.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
         : [];
     
+    // Dynamická šírka boxov podľa zoom levelu
+    const getBoxWidth = () => {
+        if (typeof window !== 'undefined') {
+            const width = window.innerWidth;
+            if (width < 768) return '95vw'; // Mobilné zariadenia
+            if (width < 1024) return '45vw'; // Tablety
+            if (width < 1280) return '35vw'; // Menšie monitory
+            return '380px'; // Štandardná šírka
+        }
+        return '380px';
+    };
+    
+    const boxWidth = getBoxWidth();
+    
     return React.createElement(
         'div',
         { 
-            className: 'w-full min-w-0',
+            className: 'w-full min-w-0 overflow-x-auto zoom-responsive',
             style: { 
                 overflowX: 'auto',
                 scrollbarWidth: 'thin',
@@ -1724,13 +1763,14 @@ const renderSingleCategoryView = () => {
             }
         },
         
-        // CELÝ OBSAH V JEDNOM FLEX KONTAJNERI - horizontálne posúvanie
+        // HLAVNÝ KONTAJNER S DYNAMICKOU ŠÍRKOU
         React.createElement(
             'div',
             { 
-                className: 'flex min-w-max px-4 pb-6',
+                className: 'flex min-w-max px-4 pb-6 zoom-content',
                 style: { 
-                    minWidth: 'min-content'
+                    minWidth: 'min-content',
+                    transition: 'all 0.3s ease'
                 }
             },
             
@@ -1739,9 +1779,17 @@ const renderSingleCategoryView = () => {
                 'div',
                 {
                     ref: teamsWithoutGroupRef,
-                    className: "w-80 min-w-80 bg-white rounded-xl shadow-xl p-6 mr-8 flex-shrink-0"
+                    className: "bg-white rounded-xl shadow-xl p-6 mr-8 flex-shrink-0 zoom-box",
+                    style: { 
+                        width: boxWidth,
+                        minWidth: boxWidth,
+                        maxWidth: boxWidth,
+                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
+                    }
                 },
-                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`),
+                React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap truncate' }, 
+                    `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`
+                ),
                 renderTeamList(teamsWithoutGroupForCategory, null, selectedCategoryId, true)
             ),
             
@@ -1752,17 +1800,20 @@ const renderSingleCategoryView = () => {
                     className: `flex-grow min-w-0 flex flex-col ${teamsWithoutGroupForCategory.length === 0 ? 'pl-4' : ''}`
                 },
                 
-                // ZÁKLADNÉ SKUPINY - NIE sú zalamované
+                // ZÁKLADNÉ SKUPINY
                 sortedBasicGroups.length > 0 && React.createElement(
                     React.Fragment,
                     null,
-                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Základné skupiny'),
+                    React.createElement('h3', { 
+                        className: 'text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap'
+                    }, 'Základné skupiny'),
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex mb-8',
+                            className: 'flex mb-8 overflow-x-auto pb-4 zoom-groups-container',
                             style: { 
-                                flexWrap: 'nowrap', // ZABRÁNI zalamovaniu
+                                flexWrap: 'nowrap',
+                                gap: '1.5rem'
                             }
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
@@ -1770,11 +1821,12 @@ const renderSingleCategoryView = () => {
                                 'div',
                                 {
                                     key: `basic-${groupIndex}`,
-                                    className: 'flex-shrink-0 mr-6 last:mr-0',
+                                    className: 'flex-shrink-0 zoom-group-box',
                                     style: { 
-                                        width: '380px',
-                                        minWidth: '380px',
-                                        maxWidth: '380px'
+                                        width: boxWidth,
+                                        minWidth: boxWidth,
+                                        maxWidth: boxWidth,
+                                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
                                     }
                                 },
                                 React.createElement(
@@ -1782,10 +1834,17 @@ const renderSingleCategoryView = () => {
                                     {
                                         className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-full'
                                     },
-                                    React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
-                                    React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
-                                    React.createElement('div', { className: 'mt-2 space-y-1 flex-grow' },
-                                        renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                                    React.createElement('h3', { 
+                                        className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap truncate' 
+                                    }, group.name),
+                                    React.createElement('p', { 
+                                        className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
+                                    }, group.type),
+                                    React.createElement('div', { 
+                                        className: 'mt-2 space-y-1 flex-grow overflow-y-auto max-h-[500px]'
+                                    },
+                                        renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), 
+                                        group.name, selectedCategoryId)
                                     )
                                 )
                             );
@@ -1793,17 +1852,20 @@ const renderSingleCategoryView = () => {
                     )
                 ),
                 
-                // NADSTAVBOVÉ SKUPINY - NIE sú zalamované
+                // NADSTAVBOVÉ SKUPINY
                 sortedSuperstructureGroups.length > 0 && React.createElement(
                     React.Fragment,
                     null,
-                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center text-gray-800' }, 'Nadstavbové skupiny'),
+                    React.createElement('h3', { 
+                        className: 'text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap'
+                    }, 'Nadstavbové skupiny'),
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex',
+                            className: 'flex overflow-x-auto pb-4 zoom-groups-container',
                             style: { 
-                                flexWrap: 'nowrap', // ZABRÁNI zalamovaniu
+                                flexWrap: 'nowrap',
+                                gap: '1.5rem'
                             }
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -1811,11 +1873,12 @@ const renderSingleCategoryView = () => {
                                 'div',
                                 {
                                     key: `super-${groupIndex}`,
-                                    className: 'flex-shrink-0 mr-6 last:mr-0',
+                                    className: 'flex-shrink-0 zoom-group-box',
                                     style: { 
-                                        width: '380px',
-                                        minWidth: '380px',
-                                        maxWidth: '380px'
+                                        width: boxWidth,
+                                        minWidth: boxWidth,
+                                        maxWidth: boxWidth,
+                                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
                                     }
                                 },
                                 React.createElement(
@@ -1823,10 +1886,17 @@ const renderSingleCategoryView = () => {
                                     {
                                         className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-full'
                                     },
-                                    React.createElement('h3', { className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap' }, group.name),
-                                    React.createElement('p', { className: 'text-center text-sm text-gray-600 mb-4' }, group.type),
-                                    React.createElement('div', { className: 'mt-2 space-y-1 flex-grow' },
-                                        renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), group.name, selectedCategoryId)
+                                    React.createElement('h3', { 
+                                        className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap truncate' 
+                                    }, group.name),
+                                    React.createElement('p', { 
+                                        className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
+                                    }, group.type),
+                                    React.createElement('div', { 
+                                        className: 'mt-2 space-y-1 flex-grow overflow-y-auto max-h-[500px]'
+                                    },
+                                        renderTeamList(teamsInGroups.filter(t => t.groupName === group.name), 
+                                        group.name, selectedCategoryId)
                                     )
                                 )
                             );
@@ -1837,8 +1907,13 @@ const renderSingleCategoryView = () => {
                 // AK NIE SÚ ŽIADNE SKUPINY
                 sortedBasicGroups.length === 0 && sortedSuperstructureGroups.length === 0 && React.createElement(
                     'div',
-                    { className: 'min-w-96' },
-                    React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 'Žiadne skupiny v tejto kategórii.')
+                    { 
+                        className: 'min-w-96',
+                        style: { minWidth: boxWidth }
+                    },
+                    React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 
+                        'Žiadne skupiny v tejto kategórii.'
+                    )
                 )
             )
         )
@@ -1976,6 +2051,7 @@ const renderSingleCategoryView = () => {
         fabButton
     );
 };
+
 // Inicializácia aplikácie
 let isEmailSyncListenerSetup = false;
 const handleDataUpdateAndRender = (event) => {
