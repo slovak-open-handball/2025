@@ -912,16 +912,16 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             const categoryId = Object.keys(categoryIdToNameMap).find(
               id => categoryIdToNameMap[id] === teamToEdit.category
             ) || '';
-   
-            // Ak je kategória locked, nastavíme ju raz a už sa nebude dať meniť
+
             setSelectedCategory(categoryId);
             setSelectedGroup(teamToEdit.groupName || '');
-   
+
+            // Pre superstructure tímy odstránime kategóriu z názvu
             const initialTeamName = teamToEdit.isSuperstructureTeam
-              ? teamToEdit.teamName
-              : teamToEdit.teamName.replace(new RegExp(`^${teamToEdit.category} `), '');
+              ? teamToEdit.teamName.replace(new RegExp(`^${teamToEdit.category} `), '')
+              : teamToEdit.teamName;
             setTeamName(initialTeamName);
-   
+
             setOriginalTeamName(teamToEdit.teamName);
             setOriginalCategory(categoryId);
             setOriginalGroup(teamToEdit.groupName || '');
@@ -943,7 +943,8 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
           setOriginalGroup('');
           setOrderInputValue(null);
         }
-  }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap]);
+      }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap]);
+      
         useEffect(() => {
           if (!isOpen) return;
 
@@ -990,9 +991,9 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
             e.preventDefault();
             if (isSubmitDisabled) return;
 
-            // Pro superstructure týmy odešleme jen část za názvem kategorie
+            // Pre superstructure tímy pridáme späť kategóriu k názvu
             const teamNameToSave = teamToEdit?.isSuperstructureTeam
-              ? teamName.trim() // Celý název (včetně kategorie) se odešle, ale v handleUpdateAnyTeam se to zpracuje správně
+              ? `${teamToEdit.category} ${teamName.trim()}` // Pridáme kategóriu späť
               : teamName.trim();
 
             unifiedSaveHandler({
@@ -1019,7 +1020,7 @@ const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
      
         if (!isOpen) return null;
         const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
-        const finalTeamNamePreview = teamName.trim() ? teamToEdit?.isSuperstructureTeam ? teamName.trim() : `${currentCategoryName} ${teamName.trim()}` : '';
+        const finalTeamNamePreview = teamName.trim() ? teamToEdit?.isSuperstructureTeam ? `${teamToEdit.category} ${teamName.trim()}` : `${currentCategoryName} ${teamName.trim()}` : '';
         return React.createElement(
           'div',
           {
