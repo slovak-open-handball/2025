@@ -1137,7 +1137,7 @@ const NewTeamModal = ({
         groupEndingMismatch ? React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
-          `⚠️ V tejto kategórii neexistuje žiadna základná skupina končiaca na „${teamName.trim().slice(-1).toUpperCase()}“`
+          `⚠️ V tejto kategórii neexistuje žiadna základná skupina "${teamName.trim().slice(-1).toUpperCase()}"`
         ) : null,
         
         orderMismatchMessage ? React.createElement(
