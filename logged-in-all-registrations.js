@@ -960,6 +960,8 @@ const formatLabel = (key) => {
     if (key === 'jerseyNumber') return 'Číslo dresu';
     if (key === 'registrationNumber') return 'Číslo registrácie';
     if (key === 'time') return 'Čas príchodu'; 
+    if (key === 'jerseyHomeColor') return 'Farba dresov 1';
+    if (key === 'jerseyAwayColor') return 'Farba dresov 2';
   
     return label;
 };
