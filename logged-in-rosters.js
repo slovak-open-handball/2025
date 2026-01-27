@@ -2931,6 +2931,33 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                 })()
                             )
                         ),
+
+                        // ─── FARBY DRESOV ────────────────────────────────────────────────────────
+team.jerseyColors && (team.jerseyColors.color1 || team.jerseyColors.color2) && React.createElement(
+  'p',
+  { className: 'text-md text-gray-700 mt-1' },
+  'Farby dresov: ',
+  team.jerseyColors.color1 && React.createElement(
+    React.Fragment,
+    null,
+    React.createElement('span', {
+      className: 'inline-block w-5 h-5 rounded-full border border-gray-300 align-middle mr-1',
+      style: { backgroundColor: team.jerseyColors.color1 }
+    }),
+    team.jerseyColors.color1,
+  ),
+  team.jerseyColors.color1 && team.jerseyColors.color2 && ' + ',
+  team.jerseyColors.color2 && React.createElement(
+    React.Fragment,
+    null,
+    React.createElement('span', {
+      className: 'inline-block w-5 h-5 rounded-full border border-gray-300 align-middle mr-1',
+      style: { backgroundColor: team.jerseyColors.color2 }
+    }),
+    team.jerseyColors.color2
+  )
+),
+                                          
                         team.tshirts && team.tshirts.length > 0 && (
                             React.createElement('div', { className: 'mb-4 w-full' },
                                 React.createElement('p', { className: 'text-md text-gray-700 font-semibold mb-1' }, 'Tričká:'),
