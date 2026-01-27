@@ -435,7 +435,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (ž): ${womenDriversCount}`)); 
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Šofér (m): ${menDriversCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Spolu: ${playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-3 whitespace-nowrap' }, 'Farby dresov: ' + (team.jerseyHomeColor || '—') + ' / ' + (team.jerseyAwayColor || '—')));        
+        titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-3 whitespace-nowrap' }, 'Farby dresov: ' + (team.jerseyHomeColor || '-') + ' / ' + (team.jerseyAwayColor || '-')));        
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Doprava: ${formatArrivalTime(team.arrival?.type, team.arrival?.time)}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Ubytovanie: ${team.accommodation?.type || '-'}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Balík: ${team.packageDetails?.name || '-'}`));
@@ -4562,7 +4562,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menDriversCount),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players + team._womenTeamMembersCount + team._menTeamMembersCount + team._womenDriversCount + team._menDriversCount || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
-                                            React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyHomeColor && team.jerseyAwayColor ? `${team.jerseyHomeColor} / ${team.jerseyAwayColor}` : (team.jerseyHomeColor || team.jerseyAwayColor || '—')),
+                                            React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyHomeColor && team.jerseyAwayColor ? `${team.jerseyHomeColor} / ${team.jerseyAwayColor}` : (team.jerseyHomeColor || team.jerseyAwayColor || '-')),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'),
                                             (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
