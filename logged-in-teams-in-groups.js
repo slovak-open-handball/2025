@@ -1014,7 +1014,7 @@ const handleTeamNameChange = (e) => {
   useEffect(() => {
     if (!isOpen || teamToEdit || !selectedCategory || !teamName.trim()) {
       setGroupEndingMismatch(false);
-      setOrderMismatchMessage(null);
+      setTeamNameError(null);
       return;
     }
 
@@ -1044,7 +1044,7 @@ const handleTeamNameChange = (e) => {
         );
         
         if (!matchingBasicGroup) {
-          setOrderMismatchMessage(null);
+          setTeamNameError(null);
           return;
         }
         
@@ -1058,17 +1058,17 @@ const handleTeamNameChange = (e) => {
         
         const currentCount = teamsInGroup.length;
         if (currentCount < requestedOrder) {
-          setOrderMismatchMessage(
+          setTeamNameError(
             `V základnej skupine "${groupName}" nie je tím s poradovým číslom ${requestedOrder}.`
           );
         } else {
-          setOrderMismatchMessage(null);
+          setTeamNameError(null);
         }
       } else {
-        setOrderMismatchMessage(null);
+        setTeamNameError(null);
       }
     } else {
-      setOrderMismatchMessage(null);
+      setTeamNameError(null);
     }
   }, [
     teamName,
