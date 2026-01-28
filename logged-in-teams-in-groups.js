@@ -2150,16 +2150,108 @@ const renderGroupedCategories = (currentWindowWidth) => {
     }
 
     const getBoxWidth = () => {
-      if (currentWindowWidth < 768) return '95vw';
-      if (currentWindowWidth < 1024) return '45vw';
-      if (currentWindowWidth < 1280) return '35vw';
-      return '380px';
+        if (currentWindowWidth < 768) return '95vw';
+        if (currentWindowWidth < 1024) return '45vw';
+        if (currentWindowWidth < 1280) return '35vw';
+        return '380px';
     };
     
     const boxWidth = getBoxWidth();
     
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
-        
+    
+    // Pre režim "Všetky kategórie" - všetky karty v jednom horizontálnom rade
+    if (!selectedCategoryId) {
+        return React.createElement(
+            'div',
+            { 
+                className: 'w-full overflow-x-auto pb-4',
+                style: { 
+                    maxWidth: '100%',
+                    boxSizing: 'border-box'
+                }
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'flex min-w-max gap-6 px-4',
+                    style: { 
+                        minWidth: 'min-content'
+                    }
+                },
+                sortedCategoryEntries.map(([categoryId, categoryName]) => {
+                    const groups = allGroupsByCategoryId[categoryId] || [];
+                    const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
+                    
+                    // Rozdelenie skupín podľa typu
+                    const basicGroups = groups.filter(g => g.type === 'základná skupina');
+                    const superstructureGroups = groups.filter(g => g.type === 'nadstavbová skupina');
+                    
+                    // Spojíme všetky skupiny
+                    const allGroups = [...basicGroups, ...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    return allGroups.map((group, groupIndex) => {
+                        const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
+                        
+                        // Vypočítame výšku karty
+                        const usedOrders = new Set(
+                            teamsInGroup
+                                .map(t => t.order)
+                                .filter(o => Number.isInteger(o) && o >= 1)
+                        );
+                        const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
+                        const count = Math.max(teamsInGroup.length, maxOrder);
+                        
+                        const teamHeight = 65;
+                        const baseCardHeight = 140;
+                        const calculatedHeight = baseCardHeight + (count * teamHeight);
+                        const minHeight = Math.max(calculatedHeight, 300);
+                        
+                        const groupColorClass = group.type === 'základná skupina' ? 'bg-gray-100' : 'bg-blue-100';
+                        
+                        return React.createElement(
+                            'div',
+                            {
+                                key: `${categoryId}-${group.name}-${groupIndex}`,
+                                className: 'flex-shrink-0',
+                                style: { 
+                                    width: boxWidth,
+                                    minWidth: boxWidth,
+                                    maxWidth: boxWidth,
+                                    flexShrink: 0,
+                                    transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
+                                }
+                            },
+                            React.createElement(
+                                'div',
+                                {
+                                    className: `flex flex-col rounded-xl shadow-xl p-6 h-full ${groupColorClass} min-h-[300px]`,
+                                    style: { minHeight: `${minHeight}px` }
+                                },
+                                // Zobrazenie názvu kategórie pre orientáciu
+                                React.createElement('p', { 
+                                    className: 'text-sm font-medium text-gray-600 mb-1 text-center'
+                                }, categoryName),
+                                React.createElement('h4', { 
+                                    className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate' 
+                                }, group.name),
+                                React.createElement('p', { 
+                                    className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
+                                }, group.type),
+                                React.createElement('div', { 
+                                    className: 'mt-2 space-y-1 flex-grow overflow-y-auto'
+                                },
+                                    renderTeamList(teamsInGroup, group.name, categoryId)
+                                )
+                            )
+                        );
+                    });
+                })
+            )
+        );
+    }
+    
+    // Pôvodná logika pre vybratú kategóriu (skupiny pod sebou)
     return React.createElement(
         'div',
         { 
@@ -2902,39 +2994,39 @@ const renderSingleCategoryView = (currentWindowWidth) => {
               )
           )
       ),
-      selectedCategoryId
-          ? renderSingleCategoryView(windowWidth)
-          : React.createElement(
-              'div',
-              { className: 'w-full' },
-              React.createElement(
-                  'div',
-                  { 
-                      className: `flex ${teamsWithoutGroup.length > 0 ? 'flex-col lg:flex-row' : 'flex-col'} items-start justify-center w-full px-4` 
-                  },
-                  // TÍMY BEZ SKUPINY (ľavá strana - LEN AK EXISTUJÚ)
-                  teamsWithoutGroup.length > 0 && React.createElement(
-                      'div',
-                      { 
-                          className: "bg-white rounded-xl shadow-xl p-6 mb-6 lg:mr-8 flex-shrink-0 w-full lg:w-auto",
-                          style: { 
-                              maxWidth: calculateBoxWidth(windowWidth),
-                              minWidth: calculateBoxWidth(windowWidth),
-                              transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
-                          }
-                      },
-                      React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
-                      React.createElement('div', { 
-                          className: 'overflow-y-auto',
-                          style: { maxHeight: '70vh' }
-                      }, renderTeamList(teamsWithoutGroup, null, null, true))
-                  ),
-                  // KARTY SKUPÍN (pravá strana)
-                  React.createElement('div', { 
-                      className: `flex-grow min-w-0 w-full ${teamsWithoutGroup.length > 0 ? 'lg:w-auto' : ''}` 
-                  }, renderGroupedCategories(windowWidth))
-              )
-          ),
+    selectedCategoryId
+        ? renderSingleCategoryView(windowWidth)
+        : React.createElement(
+            'div',
+            { className: 'w-full' },
+            React.createElement(
+                'div',
+                { 
+                    className: `flex ${teamsWithoutGroup.length > 0 ? 'flex-col lg:flex-row' : 'flex-col'} items-start w-full px-4` 
+                },
+                // TÍMY BEZ SKUPINY (ľavá strana - LEN AK EXISTUJÚ)
+                teamsWithoutGroup.length > 0 && React.createElement(
+                    'div',
+                    { 
+                        className: "bg-white rounded-xl shadow-xl p-6 mb-6 lg:mr-8 flex-shrink-0 w-full lg:w-auto",
+                        style: { 
+                            maxWidth: calculateBoxWidth(windowWidth),
+                            minWidth: calculateBoxWidth(windowWidth),
+                            transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
+                        }
+                    },
+                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
+                    React.createElement('div', { 
+                        className: 'overflow-y-auto',
+                        style: { maxHeight: '70vh' }
+                    }, renderTeamList(teamsWithoutGroup, null, null, true))
+                ),
+                // KARTY SKUPÍN (pravá strana) - ZMENENÉ: flex-grow namiesto width-full
+                React.createElement('div', { 
+                    className: `flex-grow min-w-0 ${teamsWithoutGroup.length > 0 ? '' : 'w-full'}` 
+                }, renderGroupedCategories(windowWidth))
+            )
+        ),
       fabButton
   );
 };
