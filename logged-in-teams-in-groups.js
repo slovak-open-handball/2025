@@ -1569,7 +1569,7 @@ const handleSubmit = (e) => {
       )
     )
   );
-};
+// };
     // Zjednotený handler pre uloženie
     const unifiedSaveHandler = async (data) => {
       if (data.isEdit) {
