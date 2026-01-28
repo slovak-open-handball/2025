@@ -2127,7 +2127,7 @@ const renderGroupedCategories = () => {
     return React.createElement(
         'div',
         { 
-            className: 'w-full overflow-x-auto px-4',
+            className: 'w-full px-4',
             style: { 
                 maxWidth: '100vw',
                 boxSizing: 'border-box'
@@ -2136,9 +2136,8 @@ const renderGroupedCategories = () => {
         React.createElement(
             'div',
             { 
-                className: 'flex flex-col gap-8 min-w-max',
+                className: 'flex flex-col gap-8',
                 style: { 
-                    minWidth: 'min-content',
                     maxWidth: '100%'
                 }
             },
@@ -2154,7 +2153,7 @@ const renderGroupedCategories = () => {
                 const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
                 const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
                 
-                // Funkcia pre dynamickú šírku
+                // Dynamická šírka boxov
                 const getBoxWidth = () => {
                     if (typeof window !== 'undefined') {
                         const width = window.innerWidth;
@@ -2172,9 +2171,8 @@ const renderGroupedCategories = () => {
                     'div',
                     { 
                         key: index, 
-                        className: 'bg-white rounded-xl shadow-xl p-6 mb-6 min-w-max',
+                        className: 'bg-white rounded-xl shadow-xl p-6 mb-6',
                         style: { 
-                            minWidth: 'min-content',
                             maxWidth: '100%'
                         }
                     },
@@ -2199,12 +2197,9 @@ const renderGroupedCategories = () => {
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'flex overflow-x-auto pb-4',
+                                    className: 'flex flex-wrap gap-6',
                                     style: {
-                                        flexWrap: 'nowrap',
-                                        gap: '1.5rem',
                                         alignItems: 'stretch',
-                                        paddingBottom: '1rem'
                                     }
                                 },
                                 sortedBasicGroups.map((group, groupIndex) => {
@@ -2259,12 +2254,9 @@ const renderGroupedCategories = () => {
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'flex overflow-x-auto pb-4',
+                                    className: 'flex flex-wrap gap-6',
                                     style: {
-                                        flexWrap: 'nowrap',
-                                        gap: '1.5rem',
                                         alignItems: 'stretch',
-                                        paddingBottom: '1rem'
                                     }
                                 },
                                 sortedSuperstructureGroups.map((group, groupIndex) => {
