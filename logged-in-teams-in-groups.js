@@ -2124,10 +2124,27 @@ const renderGroupedCategories = () => {
     
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
     
+    // Pridáme state pre sledovanie zmeny veľkosti okna
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+        
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('zoom', handleResize);
+        
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('zoom', handleResize);
+        };
+    }, []);
+    
     return React.createElement(
         'div',
         { 
-            className: 'w-full overflow-x-hidden', // Zmena: overflow-x-hidden namiesto px-4
+            className: 'w-full overflow-x-hidden',
             style: { 
                 maxWidth: '100vw',
                 boxSizing: 'border-box'
@@ -2153,22 +2170,27 @@ const renderGroupedCategories = () => {
                 const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
                 const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
                 
-                // Dynamická šírka boxov
+                // Dynamická šírka boxov - REAKTÍVNA NA ZMENU VEĽKOSTI OKNA
                 const getBoxWidth = () => {
-                    if (typeof window !== 'undefined') {
-                        const width = window.innerWidth;
-                        if (width < 768) return '95vw';
-                        if (width < 1024) return '45vw';
-                        if (width < 1280) return '35vw';
-                        return '380px';
-                    }
+                    const width = windowWidth;
+                    if (width < 768) return '95vw';
+                    if (width < 1024) return '45vw';
+                    if (width < 1280) return '35vw';
                     return '380px';
                 };
                 
                 const boxWidth = getBoxWidth();
                 
                 // Vypočítame počet skupín pre každý typ
-                const totalGroupsCount = sortedBasicGroups.length + sortedSuperstructureGroups.length;
+                const totalBasicGroupsCount = sortedBasicGroups.length;
+                const totalSuperGroupsCount = sortedSuperstructureGroups.length;
+                
+                // Šírka pre každý typ skupín zvlášť
+                const basicGroupsWidth = totalBasicGroupsCount > 0 ? 
+                    `${totalBasicGroupsCount * (parseInt(boxWidth.replace('vw', '').replace('px', '')) + 36)}${boxWidth.includes('vw') ? 'vw' : 'px'}` : 'auto';
+                
+                const superGroupsWidth = totalSuperGroupsCount > 0 ? 
+                    `${totalSuperGroupsCount * (parseInt(boxWidth.replace('vw', '').replace('px', '')) + 36)}${boxWidth.includes('vw') ? 'vw' : 'px'}` : 'auto';
                 
                 return React.createElement(
                     'div',
@@ -2198,18 +2220,19 @@ const renderGroupedCategories = () => {
                                 style: { 
                                     minHeight: '350px',
                                     width: '100%',
-                                    overflowX: 'visible' // Zmena: visible namiesto scroll
+                                    overflowX: 'visible'
                                 }
                             },
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'flex gap-6', // Zmena: odstránené flex-wrap
+                                    className: 'flex gap-6',
                                     style: {
-                                        flexWrap: 'nowrap', // Zmena: nowrap namiesto wrap
+                                        flexWrap: 'nowrap',
                                         alignItems: 'stretch',
-                                        width: `${totalGroupsCount * (parseInt(boxWidth + 15) + 36)}px`, // Zmena: dynamická šírka
-                                        minWidth: '100%'
+                                        width: basicGroupsWidth,
+                                        minWidth: '100%',
+                                        transition: 'width 0.3s ease' // Pridáme plynulý prechod
                                     }
                                 },
                                 sortedBasicGroups.map((group, groupIndex) => {
@@ -2222,7 +2245,8 @@ const renderGroupedCategories = () => {
                                             style: { 
                                                 width: boxWidth,
                                                 minWidth: boxWidth,
-                                                flexShrink: 0
+                                                flexShrink: 0,
+                                                transition: 'width 0.3s ease, min-width 0.3s ease' // Pridáme plynulý prechod
                                             }
                                         },
                                         React.createElement(
@@ -2262,18 +2286,19 @@ const renderGroupedCategories = () => {
                                 style: { 
                                     minHeight: '350px',
                                     width: '100%',
-                                    overflowX: 'visible' // Zmena: visible namiesto scroll
+                                    overflowX: 'visible'
                                 }
                             },
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'flex gap-6', // Zmena: odstránené flex-wrap
+                                    className: 'flex gap-6',
                                     style: {
-                                        flexWrap: 'nowrap', // Zmena: nowrap namiesto wrap
+                                        flexWrap: 'nowrap',
                                         alignItems: 'stretch',
-                                        width: `${totalGroupsCount * (parseInt(boxWidth) + 24)}px`, // Zmena: dynamická šírka
-                                        minWidth: '100%'
+                                        width: superGroupsWidth,
+                                        minWidth: '100%',
+                                        transition: 'width 0.3s ease'
                                     }
                                 },
                                 sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2286,7 +2311,8 @@ const renderGroupedCategories = () => {
                                             style: { 
                                                 width: boxWidth,
                                                 minWidth: boxWidth,
-                                                flexShrink: 0
+                                                flexShrink: 0,
+                                                transition: 'width 0.3s ease, min-width 0.3s ease'
                                             }
                                         },
                                         React.createElement(
