@@ -2143,14 +2143,14 @@ const renderGroupedCategories = () => {
                 'div',
                 { 
                     key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full overflow-x-auto' // Pridané: overflow-x-auto
+                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full'
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
                     className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
                 }, categoryName),
                 
-                // ZÁKLADNÉ SKUPINY - ZMENENÉ: ZBALENÉ DO HORIZONTÁLNEHO KONTÉJNERA
+                // ZÁKLADNÉ SKUPINY - AKTUALIZOVANÉ
                 sortedBasicGroups.length > 0 && React.createElement(
                     React.Fragment,
                     null,
@@ -2160,64 +2160,74 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex mb-8 overflow-x-auto pb-4', // flex-wrap odstránené, pridané overflow-x-auto
-                            style: { 
-                                flexWrap: 'nowrap', // Zabezpečí horizontálne usporiadanie
-                                gap: '1.5rem',
-                                alignItems: 'stretch'
+                            className: 'relative mb-8 group-category-container',
+                            style: {
+                                minHeight: '350px'
                             }
                         },
-                        sortedBasicGroups.map((group, groupIndex) => {
-                            const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
-                            
-                            // Dynamická šírka boxov podľa zoom levelu
-                            const getBoxWidth = () => {
-                                if (typeof window !== 'undefined') {
-                                    const width = window.innerWidth;
-                                    if (width < 768) return '95vw';
-                                    if (width < 1024) return '45vw';
-                                    if (width < 1280) return '35vw';
-                                    return '380px';
+                        React.createElement(
+                            'div',
+                            {
+                                className: 'flex pb-4 group-cards-wrapper',
+                                style: {
+                                    gap: '1.5rem',
+                                    overflowX: 'auto',
+                                    scrollBehavior: 'smooth',
+                                    paddingBottom: '8px'
                                 }
-                                return '380px';
-                            };
-                            
-                            const boxWidth = getBoxWidth();
-                            
-                            return React.createElement(
-                                'div',
-                                {
-                                    key: `basic-${groupIndex}`,
-                                    className: 'flex-shrink-0', // Zabezpečí že sa nebudú sťahovať
-                                    style: { 
-                                        width: boxWidth,
-                                        minWidth: boxWidth,
-                                        maxWidth: boxWidth
+                            },
+                            sortedBasicGroups.map((group, groupIndex) => {
+                                const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
+                                
+                                // Dynamická šírka boxov podľa zoom levelu
+                                const getBoxWidth = () => {
+                                    if (typeof window !== 'undefined') {
+                                        const width = window.innerWidth;
+                                        if (width < 768) return '95vw';
+                                        if (width < 1024) return '45vw';
+                                        if (width < 1280) return '35vw';
+                                        return '380px';
                                     }
-                                },
-                                React.createElement(
+                                    return '380px';
+                                };
+                                
+                                const boxWidth = getBoxWidth();
+                                
+                                return React.createElement(
                                     'div',
                                     {
-                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-[300px] w-full'
+                                        key: `basic-${groupIndex}`,
+                                        className: 'flex-shrink-0 group-card',
+                                        style: { 
+                                            width: boxWidth,
+                                            minWidth: boxWidth,
+                                            maxWidth: boxWidth
+                                        }
                                     },
-                                    React.createElement('h4', { 
-                                        className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
-                                    }, group.name),
-                                    React.createElement('p', { 
-                                        className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap flex-shrink-0' 
-                                    }, group.type),
-                                    React.createElement('div', { 
-                                        className: 'mt-2 space-y-1 flex-grow overflow-auto'
-                                    },
-                                        renderTeamList(teamsInGroup, group.name, categoryId)
+                                    React.createElement(
+                                        'div',
+                                        {
+                                            className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-[300px] w-full'
+                                        },
+                                        React.createElement('h4', { 
+                                            className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
+                                        }, group.name),
+                                        React.createElement('p', { 
+                                            className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap flex-shrink-0' 
+                                        }, group.type),
+                                        React.createElement('div', { 
+                                            className: 'mt-2 space-y-1 flex-grow overflow-auto'
+                                        },
+                                            renderTeamList(teamsInGroup, group.name, categoryId)
+                                        )
                                     )
-                                )
-                            );
-                        })
+                                );
+                            })
+                        )
                     )
                 ),
                 
-                // NADSTAVBOVÉ SKUPINY - ZMENENÉ: ZBALENÉ DO HORIZONTÁLNEHO KONTÉJNERA
+                // NADSTAVBOVÉ SKUPINY - AKTUALIZOVANÉ
                 sortedSuperstructureGroups.length > 0 && React.createElement(
                     React.Fragment,
                     null,
@@ -2227,60 +2237,70 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex overflow-x-auto pb-4', // flex-wrap odstránené, pridané overflow-x-auto
-                            style: { 
-                                flexWrap: 'nowrap', // Zabezpečí horizontálne usporiadanie
-                                gap: '1.5rem',
-                                alignItems: 'stretch'
+                            className: 'relative group-category-container',
+                            style: {
+                                minHeight: '350px'
                             }
                         },
-                        sortedSuperstructureGroups.map((group, groupIndex) => {
-                            const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
-                            
-                            // Dynamická šírka boxov podľa zoom levelu
-                            const getBoxWidth = () => {
-                                if (typeof window !== 'undefined') {
-                                    const width = window.innerWidth;
-                                    if (width < 768) return '95vw';
-                                    if (width < 1024) return '45vw';
-                                    if (width < 1280) return '35vw';
-                                    return '380px';
+                        React.createElement(
+                            'div',
+                            {
+                                className: 'flex pb-4 group-cards-wrapper',
+                                style: {
+                                    gap: '1.5rem',
+                                    overflowX: 'auto',
+                                    scrollBehavior: 'smooth',
+                                    paddingBottom: '8px'
                                 }
-                                return '380px';
-                            };
-                            
-                            const boxWidth = getBoxWidth();
-                            
-                            return React.createElement(
-                                'div',
-                                {
-                                    key: `super-${groupIndex}`,
-                                    className: 'flex-shrink-0', // Zabezpečí že sa nebudú sťahovať
-                                    style: { 
-                                        width: boxWidth,
-                                        minWidth: boxWidth,
-                                        maxWidth: boxWidth
+                            },
+                            sortedSuperstructureGroups.map((group, groupIndex) => {
+                                const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
+                                
+                                // Dynamická šírka boxov podľa zoom levelu
+                                const getBoxWidth = () => {
+                                    if (typeof window !== 'undefined') {
+                                        const width = window.innerWidth;
+                                        if (width < 768) return '95vw';
+                                        if (width < 1024) return '45vw';
+                                        if (width < 1280) return '35vw';
+                                        return '380px';
                                     }
-                                },
-                                React.createElement(
+                                    return '380px';
+                                };
+                                
+                                const boxWidth = getBoxWidth();
+                                
+                                return React.createElement(
                                     'div',
                                     {
-                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-[300px] w-full'
+                                        key: `super-${groupIndex}`,
+                                        className: 'flex-shrink-0 group-card',
+                                        style: { 
+                                            width: boxWidth,
+                                            minWidth: boxWidth,
+                                            maxWidth: boxWidth
+                                        }
                                     },
-                                    React.createElement('h4', { 
-                                        className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
-                                    }, group.name),
-                                    React.createElement('p', { 
-                                        className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap flex-shrink-0' 
-                                    }, group.type),
-                                    React.createElement('div', { 
-                                        className: 'mt-2 space-y-1 flex-grow overflow-auto'
-                                    },
-                                        renderTeamList(teamsInGroup, group.name, categoryId)
+                                    React.createElement(
+                                        'div',
+                                        {
+                                            className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-[300px] w-full'
+                                        },
+                                        React.createElement('h4', { 
+                                            className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
+                                        }, group.name),
+                                        React.createElement('p', { 
+                                            className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap flex-shrink-0' 
+                                        }, group.type),
+                                        React.createElement('div', { 
+                                            className: 'mt-2 space-y-1 flex-grow overflow-auto'
+                                        },
+                                            renderTeamList(teamsInGroup, group.name, categoryId)
+                                        )
                                     )
-                                )
-                            );
-                        })
+                                );
+                            })
+                        )
                     )
                 ),
                 
@@ -2607,6 +2627,114 @@ const renderSingleCategoryView = () => {
     );
 
     useEffect(() => {
+    const addGlobalStyles = () => {
+        if (document.getElementById('group-cards-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'group-cards-styles';
+        style.textContent = `
+            /* Štýly pre karty tímov */
+            .zoom-group-box > div > div:last-child {
+                overflow: visible !important;
+                max-height: none !important;
+            }
+            
+            .zoom-groups-container {
+                align-items: stretch !important;
+            }
+        
+            .zoom-group-box {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+        
+            .zoom-group-box > div {
+                flex: 1 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                min-height: 0 !important;
+            }
+        
+            .zoom-group-box ul {
+                flex-grow: 1 !important;
+                overflow: visible !important;
+                max-height: none !important;
+            }
+        
+            .overflow-y-auto,
+            .overflow-y-scroll {
+                overflow-y: visible !important;
+            }
+            
+            .flex-grow {
+                flex-grow: 1 !important;
+            }
+            
+            /* NOVÉ ŠTÝLY PRE HORIZONTÁLNY POSUVNÍK */
+            .group-category-container {
+                overflow: hidden;
+                position: relative;
+                width: 100%;
+            }
+            
+            .group-cards-wrapper {
+                display: flex;
+                width: max-content;
+                min-width: min-content;
+                padding-right: 16px;
+            }
+            
+            .group-cards-wrapper::-webkit-scrollbar {
+                height: 8px;
+                background-color: #f1f5f9;
+                border-radius: 4px;
+            }
+            
+            .group-cards-wrapper::-webkit-scrollbar-thumb {
+                background-color: #cbd5e0;
+                border-radius: 4px;
+            }
+            
+            .group-cards-wrapper::-webkit-scrollbar-thumb:hover {
+                background-color: #94a3b8;
+            }
+            
+            .group-card {
+                display: flex;
+                flex-shrink: 0;
+                height: auto;
+            }
+            
+            /* Zvýraznenie pri hover */
+            .group-cards-wrapper {
+                scrollbar-width: thin;
+                scrollbar-color: #cbd5e0 #f1f5f9;
+            }
+            
+            /* Responzívne úpravy */
+            @media (max-width: 768px) {
+                .group-category-container {
+                    margin-left: -1rem;
+                    margin-right: -1rem;
+                    padding-left: 1rem;
+                    padding-right: 1rem;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    };
+
+    addGlobalStyles();
+
+    return () => {
+        const style = document.getElementById('group-cards-styles');
+        if (style) {
+            document.head.removeChild(style);
+        }
+    };
+}, []);
+
+    useEffect(() => {
         const addGlobalStyles = () => {
             if (document.getElementById('group-cards-styles')) return;
             
@@ -2761,23 +2889,23 @@ return React.createElement(
         )
     ),
         selectedCategoryId
-            ? renderSingleCategoryView()
-            : React.createElement(
-                'div',
-                { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
-                // Zobrazujeme ľavý obdĺžnik LEN AK EXISTUJÚ TÍMY BEZ SKUPINY
-                teamsWithoutGroup.length > 0 && React.createElement(
-                    'div',
-                    { className: 'w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0' },
-                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
-                    renderTeamList(teamsWithoutGroup, null, null, true)
-                ),
-                React.createElement('div', { 
-                    className: `flex-grow min-w-0 ${teamsWithoutGroup.length === 0 ? 'w-full' : ''}` 
-                }, renderGroupedCategories())
-            ),
-        fabButton
-    );
+          ? renderSingleCategoryView()
+           : React.createElement(
+              'div',
+              { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4 overflow-hidden' },
+              // Zobrazujeme ľavý obdĺžnik LEN AK EXISTUJÚ TÍMY BEZ SKUPINY
+              teamsWithoutGroup.length > 0 && React.createElement(
+                  'div',
+                  { className: 'w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0' },
+                  React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
+                  renderTeamList(teamsWithoutGroup, null, null, true)
+              ),
+              React.createElement('div', { 
+                  className: `flex-grow min-w-0 overflow-hidden ${teamsWithoutGroup.length === 0 ? 'w-full' : ''}` 
+              }, renderGroupedCategories())
+          ),
+      fabButton
+  );
 };
 
 // Inicializácia aplikácie
