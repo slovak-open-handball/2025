@@ -898,9 +898,11 @@ const NewTeamModal = ({
   const [orderMismatchMessage, setOrderMismatchMessage] = useState(null);
 
   // Zobrazí sa náhľad len pre superstructure tímy
-  const shouldShowPreview = teamToEdit?.isSuperstructureTeam || (!teamToEdit); 
+  const shouldShowPreview = teamToEdit?.isSuperstructureTeam || (!teamToEdit);
+  
+  const [selectedGroupType, setSelectedGroupType] = useState('');
 
-  // Pridaj túto funkciu na spracovanie zmien v inpute
+// Pridaj túto funkciu na spracovanie zmien v inpute
 const handleTeamNameChange = (e) => {
   const value = e.target.value;
   
@@ -2399,77 +2401,99 @@ const renderSingleCategoryView = () => {
     }, []);
   
     // Pôvodný kód pred return v komponente AddGroupsApp:
-    return React.createElement(
-        'div',
-        { className: 'flex flex-col w-full relative text-[87.5%]' },
-        React.createElement(NotificationPortal, null),
-        React.createElement(NewTeamModal, {
-            isOpen: isModalOpen,
-            onClose: closeModal,
-            teamToEdit,
-            allTeams,
-            categoryIdToNameMap,
-            allGroupsByCategoryId,
-            defaultCategoryId: selectedCategoryId,
-            defaultGroupName: selectedGroupName,
-            unifiedSaveHandler,
-            showCategoryPrefix: showCategoryPrefix
-        }),
-        React.createElement(ConfirmDeleteModal, {
-          isOpen: !!confirmModal?.open,
-          onClose: () => setConfirmModal(null),
-          onConfirm: handleConfirmRemove,
-          team: confirmModal?.team,
-          isConfirming: isConfirming
-        }),
-        React.createElement(ConfirmDeleteGapModal, {
-          isOpen: !!deleteGapModal?.open,
-          onClose: () => setDeleteGapModal(null),
-          onConfirm: () => {
+return React.createElement(
+    'div',
+    { className: 'flex flex-col w-full relative text-[87.5%]' },
+    React.createElement(NotificationPortal, null),
+    React.createElement(NewTeamModal, {
+        isOpen: isModalOpen,
+        onClose: closeModal,
+        teamToEdit,
+        allTeams,
+        categoryIdToNameMap,
+        allGroupsByCategoryId,
+        defaultCategoryId: selectedCategoryId,
+        defaultGroupName: selectedGroupName,
+        unifiedSaveHandler,
+        showCategoryPrefix: showCategoryPrefix
+    }),
+    React.createElement(ConfirmDeleteModal, {
+        isOpen: !!confirmModal?.open,
+        onClose: () => setConfirmModal(null),
+        onConfirm: handleConfirmRemove,
+        team: confirmModal?.team,
+        isConfirming: isConfirming
+    }),
+    React.createElement(ConfirmDeleteGapModal, {
+        isOpen: !!deleteGapModal?.open,
+        onClose: () => setDeleteGapModal(null),
+        onConfirm: () => {
             if (deleteGapModal) {
-              handleDeleteGap(
-                deleteGapModal.categoryName,
-                deleteGapModal.groupName,
-                deleteGapModal.position
-              );
+                handleDeleteGap(
+                    deleteGapModal.categoryName,
+                    deleteGapModal.groupName,
+                    deleteGapModal.position
+                );
             }
             setDeleteGapModal(null);
-          },
-          position: deleteGapModal?.position,
-          groupName: deleteGapModal?.groupName,
-          categoryName: deleteGapModal?.categoryName,
-          isConfirming: false // prípadne pridaj loading stav ak chceš
-        }),
+        },
+        position: deleteGapModal?.position,
+        groupName: deleteGapModal?.groupName,
+        categoryName: deleteGapModal?.categoryName,
+        isConfirming: false
+    }),
+    React.createElement(
+        'div',
+        { className: 'w-full max-w-xs mx-auto mb-8' },
+        React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2' }, 'Vyberte kategóriu:'),
         React.createElement(
-            'div',
-            { className: 'w-full max-w-xs mx-auto mb-8' },
-            React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2' }, 'Vyberte kategóriu:'),
+            'select',
+            {
+                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
+                value: selectedCategoryId,
+                onChange: handleCategorySelect
+            },
+            React.createElement('option', { value: '' }, 'Všetky kategórie'),
+            sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
+        ),
+        
+        // NOVÝ SELECTBOX: Typ skupiny
+        selectedCategoryId && React.createElement(React.Fragment, null,
+            React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte typ skupiny:'),
             React.createElement(
                 'select',
                 {
                     className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
-                    value: selectedCategoryId,
-                    onChange: handleCategorySelect
+                    value: selectedGroupType,
+                    onChange: (e) => setSelectedGroupType(e.target.value)
                 },
-                React.createElement('option', { value: '' }, 'Všetky kategórie'),
-                sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
-            ),
-            React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (Voliteľné):'),
-            React.createElement(
-                'select',
-                {
-                    className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
-                    value: selectedGroupName,
-                    onChange: handleGroupSelect,
-                    disabled: !selectedCategoryId,
-                    style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' }
-                },
-                React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
-                availableGroupsForSelect.map((group, index) =>
+                React.createElement('option', { value: '' }, 'Všetky typy skupín'),
+                React.createElement('option', { value: 'základná skupina' }, 'Základné skupiny'),
+                React.createElement('option', { value: 'nadstavbová skupina' }, 'Nadstavbové skupiny')
+            )
+        ),
+        
+        // PÔVODNÝ SELECTBOX: Skupina - teraz filtrovaný podľa typu
+        React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (Voliteľné):'),
+        React.createElement(
+            'select',
+            {
+                className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
+                value: selectedGroupName,
+                onChange: handleGroupSelect,
+                disabled: !selectedCategoryId,
+                style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' }
+            },
+            React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
+            // Filtruj skupiny podľa vybraného typu
+            availableGroupsForSelect
+                .filter(group => !selectedGroupType || group.type === selectedGroupType)
+                .map((group, index) =>
                     React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
                 )
-            ),
-          React.createElement(
+        ),
+        
+        React.createElement(
             'div',
             { className: 'mt-4 flex items-center justify-center' },
             React.createElement(
@@ -2490,9 +2514,8 @@ const renderSingleCategoryView = () => {
                     'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
                 )
             )
-        ),
-          
-        ),
+        )
+    ),
         selectedCategoryId
             ? renderSingleCategoryView()
             : React.createElement(
