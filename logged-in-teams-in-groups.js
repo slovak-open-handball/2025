@@ -2160,21 +2160,20 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'relative mb-8',
+                            className: 'w-full', // Zmenené z 'relative mb-8'
                             style: {
-                                minHeight: '350px',
-                                width: '100%',
                                 overflowX: 'auto'
                             }
                         },
                         React.createElement(
                             'div',
                             {
-                                className: 'flex pb-4',
+                                className: 'flex',
                                 style: {
+                                    width: 'max-content',
+                                    minWidth: '100%',
                                     gap: '1.5rem',
-                                    minWidth: 'max-content', // Dôležité: prispôsobí sa šírke všetkých kariet
-                                    paddingRight: '1rem'
+                                    paddingBottom: '1rem'
                                 }
                             },
                             sortedBasicGroups.map((group, groupIndex) => {
@@ -2201,7 +2200,6 @@ const renderGroupedCategories = () => {
                                         style: { 
                                             width: boxWidth,
                                             minWidth: boxWidth,
-                                            maxWidth: boxWidth,
                                             flexShrink: 0
                                         }
                                     },
@@ -2238,21 +2236,20 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'relative',
+                            className: 'w-full', // Zmenené z 'relative'
                             style: {
-                                minHeight: '350px',
-                                width: '100%',
                                 overflowX: 'auto'
                             }
                         },
                         React.createElement(
                             'div',
                             {
-                                className: 'flex pb-4',
+                                className: 'flex',
                                 style: {
+                                    width: 'max-content',
+                                    minWidth: '100%',
                                     gap: '1.5rem',
-                                    minWidth: 'max-content', // Dôležité: prispôsobí sa šírke všetkých kariet
-                                    paddingRight: '1rem'
+                                    paddingBottom: '1rem'
                                 }
                             },
                             sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2279,7 +2276,6 @@ const renderGroupedCategories = () => {
                                         style: { 
                                             width: boxWidth,
                                             minWidth: boxWidth,
-                                            maxWidth: boxWidth,
                                             flexShrink: 0
                                         }
                                     },
