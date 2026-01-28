@@ -2123,6 +2123,20 @@ const renderGroupedCategories = () => {
     
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
     
+    // Dynamická šírka boxov - ROVNAKÁ AKO V renderSingleCategoryView()
+    const getBoxWidth = () => {
+        if (typeof window !== 'undefined') {
+            const width = window.innerWidth;
+            if (width < 768) return '95vw'; // Mobilné zariadenia
+            if (width < 1024) return '45vw'; // Tablety
+            if (width < 1280) return '35vw'; // Menšie monitory
+            return '380px'; // Štandardná šírka
+        }
+        return '380px';
+    };
+    
+    const boxWidth = getBoxWidth();
+    
     return React.createElement(
         'div',
         { className: 'flex flex-col gap-8' },
@@ -2138,7 +2152,7 @@ const renderGroupedCategories = () => {
             const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
             const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
             
-            // Počítač maximálnej výšky pre karty v riadku
+            // Počítač maximálnej výšky pre karty v riadku - ROVNAKÁ LOGIKA AKO V renderSingleCategoryView()
             const calculateMaxTeamCount = (groupList) => {
                 if (groupList.length === 0) return 0;
                 
@@ -2165,23 +2179,9 @@ const renderGroupedCategories = () => {
             const maxBasicTeams = calculateMaxTeamCount(basicGroups);
             const maxSuperTeams = calculateMaxTeamCount(superstructureGroups);
             
-            // Výška na jeden tím (v px) + padding
+            // Výška na jeden tím (v px) + padding - ROVNAKÉ AKO V renderSingleCategoryView()
             const teamHeight = 65;
             const baseCardHeight = 140;
-            
-            // Dynamická šírka boxov
-            const getBoxWidth = () => {
-                if (typeof window !== 'undefined') {
-                    const width = window.innerWidth;
-                    if (width < 768) return '95vw';
-                    if (width < 1024) return '45vw';
-                    if (width < 1280) return '35vw';
-                    return '380px';
-                }
-                return '380px';
-            };
-            
-            const boxWidth = getBoxWidth();
             
             return React.createElement(
                 'div',
@@ -2214,7 +2214,7 @@ const renderGroupedCategories = () => {
                         sortedBasicGroups.map((group, groupIndex) => {
                             const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
                             
-                            // Dynamická výška na základe maximálneho počtu tímov v tomto type skupiny
+                            // Dynamická výška - ROVNAKÁ LOGIKA AKO V renderSingleCategoryView()
                             const calculatedHeight = baseCardHeight + (maxBasicTeams * teamHeight);
                             const minHeight = Math.max(calculatedHeight, 300);
                             
@@ -2224,7 +2224,7 @@ const renderGroupedCategories = () => {
                                     key: `basic-${groupIndex}`,
                                     className: 'flex-shrink-0 zoom-group-box',
                                     style: { 
-                                        width: boxWidth,
+                                        width: boxWidth, // POUŽÍVAME ROVNAKÚ ŠÍRKU
                                         minWidth: boxWidth,
                                         maxWidth: boxWidth,
                                         height: `${minHeight}px`,
@@ -2274,7 +2274,7 @@ const renderGroupedCategories = () => {
                         sortedSuperstructureGroups.map((group, groupIndex) => {
                             const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
                             
-                            // Dynamická výška na základe maximálneho počtu tímov v tomto type skupiny
+                            // Dynamická výška - ROVNAKÁ LOGIKA AKO V renderSingleCategoryView()
                             const calculatedHeight = baseCardHeight + (maxSuperTeams * teamHeight);
                             const minHeight = Math.max(calculatedHeight, 300);
                             
@@ -2284,7 +2284,7 @@ const renderGroupedCategories = () => {
                                     key: `super-${groupIndex}`,
                                     className: 'flex-shrink-0 zoom-group-box',
                                     style: { 
-                                        width: boxWidth,
+                                        width: boxWidth, // POUŽÍVAME ROVNAKÚ ŠÍRKU
                                         minWidth: boxWidth,
                                         maxWidth: boxWidth,
                                         height: `${minHeight}px`,
