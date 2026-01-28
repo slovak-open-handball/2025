@@ -2767,7 +2767,7 @@ return React.createElement(
         ),
         
         // PÔVODNÝ SELECTBOX: Skupina - teraz filtrovaný podľa typu
-        React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (Voliteľné):'),
+        React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (voliteľné):'),
         React.createElement(
             'select',
             {
