@@ -896,6 +896,7 @@ const NewTeamModal = ({
   const isGroupFixed = !!defaultGroupName && !teamToEdit;
   const [groupEndingMismatch, setGroupEndingMismatch] = useState(false);
   const [orderMismatchMessage, setOrderMismatchMessage] = useState(null);
+  const [hasCorrectFormat, setHasCorrectFormat] = useState(false);
 
   // Zobrazí sa náhľad len pre superstructure tímy
   const shouldShowPreview = teamToEdit?.isSuperstructureTeam || (!teamToEdit); 
@@ -906,7 +907,7 @@ const handleTeamNameChange = (e) => {
   
   if ((teamToEdit?.isSuperstructureTeam || !teamToEdit) && showCategoryPrefix) {
     let newValue = value;
-    let hasCorrectFormat = false; // Pridajte túto premennú na sledovanie správneho formátu
+    let correctFormat = false; // Pridajte túto premennú na sledovanie správneho formátu
     
     // Ak máme aspoň jeden znak
     if (newValue.length >= 1) {
@@ -970,6 +971,7 @@ const handleTeamNameChange = (e) => {
               newValue = newValue.substring(0, 3);
               setTeamNameError("Zadaný názov tímu má správny formát.");
               hasCorrectFormat = true; // NASTAVÍME, ŽE MÁ SPRÁVNY FORMÁT
+              setHasCorrectFormat(true);
             }
           }
         }
@@ -981,10 +983,12 @@ const handleTeamNameChange = (e) => {
           newValue = newValue.substring(0, 2);
           setTeamNameError("Zadaný názov tímu má správny formát.");
           hasCorrectFormat = true; // NASTAVÍME, ŽE MÁ SPRÁVNY FORMÁT
+          setHasCorrectFormat(true);
         } else if (newValue.length === 2) {
           // Ak máme 2 znaky (číslo+písmeno), je to správny formát
           setTeamNameError("Zadaný názov tímu má správny formát.");
           hasCorrectFormat = true; // NASTAVÍME, ŽE MÁ SPRÁVNY FORMÁT
+          setHasCorrectFormat(true);
         }
       }
     }
@@ -995,16 +999,8 @@ const handleTeamNameChange = (e) => {
       newValue = newValue.substring(0, 3);
       setTeamNameError("Zadaný názov tímu má správny formát.");
       hasCorrectFormat = true; // NASTAVÍME, ŽE MÁ SPRÁVNY FORMÁT
+      setHasCorrectFormat(true);
     }
-    
-    // Pridajte túto premennú na vrch komponentu NewTeamModal:
-    const [hasCorrectFormat, setHasCorrectFormat] = useState(false);
-    
-    // A upravte useEffect pre hasCorrectFormat:
-    useEffect(() => {
-      // Reset hasCorrectFormat keď sa zmení teamName
-      setHasCorrectFormat(false);
-    }, [teamName]);
     
     // Aktualizácia hodnoty v inpute
     if (newValue !== value) {
@@ -1023,9 +1019,14 @@ const handleTeamNameChange = (e) => {
     // Pre používateľské tímy - bežné správanie
     setTeamName(value);
     setTeamNameError('');
+    setHasCorrectFormat(false);
   }
 };
-  
+
+  useEffect(() => {
+      // Reset hasCorrectFormat keď sa zmení teamName
+      setHasCorrectFormat(false);
+    }, [teamName]);  
 
   // Efekt pre validáciu koncovky a čísla poradia
   useEffect(() => {
