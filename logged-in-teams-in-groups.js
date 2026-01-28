@@ -2168,23 +2168,39 @@ const renderGroupedCategories = () => {
                         React.createElement(
                             'div',
                             {
-                                className: 'flex flex-wrap gap-6 justify-center',
+                                className: 'flex overflow-x-auto pb-4',
                                 style: {
-                                    margin: '0 -0.75rem' // Kompenzácia pre gap
+                                    flexWrap: 'nowrap', // Dôležité: karty budú vedľa seba
+                                    gap: '1.5rem',
+                                    alignItems: 'stretch',
+                                    paddingBottom: '1rem'
                                 }
                             },
                             sortedBasicGroups.map((group, groupIndex) => {
                                 const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
                                 
-                                // V režime bez vybranej kategórie používame flex-wrap namiesto horizontálneho posuvníka
+                                // Dynamická šírka boxov podľa zoom levelu
+                                const getBoxWidth = () => {
+                                    if (typeof window !== 'undefined') {
+                                        const width = window.innerWidth;
+                                        if (width < 768) return '95vw';
+                                        if (width < 1024) return '45vw';
+                                        if (width < 1280) return '35vw';
+                                        return '380px';
+                                    }
+                                    return '380px';
+                                };
+                                
+                                const boxWidth = getBoxWidth();
+                                
                                 return React.createElement(
                                     'div',
                                     {
                                         key: `basic-${groupIndex}`,
-                                        className: 'flex-grow-0 flex-shrink-0',
                                         style: { 
-                                            width: '380px',
-                                            maxWidth: '100%'
+                                            width: boxWidth,
+                                            minWidth: boxWidth,
+                                            flexShrink: 0
                                         }
                                     },
                                     React.createElement(
@@ -2228,23 +2244,39 @@ const renderGroupedCategories = () => {
                         React.createElement(
                             'div',
                             {
-                                className: 'flex flex-wrap gap-6 justify-center',
+                                className: 'flex overflow-x-auto pb-4',
                                 style: {
-                                    margin: '0 -0.75rem' // Kompenzácia pre gap
+                                    flexWrap: 'nowrap', // Dôležité: karty budú vedľa seba
+                                    gap: '1.5rem',
+                                    alignItems: 'stretch',
+                                    paddingBottom: '1rem'
                                 }
                             },
                             sortedSuperstructureGroups.map((group, groupIndex) => {
                                 const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
                                 
-                                // V režime bez vybranej kategórie používame flex-wrap namiesto horizontálneho posuvníka
+                                // Dynamická šírka boxov podľa zoom levelu
+                                const getBoxWidth = () => {
+                                    if (typeof window !== 'undefined') {
+                                        const width = window.innerWidth;
+                                        if (width < 768) return '95vw';
+                                        if (width < 1024) return '45vw';
+                                        if (width < 1280) return '35vw';
+                                        return '380px';
+                                    }
+                                    return '380px';
+                                };
+                                
+                                const boxWidth = getBoxWidth();
+                                
                                 return React.createElement(
                                     'div',
                                     {
                                         key: `super-${groupIndex}`,
-                                        className: 'flex-grow-0 flex-shrink-0',
                                         style: { 
-                                            width: '380px',
-                                            maxWidth: '100%'
+                                            width: boxWidth,
+                                            minWidth: boxWidth,
+                                            flexShrink: 0
                                         }
                                     },
                                     React.createElement(
