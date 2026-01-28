@@ -2143,35 +2143,57 @@ const renderGroupedCategories = () => {
                 'div',
                 { 
                     key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full' // Odstránené: overflow-x-auto
+                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full overflow-x-auto' // Pridané: overflow-x-auto
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
                     className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
                 }, categoryName),
                 
-                // ZÁKLADNÉ SKUPINY - ZMENENÉ: VŽDY flex-wrap bez overflow-x-auto
+                // ZÁKLADNÉ SKUPINY - ZMENENÉ: ZBALENÉ DO HORIZONTÁLNEHO KONTÉJNERA
                 sortedBasicGroups.length > 0 && React.createElement(
-                    'div',
-                    { className: 'mb-8 w-full' },
+                    React.Fragment,
+                    null,
                     React.createElement('h4', { 
                         className: 'text-xl font-semibold mb-4 text-gray-700'
                     }, 'Základné skupiny'),
                     React.createElement(
                         'div',
                         { 
-                            // ZMENENÉ: VŽDY flex-wrap bez overflow-x-auto keď nie je vybratá kategória
-                            className: 'flex flex-wrap justify-center gap-6 w-full pb-4',
+                            className: 'flex mb-8 overflow-x-auto pb-4', // flex-wrap odstránené, pridané overflow-x-auto
+                            style: { 
+                                flexWrap: 'nowrap', // Zabezpečí horizontálne usporiadanie
+                                gap: '1.5rem',
+                                alignItems: 'stretch'
+                            }
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
                             const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
+                            
+                            // Dynamická šírka boxov podľa zoom levelu
+                            const getBoxWidth = () => {
+                                if (typeof window !== 'undefined') {
+                                    const width = window.innerWidth;
+                                    if (width < 768) return '95vw';
+                                    if (width < 1024) return '45vw';
+                                    if (width < 1280) return '35vw';
+                                    return '380px';
+                                }
+                                return '380px';
+                            };
+                            
+                            const boxWidth = getBoxWidth();
                             
                             return React.createElement(
                                 'div',
                                 {
                                     key: `basic-${groupIndex}`,
-                                    // ZMENENÉ: Responzívna šírka boxov
-                                    className: 'w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.333rem)] xl:w-[calc(25%-1.5rem)]',
+                                    className: 'flex-shrink-0', // Zabezpečí že sa nebudú sťahovať
+                                    style: { 
+                                        width: boxWidth,
+                                        minWidth: boxWidth,
+                                        maxWidth: boxWidth
+                                    }
                                 },
                                 React.createElement(
                                     'div',
@@ -2195,28 +2217,50 @@ const renderGroupedCategories = () => {
                     )
                 ),
                 
-                // NADSTAVBOVÉ SKUPINY - ZMENENÉ: VŽDY flex-wrap bez overflow-x-auto
+                // NADSTAVBOVÉ SKUPINY - ZMENENÉ: ZBALENÉ DO HORIZONTÁLNEHO KONTÉJNERA
                 sortedSuperstructureGroups.length > 0 && React.createElement(
-                    'div',
-                    { className: 'w-full' },
+                    React.Fragment,
+                    null,
                     React.createElement('h4', { 
                         className: 'text-xl font-semibold mb-4 text-gray-700'
                     }, 'Nadstavbové skupiny'),
                     React.createElement(
                         'div',
                         { 
-                            // ZMENENÉ: VŽDY flex-wrap bez overflow-x-auto keď nie je vybratá kategória
-                            className: 'flex flex-wrap justify-center gap-6 w-full pb-4',
+                            className: 'flex overflow-x-auto pb-4', // flex-wrap odstránené, pridané overflow-x-auto
+                            style: { 
+                                flexWrap: 'nowrap', // Zabezpečí horizontálne usporiadanie
+                                gap: '1.5rem',
+                                alignItems: 'stretch'
+                            }
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
                             const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
+                            
+                            // Dynamická šírka boxov podľa zoom levelu
+                            const getBoxWidth = () => {
+                                if (typeof window !== 'undefined') {
+                                    const width = window.innerWidth;
+                                    if (width < 768) return '95vw';
+                                    if (width < 1024) return '45vw';
+                                    if (width < 1280) return '35vw';
+                                    return '380px';
+                                }
+                                return '380px';
+                            };
+                            
+                            const boxWidth = getBoxWidth();
                             
                             return React.createElement(
                                 'div',
                                 {
                                     key: `super-${groupIndex}`,
-                                    // ZMENENÉ: Responzívna šírka boxov
-                                    className: 'w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.333rem)] xl:w-[calc(25%-1.5rem)]',
+                                    className: 'flex-shrink-0', // Zabezpečí že sa nebudú sťahovať
+                                    style: { 
+                                        width: boxWidth,
+                                        minWidth: boxWidth,
+                                        maxWidth: boxWidth
+                                    }
                                 },
                                 React.createElement(
                                     'div',
