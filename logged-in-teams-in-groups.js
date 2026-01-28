@@ -1747,22 +1747,22 @@ const handleSubmit = (e) => {
             }
             return name;
         };
-   
+
         if (isWithoutGroup) {
             // Tímy bez skupiny → triedime len podľa názvu, bez čísel a placeholderov
             const sortedTeams = [...teamsToRender].sort((a, b) =>
                 a.teamName.localeCompare(b.teamName)
             );
-   
+
             const items = sortedTeams.map((team, idx) => {
                 let display = getCleanDisplayName(team);
                 if (!selectedCategoryId) {
                     // ak zobrazujeme všetky kategórie → ukážeme aj názov kategórie
                     display = `${team.category}: ${display}`;
                 }
-   
+
                 const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
-   
+
                 return React.createElement(
                     'li',
                     {
@@ -1770,7 +1770,7 @@ const handleSubmit = (e) => {
                         className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'}`
                     },
                     React.createElement('span', { className: 'flex-grow text-gray-800' }, display),
-   
+    
                     React.createElement(
                         'div',
                         { className: 'flex items-center space-x-1' },
@@ -1784,8 +1784,18 @@ const handleSubmit = (e) => {
                                 className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
                                 title: 'Upraviť tím'
                             },
-                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                            React.createElement('svg', { 
+                                className: 'w-5 h-5', 
+                                fill: 'none', 
+                                stroke: 'currentColor', 
+                                viewBox: '0 0 24 24' 
+                            },
+                                React.createElement('path', { 
+                                    strokeLinecap: 'round', 
+                                    strokeLinejoin: 'round', 
+                                    strokeWidth: '2', 
+                                    d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' 
+                                })
                             )
                         ),
                         showDeleteButton &&
@@ -1796,14 +1806,24 @@ const handleSubmit = (e) => {
                                 className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
                                 title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
                             },
-                            React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                            React.createElement('svg', { 
+                                className: 'w-5 h-5', 
+                                fill: 'none', 
+                                stroke: 'currentColor', 
+                                viewBox: '0 0 24 24' 
+                            },
+                                React.createElement('path', { 
+                                    strokeLinecap: 'round', 
+                                    strokeLinejoin: 'round', 
+                                    strokeWidth: '2', 
+                                    d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' 
+                                })
                             )
                         )
                     )
                 );
             });
-   
+
             return React.createElement('ul', { className: 'space-y-2' }, ...items);
         }
    
