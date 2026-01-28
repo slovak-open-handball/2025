@@ -2195,7 +2195,7 @@ const renderGroupedCategories = () => {
                 }, categoryName),
                 
                 // ZÁKLADNÉ SKUPINY (s horizontálnym posuvníkom)
-                sortedBasicGroups.length > 0 && React.createElement(
+                selectedCategoryId && sortedBasicGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'mb-8' },
                     React.createElement('h4', { 
@@ -2449,7 +2449,7 @@ const renderSingleCategoryView = () => {
                 },
                 
                 // ZÁKLADNÉ SKUPINY
-                sortedBasicGroups.length > 0 && React.createElement(
+                selectedCategoryId && sortedBasicGroups.length > 0 && React.createElement(
                     React.Fragment,
                     null,
                     React.createElement('h3', { 
