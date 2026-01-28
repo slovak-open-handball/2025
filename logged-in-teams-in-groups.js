@@ -1480,14 +1480,16 @@ const handleSubmit = (e) => {
             { className: 'text-sm text-red-600 font-medium' },
             ` ${orderMismatchMessage}`
           ) : null
-      ) : null,
-      
-      (!canEditTeamName && teamToEdit) ? React.createElement(
-        'div',
-        { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
-        React.createElement('p', { className: 'text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu:'),
-        React.createElement('p', { className: 'text-base font-bold text-gray-800' }, teamToEdit.teamName),
-      ) : null,
+        ) : null,
+        
+        // Tento blok bol PRED zátvorkou - presuňte ho SEM
+        (!canEditTeamName && teamToEdit) ? React.createElement(
+          'div',
+          { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
+          React.createElement('p', { className: 'text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu:'),
+          React.createElement('p', { className: 'text-base font-bold text-gray-800' }, teamToEdit.teamName)
+        ) : null
+      ),
 
       React.createElement(
         'form',
