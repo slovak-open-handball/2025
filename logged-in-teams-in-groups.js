@@ -2126,36 +2126,56 @@ const renderGroupedCategories = () => {
     
     // Pridáme state pre sledovanie zmeny veľkosti okna
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const [zoomLevel, setZoomLevel] = useState(100);
     
     useEffect(() => {
         const handleResize = () => {
             setWindowWidth(window.innerWidth);
+            
+            // Detekcia zoom levelu
+            const visualViewport = window.visualViewport || window;
+            const zoom = Math.round((window.outerWidth / window.innerWidth) * 100);
+            setZoomLevel(zoom);
         };
         
         window.addEventListener('resize', handleResize);
-        window.addEventListener('zoom', handleResize);
+        window.addEventListener('load', handleResize);
+        
+        // Odchytávanie zmien zoomu
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleResize);
+        }
+        
+        // Inicializácia
+        handleResize();
         
         return () => {
             window.removeEventListener('resize', handleResize);
-            window.removeEventListener('zoom', handleResize);
+            window.removeEventListener('load', handleResize);
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', handleResize);
+            }
         };
     }, []);
     
     return React.createElement(
         'div',
         { 
-            className: 'w-full overflow-x-hidden',
+            className: 'w-full overflow-x-auto pb-4',
             style: { 
-                maxWidth: '100vw',
-                boxSizing: 'border-box'
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#cbd5e0 #f1f5f9'
             }
         },
         React.createElement(
             'div',
             { 
-                className: 'flex flex-col gap-8',
+                className: 'flex flex-col gap-8 min-w-max px-4',
                 style: { 
-                    maxWidth: '100%'
+                    maxWidth: '100%',
+                    minWidth: 'min-content'
                 }
             },
             sortedCategoryEntries.map(([categoryId, categoryName], index) => {
@@ -2170,35 +2190,24 @@ const renderGroupedCategories = () => {
                 const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
                 const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
                 
-                // Dynamická šírka boxov - REAKTÍVNA NA ZMENU VEĽKOSTI OKNA
+                // Dynamická šírka boxov - REAKTÍVNA NA ZMENU VEĽKOSTI OKNA A ZOOMU
                 const getBoxWidth = () => {
-                    const width = windowWidth;
-                    if (width < 768) return '95vw';
-                    if (width < 1024) return '45vw';
-                    if (width < 1280) return '35vw';
-                    return '380px';
+                    if (windowWidth < 768) return '90vw';
+                    if (windowWidth < 1024) return '42vw';
+                    if (windowWidth < 1280) return '32vw';
+                    return '300px';
                 };
                 
                 const boxWidth = getBoxWidth();
-                
-                // Vypočítame počet skupín pre každý typ
-                const totalBasicGroupsCount = sortedBasicGroups.length;
-                const totalSuperGroupsCount = sortedSuperstructureGroups.length;
-                
-                // Šírka pre každý typ skupín zvlášť
-                const basicGroupsWidth = totalBasicGroupsCount > 0 ? 
-                    `${totalBasicGroupsCount * (parseInt(boxWidth.replace('vw', '').replace('px', '')) + 36)}${boxWidth.includes('vw') ? 'vw' : 'px'}` : 'auto';
-                
-                const superGroupsWidth = totalSuperGroupsCount > 0 ? 
-                    `${totalSuperGroupsCount * (parseInt(boxWidth.replace('vw', '').replace('px', '')) + 36)}${boxWidth.includes('vw') ? 'vw' : 'px'}` : 'auto';
                 
                 return React.createElement(
                     'div',
                     { 
                         key: index, 
-                        className: 'bg-white rounded-xl shadow-xl p-6 mb-6',
+                        className: 'bg-white rounded-xl shadow-xl p-6 mb-6 min-w-0',
                         style: { 
-                            maxWidth: '100%'
+                            maxWidth: '100%',
+                            minWidth: 'min-content'
                         }
                     },
                     // Názov kategórie
@@ -2216,23 +2225,23 @@ const renderGroupedCategories = () => {
                         React.createElement(
                             'div',
                             { 
-                                className: 'relative mb-8',
+                                className: 'relative mb-8 overflow-x-auto pb-4',
                                 style: { 
                                     minHeight: '350px',
                                     width: '100%',
-                                    overflowX: 'visible'
+                                    scrollbarWidth: 'thin',
+                                    scrollbarColor: '#cbd5e0 #f1f5f9'
                                 }
                             },
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'flex gap-6',
+                                    className: 'flex gap-6 min-w-max',
                                     style: {
                                         flexWrap: 'nowrap',
                                         alignItems: 'stretch',
-                                        width: basicGroupsWidth,
-                                        minWidth: '100%',
-                                        transition: 'width 0.3s ease' // Pridáme plynulý prechod
+                                        minWidth: 'min-content',
+                                        paddingRight: '1rem'
                                     }
                                 },
                                 sortedBasicGroups.map((group, groupIndex) => {
@@ -2245,8 +2254,7 @@ const renderGroupedCategories = () => {
                                             style: { 
                                                 width: boxWidth,
                                                 minWidth: boxWidth,
-                                                flexShrink: 0,
-                                                transition: 'width 0.3s ease, min-width 0.3s ease' // Pridáme plynulý prechod
+                                                flexShrink: 0
                                             }
                                         },
                                         React.createElement(
@@ -2261,7 +2269,7 @@ const renderGroupedCategories = () => {
                                                 className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
                                             }, group.type),
                                             React.createElement('div', { 
-                                                className: 'mt-2 space-y-1 flex-grow overflow-auto'
+                                                className: 'mt-2 space-y-1 flex-grow overflow-y-auto'
                                             },
                                                 renderTeamList(teamsInGroup, group.name, categoryId)
                                             )
@@ -2282,23 +2290,23 @@ const renderGroupedCategories = () => {
                         React.createElement(
                             'div',
                             { 
-                                className: 'relative',
+                                className: 'relative overflow-x-auto pb-4',
                                 style: { 
                                     minHeight: '350px',
                                     width: '100%',
-                                    overflowX: 'visible'
+                                    scrollbarWidth: 'thin',
+                                    scrollbarColor: '#cbd5e0 #f1f5f9'
                                 }
                             },
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'flex gap-6',
+                                    className: 'flex gap-6 min-w-max',
                                     style: {
                                         flexWrap: 'nowrap',
                                         alignItems: 'stretch',
-                                        width: superGroupsWidth,
-                                        minWidth: '100%',
-                                        transition: 'width 0.3s ease'
+                                        minWidth: 'min-content',
+                                        paddingRight: '1rem'
                                     }
                                 },
                                 sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2311,8 +2319,7 @@ const renderGroupedCategories = () => {
                                             style: { 
                                                 width: boxWidth,
                                                 minWidth: boxWidth,
-                                                flexShrink: 0,
-                                                transition: 'width 0.3s ease, min-width 0.3s ease'
+                                                flexShrink: 0
                                             }
                                         },
                                         React.createElement(
@@ -2327,7 +2334,7 @@ const renderGroupedCategories = () => {
                                                 className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
                                             }, group.type),
                                             React.createElement('div', { 
-                                                className: 'mt-2 space-y-1 flex-grow overflow-auto'
+                                                className: 'mt-2 space-y-1 flex-grow overflow-y-auto'
                                             },
                                                 renderTeamList(teamsInGroup, group.name, categoryId)
                                             )
