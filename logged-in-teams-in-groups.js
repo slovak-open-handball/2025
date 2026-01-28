@@ -5,6 +5,14 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 const { useState, useEffect, useRef } = React;
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 const listeners = new Set();
+
+const calculateBoxWidth = (currentWidth) => {
+  if (currentWidth < 768) return '95vw';
+  if (currentWidth < 1024) return '45vw';
+  if (currentWidth < 1280) return '35vw';
+  return '380px';
+};
+
 const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName, categoryName, isConfirming }) => {
   if (!isOpen) return null;
   return React.createElement(
@@ -2909,8 +2917,8 @@ const renderSingleCategoryView = (currentWindowWidth) => {
                       { 
                           className: "bg-white rounded-xl shadow-xl p-6 mb-6 lg:mr-8 flex-shrink-0 w-full lg:w-auto",
                           style: { 
-                              maxWidth: boxWidth,
-                              minWidth: boxWidth,
+                              maxWidth: getBoxWidth(windowWidth),
+                              minWidth: getBoxWidth(windowWidth),
                               transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
                           }
                       },
