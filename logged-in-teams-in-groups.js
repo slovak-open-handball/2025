@@ -2815,19 +2815,20 @@ return React.createElement(
                     className: `flex-grow min-w-0 ${teamsWithoutGroup.length === 0 ? 'w-full' : ''}` 
                 }, renderCategoryView(selectedCategoryId))
             )
-            // AK NIE JE VYBRATÁ ŽIADNA KATEGÓRIA, ZOBRAZÍME VŠETKY KATEGÓRIE
+            // AK NIE JE VYBRATÁ ŽIADNA KATEGÓRIA, ZOBRAZÍME VŠETKY KATEGÓRIE (OBDOBNÉ AKO PRE JEDNU KATEGÓRIU)
             : React.createElement(
                 'div',
-                { className: 'w-full' }, // ZMENENÉ: iba jednoduchý wrapper
+                { className: 'flex flex-col lg:flex-row justify-center space-x-0 lg:space-x-4 w-full px-4' },
                 // Zobrazujeme ľavý obdĺžnik LEN AK EXISTUJÚ TÍMY BEZ SKUPINY
                 teamsWithoutGroup.length > 0 && React.createElement(
                     'div',
-                    { className: 'w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0 mx-auto mb-8' },
-                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
+                    { className: 'w-full lg:w-1/4 max-w-sm bg-white rounded-xl shadow-xl p-8 mb-6 flex-shrink-0' },
+                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Tímy bez skupiny'),
                     renderTeamList(teamsWithoutGroup, null, null, true)
                 ),
-                // PRIAMO VRÁTI renderAllCategories() BEZ ĎALŠIEHO FLEX WRAPPERU
-                renderAllCategories()
+                React.createElement('div', { 
+                    className: `flex-grow min-w-0 ${teamsWithoutGroup.length === 0 ? 'w-full' : ''}` 
+                }, renderAllCategories())
             ),
         fabButton
     );
