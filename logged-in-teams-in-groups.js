@@ -2460,22 +2460,6 @@ return React.createElement(
             sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
         ),
         
-        // NOVÝ SELECTBOX: Typ skupiny
-        selectedCategoryId && React.createElement(React.Fragment, null,
-            React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte typ skupiny:'),
-            React.createElement(
-                'select',
-                {
-                    className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
-                    value: selectedGroupType,
-                    onChange: (e) => setSelectedGroupType(e.target.value)
-                },
-                React.createElement('option', { value: '' }, 'Všetky typy skupín'),
-                React.createElement('option', { value: 'základná skupina' }, 'Základné skupiny'),
-                React.createElement('option', { value: 'nadstavbová skupina' }, 'Nadstavbové skupiny')
-            )
-        ),
-        
         // PÔVODNÝ SELECTBOX: Skupina - teraz filtrovaný podľa typu
         React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (Voliteľné):'),
         React.createElement(
@@ -2488,12 +2472,10 @@ return React.createElement(
                 style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' }
             },
             React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
-            // Filtruj skupiny podľa vybraného typu
-            availableGroupsForSelect
-                .filter(group => !selectedGroupType || group.type === selectedGroupType)
-                .map((group, index) =>
-                    React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
-                )
+            // Zobraziť všetky dostupné skupiny bez filtrovania podľa typu
+            availableGroupsForSelect.map((group, index) =>
+                React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
+            )
         ),
         
         React.createElement(
