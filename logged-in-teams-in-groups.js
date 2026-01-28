@@ -1521,6 +1521,7 @@ const handleSubmit = (e) => {
               font-medium
               transition-colors
               duration-200
+              border-2
               ${isSubmitDisabled
                   ? 'bg-white text-indigo-600 border-indigo-600 cursor-not-allowed opacity-60'
                   : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white border-transparent'}
