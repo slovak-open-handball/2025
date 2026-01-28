@@ -2174,7 +2174,7 @@ const renderGroupedCategories = () => {
                 'div',
                 { 
                     key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full'
+                    className: `${!selectedCategoryId ? '' : 'bg-white rounded-xl shadow-xl'} p-6 mb-6 w-full`
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
