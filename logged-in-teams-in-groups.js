@@ -2410,16 +2410,6 @@ const renderSingleCategoryView = (currentWindowWidth) => {
         ? allTeams.filter(t => t.category === categoryName && !t.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
         : [];
     
-    // Dynamická šírka boxov podľa zoom levelu - TERAZ POUŽÍVAME windowWidth
-    const getBoxWidth = () => {
-      if (currentWindowWidth < 768) return '95vw';
-      if (currentWindowWidth < 1024) return '45vw';
-      if (currentWindowWidth < 1280) return '35vw';
-      return '380px';
-    };
-    
-    const boxWidth = getBoxWidth();
-    
     // Zistíme, či existujú tímy bez skupiny
     const hasTeamsWithoutGroup = teamsWithoutGroupForCategory.length > 0;
     
