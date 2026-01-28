@@ -2114,47 +2114,128 @@ const NewTeamModal = ({
    
         return React.createElement('ul', { className: 'space-y-2' }, ...items);
     };
-    const renderGroupedCategories = () => {
-        if (Object.keys(allGroupsByCategoryId).length === 0) {
-            return React.createElement('div', { className: 'w-full max-w-xl mx-auto' },
-                React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne skupiny neboli nájdené.')
-            );
-        }
-        const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
-        return React.createElement(
-            'div',
-            { className: 'flex flex-wrap gap-2 sm:gap-2 justify-center' },
-            sortedCategoryEntries.map(([categoryId, categoryName], index) => {
-                const groups = allGroupsByCategoryId[categoryId] || [];
-                const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
-                const sortedGroups = [...groups].sort((a, b) => {
-                    if (a.type === 'základná skupina' && b.type !== 'základná skupina') return -1;
-                    if (b.type === 'základná skupina' && a.type !== 'základná skupina') return 1;
-                    return a.name.localeCompare(b.name);
-                });
-                return React.createElement(
+const renderGroupedCategories = () => {
+    if (Object.keys(allGroupsByCategoryId).length === 0) {
+        return React.createElement('div', { className: 'w-full max-w-xl mx-auto' },
+            React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne skupiny neboli nájdené.')
+        );
+    }
+    
+    const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
+    
+    return React.createElement(
+        'div',
+        { className: 'flex flex-col gap-8' },  // Zmenené z flex-wrap na flex-col
+        sortedCategoryEntries.map(([categoryId, categoryName], index) => {
+            const groups = allGroupsByCategoryId[categoryId] || [];
+            const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
+            
+            // Rozdelenie skupín podľa typu
+            const basicGroups = groups.filter(g => g.type === 'základná skupina');
+            const superstructureGroups = groups.filter(g => g.type === 'nadstavbová skupina');
+            
+            // Triedenie skupín
+            const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
+            const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
+            
+            return React.createElement(
+                'div',
+                { 
+                    key: index, 
+                    className: 'bg-white rounded-xl shadow-xl p-6 mb-3'
+                },
+                // Názov kategórie
+                React.createElement('h3', { 
+                    className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
+                }, categoryName),
+                
+                // ZÁKLADNÉ SKUPINY (v riadku)
+                sortedBasicGroups.length > 0 && React.createElement(
                     'div',
-                    { key: index, className: 'flex flex-col bg-white rounded-xl shadow-xl p-6 mb-3 flex-shrink-0' },
-                    React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center whitespace-nowrap' }, categoryName),
-                    React.createElement('ul', { className: 'space-y-2' },
-                        sortedGroups.map((group, groupIndex) =>
+                    null,
+                    React.createElement('h4', { 
+                        className: 'text-xl font-semibold mb-4 text-gray-700 pl-2'
+                    }, 'Základné skupiny'),
+                    React.createElement(
+                        'div',
+                        { 
+                            className: 'flex flex-wrap gap-6 mb-6', // flex-wrap umožňuje wrap na menších obrazovkách
+                            style: { 
+                                alignItems: 'stretch'
+                            }
+                        },
+                        sortedBasicGroups.map((group, groupIndex) =>
                             React.createElement(
-                                'li',
-                                { key: groupIndex, className: `px-4 py-2 rounded-lg text-gray-700 whitespace-nowrap ${getGroupColorClass(group.type)}` },
+                                'div',
+                                { 
+                                    key: `basic-${groupIndex}`, 
+                                    className: 'flex-shrink-0 bg-gray-100 rounded-lg p-4 min-w-[250px] max-w-[300px] flex flex-col'
+                                },
                                 React.createElement('div', null,
-                                    React.createElement('p', { className: 'font-semibold whitespace-nowrap' }, group.name),
-                                    React.createElement('p', { className: 'text-sm text-gray-500 whitespace-nowrap' }, group.type),
-                                    React.createElement('div', { className: 'mt-2 space-y-1' },
+                                    React.createElement('p', { 
+                                        className: 'font-semibold text-lg text-center mb-2'
+                                    }, group.name),
+                                    React.createElement('p', { 
+                                        className: 'text-sm text-gray-500 text-center mb-3'
+                                    }, group.type),
+                                    React.createElement('div', { className: 'mt-2 space-y-1 flex-grow' },
                                         renderTeamList(teamsInThisCategory.filter(t => t.groupName === group.name), group.name, categoryId)
                                     )
                                 )
                             )
                         )
                     )
-                );
-            })
-        );
-    };
+                ),
+                
+                // NADSTAVBOVÉ SKUPINY (v riadku pod základnými)
+                sortedSuperstructureGroups.length > 0 && React.createElement(
+                    'div',
+                    null,
+                    React.createElement('h4', { 
+                        className: 'text-xl font-semibold mb-4 text-gray-700 pl-2'
+                    }, 'Nadstavbové skupiny'),
+                    React.createElement(
+                        'div',
+                        { 
+                            className: 'flex flex-wrap gap-6',
+                            style: { 
+                                alignItems: 'stretch'
+                            }
+                        },
+                        sortedSuperstructureGroups.map((group, groupIndex) =>
+                            React.createElement(
+                                'div',
+                                { 
+                                    key: `super-${groupIndex}`, 
+                                    className: 'flex-shrink-0 bg-blue-100 rounded-lg p-4 min-w-[250px] max-w-[300px] flex flex-col'
+                                },
+                                React.createElement('div', null,
+                                    React.createElement('p', { 
+                                        className: 'font-semibold text-lg text-center mb-2'
+                                    }, group.name),
+                                    React.createElement('p', { 
+                                        className: 'text-sm text-gray-500 text-center mb-3'
+                                    }, group.type),
+                                    React.createElement('div', { className: 'mt-2 space-y-1 flex-grow' },
+                                        renderTeamList(teamsInThisCategory.filter(t => t.groupName === group.name), group.name, categoryId)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+                
+                // Správa ak nie sú skupiny
+                basicGroups.length === 0 && superstructureGroups.length === 0 &&
+                React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500 py-4' },
+                    'V tejto kategórii nie sú žiadne skupiny.'
+                )
+            );
+        })
+    );
+};
   
 // Upravená funkcia renderSingleCategoryView()
 const renderSingleCategoryView = () => {
