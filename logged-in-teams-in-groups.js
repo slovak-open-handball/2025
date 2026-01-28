@@ -183,7 +183,6 @@ const AddGroupsApp = (props) => {
     const currentUserEmail = window.globalUserProfileData?.email || null;
     const [deleteGapModal, setDeleteGapModal] = useState(null);
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
-    const [isValidFormat, setIsValidFormat] = useState(false);
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
@@ -897,6 +896,8 @@ const NewTeamModal = ({
   const isGroupFixed = !!defaultGroupName && !teamToEdit;
   const [groupEndingMismatch, setGroupEndingMismatch] = useState(false);
   const [orderMismatchMessage, setOrderMismatchMessage] = useState(null);
+
+  const [isValidFormat, setIsValidFormat] = useState(false);
 
   // Zobrazí sa náhľad len pre superstructure tímy
   const shouldShowPreview = teamToEdit?.isSuperstructureTeam || (!teamToEdit); 
