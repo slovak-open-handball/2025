@@ -1369,58 +1369,65 @@ const handleSubmit = (e) => {
         modalTitle
       ),
       
-      // Pole pre názov tímu - ZOBRAZÍ SA LEN AK MÔŽEME MENIŤ NÁZOV
-      canEditTeamName ? React.createElement(
-        'div',
-        { className: 'mb-6' },
-        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
-          teamToEdit?.isSuperstructureTeam ? 'Názov tímu (bez názvu kategórie):' : 'Názov tímu:'
-        ),
-        React.createElement('input', {
-          type: 'text',
-          className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
-            isDuplicate || groupEndingMismatch || orderMismatchMessage || teamNameError ? 'border-red-500' : 'border-gray-300'
-          }`,
-          value: teamName,
-          onChange: handleTeamNameChange,
-          required: true,
-          autoFocus: true,
-          disabled: !canEditTeamName // Vypnuté, ak nemôžeme meniť
-        }),
+    // Pole pre názov tímu - ZOBRAZÍ SA LEN AK MÔŽEME MENIŤ NÁZOV
+    canEditTeamName ? React.createElement(
+      'div',
+      { className: 'mb-6' },
+      React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
+        teamToEdit?.isSuperstructureTeam ? 'Názov tímu (bez názvu kategórie):' : 'Názov tímu:'
+      ),
+      React.createElement('input', {
+        type: 'text',
+        className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
+          isDuplicate || groupEndingMismatch || orderMismatchMessage || teamNameError ? 'border-red-500' : 'border-gray-300'
+        }`,
+        value: teamName,
+        onChange: handleTeamNameChange,
+        required: true,
+        autoFocus: true,
+        disabled: !canEditTeamName // Vypnuté, ak nemôžeme meniť
+      }),
 
+      React.createElement(
+        'div',
+        { className: 'space-y-1 mt-2' },
+        // Chyba formátu názvu
         teamNameError ? React.createElement(
           'p',
-          { className: 'mt-2 text-sm text-red-600 font-medium' },
+          { className: 'text-sm text-red-600 font-medium' },
           ` ${teamNameError}`
         ) : null,
-        
-        // NÁHĽAD - ZOBRAZÍ SA LEN PRE SUPERSTRUCTURE TÍMY A NOVÉ TÍMY
-        (shouldShowPreview && finalTeamNamePreview) ? React.createElement(
-          'div',
-          { className: 'mt-3 p-3 bg-indigo-50 rounded-lg text-center' },
-          React.createElement('p', { className: 'text-sm text-gray-600' }, 'Výsledný názov:'),
-          React.createElement('p', { className: 'text-base font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
-        ) : null,
-        
-        // Chybové hlášky
+    
+        // Duplicita
         isDuplicate ? React.createElement(
           'p',
-          { className: 'mt-2 text-sm text-red-600 font-medium' },
+          { className: 'text-sm text-red-600 font-medium' },
           ' Tím s týmto názvom už existuje!'
         ) : null,
-        
+    
+        // Nezhoda koncovky skupiny
         groupEndingMismatch ? React.createElement(
           'p',
-          { className: 'mt-2 text-sm text-red-600 font-medium' },
+          { className: 'text-sm text-red-600 font-medium' },
           ` V tejto kategórii neexistuje žiadna základná skupina ${teamName.trim().slice(-1).toUpperCase()}`
         ) : null,
         
+        // Chyba poradia
         orderMismatchMessage ? React.createElement(
           'p',
-          { className: 'mt-2 text-sm text-red-600 font-medium' },
+          { className: 'text-sm text-red-600 font-medium' },
           ` ${orderMismatchMessage}`
         ) : null
-      ) : null,
+      ),
+  
+      // NÁHĽAD - TERAZ POD CHYBOVÝMI SPRÁVAMI
+      (shouldShowPreview && finalTeamNamePreview) ? React.createElement(
+        'div',
+        { className: 'mt-4 p-3 bg-indigo-50 rounded-lg text-center' },
+        React.createElement('p', { className: 'text-sm text-gray-600' }, 'Výsledný názov:'),
+        React.createElement('p', { className: 'text-base font-bold text-indigo-700 mt-1' }, finalTeamNamePreview)
+      ) : null
+    ) : null,
       
       (!canEditTeamName && teamToEdit) ? React.createElement(
         'div',
