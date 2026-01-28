@@ -2143,14 +2143,14 @@ const renderGroupedCategories = () => {
                 'div',
                 { 
                     key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full'
+                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full overflow-x-auto'
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
                     className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
                 }, categoryName),
                 
-                // ZÁKLADNÉ SKUPINY (BEZ POSUVNÍKA)
+                // ZÁKLADNÉ SKUPINY (VŠETKY VEDĽA SEBA - ŽIADNY WRAP)
                 sortedBasicGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'mb-8 w-full' },
@@ -2160,9 +2160,9 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex flex-wrap gap-6 w-full',
+                            className: 'flex flex-nowrap gap-6 w-full overflow-x-auto pb-4',
                             style: { 
-                                flexWrap: 'wrap',  // Dôležité: wrap na viac riadkov
+                                flexWrap: 'nowrap',  // DÔLEŽITÉ: VŽDY VEDĽA SEBA
                             }
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
@@ -2201,7 +2201,7 @@ const renderGroupedCategories = () => {
                     )
                 ),
                 
-                // NADSTAVBOVÉ SKUPINY (BEZ POSUVNÍKA)
+                // NADSTAVBOVÉ SKUPINY (VŠETKY VEDĽA SEBA - ŽIADNY WRAP)
                 sortedSuperstructureGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'w-full' },
@@ -2211,9 +2211,9 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex flex-wrap gap-6 w-full',
+                            className: 'flex flex-nowrap gap-6 w-full overflow-x-auto pb-4',
                             style: { 
-                                flexWrap: 'wrap',  // Dôležité: wrap na viac riadkov
+                                flexWrap: 'nowrap',  // DÔLEŽITÉ: VŽDY VEDĽA SEBA
                             }
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
