@@ -2143,14 +2143,14 @@ const renderGroupedCategories = () => {
                 'div',
                 { 
                     key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full'
+                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6'
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
                     className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
                 }, categoryName),
                 
-                // ZÁKLADNÉ SKUPINY - AKTUALIZOVANÉ
+                // ZÁKLADNÉ SKUPINY - OPRAVENÉ
                 sortedBasicGroups.length > 0 && React.createElement(
                     React.Fragment,
                     null,
@@ -2160,20 +2160,21 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'relative mb-8 group-category-container',
+                            className: 'relative mb-8',
                             style: {
-                                minHeight: '350px'
+                                minHeight: '350px',
+                                width: '100%',
+                                overflowX: 'auto'
                             }
                         },
                         React.createElement(
                             'div',
                             {
-                                className: 'flex pb-4 group-cards-wrapper',
+                                className: 'flex pb-4',
                                 style: {
                                     gap: '1.5rem',
-                                    overflowX: 'auto',
-                                    scrollBehavior: 'smooth',
-                                    paddingBottom: '8px'
+                                    minWidth: 'max-content', // Dôležité: prispôsobí sa šírke všetkých kariet
+                                    paddingRight: '1rem'
                                 }
                             },
                             sortedBasicGroups.map((group, groupIndex) => {
@@ -2197,17 +2198,17 @@ const renderGroupedCategories = () => {
                                     'div',
                                     {
                                         key: `basic-${groupIndex}`,
-                                        className: 'flex-shrink-0 group-card',
                                         style: { 
                                             width: boxWidth,
                                             minWidth: boxWidth,
-                                            maxWidth: boxWidth
+                                            maxWidth: boxWidth,
+                                            flexShrink: 0
                                         }
                                     },
                                     React.createElement(
                                         'div',
                                         {
-                                            className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-[300px] w-full'
+                                            className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-[300px]'
                                         },
                                         React.createElement('h4', { 
                                             className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
@@ -2227,7 +2228,7 @@ const renderGroupedCategories = () => {
                     )
                 ),
                 
-                // NADSTAVBOVÉ SKUPINY - AKTUALIZOVANÉ
+                // NADSTAVBOVÉ SKUPINY - OPRAVENÉ
                 sortedSuperstructureGroups.length > 0 && React.createElement(
                     React.Fragment,
                     null,
@@ -2237,20 +2238,21 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'relative group-category-container',
+                            className: 'relative',
                             style: {
-                                minHeight: '350px'
+                                minHeight: '350px',
+                                width: '100%',
+                                overflowX: 'auto'
                             }
                         },
                         React.createElement(
                             'div',
                             {
-                                className: 'flex pb-4 group-cards-wrapper',
+                                className: 'flex pb-4',
                                 style: {
                                     gap: '1.5rem',
-                                    overflowX: 'auto',
-                                    scrollBehavior: 'smooth',
-                                    paddingBottom: '8px'
+                                    minWidth: 'max-content', // Dôležité: prispôsobí sa šírke všetkých kariet
+                                    paddingRight: '1rem'
                                 }
                             },
                             sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2274,17 +2276,17 @@ const renderGroupedCategories = () => {
                                     'div',
                                     {
                                         key: `super-${groupIndex}`,
-                                        className: 'flex-shrink-0 group-card',
                                         style: { 
                                             width: boxWidth,
                                             minWidth: boxWidth,
-                                            maxWidth: boxWidth
+                                            maxWidth: boxWidth,
+                                            flexShrink: 0
                                         }
                                     },
                                     React.createElement(
                                         'div',
                                         {
-                                            className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-[300px] w-full'
+                                            className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-[300px]'
                                         },
                                         React.createElement('h4', { 
                                             className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
