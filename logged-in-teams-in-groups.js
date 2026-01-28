@@ -2733,15 +2733,26 @@ const renderSingleCategoryView = () => {
                     flex-grow: 1 !important;
                 }
                 
-                /* Pre režim nevybratej kategórie */
-                .inline-block.align-top {
-                    vertical-align: top !important;
+                /* Pre režim nevybratej kategórie - centrovanie */
+                .w-full > div {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
                 }
                 
-                /* Centrovanie pre malé obrazovky */
-                @media (max-width: 768px) {
-                    .min-w-max.justify-center {
-                        justify-content: flex-start !important;
+                /* Responsívne úpravy */
+                @media (max-width: 1024px) {
+                    .flex-col.lg\\:flex-row {
+                        flex-direction: column !important;
+                    }
+                    
+                    .lg\\:mr-8 {
+                        margin-right: 0 !important;
+                        margin-bottom: 2rem !important;
+                    }
+                    
+                    .lg\\:w-auto {
+                        width: 100% !important;
                     }
                 }
                 
@@ -2764,6 +2775,19 @@ const renderSingleCategoryView = () => {
                 ::-webkit-scrollbar-thumb:hover {
                     background: #94a3b8;
                 }
+                
+                /* Zlepšenie zobrazenia pri zmene zoomu */
+                .zoom-responsive {
+                    transform-origin: top center;
+                }
+                
+                /* Pre veľké zoom levely */
+                @media (min-width: 2000px) {
+                    .zoom-group-box {
+                        width: 420px !important;
+                        min-width: 420px !important;
+                    }
+                }
             `;
             document.head.appendChild(style);
         };
@@ -2778,136 +2802,135 @@ const renderSingleCategoryView = () => {
         };
     }, []);
   
-    // Pôvodný kód pred return v komponente AddGroupsApp:
     return React.createElement(
-        'div',
-        { className: 'flex flex-col w-full relative text-[87.5%]' },
-        React.createElement(NotificationPortal, null),
-        React.createElement(NewTeamModal, {
-            isOpen: isModalOpen,
-            onClose: closeModal,
-            teamToEdit,
-            allTeams,
-            categoryIdToNameMap,
-            allGroupsByCategoryId,
-            defaultCategoryId: selectedCategoryId,
-            defaultGroupName: selectedGroupName,
-            unifiedSaveHandler,
-            showCategoryPrefix: showCategoryPrefix
-        }),
-        React.createElement(ConfirmDeleteModal, {
-            isOpen: !!confirmModal?.open,
-            onClose: () => setConfirmModal(null),
-            onConfirm: handleConfirmRemove,
-            team: confirmModal?.team,
-            isConfirming: isConfirming
-        }),
-        React.createElement(ConfirmDeleteGapModal, {
-            isOpen: !!deleteGapModal?.open,
-            onClose: () => setDeleteGapModal(null),
-            onConfirm: () => {
-                if (deleteGapModal) {
-                    handleDeleteGap(
-                        deleteGapModal.categoryName,
-                        deleteGapModal.groupName,
-                        deleteGapModal.position
-                    );
-                }
-                setDeleteGapModal(null);
-            },
-            position: deleteGapModal?.position,
-            groupName: deleteGapModal?.groupName,
-            categoryName: deleteGapModal?.categoryName,
-            isConfirming: false
-        }),
-        React.createElement(
-            'div',
-            { className: 'w-full max-w-xs mx-auto mb-8' },
-            React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2' }, 'Vyberte kategóriu:'),
-            React.createElement(
-                'select',
-                {
-                    className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
-                    value: selectedCategoryId,
-                    onChange: handleCategorySelect
-                },
-                React.createElement('option', { value: '' }, 'Všetky kategórie'),
-                sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
-            ),
-            
-            // PÔVODNÝ SELECTBOX: Skupina - teraz filtrovaný podľa typu
-            React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (Voliteľné):'),
-            React.createElement(
-                'select',
-                {
-                    className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
-                    value: selectedGroupName,
-                    onChange: handleGroupSelect,
-                    disabled: !selectedCategoryId,
-                    style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' }
-                },
-                React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
-                // Zobraziť všetky dostupné skupiny bez filtrovania podľa typu
-                availableGroupsForSelect.map((group, index) =>
-                    React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
-                )
-            ),
-            
-            React.createElement(
-                'div',
-                { className: 'mt-4 flex items-center justify-center' },
-                React.createElement(
-                    'label',
-                    { 
-                        className: 'flex items-center space-x-2 cursor-pointer',
-                        title: 'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
-                    },
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        checked: showCategoryPrefix,
-                        onChange: (e) => setShowCategoryPrefix(e.target.checked),
-                        className: 'w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
-                    }),
-                    React.createElement(
-                        'span',
-                        { className: 'text-sm font-medium text-gray-700' },
-                        'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
-                    )
-                )
-            )
-        ),
-        selectedCategoryId
-            ? renderSingleCategoryView()
-            : React.createElement(
-                'div',
-                { className: 'w-full overflow-x-auto' },
-                React.createElement(
-                    'div',
-                    { className: 'w-full min-w-max' },
-                    // Zobrazujeme ľavý obdĺžnik LEN AK EXISTUJÚ TÍMY BEZ SKUPINY
-                    teamsWithoutGroup.length > 0 && React.createElement(
-                        'div',
-                        { 
-                            className: "mx-4 bg-white rounded-xl shadow-xl p-8 mb-6 inline-block align-top",
-                            style: { 
-                                width: '380px',
-                                minWidth: '380px',
-                                maxWidth: '380px'
-                            }
-                        },
-                        React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
-                        React.createElement('div', { 
-                            className: 'overflow-y-auto',
-                            style: { maxHeight: '70vh' }
-                        }, renderTeamList(teamsWithoutGroup, null, null, true))
-                    ),
-                    React.createElement('div', { 
-                        className: `inline-block align-top ${teamsWithoutGroup.length > 0 ? 'ml-4' : ''}` 
-                    }, renderGroupedCategories())
-                )
-            ),
-        fabButton
-    );
+      'div',
+      { className: 'flex flex-col w-full relative text-[87.5%]' },
+      React.createElement(NotificationPortal, null),
+      React.createElement(NewTeamModal, {
+          isOpen: isModalOpen,
+          onClose: closeModal,
+          teamToEdit,
+          allTeams,
+          categoryIdToNameMap,
+          allGroupsByCategoryId,
+          defaultCategoryId: selectedCategoryId,
+          defaultGroupName: selectedGroupName,
+          unifiedSaveHandler,
+          showCategoryPrefix: showCategoryPrefix
+      }),
+      React.createElement(ConfirmDeleteModal, {
+          isOpen: !!confirmModal?.open,
+          onClose: () => setConfirmModal(null),
+          onConfirm: handleConfirmRemove,
+          team: confirmModal?.team,
+          isConfirming: isConfirming
+      }),
+      React.createElement(ConfirmDeleteGapModal, {
+          isOpen: !!deleteGapModal?.open,
+          onClose: () => setDeleteGapModal(null),
+          onConfirm: () => {
+              if (deleteGapModal) {
+                  handleDeleteGap(
+                      deleteGapModal.categoryName,
+                      deleteGapModal.groupName,
+                      deleteGapModal.position
+                  );
+              }
+              setDeleteGapModal(null);
+          },
+          position: deleteGapModal?.position,
+          groupName: deleteGapModal?.groupName,
+          categoryName: deleteGapModal?.categoryName,
+          isConfirming: false
+      }),
+      React.createElement(
+          'div',
+          { className: 'w-full max-w-xs mx-auto mb-8' },
+          React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2' }, 'Vyberte kategóriu:'),
+          React.createElement(
+              'select',
+              {
+                  className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
+                  value: selectedCategoryId,
+                  onChange: handleCategorySelect
+              },
+              React.createElement('option', { value: '' }, 'Všetky kategórie'),
+              sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
+          ),
+          
+          React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (Voliteľné):'),
+          React.createElement(
+              'select',
+              {
+                  className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
+                  value: selectedGroupName,
+                  onChange: handleGroupSelect,
+                  disabled: !selectedCategoryId,
+                  style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' }
+              },
+              React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
+              availableGroupsForSelect.map((group, index) =>
+                  React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
+              )
+          ),
+          
+          React.createElement(
+              'div',
+              { className: 'mt-4 flex items-center justify-center' },
+              React.createElement(
+                  'label',
+                  { 
+                      className: 'flex items-center space-x-2 cursor-pointer',
+                      title: 'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
+                  },
+                  React.createElement('input', {
+                      type: 'checkbox',
+                      checked: showCategoryPrefix,
+                      onChange: (e) => setShowCategoryPrefix(e.target.checked),
+                      className: 'w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+                  }),
+                  React.createElement(
+                      'span',
+                      { className: 'text-sm font-medium text-gray-700' },
+                      'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
+                  )
+              )
+          )
+      ),
+      selectedCategoryId
+          ? renderSingleCategoryView()
+          : React.createElement(
+              'div',
+              { className: 'w-full' },
+              React.createElement(
+                  'div',
+                  { 
+                      className: `flex ${teamsWithoutGroup.length > 0 ? 'flex-col lg:flex-row' : 'flex-col'} items-start justify-center w-full px-4` 
+                  },
+                  // TÍMY BEZ SKUPINY (ľavá strana - LEN AK EXISTUJÚ)
+                  teamsWithoutGroup.length > 0 && React.createElement(
+                      'div',
+                      { 
+                          className: "bg-white rounded-xl shadow-xl p-6 mb-6 lg:mr-8 flex-shrink-0 w-full lg:w-auto",
+                          style: { 
+                              maxWidth: '380px',
+                              minWidth: '380px'
+                          }
+                      },
+                      React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
+                      React.createElement('div', { 
+                          className: 'overflow-y-auto',
+                          style: { maxHeight: '70vh' }
+                      }, renderTeamList(teamsWithoutGroup, null, null, true))
+                  ),
+                  // KARTY SKUPÍN (pravá strana)
+                  React.createElement('div', { 
+                      className: `flex-grow min-w-0 w-full ${teamsWithoutGroup.length > 0 ? 'lg:w-auto' : ''}` 
+                  }, renderGroupedCategories())
+              )
+          ),
+      fabButton
+  );
 };
 
 // Inicializácia aplikácie
