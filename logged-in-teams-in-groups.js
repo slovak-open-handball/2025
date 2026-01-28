@@ -2208,7 +2208,7 @@ const renderGroupedCategories = () => {
                                     style: {
                                         flexWrap: 'nowrap', // Zmena: nowrap namiesto wrap
                                         alignItems: 'stretch',
-                                        width: `${totalGroupsCount * (parseInt(boxWidth) + 24)}px`, // Zmena: dynamická šírka
+                                        width: `${totalGroupsCount * (parseInt(boxWidth + 15) + 36)}px`, // Zmena: dynamická šírka
                                         minWidth: '100%'
                                     }
                                 },
