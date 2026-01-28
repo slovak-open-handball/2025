@@ -2126,7 +2126,13 @@ const renderGroupedCategories = () => {
     
     return React.createElement(
         'div',
-        { className: 'flex flex-col gap-8 w-full' },
+        { 
+            className: 'flex flex-col gap-8 w-full overflow-x-auto',
+            style: { 
+                width: '100%',
+                minWidth: 'min-content'
+            }
+        },
         sortedCategoryEntries.map(([categoryId, categoryName], index) => {
             const groups = allGroupsByCategoryId[categoryId] || [];
             const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
@@ -2139,11 +2145,26 @@ const renderGroupedCategories = () => {
             const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
             const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
             
+            // Funkcia pre dynamickú šírku
+            const getBoxWidth = () => {
+                if (typeof window !== 'undefined') {
+                    const width = window.innerWidth;
+                    if (width < 768) return '95vw';
+                    if (width < 1024) return '45vw';
+                    if (width < 1280) return '35vw';
+                    return '380px';
+                }
+                return '380px';
+            };
+            
+            const boxWidth = getBoxWidth();
+            
             return React.createElement(
                 'div',
                 { 
                     key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full'
+                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full',
+                    style: { minWidth: 'min-content' }
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
@@ -2160,38 +2181,23 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'relative mb-8',
-                            style: {
-                                minHeight: '350px'
-                            }
+                            className: 'relative mb-8 w-full',
+                            style: { minHeight: '350px' }
                         },
                         React.createElement(
                             'div',
                             {
-                                className: 'flex overflow-x-auto pb-4',
+                                className: 'flex overflow-x-auto pb-4 w-full',
                                 style: {
-                                    flexWrap: 'nowrap', // Dôležité: karty budú vedľa seba
+                                    flexWrap: 'nowrap',
                                     gap: '1.5rem',
                                     alignItems: 'stretch',
-                                    paddingBottom: '1rem'
+                                    paddingBottom: '1rem',
+                                    width: '100%'
                                 }
                             },
                             sortedBasicGroups.map((group, groupIndex) => {
                                 const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
-                                
-                                // Dynamická šírka boxov podľa zoom levelu
-                                const getBoxWidth = () => {
-                                    if (typeof window !== 'undefined') {
-                                        const width = window.innerWidth;
-                                        if (width < 768) return '95vw';
-                                        if (width < 1024) return '45vw';
-                                        if (width < 1280) return '35vw';
-                                        return '380px';
-                                    }
-                                    return '380px';
-                                };
-                                
-                                const boxWidth = getBoxWidth();
                                 
                                 return React.createElement(
                                     'div',
@@ -2236,38 +2242,23 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'relative',
-                            style: {
-                                minHeight: '350px'
-                            }
+                            className: 'relative w-full',
+                            style: { minHeight: '350px' }
                         },
                         React.createElement(
                             'div',
                             {
-                                className: 'flex overflow-x-auto pb-4',
+                                className: 'flex overflow-x-auto pb-4 w-full',
                                 style: {
-                                    flexWrap: 'nowrap', // Dôležité: karty budú vedľa seba
+                                    flexWrap: 'nowrap',
                                     gap: '1.5rem',
                                     alignItems: 'stretch',
-                                    paddingBottom: '1rem'
+                                    paddingBottom: '1rem',
+                                    width: '100%'
                                 }
                             },
                             sortedSuperstructureGroups.map((group, groupIndex) => {
                                 const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
-                                
-                                // Dynamická šírka boxov podľa zoom levelu
-                                const getBoxWidth = () => {
-                                    if (typeof window !== 'undefined') {
-                                        const width = window.innerWidth;
-                                        if (width < 768) return '95vw';
-                                        if (width < 1024) return '45vw';
-                                        if (width < 1280) return '35vw';
-                                        return '380px';
-                                    }
-                                    return '380px';
-                                };
-                                
-                                const boxWidth = getBoxWidth();
                                 
                                 return React.createElement(
                                     'div',
