@@ -2127,7 +2127,7 @@ const renderGroupedCategories = () => {
     return React.createElement(
         'div',
         { 
-            className: 'w-full px-4',
+            className: 'w-full overflow-x-hidden', // Zmena: overflow-x-hidden namiesto px-4
             style: { 
                 maxWidth: '100vw',
                 boxSizing: 'border-box'
@@ -2167,6 +2167,9 @@ const renderGroupedCategories = () => {
                 
                 const boxWidth = getBoxWidth();
                 
+                // Vypočítame počet skupín pre každý typ
+                const totalGroupsCount = sortedBasicGroups.length + sortedSuperstructureGroups.length;
+                
                 return React.createElement(
                     'div',
                     { 
@@ -2192,14 +2195,21 @@ const renderGroupedCategories = () => {
                             'div',
                             { 
                                 className: 'relative mb-8',
-                                style: { minHeight: '350px' }
+                                style: { 
+                                    minHeight: '350px',
+                                    width: '100%',
+                                    overflowX: 'visible' // Zmena: visible namiesto scroll
+                                }
                             },
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'flex flex-wrap gap-6',
+                                    className: 'flex gap-6', // Zmena: odstránené flex-wrap
                                     style: {
+                                        flexWrap: 'nowrap', // Zmena: nowrap namiesto wrap
                                         alignItems: 'stretch',
+                                        width: `${totalGroupsCount * (parseInt(boxWidth) + 24)}px`, // Zmena: dynamická šírka
+                                        minWidth: '100%'
                                     }
                                 },
                                 sortedBasicGroups.map((group, groupIndex) => {
@@ -2249,14 +2259,21 @@ const renderGroupedCategories = () => {
                             'div',
                             { 
                                 className: 'relative',
-                                style: { minHeight: '350px' }
+                                style: { 
+                                    minHeight: '350px',
+                                    width: '100%',
+                                    overflowX: 'visible' // Zmena: visible namiesto scroll
+                                }
                             },
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'flex flex-wrap gap-6',
+                                    className: 'flex gap-6', // Zmena: odstránené flex-wrap
                                     style: {
+                                        flexWrap: 'nowrap', // Zmena: nowrap namiesto wrap
                                         alignItems: 'stretch',
+                                        width: `${totalGroupsCount * (parseInt(boxWidth) + 24)}px`, // Zmena: dynamická šírka
+                                        minWidth: '100%'
                                     }
                                 },
                                 sortedSuperstructureGroups.map((group, groupIndex) => {
