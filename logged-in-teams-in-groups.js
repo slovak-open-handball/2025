@@ -2191,10 +2191,10 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'grid grid-flow-col auto-cols-fr gap-6 pb-4 zoom-groups-container',
+                            className: 'flex flex-nowrap gap-6 pb-4 zoom-groups-container',
                             style: { 
-                                gridAutoColumns: 'minmax(380px, 1fr)',
-                                overflow: 'visible'
+                                overflow: 'visible',
+                                width: 'max-content'
                             }
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
@@ -2210,8 +2210,12 @@ const renderGroupedCategories = () => {
                                     key: `basic-${groupIndex}`,
                                     className: 'zoom-group-box',
                                     style: { 
+                                        width: '380px',
+                                        minWidth: '380px',
+                                        maxWidth: '380px',
                                         height: `${minHeight}px`,
                                         minHeight: `${minHeight}px`,
+                                        flexShrink: 0
                                     }
                                 },
                                 React.createElement(
@@ -2246,10 +2250,10 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'grid grid-flow-col auto-cols-fr gap-6 pb-4 zoom-groups-container',
+                            className: 'flex flex-nowrap gap-6 pb-4 zoom-groups-container',
                             style: { 
-                                gridAutoColumns: 'minmax(380px, 1fr)',
-                                overflow: 'visible'
+                                overflow: 'visible',
+                                width: 'max-content'
                             }
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2265,8 +2269,12 @@ const renderGroupedCategories = () => {
                                     key: `super-${groupIndex}`,
                                     className: 'zoom-group-box',
                                     style: { 
+                                        width: '380px',
+                                        minWidth: '380px',
+                                        maxWidth: '380px',
                                         height: `${minHeight}px`,
                                         minHeight: `${minHeight}px`,
+                                        flexShrink: 0
                                     }
                                 },
                                 React.createElement(
@@ -2633,8 +2641,10 @@ const renderSingleCategoryView = () => {
                 .zoom-group-box {
                     display: flex !important;
                     flex-direction: column !important;
+                    width: 380px !important;
                     min-width: 380px !important;
-                    width: 100% !important;
+                    max-width: 380px !important;
+                    flex-shrink: 0 !important;
                 }
             
                 .zoom-group-box > div {
@@ -2659,13 +2669,9 @@ const renderSingleCategoryView = () => {
                     flex-grow: 1 !important;
                 }
                 
-                /* Nové štýly pre grid bez wrap */
-                .grid-auto-cols-fr {
-                    grid-auto-columns: minmax(380px, 1fr) !important;
-                }
-                
-                .grid-flow-col {
-                    grid-auto-flow: column !important;
+                /* Zabezpečí, že karty nebudú zalamované */
+                .flex-nowrap {
+                    flex-wrap: nowrap !important;
                 }
                 
                 /* Odstránenie horizontálneho posuvníka */
@@ -2682,6 +2688,12 @@ const renderSingleCategoryView = () => {
                 .no-wrap-grid {
                     flex-wrap: nowrap !important;
                     white-space: nowrap !important;
+                }
+                
+                /* Hlavný kontajner pre karty bez posuvníka */
+                .cards-container {
+                    overflow: visible !important;
+                    width: max-content !important;
                 }
             `;
             document.head.appendChild(style);
