@@ -2628,7 +2628,7 @@ const renderSingleCategoryView = () => {
         '+'
     );
 
-    useEffect(() => {
+useEffect(() => {
     const addGlobalStyles = () => {
         if (document.getElementById('group-cards-styles')) return;
         
@@ -2672,52 +2672,28 @@ const renderSingleCategoryView = () => {
                 flex-grow: 1 !important;
             }
             
-            /* NOVÉ ŠTÝLY PRE HORIZONTÁLNY POSUVNÍK */
-            .group-category-container {
-                overflow: hidden;
-                position: relative;
-                width: 100%;
-            }
-            
-            .group-cards-wrapper {
-                display: flex;
-                width: max-content;
-                min-width: min-content;
-                padding-right: 16px;
-            }
-            
-            .group-cards-wrapper::-webkit-scrollbar {
+            /* Štýly pre horizontálny scroll */
+            ::-webkit-scrollbar {
                 height: 8px;
                 background-color: #f1f5f9;
                 border-radius: 4px;
             }
             
-            .group-cards-wrapper::-webkit-scrollbar-thumb {
+            ::-webkit-scrollbar-thumb {
                 background-color: #cbd5e0;
                 border-radius: 4px;
             }
             
-            .group-cards-wrapper::-webkit-scrollbar-thumb:hover {
+            ::-webkit-scrollbar-thumb:hover {
                 background-color: #94a3b8;
-            }
-            
-            .group-card {
-                display: flex;
-                flex-shrink: 0;
-                height: auto;
-            }
-            
-            /* Zvýraznenie pri hover */
-            .group-cards-wrapper {
-                scrollbar-width: thin;
-                scrollbar-color: #cbd5e0 #f1f5f9;
             }
             
             /* Responzívne úpravy */
             @media (max-width: 768px) {
-                .group-category-container {
+                .bg-white.rounded-xl.shadow-xl.p-6.mb-6 {
                     margin-left: -1rem;
                     margin-right: -1rem;
+                    border-radius: 0;
                     padding-left: 1rem;
                     padding-right: 1rem;
                 }
@@ -2725,6 +2701,16 @@ const renderSingleCategoryView = () => {
         `;
         document.head.appendChild(style);
     };
+
+    addGlobalStyles();
+
+    return () => {
+        const style = document.getElementById('group-cards-styles');
+        if (style) {
+            document.head.removeChild(style);
+        }
+    };
+}, []);
 
     addGlobalStyles();
 
