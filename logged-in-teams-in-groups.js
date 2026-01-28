@@ -2144,9 +2144,9 @@ const renderGroupedCategories = () => {
         };
     }, []);
     
-    // Dynamická šírka boxov
+    // Dynamická šírka boxov - ROVNAKÁ AKO V renderSingleCategoryView()
     const getBoxWidth = () => {
-        if (windowWidth < 768) return '90vw';
+        if (windowWidth < 768) return '95vw';
         if (windowWidth < 1024) return '45vw';
         if (windowWidth < 1280) return '35vw';
         return '380px';
@@ -2272,7 +2272,9 @@ const renderGroupedCategories = () => {
                                             style: { 
                                                 width: boxWidth,
                                                 minWidth: boxWidth,
-                                                flexShrink: 0
+                                                maxWidth: boxWidth,  // Pridané: maxWidth
+                                                flexShrink: 0,
+                                                transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'  // Pridané: transition
                                             }
                                         },
                                         React.createElement(
@@ -2339,7 +2341,9 @@ const renderGroupedCategories = () => {
                                             style: { 
                                                 width: boxWidth,
                                                 minWidth: boxWidth,
-                                                flexShrink: 0
+                                                maxWidth: boxWidth,  // Pridané: maxWidth
+                                                flexShrink: 0,
+                                                transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'  // Pridané: transition
                                             }
                                         },
                                         React.createElement(
@@ -2913,8 +2917,9 @@ const renderSingleCategoryView = () => {
                       { 
                           className: "bg-white rounded-xl shadow-xl p-6 mb-6 lg:mr-8 flex-shrink-0 w-full lg:w-auto",
                           style: { 
-                              maxWidth: '380px',
-                              minWidth: '380px'
+                              maxWidth: boxWidth,
+                              minWidth: boxWidth,
+                              transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
                           }
                       },
                       React.createElement('h3', { className: 'text-2xl font-semibold mb-4 text-center' }, 'Zoznam všetkých tímov'),
