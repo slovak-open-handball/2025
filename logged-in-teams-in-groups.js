@@ -967,6 +967,7 @@ const handleTeamNameChange = (e) => {
             // **Po troch znakoch (číslo+číslo+písmeno) už žiadne ďalšie znaky**
             if (newValue.length > 3) {
               newValue = newValue.substring(0, 3);
+              // TU PRIDÁVAME ZELENÚ SPRÁVU PRE SPRÁVNY FORMÁT
               setTeamNameError("Zadaný názov tímu má správny formát.");
             }
           }
@@ -977,6 +978,11 @@ const handleTeamNameChange = (e) => {
         // Maximálne 2 znaky (číslo+písmeno)
         if (newValue.length > 2) {
           newValue = newValue.substring(0, 2);
+          // TU PRIDÁVAME ZELENÚ SPRÁVU PRE SPRÁVNY FORMÁT
+          setTeamNameError("Zadaný názov tímu má správny formát.");
+        }
+        // Ak máme presne 2 znaky (číslo+písmeno), takýto formát je tiež správny
+        else if (newValue.length === 2) {
           setTeamNameError("Zadaný názov tímu má správny formát.");
         }
       }
@@ -986,10 +992,41 @@ const handleTeamNameChange = (e) => {
     // (napr. paste, drag&drop, atď.)
     if (newValue.length > 3) {
       newValue = newValue.substring(0, 3);
+      // TU PRIDÁVAME ZELENÚ SPRÁVU PRE SPRÁVNY FORMÁT
       setTeamNameError("Zadaný názov tímu má správny formát.");
     }
     
-    // Aktualizácia hodnoty v inputu
+    // Kontrola či máme správny formát pre zobrazenie zelenej správy
+    const trimmed = newValue.trim();
+    if (trimmed.length > 0) {
+      const firstChar = trimmed.charAt(0);
+      const secondChar = trimmed.charAt(1);
+      
+      // Správny formát je: 
+      // 1. Číslo (1-9) + písmeno (2 znaky) - napr. "1A"
+      // 2. Číslo (1-9) + číslo (0-9) + písmeno (3 znaky) - napr. "12B"
+      
+      if (trimmed.length === 2) {
+        const secondChar = trimmed.charAt(1);
+        if (/^[1-9]$/.test(firstChar) && /^[A-Z]$/.test(secondChar)) {
+          // Formát "číslo+písmeno" je správny
+          if (teamNameError !== "Zadaný názov tímu má správny formát.") {
+            setTeamNameError("Zadaný názov tímu má správny formát.");
+          }
+        }
+      } else if (trimmed.length === 3) {
+        const secondChar = trimmed.charAt(1);
+        const thirdChar = trimmed.charAt(2);
+        if (/^[1-9]$/.test(firstChar) && /^[0-9]$/.test(secondChar) && /^[A-Z]$/.test(thirdChar)) {
+          // Formát "číslo+číslo+písmeno" je správny
+          if (teamNameError !== "Zadaný názov tímu má správny formát.") {
+            setTeamNameError("Zadaný názov tímu má správny formát.");
+          }
+        }
+      }
+    }
+    
+    // Aktualizácia hodnoty v inpute
     if (newValue !== value) {
       setTimeout(() => {
         const inputElement = e.target;
@@ -1379,7 +1416,13 @@ const handleSubmit = (e) => {
       React.createElement('input', {
         type: 'text',
         className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
-          isDuplicate || groupEndingMismatch || orderMismatchMessage || teamNameError ? 'border-red-500' : 'border-gray-300'
+          teamNameError === 'Zadaný názov tímu má správny formát.'
+            ? 'border-green-500 focus:border-green-500 focus:ring-green-200'
+            // Červené orámovanie pre ostatné chyby
+            : isDuplicate || groupEndingMismatch || orderMismatchMessage || teamNameError
+              ? 'border-red-500'
+              // Štandardné orámovanie
+              : 'border-gray-300'
         }`,
         value: teamName,
         onChange: handleTeamNameChange,
@@ -1391,14 +1434,20 @@ const handleSubmit = (e) => {
       React.createElement(
         'div',
         { className: 'space-y-1 mt-2' },
-        // Chyba formátu názvu
+        // Chyba formátu názvu - ZELENÁ AK JE SPRÁVNY FORMÁT
         teamNameError ? React.createElement(
           'p',
-          { className: 'text-sm text-red-600 font-medium' },
-          ` ${teamNameError}`
+          { 
+            className: `text-sm font-medium ${
+              teamNameError === 'Zadaný názov tímu má správny formát.' 
+                ? 'text-green-600' 
+                : 'text-red-600'
+            }`
+          },
+          teamNameError
         ) : null,
-    
-        // Duplicita
+
+        // Duplicita - červená
         isDuplicate ? React.createElement(
           'p',
           { className: 'text-sm text-red-600 font-medium' },
