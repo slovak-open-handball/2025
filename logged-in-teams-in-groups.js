@@ -183,6 +183,7 @@ const AddGroupsApp = (props) => {
     const currentUserEmail = window.globalUserProfileData?.email || null;
     const [deleteGapModal, setDeleteGapModal] = useState(null);
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
+    const [selectedGroupType, setSelectedGroupType] = useState('');
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
@@ -1719,6 +1720,8 @@ const handleSubmit = (e) => {
     const handleCategorySelect = (e) => {
         const id = e.target.value;
         setSelectedCategoryId(id);
+        setSelectedGroupType(''); // Resetni typ skupiny
+        setSelectedGroupName(''); // Resetni skupinu
         const name = categoryIdToNameMap[id];
         window.location.replace(name ? `#${encodeURIComponent(name.replace(/ /g, '-'))}` : '#');
     };
