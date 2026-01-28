@@ -907,7 +907,9 @@ const handleTeamNameChange = (e) => {
   
   if ((teamToEdit?.isSuperstructureTeam || !teamToEdit) && showCategoryPrefix) {
     let newValue = value;
-    let correctFormat = false; // Pridajte túto premennú na sledovanie správneho formátu
+    
+    // Reset správneho formátu na začiatku
+    setHasCorrectFormat(false);
     
     // Ak máme aspoň jeden znak
     if (newValue.length >= 1) {
@@ -970,7 +972,6 @@ const handleTeamNameChange = (e) => {
             if (newValue.length > 3) {
               newValue = newValue.substring(0, 3);
               setTeamNameError("Zadaný názov tímu má správny formát.");
-              hasCorrectFormat = true; // NASTAVÍME, ŽE MÁ SPRÁVNY FORMÁT
               setHasCorrectFormat(true);
             }
           }
@@ -982,12 +983,10 @@ const handleTeamNameChange = (e) => {
         if (newValue.length > 2) {
           newValue = newValue.substring(0, 2);
           setTeamNameError("Zadaný názov tímu má správny formát.");
-          hasCorrectFormat = true; // NASTAVÍME, ŽE MÁ SPRÁVNY FORMÁT
           setHasCorrectFormat(true);
         } else if (newValue.length === 2) {
           // Ak máme 2 znaky (číslo+písmeno), je to správny formát
           setTeamNameError("Zadaný názov tímu má správny formát.");
-          hasCorrectFormat = true; // NASTAVÍME, ŽE MÁ SPRÁVNY FORMÁT
           setHasCorrectFormat(true);
         }
       }
@@ -998,7 +997,6 @@ const handleTeamNameChange = (e) => {
     if (newValue.length > 3) {
       newValue = newValue.substring(0, 3);
       setTeamNameError("Zadaný názov tímu má správny formát.");
-      hasCorrectFormat = true; // NASTAVÍME, ŽE MÁ SPRÁVNY FORMÁT
       setHasCorrectFormat(true);
     }
     
@@ -1022,11 +1020,6 @@ const handleTeamNameChange = (e) => {
     setHasCorrectFormat(false);
   }
 };
-
-  useEffect(() => {
-      // Reset hasCorrectFormat keď sa zmení teamName
-      setHasCorrectFormat(false);
-    }, [teamName]);  
 
   // Efekt pre validáciu koncovky a čísla poradia
   useEffect(() => {
@@ -1173,6 +1166,7 @@ const handleTeamNameChange = (e) => {
       setOriginalCategory('');
       setOriginalGroup('');
       setOrderInputValue(null);
+      setHasCorrectFormat(false);
     }
   }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap]);
 
