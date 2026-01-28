@@ -183,28 +183,7 @@ const AddGroupsApp = (props) => {
     const currentUserEmail = window.globalUserProfileData?.email || null;
     const [deleteGapModal, setDeleteGapModal] = useState(null);
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
-    const [selectedGroupType, setSelectedGroupType] = useState('');
-
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-    
-    // PRIDAJTE TOTO - efekt pre sledovanie veľkosti okna
-    useEffect(() => {
-        const handleResize = () => {
-            setWindowWidth(window.innerWidth);
-        };
-        
-        window.addEventListener('resize', handleResize);
-        window.addEventListener('load', handleResize);
-        
-        // Inicializácia
-        handleResize();
-        
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            window.removeEventListener('load', handleResize);
-        };
-    }, []);
-  
+    const [selectedGroupType, setSelectedGroupType] = useState('');  
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
@@ -2136,7 +2115,7 @@ const NewTeamModal = ({
         return React.createElement('ul', { className: 'space-y-2' }, ...items);
     };
   
-const renderGroupedCategories = () => {
+const renderGroupedCategories = (currentWindowWidth) => {
     if (Object.keys(allGroupsByCategoryId).length === 0) {
         return React.createElement('div', { className: 'w-full max-w-xl mx-auto' },
             React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne skupiny neboli nájdené.')
@@ -2167,10 +2146,10 @@ const renderGroupedCategories = () => {
     
     // Dynamická šírka boxov - ROVNAKÁ AKO V renderSingleCategoryView()
     const getBoxWidth = () => {
-        if (windowWidth < 768) return '95vw';
-        if (windowWidth < 1024) return '45vw';
-        if (windowWidth < 1280) return '35vw';
-        return '380px';
+      if (currentWindowWidth < 768) return '95vw';
+      if (currentWindowWidth < 1024) return '45vw';
+      if (currentWindowWidth < 1280) return '35vw';
+      return '380px';
     };
     
     const boxWidth = getBoxWidth();
@@ -2405,7 +2384,7 @@ const renderGroupedCategories = () => {
 };
   
 // Upravená funkcia renderSingleCategoryView()
-const renderSingleCategoryView = () => {
+const renderSingleCategoryView = (currentWindowWidth) => {
     const categoryName = categoryIdToNameMap[selectedCategoryId] || "Neznáma kategória";
     let groups = allGroupsByCategoryId[selectedCategoryId] || [];
     if (selectedGroupName) {
@@ -2427,10 +2406,10 @@ const renderSingleCategoryView = () => {
     
     // Dynamická šírka boxov podľa zoom levelu - TERAZ POUŽÍVAME windowWidth
     const getBoxWidth = () => {
-        if (windowWidth < 768) return '95vw';
-        if (windowWidth < 1024) return '45vw';
-        if (windowWidth < 1280) return '35vw';
-        return '380px';
+      if (currentWindowWidth < 768) return '95vw';
+      if (currentWindowWidth < 1024) return '45vw';
+      if (currentWindowWidth < 1280) return '35vw';
+      return '380px';
     };
     
     const boxWidth = getBoxWidth();
@@ -2919,7 +2898,7 @@ const renderSingleCategoryView = () => {
           )
       ),
       selectedCategoryId
-          ? renderSingleCategoryView()
+          ? renderSingleCategoryView(windowWidth)
           : React.createElement(
               'div',
               { className: 'w-full' },
@@ -2948,7 +2927,7 @@ const renderSingleCategoryView = () => {
                   // KARTY SKUPÍN (pravá strana)
                   React.createElement('div', { 
                       className: `flex-grow min-w-0 w-full ${teamsWithoutGroup.length > 0 ? 'lg:w-auto' : ''}` 
-                  }, renderGroupedCategories())
+                  }, renderGroupedCategories(windowWidth))
               )
           ),
       fabButton
