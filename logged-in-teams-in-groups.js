@@ -2311,7 +2311,6 @@ const renderSingleCategoryView = () => {
     const teamsInGroups = selectedCategoryId
         ? allTeams.filter(t => t.category === categoryIdToNameMap[selectedCategoryId] && t.groupName)
         : allTeams.filter(t => t.groupName);
-    const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([,a], [,b]) => a.localeCompare(b));
     const availableGroupsForSelect = (allGroupsByCategoryId[selectedCategoryId] || []).sort((a, b) => a.name.localeCompare(b.name));
     const uiNotificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out ${
         uiNotification
