@@ -1517,7 +1517,6 @@ const handleSubmit = (e) => {
             className: `
               px-6 py-2.5
               rounded-lg
-              text-white
               font-medium
               transition-colors
               duration-200
