@@ -2627,11 +2627,14 @@ const renderSingleCategoryView = () => {
                 
                 .zoom-groups-container {
                     align-items: stretch !important;
+                    width: 100% !important;
                 }
             
                 .zoom-group-box {
                     display: flex !important;
                     flex-direction: column !important;
+                    min-width: 380px !important;
+                    width: 100% !important;
                 }
             
                 .zoom-group-box > div {
@@ -2654,6 +2657,31 @@ const renderSingleCategoryView = () => {
                 
                 .flex-grow {
                     flex-grow: 1 !important;
+                }
+                
+                /* Nové štýly pre grid bez wrap */
+                .grid-auto-cols-fr {
+                    grid-auto-columns: minmax(380px, 1fr) !important;
+                }
+                
+                .grid-flow-col {
+                    grid-auto-flow: column !important;
+                }
+                
+                /* Odstránenie horizontálneho posuvníka */
+                .zoom-responsive {
+                    overflow-x: visible !important;
+                }
+                
+                .zoom-content {
+                    min-width: auto !important;
+                    width: 100% !important;
+                }
+                
+                /* Zabrániť zalamovaniu */
+                .no-wrap-grid {
+                    flex-wrap: nowrap !important;
+                    white-space: nowrap !important;
                 }
             `;
             document.head.appendChild(style);
