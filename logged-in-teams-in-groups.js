@@ -912,7 +912,7 @@ const handleTeamNameChange = (e) => {
       // Prvý znak - môže byť iba číslica 1-9
       const firstChar = newValue.charAt(0);
       if (!/^[1-9]$/.test(firstChar)) {
-        setTeamNameError("Prvý znak musí byť číslica 1-9");
+        setTeamNameError("Prvý znak musí byť číslica 1-9.");
         // Odstráň neplatný znak
         newValue = newValue.substring(0, 0) + newValue.substring(1);
       } else {
@@ -926,7 +926,7 @@ const handleTeamNameChange = (e) => {
       
       // Povolené: číslica 0-9 alebo písmeno
       if (!/^[0-9a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
-        setTeamNameError("Druhý znak môže byť iba číslica 0-9 alebo písmeno");
+        setTeamNameError("Druhý znak môže byť iba číslica 0-9 alebo písmeno.");
         newValue = newValue.substring(0, 1) + newValue.substring(2);
       } else {
         // Zmeň písmeno na veľké
@@ -947,7 +947,7 @@ const handleTeamNameChange = (e) => {
       if (/^[1-9]$/.test(firstChar) && /^[0-9]$/.test(secondChar)) {
         // Ak máme iba 2 znaky (dve číslice), nastav chybu
         if (newValue.length === 2) {
-          setTeamNameError("Po dvoch čísliciach musí nasledovať písmeno");
+          setTeamNameError("Po dvoch čísliciach musí nasledovať písmeno.");
         } 
         // Ak máme 3 alebo viac znakov, skontroluj tretí znak
         else if (newValue.length >= 3) {
@@ -955,7 +955,7 @@ const handleTeamNameChange = (e) => {
           
           // Tretí znak musí byť písmeno
           if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
-            setTeamNameError("Po dvoch čísliciach musí byť písmeno");
+            setTeamNameError("Po dvoch čísliciach musí nasledovať písmeno.");
             // Odstráň neplatný znak
             newValue = newValue.substring(0, 2) + newValue.substring(3);
           } else {
@@ -967,7 +967,7 @@ const handleTeamNameChange = (e) => {
             // **Po troch znakoch (číslo+číslo+písmeno) už žiadne ďalšie znaky**
             if (newValue.length > 3) {
               newValue = newValue.substring(0, 3);
-              setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
+              setTeamNameError("Zadaný názov tímu má správny formát.");
             }
           }
         }
@@ -977,7 +977,7 @@ const handleTeamNameChange = (e) => {
         // Maximálne 2 znaky (číslo+písmeno)
         if (newValue.length > 2) {
           newValue = newValue.substring(0, 2);
-          setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
+          setTeamNameError("Zadaný názov tímu má správny formát.");
         }
       }
     }
@@ -986,7 +986,7 @@ const handleTeamNameChange = (e) => {
     // (napr. paste, drag&drop, atď.)
     if (newValue.length > 3) {
       newValue = newValue.substring(0, 3);
-      setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
+      setTeamNameError("Zadaný názov tímu má správny formát.");
     }
     
     // Aktualizácia hodnoty v inputu
@@ -1274,7 +1274,7 @@ const handleSubmit = (e) => {
           
           // Ak bol druhý znak písmeno, tretí znak sa nedá pridať
           if (!/^[0-9]$/.test(secondChar)) {
-              notify("Názov tímu má maximálnu povolenú dĺžku", "error");
+              notify("Zadaný názov tímu má správny formát", "error");
               return;
           }
           
@@ -1391,7 +1391,7 @@ const handleSubmit = (e) => {
         teamNameError ? React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
-          `⚠️ ${teamNameError}`
+          ` ${teamNameError}`
         ) : null,
         
         // NÁHĽAD - ZOBRAZÍ SA LEN PRE SUPERSTRUCTURE TÍMY A NOVÉ TÍMY
@@ -1406,19 +1406,19 @@ const handleSubmit = (e) => {
         isDuplicate ? React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
-          '⚠️ Tím s týmto názvom už existuje!'
+          ' Tím s týmto názvom už existuje!'
         ) : null,
         
         groupEndingMismatch ? React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
-          `⚠️ V tejto kategórii neexistuje žiadna základná skupina ${teamName.trim().slice(-1).toUpperCase()}`
+          ` V tejto kategórii neexistuje žiadna základná skupina ${teamName.trim().slice(-1).toUpperCase()}`
         ) : null,
         
         orderMismatchMessage ? React.createElement(
           'p',
           { className: 'mt-2 text-sm text-red-600 font-medium' },
-          `⚠️ ${orderMismatchMessage}`
+          ` ${orderMismatchMessage}`
         ) : null
       ) : null,
       
