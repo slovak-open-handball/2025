@@ -967,7 +967,7 @@ const handleTeamNameChange = (e) => {
             // **Po troch znakoch (číslo+číslo+písmeno) už žiadne ďalšie znaky**
             if (newValue.length > 3) {
               newValue = newValue.substring(0, 3);
-              setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
+              setTeamNameError("Zadaný názov tímu má správny formát.");
             }
           }
         }
@@ -977,7 +977,7 @@ const handleTeamNameChange = (e) => {
         // Maximálne 2 znaky (číslo+písmeno)
         if (newValue.length > 2) {
           newValue = newValue.substring(0, 2);
-          setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
+          setTeamNameError("Zadaný názov tímu má správny formát.");
         }
       }
     }
@@ -986,7 +986,7 @@ const handleTeamNameChange = (e) => {
     // (napr. paste, drag&drop, atď.)
     if (newValue.length > 3) {
       newValue = newValue.substring(0, 3);
-      setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
+      setTeamNameError("Zadaný názov tímu má správny formát.");
     }
     
     // Aktualizácia hodnoty v inputu
@@ -1274,7 +1274,7 @@ const handleSubmit = (e) => {
           
           // Ak bol druhý znak písmeno, tretí znak sa nedá pridať
           if (!/^[0-9]$/.test(secondChar)) {
-              notify("Názov tímu má maximálnu povolenú dĺžku", "error");
+              notify("Zadaný názov tímu má správny formát.", "error");
               return;
           }
           
