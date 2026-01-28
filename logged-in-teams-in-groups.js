@@ -2115,7 +2115,6 @@ const NewTeamModal = ({
         return React.createElement('ul', { className: 'space-y-2' }, ...items);
     };
   
-// Nájdite funkciu renderGroupedCategories() a upravte kontajner pre skupiny
 const renderGroupedCategories = () => {
     if (Object.keys(allGroupsByCategoryId).length === 0) {
         return React.createElement('div', { className: 'w-full max-w-xl mx-auto' },
@@ -2144,14 +2143,14 @@ const renderGroupedCategories = () => {
                 'div',
                 { 
                     key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full overflow-x-auto'
+                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full' // Odstránené: overflow-x-auto
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
                     className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
                 }, categoryName),
                 
-                // ZÁKLADNÉ SKUPINY - UPRAVENÉ: flex-wrap ked nie je vybratá kategória
+                // ZÁKLADNÉ SKUPINY - ZMENENÉ: VŽDY flex-wrap bez overflow-x-auto
                 sortedBasicGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'mb-8 w-full' },
@@ -2161,10 +2160,8 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            // ZMENENÉ: Teraz používame flex-wrap keď nie je vybratá kategória
-                            className: `flex gap-6 w-full pb-4 ${
-                                !selectedCategoryId ? 'flex-wrap justify-center' : 'flex-nowrap overflow-x-auto'
-                            }`,
+                            // ZMENENÉ: VŽDY flex-wrap bez overflow-x-auto keď nie je vybratá kategória
+                            className: 'flex flex-wrap justify-center gap-6 w-full pb-4',
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
                             const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
@@ -2173,24 +2170,13 @@ const renderGroupedCategories = () => {
                                 'div',
                                 {
                                     key: `basic-${groupIndex}`,
-                                    // ZMENENÉ: Šírka boxu sa mení podľa toho či je vybratá kategória
-                                    className: `${
-                                        !selectedCategoryId 
-                                            ? 'w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.333rem)] xl:w-[calc(25%-1.5rem)]' 
-                                            : 'flex-shrink-0'
-                                    }`,
-                                    style: !selectedCategoryId ? {} : { 
-                                        width: '380px',
-                                        minWidth: '380px',
-                                        maxWidth: '380px',
-                                    }
+                                    // ZMENENÉ: Responzívna šírka boxov
+                                    className: 'w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.333rem)] xl:w-[calc(25%-1.5rem)]',
                                 },
                                 React.createElement(
                                     'div',
                                     {
-                                        className: `flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-[300px] ${
-                                            !selectedCategoryId ? 'w-full' : ''
-                                        }`
+                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-[300px] w-full'
                                     },
                                     React.createElement('h4', { 
                                         className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
@@ -2209,7 +2195,7 @@ const renderGroupedCategories = () => {
                     )
                 ),
                 
-                // NADSTAVBOVÉ SKUPINY - UPRAVENÉ: flex-wrap ked nie je vybratá kategória
+                // NADSTAVBOVÉ SKUPINY - ZMENENÉ: VŽDY flex-wrap bez overflow-x-auto
                 sortedSuperstructureGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'w-full' },
@@ -2219,10 +2205,8 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            // ZMENENÉ: Teraz používame flex-wrap keď nie je vybratá kategória
-                            className: `flex gap-6 w-full pb-4 ${
-                                !selectedCategoryId ? 'flex-wrap justify-center' : 'flex-nowrap overflow-x-auto'
-                            }`,
+                            // ZMENENÉ: VŽDY flex-wrap bez overflow-x-auto keď nie je vybratá kategória
+                            className: 'flex flex-wrap justify-center gap-6 w-full pb-4',
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
                             const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
@@ -2231,24 +2215,13 @@ const renderGroupedCategories = () => {
                                 'div',
                                 {
                                     key: `super-${groupIndex}`,
-                                    // ZMENENÉ: Šírka boxu sa mení podľa toho či je vybratá kategória
-                                    className: `${
-                                        !selectedCategoryId 
-                                            ? 'w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.333rem)] xl:w-[calc(25%-1.5rem)]' 
-                                            : 'flex-shrink-0'
-                                    }`,
-                                    style: !selectedCategoryId ? {} : { 
-                                        width: '380px',
-                                        minWidth: '380px',
-                                        maxWidth: '380px',
-                                    }
+                                    // ZMENENÉ: Responzívna šírka boxov
+                                    className: 'w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.333rem)] xl:w-[calc(25%-1.5rem)]',
                                 },
                                 React.createElement(
                                     'div',
                                     {
-                                        className: `flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-[300px] ${
-                                            !selectedCategoryId ? 'w-full' : ''
-                                        }`
+                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-[300px] w-full'
                                     },
                                     React.createElement('h4', { 
                                         className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
