@@ -2123,37 +2123,7 @@ const renderGroupedCategories = (currentWindowWidth) => {
     }
     
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
-    
-    // Pridáme state pre sledovanie zmeny veľkosti okna
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-    
-    useEffect(() => {
-        const handleResize = () => {
-            setWindowWidth(window.innerWidth);
-        };
         
-        window.addEventListener('resize', handleResize);
-        window.addEventListener('load', handleResize);
-        
-        // Inicializácia
-        handleResize();
-        
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            window.removeEventListener('load', handleResize);
-        };
-    }, []);
-    
-    // Dynamická šírka boxov - ROVNAKÁ AKO V renderSingleCategoryView()
-    const getBoxWidth = () => {
-      if (currentWindowWidth < 768) return '95vw';
-      if (currentWindowWidth < 1024) return '45vw';
-      if (currentWindowWidth < 1280) return '35vw';
-      return '380px';
-    };
-    
-    const boxWidth = getBoxWidth();
-    
     return React.createElement(
         'div',
         { 
