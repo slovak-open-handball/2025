@@ -193,6 +193,7 @@ const AddGroupsApp = (props) => {
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
     const [selectedGroupType, setSelectedGroupType] = useState('');  
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const boxWidth = calculateBoxWidth(windowWidth);
 
     useEffect(() => {
         const handleResize = () => {
