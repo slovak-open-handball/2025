@@ -201,7 +201,7 @@ const AddGroupsApp = (props) => {
             const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
             const snap = await getDoc(docRef);
             if (!snap.exists()) {
-                notify("Dokument nadstavbových skupín sa nenašiel", "error");
+                notify("Nenašli sa nadstavbové skupiny v databáze.", "error");
                 return;
             }
             const data = snap.data() || {};
@@ -435,7 +435,7 @@ const createTeamAssignmentNotification = async (action, team) => {
     // ===================================================================
     const handleDeleteTeam = async (teamToDelete) => {
         if (!window.db || !teamToDelete || !teamToDelete.isSuperstructureTeam) {
-            notify("Možno odstrániť len nadstavbové tímy", "error");
+            notify("Možno odstrániť len nadstavbové tímy.", "error");
             return;
         }
 
@@ -446,7 +446,7 @@ const createTeamAssignmentNotification = async (action, team) => {
             let teams = globalTeamsData[teamToDelete.category] || [];
             const teamIndex = teams.findIndex(t => t.id === teamToDelete.id);
             if (teamIndex === -1) {
-                notify("Odstraňovaný tím sa nenašiel", "error");
+                notify("Odstraňovaný tím sa nenašiel.", "error");
                 return;
             }
 
@@ -557,7 +557,7 @@ const createTeamAssignmentNotification = async (action, team) => {
         setConfirmModal(null);
       } catch (err) {
         console.error(err);
-        notify("Operácia zlyhala", "error");
+        notify("Funkcia zlyhala.", "error");
       } finally {
         setIsConfirming(false);
       }
@@ -581,7 +581,7 @@ const createTeamAssignmentNotification = async (action, team) => {
             let oldTeams = [...(data[oldCategory] || [])];
             const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
             if (idx === -1) {
-                notify("Pôvodný tím sa nenašiel", "error");
+                notify("Pôvodný tím sa nenašiel.", "error");
                 return;
             }
             oldTeams.splice(idx, 1);
@@ -1096,7 +1096,7 @@ const handleTeamNameChange = (e) => {
         const currentCount = teamsInGroup.length;
         if (currentCount < requestedOrder) {
           setOrderMismatchMessage(
-            `V základnej skupine "${groupName}" nie je tím s poradovým číslom ${requestedOrder}.`
+            `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
           );
         } else {
           setOrderMismatchMessage(null);
@@ -1255,21 +1255,21 @@ const handleSubmit = (e) => {
       
       // 1. Skontroluj dĺžku (minimálne 2 znaky)
       if (trimmed.length < 2) {
-          notify("Názov tímu musí mať aspoň 2 znaky", "error");
+          notify("Názov tímu musí mať aspoň 2 znaky.", "error");
           return;
       }
       
       // 2. Prvý znak musí byť číslica 1-9
       const firstChar = trimmed.charAt(0);
       if (!/^[1-9]$/.test(firstChar)) {
-          notify("Prvý znak musí byť číslica 1-9", "error");
+          notify("Prvý znak musí byť číslica 1-9.", "error");
           return;
       }
       
       // 3. Transformuj druhý znak
       let secondChar = trimmed.charAt(1);
       if (secondChar === '') {
-          notify("Názov tímu musí mať aspoň 2 znaky", "error");
+          notify("Názov tímu musí mať aspoň 2 znaky.", "error");
           return;
       }
       
@@ -1279,7 +1279,7 @@ const handleSubmit = (e) => {
       } 
       // Ak je druhý znak číslica, skontroluj, že je 0-9
       else if (!/^[0-9]$/.test(secondChar)) {
-          notify("Druhý znak môže byť iba číslica 0-9 alebo písmeno", "error");
+          notify("Druhý znak môže byť iba číslica 0-9 alebo písmeno.", "error");
           return;
       }
       
@@ -1287,19 +1287,19 @@ const handleSubmit = (e) => {
       if (/^[0-9]$/.test(secondChar)) {
           // Ak máme iba dve číslice, pošleme chybu
           if (trimmed.length === 2) {
-              notify("Názov tímu musí obsahovať písmeno", "error");
+              notify("Názov tímu musí obsahovať písmeno.", "error");
               return;
           }
           
           // Kontrola tretieho znaku
           const thirdChar = trimmed.charAt(2);
           if (!thirdChar) {
-              notify("Názov tímu musí obsahovať písmeno", "error");
+              notify("Názov tímu musí obsahovať písmeno.", "error");
               return;
           }
           
           if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
-              notify("Názov tímu musí obsahovať písmeno", "error");
+              notify("Názov tímu musí obsahovať písmeno.", "error");
               return;
           }
       }
@@ -1311,13 +1311,13 @@ const handleSubmit = (e) => {
           
           // Ak bol druhý znak písmeno, tretí znak sa nedá pridať
           if (!/^[0-9]$/.test(secondChar)) {
-              notify("Zadaný názov tímu má správny formát", "error");
+              notify("Zadaný názov tímu má správny formát.", "error");
               return;
           }
           
           // Tretí znak musí byť písmeno (malé/veľké s diakritikou)
           if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
-              notify("Tretí znak môže byť iba písmeno", "error");
+              notify("Tretí znak musí byť iba písmeno.", "error");
               return;
           }
           
