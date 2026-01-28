@@ -1489,7 +1489,7 @@ const handleSubmit = (e) => {
           React.createElement('p', { className: 'text-sm font-medium text-gray-700 mb-2' }, 'Názov tímu:'),
           React.createElement('p', { className: 'text-base font-bold text-gray-800' }, teamToEdit.teamName)
         ) : null
-      ),
+      )
 
       React.createElement(
         'form',
