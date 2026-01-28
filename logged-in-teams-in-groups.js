@@ -882,6 +882,7 @@ const NewTeamModal = ({
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
   const [teamName, setTeamName] = useState('');
+  const [teamNameError, setTeamNameError] = useState('');
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [originalTeamName, setOriginalTeamName] = useState('');
   const [originalCategory, setOriginalCategory] = useState('');
@@ -897,7 +898,75 @@ const NewTeamModal = ({
   const [orderMismatchMessage, setOrderMismatchMessage] = useState(null);
 
   // Zobrazí sa náhľad len pre superstructure tímy
-  const shouldShowPreview = teamToEdit?.isSuperstructureTeam || (!teamToEdit); // nové tímy tiež
+  const shouldShowPreview = teamToEdit?.isSuperstructureTeam || (!teamToEdit); 
+
+  // Pridaj túto funkciu na spracovanie zmien v inpute
+  const handleTeamNameChange = (e) => {
+    const value = e.target.value;
+    
+    if ((teamToEdit?.isSuperstructureTeam || !teamToEdit) && showCategoryPrefix) {
+        let newValue = value;
+        
+        // Ak máme aspoň jeden znak
+        if (newValue.length >= 1) {
+            // Prvý znak - môže byť iba číslica 1-9
+            const firstChar = newValue.charAt(0);
+            if (!/^[1-9]$/.test(firstChar)) {
+                setTeamNameError("Prvý znak musí byť číslica 1-9");
+                // Odstráň neplatný znak
+                newValue = newValue.substring(0, 0) + newValue.substring(1);
+            } else {
+                setTeamNameError('');
+            }
+        }
+        
+        // Ak máme aspoň dva znaky
+        if (newValue.length >= 2) {
+            const secondChar = newValue.charAt(1);
+            // Povolené: číslica 0-9 alebo písmeno
+            if (!/^[0-9a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
+                setTeamNameError("Druhý znak môže byť iba číslica 0-9 alebo písmeno");
+                newValue = newValue.substring(0, 1) + newValue.substring(2);
+            } else {
+                // Zmeň písmeno na veľké
+                if (/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
+                    const upperSecond = secondChar.toUpperCase();
+                    newValue = newValue.substring(0, 1) + upperSecond + newValue.substring(2);
+                }
+                setTeamNameError('');
+            }
+        }
+        
+        // Ak máme aspoň tri znaky
+        if (newValue.length >= 3) {
+            const secondChar = newValue.charAt(1);
+            const thirdChar = newValue.charAt(2);
+            
+            // Ak je druhý znak písmeno, tretí znak sa nedá pridať
+            if (!/^[0-9]$/.test(secondChar)) {
+                setTeamNameError("Ak je druhý znak písmeno, nemôže byť tretí znak");
+                newValue = newValue.substring(0, 2); // Odstráň tretí znak
+            } 
+            // Ak je druhý znak číslica, tretí znak musí byť písmeno
+            else if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
+                setTeamNameError("Tretí znak môže byť iba písmeno");
+                newValue = newValue.substring(0, 2) + newValue.substring(3);
+            } else {
+                // Zmeň tretí znak na veľké písmeno
+                const upperThird = thirdChar.toUpperCase();
+                newValue = newValue.substring(0, 2) + upperThird + newValue.substring(3);
+                setTeamNameError('');
+            }
+        }
+        
+        setTeamName(newValue);
+    } else {
+        // Pre používateľské tímy - bežné správanie
+        setTeamName(value);
+        setTeamNameError('');
+    }
+  };
+  
 
   // Efekt pre validáciu koncovky a čísla poradia
   useEffect(() => {
@@ -1095,24 +1164,90 @@ const NewTeamModal = ({
   };
 
   const handleSubmit = (e) => {
-      e.preventDefault();
-      if (isSubmitDisabled) return;
+    e.preventDefault();
+    if (isSubmitDisabled) return;
     
-      // Použi prop showCategoryPrefix namiesto neexistujúcej premennej
-      const teamNameToSave = teamToEdit?.isSuperstructureTeam
-          ? (showCategoryPrefix 
-              ? `${teamToEdit.category} ${teamName.trim()}` 
-              : teamName.trim())
-          : teamName.trim();
+    // VALIDÁCIA PRE SUPERSTRUCTURE TÍMY
+    let finalTeamName = teamName.trim();
+    
+    if ((teamToEdit?.isSuperstructureTeam || !teamToEdit) && showCategoryPrefix) {
+        // Len pre superstructure tímy s prefixom kategórie
+        const trimmed = teamName.trim();
+        
+        // 1. Skontroluj dĺžku (minimálne 2 znaky)
+        if (trimmed.length < 2) {
+            notify("Názov tímu musí mať aspoň 2 znaky", "error");
+            return;
+        }
+        
+        // 2. Prvý znak musí byť číslica 1-9
+        const firstChar = trimmed.charAt(0);
+        if (!/^[1-9]$/.test(firstChar)) {
+            notify("Prvý znak musí byť číslica 1-9", "error");
+            return;
+        }
+        
+        // 3. Transformuj druhý znak
+        let secondChar = trimmed.charAt(1);
+        if (secondChar === '') {
+            notify("Musí byť aspoň 2 znaky", "error");
+            return;
+        }
+        
+        // Ak je druhý znak písmeno (aj s diakritikou), zmeň na veľké
+        if (/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
+            secondChar = secondChar.toUpperCase();
+        } 
+        // Ak je druhý znak číslica, skontroluj, že je 0-9
+        else if (!/^[0-9]$/.test(secondChar)) {
+            notify("Druhý znak môže byť iba číslica 0-9 alebo písmeno", "error");
+            return;
+        }
+        
+        // 4. Tretí znak - len ak existuje a druhý znak bol číslica
+        let finalName = firstChar + secondChar;
+        if (trimmed.length >= 3) {
+            const thirdChar = trimmed.charAt(2);
+            
+            // Ak bol druhý znak písmeno, tretí znak sa nedá pridať
+            if (!/^[0-9]$/.test(secondChar)) {
+                notify("Ak je druhý znak písmeno, nemôže byť tretí znak", "error");
+                return;
+            }
+            
+            // Tretí znak musí byť písmeno (malé/veľké s diakritikou)
+            if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
+                notify("Tretí znak môže byť iba písmeno", "error");
+                return;
+            }
+            
+            // Zmeň tretí znak na veľké písmeno
+            finalName += thirdChar.toUpperCase();
+        }
+        
+        // Pridaj zvyšné znaky, ak existujú (od štvrtého znaku)
+        if (trimmed.length > 3) {
+            finalName += trimmed.substring(3);
+        }
+        
+        finalTeamName = finalName;
+    }
+    
+    // Použi prop showCategoryPrefix namiesto neexistujúcej premennej
+    const teamNameToSave = teamToEdit?.isSuperstructureTeam
+        ? (showCategoryPrefix 
+            ? `${teamToEdit.category} ${finalTeamName}` 
+            : finalTeamName)
+        : finalTeamName;
 
-      unifiedSaveHandler({
-          categoryId: selectedCategory,
-          groupName: selectedGroup || null,
-          teamName: teamNameToSave,
-          order: orderInputValue,
-          isEdit: !!teamToEdit,
-          originalTeam: teamToEdit
-      });
+    unifiedSaveHandler({
+        categoryId: selectedCategory,
+        groupName: selectedGroup || null,
+        teamName: teamNameToSave,
+        order: orderInputValue,
+        isEdit: !!teamToEdit,
+        originalTeam: teamToEdit
+    });
   };
 
   const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
@@ -1181,14 +1316,20 @@ const NewTeamModal = ({
         React.createElement('input', {
           type: 'text',
           className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
-            isDuplicate || groupEndingMismatch || orderMismatchMessage ? 'border-red-500' : 'border-gray-300'
+            isDuplicate || groupEndingMismatch || orderMismatchMessage || teamNameError ? 'border-red-500' : 'border-gray-300'
           }`,
           value: teamName,
-          onChange: (e) => setTeamName(e.target.value),
+          onChange: handleTeamNameChange,
           required: true,
           autoFocus: true,
           disabled: !canEditTeamName // Vypnuté, ak nemôžeme meniť
         }),
+
+        teamNameError ? React.createElement(
+          'p',
+          { className: 'mt-2 text-sm text-red-600 font-medium' },
+          `⚠️ ${teamNameError}`
+        ) : null,
         
         // NÁHĽAD - ZOBRAZÍ SA LEN PRE SUPERSTRUCTURE TÍMY A NOVÉ TÍMY
         (shouldShowPreview && finalTeamNamePreview) ? React.createElement(
