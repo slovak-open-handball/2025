@@ -2918,8 +2918,8 @@ const renderSingleCategoryView = (currentWindowWidth) => {
                       { 
                           className: "bg-white rounded-xl shadow-xl p-6 mb-6 lg:mr-8 flex-shrink-0 w-full lg:w-auto",
                           style: { 
-                              maxWidth: getBoxWidth(windowWidth),
-                              minWidth: getBoxWidth(windowWidth),
+                              maxWidth: calculateBoxWidth(windowWidth),
+                              minWidth: calculateBoxWidth(windowWidth),
                               transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease'
                           }
                       },
