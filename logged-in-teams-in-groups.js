@@ -184,6 +184,27 @@ const AddGroupsApp = (props) => {
     const [deleteGapModal, setDeleteGapModal] = useState(null);
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
     const [selectedGroupType, setSelectedGroupType] = useState('');
+
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    
+    // PRIDAJTE TOTO - efekt pre sledovanie veľkosti okna
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+        
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('load', handleResize);
+        
+        // Inicializácia
+        handleResize();
+        
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('load', handleResize);
+        };
+    }, []);
+  
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
@@ -2404,15 +2425,11 @@ const renderSingleCategoryView = () => {
         ? allTeams.filter(t => t.category === categoryName && !t.groupName).sort((a, b) => a.teamName.localeCompare(b.teamName))
         : [];
     
-    // Dynamická šírka boxov podľa zoom levelu
+    // Dynamická šírka boxov podľa zoom levelu - TERAZ POUŽÍVAME windowWidth
     const getBoxWidth = () => {
-        if (typeof window !== 'undefined') {
-            const width = window.innerWidth;
-            if (width < 768) return '95vw'; // Mobilné zariadenia
-            if (width < 1024) return '45vw'; // Tablety
-            if (width < 1280) return '35vw'; // Menšie monitory
-            return '380px'; // Štandardná šírka
-        }
+        if (windowWidth < 768) return '95vw';
+        if (windowWidth < 1024) return '45vw';
+        if (windowWidth < 1280) return '35vw';
         return '380px';
     };
     
