@@ -2124,23 +2124,9 @@ const renderGroupedCategories = () => {
     
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
     
-    // Dynamická šírka boxov
-    const getBoxWidth = () => {
-        if (typeof window !== 'undefined') {
-            const width = window.innerWidth;
-            if (width < 768) return '95vw'; // Mobilné zariadenia
-            if (width < 1024) return '45vw'; // Tablety
-            if (width < 1280) return '35vw'; // Menšie monitory
-            return '380px'; // Štandardná šírka
-        }
-        return '380px';
-    };
-    
-    const boxWidth = getBoxWidth();
-    
     return React.createElement(
         'div',
-        { className: 'flex flex-col gap-8' },
+        { className: 'flex flex-col gap-8 w-full' },
         sortedCategoryEntries.map(([categoryId, categoryName], index) => {
             const groups = allGroupsByCategoryId[categoryId] || [];
             const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
@@ -2153,7 +2139,7 @@ const renderGroupedCategories = () => {
             const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
             const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
             
-            // Počítač maximálnej výšky pre karty v riadku
+            // Počítač maximálnej výšky pre karty
             const calculateMaxTeamCount = (groupList) => {
                 if (groupList.length === 0) return 0;
                 
@@ -2195,7 +2181,7 @@ const renderGroupedCategories = () => {
                     className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
                 }, categoryName),
                 
-                // ZÁKLADNÉ SKUPINY (BEZ HORIZONTÁLNEHO POSUVNÍKA)
+                // ZÁKLADNÉ SKUPINY
                 sortedBasicGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'mb-8' },
@@ -2205,9 +2191,10 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex flex-wrap gap-6 pb-4 zoom-groups-container',
+                            className: 'grid grid-flow-col auto-cols-fr gap-6 pb-4 zoom-groups-container',
                             style: { 
-                                alignItems: 'stretch'
+                                gridAutoColumns: 'minmax(380px, 1fr)',
+                                overflow: 'visible'
                             }
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
@@ -2223,13 +2210,8 @@ const renderGroupedCategories = () => {
                                     key: `basic-${groupIndex}`,
                                     className: 'zoom-group-box',
                                     style: { 
-                                        width: boxWidth,
-                                        minWidth: boxWidth,
-                                        maxWidth: boxWidth,
                                         height: `${minHeight}px`,
                                         minHeight: `${minHeight}px`,
-                                        flexShrink: 0,
-                                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease, height 0.3s ease'
                                     }
                                 },
                                 React.createElement(
@@ -2254,7 +2236,7 @@ const renderGroupedCategories = () => {
                     )
                 ),
                 
-                // NADSTAVBOVÉ SKUPINY (BEZ HORIZONTÁLNEHO POSUVNÍKA)
+                // NADSTAVBOVÉ SKUPINY
                 sortedSuperstructureGroups.length > 0 && React.createElement(
                     'div',
                     null,
@@ -2264,9 +2246,10 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex flex-wrap gap-6 pb-4 zoom-groups-container',
+                            className: 'grid grid-flow-col auto-cols-fr gap-6 pb-4 zoom-groups-container',
                             style: { 
-                                alignItems: 'stretch'
+                                gridAutoColumns: 'minmax(380px, 1fr)',
+                                overflow: 'visible'
                             }
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2282,13 +2265,8 @@ const renderGroupedCategories = () => {
                                     key: `super-${groupIndex}`,
                                     className: 'zoom-group-box',
                                     style: { 
-                                        width: boxWidth,
-                                        minWidth: boxWidth,
-                                        maxWidth: boxWidth,
                                         height: `${minHeight}px`,
                                         minHeight: `${minHeight}px`,
-                                        flexShrink: 0,
-                                        transition: 'width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease, height 0.3s ease'
                                     }
                                 },
                                 React.createElement(
