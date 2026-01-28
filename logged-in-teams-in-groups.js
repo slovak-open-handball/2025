@@ -2124,7 +2124,7 @@ const renderGroupedCategories = () => {
     
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
     
-    // Šírka pre boxy - ROVNAKÁ AKO V renderSingleCategoryView()
+    // Dynamická šírka boxov
     const getBoxWidth = () => {
         if (typeof window !== 'undefined') {
             const width = window.innerWidth;
@@ -2140,7 +2140,7 @@ const renderGroupedCategories = () => {
     
     return React.createElement(
         'div',
-        { className: 'flex flex-col gap-8 w-full' },
+        { className: 'flex flex-col gap-8' },
         sortedCategoryEntries.map(([categoryId, categoryName], index) => {
             const groups = allGroupsByCategoryId[categoryId] || [];
             const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
@@ -2184,20 +2184,6 @@ const renderGroupedCategories = () => {
             const teamHeight = 65;
             const baseCardHeight = 140;
             
-            // VYPOČÍTAME POTREBNÚ ŠÍRKU PRE VŠETKY KARTY V RIADKU
-            const calculateRowWidth = (groupList) => {
-                if (groupList.length === 0) return '100%';
-                // Šírka jednej karty + medzera (1.5rem = 24px)
-                const singleCardWidth = parseInt(boxWidth);
-                const gapWidth = 24;
-                // Celková šírka = (počet kariet × šírka karty) + ((počet kariet - 1) × medzera)
-                const totalWidth = (groupList.length * singleCardWidth) + ((groupList.length - 1) * gapWidth) + groupList.lengt * 10;
-                return `${totalWidth}px`;
-            };
-            
-            const basicRowWidth = calculateRowWidth(basicGroups);
-            const superRowWidth = calculateRowWidth(superstructureGroups);
-            
             return React.createElement(
                 'div',
                 { 
@@ -2219,7 +2205,7 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'relative overflow-x-auto pb-4 zoom-groups-container w-full',
+                            className: 'relative w-full overflow-x-auto pb-4 zoom-groups-container',
                             style: { 
                                 scrollbarWidth: 'thin',
                                 scrollbarColor: '#cbd5e0 #f1f5f9'
@@ -2230,10 +2216,13 @@ const renderGroupedCategories = () => {
                             {
                                 className: 'flex',
                                 style: { 
-                                    width: basicRowWidth, // NASTAVENIE ŠÍRKY PODĽA VÝPOČTU
-                                    minWidth: basicRowWidth,
+                                    // Dynamická šírka - vypočítame presnú šírku potrebnú pre všetky karty
+                                    width: 'max-content',
+                                    minWidth: '100%',
                                     gap: '1.5rem',
-                                    alignItems: 'stretch'
+                                    alignItems: 'stretch',
+                                    paddingLeft: '0.5rem',
+                                    paddingRight: '0.5rem'
                                 }
                             },
                             sortedBasicGroups.map((group, groupIndex) => {
@@ -2249,7 +2238,7 @@ const renderGroupedCategories = () => {
                                         key: `basic-${groupIndex}`,
                                         className: 'flex-shrink-0 zoom-group-box',
                                         style: { 
-                                            width: boxWidth, // POUŽÍVAME ROVNAKÚ ŠÍRKU
+                                            width: boxWidth,
                                             minWidth: boxWidth,
                                             maxWidth: boxWidth,
                                             height: `${minHeight}px`,
@@ -2290,7 +2279,7 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'relative overflow-x-auto pb-4 zoom-groups-container w-full',
+                            className: 'relative w-full overflow-x-auto pb-4 zoom-groups-container',
                             style: { 
                                 scrollbarWidth: 'thin',
                                 scrollbarColor: '#cbd5e0 #f1f5f9'
@@ -2301,10 +2290,13 @@ const renderGroupedCategories = () => {
                             {
                                 className: 'flex',
                                 style: { 
-                                    width: superRowWidth, // NASTAVENIE ŠÍRKY PODĽA VÝPOČTU
-                                    minWidth: superRowWidth,
+                                    // Dynamická šírka - vypočítame presnú šírku potrebnú pre všetky karty
+                                    width: 'max-content',
+                                    minWidth: '100%',
                                     gap: '1.5rem',
-                                    alignItems: 'stretch'
+                                    alignItems: 'stretch',
+                                    paddingLeft: '0.5rem',
+                                    paddingRight: '0.5rem'
                                 }
                             },
                             sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2320,7 +2312,7 @@ const renderGroupedCategories = () => {
                                         key: `super-${groupIndex}`,
                                         className: 'flex-shrink-0 zoom-group-box',
                                         style: { 
-                                            width: boxWidth, // POUŽÍVAME ROVNAKÚ ŠÍRKU
+                                            width: boxWidth,
                                             minWidth: boxWidth,
                                             maxWidth: boxWidth,
                                             height: `${minHeight}px`,
