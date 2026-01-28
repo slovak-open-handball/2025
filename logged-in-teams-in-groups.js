@@ -938,48 +938,55 @@ const handleTeamNameChange = (e) => {
       }
     }
     
-    // Ak máme aspoň tri znaky
-    if (newValue.length >= 3) {
+    // **DÔLEŽITÁ ZMENA: Ak sú dve číslice, musí nasledovať písmeno**
+    if (newValue.length >= 2) {
+      const firstChar = newValue.charAt(0);
       const secondChar = newValue.charAt(1);
-      const thirdChar = newValue.charAt(2);
       
-      // **PRÍPAD 1: Ak je druhý znak písmeno → tretí a ďalšie znaky NIE sú povolené**
-      if (/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
-        // Odstráň všetky znaky od tretieho po koniec
-        newValue = newValue.substring(0, 2);
-        setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
+      // Ak sú oba znaky číslice
+      if (/^[1-9]$/.test(firstChar) && /^[0-9]$/.test(secondChar)) {
+        // Ak máme iba 2 znaky (dve číslice), nastav chybu
+        if (newValue.length === 2) {
+          setTeamNameError("Po dvoch čísliciach musí nasledovať písmeno");
+        } 
+        // Ak máme 3 alebo viac znakov, skontroluj tretí znak
+        else if (newValue.length >= 3) {
+          const thirdChar = newValue.charAt(2);
+          
+          // Tretí znak musí byť písmeno
+          if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
+            setTeamNameError("Po dvoch čísliciach musí byť písmeno");
+            // Odstráň neplatný znak
+            newValue = newValue.substring(0, 2) + newValue.substring(3);
+          } else {
+            // Zmeň tretí znak na veľké písmeno
+            const upperThird = thirdChar.toUpperCase();
+            newValue = newValue.substring(0, 2) + upperThird + newValue.substring(3);
+            setTeamNameError('');
+            
+            // **Po troch znakoch (číslo+číslo+písmeno) už žiadne ďalšie znaky**
+            if (newValue.length > 3) {
+              newValue = newValue.substring(0, 3);
+              setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
+            }
+          }
+        }
       } 
-      // **PRÍPAD 2: Ak je druhý znak číslica → tretí znak môže byť iba písmeno**
-      else if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
-        setTeamNameError("Tretí znak môže byť iba písmeno");
-        newValue = newValue.substring(0, 2) + newValue.substring(3);
-      } else {
-        // Zmeň tretí znak na veľké písmeno
-        const upperThird = thirdChar.toUpperCase();
-        newValue = newValue.substring(0, 2) + upperThird + newValue.substring(3);
-        setTeamNameError('');
-        
-        // **DÔLEŽITÉ: Ak už máme 3 znaky (1číslo + 2číslo + 3písmeno), štvrty a ďalšie NIE sú povolené**
-        if (newValue.length > 3) {
-          newValue = newValue.substring(0, 3);
+      // Ak je druhý znak písmeno
+      else if (/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
+        // Maximálne 2 znaky (číslo+písmeno)
+        if (newValue.length > 2) {
+          newValue = newValue.substring(0, 2);
           setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
         }
       }
     }
     
-    // **DODATOČNÁ OCHRANA: Ak sa niekto pokúsi vložiť viac ako 3 znaky iným spôsobom**
+    // **DODATOČNÁ OCHRANA: Ak sa niekto pokúsi vložiť viac znakov iným spôsobom**
     // (napr. paste, drag&drop, atď.)
-    const secondChar = newValue.charAt(1);
-    if (newValue.length > 3 && /^[0-9]$/.test(secondChar)) {
-      // Ak je druhý znak číslo a máme viac ako 3 znaky → ponechaj len prvé 3
+    if (newValue.length > 3) {
       newValue = newValue.substring(0, 3);
-      setTeamNameError("Názov tímu má maximálnu povolenú dĺžku.");
-    }
-    
-    // **DODATOČNÁ OCHRANA: Ak je druhý znak písmeno → maximálne 2 znaky**
-    if (newValue.length > 2 && /^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
-      newValue = newValue.substring(0, 2);
-      setTeamNameError("Názov tímu má maximálnu povolenú dĺžku.");
+      setTeamNameError("Názov tímu má maximálnu povolenú dĺžku");
     }
     
     // Aktualizácia hodnoty v inputu
@@ -1198,92 +1205,113 @@ const handleTeamNameChange = (e) => {
     if (!defaultGroupName) setSelectedGroup('');
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isSubmitDisabled) return;
-    
-    // VALIDÁCIA PRE SUPERSTRUCTURE TÍMY
-    let finalTeamName = teamName.trim();
-    
-    if ((teamToEdit?.isSuperstructureTeam || !teamToEdit) && showCategoryPrefix) {
-        // Len pre superstructure tímy s prefixom kategórie
-        const trimmed = teamName.trim();
-        
-        // 1. Skontroluj dĺžku (minimálne 2 znaky)
-        if (trimmed.length < 2) {
-            notify("Názov tímu musí mať aspoň 2 znaky", "error");
-            return;
-        }
-        
-        // 2. Prvý znak musí byť číslica 1-9
-        const firstChar = trimmed.charAt(0);
-        if (!/^[1-9]$/.test(firstChar)) {
-            notify("Prvý znak musí byť číslica 1-9", "error");
-            return;
-        }
-        
-        // 3. Transformuj druhý znak
-        let secondChar = trimmed.charAt(1);
-        if (secondChar === '') {
-            notify("Musí byť aspoň 2 znaky", "error");
-            return;
-        }
-        
-        // Ak je druhý znak písmeno (aj s diakritikou), zmeň na veľké
-        if (/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
-            secondChar = secondChar.toUpperCase();
-        } 
-        // Ak je druhý znak číslica, skontroluj, že je 0-9
-        else if (!/^[0-9]$/.test(secondChar)) {
-            notify("Druhý znak môže byť iba číslica 0-9 alebo písmeno", "error");
-            return;
-        }
-        
-        // 4. Tretí znak - len ak existuje a druhý znak bol číslica
-        let finalName = firstChar + secondChar;
-        if (trimmed.length >= 3) {
-            const thirdChar = trimmed.charAt(2);
-            
-            // Ak bol druhý znak písmeno, tretí znak sa nedá pridať
-            if (!/^[0-9]$/.test(secondChar)) {
-                notify("Ak je druhý znak písmeno, nemôže byť tretí znak", "error");
-                return;
-            }
-            
-            // Tretí znak musí byť písmeno (malé/veľké s diakritikou)
-            if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
-                notify("Tretí znak môže byť iba písmeno", "error");
-                return;
-            }
-            
-            // Zmeň tretí znak na veľké písmeno
-            finalName += thirdChar.toUpperCase();
-        }
-        
-        // Pridaj zvyšné znaky, ak existujú (od štvrtého znaku)
-        if (trimmed.length > 3) {
-            finalName += trimmed.substring(3);
-        }
-        
-        finalTeamName = finalName;
-    }
-    
-    // Použi prop showCategoryPrefix namiesto neexistujúcej premennej
-    const teamNameToSave = teamToEdit?.isSuperstructureTeam
-        ? (showCategoryPrefix 
-            ? `${teamToEdit.category} ${finalTeamName}` 
-            : finalTeamName)
-        : finalTeamName;
+const handleSubmit = (e) => {
+  e.preventDefault();
+  if (isSubmitDisabled) return;
+  
+  // VALIDÁCIA PRE SUPERSTRUCTURE TÍMY
+  let finalTeamName = teamName.trim();
+  
+  if ((teamToEdit?.isSuperstructureTeam || !teamToEdit) && showCategoryPrefix) {
+      // Len pre superstructure tímy s prefixom kategórie
+      const trimmed = teamName.trim();
+      
+      // 1. Skontroluj dĺžku (minimálne 2 znaky)
+      if (trimmed.length < 2) {
+          notify("Názov tímu musí mať aspoň 2 znaky", "error");
+          return;
+      }
+      
+      // 2. Prvý znak musí byť číslica 1-9
+      const firstChar = trimmed.charAt(0);
+      if (!/^[1-9]$/.test(firstChar)) {
+          notify("Prvý znak musí byť číslica 1-9", "error");
+          return;
+      }
+      
+      // 3. Transformuj druhý znak
+      let secondChar = trimmed.charAt(1);
+      if (secondChar === '') {
+          notify("Názov tímu musí mať aspoň 2 znaky", "error");
+          return;
+      }
+      
+      // Ak je druhý znak písmeno (aj s diakritikou), zmeň na veľké
+      if (/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(secondChar)) {
+          secondChar = secondChar.toUpperCase();
+      } 
+      // Ak je druhý znak číslica, skontroluj, že je 0-9
+      else if (!/^[0-9]$/.test(secondChar)) {
+          notify("Druhý znak môže byť iba číslica 0-9 alebo písmeno", "error");
+          return;
+      }
+      
+      // **DÔLEŽITÁ VALIDÁCIA: Ak sú dve číslice, musí byť aj tretí znak (písmeno)**
+      if (/^[0-9]$/.test(secondChar)) {
+          // Ak máme iba dve číslice, pošleme chybu
+          if (trimmed.length === 2) {
+              notify("Názov tímu musí obsahovať písmeno", "error");
+              return;
+          }
+          
+          // Kontrola tretieho znaku
+          const thirdChar = trimmed.charAt(2);
+          if (!thirdChar) {
+              notify("Názov tímu musí obsahovať písmeno", "error");
+              return;
+          }
+          
+          if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
+              notify("Názov tímu musí obsahovať písmeno", "error");
+              return;
+          }
+      }
+      
+      // 4. Tretí znak - len ak existuje a druhý znak bol číslica
+      let finalName = firstChar + secondChar;
+      if (trimmed.length >= 3) {
+          const thirdChar = trimmed.charAt(2);
+          
+          // Ak bol druhý znak písmeno, tretí znak sa nedá pridať
+          if (!/^[0-9]$/.test(secondChar)) {
+              notify("Názov tímu má maximálnu povolenú dĺžku", "error");
+              return;
+          }
+          
+          // Tretí znak musí byť písmeno (malé/veľké s diakritikou)
+          if (!/^[a-zA-ZáäčďéíľĺňóôřŕšťúůýžÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(thirdChar)) {
+              notify("Tretí znak môže byť iba písmeno", "error");
+              return;
+          }
+          
+          // Zmeň tretí znak na veľké písmeno
+          finalName += thirdChar.toUpperCase();
+      }
+      
+      // Pridaj zvyšné znaky, ak existujú (od štvrtého znaku)
+      if (trimmed.length > 3) {
+          finalName += trimmed.substring(3);
+      }
+      
+      finalTeamName = finalName;
+  }
+  
+  // Použi prop showCategoryPrefix namiesto neexistujúcej premennej
+  const teamNameToSave = teamToEdit?.isSuperstructureTeam
+      ? (showCategoryPrefix 
+          ? `${teamToEdit.category} ${finalTeamName}` 
+          : finalTeamName)
+      : finalTeamName;
 
-    unifiedSaveHandler({
-        categoryId: selectedCategory,
-        groupName: selectedGroup || null,
-        teamName: teamNameToSave,
-        order: orderInputValue,
-        isEdit: !!teamToEdit,
-        originalTeam: teamToEdit
-    });
-  };
+  unifiedSaveHandler({
+      categoryId: selectedCategory,
+      groupName: selectedGroup || null,
+      teamName: teamNameToSave,
+      order: orderInputValue,
+      isEdit: !!teamToEdit,
+      originalTeam: teamToEdit
+  });
+};
 
   const currentCategoryName = categoryIdToNameMap[selectedCategory] || '';
   
