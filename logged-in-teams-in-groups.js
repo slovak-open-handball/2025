@@ -2191,7 +2191,7 @@ const renderGroupedCategories = () => {
                 const singleCardWidth = parseInt(boxWidth);
                 const gapWidth = 24;
                 // Celková šírka = (počet kariet × šírka karty) + ((počet kariet - 1) × medzera)
-                const totalWidth = (groupList.length * singleCardWidth) + ((groupList.length - 1) * gapWidth);
+                const totalWidth = (groupList.length * singleCardWidth) + ((groupList.length - 1) * gapWidth) + groupList.lengt * 10;
                 return `${totalWidth}px`;
             };
             
