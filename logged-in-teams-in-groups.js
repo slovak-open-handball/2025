@@ -2139,6 +2139,15 @@ const renderGroupedCategories = (currentWindowWidth) => {
             React.createElement('p', { className: 'text-center text-gray-500' }, 'Žiadne skupiny neboli nájdené.')
         );
     }
+
+    const getBoxWidth = () => {
+      if (currentWindowWidth < 768) return '95vw';
+      if (currentWindowWidth < 1024) return '45vw';
+      if (currentWindowWidth < 1280) return '35vw';
+      return '380px';
+    };
+    
+    const boxWidth = getBoxWidth();
     
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([, a], [, b]) => a.localeCompare(b));
         
@@ -2378,6 +2387,15 @@ const renderSingleCategoryView = (currentWindowWidth) => {
     if (selectedGroupName) {
         groups = groups.filter(g => g.name === selectedGroupName);
     }
+
+    const getBoxWidth = () => {
+      if (currentWindowWidth < 768) return '95vw';
+      if (currentWindowWidth < 1024) return '45vw';
+      if (currentWindowWidth < 1280) return '35vw';
+      return '380px';
+    };
+    
+    const boxWidth = getBoxWidth();
     
     // Rozdelenie skupín podľa typu
     const basicGroups = groups.filter(g => g.type === 'základná skupina');
