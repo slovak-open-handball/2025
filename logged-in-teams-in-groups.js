@@ -1120,25 +1120,37 @@ const NewTeamModal = ({
     categoryIdToNameMap
   ]);
 
-  // Efekt pre order input
+  // Efekt pre order input - VYMAZANÝ PÔVODNÝ EFEKT A PRIDANÝ NOVÝ
+  // Teraz vždy nastavíme orderInputValue, aj keď nie je vybratá skupina
   useEffect(() => {
-    if (!isOpen || !selectedGroup) {
+    if (!isOpen) {
       setOrderInputValue(null);
       return;
     }
 
+    // Ak nie je vybratá skupina, zobrazíme placeholder
+    if (!selectedGroup) {
+      setOrderInputValue('');
+      return;
+    }
+
+    // Ak editujeme tím a má rovnakú skupinu
     if (teamToEdit && teamToEdit.groupName === selectedGroup && teamToEdit.order != null) {
       setOrderInputValue(teamToEdit.order);
       return;
     }
 
     const currentCategoryName = categoryIdToNameMap[selectedCategory];
-    if (!currentCategoryName) return;
+    if (!currentCategoryName) {
+      setOrderInputValue('');
+      return;
+    }
 
     const teamsInThisGroup = allTeams.filter(
       t => t.category === currentCategoryName && t.groupName === selectedGroup
     );
 
+    // Ak nie sú žiadne tímy v skupine, predvolené je 1
     if (teamsInThisGroup.length === 0) {
       setOrderInputValue(1);
       return;
@@ -1407,6 +1419,12 @@ const NewTeamModal = ({
     }
   }
 
+  // Zistíme, či je order input dostupný na editáciu
+  const isOrderInputEnabled = !!selectedGroup;
+  const orderInputPlaceholder = selectedGroup 
+    ? (orderInputValue === '' ? 'Vyberte skupinu...' : 'Automaticky vypočítané')
+    : 'Najprv vyberte skupinu';
+
   const isCategoryValid = !!selectedCategory;
   const isGroupTypeValid = !!selectedGroupType;
   const isGroupValid = !!selectedGroup;
@@ -1610,19 +1628,32 @@ const NewTeamModal = ({
           isGroupFixed ? React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená skupina: ${defaultGroupName}`) : null
         ),
 
-        selectedGroup ? React.createElement(
+        // UPRAVENÉ: Inputbox pre poradie - TERAZ VŽDY VIDITEĽNÝ
+        React.createElement(
           'div',
           { className: 'flex flex-col' },
           React.createElement('label', { className: 'text-sm font-medium text-gray-700 mb-1' }, 'Poradie v skupine:'),
           React.createElement('input', {
             type: 'number',
             min: '1',
-            className: 'p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-full',
+            className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-full ${
+              !isOrderInputEnabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300'
+            }`,
             value: orderInputValue ?? '',
-            onChange: (e) => setOrderInputValue(e.target.value === '' ? null : parseInt(e.target.value, 10)),
-            placeholder: 'auto'
-          })
-        ) : null,
+            onChange: (e) => {
+              if (isOrderInputEnabled) {
+                setOrderInputValue(e.target.value === '' ? null : parseInt(e.target.value, 10));
+              }
+            },
+            placeholder: orderInputPlaceholder,
+            disabled: !isOrderInputEnabled
+          }),
+          !selectedGroup && React.createElement(
+            'p',
+            { className: 'text-xs text-gray-500 mt-1 italic' },
+            'Vyberte skupinu pre zadanie poradia'
+          )
+        ),
 
         React.createElement(
           'div',
