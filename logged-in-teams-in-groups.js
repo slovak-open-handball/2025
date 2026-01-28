@@ -2147,7 +2147,7 @@ const renderSingleCategoryView = () => {
                 },
                 React.createElement('h3', { 
                     className: 'text-2xl font-semibold mb-4 text-center flex-shrink-0' 
-                }, `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`),
+                }, `Tímy bez skupiny v kategórii: ${categoryName}`),
                 React.createElement('div', { 
                     className: 'flex-grow overflow-y-auto min-h-0'
                 }, renderTeamList(teamsWithoutGroupForCategory, null, selectedCategoryId, true))
