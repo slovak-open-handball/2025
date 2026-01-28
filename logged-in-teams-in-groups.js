@@ -1425,6 +1425,20 @@ const NewTeamModal = ({
     ? (orderInputValue === '' ? 'Vyberte skupinu...' : 'Automaticky vypočítané')
     : 'Najprv vyberte skupinu';
 
+  // NOVÁ LOGIKA: Zistíme, či je nejaká červená chybová správa
+  const hasRedError = 
+    teamNameError && 
+    teamNameError !== "Zadaný názov tímu má správny formát." &&
+    teamNameError !== "" ||
+    isDuplicate ||
+    groupEndingMismatch ||
+    !!orderMismatchMessage;
+
+  // Zistíme, či zobraziť zelenú správu
+  const shouldShowGreenMessage = 
+    teamNameError === "Zadaný názov tímu má správny formát." && 
+    !hasRedError;
+
   const isCategoryValid = !!selectedCategory;
   const isGroupTypeValid = !!selectedGroupType;
   const isGroupValid = !!selectedGroup;
@@ -1472,12 +1486,11 @@ const NewTeamModal = ({
         React.createElement('input', {
           type: 'text',
           className: `w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
-            teamNameError === 'Zadaný názov tímu má správny formát.'
+            // UPRAVENÉ: Ak je zelená správa, zelené orámovanie, inak červené ak je nejaká chyba
+            shouldShowGreenMessage
               ? 'border-green-500 focus:border-green-500 focus:ring-green-200'
-              // Červené orámovanie pre ostatné chyby
-              : isDuplicate || groupEndingMismatch || orderMismatchMessage || teamNameError
-                ? 'border-red-500'
-                // Štandardné orámovanie
+              : hasRedError
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-200'
                 : 'border-gray-300'
           }`,
           value: teamName,
@@ -1490,15 +1503,22 @@ const NewTeamModal = ({
         React.createElement(
           'div',
           { className: 'space-y-1 mt-2' },
-          // Chyba formátu názvu - ZELENÁ AK JE SPRÁVNY FORMÁT
-          teamNameError ? React.createElement(
+          // ZELENÁ SPRÁVA - LEN AK NIE JE ŽIADNA ČERVENÁ CHYBA
+          shouldShowGreenMessage ? React.createElement(
             'p',
             { 
-              className: `text-sm font-medium ${
-                teamNameError === 'Zadaný názov tímu má správny formát.' 
-                  ? 'text-green-600' 
-                  : 'text-red-600'
-              }`
+              className: 'text-sm font-medium text-green-600'
+            },
+            teamNameError
+          ) : null,
+
+          // Chyba formátu názvu - ČERVENÁ
+          teamNameError && 
+          teamNameError !== "Zadaný názov tímu má správny formát." && 
+          teamNameError !== "" ? React.createElement(
+            'p',
+            { 
+              className: 'text-sm font-medium text-red-600'
             },
             teamNameError
           ) : null,
