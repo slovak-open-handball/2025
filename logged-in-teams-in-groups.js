@@ -2178,7 +2178,7 @@ const renderGroupedCategories = () => {
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
-                    className: 'text-3xl font-semibold mb-6 text-center text-gray-800'
+                    className: 'text-3xl font-bold mb-6 text-center text-gray-800'
                 }, categoryName),
                 
                 // ZÁKLADNÉ SKUPINY
