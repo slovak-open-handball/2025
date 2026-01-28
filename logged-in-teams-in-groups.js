@@ -2139,77 +2139,82 @@ const renderGroupedCategories = () => {
     
     return React.createElement(
         'div',
-        { className: 'flex flex-col gap-8 w-full' },
-        sortedCategoryEntries.map(([categoryId, categoryName], index) => {
-            const groups = allGroupsByCategoryId[categoryId] || [];
-            const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
-            
-            // Rozdelenie skupín podľa typu
-            const basicGroups = groups.filter(g => g.type === 'základná skupina');
-            const superstructureGroups = groups.filter(g => g.type === 'nadstavbová skupina');
-            
-            // Triedenie skupín
-            const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
-            const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
-            
-            // Počítač maximálnej výšky pre karty v riadku
-            const calculateMaxTeamCount = (groupList) => {
-                if (groupList.length === 0) return 0;
+        { 
+            className: 'w-full overflow-x-auto pb-4',
+            style: { 
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#cbd5e0 #f1f5f9'
+            }
+        },
+        React.createElement(
+            'div',
+            {
+                className: 'flex flex-col gap-8 min-w-max px-4',
+                style: { 
+                    minWidth: 'min-content'
+                }
+            },
+            sortedCategoryEntries.map(([categoryId, categoryName], index) => {
+                const groups = allGroupsByCategoryId[categoryId] || [];
+                const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
                 
-                let maxCount = 0;
-                groupList.forEach(group => {
-                    const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
+                // Rozdelenie skupín podľa typu
+                const basicGroups = groups.filter(g => g.type === 'základná skupina');
+                const superstructureGroups = groups.filter(g => g.type === 'nadstavbová skupina');
+                
+                // Triedenie skupín
+                const sortedBasicGroups = [...basicGroups].sort((a, b) => a.name.localeCompare(b.name));
+                const sortedSuperstructureGroups = [...superstructureGroups].sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Počítač maximálnej výšky pre karty v riadku
+                const calculateMaxTeamCount = (groupList) => {
+                    if (groupList.length === 0) return 0;
                     
-                    // Spočítame rôzne pozície (vrátane dier)
-                    const usedOrders = new Set(
-                        teamsInGroup
-                            .map(t => t.order)
-                            .filter(o => Number.isInteger(o) && o >= 1)
-                    );
+                    let maxCount = 0;
+                    groupList.forEach(group => {
+                        const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
+                        
+                        // Spočítame rôzne pozície (vrátane dier)
+                        const usedOrders = new Set(
+                            teamsInGroup
+                                .map(t => t.order)
+                                .filter(o => Number.isInteger(o) && o >= 1)
+                        );
+                        
+                        const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
+                        const count = Math.max(teamsInGroup.length, maxOrder);
+                        maxCount = Math.max(maxCount, count);
+                    });
                     
-                    const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
-                    const count = Math.max(teamsInGroup.length, maxOrder);
-                    maxCount = Math.max(maxCount, count);
-                });
+                    return maxCount;
+                };
                 
-                return maxCount;
-            };
-            
-            // Vypočítame maximálny počet tímov pre základné a nadstavbové skupiny
-            const maxBasicTeams = calculateMaxTeamCount(basicGroups);
-            const maxSuperTeams = calculateMaxTeamCount(superstructureGroups);
-            
-            // Výška na jeden tím (v px) + padding
-            const teamHeight = 65;
-            const baseCardHeight = 140;
-            
-            return React.createElement(
-                'div',
-                { 
-                    key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full'
-                },
-                // Názov kategórie
-                React.createElement('h3', { 
-                    className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
-                }, categoryName),
+                // Vypočítame maximálny počet tímov pre základné a nadstavbové skupiny
+                const maxBasicTeams = calculateMaxTeamCount(basicGroups);
+                const maxSuperTeams = calculateMaxTeamCount(superstructureGroups);
                 
-                // ZÁKLADNÉ SKUPINY - JEDEN SPOLOČNÝ POSUVNÍK PRE VŠETKY KARTY
-                sortedBasicGroups.length > 0 && React.createElement(
+                // Výška na jeden tím (v px) + padding
+                const teamHeight = 65;
+                const baseCardHeight = 140;
+                
+                return React.createElement(
                     'div',
-                    { className: 'mb-8 w-full' },
-                    React.createElement('h4', { 
-                        className: 'text-xl font-semibold mb-4 text-gray-700'
-                    }, 'Základné skupiny'),
-                    React.createElement(
-                        'div',
-                        { 
-                            className: 'w-full overflow-x-auto pb-4 zoom-groups-container',
-                            style: { 
-                                scrollbarWidth: 'thin',
-                                scrollbarColor: '#cbd5e0 #f1f5f9'
-                            }
-                        },
+                    { 
+                        key: index, 
+                        className: 'bg-white rounded-xl shadow-xl p-6 mb-6 min-w-max'
+                    },
+                    // Názov kategórie
+                    React.createElement('h3', { 
+                        className: 'text-2xl font-semibold mb-6 text-center text-gray-800'
+                    }, categoryName),
+                    
+                    // ZÁKLADNÉ SKUPINY
+                    sortedBasicGroups.length > 0 && React.createElement(
+                        React.Fragment,
+                        null,
+                        React.createElement('h4', { 
+                            className: 'text-xl font-semibold mb-4 text-gray-700'
+                        }, 'Základné skupiny'),
                         React.createElement(
                             'div',
                             {
@@ -2217,9 +2222,7 @@ const renderGroupedCategories = () => {
                                 style: { 
                                     flexWrap: 'nowrap',
                                     gap: '1.5rem',
-                                    alignItems: 'stretch',
-                                    padding: '0 0.25rem',
-                                    minWidth: 'min-content'
+                                    alignItems: 'stretch'
                                 }
                             },
                             sortedBasicGroups.map((group, groupIndex) => {
@@ -2263,25 +2266,15 @@ const renderGroupedCategories = () => {
                                 );
                             })
                         )
-                    )
-                ),
-                
-                // NADSTAVBOVÉ SKUPINY - JEDEN SPOLOČNÝ POSUVNÍK PRE VŠETKY KARTY
-                sortedSuperstructureGroups.length > 0 && React.createElement(
-                    'div',
-                    { className: 'w-full' },
-                    React.createElement('h4', { 
-                        className: 'text-xl font-semibold mb-4 text-gray-700'
-                    }, 'Nadstavbové skupiny'),
-                    React.createElement(
-                        'div',
-                        { 
-                            className: 'w-full overflow-x-auto pb-4 zoom-groups-container',
-                            style: { 
-                                scrollbarWidth: 'thin',
-                                scrollbarColor: '#cbd5e0 #f1f5f9'
-                            }
-                        },
+                    ),
+                    
+                    // NADSTAVBOVÉ SKUPINY
+                    sortedSuperstructureGroups.length > 0 && React.createElement(
+                        React.Fragment,
+                        null,
+                        React.createElement('h4', { 
+                            className: 'text-xl font-semibold mb-4 mt-6 text-gray-700'
+                        }, 'Nadstavbové skupiny'),
                         React.createElement(
                             'div',
                             {
@@ -2289,9 +2282,7 @@ const renderGroupedCategories = () => {
                                 style: { 
                                     flexWrap: 'nowrap',
                                     gap: '1.5rem',
-                                    alignItems: 'stretch',
-                                    padding: '0 0.25rem',
-                                    minWidth: 'min-content'
+                                    alignItems: 'stretch'
                                 }
                             },
                             sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2335,18 +2326,18 @@ const renderGroupedCategories = () => {
                                 );
                             })
                         )
+                    ),
+                    
+                    // Správa ak nie sú skupiny
+                    basicGroups.length === 0 && superstructureGroups.length === 0 &&
+                    React.createElement(
+                        'p',
+                        { className: 'text-center text-gray-500 py-4' },
+                        'V tejto kategórii nie sú žiadne skupiny.'
                     )
-                ),
-                
-                // Správa ak nie sú skupiny
-                basicGroups.length === 0 && superstructureGroups.length === 0 &&
-                React.createElement(
-                    'p',
-                    { className: 'text-center text-gray-500 py-4' },
-                    'V tejto kategórii nie sú žiadne skupiny.'
-                )
-            );
-        })
+                );
+            })
+        )
     );
 };
   
