@@ -2126,7 +2126,7 @@ const renderGroupedCategories = () => {
     
     return React.createElement(
         'div',
-        { className: 'flex flex-col gap-8' },
+        { className: 'flex flex-col gap-8 w-full' },
         sortedCategoryEntries.map(([categoryId, categoryName], index) => {
             const groups = allGroupsByCategoryId[categoryId] || [];
             const teamsInThisCategory = allTeams.filter(team => team.category === categoryName);
@@ -2143,7 +2143,7 @@ const renderGroupedCategories = () => {
                 'div',
                 { 
                     key: index, 
-                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6'
+                    className: 'bg-white rounded-xl shadow-xl p-6 mb-6 w-full'
                 },
                 // Názov kategórie
                 React.createElement('h3', { 
@@ -2160,47 +2160,31 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'w-full', // Zmenené z 'relative mb-8'
+                            className: 'relative mb-8',
                             style: {
-                                overflowX: 'auto'
+                                minHeight: '350px'
                             }
                         },
                         React.createElement(
                             'div',
                             {
-                                className: 'flex',
+                                className: 'flex flex-wrap gap-6 justify-center',
                                 style: {
-                                    width: 'max-content',
-                                    minWidth: '100%',
-                                    gap: '1.5rem',
-                                    paddingBottom: '1rem'
+                                    margin: '0 -0.75rem' // Kompenzácia pre gap
                                 }
                             },
                             sortedBasicGroups.map((group, groupIndex) => {
                                 const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
                                 
-                                // Dynamická šírka boxov podľa zoom levelu
-                                const getBoxWidth = () => {
-                                    if (typeof window !== 'undefined') {
-                                        const width = window.innerWidth;
-                                        if (width < 768) return '95vw';
-                                        if (width < 1024) return '45vw';
-                                        if (width < 1280) return '35vw';
-                                        return '380px';
-                                    }
-                                    return '380px';
-                                };
-                                
-                                const boxWidth = getBoxWidth();
-                                
+                                // V režime bez vybranej kategórie používame flex-wrap namiesto horizontálneho posuvníka
                                 return React.createElement(
                                     'div',
                                     {
                                         key: `basic-${groupIndex}`,
+                                        className: 'flex-grow-0 flex-shrink-0',
                                         style: { 
-                                            width: boxWidth,
-                                            minWidth: boxWidth,
-                                            flexShrink: 0
+                                            width: '380px',
+                                            maxWidth: '100%'
                                         }
                                     },
                                     React.createElement(
@@ -2209,10 +2193,10 @@ const renderGroupedCategories = () => {
                                             className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100 min-h-[300px]'
                                         },
                                         React.createElement('h4', { 
-                                            className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
+                                            className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate' 
                                         }, group.name),
                                         React.createElement('p', { 
-                                            className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap flex-shrink-0' 
+                                            className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
                                         }, group.type),
                                         React.createElement('div', { 
                                             className: 'mt-2 space-y-1 flex-grow overflow-auto'
@@ -2236,47 +2220,31 @@ const renderGroupedCategories = () => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'w-full', // Zmenené z 'relative'
+                            className: 'relative',
                             style: {
-                                overflowX: 'auto'
+                                minHeight: '350px'
                             }
                         },
                         React.createElement(
                             'div',
                             {
-                                className: 'flex',
+                                className: 'flex flex-wrap gap-6 justify-center',
                                 style: {
-                                    width: 'max-content',
-                                    minWidth: '100%',
-                                    gap: '1.5rem',
-                                    paddingBottom: '1rem'
+                                    margin: '0 -0.75rem' // Kompenzácia pre gap
                                 }
                             },
                             sortedSuperstructureGroups.map((group, groupIndex) => {
                                 const teamsInGroup = teamsInThisCategory.filter(t => t.groupName === group.name);
                                 
-                                // Dynamická šírka boxov podľa zoom levelu
-                                const getBoxWidth = () => {
-                                    if (typeof window !== 'undefined') {
-                                        const width = window.innerWidth;
-                                        if (width < 768) return '95vw';
-                                        if (width < 1024) return '45vw';
-                                        if (width < 1280) return '35vw';
-                                        return '380px';
-                                    }
-                                    return '380px';
-                                };
-                                
-                                const boxWidth = getBoxWidth();
-                                
+                                // V režime bez vybranej kategórie používame flex-wrap namiesto horizontálneho posuvníka
                                 return React.createElement(
                                     'div',
                                     {
                                         key: `super-${groupIndex}`,
+                                        className: 'flex-grow-0 flex-shrink-0',
                                         style: { 
-                                            width: boxWidth,
-                                            minWidth: boxWidth,
-                                            flexShrink: 0
+                                            width: '380px',
+                                            maxWidth: '100%'
                                         }
                                     },
                                     React.createElement(
@@ -2285,10 +2253,10 @@ const renderGroupedCategories = () => {
                                             className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-blue-100 min-h-[300px]'
                                         },
                                         React.createElement('h4', { 
-                                            className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
+                                            className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate' 
                                         }, group.name),
                                         React.createElement('p', { 
-                                            className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap flex-shrink-0' 
+                                            className: 'text-center text-sm text-gray-600 mb-4 whitespace-nowrap' 
                                         }, group.type),
                                         React.createElement('div', { 
                                             className: 'mt-2 space-y-1 flex-grow overflow-auto'
