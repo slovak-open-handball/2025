@@ -1,26 +1,33 @@
-import {doc, getDoc, collection, getDocs} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
 // logged-in-team-info.js
-console.log("%c[logged-in-team-info.js] Skript beží – čakám na Firebase", 
-    "color:#8b5cf6; font-weight:bold; font-size:14px;");
 
-// === HLAVNÁ FUNKCIA NA VYHĽADÁVANIE ===
+// === PRIAME IMPORTY FIRESTORE FUNKCIÍ (najspoľahlivejšie riešenie) ===
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+console.log("%c[logged-in-team-info.js] Skript beží – FULL FIRESTORE lookup (priamy import)", 
+    "color:#8b5cf6; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
+
+// === HLAVNÁ FUNKCIA NA VYHĽADÁVANIE V DATABÁZE ===
 async function lookupTeamInFirestore(teamName, category = null, group = null) {
-    // Bezpečnostná kontrola – čakáme, kým je všetko pripravené
-    if (!window.db || typeof window.doc !== 'function' || typeof window.getDoc !== 'function') {
-        console.warn("Firebase ešte nie je pripravený (chýba window.db alebo window.doc). Skúšam neskôr...");
+    if (!window.db) {
+        console.warn("Firestore (window.db) ešte nie je dostupné!");
         return null;
     }
 
-    console.log(`Hľadám tím "${teamName}" ...`);
+    console.log(`Hľadám tím "${teamName}" (kategória: ${category || 'ľubovoľná'}, skupina: ${group || 'ľubovoľná'})`);
 
     try {
-        // 1. superstructureGroups
-        const superstructureRef = window.doc(window.db, 'settings/superstructureGroups');
-        const superstructureSnap = await window.getDoc(superstructureRef);
+        // 1. superstructureGroups → settings/superstructureGroups
+        const superstructureRef = doc(window.db, 'settings/superstructureGroups');
+        const superstructureSnap = await getDoc(superstructureRef);
 
         if (superstructureSnap.exists()) {
             const data = superstructureSnap.data() || {};
+            
             for (const [catKey, teams] of Object.entries(data)) {
                 if (!Array.isArray(teams)) continue;
                 if (category && catKey !== category) continue;
@@ -32,15 +39,19 @@ async function lookupTeamInFirestore(teamName, category = null, group = null) {
 
                 if (found) {
                     console.log(`→ Nájdený v superstructureGroups (${catKey})`);
-                    return { source: 'superstructure', category: catKey, ...found };
+                    return {
+                        source: 'superstructure',
+                        category: catKey,
+                        ...found
+                    };
                 }
             }
         }
 
-        // 2. users kolekcia
-        console.log("Nie je v superstructure → prehľadávam users...");
-        const usersCollection = window.collection(window.db, "users");
-        const usersSnap = await window.getDocs(usersCollection);
+        // 2. prehľadávanie všetkých používateľov (users kolekcia)
+        console.log("Nie je v superstructure → prehľadávam users kolekciu...");
+        const usersCol = collection(window.db, "users");
+        const usersSnap = await getDocs(usersCol);
 
         for (const userDoc of usersSnap.docs) {
             const userData = userDoc.data();
@@ -57,12 +68,17 @@ async function lookupTeamInFirestore(teamName, category = null, group = null) {
 
                 if (found) {
                     console.log(`→ Nájdený u používateľa ${userDoc.id} v kategórii ${catKey}`);
-                    return { source: 'user', userId: userDoc.id, category: catKey, ...found };
+                    return {
+                        source: 'user',
+                        userId: userDoc.id,
+                        category: catKey,
+                        ...found
+                    };
                 }
             }
         }
 
-        console.log("→ Žiadna zhoda.");
+        console.log("→ Žiadna zhoda v databáze.");
         return null;
     } catch (err) {
         console.error("Chyba pri prehľadávaní Firestore:", err);
@@ -70,19 +86,20 @@ async function lookupTeamInFirestore(teamName, category = null, group = null) {
     }
 }
 
-// === HOVER LISTENER ===
+// === INICIALIZÁCIA HOVER LISTENEROV ===
 function initTeamHoverListeners() {
-    console.log("Inicializujem hover listenery...");
+    console.log("Inicializujem hover listenery na span.flex-grow...");
 
     const nameSpans = document.querySelectorAll('li span.flex-grow');
     console.log(`Nájdených ${nameSpans.length} spanov s triedou flex-grow`);
 
     if (nameSpans.length === 0) {
-        console.warn("Žiadne span.flex-grow – React ešte nerenderoval.");
+        console.warn("Žiadne span.flex-grow – React zatiaľ pravdepodobne nerenderoval zoznam tímov.");
         return;
     }
 
     nameSpans.forEach(span => {
+        // Zabránenie duplicitných listenerov
         if (span.dataset.hoverListenerAdded) return;
         span.dataset.hoverListenerAdded = 'true';
 
@@ -98,59 +115,73 @@ function initTeamHoverListeners() {
             let type = 'neznámy typ';
 
             const catHeader = li.closest('.flex-col')?.previousElementSibling;
-            if (catHeader?.tagName === 'H3') category = catHeader.textContent.trim();
+            if (catHeader?.tagName === 'H3') {
+                category = catHeader.textContent.trim();
+            }
 
             const groupHeader = li.closest('.zoom-group-box')?.querySelector('h3, h4');
-            if (groupHeader) group = groupHeader.textContent.trim();
+            if (groupHeader) {
+                group = groupHeader.textContent.trim();
+            }
 
-            if (li.classList.contains('bg-yellow-50')) type = 'SUPERSTRUCTURE tím';
-            else if (li.closest('.bg-blue-100')) type = 'nadstavbová skupina';
-            else if (li.closest('.bg-gray-100')) type = 'základná skupina';
+            if (li.classList.contains('bg-yellow-50')) {
+                type = 'SUPERSTRUCTURE / nadstavbový tím';
+            } else if (li.closest('.bg-blue-100')) {
+                type = 'tím v nadstavbovej skupine';
+            } else if (li.closest('.bg-gray-100')) {
+                type = 'tím v základnej skupine';
+            }
 
-            console.groupCollapsed(`%c${teamName}`, 'color:#10b981; font-weight:bold;');
+            console.groupCollapsed(`%c${teamName || '(bez názvu)'}`, 'color:#10b981; font-weight:bold;');
             console.log(`Viditeľný text:     ${visibleText}`);
-            console.log(`Kategória (DOM):     ${category}`);
-            console.log(`Skupina (DOM):       ${group}`);
+            console.log(`Vyčistený názov:     ${teamName}`);
+            console.log(`Kategória (z DOM):   ${category}`);
+            console.log(`Skupina (z DOM):     ${group}`);
             console.log(`Typ (podľa farby):   ${type}`);
 
-            // Pokus o lookup
+            // === VYHĽADÁVANIE V DATABÁZE ===
+            console.log("Spúšťam vyhľadávanie v Firestore...");
             const teamData = await lookupTeamInFirestore(teamName, category, group);
 
             if (teamData) {
                 console.log("ÚPLNÉ DÁTA Z DATABÁZY:");
                 console.dir(teamData);
             } else {
-                console.warn("Tím sa nenašiel alebo Firebase nie je pripravený.");
+                console.warn("Tím sa v databáze nenašiel (alebo ešte nie je načítaný Firebase).");
             }
 
             console.groupEnd();
         });
     });
 
-    console.log("Hover listenery priradené.");
+    console.log("→ Hover listenery boli úspešne priradené.");
 }
 
-// === Spustenie s čakaním na Firebase ===
+// === SPUSTENIE S ČAKANÍM NA REACT + FIREBASE ===
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOMContentLoaded → čakám na Firebase (max 10 sekúnd)...");
-
-    let attempts = 0;
-    const maxAttempts = 10;
+    console.log("DOMContentLoaded → čakám 2 sekundy na inicializáciu Firebase a React render...");
 
     const tryInit = () => {
-        attempts++;
-        console.log(`Pokus ${attempts}/${maxAttempts}: kontrolujem Firebase...`);
-
-        if (window.db && typeof window.doc === 'function' && typeof window.getDoc === 'function') {
-            console.log("Firebase je pripravený → spúšťam listenery!");
+        if (window.db) {
+            console.log("window.db je dostupné → spúšťam inicializáciu listenerov");
             initTeamHoverListeners();
-        } else if (attempts < maxAttempts) {
-            console.log("Firebase ešte nie je pripravený, čakám 1 sekundu...");
-            setTimeout(tryInit, 1000);
         } else {
-            console.error("Firebase sa nenačítal ani po 10 sekundách. Skontroluj authentication.js");
+            console.log("window.db ešte nie je dostupné, čakám ďalej...");
+            setTimeout(tryInit, 1000);
         }
     };
 
-    setTimeout(tryInit, 1500); // prvý pokus po 1.5 s
+    setTimeout(tryInit, 2000); // prvý pokus po 2 sekundách
+
+    // Opakovaný pokus každé 3 sekundy, kým sa niečo nenájde
+    const interval = setInterval(() => {
+        const spans = document.querySelectorAll('li span.flex-grow');
+        if (spans.length > 0) {
+            console.log(`Zoznam tímov už je v DOM-e (${spans.length} spanov) → listenery sú aktívne`);
+            clearInterval(interval);
+        } else {
+            console.log("Stále čakám na zoznam tímov v DOM...");
+            initTeamHoverListeners();
+        }
+    }, 3000);
 });
