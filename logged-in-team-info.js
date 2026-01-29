@@ -1,6 +1,6 @@
 // logged-in-team-info.js
 
-// === PRIAME IMPORTY FIRESTORE FUNKCIÍ (najspoľahlivejšie riešenie) ===
+// === PRIAME IMPORTY FIRESTORE FUNKCIÍ ===
 import {
   doc,
   getDoc,
@@ -8,13 +8,13 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-console.log("%c[logged-in-team-info.js] Skript beží – FULL FIRESTORE lookup (priamy import)", 
+console.log("%c[logged-in-team-info.js] Skript beží – FULL FIRESTORE lookup (priamy import, bez čakania)",
     "color:#8b5cf6; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
 
 // === HLAVNÁ FUNKCIA NA VYHĽADÁVANIE V DATABÁZE ===
 async function lookupTeamInFirestore(teamName, category = null, group = null) {
     if (!window.db) {
-        console.warn("Firestore (window.db) ešte nie je dostupné!");
+        console.warn("Firestore (window.db) nie je dostupné!");
         return null;
     }
 
@@ -147,7 +147,7 @@ function initTeamHoverListeners() {
                 console.log("ÚPLNÉ DÁTA Z DATABÁZY:");
                 console.dir(teamData);
             } else {
-                console.warn("Tím sa v databáze nenašiel (alebo ešte nie je načítaný Firebase).");
+                console.warn("Tím sa v databáze nenašiel.");
             }
 
             console.groupEnd();
@@ -157,31 +157,15 @@ function initTeamHoverListeners() {
     console.log("→ Hover listenery boli úspešne priradené.");
 }
 
-// === SPUSTENIE S ČAKANÍM NA REACT + FIREBASE ===
+// === OKAMŽITÉ SPUSTENIE PO NAČÍTANÍ DOM ===
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOMContentLoaded → čakám 2 sekundy na inicializáciu Firebase a React render...");
-
-    const tryInit = () => {
-        if (window.db) {
-            console.log("window.db je dostupné → spúšťam inicializáciu listenerov");
-            initTeamHoverListeners();
-        } else {
-            console.log("window.db ešte nie je dostupné, čakám ďalej...");
-            setTimeout(tryInit, 1000);
-        }
-    };
-
-    setTimeout(tryInit, 2000); // prvý pokus po 2 sekundách
-
-    // Opakovaný pokus každé 3 sekundy, kým sa niečo nenájde
-    const interval = setInterval(() => {
-        const spans = document.querySelectorAll('li span.flex-grow');
-        if (spans.length > 0) {
-            console.log(`Zoznam tímov už je v DOM-e (${spans.length} spanov) → listenery sú aktívne`);
-            clearInterval(interval);
-        } else {
-            console.log("Stále čakám na zoznam tímov v DOM...");
-            initTeamHoverListeners();
-        }
-    }, 3000);
+    console.log("DOMContentLoaded → spúšťam inicializáciu listenerov okamžite");
+    
+    // Kontrola, či je db dostupná (podľa tvojho vyjadrenia vždy áno)
+    if (window.db) {
+        console.log("window.db je dostupné → inicializujem listenery");
+        initTeamHoverListeners();
+    } else {
+        console.warn("window.db nie je dostupné – listenery nebudú inicializované");
+    }
 });
