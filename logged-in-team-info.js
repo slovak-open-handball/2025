@@ -1,3 +1,5 @@
+import {doc, getDoc, collection, getDocs} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 // logged-in-team-info.js
 console.log("%c[logged-in-team-info.js] Skript beží – čakám na Firebase", 
     "color:#8b5cf6; font-weight:bold; font-size:14px;");
