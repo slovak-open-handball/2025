@@ -1904,11 +1904,7 @@ const NewTeamModal = ({
                         key: team.id || `${team.uid || 'g'}-${team.teamName}-${team.groupName || ''}-${idx}`,
                         className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'}`
                     },
-                    React.createElement('span', {
-                        className: 'flex-grow text-gray-800',
-                        'data-team-name': team.teamName,
-                        'data-team-id': team.id || ''
-                    }, display)
+                    React.createElement('span', { className: 'flex-grow text-gray-800' }, display),
    
                     React.createElement(
                         'div',
