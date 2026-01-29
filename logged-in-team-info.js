@@ -91,45 +91,65 @@ function addHoverListener(span) {
         let group = 'bez skupiny';
         let type = 'neznámy typ';
 
-        // 1. Najbližší predchádzajúci <h3> mimo zoom-group-box
-        let current = li;
-        while (current && current !== document.body) {
-            if (current.classList.contains('zoom-group-box')) {
-                current = current.parentElement;
-                continue;
-            }
-
-            let prev = current.previousElementSibling;
-            while (prev) {
-                if (prev.tagName === 'H3' && prev.textContent.trim().length > 5) {
-                    const text = prev.textContent.trim();
-                    if (!text.includes('Základné skupiny') && !text.includes('Nadstavbové skupiny')) {
-                        category = text;
-                        break;
-                    }
-                }
-                prev = prev.previousElementSibling;
-            }
-
-            if (category !== 'neznáma kategória') break;
-            current = current.parentElement;
-        }
-
-        // 2. Fallback na hash (ak je vybratá konkrétna kategória)
-        if (category === 'neznáma kategória' && window.location.hash && window.location.hash !== '#') {
+        // === 1. Najvyššia priorita: hash v URL ===
+        if (window.location.hash && window.location.hash !== '#' && window.location.hash !== '') {
             const hash = window.location.hash.substring(1);
-            const catNameFromHash = decodeURIComponent(hash.split('/')[0]).replace(/-/g, ' ');
-            if (catNameFromHash) {
+            const parts = hash.split('/');
+            const catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
+
+            // Ak vyzerá ako názov kategórie (nie je to názov skupiny typu "1A", "A", atď.)
+            if (catNameFromHash.length > 5 && !/^[A-Za-z0-9]$/.test(catNameFromHash) && !catNameFromHash.includes(' ')) {
                 category = catNameFromHash;
-                console.log(`Kategória získaná z URL hash: ${category}`);
+                console.log(`Kategória získaná z URL hash (priorita 1): ${category}`);
             }
         }
 
+        // === 2. Ak hash nič nedal → hľadáme v DOM-e ===
+        if (category === 'neznáma kategória') {
+            let current = li;
+
+            // Ideme von z vnútorných kontajnerov
+            while (current && current !== document.body) {
+                if (current.classList.contains('zoom-group-box') ||
+                    current.classList.contains('zoom-content') ||
+                    current.classList.contains('flex-grow')) {
+                    current = current.parentElement;
+                    continue;
+                }
+
+                // Hľadáme predchádzajúci <h3>
+                let prev = current.previousElementSibling;
+                while (prev) {
+                    if (prev.tagName === 'H3' && prev.textContent.trim().length > 5) {
+                        const text = prev.textContent.trim();
+
+                        // Vylúčime interné nadpisy
+                        if (!text.startsWith('Základné skupiny') &&
+                            !text.startsWith('Nadstavbové skupiny') &&
+                            !text.startsWith('Skupina') &&
+                            !text.includes('Tímy bez skupiny') &&
+                            !text.match(/^\d+\.\s*[A-Za-z]/)) {  // vylúčime aj niečo ako "1. 1A"
+
+                            category = text;
+                            console.log(`Kategória nájdená v DOM (nadpis <h3>): ${category}`);
+                            break;
+                        }
+                    }
+                    prev = prev.previousElementSibling;
+                }
+
+                if (category !== 'neznáma kategória') break;
+                current = current.parentElement;
+            }
+        }
+
+        // === 3. Skupina ===
         const groupHeader = li.closest('.zoom-group-box')?.querySelector('h3, h4');
         if (groupHeader) {
             group = groupHeader.textContent.trim();
         }
 
+        // === 4. Typ podľa farby ===
         if (li.classList.contains('bg-yellow-50')) {
             type = 'SUPERSTRUCTURE / nadstavbový tím';
         } else if (li.closest('.bg-blue-100')) {
@@ -138,20 +158,24 @@ function addHoverListener(span) {
             type = 'tím v základnej skupine';
         }
 
+        // Výpis do konzoly
         console.groupCollapsed(`%c${teamName || '(bez názvu)'}`, 'color:#10b981; font-weight:bold;');
-        console.log(`Viditeľný text: ${visibleText}`);
-        console.log(`Vyčistený názov: ${teamName}`);
-        console.log(`Kategória: ${category}`);
-        console.log(`Skupina: ${group}`);
-        console.log(`Typ: ${type}`);
+        console.log(`Viditeľný text:     ${visibleText}`);
+        console.log(`Vyčistený názov:     ${teamName}`);
+        console.log(`Kategória:           ${category}`);
+        console.log(`Skupina:             ${group}`);
+        console.log(`Typ:                 ${type}`);
+
         console.log("Spúšťam vyhľadávanie v Firestore...");
         const teamData = await lookupTeamInFirestore(teamName, category, group);
+
         if (teamData) {
             console.log("ÚPLNÉ DÁTA Z DATABÁZY:");
             console.dir(teamData);
         } else {
             console.warn("Tím sa v databáze nenašiel.");
         }
+
         console.groupEnd();
     });
 }
