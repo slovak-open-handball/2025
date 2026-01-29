@@ -94,7 +94,7 @@ function initTeamHoverListeners() {
         span.dataset.hoverListenerAdded = 'true';
 
         span.addEventListener('mouseover', async e => {
-            let visibleText = e.target.textContent.trim();
+            let visibleText = e.currentTarget.textContent.trim();
             let teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
 
             const li = e.target.closest('li');
