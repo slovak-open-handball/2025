@@ -178,27 +178,22 @@ function initTeamHoverListeners() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOMContentLoaded → čakám na inicializáciu Firebase...");
 
-    let attempts = 0;
-    const maxAttempts = 15;
-
     function tryInitialize() {
-        attempts++;
-
         if (window.db) {
-            console.log("window.db je dostupné → spúšťam listenery");
-            initTeamHoverListeners();
-            return;
+            console.log("window.db je dostupné → kontrolujem DOM prvky...");
+            const spans = document.querySelectorAll('li span.flex-grow');
+            if (spans.length > 0) {
+                console.log(`Nájdených ${spans.length} tímov → spúšťam listenery`);
+                initTeamHoverListeners();
+            } else {
+                console.log("Zoznam tímov ešte nie je v DOM → skúšam znova o 800 ms...");
+                setTimeout(tryInitialize, 800);
+            }
+        } else {
+            console.log("Firebase ešte nie je pripravený → čakám...");
+            setTimeout(tryInitialize, 1000);
         }
-
-        if (attempts >= maxAttempts) {
-            console.error("Firebase sa nenačítal ani po 15 pokusoch. Skontroluj authentication.js");
-            return;
-        }
-
-        console.log(`Firebase ešte nie je pripravený (pokus ${attempts}/${maxAttempts}) → čakám 1s...`);
-        setTimeout(tryInitialize, 1000);
     }
 
-    // Prvý pokus okamžite
     tryInitialize();
 });
