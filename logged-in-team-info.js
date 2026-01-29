@@ -18,7 +18,10 @@ async function lookupTeamInFirestore(teamName, category = null, group = null) {
         return null;
     }
 
-    console.log(`Hľadám tím "${teamName}" (kategória: ${category || 'ľubovoľná'}, skupina: ${group || 'ľubovoľná'})`);
+    // Vyčistený názov z DOM (bez poradia)
+    let cleanName = teamName.trim();
+
+    console.log(`Hľadám tím "${cleanName}" (kategória: ${category || 'ľubovoľná'}, skupina: ${group || 'ľubovoľná'})`);
 
     try {
         // 1. superstructureGroups → settings/superstructureGroups
@@ -27,29 +30,44 @@ async function lookupTeamInFirestore(teamName, category = null, group = null) {
 
         if (superstructureSnap.exists()) {
             const data = superstructureSnap.data() || {};
-            
+
             for (const [catKey, teams] of Object.entries(data)) {
                 if (!Array.isArray(teams)) continue;
-                if (category && catKey !== category) continue;
 
-                const found = teams.find(t => 
-                    t.teamName === teamName || 
-                    (t.teamName && t.teamName.includes(teamName))
-                );
+                // Priorita: ak máme kategóriu z DOM, skúsime najprv s prefixom
+                let candidates = [];
 
-                if (found) {
-                    console.log(`→ Nájdený v superstructureGroups (${catKey})`);
-                    return {
-                        source: 'superstructure',
-                        category: catKey,
-                        ...found
-                    };
+                // Varianta 1: s prefixom kategórie
+                if (category && catKey === category) {
+                    const prefixedName = `${category} ${cleanName}`;
+                    candidates.push(prefixedName);
+                }
+
+                // Varianta 2: bez prefixu (pre istotu)
+                candidates.push(cleanName);
+
+                // Varianta 3: ak máme skupinu, skúsime aj iné kombinácie (voliteľné)
+
+                for (const searchName of candidates) {
+                    const found = teams.find(t =>
+                        t.teamName === searchName ||
+                        (t.teamName && t.teamName.includes(searchName))
+                    );
+
+                    if (found) {
+                        console.log(`→ Nájdený v superstructureGroups (${catKey}) pod názvom "${found.teamName}"`);
+                        return {
+                            source: 'superstructure',
+                            category: catKey,
+                            ...found
+                        };
+                    }
                 }
             }
         }
 
-        // 2. prehľadávanie všetkých používateľov (users kolekcia)
-        console.log("Nie je v superstructure → prehľadávam users kolekciu...");
+        // 2. prehľadávanie používateľov (users kolekcia)
+        console.log("Nie je v superstructure → prehľadávam users...");
         const usersCol = collection(window.db, "users");
         const usersSnap = await getDocs(usersCol);
 
@@ -59,26 +77,35 @@ async function lookupTeamInFirestore(teamName, category = null, group = null) {
 
             for (const [catKey, teamArray] of Object.entries(userData.teams || {})) {
                 if (!Array.isArray(teamArray)) continue;
-                if (category && catKey !== category) continue;
 
-                const found = teamArray.find(t => 
-                    t.teamName === teamName ||
-                    (t.teamName && t.teamName.includes(teamName))
-                );
+                // Rovnaká stratégia: najprv s prefixom, potom bez
+                let candidates = [cleanName];
 
-                if (found) {
-                    console.log(`→ Nájdený u používateľa ${userDoc.id} v kategórii ${catKey}`);
-                    return {
-                        source: 'user',
-                        userId: userDoc.id,
-                        category: catKey,
-                        ...found
-                    };
+                if (category && catKey === category) {
+                    const prefixedName = `${category} ${cleanName}`;
+                    candidates.unshift(prefixedName); // na prvé miesto
+                }
+
+                for (const searchName of candidates) {
+                    const found = teamArray.find(t =>
+                        t.teamName === searchName ||
+                        (t.teamName && t.teamName.includes(searchName))
+                    );
+
+                    if (found) {
+                        console.log(`→ Nájdený u používateľa ${userDoc.id} v kategórii ${catKey} pod názvom "${found.teamName}"`);
+                        return {
+                            source: 'user',
+                            userId: userDoc.id,
+                            category: catKey,
+                            ...found
+                        };
+                    }
                 }
             }
         }
 
-        console.log("→ Žiadna zhoda v databáze.");
+        console.log("→ Žiadna zhoda v databáze ani s prefixom.");
         return null;
     } catch (err) {
         console.error("Chyba pri prehľadávaní Firestore:", err);
