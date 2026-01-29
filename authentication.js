@@ -69,7 +69,8 @@ const blockedPages = [
     'logged-in-tournament-settings.html',
     'logged-in-all-registrations.html',
     'logged-in-users.html',
-    'logged-in-notifications.html'
+    'logged-in-notifications.html',
+    'logged-in-teams-in-groups.html'
 ];
 
 
