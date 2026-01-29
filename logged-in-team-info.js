@@ -95,10 +95,10 @@ function addHoverListener(span) {
         if (window.location.hash && window.location.hash !== '#' && window.location.hash !== '') {
             const hash = window.location.hash.substring(1);
             const parts = hash.split('/');
-            const catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
+            let catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
 
-            // Ak vyzerá ako názov kategórie (nie je to názov skupiny typu "1A", "A", atď.)
-            if (catNameFromHash.length > 5 && !/^[A-Za-z0-9]$/.test(catNameFromHash) && !catNameFromHash.includes(' ')) {
+            // Ak nie je to krátky kód skupiny (1-3 znaky, len písmená/číslice bez medzier)
+            if (!/^[A-Za-z0-9]{1,3}$/.test(catNameFromHash)) {
                 category = catNameFromHash;
                 console.log(`Kategória získaná z URL hash (priorita 1): ${category}`);
             }
@@ -112,7 +112,8 @@ function addHoverListener(span) {
             while (current && current !== document.body) {
                 if (current.classList.contains('zoom-group-box') ||
                     current.classList.contains('zoom-content') ||
-                    current.classList.contains('flex-grow')) {
+                    current.classList.contains('flex-grow') ||
+                    current.classList.contains('zoom-responsive')) {
                     current = current.parentElement;
                     continue;
                 }
@@ -120,15 +121,18 @@ function addHoverListener(span) {
                 // Hľadáme predchádzajúci <h3>
                 let prev = current.previousElementSibling;
                 while (prev) {
-                    if (prev.tagName === 'H3' && prev.textContent.trim().length > 5) {
+                    if (prev.tagName === 'H3' && prev.textContent.trim()) {
                         const text = prev.textContent.trim();
 
-                        // Vylúčime interné nadpisy
+                        // Vylúčime len interné nadpisy a krátke kódy skupín
                         if (!text.startsWith('Základné skupiny') &&
                             !text.startsWith('Nadstavbové skupiny') &&
                             !text.startsWith('Skupina') &&
                             !text.includes('Tímy bez skupiny') &&
-                            !text.match(/^\d+\.\s*[A-Za-z]/)) {  // vylúčime aj niečo ako "1. 1A"
+                            // Vylúčime niečo ako "1A", "A", "12B" – krátke, bez medzier, alfanumerické
+                            !/^[A-Za-z0-9]{1,4}$/.test(text) &&
+                            // Neprijímame čisto číselné (napr. "12")
+                            !/^\d+$/.test(text)) {
 
                             category = text;
                             console.log(`Kategória nájdená v DOM (nadpis <h3>): ${category}`);
