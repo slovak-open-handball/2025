@@ -126,7 +126,6 @@ function initTeamHoverListeners() {
     }
 
     nameSpans.forEach(span => {
-        // Zabránenie duplicitných listenerov
         if (span.dataset.hoverListenerAdded) return;
         span.dataset.hoverListenerAdded = 'true';
 
@@ -141,16 +140,42 @@ function initTeamHoverListeners() {
             let group = 'bez skupiny';
             let type = 'neznámy typ';
 
-            const catHeader = li.closest('.flex-col')?.previousElementSibling;
-            if (catHeader?.tagName === 'H3') {
+            // 1. Najprv skúsime najbližší nadpis kategórie (funguje lepšie v multi-view)
+            let catHeader = li.closest('.zoom-group-box')?.previousElementSibling;
+            while (catHeader && catHeader.tagName !== 'H3' && catHeader.tagName !== 'H4') {
+                catHeader = catHeader.previousElementSibling;
+            }
+            if (catHeader?.tagName === 'H3' || catHeader?.tagName === 'H4') {
                 category = catHeader.textContent.trim();
             }
 
+            // 2. Ak sa nenašiel – fallback na pôvodnú logiku (single view)
+            if (category === 'neznáma kategória') {
+                const altCatHeader = li.closest('.flex-col')?.previousElementSibling;
+                if (altCatHeader?.tagName === 'H3') {
+                    category = altCatHeader.textContent.trim();
+                }
+            }
+
+            // 3. Ak stále nič – skúsime hash v URL (napr. #Fortuna-liga)
+            if (category === 'neznáma kategória' && window.location.hash) {
+                const hash = window.location.hash.substring(1);
+                if (hash) {
+                    const catNameFromHash = decodeURIComponent(hash.split('/')[0]).replace(/-/g, ' ');
+                    if (catNameFromHash) {
+                        category = catNameFromHash;
+                        console.log(`Kategória získaná z URL hash: ${category}`);
+                    }
+                }
+            }
+
+            // Skupina (zostáva rovnaká)
             const groupHeader = li.closest('.zoom-group-box')?.querySelector('h3, h4');
             if (groupHeader) {
                 group = groupHeader.textContent.trim();
             }
 
+            // Typ podľa farby (zostáva rovnaký)
             if (li.classList.contains('bg-yellow-50')) {
                 type = 'SUPERSTRUCTURE / nadstavbový tím';
             } else if (li.closest('.bg-blue-100')) {
@@ -159,14 +184,15 @@ function initTeamHoverListeners() {
                 type = 'tím v základnej skupine';
             }
 
+            // Výpis do konzoly
             console.groupCollapsed(`%c${teamName || '(bez názvu)'}`, 'color:#10b981; font-weight:bold;');
             console.log(`Viditeľný text:     ${visibleText}`);
             console.log(`Vyčistený názov:     ${teamName}`);
-            console.log(`Kategória (z DOM):   ${category}`);
+            console.log(`Kategória (z DOM / URL): ${category}`);
             console.log(`Skupina (z DOM):     ${group}`);
             console.log(`Typ (podľa farby):   ${type}`);
 
-            // === VYHĽADÁVANIE V DATABÁZE ===
+            // Spustenie vyhľadávania
             console.log("Spúšťam vyhľadávanie v Firestore...");
             const teamData = await lookupTeamInFirestore(teamName, category, group);
 
