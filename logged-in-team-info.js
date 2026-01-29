@@ -11,63 +11,98 @@ import {
 console.log("%c[logged-in-team-info.js] Skript beží – čakám na window.db",
     "color:#8b5cf6; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
 
-// === HLAVNÁ FUNKCIA NA VYHĽADÁVANIE V DATABÁZE ===
 async function lookupTeamInFirestore(teamName, category = null, group = null) {
     if (!window.db) {
         console.warn("Firestore (window.db) nie je dostupné!");
         return null;
     }
+
     let cleanName = teamName.trim();
-    console.log(`Hľadám tím "${cleanName}" (kategória: ${category || 'ľubovoľná'}, skupina: ${group || 'ľubovoľná'})`);
+    console.log(`Hľadám tím "${cleanName}" (predpokladaná kategória: ${category || 'ľubovoľná'}, skupina: ${group || 'ľubovoľná'})`);
+
     try {
+        // 1. superstructureGroups – tu stále skúšame s prefixom, ak máme kategóriu
         const superstructureRef = doc(window.db, 'settings/superstructureGroups');
         const superstructureSnap = await getDoc(superstructureRef);
         if (superstructureSnap.exists()) {
             const data = superstructureSnap.data() || {};
             for (const [catKey, teams] of Object.entries(data)) {
                 if (!Array.isArray(teams)) continue;
-                let candidates = [];
+
+                let found = null;
+
+                // Najprv presná zhoda s predpokladanou kategóriou
                 if (category && catKey === category) {
-                    candidates.push(`${category} ${cleanName}`);
+                    const prefixed = `${category} ${cleanName}`;
+                    found = teams.find(t => t.teamName === prefixed || t.teamName === cleanName);
                 }
-                candidates.push(cleanName);
-                for (const searchName of candidates) {
-                    const found = teams.find(t =>
-                        t.teamName === searchName ||
-                        (t.teamName && t.teamName.includes(searchName))
-                    );
-                    if (found) {
-                        console.log(`→ Nájdený v superstructureGroups (${catKey}) pod "${found.teamName}"`);
-                        return { source: 'superstructure', category: catKey, ...found };
-                    }
+
+                // Ak nič, skúsime bez prefixu
+                if (!found) {
+                    found = teams.find(t => t.teamName === cleanName);
+                }
+
+                if (found) {
+                    console.log(`→ Nájdený v superstructureGroups (${catKey}) pod "${found.teamName}"`);
+                    return { source: 'superstructure', category: catKey, ...found };
                 }
             }
         }
-        console.log("Nie je v superstructure → prehľadávam users...");
+
+        // 2. users – PRVÝ POKUS: s presnou kategóriou (ak ju máme)
+        console.log("Prehľadávam users...");
         const usersCol = collection(window.db, "users");
         const usersSnap = await getDocs(usersCol);
+
+        let foundWithCategory = null;
+
         for (const userDoc of usersSnap.docs) {
             const userData = userDoc.data();
             if (!userData?.teams) continue;
+
             for (const [catKey, teamArray] of Object.entries(userData.teams || {})) {
                 if (!Array.isArray(teamArray)) continue;
-                let candidates = [cleanName];
+
+                // Pokúsime sa nájsť s predpokladanou kategóriou
                 if (category && catKey === category) {
-                    candidates.unshift(`${category} ${cleanName}`);
-                }
-                for (const searchName of candidates) {
-                    const found = teamArray.find(t =>
-                        t.teamName === searchName ||
-                        (t.teamName && t.teamName.includes(searchName))
+                    const found = teamArray.find(t => 
+                        t.teamName === cleanName ||
+                        t.teamName === `${category} ${cleanName}`  // pre istotu aj prefix
                     );
                     if (found) {
-                        console.log(`→ Nájdený u používateľa ${userDoc.id} v kategórii ${catKey} pod "${found.teamName}"`);
-                        return { source: 'user', userId: userDoc.id, category: catKey, ...found };
+                        foundWithCategory = { source: 'user', userId: userDoc.id, category: catKey, ...found };
+                        break;
                     }
                 }
             }
+            if (foundWithCategory) break;
         }
-        console.log("→ Žiadna zhoda.");
+
+        if (foundWithCategory) {
+            console.log(`→ Nájdený s presnou kategóriou ${foundWithCategory.category} (zhoduje sa s DOM/hash)`);
+            return foundWithCategory;
+        }
+
+        // 3. FALLBACK: ak sa nenašiel v predpokladanej kategórii → hľadáme všade
+        console.log(`Tím sa nenašiel v predpokladanej kategórii "${category}" → hľadám bez filtra kategórie (fallback)`);
+
+        for (const userDoc of usersSnap.docs) {
+            const userData = userDoc.data();
+            if (!userData?.teams) continue;
+
+            for (const [catKey, teamArray] of Object.entries(userData.teams || {})) {
+                if (!Array.isArray(teamArray)) continue;
+
+                const found = teamArray.find(t => t.teamName === cleanName);
+                if (found) {
+                    console.log(`→ FALLBACK: Nájdený u používateľa ${userDoc.id} v kategórii ${catKey} pod "${found.teamName}"`);
+                    console.log(`  (pôvodná predpokladaná kategória z DOM/hash: ${category || 'žiadna'})`);
+                    return { source: 'user', userId: userDoc.id, category: catKey, ...found };
+                }
+            }
+        }
+
+        console.log("→ Žiadna zhoda ani vo fallbacku.");
         return null;
     } catch (err) {
         console.error("Chyba pri prehľadávaní Firestore:", err);
