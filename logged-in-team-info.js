@@ -1,28 +1,41 @@
 // logged-in-team-info.js
 
 // Funkcia na inicializáciu event listenerov pre hover nad názvami tímov
+// logged-in-team-info.js
 function initTeamHoverListeners() {
-    const teamSpans = document.querySelectorAll('span[data-team]');
+    // Hľadáme všetky span-y, ktoré majú class flex-grow (toto je v tvojom kóde konzistentné)
+    const nameSpans = document.querySelectorAll('li span.flex-grow');
 
-    teamSpans.forEach(span => {
+    nameSpans.forEach(span => {
         span.addEventListener('mouseover', e => {
-            const teamName = e.target.textContent.trim().replace(/^\d+\.\s*/, ''); // odstráni číslo poradia ak je
+            let text = e.target.textContent.trim();
 
-            let teamData = {};
-            try {
-                teamData = JSON.parse(span.getAttribute('data-team'));
-            } catch (err) {
-                console.error("Chyba parsovania team dát:", err);
+            // Odstránime číslo poradia ak je (napr. "3. Real Madrid" → "Real Madrid")
+            text = text.replace(/^\d+\.\s*/, '');
+
+            // Pokúsime sa zistiť, či je to tím bez skupiny alebo v skupine
+            const li = e.target.closest('li');
+            let context = '';
+
+            if (li) {
+                if (li.classList.contains('bg-yellow-50')) {
+                    context = ' (nadstavbový / superstructure tím)';
+                } else if (li.closest('.bg-blue-100')) {
+                    context = ' (v nadstavbovej skupine)';
+                } else if (li.closest('.bg-gray-100')) {
+                    context = ' (v základnej skupine)';
+                }
+
+                // Ak je to placeholder diery
+                if (li.textContent.includes('chýba tím')) {
+                    context = ' → toto je len placeholder diery';
+                }
             }
 
-            console.log("Názov tímu:", teamName);
-            console.log("Celý objekt tímu:", teamData);
+            console.log(`Názov tímu: ${text}${context}`);
             console.log("──────────────────────────────");
         });
     });
 }
 
-document.addEventListener('DOMContentLoaded', initTeamHoverListeners);
-
-// Spustíme inicializáciu po načítaní DOM
 document.addEventListener('DOMContentLoaded', initTeamHoverListeners);
