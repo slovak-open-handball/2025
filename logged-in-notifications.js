@@ -7,6 +7,34 @@
 import { getAuth, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, collection, query, where, updateDoc, deleteDoc, writeBatch, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+function CustomToggle({ checked, onChange, label, disabled }) {
+  return React.createElement(
+    'div', { className: 'flex items-center justify-between' },
+    React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, label),
+    React.createElement(
+      'label', { className: 'relative inline-flex items-center cursor-pointer' },
+      React.createElement('input', {
+        type: 'checkbox',
+        checked: checked,
+        onChange: onChange,
+        className: 'sr-only peer',
+        disabled: disabled,
+      }),
+      React.createElement('div', {
+        className: `
+          w-11 h-6 rounded-full transition-colors
+          peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
+          peer-checked:after:translate-x-full peer-checked:after:border-white
+          after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+          after:bg-white after:border after:border-gray-300 after:rounded-full
+          after:h-5 after:w-5 after:transition-all
+          ${checked ? 'bg-[#47b3ff]' : 'bg-gray-200'}
+        `
+      })
+    )
+  );
+}
+
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = React.useState(false);
@@ -785,64 +813,22 @@ function NotificationsApp() {
           'Upozornenia'
         ),
         // Toggle switch pre notifikácie
-        React.createElement(
-          'div',
-          { className: 'space-y-6 mb-8' },  // ← zmena: pridali sme space-y-6 pre väčší odstup
-        
-          // Prvý toggle (pôvodný)
-          React.createElement(
-            'div',
-            { className: 'flex items-center justify-between' },
-            React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobrazovať upozornenia'),
-            React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
-              React.createElement('input', {
-                type: 'checkbox',
-                checked: displayNotifications,
-                onChange: handleToggleNotifications,
-                className: 'sr-only peer',
-                disabled: loading
-              }),
-              React.createElement('div', {
-                className: `
-                  w-11 h-6 rounded-full 
-                  peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
-                  peer-checked:after:translate-x-full peer-checked:after:border-white
-                  after:content-[''] after:absolute after:top-[2px] after:left-[2px]
-                  after:bg-white after:border after:border-gray-300 after:rounded-full
-                  after:h-5 after:w-5 after:transition-all
-                  ${displayNotifications ? 'bg-[#47b3ff]' : 'bg-gray-200'}
-                `
-              })
-            )
+
+        React.createElement('div', { className: 'space-y-6 mb-8' },
+          React.createElement(CustomToggle, {
+              checked: displayNotifications,
+              onChange: handleToggleNotifications,
+              label: 'Zobrazovať upozornenia',
+              disabled: loading
+            }),
+            React.createElement(CustomToggle, {
+              checked: displayTeamBubbles,
+              onChange: handleToggleTeamBubbles,
+              label: 'Zobrazovať informácie o tíme (bublinky)',
+              disabled: loading
+            })
           ),
-        
-          // Druhý toggle – NOVÝ
-          React.createElement(
-            'div',
-            { className: 'flex items-center justify-between' },
-            React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobrazovať informácie o tíme (bublinky)'),
-            React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
-              React.createElement('input', {
-                type: 'checkbox',
-                checked: displayTeamBubbles,
-                onChange: handleToggleTeamBubbles,
-                className: 'sr-only peer',
-                disabled: loading
-              }),
-              React.createElement('div', {
-                className: `
-                  w-11 h-6 rounded-full 
-                  peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
-                  peer-checked:after:translate-x-full peer-checked:after:border-white
-                  after:content-[''] after:absolute after:top-[2px] after:left-[2px]
-                  after:bg-white after:border after:border-gray-300 after:rounded-full
-                  after:h-5 after:w-5 after:transition-all
-                  ${displayTeamBubbles ? 'bg-[#47b3ff]' : 'bg-gray-200'}
-                `
-              })
-            )
-          )
-        ),
+
         // Skupina tlačidiel
         (hasActiveNotifications || hasDeletedByMeNotifications) && React.createElement(
           'div',
