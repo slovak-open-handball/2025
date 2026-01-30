@@ -49,11 +49,10 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 const AddGroupsApp = ({ userProfileData }) => {
-    const mapRef = useRef(null);           // referencia na DOM element
-    const leafletMap = useRef(null);       // referencia na Leaflet map inštanciu
+    const mapRef = useRef(null);
+    const leafletMap = useRef(null);
 
     useEffect(() => {
-        // Čakáme, kým sa Leaflet načíta (CDN môže chvíľu trvať)
         if (!window.L) {
             console.warn("Leaflet sa ešte nenačítal...");
             const timer = setInterval(() => {
@@ -68,56 +67,72 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
 
         function initMap() {
-            if (leafletMap.current) return; // už inicializovaná
+            if (leafletMap.current) return;
 
-            // Vytvoríme mapu
             leafletMap.current = window.L.map(mapRef.current).setView(
-                [48.1486, 17.1077],   // Bratislava (default) – zmeň podľa potreby
-                10                        // zoom level (10 = mesto + okolie)
+                [48.1486, 17.1077], // Bratislava
+                10
             );
 
-            // Pridáme OpenStreetMap dlaždice
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
-            // Voliteľné: pridaj marker (napr. aktuálna poloha používateľa, ak budeš mať)
-            // window.L.marker([48.1486, 17.1077]).addTo(leafletMap.current)
-            //     .bindPopup('Toto je Bratislava!')
-            //     .openPopup();
+            // Voliteľné: centruj mapu podľa veľkosti okna po načítaní
+            setTimeout(() => {
+                if (leafletMap.current) {
+                    leafletMap.current.invalidateSize();
+                }
+            }, 400);
 
             console.log("Leaflet mapa bola inicializovaná");
         }
 
-        // Cleanup – aby sme mapu zničili pri odpojení komponentu
         return () => {
             if (leafletMap.current) {
                 leafletMap.current.remove();
                 leafletMap.current = null;
             }
         };
-    }, []); // spustí sa iba raz pri mountnutí
+    }, []);
 
     return React.createElement(
         'div',
-        { className: 'flex-grow flex justify-center items-center' },
+        { className: 'flex-grow flex justify-center items-center p-2 sm:p-4' },
         React.createElement(
             'div',
-            { className: `w-full max-w-5xl bg-white rounded-xl shadow-xl p-4 md:p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+            { 
+                className: `
+                    w-full max-w-7xl bg-white rounded-xl shadow-2xl 
+                    p-3 sm:p-6 md:p-8 transform transition-all duration-500 hover:scale-[1.005]
+                ` 
+            },
             React.createElement(
                 'div',
-                { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 rounded-t-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white` },
-                React.createElement('h2', { className: 'text-3xl md:text-4xl font-bold tracking-tight text-center' }, 'Mapa')
+                { 
+                    className: `
+                        flex flex-col items-center justify-center mb-5 md:mb-7 
+                        p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl 
+                        bg-gradient-to-r from-blue-600 to-indigo-700 text-white
+                    ` 
+                },
+                React.createElement(
+                    'h2', 
+                    { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center' }, 
+                    'Mapa'
+                )
             ),
-            // Mapa bude mať výšku 500px (alebo 70vh) – uprav si podľa dizajnu
+            // ── MAPA ───────────────────────────────────────────────
             React.createElement(
                 'div',
                 {
                     id: 'map',
                     ref: mapRef,
-                    className: 'w-full rounded-lg shadow-inner',
-                    style: { height: '500px', minHeight: '400px' }
+                    className: `
+                        w-full rounded-xl shadow-inner border border-gray-200 
+                        h-[70vh] md:h-[80vh] min-h-[500px]
+                    `
                 }
             )
         )
