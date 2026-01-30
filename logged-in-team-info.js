@@ -192,21 +192,13 @@ Ubytovanie: ${accommodation}
 Doprava: ${arrivalType}${arrivalTime}`;
 
             // aktualizujeme tooltip – ak stále visí myš nad spanom
-            showTooltip(currentTooltipText, e.clientX, e.clientY);
+            showTooltipUnderElement(currentTooltipText, li);
         } else {
             currentTooltipText = `${teamName || '(bez názvu)'}\n(údaje sa nenašli v databáze)`;
-            showTooltip(currentTooltipText, e.clientX, e.clientY);
+            showTooltipUnderElement(currentTooltipText, li);
         }
 
         console.groupEnd();
-    });
-
-    span.addEventListener('mousemove', (e) => {
-        // tooltip sa pohybuje s kurzorom
-        if (customTooltip && customTooltip.style.display !== 'none') {
-            customTooltip.style.left = (e.clientX + 14) + 'px';
-            customTooltip.style.top  = (e.clientY + 18) + 'px';
-        }
     });
 
     span.addEventListener('mouseout', () => {
@@ -245,11 +237,23 @@ function createOrGetTooltip() {
     return customTooltip;
 }
 
-function showTooltip(text, x, y) {
+function showTooltipUnderElement(text, element) {
     const tt = createOrGetTooltip();
+
     tt.textContent = text;
-    tt.style.left = (x + 14) + 'px';
-    tt.style.top  = (y + 18) + 'px';
+
+    // Získame pozíciu <li> elementu
+    const rect = element.getBoundingClientRect();
+
+    // Tooltip pod riadkom
+    const tooltipTop  = rect.bottom + window.scrollY + 8;   // 8 px pod spodným okrajom
+    const tooltipLeft = rect.left + window.scrollX + (rect.width / 2) - 120;  // približne na stred
+
+    // Ochrana pred presahom za ľavý okraj obrazovky
+    const finalLeft = Math.max(10, tooltipLeft);
+
+    tt.style.left = finalLeft + 'px';
+    tt.style.top  = tooltipTop + 'px';
     tt.style.display = 'block';
 }
 
