@@ -84,39 +84,91 @@ const AddGroupsApp = ({ userProfileData }) => {
                 [49.156950, 18.882281] 
             ];
 
-            // ----------------- Home button -----------------
-            const homeButton = L.control({ position: 'topleft' });
-            
-            homeButton.onAdd = function (map) {
-                const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-                
-                const a = L.DomUtil.create('a', '', div);
-                a.href = '#';
-                a.title = 'Návrat na pôvodné zobrazenie';
-                a.style.display = 'block';
-                a.style.width = '26px';
-                a.style.height = '26px';
-                a.style.lineHeight = '26px';
-                a.style.textAlign = 'center';
-                a.style.background = 'white';
-                a.style.borderBottom = '1px solid #ccc';
-                a.innerHTML = '🏠';   // alebo '<i class="fa fa-home"></i>' ak máš font-awesome
-            
-                L.DomEvent
-                    .on(a, 'mousedown dblclick', L.DomEvent.stopPropagation)
-                    .on(a, 'click', L.DomEvent.stop)
-                    .on(a, 'click', function (e) {
-                        e.preventDefault();
-                        // možnosť 1: presne pôvodné bounds
-                        map.fitBounds(initialBounds);
-                        // možnosť 2: stred + zoom
-                        // map.setView(initialCenter, initialZoom);
-                    });
-            
-                return div;
+            L.Control.ZoomHome = L.Control.extend({
+                options: {
+                    position: 'topleft'   // môžeš zmeniť na 'topright', 'bottomleft' atď.
+                },
+
+                onAdd: function (map) {
+                    const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
+
+                    // Tlačidlo Zoom In (+)
+                    this._zoomInButton = this._createButton(
+                        '+', 'Priblížiť', 'leaflet-control-zoom-in', container,
+                        function () { map.zoomIn(); }, this
+                    );
+        
+                    // Tlačidlo Home (🏠)
+                    this._homeButton = this._createButton(
+                        '🏠', 'Návrat na pôvodné zobrazenie', 'leaflet-control-zoom-home', container,
+                        function () {
+                            map.fitBounds(initialBounds);
+                            // alternatíva: map.setView([49.2232, 18.7394], 12);
+                        }, this
+                    );
+        
+                    // Tlačidlo Zoom Out (−)
+                    this._zoomOutButton = this._createButton(
+                        '−', 'Oddialiť', 'leaflet-control-zoom-out', container,
+                        function () { map.zoomOut(); }, this
+                    );
+        
+                    return container;
+                },
+        
+                _createButton: function (html, title, className, container, fn, context) {
+                    const link = L.DomUtil.create('a', className, container);
+                    link.innerHTML = html;
+                    link.href = '#';
+                    link.title = title;
+        
+                    const stop = L.DomEvent.stopPropagation;
+                    L.DomEvent
+                        .on(link, 'click', stop)
+                        .on(link, 'mousedown', stop)
+                        .on(link, 'dblclick', stop)
+                        .on(link, 'click', L.DomEvent.preventDefault)
+                        .on(link, 'click', fn, context)
+                        .on(link, 'click', this._refocusOnMap, context);
+        
+                    return link;
+                },
+        
+                _refocusOnMap: function () {
+                    // voliteľné – pomáha pri keyboard navigácii
+                    if (this._map) this._map.getContainer().focus();
+                }
+            });
+        
+            // Registrujeme control (aby sme ho mohli volať L.control.zoomHome())
+            L.control.zoomHome = function (options) {
+                return new L.Control.ZoomHome(options);
             };
-            
-            homeButton.addTo(leafletMap.current);            
+        
+            // Pridáme ho na mapu
+            L.control.zoomHome().addTo(leafletMap.current);
+            // ────────────────────────────────────────────────
+        
+            // ... zvyšok tvojho kódu – logCurrentView, poslucháče, invalidateSize, atď. ...
+        
+            const logCurrentView = () => {
+                // ... tvoj pôvodný kód logovania ...
+            };
+        
+            setTimeout(logCurrentView, 500);
+        
+            leafletMap.current.on('moveend', logCurrentView);
+            leafletMap.current.on('zoomend', logCurrentView);
+            leafletMap.current.on('resize', logCurrentView);
+        
+            setTimeout(() => {
+                if (leafletMap.current) {
+                    leafletMap.current.invalidateSize();
+                }
+            }, 400);
+        
+            console.log("Leaflet mapa bola inicializovaná – centrum: Žilina");
+        }            
 
             const logCurrentView = () => {
                 if (!leafletMap.current) return;
