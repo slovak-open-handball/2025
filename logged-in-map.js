@@ -105,7 +105,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const lon = parseFloat(props.lon);
 
         if (!isNaN(lat) && !isNaN(lon)) {
-            leafletMap.current.setView([lat, lon], 17, { animate: true });
+            leafletMap.current.setView([lat, lon], 18, { animate: true });
 
             // predvyplnenie názvu – priorita: name → formatted bez čísla
             const name = props.name || (props.formatted || '').split(',')[0].trim();
@@ -280,7 +280,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             const marker = L.marker([place.lat, place.lng]);
                             marker.on('click', () => {
                                 setSelectedPlace(place);
-                                leafletMap.current.setView([place.lat, place.lng], 17, { animate: true });
+                                leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
                             });
                             placesLayerRef.current.addLayer(marker);
                         }
