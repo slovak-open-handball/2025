@@ -70,8 +70,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             if (leafletMap.current) return;
 
             leafletMap.current = window.L.map(mapRef.current).setView(
-                [49.2232, 18.7394],  // ← Žilina centrum
-                12                   // zoom: 12 = mesto + trocha okolia (11 = širšie, 13 = detailnejšie)
+                [49.242758, 18.673885],  // ← Žilina centrum   -  49.156950, 18.882281
+                13                   // zoom: 12 = mesto + trocha okolia (11 = širšie, 13 = detailnejšie)
             );
 
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
