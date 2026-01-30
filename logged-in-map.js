@@ -301,12 +301,12 @@ useEffect(() => {
                 React.createElement('div', {
                     id: 'map',
                     ref: mapRef,
-                    className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[65vh] md:h-[65vh] min-h-[450px]'
+                    className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[450px]'
                 }),
                 selectedPlace && React.createElement(
                     'div',
                     {
-                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[65vh] md:h-[65vh] min-h-[450px]
+                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[450px]
                                     bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300`
                     },
                     React.createElement('div', { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
