@@ -143,7 +143,63 @@ function addHoverListener(span) {
     
         // Získavanie kategórie z hash/DOM iba ak nie je z textu
         if (!categoryFromText) {
-            // ... tvoja pôvodná logika hash + DOM ...
+            // 1. Najprv hash v URL (ako predtým)
+            if (window.location.hash && window.location.hash !== '#' && window.location.hash !== '') {
+                const hash = window.location.hash.substring(1);
+                const parts = hash.split('/');
+                let catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
+                
+                // ak to nevyzerá ako krátky kód skupiny (A, B, 1A, 12B...)
+                if (!/^[A-Za-z0-9]{1,4}$/.test(catNameFromHash)) {
+                    category = catNameFromHash;
+                    console.log(`Kategória získaná z URL hash: ${category}`);
+                }
+            }
+        
+            // 2. Ak hash nič nedal → hľadáme najbližší relevantný nadpis (<h2>, <h3>, <h4>...)
+            if (category === 'neznáma kategória') {
+                let current = li;
+                let foundHeader = null;
+        
+                // ideme hore po DOM strome, kým nenájdeme nadpis alebo neprejdeme príliš ďaleko
+                while (current && current !== document.body && !foundHeader) {
+                    // preskočíme niektoré kontajnery, ktoré nechceme brať ako nadpis
+                    if (current.classList.contains('zoom-group-box') ||
+                        current.classList.contains('zoom-content') ||
+                        current.classList.contains('flex-grow') ||
+                        current.classList.contains('zoom-responsive')) {
+                        current = current.parentElement;
+                        continue;
+                    }
+        
+                    // hľadáme predchádzajúci súrodenec, ktorý je nadpis
+                    let prev = current.previousElementSibling;
+                    while (prev && !foundHeader) {
+                        if (['H2','H3','H4'].includes(prev.tagName)) {
+                            const text = prev.textContent.trim();
+        
+                            // vylúčime nezmyselné nadpisy
+                            if (text && 
+                                !text.startsWith('Základné skupiny') &&
+                                !text.startsWith('Nadstavbové skupiny') &&
+                                !text.startsWith('Skupina') &&
+                                !text.includes('Tímy bez skupiny') &&
+                                !/^[A-Za-z0-9]{1,4}$/.test(text) &&           // krátke kódy A, B, 1A...
+                                !/^\d+$/.test(text) &&                        // čísla samé
+                                text.length > 4) {                            // aspoň niečo zmysluplné
+        
+                                category = text;
+                                console.log(`Kategória nájdená v DOM (nadpis ${prev.tagName}): "${category}"`);
+                                foundHeader = true;
+                                break;
+                            }
+                        }
+                        prev = prev.previousElementSibling;
+                    }
+        
+                    current = current.parentElement;
+                }
+            }
         }
     
         // Skupina + typ podľa farby (nezmenené)
