@@ -108,179 +108,186 @@ const AddGroupsApp = ({ userProfileData }) => {
         loadGlobalView();
     }, []);
 
-    // Inicializácia mapy a načítanie miest
-    useEffect(() => {
-        let unsubscribePlaces = null;
+useEffect(() => {
+    let unsubscribePlaces = null;
 
-        const initMap = () => {
-            if (leafletMap.current) return;
+    // ──────────────────────────────────────────────
+    // Inicializácia mapy – spustí sa iba raz
+    // ──────────────────────────────────────────────
+    const initMap = () => {
+        if (leafletMap.current) return;
 
-            leafletMap.current = L.map(mapRef.current, { zoomControl: false })
-                .setView(defaultCenter, defaultZoom);
+        leafletMap.current = L.map(mapRef.current, { zoomControl: false })
+            .setView(defaultCenter, defaultZoom);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(leafletMap.current);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(leafletMap.current);
 
-            // Custom zoom + home control (🏠 vracia na globálne východzie)
-            L.Control.ZoomHome = L.Control.extend({
-                options: { position: 'topleft' },
-                onAdd: function (map) {
-                    const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
-                    this._zoomIn = this._createButton('+', 'Priblížiť', 'leaflet-control-zoom-in', container, () => map.zoomIn(), this);
-                    this._home = this._createButton('🏠', 'Pôvodné zobrazenie (globálne)', 'leaflet-control-zoom-home', container, () => {
-                        map.setView(defaultCenter, defaultZoom);
-                    }, this);
-                    this._zoomOut = this._createButton('−', 'Oddialiť', 'leaflet-control-zoom-out', container, () => map.zoomOut(), this);
-                    return container;
-                },
-                _createButton: function (html, title, className, container, fn, context) {
-                    const link = L.DomUtil.create('a', className, container);
-                    link.innerHTML = html;
-                    link.href = '#';
-                    link.title = title;
-                    L.DomEvent
-                        .on(link, 'click', L.DomEvent.stopPropagation)
-                        .on(link, 'mousedown', L.DomEvent.stopPropagation)
-                        .on(link, 'dblclick', L.DomEvent.stopPropagation)
-                        .on(link, 'click', L.DomEvent.preventDefault)
-                        .on(link, 'click', fn, context);
-                    return link;
-                }
-            });
-
-            L.control.zoomHome = function(options) {
-                return new L.Control.ZoomHome(options);
-            };
-
-            L.control.zoomHome().addTo(leafletMap.current);
-
-            // Tlačidlo ★ – nastaviť aktuálne zobrazenie ako globálne východzie
-            const setGlobalHome = L.control({ position: 'topright' });
-            setGlobalHome.onAdd = function (map) {
-                const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-                div.innerHTML = '<a href="#" title="Nastaviť aktuálne zobrazenie ako východzie pre všetkých" style="width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;">★</a>';
-                div.firstChild.onclick = async function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const center = map.getCenter();
-                    const zoom = map.getZoom();
-
-                    try {
-                        await setDoc(globalViewRef, {
-                            center: { lat: center.lat, lng: center.lng },
-                            zoom: zoom,
-                            updatedAt: Timestamp.now()
-                        }, { merge: true });
-
-                        setDefaultCenter([center.lat, center.lng]);
-                        setDefaultZoom(zoom);
-
-                        window.showGlobalNotification('Globálne východzie zobrazenie uložené!', 'success');
-                    } catch (err) {
-                        console.error('Chyba pri ukladaní globálneho zobrazenia:', err);
-                        window.showGlobalNotification('Nepodarilo sa uložiť', 'error');
+        // Custom zoom + home control (🏠 vracia na aktuálne default)
+        L.Control.ZoomHome = L.Control.extend({
+            options: { position: 'topleft' },
+            onAdd: function (map) {
+                const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
+                this._zoomIn = this._createButton('+', 'Priblížiť', 'leaflet-control-zoom-in', container, () => map.zoomIn(), this);
+                this._home = this._createButton('🏠', 'Pôvodné zobrazenie (globálne)', 'leaflet-control-zoom-home', container, () => {
+                    if (leafletMap.current) {
+                        leafletMap.current.setView(defaultCenter, defaultZoom);
                     }
-                };
-                return div;
-            };
-            setGlobalHome.addTo(leafletMap.current);
-
-            leafletMap.current.on('moveend zoomend resize', () => {
-                const c = leafletMap.current.getCenter();
-                console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
-            });
-
-            setTimeout(() => leafletMap.current?.invalidateSize(), 400);
-        };
-
-        if (window.L) {
-            initMap();
-        } else if (leafletJS) {
-            leafletJS.onload = initMap;
-        }
-
-        // Načítanie miest
-        if (window.db) {
-            unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
-                const loadedPlaces = [];
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    const loc = data.location;
-                    loadedPlaces.push({
-                        id: docSnap.id,
-                        name: data.name,
-                        type: data.type,
-                        lat: loc?.latitude ?? data.lat,
-                        lng: loc?.longitude ?? data.lng,
-                        createdAt: data.createdAt
-                    });
-                });
-                setPlaces(loadedPlaces);
-
-                if (leafletMap.current) {
-                    if (!placesLayerRef.current) {
-                        placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
-                    } else {
-                        placesLayerRef.current.clearLayers();
-                    }
-
-                    loadedPlaces.forEach(place => {
-                        if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
-
-                        const typeConfig = typeIcons[place.type] || {
-                            icon: 'fa-map-pin',
-                            color: '#6b7280'
-                        };
-
-                        const markerHtml = `
-                            <div style="
-                                background: white;
-                                width: 38px;
-                                height: 38px;
-                                border-radius: 50%;
-                                border: 3px solid ${typeConfig.color};
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                box-shadow: 0 3px 8px rgba(0,0,0,0.30);
-                                color: ${typeConfig.color};
-                                font-size: 18px;
-                            ">
-                                <i class="fa-solid ${typeConfig.icon}"></i>
-                            </div>
-                        `;
-
-                        const customIcon = L.divIcon({
-                            html: markerHtml,
-                            className: 'custom-marker-no-border',
-                            iconSize: [38, 38],
-                            iconAnchor: [19, 19]
-                        });
-
-                        const marker = L.marker([place.lat, place.lng], { icon: customIcon });
-
-                        marker.on('click', () => {
-                            setSelectedPlace(place);
-                            leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-                        });
-
-                        placesLayerRef.current.addLayer(marker);
-                    });
-                }
-            }, err => console.error("onSnapshot error:", err));
-        }
-
-        return () => {
-            if (unsubscribePlaces) unsubscribePlaces();
-            if (leafletMap.current) {
-                leafletMap.current.remove();
-                leafletMap.current = null;
+                }, this);
+                this._zoomOut = this._createButton('−', 'Oddialiť', 'leaflet-control-zoom-out', container, () => map.zoomOut(), this);
+                return container;
+            },
+            _createButton: function (html, title, className, container, fn, context) {
+                const link = L.DomUtil.create('a', className, container);
+                link.innerHTML = html;
+                link.href = '#';
+                link.title = title;
+                L.DomEvent
+                    .on(link, 'click', L.DomEvent.stopPropagation)
+                    .on(link, 'mousedown', L.DomEvent.stopPropagation)
+                    .on(link, 'dblclick', L.DomEvent.stopPropagation)
+                    .on(link, 'click', L.DomEvent.preventDefault)
+                    .on(link, 'click', fn, context);
+                return link;
             }
+        });
+
+        L.control.zoomHome = options => new L.Control.ZoomHome(options);
+        L.control.zoomHome().addTo(leafletMap.current);
+
+        // Tlačidlo ★ – uložiť aktuálne zobrazenie ako globálne východzie
+        const setGlobalHome = L.control({ position: 'topright' });
+        setGlobalHome.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = '<a href="#" title="Nastaviť aktuálne zobrazenie ako východzie pre všetkých" style="width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;">★</a>';
+            div.firstChild.onclick = async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const center = map.getCenter();
+                const zoom = map.getZoom();
+
+                try {
+                    await setDoc(globalViewRef, {
+                        center: { lat: center.lat, lng: center.lng },
+                        zoom: zoom,
+                        updatedAt: Timestamp.now()
+                    }, { merge: true });
+
+                    setDefaultCenter([center.lat, center.lng]);
+                    setDefaultZoom(zoom);
+
+                    window.showGlobalNotification('Globálne východzie zobrazenie uložené!', 'success');
+                } catch (err) {
+                    console.error('Chyba pri ukladaní globálneho zobrazenia:', err);
+                    window.showGlobalNotification('Nepodarilo sa uložiť', 'error');
+                }
+            };
+            return div;
         };
-    }, [defaultCenter, defaultZoom]);
+        setGlobalHome.addTo(leafletMap.current);
+
+        // Logovanie pohybu mapy
+        leafletMap.current.on('moveend zoomend resize', () => {
+            const c = leafletMap.current.getCenter();
+            console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
+        });
+
+        setTimeout(() => leafletMap.current?.invalidateSize(), 400);
+    };
+
+    // Spustenie inicializácie mapy
+    if (window.L) {
+        initMap();
+    } else if (leafletJS) {
+        leafletJS.onload = initMap;
+    }
+
+    // ──────────────────────────────────────────────
+    // Načítavanie miest a tvorba markerov (pri každej zmene dát)
+    // ──────────────────────────────────────────────
+    if (window.db) {
+        unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
+            const loadedPlaces = [];
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const loc = data.location;
+                loadedPlaces.push({
+                    id: docSnap.id,
+                    name: data.name,
+                    type: data.type,
+                    lat: loc?.latitude ?? data.lat,
+                    lng: loc?.longitude ?? data.lng,
+                    createdAt: data.createdAt
+                });
+            });
+            setPlaces(loadedPlaces);
+
+            // Ak mapa ešte nie je inicializovaná, počkáme
+            if (!leafletMap.current) return;
+
+            if (!placesLayerRef.current) {
+                placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
+            } else {
+                placesLayerRef.current.clearLayers();
+            }
+
+            loadedPlaces.forEach(place => {
+                if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
+
+                const typeConfig = typeIcons[place.type] || {
+                    icon: 'fa-map-pin',
+                    color: '#6b7280'
+                };
+
+                const markerHtml = `
+                    <div style="
+                        background: white;
+                        width: 38px;
+                        height: 38px;
+                        border-radius: 50%;
+                        border: 3px solid ${typeConfig.color};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 3px 8px rgba(0,0,0,0.30);
+                        color: ${typeConfig.color};
+                        font-size: 18px;
+                    ">
+                        <i class="fa-solid ${typeConfig.icon}"></i>
+                    </div>
+                `;
+
+                const customIcon = L.divIcon({
+                    html: markerHtml,
+                    className: 'custom-marker-no-border',
+                    iconSize: [38, 38],
+                    iconAnchor: [19, 19]
+                });
+
+                const marker = L.marker([place.lat, place.lng], { icon: customIcon });
+
+                marker.on('click', () => {
+                    setSelectedPlace(place);
+                    leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+                });
+
+                placesLayerRef.current.addLayer(marker);
+            });
+        }, err => console.error("onSnapshot error:", err));
+    }
+
+    // Cleanup
+    return () => {
+        if (unsubscribePlaces) unsubscribePlaces();
+        if (leafletMap.current) {
+            leafletMap.current.remove();
+            leafletMap.current = null;
+        }
+    };
+}, []);  // ← prázdna závislosť – spustí sa iba raz pri mount-e komponentu
 
     // ──────────────────────────────────────────────
     // RENDER
