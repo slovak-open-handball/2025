@@ -46,12 +46,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [places, setPlaces] = useState([]);
     const [selectedPlace, setSelectedPlace] = useState(null);
 
-    const initialBounds = [
-        [49.242758, 18.673885],
-        [49.156950, 18.882281]
-    ];
-
-    // Uloženie pôvodného stredu a zoomu pre reset    
+    // Pôvodná pozícia a zoom – používa sa pri načítaní aj pri resete
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
 
@@ -87,15 +82,16 @@ const AddGroupsApp = ({ userProfileData }) => {
         const initMap = () => {
             if (leafletMap.current) return;
 
+            // Inicializácia mapy na požadovaný stred a zoom
             leafletMap.current = L.map(mapRef.current, { zoomControl: false })
-                .setView(initialCenter, initialZoom);  // ← použijeme uložené hodnoty
+                .setView(initialCenter, initialZoom);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
-            // Custom Zoom + Home control
+            // Custom Zoom + Home control – home tlačidlo resetuje na initialCenter + initialZoom
             L.Control.ZoomHome = L.Control.extend({
                 options: { position: 'topleft' },
                 onAdd: function (map) {
@@ -209,7 +205,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const closeDetail = () => {
         setSelectedPlace(null);
-        // Vrátiť mapu na pôvodnú pozíciu
+        // Reset mapy na pôvodnú pozíciu a zoom
         if (leafletMap.current) {
             leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
         }
@@ -249,7 +245,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
                         React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
                         React.createElement('button', {
-                            onClick: closeDetail,  // ← tu sa volá funkcia s resetom mapy
+                            onClick: closeDetail,
                             className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
                         }, '×')
                     ),
