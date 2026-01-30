@@ -441,7 +441,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     'div',
                     { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
                   
-                    // Upraviť názov a typ
+                    // 1. Upraviť názov a typ
                     React.createElement('button', {
                       onClick: () => {
                         setIsEditingNameAndType(true);
@@ -451,7 +451,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
                     }, 'Upraviť názov a typ'),
                   
-                    // Toto je problémové miesto – ternár musí byť jeden argument
+                    // 2. Upraviť polohu (ternárny výraz – musí byť jeden argument + čiarka za ním)
                     (isEditingLocation
                       ? React.createElement('div', { className: 'flex gap-2' },
                           React.createElement('button', {
@@ -496,7 +496,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                         }, 'Upraviť polohu')
                     ),
                   
-                    // Odstrániť miesto
+                    // ← TU MUSÍ BYŤ ČIARKA !!!
+                    // 3. Odstrániť miesto
                     React.createElement('button', {
                       onClick: handleDeletePlace,
                       className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition'
