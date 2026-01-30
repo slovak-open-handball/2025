@@ -15,6 +15,34 @@ const leafletJS = document.createElement('script');
 leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
 document.head.appendChild(leafletJS);
 
+const faCSS = document.createElement('link');
+faCSS.rel = 'stylesheet';
+faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
+document.head.appendChild(faCSS);
+
+const typeIcons = {
+    sportova_hala: {
+        icon: 'fa-futbol',          // hráč s loptou ≈ futbalová lopta
+        color: '#dc2626',           // červená (red-600)
+        bgColor: 'rgba(220,38,38,0.15)'
+    },
+    stravovanie: {
+        icon: 'fa-utensils',        // príbor
+        color: '#16a34a',           // zelená (green-600)
+        bgColor: 'rgba(22,163,74,0.15)'
+    },
+    ubytovanie: {
+        icon: 'fa-bed',             // posteľ
+        color: '#6b7280',           // sivá (gray-500)
+        bgColor: 'rgba(107,114,128,0.15)'
+    },
+    zastavka: {
+        icon: 'fa-bus',             // autobus
+        color: '#2563eb',           // modrá (blue-600)
+        bgColor: 'rgba(37,99,235,0.15)'
+    }
+};
+
 // Global notification helper
 window.showGlobalNotification = (message, type = 'success') => {
     let el = document.getElementById('global-notification');
@@ -324,23 +352,56 @@ const AddGroupsApp = ({ userProfileData }) => {
                     });
                 });
                 setPlaces(loadedPlaces);
-
+            
                 if (leafletMap.current) {
                     if (!placesLayerRef.current) {
                         placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
                     } else {
                         placesLayerRef.current.clearLayers();
                     }
-
+            
                     loadedPlaces.forEach(place => {
-                        if (typeof place.lat === 'number' && typeof place.lng === 'number') {
-                            const marker = L.marker([place.lat, place.lng]);
-                            marker.on('click', () => {
-                                setSelectedPlace(place);
-                                leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-                            });
-                            placesLayerRef.current.addLayer(marker);
-                        }
+                        if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
+            
+                        const typeConfig = typeIcons[place.type] || {
+                            icon: 'fa-map-pin',
+                            color: '#6b7280',
+                            bgColor: 'rgba(107,114,128,0.2)'
+                        };
+            
+                        const markerHtml = `
+                            <div style="
+                                background: ${typeConfig.bgColor};
+                                width: 38px;
+                                height: 38px;
+                                border-radius: 50%;
+                                border: 3px solid ${typeConfig.color};
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+                                color: ${typeConfig.color};
+                                font-size: 18px;
+                            ">
+                                <i class="fa-solid ${typeConfig.icon}"></i>
+                            </div>
+                        `;
+            
+                        const customIcon = L.divIcon({
+                            html: markerHtml,
+                            className: 'custom-marker-no-border',  // voliteľné – môžeš definovať v CSS
+                            iconSize: [38, 38],
+                            iconAnchor: [19, 19]
+                        });
+            
+                        const marker = L.marker([place.lat, place.lng], { icon: customIcon });
+            
+                        marker.on('click', () => {
+                            setSelectedPlace(place);
+                            leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+                        });
+            
+                        placesLayerRef.current.addLayer(marker);
                     });
                 }
             }, err => console.error("onSnapshot error:", err));
