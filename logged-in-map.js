@@ -79,6 +79,45 @@ const AddGroupsApp = ({ userProfileData }) => {
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
+            const initialBounds = [
+                [49.242758, 18.673885],    // severozápad
+                [49.156950, 18.882281] 
+            ];
+
+            // ----------------- Home button -----------------
+            const homeButton = L.control({ position: 'topleft' });
+            
+            homeButton.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                
+                const a = L.DomUtil.create('a', '', div);
+                a.href = '#';
+                a.title = 'Návrat na pôvodné zobrazenie';
+                a.style.display = 'block';
+                a.style.width = '26px';
+                a.style.height = '26px';
+                a.style.lineHeight = '26px';
+                a.style.textAlign = 'center';
+                a.style.background = 'white';
+                a.style.borderBottom = '1px solid #ccc';
+                a.innerHTML = '🏠';   // alebo '<i class="fa fa-home"></i>' ak máš font-awesome
+            
+                L.DomEvent
+                    .on(a, 'mousedown dblclick', L.DomEvent.stopPropagation)
+                    .on(a, 'click', L.DomEvent.stop)
+                    .on(a, 'click', function (e) {
+                        e.preventDefault();
+                        // možnosť 1: presne pôvodné bounds
+                        map.fitBounds(initialBounds);
+                        // možnosť 2: stred + zoom
+                        // map.setView(initialCenter, initialZoom);
+                    });
+            
+                return div;
+            };
+            
+            homeButton.addTo(leafletMap.current);            
+
             const logCurrentView = () => {
                 if (!leafletMap.current) return;
 
