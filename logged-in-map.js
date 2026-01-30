@@ -51,6 +51,10 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [addressSearch, setAddressSearch] = useState('');
     const [addressSuggestions, setAddressSuggestions] = useState([]);
 
+    const [isEditingLocation, setIsEditingLocation] = useState(false);
+    const [tempLocation, setTempLocation] = useState(null);     // { lat, lng }
+    const editMarkerRef = useRef(null);
+
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
 
@@ -69,6 +73,40 @@ const AddGroupsApp = ({ userProfileData }) => {
             clearTimeout(timeout);
             timeout = setTimeout(() => func(...args), wait);
         };
+    };
+
+    const handleSaveNewLocation = async () => {
+        if (!selectedPlace || !tempLocation || !window.db) return;
+
+        try {
+            const placeRef = doc(window.db, 'places', selectedPlace.id);
+            await updateDoc(placeRef, {
+                location: new GeoPoint(tempLocation.lat, tempLocation.lng),
+                updatedAt: Timestamp.now(),   // voliteľné – ak chceš sledovať úpravy
+            });
+    
+            window.showGlobalNotification('Poloha bola aktualizovaná', 'success');
+            
+            // reset režimu úpravy
+            setIsEditingLocation(false);
+            setTempLocation(null);
+            if (editMarkerRef.current) {
+                editMarkerRef.current.remove();
+                editMarkerRef.current = null;
+            }
+        } catch (err) {
+            console.error("Chyba pri ukladaní novej polohy:", err);
+            window.showGlobalNotification('Nepodarilo sa uložiť novú polohu', 'error');
+        }
+    };
+
+    const handleCancelEditLocation = () => {
+        setIsEditingLocation(false);
+        setTempLocation(null);
+        if (editMarkerRef.current) {
+            editMarkerRef.current.remove();
+            editMarkerRef.current = null;
+        }
     };
 
     const searchAddress = async (query) => {
@@ -167,6 +205,17 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const closeDetail = () => {
         setSelectedPlace(null);
+        setIsEditingLocation(false);
+        setTempLocation(null);
+        
+        if (editMarkerRef.current) {
+            if (editMarkerRef.current._clickHandler) {
+                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
+            }
+            editMarkerRef.current.remove();
+            editMarkerRef.current = null;
+        }
+        
         if (leafletMap.current) {
             leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
         }
@@ -324,8 +373,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                     'div',
                     {
                         className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[400px]
-                            bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col
-                            transition-all duration-300`
+                                    bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col
+                                    transition-all duration-300`
                     },
                     React.createElement(
                         'div',
@@ -346,7 +395,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                         ),
                         React.createElement('p', { className: 'text-gray-600 mb-3' },
                             React.createElement('strong', null, 'Súradnice: '),
-                            `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
+                            tempLocation 
+                                ? `${tempLocation.lat.toFixed(6)}, ${tempLocation.lng.toFixed(6)} (dočasné)`
+                                : `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
                         ),
                         selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600 mb-6' },
                             React.createElement('strong', null, 'Vytvorené: '),
@@ -357,10 +408,59 @@ const AddGroupsApp = ({ userProfileData }) => {
                     ),
                     React.createElement(
                         'div',
-                        { className: 'p-4 border-t border-gray-200 bg-gray-50' },
+                        { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
+                        
+                        // Tlačidlo Upraviť polohu / Uložiť / Zrušiť
+                        isEditingLocation ? React.createElement('div', { className: 'flex gap-2' },
+                            React.createElement('button', {
+                                onClick: handleSaveNewLocation,
+                                className: 'flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition'
+                            }, 'Uložiť novú polohu'),
+                            React.createElement('button', {
+                                onClick: handleCancelEditLocation,
+                                className: 'flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition'
+                            }, 'Zrušiť')
+                        ) : React.createElement('button', {
+                            onClick: () => {
+                                setIsEditingLocation(true);
+                                setTempLocation({ lat: selectedPlace.lat, lng: selectedPlace.lng });
+                                
+                                // vytvoríme dočasný marker (voliteľne draggable)
+                                if (leafletMap.current) {
+                                    editMarkerRef.current = L.marker([selectedPlace.lat, selectedPlace.lng], {
+                                        draggable: true,           // umožní ťahať myšou
+                                        icon: L.divIcon({          // voliteľne iné zobrazenie
+                                            className: 'editing-marker',
+                                            html: '<div style="background:red;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>'
+                                        })
+                                    }).addTo(leafletMap.current);
+                                    
+                                    // aktualizácia pri ťahaní
+                                    editMarkerRef.current.on('dragend', (e) => {
+                                        const pos = e.target.getLatLng();
+                                        setTempLocation({ lat: pos.lat, lng: pos.lng });
+                                    });
+                                    
+                                    // aktualizácia pri kliknutí na mapu (alternatíva k drag)
+                                    const clickHandler = (e) => {
+                                        setTempLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+                                        if (editMarkerRef.current) {
+                                            editMarkerRef.current.setLatLng(e.latlng);
+                                        }
+                                    };
+                                    leafletMap.current.on('click', clickHandler);
+                                    
+                                    // uložíme handler, aby sme ho mohli odstrániť pri zrušení
+                                    editMarkerRef.current._clickHandler = clickHandler;
+                                }
+                            },
+                            className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
+                        }, 'Upraviť polohu'),
+                
+                        // Odstrániť miesto (stále tam ostáva)
                         React.createElement('button', {
                             onClick: handleDeletePlace,
-                            className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2'
+                            className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition'
                         }, 'Odstrániť miesto')
                     )
                 )
