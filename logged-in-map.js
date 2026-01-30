@@ -172,7 +172,31 @@ const AddGroupsApp = ({ userProfileData }) => {
                 });
 
                 setPlaces(loadedPlaces);
-                console.log(`Načítaných miest z DB: ${loadedPlaces.length}`);
+
+                // Detailný výpis do konzoly
+                console.log(`╔════════════════════════════════════════════════════════════╗`);
+                console.log(`║ NAČÍTANÉ MIESTA Z DATABÁZY (${loadedPlaces.length} záznamov) ║`);
+                console.log(`╠════════════════════════════════════════════════════════════╣`);
+
+                if (loadedPlaces.length === 0) {
+                    console.log(`║ Žiadne miesta v databáze (kolekcia 'places')               ║`);
+                } else {
+                    loadedPlaces.forEach((place, index) => {
+                        console.log(`║ Miesto #${index + 1}:`);
+                        console.log(`║   ID dokumentu   : ${place.id}`);
+                        console.log(`║   Názov          : ${place.name || '(bez názvu)'}`);
+                        console.log(`║   Typ            : ${place.type || '(nevyplnený)'}`);
+                        console.log(`║   Súradnice      : ${place.lat.toFixed(6)}, ${place.lng.toFixed(6)}`);
+                        // Ak máš uložené createdAt ako Timestamp
+                        if (place.createdAt) {
+                            const date = place.createdAt.toDate ? place.createdAt.toDate() : new Date(place.createdAt);
+                            console.log(`║   Vytvorené      : ${date.toLocaleString('sk-SK')}`);
+                        }
+                        console.log(`╟────────────────────────────────────────────────────────────╢`);
+                    });
+                }
+
+console.log(`╚════════════════════════════════════════════════════════════╝`);
 
                 if (leafletMap.current) {
                     if (!window.placesLayer) {
