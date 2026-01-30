@@ -45,8 +45,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [newPlaceType, setNewPlaceType] = useState('');
     const [places, setPlaces] = useState([]);
     const [selectedPlace, setSelectedPlace] = useState(null);
-    const [addressSearch, setAddressSearch] = useState('');           // hodnota v inpute adresy
-    const [addressSuggestions, setAddressSuggestions] = useState([]); // návrhy adries
+    const [addressSearch, setAddressSearch] = useState('');
+    const [addressSuggestions, setAddressSuggestions] = useState([]);
 
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
@@ -67,30 +67,29 @@ const searchAddress = async (query) => {
     }
 
     try {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(query)}&countrycodes=sk`,
-            {
-                headers: {
-                    'User-Agent': 'TvojaAplikaciaMapa/1.0 (tvoj.email@example.com)', // ← POVINNÉ!
-                    'Referer': window.location.origin // voliteľné, ale pomáha
-                }
+        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=Mosco&apiKey=101bfa135bcd4d569450fd3f6e43a659&lang=sk&limit=6`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'MapaAplikacia/1.0 (miloslav.mihucky@gmail.com)'
             }
-        );
+        });
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-            setAddressSuggestions(data);
-        } catch (err) {
-            console.error("Chyba pri vyhľadávaní adresy:", err);
-            setAddressSuggestions([]);
-        }
-    };
+        // Geoapify vracia features pole
+        setAddressSuggestions(data.features || []);
+    } catch (err) {
+        console.error("Chyba pri vyhľadávaní adresy:", err);
+        setAddressSuggestions([]);
+    }
+};
 
-    // Debounced verzia (volá sa max. raz za 600 ms)
-    const debouncedSearch = debounce((query) => searchAddress(query), 600);
+    // Debounced verzia (volá sa max. raz za 500 ms)
+    const debouncedSearch = debounce((query) => searchAddress(query), 500);
     
     // V inpute použiješ debouncedSearch
     onChange: (e) => {
@@ -380,8 +379,9 @@ const searchAddress = async (query) => {
                             type: 'text',
                             value: addressSearch,
                             onChange: (e) => {
-                                setAddressSearch(e.target.value);
-                                searchAddress(e.target.value);
+                                const value = e.target.value;
+                                setAddressSearch(value);
+                                debouncedSearch(value);  // ← tu musí byť debouncedSearch!
                             },
                             placeholder: 'napr. Námestie SNP, Žilina',
                             className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
