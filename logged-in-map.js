@@ -113,11 +113,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                         .on(link, 'mousedown', L.DomEvent.stopPropagation)
                         .on(link, 'dblclick', L.DomEvent.stopPropagation)
                         .on(link, 'click', L.DomEvent.preventDefault)
-                        .on(link, 'click', fn, context)
-                        .on(link, 'click', () => {
-                            if (map) map.getContainer().focus();
-                        });
-
+                        .on(link, 'click', fn, context);
+                
                     return link;
                 }
             });
