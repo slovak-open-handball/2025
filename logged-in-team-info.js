@@ -186,10 +186,10 @@ function addHoverListener(span) {
             const displayCategory = teamData.category || category || 'bez kategórie';
 
             currentTooltipText = `${displayCategory} → ${teamName}
-            Počet osôb:      ${totalPeople}  (hráči ${playerCount}, člen RT ženy ${womenCount}, člen RT muži ${menCount})
-            Balík:           ${packageName}
-            Ubytovanie:      ${accommodation}
-            Doprava:         ${arrivalType}${arrivalTime}`;
+Počet osôb: ${totalPeople}  (hráči ${playerCount}, člen RT ženy ${womenCount}, člen RT muži ${menCount})
+Balík: ${packageName}
+Ubytovanie: ${accommodation}
+Doprava: ${arrivalType}${arrivalTime}`;
 
             // aktualizujeme tooltip – ak stále visí myš nad spanom
             showTooltip(currentTooltipText, e.clientX, e.clientY);
