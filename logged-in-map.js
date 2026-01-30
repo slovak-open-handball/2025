@@ -405,7 +405,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
 
-        React.createElement('div', { className: 'w-full max-w-7xl bg-white rounded-xl shadow-2xl p-3 sm:p-6 md:p-8' },
+        React.createElement('div', { className: 'w-full max-w-[95vw] bg-white rounded-xl shadow-2xl p-3 sm:p-6 md:p-8' },
 
             React.createElement('div', { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
                 React.createElement('h2', { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center' }, 'Mapa')
@@ -416,14 +416,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                 React.createElement('div', {
                     id: 'map',
                     ref: mapRef,
-                    className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[60vh] md:h-[68vh] min-h-[350px]'
+                    className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[70vh] md:h-[70vh] min-h-[400px]'
                 }),
 
                 // Detail panel (podmienene)
                 selectedPlace && React.createElement(
                     'div',
                     {
-                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[60vh] md:h-[68vh] min-h-[350px]
+                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[70vh] md:h-[70vh] min-h-[400px]
                                     bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300`
                     },
 
