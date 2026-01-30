@@ -74,6 +74,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Názov a typ musia byť vyplnené', 'error');
             return;
         }
+    
         try {
             const placeRef = doc(window.db, 'places', selectedPlace.id);
             await updateDoc(placeRef, {
@@ -81,6 +82,23 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: editType,
                 updatedAt: Timestamp.now(),
             });
+
+            // Okamžitá aktualizácia vybraného miesta v UI
+            setSelectedPlace(prev => ({
+                ...prev,
+                name: editName.trim(),
+                type: editType,
+            }));
+    
+            // Aktualizácia aj v zozname miest (aby marker tooltip / iné zobrazenie bolo aktuálne)
+            setPlaces(prevPlaces =>
+                prevPlaces.map(p =>
+                    p.id === selectedPlace.id
+                        ? { ...p, name: editName.trim(), type: editType }
+                        : p
+                )
+            );
+
             window.showGlobalNotification('Názov a typ boli aktualizované', 'success');
             setIsEditingNameAndType(false);
         } catch (err) {
