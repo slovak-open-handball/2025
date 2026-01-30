@@ -51,24 +51,52 @@ const AddGroupsApp = ({ userProfileData }) => {
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
 
+    const debounce = (func, wait) => {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        };
+    };
+
     // Vyhľadávanie adries cez Nominatim (OpenStreetMap)
-    const searchAddress = async (query) => {
-        if (query.length < 3) {
-            setAddressSuggestions([]);
-            return;
+const searchAddress = async (query) => {
+    if (query.length < 3) {
+        setAddressSuggestions([]);
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(query)}&countrycodes=sk`,
+            {
+                headers: {
+                    'User-Agent': 'TvojaAplikaciaMapa/1.0 (tvoj.email@example.com)', // ← POVINNÉ!
+                    'Referer': window.location.origin // voliteľné, ale pomáha
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(query)}&countrycodes=sk`
-            );
-            const data = await response.json();
+        const data = await response.json();
             setAddressSuggestions(data);
         } catch (err) {
             console.error("Chyba pri vyhľadávaní adresy:", err);
             setAddressSuggestions([]);
         }
     };
+
+    // Debounced verzia (volá sa max. raz za 600 ms)
+    const debouncedSearch = debounce((query) => searchAddress(query), 600);
+    
+    // V inpute použiješ debouncedSearch
+    onChange: (e) => {
+        setAddressSearch(e.target.value);
+        debouncedSearch(e.target.value);
+    },
 
     // Vybrať adresu z návrhov → posunúť mapu
     const selectAddress = (suggestion) => {
