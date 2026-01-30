@@ -146,7 +146,6 @@ function addHoverListener(span) {
         if (category && category !== 'neznáma kategória') {
             tooltipText = `${category} → ${teamName}`;
         }
-        span.setAttribute('title', tooltipText);   // základný tooltip hneď
     
         const li = e.target.closest('li');
         if (!li) return;
