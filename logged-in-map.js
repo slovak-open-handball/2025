@@ -173,7 +173,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             'div',
             {
                 className: `
-                    w-full max-w-7xl bg-white rounded-xl shadow-2xl
+                    w-full max-w-[1400px] mx-auto bg-white rounded-xl shadow-2xl
                     p-3 sm:p-6 md:p-8
                 `
             },
