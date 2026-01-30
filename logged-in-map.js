@@ -403,10 +403,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 ? `${tempLocation.lat.toFixed(6)}, ${tempLocation.lng.toFixed(6)} (dočasné)`
                                 : `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
                         ),
-                        selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600 mb-6' },
-                            React.createElement('strong', null, 'Vytvorené: '),
-                            formatDate(selectedPlace.createdAt)
-                        )
+//                        selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600 mb-6' },
+//                            React.createElement('strong', null, 'Vytvorené: '),
+//                            formatDate(selectedPlace.createdAt)
+//                        )
                     ),
 
                     React.createElement('div', { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
