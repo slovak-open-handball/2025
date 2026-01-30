@@ -224,24 +224,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
-    // ──────────────────────────────────────────────
-    // useEffect – mapa + načítanie miest (už opravený)
-    // ──────────────────────────────────────────────
-    useEffect(() => {
-        let unsubscribePlaces = null;
-
-        const initMap = () => {
-            if (leafletMap.current) return;
-
-            leafletMap.current = L.map(mapRef.current, { zoomControl: false })
-                .setView(defaultCenter, defaultZoom);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(leafletMap.current);
-
-            useEffect(() => {
+useEffect(() => {
     let unsubscribePlaces = null;
 
     const initMap = () => {
@@ -295,108 +278,156 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         });
 
-            leafletMap.current.on('moveend zoomend resize', () => {
-                const c = leafletMap.current.getCenter();
-                console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
-            });
-
-            setTimeout(() => leafletMap.current?.invalidateSize(), 400);
+        L.control.zoomHome = function (options) {
+            return new L.Control.ZoomHome(options);
         };
 
-        if (window.L) {
-            initMap();
-        } else if (leafletJS) {
-            leafletJS.onload = initMap;
-        }
+        // Pridáme zoom + home kontrolu
+        L.control.zoomHome().addTo(leafletMap.current);
 
-        if (window.db) {
-            unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
-                const loadedPlaces = [];
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    const loc = data.location;
-                    loadedPlaces.push({
-                        id: docSnap.id,
-                        name: data.name,
-                        type: data.type,
-                        lat: loc?.latitude ?? data.lat,
-                        lng: loc?.longitude ?? data.lng,
-                        createdAt: data.createdAt
-                    });
-                });
-                setPlaces(loadedPlaces);
+        // ──────────────────────────────────────────────
+        // Tlačidlo ★ (nastaviť ako globálne východzie)
+        // ──────────────────────────────────────────────
+        const setGlobalHome = L.control({ position: 'topright' });
+        setGlobalHome.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = '<a href="#" title="Nastaviť aktuálne zobrazenie ako východzie pre všetkých" style="width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;">★</a>';
 
-                if (!leafletMap.current) return;
+            div.firstChild.onclick = async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
 
-                if (!placesLayerRef.current) {
-                    placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
-                } else {
-                    placesLayerRef.current.clearLayers();
+                const center = map.getCenter();
+                const zoom = map.getZoom();
+
+                try {
+                    await setDoc(globalViewRef, {
+                        center: { lat: center.lat, lng: center.lng },
+                        zoom: zoom,
+                        updatedAt: Timestamp.now()
+                    }, { merge: true });
+
+                    setDefaultCenter([center.lat, center.lng]);
+                    setDefaultZoom(zoom);
+
+                    // Automaticky posunieme mapu (pre vizuálnu spätnú väzbu)
+                    map.setView([center.lat, center.lng], zoom, { animate: true });
+
+                    window.showGlobalNotification('Globálne východzie uložené a nastavené!', 'success');
+                } catch (err) {
+                    console.error('Chyba pri ukladaní:', err);
+                    window.showGlobalNotification('Nepodarilo sa uložiť', 'error');
                 }
+            };
 
-                loadedPlaces.forEach(place => {
-                    if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
-
-                    const typeConfig = typeIcons[place.type] || {
-                        icon: 'fa-map-pin',
-                        color: '#6b7280'
-                    };
-
-                    const markerHtml = `
-                        <div style="
-                            background: white;
-                            width: 38px;
-                            height: 38px;
-                            border-radius: 50%;
-                            border: 3px solid ${typeConfig.color};
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            box-shadow: 0 3px 8px rgba(0,0,0,0.30);
-                            color: ${typeConfig.color};
-                            font-size: 18px;
-                        ">
-                            <i class="fa-solid ${typeConfig.icon}"></i>
-                        </div>
-                    `;
-
-                    const customIcon = L.divIcon({
-                        html: markerHtml,
-                        className: 'custom-marker-no-border',
-                        iconSize: [38, 38],
-                        iconAnchor: [19, 19]
-                    });
-
-                    const marker = L.marker([place.lat, place.lng], { icon: customIcon });
-
-                    marker.on('click', () => {
-                        setSelectedPlace(place);
-                        leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-                    });
-
-                    placesLayerRef.current.addLayer(marker);
-                });
-            }, err => console.error("onSnapshot error:", err));
-        }
-
-        return () => {
-            if (unsubscribePlaces) unsubscribePlaces();
-            if (leafletMap.current) {
-                leafletMap.current.eachLayer(layer => leafletMap.current.removeLayer(layer));
-                leafletMap.current.off();
-                leafletMap.current.remove();
-                leafletMap.current = null;
-            }
-            if (placesLayerRef.current) {
-                placesLayerRef.current.clearLayers();
-                placesLayerRef.current = null;
-            }
-            if (editMarkerRef.current) {
-                editMarkerRef.current.remove();
-                editMarkerRef.current = null;
-            }
+            return div;
         };
-    }, []);
+        setGlobalHome.addTo(leafletMap.current);
+
+        // Logovanie pohybu mapy
+        leafletMap.current.on('moveend zoomend resize', () => {
+            const c = leafletMap.current.getCenter();
+            console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
+        });
+
+        setTimeout(() => leafletMap.current?.invalidateSize(), 400);
+    };
+
+    if (window.L) {
+        initMap();
+    } else if (leafletJS) {
+        leafletJS.onload = initMap;
+    }
+
+    // Načítanie miest a tvorba markerov
+    if (window.db) {
+        unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
+            const loadedPlaces = [];
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const loc = data.location;
+                loadedPlaces.push({
+                    id: docSnap.id,
+                    name: data.name,
+                    type: data.type,
+                    lat: loc?.latitude ?? data.lat,
+                    lng: loc?.longitude ?? data.lng,
+                    createdAt: data.createdAt
+                });
+            });
+            setPlaces(loadedPlaces);
+
+            if (!leafletMap.current) return;
+
+            if (!placesLayerRef.current) {
+                placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
+            } else {
+                placesLayerRef.current.clearLayers();
+            }
+
+            loadedPlaces.forEach(place => {
+                if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
+
+                const typeConfig = typeIcons[place.type] || {
+                    icon: 'fa-map-pin',
+                    color: '#6b7280'
+                };
+
+                const markerHtml = `
+                    <div style="
+                        background: white;
+                        width: 38px;
+                        height: 38px;
+                        border-radius: 50%;
+                        border: 3px solid ${typeConfig.color};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 3px 8px rgba(0,0,0,0.30);
+                        color: ${typeConfig.color};
+                        font-size: 18px;
+                    ">
+                        <i class="fa-solid ${typeConfig.icon}"></i>
+                    </div>
+                `;
+
+                const customIcon = L.divIcon({
+                    html: markerHtml,
+                    className: 'custom-marker-no-border',
+                    iconSize: [38, 38],
+                    iconAnchor: [19, 19]
+                });
+
+                const marker = L.marker([place.lat, place.lng], { icon: customIcon });
+
+                marker.on('click', () => {
+                    setSelectedPlace(place);
+                    leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+                });
+
+                placesLayerRef.current.addLayer(marker);
+            });
+        }, err => console.error("onSnapshot error:", err));
+    }
+
+    return () => {
+        if (unsubscribePlaces) unsubscribePlaces();
+        if (leafletMap.current) {
+            leafletMap.current.eachLayer(layer => leafletMap.current.removeLayer(layer));
+            leafletMap.current.off();
+            leafletMap.current.remove();
+            leafletMap.current = null;
+        }
+        if (placesLayerRef.current) {
+            placesLayerRef.current.clearLayers();
+            placesLayerRef.current = null;
+        }
+        if (editMarkerRef.current) {
+            editMarkerRef.current.remove();
+            editMarkerRef.current = null;
+        }
+    };
+}, []);  // prázdna závislosť – inicializácia iba raz
 
     // ──────────────────────────────────────────────
     // RENDER – tu už všetky funkcie existujú
