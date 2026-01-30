@@ -148,8 +148,9 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             allRegistrationsLink.classList.add('hidden');
             allUsersLink.classList.add('hidden');
             notificationsLink.classList.add('hidden');
-            teamRostersLink.classList.remove('hidden'); // Používateľ vidí súpisku tímov
-            teamsInGroupsLink.classList.add('hidden'); // Používateľ nevidí "Tímy do skupín"
+            teamRostersLink.classList.remove('hidden');
+            teamsInGroupsLink.classList.add('hidden'); 
+            mapLink?.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
@@ -165,8 +166,9 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             allRegistrationsLink.classList.add('hidden');
             allUsersLink.classList.add('hidden');
             notificationsLink.classList.add('hidden');
-            teamRostersLink.classList.add('hidden'); // Skryť aj súpisku tímov
-            teamsInGroupsLink.classList.add('hidden'); // Skryť aj "Tímy do skupín"
+            teamRostersLink.classList.add('hidden');
+            teamsInGroupsLink.classList.add('hidden');
+            mapLink?.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
