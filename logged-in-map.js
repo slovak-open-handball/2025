@@ -164,7 +164,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     ref: mapRef,
                     className: `
                         w-full rounded-xl shadow-inner border border-gray-200
-                        h-[65vh] md:h-[65vh] min-h-[400px]
+                        h-[68vh] md:h-[68vh] min-h-[400px]
                     `
                 }
             )
