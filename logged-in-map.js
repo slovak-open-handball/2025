@@ -1,6 +1,7 @@
 // Importy pre Firebase funkcie
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
 const { useState, useEffect, useRef } = React;
 
 // ================ Leaflet CDN importy ================
@@ -12,6 +13,7 @@ document.head.appendChild(leafletCSS);
 const leafletJS = document.createElement('script');
 leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
 document.head.appendChild(leafletJS);
+
 // =====================================================================
 
 window.showGlobalNotification = (message, type = 'success') => {
@@ -40,6 +42,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const mapRef = useRef(null);
     const leafletMap = useRef(null);
     const placesLayerRef = useRef(null);
+
     const [showModal, setShowModal] = useState(false);
     const [newPlaceName, setNewPlaceName] = useState('');
     const [newPlaceType, setNewPlaceType] = useState('');
@@ -51,6 +54,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
 
+    // ----------------- pomocné funkcie -----------------
+
     const debounce = (func, wait) => {
         let timeout;
         return (...args) => {
@@ -59,66 +64,57 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     };
 
-    // Vyhľadávanie adries cez Nominatim (OpenStreetMap)
-const searchAddress = async (query) => {
-    if (query.length < 3) {
-        setAddressSuggestions([]);
-        return;
-    }
-
-    try {
-        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=Mosco&apiKey=101bfa135bcd4d569450fd3f6e43a659&lang=sk&limit=6`;
-        
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'MapaAplikacia/1.0 (miloslav.mihucky@gmail.com)'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    const searchAddress = async (query) => {
+        if (query.length < 3) {
+            setAddressSuggestions([]);
+            return;
         }
+        try {
+            const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=101bfa135bcd4d569450fd3f6e43a659&lang=sk&limit=6`;
 
-        const data = await response.json();
-        // Geoapify vracia features pole
-        setAddressSuggestions(data.features || []);
-    } catch (err) {
-        console.error("Chyba pri vyhľadávaní adresy:", err);
-        setAddressSuggestions([]);
-    }
-};
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'MapaAplikacia/1.0 (miloslav.mihucky@gmail.com)'
+                }
+            });
 
-    // Debounced verzia (volá sa max. raz za 500 ms)
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setAddressSuggestions(data.features || []);
+        } catch (err) {
+            console.error("Chyba pri vyhľadávaní adresy:", err);
+            setAddressSuggestions([]);
+        }
+    };
+
     const debouncedSearch = debounce((query) => searchAddress(query), 500);
-    
-    // V inpute použiješ debouncedSearch
-    onChange: (e) => {
-        setAddressSearch(e.target.value);
-        debouncedSearch(e.target.value);
-    },
 
-    // Vybrať adresu z návrhov → posunúť mapu
     const selectAddress = (suggestion) => {
-        const lat = parseFloat(suggestion.lat);
-        const lon = parseFloat(suggestion.lon);
+        const props = suggestion.properties || {};
+        const lat = parseFloat(props.lat);
+        const lon = parseFloat(props.lon);
 
         if (!isNaN(lat) && !isNaN(lon)) {
-            // Posunieme mapu na vybranú adresu
             leafletMap.current.setView([lat, lon], 17, { animate: true });
 
-            // Môžeme predvyplniť názov miesta (voliteľné)
-            setNewPlaceName(suggestion.display_name.split(',')[0].trim());
+            // predvyplnenie názvu – priorita: name → formatted bez čísla
+            const name = props.name || (props.formatted || '').split(',')[0].trim();
+            setNewPlaceName(name);
 
-            // Vyčistíme návrhy a input
-            setAddressSearch(suggestion.display_name);
+            setAddressSearch(props.formatted || suggestion.display_name || '');
             setAddressSuggestions([]);
         }
     };
 
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
+
         try {
             if (!window.db) throw new Error("Firestore nie je inicializované");
+
             const center = leafletMap.current.getCenter();
 
             const placeData = {
@@ -129,6 +125,7 @@ const searchAddress = async (query) => {
             };
 
             await addDoc(collection(window.db, 'places'), placeData);
+
             console.log("Miesto uložené:", placeData);
 
             setNewPlaceName('');
@@ -136,6 +133,7 @@ const searchAddress = async (query) => {
             setAddressSearch('');
             setAddressSuggestions([]);
             setShowModal(false);
+
             window.showGlobalNotification('Miesto bolo pridané!', 'success');
         } catch (err) {
             console.error("Chyba pri ukladaní:", err);
@@ -150,6 +148,7 @@ const searchAddress = async (query) => {
         try {
             const placeDocRef = doc(window.db, 'places', selectedPlace.id);
             await deleteDoc(placeDocRef);
+
             console.log("Miesto odstránené:", selectedPlace.id);
             window.showGlobalNotification('Miesto bolo úspešne odstránené', 'success');
             closeDetail();
@@ -165,6 +164,8 @@ const searchAddress = async (query) => {
             leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
         }
     };
+
+    // ----------------- useEffect – inicializácia mapy + načítanie miest -----------------
 
     useEffect(() => {
         let unsubscribePlaces = null;
@@ -218,6 +219,7 @@ const searchAddress = async (query) => {
             setTimeout(logCurrentView, 800);
             leafletMap.current.on('moveend zoomend resize', logCurrentView);
             setTimeout(() => leafletMap.current?.invalidateSize(), 600);
+
             console.log("Mapa inicializovaná");
         };
 
@@ -234,7 +236,7 @@ const searchAddress = async (query) => {
         }
 
         // Načítanie miest
-        if (window.db && leafletMap.current) {
+        if (window.db) {
             const placesRef = collection(window.db, 'places');
             unsubscribePlaces = onSnapshot(placesRef, (snapshot) => {
                 const loadedPlaces = [];
@@ -252,7 +254,6 @@ const searchAddress = async (query) => {
                 });
 
                 setPlaces(loadedPlaces);
-
                 console.groupCollapsed(`Načítaných miest: ${loadedPlaces.length}`);
                 loadedPlaces.forEach((p, i) => {
                     console.log(`#${i+1} → ${p.name || '?'} (${p.type}) @ ${p.lat?.toFixed(5)}, ${p.lng?.toFixed(5)}`);
@@ -277,7 +278,6 @@ const searchAddress = async (query) => {
                             placesLayerRef.current.addLayer(marker);
                         }
                     });
-
                     console.log(`Zobrazených ${loadedPlaces.length} špendlíkov`);
                 }
             }, err => console.error("onSnapshot error:", err));
@@ -291,6 +291,8 @@ const searchAddress = async (query) => {
             }
         };
     }, []);
+
+    // ----------------- JSX -----------------
 
     return React.createElement(
         'div',
@@ -314,11 +316,9 @@ const searchAddress = async (query) => {
                 selectedPlace && React.createElement(
                     'div',
                     {
-                        className: `
-                            absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[400px]
+                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[400px]
                             bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col
-                            transition-all duration-300
-                        `
+                            transition-all duration-300`
                     },
                     React.createElement(
                         'div',
@@ -358,11 +358,13 @@ const searchAddress = async (query) => {
                     )
                 )
             ),
+
             // Floating + button
             React.createElement('button', {
                 onClick: () => setShowModal(true),
                 className: 'fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-300'
             }, '+'),
+
             // Modálne okno pre pridanie
             showModal && React.createElement(
                 'div',
@@ -371,8 +373,8 @@ const searchAddress = async (query) => {
                     'div',
                     { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
                     React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Pridať nové miesto'),
-                    
-                    // Nový input na vyhľadávanie adresy
+
+                    // Vyhľadávanie adresy
                     React.createElement('div', { className: 'mb-5 relative' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Vyhľadať adresu'),
                         React.createElement('input', {
@@ -381,24 +383,25 @@ const searchAddress = async (query) => {
                             onChange: (e) => {
                                 const value = e.target.value;
                                 setAddressSearch(value);
-                                debouncedSearch(value);  // ← tu musí byť debouncedSearch!
+                                debouncedSearch(value);
                             },
                             placeholder: 'napr. Námestie SNP, Žilina',
                             className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                         }),
-                        // Dropdown s návrhmi adries
                         addressSuggestions.length > 0 && React.createElement(
                             'div',
                             { className: 'absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto' },
-                            addressSuggestions.map((sug, index) => React.createElement(
-                                'div',
-                                {
-                                    key: index,
-                                    onClick: () => selectAddress(sug),
-                                    className: 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm'
-                                },
-                                sug.display_name
-                            ))
+                            addressSuggestions.map((sug, index) =>
+                                React.createElement(
+                                    'div',
+                                    {
+                                        key: index,
+                                        onClick: () => selectAddress(sug),
+                                        className: 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm'
+                                    },
+                                    sug.properties?.formatted || sug.display_name || '—'
+                                )
+                            )
                         )
                     ),
 
@@ -457,6 +460,7 @@ let isEmailSyncListenerSetup = false;
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
+
     if (userProfileData) {
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
             console.log("logged-in-template.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
