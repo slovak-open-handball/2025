@@ -111,9 +111,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 useEffect(() => {
     let unsubscribePlaces = null;
 
-    // ──────────────────────────────────────────────
     // Inicializácia mapy – spustí sa iba raz
-    // ──────────────────────────────────────────────
     const initMap = () => {
         if (leafletMap.current) return;
 
@@ -125,7 +123,7 @@ useEffect(() => {
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(leafletMap.current);
 
-        // Custom zoom + home control (🏠 vracia na aktuálne default)
+        // Custom zoom + home control
         L.Control.ZoomHome = L.Control.extend({
             options: { position: 'topleft' },
             onAdd: function (map) {
@@ -133,7 +131,7 @@ useEffect(() => {
                 this._zoomIn = this._createButton('+', 'Priblížiť', 'leaflet-control-zoom-in', container, () => map.zoomIn(), this);
                 this._home = this._createButton('🏠', 'Pôvodné zobrazenie (globálne)', 'leaflet-control-zoom-home', container, () => {
                     if (leafletMap.current) {
-                        leafletMap.current.setView(defaultCenter, defaultZoom);
+                        leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
                     }
                 }, this);
                 this._zoomOut = this._createButton('−', 'Oddialiť', 'leaflet-control-zoom-out', container, () => map.zoomOut(), this);
@@ -157,7 +155,7 @@ useEffect(() => {
         L.control.zoomHome = options => new L.Control.ZoomHome(options);
         L.control.zoomHome().addTo(leafletMap.current);
 
-        // Tlačidlo ★ – uložiť aktuálne zobrazenie ako globálne východzie
+        // Tlačidlo ★ – uložiť a automaticky posunúť mapu
         const setGlobalHome = L.control({ position: 'topright' });
         setGlobalHome.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
@@ -176,10 +174,16 @@ useEffect(() => {
                         updatedAt: Timestamp.now()
                     }, { merge: true });
 
+                    // Uložíme nové hodnoty do stavu
                     setDefaultCenter([center.lat, center.lng]);
                     setDefaultZoom(zoom);
 
-                    window.showGlobalNotification('Globálne východzie zobrazenie uložené!', 'success');
+                    // Automaticky posunieme mapu na nové východzie (aj keď sme už na ňom)
+                    if (leafletMap.current) {
+                        leafletMap.current.setView([center.lat, center.lng], zoom, { animate: true });
+                    }
+
+                    window.showGlobalNotification('Globálne východzie zobrazenie uložené a nastavené!', 'success');
                 } catch (err) {
                     console.error('Chyba pri ukladaní globálneho zobrazenia:', err);
                     window.showGlobalNotification('Nepodarilo sa uložiť', 'error');
@@ -189,7 +193,7 @@ useEffect(() => {
         };
         setGlobalHome.addTo(leafletMap.current);
 
-        // Logovanie pohybu mapy
+        // Logovanie pohybu
         leafletMap.current.on('moveend zoomend resize', () => {
             const c = leafletMap.current.getCenter();
             console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
@@ -198,16 +202,14 @@ useEffect(() => {
         setTimeout(() => leafletMap.current?.invalidateSize(), 400);
     };
 
-    // Spustenie inicializácie mapy
+    // Spustenie inicializácie
     if (window.L) {
         initMap();
     } else if (leafletJS) {
         leafletJS.onload = initMap;
     }
 
-    // ──────────────────────────────────────────────
-    // Načítavanie miest a tvorba markerov (pri každej zmene dát)
-    // ──────────────────────────────────────────────
+    // Načítanie miest a tvorba markerov
     if (window.db) {
         unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
             const loadedPlaces = [];
@@ -225,7 +227,6 @@ useEffect(() => {
             });
             setPlaces(loadedPlaces);
 
-            // Ak mapa ešte nie je inicializovaná, počkáme
             if (!leafletMap.current) return;
 
             if (!placesLayerRef.current) {
@@ -279,7 +280,6 @@ useEffect(() => {
         }, err => console.error("onSnapshot error:", err));
     }
 
-    // Cleanup
     return () => {
         if (unsubscribePlaces) unsubscribePlaces();
         if (leafletMap.current) {
@@ -287,7 +287,7 @@ useEffect(() => {
             leafletMap.current = null;
         }
     };
-}, []);  // ← prázdna závislosť – spustí sa iba raz pri mount-e komponentu
+}, []);  // ← prázdna závislosť – inicializácia iba raz
 
     // ──────────────────────────────────────────────
     // RENDER
