@@ -228,7 +228,7 @@ function createOrGetTooltip() {
         customTooltip.style.position = 'absolute';
         customTooltip.style.zIndex = '9999';
         customTooltip.style.background = 'rgba(71, 179, 255, 0.96)';
-        customTooltip.style.color = '#f0f0f0';
+        customTooltip.style.color = '#000000';
         customTooltip.style.padding = '10px 14px';
         customTooltip.style.borderRadius = '6px';
         customTooltip.style.fontSize = '13px';
@@ -239,7 +239,7 @@ function createOrGetTooltip() {
         customTooltip.style.lineHeight = '1.45';
         customTooltip.style.whiteSpace = 'pre-wrap';
         customTooltip.style.display = 'none';
-        customTooltip.style.border = '1px solid #444';
+        customTooltip.style.border = '1px solid #47b3ff';
         document.body.appendChild(customTooltip);
     }
     return customTooltip;
