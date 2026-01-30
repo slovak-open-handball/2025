@@ -46,24 +46,43 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [showModal, setShowModal] = useState(false);
     const [newPlaceName, setNewPlaceName] = useState('');
     const [newPlaceType, setNewPlaceType] = useState('');
+    const [places, setPlaces] = useState([]);
 
-    const handleAddPlace = () => {
-      if (!newPlaceName.trim() || !newPlaceType) return;
+    const handleAddPlace = async () => {
+        if (!newPlaceName.trim() || !newPlaceType) return;
 
-      console.log('Nové miesto:', {
-        name: newPlaceName.trim(),
-        type: newPlaceType,
-        // tu môžeš neskôr pridať aj súradnice z mapy kliknutím
-      });
+        try {
+            if (!window.db) {
+                throw new Error("Firestore nie je inicializované");
+            }
+    
+            // Súradnice stredu mapy (alebo môžeš neskôr umožniť kliknúť na mapu)
+            const center = leafletMap.current.getCenter();
+    
+            const placeData = {
+                name: newPlaceName.trim(),
+                type: newPlaceType,
+                lat: center.lat,
+                lng: center.lng,
+                createdAt: Timestamp.now(),
+                // createdBy: user.uid   ak chceš vedieť kto pridal
+            };
+    
+            // Uložíme do novej kolekcie 'places'
+            await addDoc(collection(window.db, 'places'), placeData);
+    
+            console.log("Miesto uložené do Firestore:", placeData);
 
-      // TODO: tu budeš ukladať do Firestore / pridávať marker na mapu
-
-      // Vyčistenie a zatvorenie
-      setNewPlaceName('');
-      setNewPlaceType('');
-      setShowModal(false);
-
-      window.showGlobalNotification('Miesto bolo pridané!', 'success');
+            // Vyčistenie formulára
+            setNewPlaceName('');
+            setNewPlaceType('');
+            setShowModal(false);
+    
+            window.showGlobalNotification('Miesto bolo pridané!', 'success');
+        } catch (err) {
+            console.error("Chyba pri ukladaní miesta:", err);
+            window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
+        }
     };
 
     useEffect(() => {
@@ -178,8 +197,65 @@ const AddGroupsApp = ({ userProfileData }) => {
             }, 400);
 
             console.log("Leaflet mapa bola inicializovaná – centrum: Žilina");
-        }
 
+            if (window.db) {
+                const placesRef = collection(window.db, 'places');
+            
+                // Jednorazové načítanie + listener na zmeny
+                const unsubscribe = onSnapshot(placesRef, (snapshot) => {
+                    const loadedPlaces = [];
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        loadedPlaces.push({
+                            id: doc.id,
+                            name: data.name,
+                            type: data.type,
+                            lat: data.lat,
+                            lng: data.lng,
+                            // createdAt: data.createdAt?.toDate()  ak chceš čas
+                        });
+                    });
+                    
+                    setPlaces(loadedPlaces);
+                    console.log(`Načítaných miest z DB: ${loadedPlaces.length}`);
+                    
+                    // Vymažeme staré markery (ak existujú) a vytvoríme nové
+                    if (leafletMap.current) {
+                        // Ak chceš mať vrstvu len pre tieto markery, môžeš vytvoriť LayerGroup
+                        if (!window.placesLayer) {
+                            window.placesLayer = L.layerGroup().addTo(leafletMap.current);
+                        } else {
+                            window.placesLayer.clearLayers();
+                        }
+    
+                        loadedPlaces.forEach(place => {
+                            const marker = L.marker([place.lat, place.lng], {
+                                icon: L.divIcon({
+                                    className: 'custom-marker',
+                                    html: '<div style="background:#ef4444;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;border:2px solid white;">•</div>',
+                                    iconSize: [28, 28],
+                                    iconAnchor: [14, 14]
+                                })
+                            });
+    
+                            marker.bindPopup(`
+                                <b>${place.name}</b><br>
+                                <span style="color:#666;">Typ: ${place.type}</span>
+                            `);
+    
+                            window.placesLayer.addLayer(marker);
+                        });
+                    }
+                }, (err) => {
+                    console.error("Chyba pri načítavaní miest:", err);
+                });
+    
+                // Cleanup listener pri unmount
+                return () => unsubscribe();
+            }
+          }
+        }
+    
         return () => {
             if (leafletMap.current) {
                 leafletMap.current.remove();
