@@ -241,7 +241,59 @@ const AddGroupsApp = ({ userProfileData }) => {
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
-            // ... custom ZoomHome + tlačidlo ★ (bez zmeny) ...
+            useEffect(() => {
+    let unsubscribePlaces = null;
+
+    const initMap = () => {
+        if (leafletMap.current) return;
+
+        leafletMap.current = L.map(mapRef.current, { zoomControl: false })
+            .setView(defaultCenter, defaultZoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(leafletMap.current);
+
+        // ──────────────────────────────────────────────
+        // Custom Zoom + Home control (+ / − / 🏠)
+        // ──────────────────────────────────────────────
+        L.Control.ZoomHome = L.Control.extend({
+            options: { position: 'topleft' },
+            onAdd: function (map) {
+                const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
+
+                // + (priblížiť)
+                this._zoomIn = L.DomUtil.create('a', 'leaflet-control-zoom-in', container);
+                this._zoomIn.innerHTML = '+';
+                this._zoomIn.href = '#';
+                this._zoomIn.title = 'Priblížiť';
+                L.DomEvent.on(this._zoomIn, 'click', L.DomEvent.stopPropagation);
+                L.DomEvent.on(this._zoomIn, 'click', () => map.zoomIn());
+
+                // 🏠 (domov – globálne východzie)
+                this._home = L.DomUtil.create('a', 'leaflet-control-zoom-home', container);
+                this._home.innerHTML = '🏠';
+                this._home.href = '#';
+                this._home.title = 'Pôvodné zobrazenie (globálne)';
+                L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
+                L.DomEvent.on(this._home, 'click', () => {
+                    if (leafletMap.current) {
+                        leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+                    }
+                });
+
+                // − (oddialiť)
+                this._zoomOut = L.DomUtil.create('a', 'leaflet-control-zoom-out', container);
+                this._zoomOut.innerHTML = '−';
+                this._zoomOut.href = '#';
+                this._zoomOut.title = 'Oddialiť';
+                L.DomEvent.on(this._zoomOut, 'click', L.DomEvent.stopPropagation);
+                L.DomEvent.on(this._zoomOut, 'click', () => map.zoomOut());
+
+                return container;
+            }
+        });
 
             leafletMap.current.on('moveend zoomend resize', () => {
                 const c = leafletMap.current.getCenter();
