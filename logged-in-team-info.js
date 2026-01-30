@@ -184,24 +184,27 @@ function addHoverListener(span) {
         if (teamData) {
             console.log("ÚPLNÉ DÁTA Z DATABÁZY:");
             console.dir(teamData);
-    
+        
             // ───────────────────────────────────────────────
             // ROZŠÍRENÝ TOOLTIP – PO NAČÍTANÍ DÁT
             // ───────────────────────────────────────────────
-            const playerCount   = (teamData.playerDetails   || []).length;
+            const playerCount   = (teamData.playerDetails || []).length;
             const womenCount    = (teamData.womenTeamMemberDetails || []).length;
-            const menCount      = (teamData.menTeamMemberDetails   || []).length;
+            const menCount      = (teamData.menTeamMemberDetails || []).length;
             const totalPeople   = playerCount + womenCount + menCount;
-    
+        
             const packageName   = teamData.packageDetails?.name   || '—';
             const accommodation = teamData.accommodation?.type    || '—';
-    
-            tooltipText = `${category} → ${teamName}\n` +
-                          `Počet osôb: ${totalPeople}  (hráči ${playerCount}, ženy ${womenCount}, muži ${menCount})\n` +
+        
+            // ★★★ TU JE KĽÚČOVÁ ZMENA ★★★
+            const displayCategory = teamData.category || category;  // priorita: DB → fallback
+        
+            tooltipText = `${displayCategory} → ${teamName}\n` +
+                          `Počet osôb: ${totalPeople} (hráči ${playerCount}, ženy ${womenCount}, muži ${menCount})\n` +
                           `Balík: ${packageName}\n` +
                           `Ubytovanie: ${accommodation}`;
-    
-            // Aktualizujeme title po načítaní dát
+        
+            // Aktualizujeme title
             span.setAttribute('title', tooltipText);
         } else {
             console.warn("Tím sa v databáze nenašiel.");
