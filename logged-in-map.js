@@ -269,6 +269,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                     return link;
                 }
             });
+
+            L.control.zoomHome = function(options) {
+                return new L.Control.ZoomHome(options);
+            };
+          
             L.control.zoomHome().addTo(leafletMap.current);
 
             leafletMap.current.on('moveend zoomend resize', () => {
