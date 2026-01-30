@@ -119,56 +119,63 @@ function addHoverListener(span) {
         let visibleText = e.target.textContent.trim();
         let teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
 
-        let tooltipText = teamName;
+        // ───────────────────────────────────────────────
+        // Premenné deklarujeme hneď na začiatku
+        // ───────────────────────────────────────────────
         let category = 'neznáma kategória';
         let group = 'bez skupiny';
         let type = 'neznámy typ';
-
-        // ak máme kategóriu (z : alebo z hash/DOM), pridáme ju
-        if (category && category !== 'neznáma kategória') {
-            tooltipText = `${category} → ${teamName}`;
-        }
-      
-        const li = e.target.closest('li');
-        if (!li) return;
-
-        // -------------------------------
-        // NOVÉ: Najvyššia priorita – formát "Kategória: Názov tímu"
-        // -------------------------------
         let categoryFromText = null;
+
+        let tooltipText = teamName;
+
+        // -------------------------------
+        // Najvyššia priorita – formát "Kategória: Názov tímu"
+        // -------------------------------
         const colonIndex = visibleText.indexOf(':');
         if (colonIndex !== -1 && colonIndex < visibleText.length - 1) {
             const potentialCategory = visibleText.substring(0, colonIndex).trim();
             const potentialTeamName = visibleText.substring(colonIndex + 1).trim();
 
-            // Ak po : niečo zmysluplné ostalo
             if (potentialTeamName && potentialTeamName.length > 1) {
-                // čistíme číslo poradia ak tam je
                 teamName = potentialTeamName.replace(/^\d+\.\s*/, '').trim();
                 categoryFromText = potentialCategory;
-                
+
                 console.log(`→ Detekovaný formát "Kategória: Tím" → kategória: "${categoryFromText}", tím: "${teamName}"`);
             }
         }
 
-        // Ak sme našli kategóriu priamo v texte → použijeme ju ako prioritu č.1
+        // Ak máme kategóriu z textu → použijeme ju
         if (categoryFromText) {
             category = categoryFromText;
         }
-        // Inak pokračujeme v starej logike (hash → DOM)
-        else {
-            // === 1. Najvyššia priorita: hash v URL ===
+
+        // Tooltip – teraz už category existuje
+        if (category && category !== 'neznáma kategória') {
+            tooltipText = `${category} → ${teamName}`;
+        }
+
+        span.setAttribute('title', tooltipText);   // <--- pridávame title hneď
+
+        const li = e.target.closest('li');
+        if (!li) return;
+
+        // ───────────────────────────────────────────────
+        // Zvyšok logiky získavania kategórie (hash, DOM) iba ak nie je z textu
+        // ───────────────────────────────────────────────
+        if (!categoryFromText) {
+            // === 1. Hash v URL ===
             if (window.location.hash && window.location.hash !== '#' && window.location.hash !== '') {
                 const hash = window.location.hash.substring(1);
                 const parts = hash.split('/');
                 let catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
                 if (!/^[A-Za-z0-9]{1,3}$/.test(catNameFromHash)) {
                     category = catNameFromHash;
-                    console.log(`Kategória získaná z URL hash (priorita): ${category}`);
+                    console.log(`Kategória získaná z URL hash: ${category}`);
                 }
             }
 
-            // === 2. Ak hash nič nedal → hľadáme v DOM-e ===
+            // === 2. DOM – predchádzajúci <h3> ===
             if (category === 'neznáma kategória') {
                 let current = li;
                 while (current && current !== document.body) {
