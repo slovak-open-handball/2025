@@ -118,6 +118,14 @@ function addHoverListener(span) {
     span.addEventListener('mouseover', async e => {
         let visibleText = e.target.textContent.trim();
         let teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
+
+        let tooltipText = teamName;
+
+        // ak máme kategóriu (z : alebo z hash/DOM), pridáme ju
+        if (category && category !== 'neznáma kategória') {
+            tooltipText = `${category} → ${teamName}`;
+        }
+      
         const li = e.target.closest('li');
         if (!li) return;
 
