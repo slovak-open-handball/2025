@@ -168,46 +168,95 @@ function addHoverListener(span) {
         console.log("Spúšťam vyhľadávanie v Firestore...");
     
         const teamData = await lookupTeamInFirestore(teamName, category, group);
-    
+
         if (teamData) {
             console.log("ÚPLNÉ DÁTA Z DATABÁZY:");
             console.dir(teamData);
-    
-            // ───────────────────────────────────────────────
-            // VÝPOČTY PRE TOOLTIP
-            // ───────────────────────────────────────────────
+
             const playerCount   = (teamData.playerDetails || []).length;
             const womenCount    = (teamData.womenTeamMemberDetails || []).length;
             const menCount      = (teamData.menTeamMemberDetails || []).length;
             const totalPeople   = playerCount + womenCount + menCount;
-    
+
             const packageName   = teamData.packageDetails?.name   || '—';
             const accommodation = teamData.accommodation?.type    || '—';
-    
-            // NOVÉ: arrival
-            const arrivalType = teamData.arrival?.type || '—';
-            const arrivalTime = teamData.arrival?.time ? ` (${teamData.arrival.time})` : '';
-    
+            const arrivalType   = teamData.arrival?.type          || '—';
+            const arrivalTime   = teamData.arrival?.time ? ` (${teamData.arrival.time})` : '';
+
             const displayCategory = teamData.category || category || 'bez kategórie';
-    
-            // ───────────────────────────────────────────────
-            // FINÁLNY TOOLTIP – viacriadkový, prehľadný
-            // ───────────────────────────────────────────────
-            tooltipText = `${displayCategory} → ${teamName}
-    Počet osôb:      ${totalPeople}  (hráči ${playerCount}, člen RT ženy ${womenCount}, člen RT muži ${menCount})
-    Balík:           ${packageName}
-    Ubytovanie:      ${accommodation}
-    Doprava:         ${arrivalType}${arrivalTime}`;
-    
-            span.setAttribute('title', tooltipText);
-        } 
-        else {
-            console.warn("Tím sa v databáze nenašiel.");
-            span.setAttribute('title', `${teamName}\n(kategória a údaje sa nenašli v databáze)`);
+
+            currentTooltipText = `${displayCategory} → ${teamName}
+            Počet osôb:      ${totalPeople}  (hráči ${playerCount}, člen RT ženy ${womenCount}, člen RT muži ${menCount})
+            Balík:           ${packageName}
+            Ubytovanie:      ${accommodation}
+            Doprava:         ${arrivalType}${arrivalTime}`;
+
+            // aktualizujeme tooltip – ak stále visí myš nad spanom
+            showTooltip(currentTooltipText, e.clientX, e.clientY);
+        } else {
+            currentTooltipText = `${teamName || '(bez názvu)'}\n(údaje sa nenašli v databáze)`;
+            showTooltip(currentTooltipText, e.clientX, e.clientY);
         }
-    
+
         console.groupEnd();
     });
+
+    span.addEventListener('mousemove', (e) => {
+        // tooltip sa pohybuje s kurzorom
+        if (customTooltip && customTooltip.style.display !== 'none') {
+            customTooltip.style.left = (e.clientX + 14) + 'px';
+            customTooltip.style.top  = (e.clientY + 18) + 'px';
+        }
+    });
+
+    span.addEventListener('mouseout', () => {
+        hideTooltip();
+    });
+
+    span.addEventListener('mouseleave', () => {
+        hideTooltip();
+    });
+}
+
+// na konci súboru (po všetkých funkciách) alebo pred initTeamHoverListeners
+let customTooltip = null;
+
+function createOrGetTooltip() {
+    if (!customTooltip) {
+        customTooltip = document.createElement('div');
+        customTooltip.id = 'team-custom-tooltip';
+        customTooltip.style.position = 'absolute';
+        customTooltip.style.zIndex = '9999';
+        customTooltip.style.background = 'rgba(30, 30, 40, 0.96)';
+        customTooltip.style.color = '#f0f0f0';
+        customTooltip.style.padding = '10px 14px';
+        customTooltip.style.borderRadius = '6px';
+        customTooltip.style.fontSize = '13px';
+        customTooltip.style.fontFamily = 'system-ui, sans-serif';
+        customTooltip.style.boxShadow = '0 4px 16px rgba(0,0,0,0.5)';
+        customTooltip.style.pointerEvents = 'none';
+        customTooltip.style.maxWidth = '340px';
+        customTooltip.style.lineHeight = '1.45';
+        customTooltip.style.whiteSpace = 'pre-wrap';
+        customTooltip.style.display = 'none';
+        customTooltip.style.border = '1px solid #444';
+        document.body.appendChild(customTooltip);
+    }
+    return customTooltip;
+}
+
+function showTooltip(text, x, y) {
+    const tt = createOrGetTooltip();
+    tt.textContent = text;
+    tt.style.left = (x + 14) + 'px';
+    tt.style.top  = (y + 18) + 'px';
+    tt.style.display = 'block';
+}
+
+function hideTooltip() {
+    if (customTooltip) {
+        customTooltip.style.display = 'none';
+    }
 }
 
 // === INICIALIZÁCIA + MUTATION OBSERVER ===
