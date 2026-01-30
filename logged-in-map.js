@@ -46,7 +46,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [places, setPlaces] = useState([]);
     const [selectedPlace, setSelectedPlace] = useState(null);
 
-    // Pôvodná pozícia a zoom – používa sa pri načítaní aj pri resete
+    // Pôvodná pozícia a zoom – používa sa pri načítaní stránky aj pri resete po zatvorení detailu
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
 
@@ -82,7 +82,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         const initMap = () => {
             if (leafletMap.current) return;
 
-            // Inicializácia mapy na požadovaný stred a zoom
             leafletMap.current = L.map(mapRef.current, { zoomControl: false })
                 .setView(initialCenter, initialZoom);
 
@@ -91,7 +90,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
-            // Custom Zoom + Home control – home tlačidlo resetuje na initialCenter + initialZoom
+            // Custom Zoom + Home control
             L.Control.ZoomHome = L.Control.extend({
                 options: { position: 'topleft' },
                 onAdd: function (map) {
@@ -183,7 +182,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                             const marker = L.marker([place.lat, place.lng]);
                             marker.on('click', () => {
                                 setSelectedPlace(place);
-                                leafletMap.current.setView([place.lat, place.lng], 15, { animate: true });
+                                // Väčší zoom po kliknutí na špendlík
+                                leafletMap.current.setView([place.lat, place.lng], 17, { animate: true });
                             });
                             placesLayerRef.current.addLayer(marker);
                         }
