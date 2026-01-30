@@ -55,6 +55,10 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [tempLocation, setTempLocation] = useState(null);     // { lat, lng }
     const editMarkerRef = useRef(null);
 
+    const [isEditingNameAndType, setIsEditingNameAndType] = useState(false);
+    const [editName, setEditName] = useState('');
+    const [editType, setEditType] = useState('');
+
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
 
@@ -66,6 +70,30 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
 
     // ----------------- pomocné funkcie -----------------
+
+    const handleSaveNameAndType = async () => {
+      if (!selectedPlace || !window.db) return;
+    
+      if (!editName.trim() || !editType) {
+        window.showGlobalNotification('Názov a typ musia byť vyplnené', 'error');
+        return;
+      }
+    
+      try {
+        const placeRef = doc(window.db, 'places', selectedPlace.id);
+        await updateDoc(placeRef, {
+          name: editName.trim(),
+          type: editType,
+          updatedAt: Timestamp.now(), // voliteľné
+        });
+    
+        window.showGlobalNotification('Názov a typ boli aktualizované', 'success');
+        setIsEditingNameAndType(false);
+      } catch (err) {
+        console.error("Chyba pri ukladaní názvu a typu:", err);
+        window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
+      }
+    };    
 
     const debounce = (func, wait) => {
         let timeout;
@@ -204,21 +232,22 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const closeDetail = () => {
-        setSelectedPlace(null);
-        setIsEditingLocation(false);
-        setTempLocation(null);
-        
-        if (editMarkerRef.current) {
-            if (editMarkerRef.current._clickHandler) {
-                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
-            }
-            editMarkerRef.current.remove();
-            editMarkerRef.current = null;
+      setSelectedPlace(null);
+      setIsEditingLocation(false);
+      setTempLocation(null);
+      setIsEditingNameAndType(false);
+    
+      if (editMarkerRef.current) {
+        if (editMarkerRef.current._clickHandler) {
+          leafletMap.current.off('click', editMarkerRef.current._clickHandler);
         }
-        
-        if (leafletMap.current) {
-            leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
-        }
+        editMarkerRef.current.remove();
+        editMarkerRef.current = null;
+      }
+    
+      if (leafletMap.current) {
+        leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
+      }
     };
 
     // ----------------- useEffect – inicializácia mapy + načítanie miest -----------------
@@ -370,101 +399,159 @@ const AddGroupsApp = ({ userProfileData }) => {
                     className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[400px]'
                 }),
                 selectedPlace && React.createElement(
+                  'div',
+                  {
+                    className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[400px]
+                                bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col
+                                transition-all duration-300`
+                  },
+                  React.createElement(
                     'div',
-                    {
-                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[400px]
-                                    bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col
-                                    transition-all duration-300`
-                    },
-                    React.createElement(
-                        'div',
-                        { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
-                        React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
-                        React.createElement('button', {
-                            onClick: closeDetail,
-                            className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
-                        }, '×')
+                    { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
+                    React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
+                    React.createElement('button', {
+                      onClick: closeDetail,
+                      className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
+                    }, '×')
+                  ),
+                  React.createElement(
+                    'div',
+                    { className: 'p-5 flex-1 overflow-y-auto' },
+                    React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
+                    React.createElement('p', { className: 'text-gray-600 mb-3' },
+                      React.createElement('strong', null, 'Typ: '),
+                      typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
                     ),
-                    React.createElement(
-                        'div',
-                        { className: 'p-5 flex-1 overflow-y-auto' },
-                        React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
-                        React.createElement('p', { className: 'text-gray-600 mb-3' },
-                            React.createElement('strong', null, 'Typ: '),
-                            typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
-                        ),
-                        React.createElement('p', { className: 'text-gray-600 mb-3' },
-                            React.createElement('strong', null, 'Súradnice: '),
-                            tempLocation 
-                                ? `${tempLocation.lat.toFixed(6)}, ${tempLocation.lng.toFixed(6)} (dočasné)`
-                                : `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
-                        ),
-                        selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600 mb-6' },
-                            React.createElement('strong', null, 'Vytvorené: '),
-                            selectedPlace.createdAt.toDate
-                                ? selectedPlace.createdAt.toDate().toLocaleString('sk-SK')
-                                : new Date(selectedPlace.createdAt).toLocaleString('sk-SK')
+                    React.createElement('p', { className: 'text-gray-600 mb-3' },
+                      React.createElement('strong', null, 'Súradnice: '),
+                      tempLocation
+                        ? `${tempLocation.lat.toFixed(6)}, ${tempLocation.lng.toFixed(6)} (dočasné)`
+                        : `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
+                    ),
+                    selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600 mb-6' },
+                      React.createElement('strong', null, 'Vytvorené: '),
+                      selectedPlace.createdAt.toDate
+                        ? selectedPlace.createdAt.toDate().toLocaleString('sk-SK')
+                        : new Date(selectedPlace.createdAt).toLocaleString('sk-SK')
+                    )
+                  ),
+                
+                  // spodná časť s tlačidlami
+                  React.createElement(
+                    'div',
+                    { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
+                
+                    // === NOVÉ TLAČIDLO ===
+                    React.createElement('button', {
+                      onClick: () => {
+                        setIsEditingNameAndType(true);
+                        setEditName(selectedPlace.name || '');
+                        setEditType(selectedPlace.type || '');
+                      },
+                      className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
+                    }, 'Upraviť názov a typ'),
+                
+                    // Upraviť polohu / Uložiť / Zrušiť
+                    isEditingLocation
+                      ? React.createElement('div', { className: 'flex gap-2' },
+                          React.createElement('button', {
+                            onClick: handleSaveNewLocation,
+                            className: 'flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition'
+                          }, 'Uložiť novú polohu'),
+                          React.createElement('button', {
+                            onClick: handleCancelEditLocation,
+                            className: 'flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition'
+                          }, 'Zrušiť')
                         )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
-                        
-                        // Tlačidlo Upraviť polohu / Uložiť / Zrušiť
-                        isEditingLocation ? React.createElement('div', { className: 'flex gap-2' },
-                            React.createElement('button', {
-                                onClick: handleSaveNewLocation,
-                                className: 'flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition'
-                            }, 'Uložiť novú polohu'),
-                            React.createElement('button', {
-                                onClick: handleCancelEditLocation,
-                                className: 'flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition'
-                            }, 'Zrušiť')
-                        ) : React.createElement('button', {
-                            onClick: () => {
-                                setIsEditingLocation(true);
-                                setTempLocation({ lat: selectedPlace.lat, lng: selectedPlace.lng });
-                                
-                                // vytvoríme dočasný marker (voliteľne draggable)
-                                if (leafletMap.current) {
-                                    editMarkerRef.current = L.marker([selectedPlace.lat, selectedPlace.lng], {
-                                        draggable: true,           // umožní ťahať myšou
-                                        icon: L.divIcon({          // voliteľne iné zobrazenie
-                                            className: 'editing-marker',
-                                            html: '<div style="background:red;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>'
-                                        })
-                                    }).addTo(leafletMap.current);
-                                    
-                                    // aktualizácia pri ťahaní
-                                    editMarkerRef.current.on('dragend', (e) => {
-                                        const pos = e.target.getLatLng();
-                                        setTempLocation({ lat: pos.lat, lng: pos.lng });
-                                    });
-                                    
-                                    // aktualizácia pri kliknutí na mapu (alternatíva k drag)
-                                    const clickHandler = (e) => {
-                                        setTempLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
-                                        if (editMarkerRef.current) {
-                                            editMarkerRef.current.setLatLng(e.latlng);
-                                        }
-                                    };
-                                    leafletMap.current.on('click', clickHandler);
-                                    
-                                    // uložíme handler, aby sme ho mohli odstrániť pri zrušení
-                                    editMarkerRef.current._clickHandler = clickHandler;
+                      : React.createElement('button', {
+                          onClick: () => {
+                            setIsEditingLocation(true);
+                            setTempLocation({ lat: selectedPlace.lat, lng: selectedPlace.lng });
+                
+                            if (leafletMap.current) {
+                              editMarkerRef.current = L.marker([selectedPlace.lat, selectedPlace.lng], {
+                                draggable: true,
+                                icon: L.divIcon({
+                                  className: 'editing-marker',
+                                  html: '<div style="background:red;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>'
+                                })
+                              }).addTo(leafletMap.current);
+                
+                              editMarkerRef.current.on('dragend', (e) => {
+                                const pos = e.target.getLatLng();
+                                setTempLocation({ lat: pos.lat, lng: pos.lng });
+                              });
+                
+                              const clickHandler = (e) => {
+                                setTempLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+                                if (editMarkerRef.current) {
+                                  editMarkerRef.current.setLatLng(e.latlng);
                                 }
-                            },
-                            className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
+                              };
+                              leafletMap.current.on('click', clickHandler);
+                              editMarkerRef.current._clickHandler = clickHandler;
+                            }
+                          },
+                          className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
                         }, 'Upraviť polohu'),
                 
-                        // Odstrániť miesto (stále tam ostáva)
-                        React.createElement('button', {
-                            onClick: handleDeletePlace,
-                            className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition'
-                        }, 'Odstrániť miesto')
-                    )
-                )
+                    // Odstrániť miesto
+                    React.createElement('button', {
+                      onClick: handleDeletePlace,
+                      className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition'
+                    }, 'Odstrániť miesto')
+                  )
             ),
+
+            isEditingNameAndType && React.createElement(
+              'div',
+              { className: 'fixed inset-0 z-[2100] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
+              React.createElement(
+                'div',
+                { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
+                React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Upraviť názov a typ'),
+            
+                // Názov miesta
+                React.createElement('div', { className: 'mb-5' },
+                  React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
+                  React.createElement('input', {
+                    type: 'text',
+                    value: editName,
+                    onChange: e => setEditName(e.target.value),
+                    className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                  })
+                ),
+            
+                // Typ miesta
+                React.createElement('div', { className: 'mb-6' },
+                  React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
+                  React.createElement('select', {
+                    value: editType,
+                    onChange: e => setEditType(e.target.value),
+                    className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
+                  },
+                    React.createElement('option', { value: '' }, 'Vyberte typ'),
+                    React.createElement('option', { value: 'sportova_hala' }, 'Športová hala'),
+                    React.createElement('option', { value: 'ubytovanie' }, 'Ubytovanie'),
+                    React.createElement('option', { value: 'stravovanie' }, 'Stravovanie'),
+                    React.createElement('option', { value: 'zastavka' }, 'Zastávka')
+                  )
+                ),
+            
+                // Tlačidlá
+                React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
+                  React.createElement('button', {
+                    onClick: () => setIsEditingNameAndType(false),
+                    className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
+                  }, 'Zrušiť'),
+                  React.createElement('button', {
+                    onClick: handleSaveNameAndType,
+                    disabled: !editName.trim() || !editType,
+                    className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
+                  }, 'Uložiť zmeny')
+                )
+              )
+            )
 
             // Floating + button
             React.createElement('button', {
