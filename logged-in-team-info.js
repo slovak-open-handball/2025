@@ -283,7 +283,7 @@ function createOrGetTooltip() {
         customTooltip.style.fontFamily = 'system-ui, sans-serif';
         customTooltip.style.boxShadow = '0 4px 16px rgba(0,0,0,0.5)';
         customTooltip.style.pointerEvents = 'none';
-        customTooltip.style.maxWidth = '340px';
+        customTooltip.style.maxWidth = '400px';
         customTooltip.style.lineHeight = '1.45';
         customTooltip.style.whiteSpace = 'pre-wrap';
         customTooltip.style.display = 'none';
