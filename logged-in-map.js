@@ -66,109 +66,109 @@ const AddGroupsApp = ({ userProfileData }) => {
             initMap();
         }
 
-        function initMap() {
-            if (leafletMap.current) return;
+function initMap() {
+    if (leafletMap.current) return;
 
-            leafletMap.current = window.L.map(mapRef.current).fitBounds([
-                [49.242758, 18.673885],    // severozápad
-                [49.156950, 18.882281]     // juhovýchod
-            ]);
+    leafletMap.current = window.L.map(mapRef.current, {
+        zoomControl: false
+    }).fitBounds([
+        [49.242758, 18.673885],
+        [49.156950, 18.882281]
+    ]);
 
-            window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(leafletMap.current);
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(leafletMap.current);
 
-            const initialBounds = [
-                [49.242758, 18.673885],    // severozápad
-                [49.156950, 18.882281] 
-            ];
+    const initialBounds = [
+        [49.242758, 18.673885],
+        [49.156950, 18.882281]
+    ];
 
-            L.Control.ZoomHome = L.Control.extend({
-                options: {
-                    position: 'topleft'   // môžeš zmeniť na 'topright', 'bottomleft' atď.
-                },
+    // ─── Custom Zoom + Home control ───────────────────────────────
+    L.Control.ZoomHome = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd: function (map) {
+            const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
 
-                onAdd: function (map) {
-                    const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
+            this._zoomInButton = this._createButton(
+                '+', 'Priblížiť', 'leaflet-control-zoom-in', container,
+                () => map.zoomIn(), this
+            );
 
-                    // Tlačidlo Zoom In (+)
-                    this._zoomInButton = this._createButton(
-                        '+', 'Priblížiť', 'leaflet-control-zoom-in', container,
-                        function () { map.zoomIn(); }, this
-                    );
-        
-                    // Tlačidlo Home (🏠)
-                    this._homeButton = this._createButton(
-                        '🏠', 'Návrat na pôvodné zobrazenie', 'leaflet-control-zoom-home', container,
-                        function () {
-                            map.fitBounds(initialBounds);
-                            // alternatíva: map.setView([49.2232, 18.7394], 12);
-                        }, this
-                    );
-        
-                    // Tlačidlo Zoom Out (−)
-                    this._zoomOutButton = this._createButton(
-                        '−', 'Oddialiť', 'leaflet-control-zoom-out', container,
-                        function () { map.zoomOut(); }, this
-                    );
-        
-                    return container;
-                },
-        
-                _createButton: function (html, title, className, container, fn, context) {
-                    const link = L.DomUtil.create('a', className, container);
-                    link.innerHTML = html;
-                    link.href = '#';
-                    link.title = title;
-        
-                    const stop = L.DomEvent.stopPropagation;
-                    L.DomEvent
-                        .on(link, 'click', stop)
-                        .on(link, 'mousedown', stop)
-                        .on(link, 'dblclick', stop)
-                        .on(link, 'click', L.DomEvent.preventDefault)
-                        .on(link, 'click', fn, context)
-                        .on(link, 'click', this._refocusOnMap, context);
-        
-                    return link;
-                },
-        
-                _refocusOnMap: function () {
-                    // voliteľné – pomáha pri keyboard navigácii
-                    if (this._map) this._map.getContainer().focus();
-                }
-            });
-        
-            // Registrujeme control (aby sme ho mohli volať L.control.zoomHome())
-            L.control.zoomHome = function (options) {
-                return new L.Control.ZoomHome(options);
-            };
-        
-            // Pridáme ho na mapu
-            L.control.zoomHome().addTo(leafletMap.current);
-            // ────────────────────────────────────────────────
-        
-            // ... zvyšok tvojho kódu – logCurrentView, poslucháče, invalidateSize, atď. ...
-        
-            const logCurrentView = () => {
-                // ... tvoj pôvodný kód logovania ...
-            };
-        
-            setTimeout(logCurrentView, 500);
-        
-            leafletMap.current.on('moveend', logCurrentView);
-            leafletMap.current.on('zoomend', logCurrentView);
-            leafletMap.current.on('resize', logCurrentView);
-        
-            setTimeout(() => {
-                if (leafletMap.current) {
-                    leafletMap.current.invalidateSize();
-                }
-            }, 400);
-        
-            console.log("Leaflet mapa bola inicializovaná – centrum: Žilina");
-        }            
+            this._homeButton = this._createButton(
+                '🏠', 'Návrat na pôvodné zobrazenie', 'leaflet-control-zoom-home', container,
+                () => map.fitBounds(initialBounds), this
+            );
+
+            this._zoomOutButton = this._createButton(
+                '−', 'Oddialiť', 'leaflet-control-zoom-out', container,
+                () => map.zoomOut(), this
+            );
+
+            return container;
+        },
+
+        _createButton: function (html, title, className, container, fn, context) {
+            const link = L.DomUtil.create('a', className, container);
+            link.innerHTML = html;
+            link.href = '#';
+            link.title = title;
+
+            L.DomEvent
+                .on(link, 'click', L.DomEvent.stopPropagation)
+                .on(link, 'mousedown', L.DomEvent.stopPropagation)
+                .on(link, 'dblclick', L.DomEvent.stopPropagation)
+                .on(link, 'click', L.DomEvent.preventDefault)
+                .on(link, 'click', fn, context)
+                .on(link, 'click', () => {
+                    if (map) map.getContainer().focus();
+                });
+
+            return link;
+        }
+    });
+
+    L.control.zoomHome = function (options) {
+        return new L.Control.ZoomHome(options);
+    };
+
+    L.control.zoomHome().addTo(leafletMap.current);
+    // ──────────────────────────────────────────────────────────────
+
+    // Definícia logovacej funkcie – LEN JEDNA!
+    const logCurrentView = () => {
+        if (!leafletMap.current) return;
+        const center = leafletMap.current.getCenter();
+        const zoom = leafletMap.current.getZoom();
+        const bounds = leafletMap.current.getBounds();
+
+        console.log('╔══════════════════════════════════════════════╗');
+        console.log('║ Aktuálne zobrazenie mapy ║');
+        console.log('╠══════════════════════════════════════════════╣');
+        console.log(`║ Center (lat, lng) : ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
+        console.log(`║ Zoom              : ${zoom}`);
+        console.log(`║ Bounds (lat,lng)  :`);
+        console.log(`║   severozápad     : ${bounds.getNorthWest().lat.toFixed(6)}, ${bounds.getNorthWest().lng.toFixed(6)}`);
+        console.log(`║   juhovýchod      : ${bounds.getSouthEast().lat.toFixed(6)}, ${bounds.getSouthEast().lng.toFixed(6)}`);
+        console.log('╚══════════════════════════════════════════════╝');
+    };
+
+    setTimeout(logCurrentView, 500);
+
+    leafletMap.current.on('moveend', logCurrentView);
+    leafletMap.current.on('zoomend', logCurrentView);
+    leafletMap.current.on('resize', logCurrentView);
+
+    setTimeout(() => {
+        if (leafletMap.current) {
+            leafletMap.current.invalidateSize();
+        }
+    }, 400);
+
+    console.log("Leaflet mapa bola inicializovaná – centrum: Žilina");
+}          
 
             const logCurrentView = () => {
                 if (!leafletMap.current) return;
