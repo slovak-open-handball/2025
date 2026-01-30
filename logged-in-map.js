@@ -131,7 +131,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
         try {
-            const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=YOUR_GEOAPIFY_API_KEY_HERE&lang=sk&limit=6`; // Nahraďte YOUR_GEOAPIFY_API_KEY_HERE svojím API kľúčom (presuňte do env alebo backendu pre bezpečnosť)
+            const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=101bfa135bcd4d569450fd3f6e43a659&lang=sk&limit=6`;
             const response = await fetch(url, {
                 headers: {
                     'User-Agent': 'MapaAplikacia/1.0 (miloslav.mihucky@gmail.com)'
