@@ -1,21 +1,19 @@
 // logged-in-team-info.js
 
-// === PRIAME IMPORTY FIRESTORE FUNKCIÍ ===
 import {
-  doc,
-  getDoc,
-  onSnapshot,
-  collection,
-  getDocs
+  doc, getDoc, onSnapshot, collection, getDocs, updateDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 console.log("%c[logged-in-team-info.js] Skript beží – čakám na window.db",
     "color:#8b5cf6; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
 
 let shouldShowTeamBubbles = true;
+let unsubscribeUserSettings = null;
 
 // === NAČÍTANIE NASTAVENIA ZO USER DOKUMENTU ===
 function setupTeamBubblesListener() {
+    if (unsubscribeUserSettings) return;
+  
     if (!window.db || !window.auth || !window.auth.currentUser) {
         console.warn("[team-info] auth alebo db ešte nie je pripravené → čakáme");
         return;
@@ -38,10 +36,9 @@ function setupTeamBubblesListener() {
 
         // Ak pole vôbec neexistuje → nastavíme default (true) a zapíšeme ho
         if (newValue === undefined) {
-            console.log("[team-info] displayTeamBubbles neexistuje → inicializujem na true");
-            window.db.collection("users").doc(userId).update({
-                displayTeamBubbles: true
-            }).catch(err => console.error("[team-info] Chyba pri inicializácii displayTeamBubbles", err));
+            console.log("[team-info] Inicializujem displayTeamBubbles = true");
+            updateDoc(userRef, { displayTeamBubbles: true })
+                .catch(err => console.error("[team-info] Chyba pri init:", err));
             shouldShowTeamBubbles = true;
         } else {
             shouldShowTeamBubbles = !!newValue;  // true/false → boolean
@@ -407,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.db) {
             console.log("%cwindow.db je dostupné → spúšťam inicializáciu listenerov",
                 "color:#10b981; font-weight:bold; font-size:14px; background:#000; padding:6px 12px; border-radius:6px;");
+            setupTeamBubblesListener();
             initTeamHoverListeners();
             return;
         }
