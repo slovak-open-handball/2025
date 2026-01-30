@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 
@@ -46,7 +46,6 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [places, setPlaces] = useState([]);
     const [selectedPlace, setSelectedPlace] = useState(null);
 
-    // Pôvodná pozícia a zoom – používa sa pri načítaní stránky aj pri resete po zatvorení detailu
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
 
@@ -73,6 +72,35 @@ const AddGroupsApp = ({ userProfileData }) => {
         } catch (err) {
             console.error("Chyba pri ukladaní:", err);
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
+        }
+    };
+
+    const handleDeletePlace = async () => {
+        if (!selectedPlace || !window.db) return;
+
+        if (!confirm(`Naozaj chcete odstrániť miesto "${selectedPlace.name || 'bez názvu'}"?`)) {
+            return;
+        }
+
+        try {
+            const placeDocRef = doc(window.db, 'places', selectedPlace.id);
+            await deleteDoc(placeDocRef);
+
+            console.log("Miesto odstránené:", selectedPlace.id);
+            window.showGlobalNotification('Miesto bolo úspešne odstránené', 'success');
+
+            // Zatvor panel a resetuj mapu
+            closeDetail();
+        } catch (err) {
+            console.error("Chyba pri odstraňovaní miesta:", err);
+            window.showGlobalNotification('Nepodarilo sa odstrániť miesto', 'error');
+        }
+    };
+
+    const closeDetail = () => {
+        setSelectedPlace(null);
+        if (leafletMap.current) {
+            leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
         }
     };
 
@@ -182,7 +210,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                             const marker = L.marker([place.lat, place.lng]);
                             marker.on('click', () => {
                                 setSelectedPlace(place);
-                                // Väčší zoom po kliknutí na špendlík
                                 leafletMap.current.setView([place.lat, place.lng], 17, { animate: true });
                             });
                             placesLayerRef.current.addLayer(marker);
@@ -203,14 +230,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     }, []);
 
-    const closeDetail = () => {
-        setSelectedPlace(null);
-        // Reset mapy na pôvodnú pozíciu a zoom
-        if (leafletMap.current) {
-            leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
-        }
-    };
-
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
@@ -230,7 +249,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     ref: mapRef,
                     className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[400px]'
                 }),
-                // Sidebar – detail vybraného miesta (zarovnaný s mapou)
+                // Sidebar – detail vybraného miesta
                 selectedPlace && React.createElement(
                     'div',
                     {
@@ -252,21 +271,30 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'p-5 flex-1 overflow-y-auto' },
-                        React.createElement('h4', { className: 'text-xl font-semibold mb-3' }, selectedPlace.name || '(bez názvu)'),
-                        React.createElement('p', { className: 'text-gray-600 mb-4' },
+                        React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
+                        React.createElement('p', { className: 'text-gray-600 mb-3' },
                             React.createElement('strong', null, 'Typ: '),
                             selectedPlace.type || '(nevyplnený)'
                         ),
-                        React.createElement('p', { className: 'text-gray-600 mb-4' },
+                        React.createElement('p', { className: 'text-gray-600 mb-3' },
                             React.createElement('strong', null, 'Súradnice: '),
                             `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
                         ),
-                        selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600' },
+                        selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600 mb-6' },
                             React.createElement('strong', null, 'Vytvorené: '),
                             selectedPlace.createdAt.toDate
                                 ? selectedPlace.createdAt.toDate().toLocaleString('sk-SK')
                                 : new Date(selectedPlace.createdAt).toLocaleString('sk-SK')
                         )
+                    ),
+                    // Tlačidlo Odstrániť
+                    React.createElement(
+                        'div',
+                        { className: 'p-4 border-t border-gray-200 bg-gray-50' },
+                        React.createElement('button', {
+                            onClick: handleDeletePlace,
+                            className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2'
+                        }, 'Odstrániť miesto')
                     )
                 )
             ),
