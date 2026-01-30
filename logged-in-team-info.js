@@ -303,7 +303,7 @@ function showTooltipUnderElement(text, element) {
 
     // Tooltip pod riadkom
     const tooltipTop  = rect.bottom + window.scrollY + 8;   // 8 px pod spodným okrajom
-    const tooltipLeft = rect.left + window.scrollX + (rect.width / 2) - 120;  // približne na stred
+    const tooltipLeft = rect.left + window.scrollX + (rect.width / 2) - 10;  // približne na stred
 
     // Ochrana pred presahom za ľavý okraj obrazovky
     const finalLeft = Math.max(10, tooltipLeft);
