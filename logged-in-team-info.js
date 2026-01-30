@@ -200,7 +200,7 @@ function addHoverListener(span) {
             const displayCategory = teamData.category || category;  // priorita: DB → fallback
         
             tooltipText = `${displayCategory} → ${teamName}\n` +
-                          `Počet osôb: ${totalPeople} (hráči ${playerCount}, ženy ${womenCount}, muži ${menCount})\n` +
+                          `Počet osôb: ${totalPeople} (hráči ${playerCount}, člen RT (ženy) ${womenCount}, člen RT (muži) ${menCount})\n` +
                           `Balík: ${packageName}\n` +
                           `Ubytovanie: ${accommodation}`;
         
