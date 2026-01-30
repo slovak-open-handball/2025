@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect, useRef } = React;
@@ -120,7 +120,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             const placeData = {
                 name: newPlaceName.trim(),
                 type: newPlaceType,
-                location: new firebase.firestore.GeoPoint(center.lat, center.lng),
+                location: new GeoPoint(center.lat, center.lng),
                 createdAt: Timestamp.now(),
             };
 
