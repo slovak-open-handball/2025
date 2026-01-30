@@ -301,9 +301,25 @@ useEffect(() => {
 
     return () => {
         if (unsubscribePlaces) unsubscribePlaces();
+
         if (leafletMap.current) {
+            // Vyčistiť všetky event listenery a vrstvy pred remove
+            leafletMap.current.eachLayer(layer => {
+                leafletMap.current.removeLayer(layer);
+            });
+            leafletMap.current.off();  // odstráni všetky eventy
             leafletMap.current.remove();
             leafletMap.current = null;
+        }  
+    
+        // Vyčistiť referencie
+        if (placesLayerRef.current) {
+            placesLayerRef.current.clearLayers();
+            placesLayerRef.current = null;
+        }
+        if (editMarkerRef.current) {
+            editMarkerRef.current.remove();
+            editMarkerRef.current = null;
         }
     };
 }, []);  // ← prázdna závislosť – inicializácia iba raz
