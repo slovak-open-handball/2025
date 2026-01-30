@@ -231,7 +231,7 @@ function createOrGetTooltip() {
         customTooltip.style.lineHeight = '1.45';
         customTooltip.style.whiteSpace = 'pre-wrap';
         customTooltip.style.display = 'none';
-        customTooltip.style.border = '1px solid #47b3ff';
+        customTooltip.style.border = '1px solid #81dca3';
         document.body.appendChild(customTooltip);
     }
     return customTooltip;
