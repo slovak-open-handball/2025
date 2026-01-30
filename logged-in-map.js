@@ -32,42 +32,46 @@ window.showGlobalNotification = (message, type = 'success') => {
     }
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
-    setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`; }, 10);
-    setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`; }, 5000);
+    setTimeout(() => notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`, 10);
+    setTimeout(() => notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`, 5000);
 };
 
 const AddGroupsApp = ({ userProfileData }) => {
     const mapRef = useRef(null);
     const leafletMap = useRef(null);
+    const placesLayerRef = useRef(null); // ← lepšie ako window, zabráni konfliktom
     const [showModal, setShowModal] = useState(false);
     const [newPlaceName, setNewPlaceName] = useState('');
     const [newPlaceType, setNewPlaceType] = useState('');
     const [places, setPlaces] = useState([]);
 
+    const initialBounds = [
+        [49.242758, 18.673885],
+        [49.156950, 18.882281]
+    ];
+
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
         try {
             if (!window.db) throw new Error("Firestore nie je inicializované");
-
             const center = leafletMap.current.getCenter();
 
             const placeData = {
                 name: newPlaceName.trim(),
                 type: newPlaceType,
-                location: new firebase.firestore.GeoPoint(center.lat, center.lng),  // ← GEOPOINT
+                location: new firebase.firestore.GeoPoint(center.lat, center.lng),
                 createdAt: Timestamp.now(),
             };
 
             await addDoc(collection(window.db, 'places'), placeData);
+            console.log("Miesto uložené:", placeData);
 
-            console.log("Miesto uložené do Firestore:", placeData);
             setNewPlaceName('');
             setNewPlaceType('');
             setShowModal(false);
-
             window.showGlobalNotification('Miesto bolo pridané!', 'success');
         } catch (err) {
-            console.error("Chyba pri ukladaní miesta:", err);
+            console.error("Chyba pri ukladaní:", err);
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
@@ -75,44 +79,24 @@ const AddGroupsApp = ({ userProfileData }) => {
     useEffect(() => {
         let unsubscribePlaces = null;
 
-        const initialBounds = [
-            [49.242758, 18.673885],
-            [49.156950, 18.882281]
-        ];
-
-        const loadLeaflet = () => {
-            if (!window.L) {
-                console.warn("Leaflet sa ešte nenačítal...");
-                const timer = setInterval(() => {
-                    if (window.L && mapRef.current && !leafletMap.current) {
-                        initMap();
-                        clearInterval(timer);
-                    }
-                }, 300);
-                return () => clearInterval(timer);
-            } else {
-                initMap();
-            }
-        };
-
-        function initMap() {
+        const initMap = () => {
             if (leafletMap.current) return;
 
-            leafletMap.current = window.L.map(mapRef.current, { zoomControl: false })
-                .fitBounds([[49.242758, 18.673885], [49.156950, 18.882281]]);
+            leafletMap.current = L.map(mapRef.current, { zoomControl: false })
+                .fitBounds(initialBounds);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
-            // Custom Zoom + Home control (nezmenené)
+            // Custom Zoom + Home control
             L.Control.ZoomHome = L.Control.extend({
                 options: { position: 'topleft' },
                 onAdd: function (map) {
                     const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
                     this._zoomInButton = this._createButton('+', 'Priblížiť', 'leaflet-control-zoom-in', container, () => map.zoomIn(), this);
-                    this._homeButton = this._createButton('🏠', 'Návrat na pôvodné zobrazenie', 'leaflet-control-zoom-home', container, () => map.fitBounds(initialBounds), this);
+                    this._homeButton = this._createButton('🏠', 'Pôvodné zobrazenie', 'leaflet-control-zoom-home', container, () => map.fitBounds(initialBounds), this);
                     this._zoomOutButton = this._createButton('−', 'Oddialiť', 'leaflet-control-zoom-out', container, () => map.zoomOut(), this);
                     return container;
                 },
@@ -135,100 +119,79 @@ const AddGroupsApp = ({ userProfileData }) => {
             L.control.zoomHome().addTo(leafletMap.current);
 
             const logCurrentView = () => {
-//                if (!leafletMap.current) return;
-//                const center = leafletMap.current.getCenter();
-//                const zoom = leafletMap.current.getZoom();
-//                const bounds = leafletMap.current.getBounds();
-//                console.log('╔══════════════════════════════════════════════╗');
-//                console.log('║ Aktuálne zobrazenie mapy ║');
-//                console.log('╠══════════════════════════════════════════════╣');
-//                console.log(`║ Center (lat, lng) : ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
-//                console.log(`║ Zoom              : ${zoom}`);
-//                console.log(`║ Bounds            :`);
-//                console.log(`║   severozápad     : ${bounds.getNorthWest().lat.toFixed(6)}, ${bounds.getNorthWest().lng.toFixed(6)}`);
-//                console.log(`║   juhovýchod      : ${bounds.getSouthEast().lat.toFixed(6)}, ${bounds.getSouthEast().lng.toFixed(6)}`);
-//                console.log('╚══════════════════════════════════════════════╝');
+                if (!leafletMap.current) return;
+                const center = leafletMap.current.getCenter();
+                const zoom = leafletMap.current.getZoom();
+                const bounds = leafletMap.current.getBounds();
+                console.log(`[MAP VIEW] Center: ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)} | Zoom: ${zoom}`);
             };
 
-            setTimeout(logCurrentView, 500);
+            setTimeout(logCurrentView, 800);
             leafletMap.current.on('moveend zoomend resize', logCurrentView);
-            setTimeout(() => leafletMap.current?.invalidateSize(), 400);
-            console.log("Leaflet mapa bola inicializovaná – centrum: Žilina");
+            setTimeout(() => leafletMap.current?.invalidateSize(), 600);
+            console.log("Mapa inicializovaná");
+        };
+
+        // Spustenie inicializácie mapy
+        if (!window.L) {
+            const timer = setInterval(() => {
+                if (window.L && mapRef.current && !leafletMap.current) {
+                    initMap();
+                    clearInterval(timer);
+                }
+            }, 300);
+            return () => clearInterval(timer);
+        } else {
+            initMap();
         }
 
-        loadLeaflet();
-
-        // Načítanie miest z Firestore
+        // Načítanie miest až po inicializácii mapy
         if (window.db && leafletMap.current) {
             const placesRef = collection(window.db, 'places');
             unsubscribePlaces = onSnapshot(placesRef, (snapshot) => {
                 const loadedPlaces = [];
-                snapshot.forEach((doc) => {
+                snapshot.forEach(doc => {
                     const data = doc.data();
-                    // Ak je uložené ako GeoPoint
                     const loc = data.location;
                     loadedPlaces.push({
                         id: doc.id,
                         name: data.name,
                         type: data.type,
-                        lat: loc?.latitude  || data.lat,
+                        lat: loc?.latitude || data.lat,
                         lng: loc?.longitude || data.lng,
+                        createdAt: data.createdAt
                     });
                 });
 
                 setPlaces(loadedPlaces);
 
-                // Detailný výpis do konzoly
-                console.log(`╔════════════════════════════════════════════════════════════╗`);
-                console.log(`║ NAČÍTANÉ MIESTA Z DATABÁZY (${loadedPlaces.length} záznamov) ║`);
-                console.log(`╠════════════════════════════════════════════════════════════╣`);
+                // Detailný výpis
+                console.groupCollapsed(`Načítaných miest: ${loadedPlaces.length}`);
+                loadedPlaces.forEach((p, i) => {
+                    console.log(`#${i+1} → ${p.name || '?'} (${p.type}) @ ${p.lat?.toFixed(5)}, ${p.lng?.toFixed(5)}`);
+                });
+                console.groupEnd();
 
-                if (loadedPlaces.length === 0) {
-                    console.log(`║ Žiadne miesta v databáze (kolekcia 'places')               ║`);
-                } else {
-                    loadedPlaces.forEach((place, index) => {
-                        console.log(`║ Miesto #${index + 1}:`);
-                        console.log(`║   ID dokumentu   : ${place.id}`);
-                        console.log(`║   Názov          : ${place.name || '(bez názvu)'}`);
-                        console.log(`║   Typ            : ${place.type || '(nevyplnený)'}`);
-                        console.log(`║   Súradnice      : ${place.lat.toFixed(6)}, ${place.lng.toFixed(6)}`);
-                        // Ak máš uložené createdAt ako Timestamp
-                        if (place.createdAt) {
-                            const date = place.createdAt.toDate ? place.createdAt.toDate() : new Date(place.createdAt);
-                            console.log(`║   Vytvorené      : ${date.toLocaleString('sk-SK')}`);
-                        }
-                        console.log(`╟────────────────────────────────────────────────────────────╢`);
-                    });
-                }
-
-console.log(`╚════════════════════════════════════════════════════════════╝`);
-
+                // Zobrazenie markerov
                 if (leafletMap.current) {
-                    // Ak vrstva ešte neexistuje → vytvoríme ju a pridáme do mapy
-                    if (!window.placesLayer) {
-                        window.placesLayer = L.layerGroup().addTo(leafletMap.current);
-                        console.log("Vytvorená a pridaná nová placesLayer do mapy");
+                    if (!placesLayerRef.current) {
+                        placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
+                        console.log("Places layer pridaná do mapy");
                     } else {
-                        window.placesLayer.clearLayers();
-                        console.log("Vymazané staré markery v existujúcej placesLayer");
+                        placesLayerRef.current.clearLayers();
                     }
-                
+
                     loadedPlaces.forEach(place => {
-                        const marker = L.marker([place.lat, place.lng]);  // štandardný špendlík
-                
-                        marker.bindPopup(`
-                            <b>${place.name || '(bez názvu)'}</b><br>
-                            <span style="color:#666;">Typ: ${place.type || '(nevyplnený)'}</span>
-                        `);
-                
-                        window.placesLayer.addLayer(marker);
+                        if (typeof place.lat === 'number' && typeof place.lng === 'number') {
+                            const marker = L.marker([place.lat, place.lng]);
+                            marker.bindPopup(`<b>${place.name || '(bez názvu)'}</b><br>Typ: ${place.type || '-'}`);
+                            placesLayerRef.current.addLayer(marker);
+                        }
                     });
-                
-                    console.log(`Pridaných ${loadedPlaces.length} markerov na mapu`);
+
+                    console.log(`Zobrazených ${loadedPlaces.length} špendlíkov`);
                 }
-            }, (err) => {
-                console.error("Chyba pri načítavaní miest:", err);
-            });
+            }, err => console.error("onSnapshot error:", err));
         }
 
         return () => {
@@ -241,14 +204,11 @@ console.log(`╚═════════════════════�
     }, []);
 
     return React.createElement(
-        'div',
-        { className: 'flex-grow flex justify-center items-center p-2 sm:p-4' },
+        'div', { className: 'flex-grow flex justify-center items-center p-2 sm:p-4' },
         React.createElement(
-            'div',
-            { className: 'w-full max-w-7xl bg-white rounded-xl shadow-2xl p-3 sm:p-6 md:p-8' },
+            'div', { className: 'w-full max-w-7xl bg-white rounded-xl shadow-2xl p-3 sm:p-6 md:p-8' },
             React.createElement(
-                'div',
-                { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
+                'div', { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
                 React.createElement('h2', { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center' }, 'Mapa')
             ),
             React.createElement('div', {
@@ -256,20 +216,15 @@ console.log(`╚═════════════════════�
                 ref: mapRef,
                 className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[400px]'
             }),
-            // Floating + button
             React.createElement('button', {
                 onClick: () => setShowModal(true),
                 className: 'fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-300'
             }, '+'),
-            // Modálne okno
             showModal && React.createElement(
-                'div',
-                { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
+                'div', { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
                 React.createElement(
-                    'div',
-                    { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100' },
+                    'div', { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100' },
                     React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Pridať nové miesto'),
-                    // Názov
                     React.createElement('div', { className: 'mb-5' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
                         React.createElement('input', {
@@ -280,7 +235,6 @@ console.log(`╚═════════════════════�
                             className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                         })
                     ),
-                    // Typ
                     React.createElement('div', { className: 'mb-6' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
                         React.createElement('select', {
@@ -295,7 +249,6 @@ console.log(`╚═════════════════════�
                             React.createElement('option', { value: 'zastavka' }, 'Zastávka')
                         )
                     ),
-                    // Tlačidlá
                     React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                         React.createElement('button', {
                             onClick: () => setShowModal(false),
@@ -333,7 +286,6 @@ const handleDataUpdateAndRender = (event) => {
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-map.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
                                 await updateDoc(userProfileRef, { email: user.email });
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
@@ -341,31 +293,29 @@ const handleDataUpdateAndRender = (event) => {
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
                                     timestamp: new Date(),
                                 });
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                            } else {
-                                console.log("logged-in-map.js: E-maily sú synchronizované.");
+                                window.showGlobalNotification('E-mail aktualizovaný', 'success');
                             }
                         }
                     } catch (error) {
-                        console.error("logged-in-map.js: Chyba pri synchronizácii e-mailu:", error);
-                        window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
+                        console.error("Chyba pri synchronizácii e-mailu:", error);
+                        window.showGlobalNotification('Chyba pri aktualizácii e-mailu', 'error');
                     }
                 }
             });
             isEmailSyncListenerSetup = true;
         }
-        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+
+        if (rootElement && ReactDOM && React) {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
-            console.log("logged-in-map.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
+            console.log("Aplikácia vykreslená");
         }
     } else {
-        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        if (rootElement && ReactDOM && React) {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
                 React.createElement(
-                    'div',
-                    { className: 'flex justify-center items-center h-full pt-16' },
+                    'div', { className: 'flex justify-center items-center h-full pt-16' },
                     React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
                 )
             );
@@ -373,20 +323,18 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-console.log("logged-in-map.js: Registrujem poslucháča pre 'globalDataUpdated'.");
+console.log("Registrujem poslucháča 'globalDataUpdated'");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 if (window.globalUserProfileData) {
-    console.log("logged-in-map.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+    if (rootElement && ReactDOM && React) {
         const root = ReactDOM.createRoot(rootElement);
         root.render(
             React.createElement(
-                'div',
-                { className: 'flex justify-center items-center h-full pt-16' },
+                'div', { className: 'flex justify-center items-center h-full pt-16' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
             )
         );
