@@ -69,10 +69,10 @@ const AddGroupsApp = ({ userProfileData }) => {
         function initMap() {
             if (leafletMap.current) return;
 
-            leafletMap.current = window.L.map(mapRef.current).setView(
-                [49.242758, 18.673885],  // ← Žilina centrum   -  49.156950, 18.882281
-                13                   // zoom: 12 = mesto + trocha okolia (11 = širšie, 13 = detailnejšie)
-            );
+            leafletMap.current = window.L.map(mapRef.current).fitBounds([
+                [49.242758, 18.673885],    // severozápad
+                [49.156950, 18.882281]     // juhovýchod
+            ]);
 
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
