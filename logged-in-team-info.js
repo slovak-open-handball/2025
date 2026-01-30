@@ -4,12 +4,54 @@
 import {
   doc,
   getDoc,
+  onSnapshot,
   collection,
   getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 console.log("%c[logged-in-team-info.js] Skript beží – čakám na window.db",
     "color:#8b5cf6; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
+
+let shouldShowTeamBubbles = true;
+
+// === NAČÍTANIE NASTAVENIA ZO USER DOKUMENTU ===
+function setupTeamBubblesListener() {
+    if (!window.db || !window.auth || !window.auth.currentUser) {
+        console.warn("[team-info] auth alebo db ešte nie je pripravené → čakáme");
+        return;
+    }
+
+    const userId = window.auth.currentUser.uid;
+    const userRef = doc(window.db, "users", userId);
+
+    console.log(`[team-info] Nastavujem onSnapshot na users/${userId} → sledujem displayTeamBubbles`);
+
+    onSnapshot(userRef, (snap) => {
+        if (!snap.exists()) {
+            console.warn("[team-info] Dokument používateľa neexistuje");
+            shouldShowTeamBubbles = true; // fallback
+            return;
+        }
+
+        const data = snap.data() || {};
+        const newValue = data.displayTeamBubbles;
+
+        // Ak pole vôbec neexistuje → nastavíme default (true) a zapíšeme ho
+        if (newValue === undefined) {
+            console.log("[team-info] displayTeamBubbles neexistuje → inicializujem na true");
+            window.db.collection("users").doc(userId).update({
+                displayTeamBubbles: true
+            }).catch(err => console.error("[team-info] Chyba pri inicializácii displayTeamBubbles", err));
+            shouldShowTeamBubbles = true;
+        } else {
+            shouldShowTeamBubbles = !!newValue;  // true/false → boolean
+            console.log(`[team-info] displayTeamBubbles = ${shouldShowTeamBubbles}`);
+        }
+    }, (err) => {
+        console.error("[team-info] Chyba pri počúvaní nastavenia bubliniek:", err);
+        shouldShowTeamBubbles = true; // fallback pri chybe
+    });
+}
 
 async function lookupTeamInFirestore(teamName, category = null, group = null) {
     if (!window.db) {
@@ -116,6 +158,11 @@ function addHoverListener(span) {
     span.dataset.hoverListenerAdded = 'true';
 
     span.addEventListener('mouseover', async e => {
+        // ----------------- NOVÁ KONTROLA -----------------
+        if (!shouldShowTeamBubbles) {
+            // nastavenie vypnuté → žiadny tooltip
+            return;
+        }
         let visibleText = e.target.textContent.trim();
         let teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
     
