@@ -20,10 +20,10 @@ window.showGlobalNotification = (message, type = 'success') => {
     if (!notificationElement) {
         notificationElement = document.createElement('div');
         notificationElement.id = 'global-notification';
-        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
+        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999]';
         document.body.appendChild(notificationElement);
     }
-    const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
+    const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999]';
     let typeClasses = '';
     switch (type) {
         case 'success':
@@ -139,7 +139,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             {
                 className: `
                     w-full max-w-7xl bg-white rounded-xl shadow-2xl
-                    p-3 sm:p-6 md:p-8 transform transition-all duration-500 hover:scale-[1.005]
+                    p-3 sm:p-6 md:p-8
                 `
             },
             React.createElement(
