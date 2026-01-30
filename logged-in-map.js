@@ -440,8 +440,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                   React.createElement(
                     'div',
                     { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
-                
-                    // === NOVÉ TLAČIDLO ===
+                  
+                    // Upraviť názov a typ
                     React.createElement('button', {
                       onClick: () => {
                         setIsEditingNameAndType(true);
@@ -450,9 +450,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                       },
                       className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
                     }, 'Upraviť názov a typ'),
-                
-                    // Upraviť polohu / Uložiť / Zrušiť
-                    isEditingLocation
+                  
+                    // Toto je problémové miesto – ternár musí byť jeden argument
+                    (isEditingLocation
                       ? React.createElement('div', { className: 'flex gap-2' },
                           React.createElement('button', {
                             onClick: handleSaveNewLocation,
@@ -467,7 +467,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                           onClick: () => {
                             setIsEditingLocation(true);
                             setTempLocation({ lat: selectedPlace.lat, lng: selectedPlace.lng });
-                
+                  
                             if (leafletMap.current) {
                               editMarkerRef.current = L.marker([selectedPlace.lat, selectedPlace.lng], {
                                 draggable: true,
@@ -476,12 +476,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                   html: '<div style="background:red;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>'
                                 })
                               }).addTo(leafletMap.current);
-                
+                  
                               editMarkerRef.current.on('dragend', (e) => {
                                 const pos = e.target.getLatLng();
                                 setTempLocation({ lat: pos.lat, lng: pos.lng });
                               });
-                
+                  
                               const clickHandler = (e) => {
                                 setTempLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
                                 if (editMarkerRef.current) {
@@ -493,15 +493,15 @@ const AddGroupsApp = ({ userProfileData }) => {
                             }
                           },
                           className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
-                        }, 'Upraviť polohu'),
-                
+                        }, 'Upraviť polohu')
+                    ),
+                  
                     // Odstrániť miesto
                     React.createElement('button', {
                       onClick: handleDeletePlace,
                       className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition'
                     }, 'Odstrániť miesto')
                   )
-            ),
 
             isEditingNameAndType && React.createElement(
               'div',
