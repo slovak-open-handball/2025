@@ -54,6 +54,13 @@ const AddGroupsApp = ({ userProfileData }) => {
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
 
+    const typeLabels = {
+          sportova_hala:   "Športová hala",
+          ubytovanie:      "Ubytovanie",
+          stravovanie:     "Stravovanie",
+          zastavka:        "Zastávka",
+        };
+
     // ----------------- pomocné funkcie -----------------
 
     const debounce = (func, wait) => {
@@ -335,7 +342,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
                         React.createElement('p', { className: 'text-gray-600 mb-3' },
                             React.createElement('strong', null, 'Typ: '),
-                            selectedPlace.type || '(nevyplnený)'
+                            typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
                         ),
                         React.createElement('p', { className: 'text-gray-600 mb-3' },
                             React.createElement('strong', null, 'Súradnice: '),
