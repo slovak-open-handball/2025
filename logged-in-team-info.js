@@ -124,9 +124,8 @@ function addHoverListener(span) {
         let group = 'bez skupiny';
         let type = 'neznámy typ';
         let categoryFromText = null;
-        let tooltipText = teamName;
     
-        // Detekcia "Kategória: Tím"
+        // Detekcia "Kategória: Tím" – ak je priamo v texte
         const colonIndex = visibleText.indexOf(':');
         if (colonIndex !== -1 && colonIndex < visibleText.length - 1) {
             const potentialCategory = visibleText.substring(0, colonIndex).trim();
@@ -134,12 +133,8 @@ function addHoverListener(span) {
             if (potentialTeamName && potentialTeamName.length > 1) {
                 teamName = potentialTeamName.replace(/^\d+\.\s*/, '').trim();
                 categoryFromText = potentialCategory;
-                console.log(`→ Detekovaný formát "Kategória: Tím" → kategória: "${categoryFromText}", tím: "${teamName}"`);
+                category = categoryFromText;  // môžeme rovno priradiť
             }
-        }
-    
-        if (categoryFromText) {
-            category = categoryFromText;
         }
     
         const li = e.target.closest('li');
@@ -147,16 +142,13 @@ function addHoverListener(span) {
     
         // Získavanie kategórie z hash/DOM iba ak nie je z textu
         if (!categoryFromText) {
-            // ... (hash a DOM logika zostáva rovnaká ako predtým) ...
+            // ... tvoja pôvodná logika hash + DOM ...
         }
     
-        // Skupina
+        // Skupina + typ podľa farby (nezmenené)
         const groupHeader = li.closest('.zoom-group-box')?.querySelector('h3, h4');
-        if (groupHeader) {
-            group = groupHeader.textContent.trim();
-        }
+        if (groupHeader) group = groupHeader.textContent.trim();
     
-        // Typ podľa farby
         if (li.classList.contains('bg-yellow-50')) {
             type = 'SUPERSTRUCTURE / nadstavbový tím';
         } else if (li.closest('.bg-blue-100')) {
@@ -165,7 +157,7 @@ function addHoverListener(span) {
             type = 'tím v základnej skupine';
         }
     
-        // Výpis do konzoly (pôvodný)
+        // Konzolový výpis (nezmenený)
         console.groupCollapsed(`%c${teamName || '(bez názvu)'}`, 'color:#10b981; font-weight:bold;');
         console.log(`Viditeľný text: ${visibleText}`);
         console.log(`Vyčistený názov: ${teamName}`);
@@ -179,32 +171,38 @@ function addHoverListener(span) {
         if (teamData) {
             console.log("ÚPLNÉ DÁTA Z DATABÁZY:");
             console.dir(teamData);
-        
+    
             // ───────────────────────────────────────────────
-            // ROZŠÍRENÝ TOOLTIP – PO NAČÍTANÍ DÁT
+            // VÝPOČTY PRE TOOLTIP
             // ───────────────────────────────────────────────
             const playerCount   = (teamData.playerDetails || []).length;
             const womenCount    = (teamData.womenTeamMemberDetails || []).length;
             const menCount      = (teamData.menTeamMemberDetails || []).length;
             const totalPeople   = playerCount + womenCount + menCount;
-        
+    
             const packageName   = teamData.packageDetails?.name   || '—';
             const accommodation = teamData.accommodation?.type    || '—';
-        
-            // ★★★ TU JE KĽÚČOVÁ ZMENA ★★★
-            const displayCategory = teamData.category || category;  // priorita: DB → fallback
-        
-            tooltipText = `${displayCategory} → ${teamName}\n` +
-                          `Počet osôb: ${totalPeople} (hráči ${playerCount}, člen RT (ženy) ${womenCount}, člen RT (muži) ${menCount})\n` +
-                          `Balík: ${packageName}\n` +
-                          `Ubytovanie: ${accommodation}`;
-        
-            // Aktualizujeme title
+    
+            // NOVÉ: arrival
+            const arrivalType = teamData.arrival?.type || '—';
+            const arrivalTime = teamData.arrival?.time ? ` (${teamData.arrival.time})` : '';
+    
+            const displayCategory = teamData.category || category || 'bez kategórie';
+    
+            // ───────────────────────────────────────────────
+            // FINÁLNY TOOLTIP – viacriadkový, prehľadný
+            // ───────────────────────────────────────────────
+            tooltipText = `${displayCategory} → ${teamName}
+    Počet osôb:      ${totalPeople}  (hráči ${playerCount}, člen RT ženy ${womenCount}, člen RT muži ${menCount})
+    Balík:           ${packageName}
+    Ubytovanie:      ${accommodation}
+    Doprava:         ${arrivalType}${arrivalTime}`;
+    
             span.setAttribute('title', tooltipText);
-        } else {
+        } 
+        else {
             console.warn("Tím sa v databáze nenašiel.");
-            // Tooltip môžeš nechať pôvodný, alebo pridať upozornenie
-            // span.setAttribute('title', tooltipText + '\n(dáta z DB sa nenašli)');
+            span.setAttribute('title', `${teamName}\n(kategória a údaje sa nenašli v databáze)`);
         }
     
         console.groupEnd();
