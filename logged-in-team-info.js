@@ -227,7 +227,7 @@ function createOrGetTooltip() {
         customTooltip.id = 'team-custom-tooltip';
         customTooltip.style.position = 'absolute';
         customTooltip.style.zIndex = '9999';
-        customTooltip.style.background = 'rgba(30, 30, 40, 0.96)';
+        customTooltip.style.background = 'rgba(71, 179, 255, 0.96)';
         customTooltip.style.color = '#f0f0f0';
         customTooltip.style.padding = '10px 14px';
         customTooltip.style.borderRadius = '6px';
