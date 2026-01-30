@@ -22,12 +22,14 @@ function CustomToggle({ checked, onChange, label, disabled }) {
       }),
       React.createElement('div', {
         className: `
-          w-11 h-6 rounded-full transition-colors
+          w-11 h-6 rounded-full
+          transition-colors duration-200 ease-in-out
           peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
           peer-checked:after:translate-x-full peer-checked:after:border-white
           after:content-[''] after:absolute after:top-[2px] after:left-[2px]
           after:bg-white after:border after:border-gray-300 after:rounded-full
-          after:h-5 after:w-5 after:transition-all
+          after:h-5 after:w-5
+          after:transition-transform after:duration-200 after:ease-in-out
           ${checked ? 'bg-[#47b3ff]' : 'bg-gray-200'}
         `
       })
