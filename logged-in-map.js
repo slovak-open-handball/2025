@@ -75,6 +75,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     useEffect(() => {
         let unsubscribePlaces = null;
 
+        const initialBounds = [
+            [49.242758, 18.673885],
+            [49.156950, 18.882281]
+        ];
+
         const loadLeaflet = () => {
             if (!window.L) {
                 console.warn("Leaflet sa ešte nenačítal...");
