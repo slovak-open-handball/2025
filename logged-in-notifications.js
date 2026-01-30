@@ -7,6 +7,15 @@
 import { getAuth, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, collection, query, where, updateDoc, deleteDoc, writeBatch, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+function ToggleSection({ label, checked, onChange, disabled }) {
+  return React.createElement(CustomToggle, {
+    checked,
+    onChange,
+    label,
+    disabled
+  });
+}
+
 function CustomToggle({ checked, onChange, label, disabled }) {
   return React.createElement(
     'div', { className: 'flex items-center justify-between' },
@@ -817,19 +826,19 @@ function NotificationsApp() {
         // Toggle switch pre notifikácie
 
         React.createElement('div', { className: 'space-y-6 mb-8' },
-          React.createElement(CustomToggle, {
-              checked: displayNotifications,
-              onChange: handleToggleNotifications,
-              label: 'Zobrazovať upozornenia',
-              disabled: loading
-            }),
-            React.createElement(CustomToggle, {
-              checked: displayTeamBubbles,
-              onChange: handleToggleTeamBubbles,
-              label: 'Zobrazovať informácie o tíme (bublinky)',
-              disabled: loading
-            })
-          ),
+          React.createElement(ToggleSection, {
+            label: 'Zobrazovať upozornenia',
+            checked: displayNotifications,
+            onChange: handleToggleNotifications,
+            disabled: loading
+          }),
+          React.createElement(ToggleSection, {
+            label: 'Zobrazovať informácie o tíme (bublinky)',
+            checked: displayTeamBubbles,
+            onChange: handleToggleTeamBubbles,
+            disabled: loading
+          })
+        ),
 
         // Skupina tlačidiel
         (hasActiveNotifications || hasDeletedByMeNotifications) && React.createElement(
