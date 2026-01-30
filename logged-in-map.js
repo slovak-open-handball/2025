@@ -148,7 +148,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     className: `
                         flex flex-col items-center justify-center mb-5 md:mb-7
                         p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl
-                        bg-gradient-to-r from-blue-600 to-indigo-700 text-white
+                        bg-white text-black
                     `
                 },
                 React.createElement(
