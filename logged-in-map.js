@@ -129,21 +129,21 @@ const AddGroupsApp = ({ userProfileData }) => {
             L.control.zoomHome = options => new L.Control.ZoomHome(options);
             L.control.zoomHome().addTo(leafletMap.current);
 
-            const logCurrentView = () => {
-                if (!leafletMap.current) return;
-                const center = leafletMap.current.getCenter();
-                const zoom = leafletMap.current.getZoom();
-                const bounds = leafletMap.current.getBounds();
-                console.log('╔══════════════════════════════════════════════╗');
-                console.log('║ Aktuálne zobrazenie mapy ║');
-                console.log('╠══════════════════════════════════════════════╣');
-                console.log(`║ Center (lat, lng) : ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
-                console.log(`║ Zoom              : ${zoom}`);
-                console.log(`║ Bounds            :`);
-                console.log(`║   severozápad     : ${bounds.getNorthWest().lat.toFixed(6)}, ${bounds.getNorthWest().lng.toFixed(6)}`);
-                console.log(`║   juhovýchod      : ${bounds.getSouthEast().lat.toFixed(6)}, ${bounds.getSouthEast().lng.toFixed(6)}`);
-                console.log('╚══════════════════════════════════════════════╝');
-            };
+//            const logCurrentView = () => {
+//                if (!leafletMap.current) return;
+//                const center = leafletMap.current.getCenter();
+//                const zoom = leafletMap.current.getZoom();
+//                const bounds = leafletMap.current.getBounds();
+//                console.log('╔══════════════════════════════════════════════╗');
+//                console.log('║ Aktuálne zobrazenie mapy ║');
+//                console.log('╠══════════════════════════════════════════════╣');
+//                console.log(`║ Center (lat, lng) : ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
+//                console.log(`║ Zoom              : ${zoom}`);
+//                console.log(`║ Bounds            :`);
+//                console.log(`║   severozápad     : ${bounds.getNorthWest().lat.toFixed(6)}, ${bounds.getNorthWest().lng.toFixed(6)}`);
+//                console.log(`║   juhovýchod      : ${bounds.getSouthEast().lat.toFixed(6)}, ${bounds.getSouthEast().lng.toFixed(6)}`);
+//                console.log('╚══════════════════════════════════════════════╝');
+//            };
 
             setTimeout(logCurrentView, 500);
             leafletMap.current.on('moveend zoomend resize', logCurrentView);
