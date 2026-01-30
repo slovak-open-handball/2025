@@ -254,11 +254,11 @@ useEffect(() => {
                 L.DomEvent.on(this._zoomIn, 'click', L.DomEvent.stopPropagation);
                 L.DomEvent.on(this._zoomIn, 'click', () => map.zoomIn());
 
-                // 🏠 (domov – globálne východzie)
+                // 🏠 (domov – vždy z databázy / aktuálneho stavu)
                 this._home = L.DomUtil.create('a', 'leaflet-control-zoom-home', container);
                 this._home.innerHTML = '🏠';
                 this._home.href = '#';
-                this._home.title = 'Pôvodné zobrazenie (globálne)';
+                this._home.title = 'Pôvodné zobrazenie (z databázy)';
                 L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
                 L.DomEvent.on(this._home, 'click', () => {
                     if (leafletMap.current) {
@@ -307,10 +307,11 @@ useEffect(() => {
                         updatedAt: Timestamp.now()
                     }, { merge: true });
 
+                    // Aktualizujeme stav – tým sa zmení aj to, kam sa vráti domček
                     setDefaultCenter([center.lat, center.lng]);
                     setDefaultZoom(zoom);
 
-                    // Automaticky posunieme mapu (pre vizuálnu spätnú väzbu)
+                    // Pre vizuálnu spätnú väzbu – posunieme mapu (aj keď sme už tam)
                     map.setView([center.lat, center.lng], zoom, { animate: true });
 
                     window.showGlobalNotification('Globálne východzie uložené a nastavené!', 'success');
@@ -324,7 +325,7 @@ useEffect(() => {
         };
         setGlobalHome.addTo(leafletMap.current);
 
-        // Logovanie pohybu mapy
+        // Logovanie pohybu
         leafletMap.current.on('moveend zoomend resize', () => {
             const c = leafletMap.current.getCenter();
             console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
