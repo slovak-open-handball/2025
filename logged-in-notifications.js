@@ -134,7 +134,7 @@ function NotificationsApp() {
 
   // NEW STATE FOR NOTIFICATIONS TOGGLE
   const [displayNotifications, setDisplayNotifications] = React.useState(false);
-
+  const [displayTeamBubbles, setDisplayTeamBubbles] = React.useState(false);
 
   const [notifications, setNotifications] = React.useState([]);
   const [allAdminUids, setAllAdminUids] = React.useState([]); // New state for storing UIDs of all administrators
@@ -199,34 +199,46 @@ function NotificationsApp() {
 
     // NEW EFFECT: Listen for real-time updates to the 'displayNotifications' field
     React.useEffect(() => {
-        let unsubscribeNotificationsToggle;
+        let unsubscribeUserDoc;
+    
         if (db && user) {
-            console.log("NotificationsApp: Setting up onSnapshot for user notifications toggle.");
+            console.log("NotificationsApp: Setting up onSnapshot for user settings (displayNotifications + displayTeamBubbles).");
+    
             const userDocRef = doc(db, 'users', user.uid);
-            unsubscribeNotificationsToggle = onSnapshot(userDocRef, (docSnapshot) => {
+            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    // Update the state with the latest value from the database
+    
+                    // displayNotifications
                     if (data.hasOwnProperty('displayNotifications')) {
                         setDisplayNotifications(data.displayNotifications);
-                        console.log("NotificationsApp: 'displayNotifications' value updated from database:", data.displayNotifications);
+                    }
+    
+                    // displayTeamBubbles – NOVÉ
+                    if (data.hasOwnProperty('displayTeamBubbles')) {
+                        setDisplayTeamBubbles(data.displayTeamBubbles);
+                        console.log("displayTeamBubbles updated:", data.displayTeamBubbles);
+                    } else {
+                        // Ak pole ešte neexistuje → nastavíme default (napr. true)
+                        // Toto sa vykoná iba raz – pri prvom načítaní
+                        updateDoc(userDocRef, { displayTeamBubbles: true })
+                            .then(() => console.log("Initialized displayTeamBubbles = true"))
+                            .catch(err => console.error("Failed to init displayTeamBubbles:", err));
                     }
                 }
             }, (error) => {
-                console.error("NotificationsApp: Error listening to displayNotifications:", error);
-                // Handle error, e.g., display an error message
-                setUserNotificationMessage(`Chyba pri načítaní nastavení notifikácií: ${error.message}`);
+                console.error("Error listening to user document:", error);
+                setUserNotificationMessage(`Chyba pri načítaní nastavení: ${error.message}`);
                 setUserNotificationType('error');
             });
         }
-        
+    
         return () => {
-            if (unsubscribeNotificationsToggle) {
-                console.log("NotificationsApp: Unsubscribing from displayNotifications listener.");
-                unsubscribeNotificationsToggle();
+            if (unsubscribeUserDoc) {
+                unsubscribeUserDoc();
             }
         };
-    }, [db, user]); // Depend on db and user to ensure listener is set up correctly
+    }, [db, user]);
 
   // Effect for fetching all admin Uids
   React.useEffect(() => {
@@ -327,6 +339,39 @@ function NotificationsApp() {
     };
   }, [db, userProfileData, user]);
 
+  const handleToggleTeamBubbles = async () => {
+    if (!db || !user || !user.uid) {
+        setUserNotificationMessage("Chyba: Nie sú dostupné dáta používateľa alebo databázy.");
+        setUserNotificationType('error');
+        return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+        const userRef = doc(db, 'users', user.uid);
+        const newState = !displayTeamBubbles;
+
+        await updateDoc(userRef, { 
+            displayTeamBubbles: newState 
+        });
+
+        // onSnapshot to automaticky zachytí a aktualizuje stav
+        setUserNotificationMessage(
+            newState 
+                ? "Zobrazovanie informácií o tíme (bublinky) bolo zapnuté." 
+                : "Zobrazovanie informácií o tíme (bublinky) bolo vypnuté."
+        );
+        setUserNotificationType('success');
+    } catch (e) {
+        console.error("Error updating displayTeamBubbles:", e);
+        setError(`Chyba pri zmene nastavenia bubliniek: ${e.message}`);
+        setUserNotificationType('error');
+    } finally {
+        setLoading(false);
+    }
+  };
 
   // NEW HANDLER: For updating the displayNotifications field
   const handleToggleNotifications = async () => {
@@ -742,20 +787,46 @@ function NotificationsApp() {
         // Toggle switch pre notifikácie
         React.createElement(
           'div',
-          { className: 'flex items-center justify-between mb-6' },
-          React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobrazovať upozornenia'),
-          React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: displayNotifications,
-              onChange: handleToggleNotifications,
-              className: 'sr-only peer',
-              disabled: loading
-            }),
-            React.createElement('div', { 
+          { className: 'space-y-6 mb-8' },  // ← zmena: pridali sme space-y-6 pre väčší odstup
+        
+          // Prvý toggle (pôvodný)
+          React.createElement(
+            'div',
+            { className: 'flex items-center justify-between' },
+            React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobrazovať upozornenia'),
+            React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: displayNotifications,
+                onChange: handleToggleNotifications,
+                className: 'sr-only peer',
+                disabled: loading
+              }),
+              React.createElement('div', {
                 className: 'w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all',
                 style: { backgroundColor: displayNotifications ? '#47b3ff' : '' }
-            })
+              })
+            )
+          ),
+        
+          // Druhý toggle – NOVÝ
+          React.createElement(
+            'div',
+            { className: 'flex items-center justify-between' },
+            React.createElement('span', { className: 'text-lg font-semibold text-gray-700' }, 'Zobrazovať informácie o tíme (bublinky)'),
+            React.createElement('label', { className: 'relative inline-flex items-center cursor-pointer' },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: displayTeamBubbles,
+                onChange: handleToggleTeamBubbles,
+                className: 'sr-only peer',
+                disabled: loading
+              }),
+              React.createElement('div', {
+                className: 'w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all',
+                style: { backgroundColor: displayTeamBubbles ? '#47b3ff' : '' }
+              })
+            )
           )
         ),
         // Skupina tlačidiel
