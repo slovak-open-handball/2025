@@ -124,6 +124,7 @@ function addHoverListener(span) {
         let group = 'bez skupiny';
         let type = 'neznámy typ';
         let categoryFromText = null;
+        let tooltipText;
     
         // Detekcia "Kategória: Tím" – ak je priamo v texte
         const colonIndex = visibleText.indexOf(':');
