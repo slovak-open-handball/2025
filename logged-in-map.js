@@ -51,6 +51,10 @@ const AddGroupsApp = ({ userProfileData }) => {
         [49.156950, 18.882281]
     ];
 
+    // Uloženie pôvodného stredu a zoomu pre reset
+    const initialCenter = [49.2232, 18.7394];  // stred Žiliny (prispôsob si)
+    const initialZoom = 12;                    // pôvodný zoom (prispôsob si)
+
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
         try {
@@ -84,7 +88,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             if (leafletMap.current) return;
 
             leafletMap.current = L.map(mapRef.current, { zoomControl: false })
-                .fitBounds(initialBounds);
+                .setView(initialCenter, initialZoom);  // ← použijeme uložené hodnoty
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -97,7 +101,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 onAdd: function (map) {
                     const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
                     this._zoomInButton = this._createButton('+', 'Priblížiť', 'leaflet-control-zoom-in', container, () => map.zoomIn(), this);
-                    this._homeButton = this._createButton('🏠', 'Pôvodné zobrazenie', 'leaflet-control-zoom-home', container, () => map.fitBounds(initialBounds), this);
+                    this._homeButton = this._createButton('🏠', 'Pôvodné zobrazenie', 'leaflet-control-zoom-home', container, () => map.setView(initialCenter, initialZoom), this);
                     this._zoomOutButton = this._createButton('−', 'Oddialiť', 'leaflet-control-zoom-out', container, () => map.zoomOut(), this);
                     return container;
                 },
@@ -203,6 +207,14 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     }, []);
 
+    const closeDetail = () => {
+        setSelectedPlace(null);
+        // Vrátiť mapu na pôvodnú pozíciu
+        if (leafletMap.current) {
+            leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
+        }
+    };
+
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
@@ -237,7 +249,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
                         React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
                         React.createElement('button', {
-                            onClick: () => setSelectedPlace(null),
+                            onClick: closeDetail,  // ← tu sa volá funkcia s resetom mapy
                             className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
                         }, '×')
                     ),
