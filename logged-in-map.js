@@ -51,9 +51,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         [49.156950, 18.882281]
     ];
 
-    // Uloženie pôvodného stredu a zoomu pre reset
-    const initialCenter = [49.2232, 18.7394];  // stred Žiliny (prispôsob si)
-    const initialZoom = 12;                    // pôvodný zoom (prispôsob si)
+    // Uloženie pôvodného stredu a zoomu pre reset    
+    const initialCenter = [49.195340, 18.786106];
+    const initialZoom = 13;
 
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
