@@ -421,7 +421,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 // Plávajúce tlačidlo +
                 React.createElement('button', {
                     onClick: () => setShowModal(true),
-                    className: 'fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-300'
+                    className: 'fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full bg-green-600 hover:bg-green-700 text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-green-300'
                 }, '+'),
                 // Modal na pridanie miesta (bez zmeny)
                 showModal && React.createElement(
