@@ -21,26 +21,10 @@ faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.
 document.head.appendChild(faCSS);
 
 const typeIcons = {
-    sportova_hala: {
-        icon: 'fa-futbol',          // hráč s loptou ≈ futbalová lopta
-        color: '#dc2626',           // červená (red-600)
-        bgColor: 'rgba(220,38,38,0.15)'
-    },
-    stravovanie: {
-        icon: 'fa-utensils',        // príbor
-        color: '#16a34a',           // zelená (green-600)
-        bgColor: 'rgba(22,163,74,0.15)'
-    },
-    ubytovanie: {
-        icon: 'fa-bed',             // posteľ
-        color: '#6b7280',           // sivá (gray-500)
-        bgColor: 'rgba(107,114,128,0.15)'
-    },
-    zastavka: {
-        icon: 'fa-bus',             // autobus
-        color: '#2563eb',           // modrá (blue-600)
-        bgColor: 'rgba(37,99,235,0.15)'
-    }
+    sportova_hala: { icon: 'fa-futbol', color: '#dc2626' },
+    stravovanie:   { icon: 'fa-utensils', color: '#16a34a' },
+    ubytovanie:    { icon: 'fa-bed',      color: '#6b7280' },
+    zastavka:      { icon: 'fa-bus',      color: '#2563eb' }
 };
 
 // Global notification helper
