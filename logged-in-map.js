@@ -1,11 +1,11 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint } 
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect, useRef } = React;
 
-// Leaflet CDN
+// Leaflet + Font Awesome
 const leafletCSS = document.createElement('link');
 leafletCSS.rel = 'stylesheet';
 leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -20,11 +20,23 @@ faCSS.rel = 'stylesheet';
 faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
 document.head.appendChild(faCSS);
 
+// Globálne predvolené hodnoty (fallback)
+const DEFAULT_CENTER = [49.195340, 18.786106];
+const DEFAULT_ZOOM = 13;
+
+// Typy a ikony značiek
 const typeIcons = {
     sportova_hala: { icon: 'fa-futbol', color: '#dc2626' },
     stravovanie:   { icon: 'fa-utensils', color: '#16a34a' },
     ubytovanie:    { icon: 'fa-bed',      color: '#6b7280' },
     zastavka:      { icon: 'fa-bus',      color: '#2563eb' }
+};
+
+const typeLabels = {
+    sportova_hala: "Športová hala",
+    ubytovanie:    "Ubytovanie",
+    stravovanie:   "Stravovanie",
+    zastavka:      "Zastávka",
 };
 
 // Global notification helper
@@ -66,222 +78,60 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [editName, setEditName] = useState('');
     const [editType, setEditType] = useState('');
 
-    const initialCenter = [49.195340, 18.786106];
-    const initialZoom = 13;
+    // Globálne východzie zobrazenie (načítané z DB)
+    const [defaultCenter, setDefaultCenter] = useState(DEFAULT_CENTER);
+    const [defaultZoom, setDefaultZoom] = useState(DEFAULT_ZOOM);
 
-    const typeLabels = {
-        sportova_hala: "Športová hala",
-        ubytovanie:    "Ubytovanie",
-        stravovanie:   "Stravovanie",
-        zastavka:      "Zastávka",
-    };
+    // Referencia na globálny dokument nastavení
+    const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
 
-    // ──────────────────────────────────────────────
-    // Helper funkcie
-    // ──────────────────────────────────────────────
+    // Načítanie globálneho východzieho zobrazenia
+    useEffect(() => {
+        if (!window.db) return;
 
-    const handleSaveNameAndType = async () => {
-        if (!selectedPlace || !window.db) return;
-        if (!editName.trim() || !editType) {
-            window.showGlobalNotification('Názov a typ musia byť vyplnené', 'error');
-            return;
-        }
-    
-        try {
-            const placeRef = doc(window.db, 'places', selectedPlace.id);
-            await updateDoc(placeRef, {
-                name: editName.trim(),
-                type: editType,
-                updatedAt: Timestamp.now(),
-            });
-
-            // Okamžitá aktualizácia vybraného miesta v UI
-            setSelectedPlace(prev => ({
-                ...prev,
-                name: editName.trim(),
-                type: editType,
-            }));
-    
-            // Aktualizácia aj v zozname miest (aby marker tooltip / iné zobrazenie bolo aktuálne)
-            setPlaces(prevPlaces =>
-                prevPlaces.map(p =>
-                    p.id === selectedPlace.id
-                        ? { ...p, name: editName.trim(), type: editType }
-                        : p
-                )
-            );
-
-            window.showGlobalNotification('Názov a typ boli aktualizované', 'success');
-            setIsEditingNameAndType(false);
-        } catch (err) {
-            console.error("Chyba pri ukladaní názvu a typu:", err);
-            window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
-        }
-    };
-
-    const debounce = (func, wait) => {
-        let timeout;
-        return (...args) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func(...args), wait);
-        };
-    };
-
-    const handleSaveNewLocation = async () => {
-        if (!selectedPlace || !tempLocation || !window.db) return;
-        try {
-            const placeRef = doc(window.db, 'places', selectedPlace.id);
-            await updateDoc(placeRef, {
-                location: new GeoPoint(tempLocation.lat, tempLocation.lng),
-                updatedAt: Timestamp.now(),
-            });
-            window.showGlobalNotification('Poloha bola aktualizovaná', 'success');
-            setIsEditingLocation(false);
-            setTempLocation(null);
-            if (editMarkerRef.current) {
-                if (editMarkerRef.current._clickHandler) {
-                    leafletMap.current.off('click', editMarkerRef.current._clickHandler);
+        const loadGlobalView = async () => {
+            try {
+                const snap = await getDoc(globalViewRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.center && typeof data.zoom === 'number') {
+                        setDefaultCenter([data.center.lat, data.center.lng]);
+                        setDefaultZoom(data.zoom);
+                        console.log('Načítané globálne východzie zobrazenie:', data);
+                    }
                 }
-                editMarkerRef.current.remove();
-                editMarkerRef.current = null;
+            } catch (err) {
+                console.error('Chyba pri načítaní globálneho zobrazenia:', err);
             }
-        } catch (err) {
-            console.error("Chyba pri ukladaní novej polohy:", err);
-            window.showGlobalNotification('Nepodarilo sa uložiť novú polohu', 'error');
-        }
-    };
+        };
 
-    const handleCancelEditLocation = () => {
-        setIsEditingLocation(false);
-        setTempLocation(null);
-        if (editMarkerRef.current) {
-            if (editMarkerRef.current._clickHandler) {
-                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
-            }
-            editMarkerRef.current.remove();
-            editMarkerRef.current = null;
-        }
-    };
+        loadGlobalView();
+    }, []);
 
-    const searchAddress = async (query) => {
-        if (query.length < 3) {
-            setAddressSuggestions([]);
-            return;
-        }
-        try {
-            const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=101bfa135bcd4d569450fd3f6e43a659&lang=sk&limit=6`;
-            const response = await fetch(url, {
-                headers: { 'User-Agent': 'MapaAplikacia/1.0 (miloslav.mihucky@gmail.com)' }
-            });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            setAddressSuggestions(data.features || []);
-        } catch (err) {
-            console.error("Chyba pri vyhľadávaní adresy:", err);
-            setAddressSuggestions([]);
-        }
-    };
-
-    const debouncedSearch = debounce(searchAddress, 500);
-
-    const selectAddress = (suggestion) => {
-        const props = suggestion.properties || {};
-        const lat = parseFloat(props.lat);
-        const lon = parseFloat(props.lon);
-        if (!isNaN(lat) && !isNaN(lon)) {
-            leafletMap.current.setView([lat, lon], 18, { animate: true });
-            const name = props.name || (props.formatted || '').split(',')[0].trim();
-            setNewPlaceName(name);
-            setAddressSearch(props.formatted || '');
-            setAddressSuggestions([]);
-        }
-    };
-
-    const handleAddPlace = async () => {
-        if (!newPlaceName.trim() || !newPlaceType || !window.db) return;
-        try {
-            const center = leafletMap.current.getCenter();
-            const placeData = {
-                name: newPlaceName.trim(),
-                type: newPlaceType,
-                location: new GeoPoint(center.lat, center.lng),
-                createdAt: Timestamp.now(),
-            };
-            await addDoc(collection(window.db, 'places'), placeData);
-            setNewPlaceName('');
-            setNewPlaceType('');
-            setAddressSearch('');
-            setAddressSuggestions([]);
-            setShowModal(false);
-            window.showGlobalNotification('Miesto bolo pridané!', 'success');
-        } catch (err) {
-            console.error("Chyba pri pridávaní miesta:", err);
-            window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
-        }
-    };
-
-    const handleDeletePlace = async () => {
-        if (!selectedPlace || !window.db) return;
-        if (!confirm(`Naozaj chcete odstrániť miesto "${selectedPlace.name || 'bez názvu'}"?`)) return;
-        try {
-            await deleteDoc(doc(window.db, 'places', selectedPlace.id));
-            window.showGlobalNotification('Miesto bolo odstránené', 'success');
-            closeDetail();
-        } catch (err) {
-            console.error("Chyba pri odstraňovaní:", err);
-            window.showGlobalNotification('Nepodarilo sa odstrániť miesto', 'error');
-        }
-    };
-
-    const closeDetail = () => {
-        setSelectedPlace(null);
-        setIsEditingLocation(false);
-        setTempLocation(null);
-        setIsEditingNameAndType(false);
-        if (editMarkerRef.current) {
-            if (editMarkerRef.current._clickHandler) {
-                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
-            }
-            editMarkerRef.current.remove();
-            editMarkerRef.current = null;
-        }
-        if (leafletMap.current) {
-            leafletMap.current.setView(initialCenter, initialZoom, { animate: true });
-        }
-    };
-
-    const formatDate = (ts) => {
-        if (!ts) return '—';
-        if (ts?.toDate?.()) return ts.toDate().toLocaleString('sk-SK');
-        if (ts instanceof Date) return ts.toLocaleString('sk-SK');
-        if (typeof ts === 'number') return new Date(ts).toLocaleString('sk-SK');
-        return String(ts);
-    };
-
-    // ──────────────────────────────────────────────
-    // useEffect – mapa + načítanie dát
-    // ──────────────────────────────────────────────
-
+    // Inicializácia mapy a načítanie miest
     useEffect(() => {
         let unsubscribePlaces = null;
 
         const initMap = () => {
             if (leafletMap.current) return;
+
             leafletMap.current = L.map(mapRef.current, { zoomControl: false })
-                .setView(initialCenter, initialZoom);
+                .setView(defaultCenter, defaultZoom);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
-            // Custom zoom + home control
+            // Custom zoom + home control (🏠 vracia na globálne východzie)
             L.Control.ZoomHome = L.Control.extend({
                 options: { position: 'topleft' },
                 onAdd: function (map) {
                     const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
                     this._zoomIn = this._createButton('+', 'Priblížiť', 'leaflet-control-zoom-in', container, () => map.zoomIn(), this);
-                    this._home   = this._createButton('🏠', 'Pôvodné zobrazenie', 'leaflet-control-zoom-home', container, () => map.setView(initialCenter, initialZoom), this);
+                    this._home = this._createButton('🏠', 'Pôvodné zobrazenie (globálne)', 'leaflet-control-zoom-home', container, () => {
+                        map.setView(defaultCenter, defaultZoom);
+                    }, this);
                     this._zoomOut = this._createButton('−', 'Oddialiť', 'leaflet-control-zoom-out', container, () => map.zoomOut(), this);
                     return container;
                 },
@@ -303,8 +153,40 @@ const AddGroupsApp = ({ userProfileData }) => {
             L.control.zoomHome = function(options) {
                 return new L.Control.ZoomHome(options);
             };
-          
+
             L.control.zoomHome().addTo(leafletMap.current);
+
+            // Tlačidlo ★ – nastaviť aktuálne zobrazenie ako globálne východzie
+            const setGlobalHome = L.control({ position: 'topright' });
+            setGlobalHome.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                div.innerHTML = '<a href="#" title="Nastaviť aktuálne zobrazenie ako východzie pre všetkých" style="width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;">★</a>';
+                div.firstChild.onclick = async function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const center = map.getCenter();
+                    const zoom = map.getZoom();
+
+                    try {
+                        await setDoc(globalViewRef, {
+                            center: { lat: center.lat, lng: center.lng },
+                            zoom: zoom,
+                            updatedAt: Timestamp.now()
+                        }, { merge: true });
+
+                        setDefaultCenter([center.lat, center.lng]);
+                        setDefaultZoom(zoom);
+
+                        window.showGlobalNotification('Globálne východzie zobrazenie uložené!', 'success');
+                    } catch (err) {
+                        console.error('Chyba pri ukladaní globálneho zobrazenia:', err);
+                        window.showGlobalNotification('Nepodarilo sa uložiť', 'error');
+                    }
+                };
+                return div;
+            };
+            setGlobalHome.addTo(leafletMap.current);
 
             leafletMap.current.on('moveend zoomend resize', () => {
                 const c = leafletMap.current.getCenter();
@@ -320,6 +202,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             leafletJS.onload = initMap;
         }
 
+        // Načítanie miest
         if (window.db) {
             unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
                 const loadedPlaces = [];
@@ -336,22 +219,22 @@ const AddGroupsApp = ({ userProfileData }) => {
                     });
                 });
                 setPlaces(loadedPlaces);
-            
+
                 if (leafletMap.current) {
                     if (!placesLayerRef.current) {
                         placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
                     } else {
                         placesLayerRef.current.clearLayers();
                     }
-            
+
                     loadedPlaces.forEach(place => {
                         if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
-            
+
                         const typeConfig = typeIcons[place.type] || {
                             icon: 'fa-map-pin',
                             color: '#6b7280'
                         };
-            
+
                         const markerHtml = `
                             <div style="
                                 background: white;
@@ -369,21 +252,21 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 <i class="fa-solid ${typeConfig.icon}"></i>
                             </div>
                         `;
-            
+
                         const customIcon = L.divIcon({
                             html: markerHtml,
                             className: 'custom-marker-no-border',
                             iconSize: [38, 38],
                             iconAnchor: [19, 19]
                         });
-            
+
                         const marker = L.marker([place.lat, place.lng], { icon: customIcon });
-            
+
                         marker.on('click', () => {
                             setSelectedPlace(place);
                             leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
                         });
-            
+
                         placesLayerRef.current.addLayer(marker);
                     });
                 }
@@ -397,36 +280,28 @@ const AddGroupsApp = ({ userProfileData }) => {
                 leafletMap.current = null;
             }
         };
-    }, []);
+    }, [defaultCenter, defaultZoom]);
 
     // ──────────────────────────────────────────────
-    // RENDER (tu bola chyba – extra čiarka po detail paneli)
+    // RENDER
     // ──────────────────────────────────────────────
-
     return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
-
-        React.createElement('div', { className: 'w-full max-w-[95vw] bg-white rounded-xl shadow-2xl p-3 sm:p-6 md:p-8' },
-
+        React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-10' },
             React.createElement('div', { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
                 React.createElement('h2', { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center' }, 'Mapa')
             ),
-
             React.createElement('div', { className: 'relative' },
-
                 React.createElement('div', {
                     id: 'map',
                     ref: mapRef,
-                    className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[70vh] md:h-[70vh] min-h-[400px]'
+                    className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[70vh] md:h-[82vh] min-h-[450px]'
                 }),
-
-                // Detail panel (podmienene)
                 selectedPlace && React.createElement(
                     'div',
                     {
-                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[70vh] md:h-[70vh] min-h-[400px]
+                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[70vh] md:h-[82vh] min-h-[450px]
                                     bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300`
                     },
-
                     React.createElement('div', { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
                         React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
                         React.createElement('button', {
@@ -434,7 +309,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                             className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
                         }, '×')
                     ),
-
                     React.createElement('div', { className: 'p-5 flex-1 overflow-y-auto' },
                         React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
                         React.createElement('p', { className: 'text-gray-600 mb-3' },
@@ -446,13 +320,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                             tempLocation
                                 ? `${tempLocation.lat.toFixed(6)}, ${tempLocation.lng.toFixed(6)} (dočasné)`
                                 : `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
-                        ),
-//                        selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600 mb-6' },
-//                            React.createElement('strong', null, 'Vytvorené: '),
-//                            formatDate(selectedPlace.createdAt)
-//                        )
+                        )
                     ),
-
                     React.createElement('div', { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
                         React.createElement('button', {
                             onClick: () => {
@@ -462,7 +331,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                             },
                             className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
                         }, 'Upraviť názov a typ'),
-
                         isEditingLocation
                             ? React.createElement('div', { className: 'flex gap-2' },
                                 React.createElement('button', {
@@ -486,32 +354,27 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 html: '<div style="background:red;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>'
                                             })
                                         }).addTo(leafletMap.current);
-
                                         editMarkerRef.current.on('dragend', e => {
                                             const pos = e.target.getLatLng();
                                             setTempLocation({ lat: pos.lat, lng: pos.lng });
                                         });
-
                                         const clickHandler = e => {
                                             setTempLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
                                             if (editMarkerRef.current) editMarkerRef.current.setLatLng(e.latlng);
                                         };
-
                                         leafletMap.current.on('click', clickHandler);
                                         editMarkerRef.current._clickHandler = clickHandler;
                                     }
                                 },
                                 className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
                             }, 'Upraviť polohu'),
-
                         React.createElement('button', {
                             onClick: handleDeletePlace,
                             className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition'
                         }, 'Odstrániť miesto')
                     )
                 ),
-
-                // Editácia názvu + typu (modal)
+                // Edit modál názov + typ
                 isEditingNameAndType && React.createElement(
                     'div',
                     { className: 'fixed inset-0 z-[2100] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
@@ -555,14 +418,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-
                 // Plávajúce tlačidlo +
                 React.createElement('button', {
                     onClick: () => setShowModal(true),
                     className: 'fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-300'
                 }, '+'),
-
-                // Modal na pridanie nového miesta
+                // Modal na pridanie miesta (bez zmeny)
                 showModal && React.createElement(
                     'div',
                     { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
@@ -645,7 +506,6 @@ const AddGroupsApp = ({ userProfileData }) => {
 // ──────────────────────────────────────────────
 
 let isEmailSyncListenerSetup = false;
-
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const root = document.getElementById('root');
@@ -678,7 +538,6 @@ const handleDataUpdateAndRender = (event) => {
             });
             isEmailSyncListenerSetup = true;
         }
-
         ReactDOM.createRoot(root).render(React.createElement(AddGroupsApp, { userProfileData }));
     } else {
         ReactDOM.createRoot(root).render(
