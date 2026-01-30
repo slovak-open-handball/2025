@@ -199,23 +199,27 @@ const AddGroupsApp = ({ userProfileData }) => {
 console.log(`╚════════════════════════════════════════════════════════════╝`);
 
                 if (leafletMap.current) {
+                    // Ak vrstva ešte neexistuje → vytvoríme ju a pridáme do mapy
                     if (!window.placesLayer) {
                         window.placesLayer = L.layerGroup().addTo(leafletMap.current);
+                        console.log("Vytvorená a pridaná nová placesLayer do mapy");
                     } else {
                         window.placesLayer.clearLayers();
+                        console.log("Vymazané staré markery v existujúcej placesLayer");
                     }
-
+                
                     loadedPlaces.forEach(place => {
-                        // Štandardný špendlík (defaultná ikona Leaflet)
-                        const marker = L.marker([place.lat, place.lng]);
-
+                        const marker = L.marker([place.lat, place.lng]);  // štandardný špendlík
+                
                         marker.bindPopup(`
-                            <b>${place.name}</b><br>
-                            <span style="color:#666;">Typ: ${place.type}</span>
+                            <b>${place.name || '(bez názvu)'}</b><br>
+                            <span style="color:#666;">Typ: ${place.type || '(nevyplnený)'}</span>
                         `);
-
+                
                         window.placesLayer.addLayer(marker);
                     });
+                
+                    console.log(`Pridaných ${loadedPlaces.length} markerov na mapu`);
                 }
             }, (err) => {
                 console.error("Chyba pri načítavaní miest:", err);
