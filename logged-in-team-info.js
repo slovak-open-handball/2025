@@ -272,33 +272,58 @@ function addHoverListener(span) {
         if (teamData) {
             console.log("ÚPLNÉ DÁTA Z DATABÁZY:");
             console.dir(teamData);
-
-            const playerCount = (teamData.playerDetails || []).length;
-            const womenCount = (teamData.womenTeamMemberDetails || []).length;
-            const menCount = (teamData.menTeamMemberDetails || []).length;
-            const driverMaleCount = (teamData.driverDetailsMale || []).length;
-            const driverFemaleCount = (teamData.driverDetailsFemale || []).length;
-            const totalPeople = playerCount + womenCount + menCount + driverMaleCount + driverFemaleCount;
-
-            const packageName   = teamData.packageDetails?.name   || '—';
-            const accommodation = teamData.accommodation?.type    || '—';
-            const arrivalType   = teamData.arrival?.type          || '—';
-            const arrivalTime   = teamData.arrival?.time ? ` (${teamData.arrival.time})` : '';
-
+        
+            const playerCount       = (teamData.playerDetails          || []).length;
+            const womenCount        = (teamData.womenTeamMemberDetails || []).length;
+            const menCount          = (teamData.menTeamMemberDetails   || []).length;
+            const driverMaleCount   = (teamData.driverDetailsMale      || []).length;
+            const driverFemaleCount = (teamData.driverDetailsFemale    || []).length;
+        
+            const totalPeople = playerCount + womenCount + menCount 
+                              + driverMaleCount + driverFemaleCount;
+        
+            const packageName    = teamData.packageDetails?.name || '—';
+            const accommodation  = teamData.accommodation?.type  || '—';
+            const arrivalType    = teamData.arrival?.type        || '—';
+            const arrivalTime    = teamData.arrival?.time 
+                ? ` (${teamData.arrival.time})` 
+                : '';
+        
             const displayCategory = teamData.category || category || 'bez kategórie';
-
+        
+            // Zoznam riadkov, ktoré chceme zobraziť (iba tie s počtom > 0)
+            const teamMemberLines = [];
+        
+            if (playerCount > 0) {
+                teamMemberLines.push(`  • hráči: ${playerCount}`);
+            }
+            if (womenCount > 0) {
+                teamMemberLines.push(`  • člen RT (ženy): ${womenCount}`);
+            }
+            if (menCount > 0) {
+                teamMemberLines.push(`  • člen RT (muži): ${menCount}`);
+            }
+            if (driverMaleCount > 0) {
+                teamMemberLines.push(`  • šofér (muži): ${driverMaleCount}`);
+            }
+            if (driverFemaleCount > 0) {
+                teamMemberLines.push(`  • šofér (ženy): ${driverFemaleCount}`);
+            }
+        
+            // Ak nie je žiadny člen tímu (veľmi nepravdepodobné, ale pre istotu)
+            const membersText = teamMemberLines.length > 0 
+                ? teamMemberLines.join('\n')
+                : '  (žiadni členovia tímu v databáze)';
+        
             currentTooltipText = `${displayCategory} → ${teamName}
 Počet osôb celkom: ${totalPeople}
-  • hráči: ${playerCount}
-  • člen RT (ženy): ${womenCount}
-  • člen RT (muži): ${menCount}
-  • šofér (ženy): ${driverFemaleCount}
-  • šofér (muži): ${driverMaleCount}
+${membersText}
+
 Balík: ${packageName}
 Ubytovanie: ${accommodation}
 Doprava: ${arrivalType}${arrivalTime}`;
-
-            // aktualizujeme tooltip – ak stále visí myš nad spanom
+        
+            // aktualizujeme tooltip
             showTooltipUnderElement(currentTooltipText, li);
         } else {
             currentTooltipText = `${teamName || '(bez názvu)'}\n(údaje sa nenašli v databáze)`;
