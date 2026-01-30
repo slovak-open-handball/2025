@@ -142,11 +142,6 @@ function addHoverListener(span) {
             category = categoryFromText;
         }
     
-        // Počiatočný tooltip (pred načítaním dát)
-        if (category && category !== 'neznáma kategória') {
-            tooltipText = `${category} → ${teamName}`;
-        }
-    
         const li = e.target.closest('li');
         if (!li) return;
     
