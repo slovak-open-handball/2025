@@ -79,6 +79,28 @@ const AddGroupsApp = ({ userProfileData }) => {
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
+            const logCurrentView = () => {
+                if (!leafletMap.current) return;
+
+                const center = leafletMap.current.getCenter();
+                const zoom = leafletMap.current.getZoom();
+                const bounds = leafletMap.current.getBounds();
+        
+                console.log('╔══════════════════════════════════════════════╗');
+                console.log('║          Aktuálne zobrazenie mapy            ║');
+                console.log('╠══════════════════════════════════════════════╣');
+                console.log(`║ Center (lat, lng) : ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
+                console.log(`║ Zoom              : ${zoom}`);
+                console.log(`║ Bounds (lat,lng)  :`);
+                console.log(`║   severozápad     : ${bounds.getNorthWest().lat.toFixed(6)}, ${bounds.getNorthWest().lng.toFixed(6)}`);
+                console.log(`║   juhovýchod      : ${bounds.getSouthEast().lat.toFixed(6)}, ${bounds.getSouthEast().lng.toFixed(6)}`);
+                console.log('╚══════════════════════════════════════════════╝');
+        
+                // Ak chceš kratšiu verziu, stačí toto:
+                // console.log(`map view → center: [${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}], zoom: ${zoom}`);
+            };
+            
+
             // Voliteľné: centruj mapu podľa veľkosti okna po načítaní (už tam bolo)
             setTimeout(() => {
                 if (leafletMap.current) {
