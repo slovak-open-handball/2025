@@ -273,10 +273,12 @@ function addHoverListener(span) {
             console.log("ÚPLNÉ DÁTA Z DATABÁZY:");
             console.dir(teamData);
 
-            const playerCount   = (teamData.playerDetails || []).length;
-            const womenCount    = (teamData.womenTeamMemberDetails || []).length;
-            const menCount      = (teamData.menTeamMemberDetails || []).length;
-            const totalPeople   = playerCount + womenCount + menCount;
+            const playerCount = (teamData.playerDetails || []).length;
+            const womenCount = (teamData.womenTeamMemberDetails || []).length;
+            const menCount = (teamData.menTeamMemberDetails || []).length;
+            const driverMaleCount = (teamData.driverDetailsMale || []).length;
+            const driverFemaleCount = (teamData.driverDetailsFemale || []).length;
+            const totalPeople = playerCount + womenCount + menCount + driverMaleCount + driverFemaleCount;
 
             const packageName   = teamData.packageDetails?.name   || '—';
             const accommodation = teamData.accommodation?.type    || '—';
@@ -286,7 +288,12 @@ function addHoverListener(span) {
             const displayCategory = teamData.category || category || 'bez kategórie';
 
             currentTooltipText = `${displayCategory} → ${teamName}
-Počet osôb: ${totalPeople}  (hráči ${playerCount}, člen RT ženy ${womenCount}, člen RT muži ${menCount})
+Počet osôb celkom: ${totalPeople}
+  • hráči: ${playerCount}
+  • člen RT (ženy): ${womenCount}
+  • člen RT (muži): ${menCount}
+  • šofér (ženy): ${driverFemaleCount}
+  • šofér (muži): ${driverMaleCount}
 Balík: ${packageName}
 Ubytovanie: ${accommodation}
 Doprava: ${arrivalType}${arrivalTime}`;
