@@ -26,9 +26,9 @@ window.showGlobalNotification = (message, type = 'success') => {
     let typeClasses = '';
     switch (type) {
         case 'success': typeClasses = 'bg-green-500 text-white'; break;
-        case 'error':   typeClasses = 'bg-red-500 text-white';   break;
-        case 'info':    typeClasses = 'bg-blue-500 text-white';  break;
-        default:        typeClasses = 'bg-gray-700 text-white';
+        case 'error': typeClasses = 'bg-red-500 text-white'; break;
+        case 'info': typeClasses = 'bg-blue-500 text-white'; break;
+        default: typeClasses = 'bg-gray-700 text-white';
     }
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
@@ -45,9 +45,48 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [newPlaceType, setNewPlaceType] = useState('');
     const [places, setPlaces] = useState([]);
     const [selectedPlace, setSelectedPlace] = useState(null);
+    const [addressSearch, setAddressSearch] = useState('');           // hodnota v inpute adresy
+    const [addressSuggestions, setAddressSuggestions] = useState([]); // návrhy adries
 
     const initialCenter = [49.195340, 18.786106];
     const initialZoom = 13;
+
+    // Vyhľadávanie adries cez Nominatim (OpenStreetMap)
+    const searchAddress = async (query) => {
+        if (query.length < 3) {
+            setAddressSuggestions([]);
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(query)}&countrycodes=sk`
+            );
+            const data = await response.json();
+            setAddressSuggestions(data);
+        } catch (err) {
+            console.error("Chyba pri vyhľadávaní adresy:", err);
+            setAddressSuggestions([]);
+        }
+    };
+
+    // Vybrať adresu z návrhov → posunúť mapu
+    const selectAddress = (suggestion) => {
+        const lat = parseFloat(suggestion.lat);
+        const lon = parseFloat(suggestion.lon);
+
+        if (!isNaN(lat) && !isNaN(lon)) {
+            // Posunieme mapu na vybranú adresu
+            leafletMap.current.setView([lat, lon], 17, { animate: true });
+
+            // Môžeme predvyplniť názov miesta (voliteľné)
+            setNewPlaceName(suggestion.display_name.split(',')[0].trim());
+
+            // Vyčistíme návrhy a input
+            setAddressSearch(suggestion.display_name);
+            setAddressSuggestions([]);
+        }
+    };
 
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
@@ -67,6 +106,8 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             setNewPlaceName('');
             setNewPlaceType('');
+            setAddressSearch('');
+            setAddressSuggestions([]);
             setShowModal(false);
             window.showGlobalNotification('Miesto bolo pridané!', 'success');
         } catch (err) {
@@ -77,22 +118,16 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const handleDeletePlace = async () => {
         if (!selectedPlace || !window.db) return;
-
-        if (!confirm(`Naozaj chcete odstrániť miesto "${selectedPlace.name || 'bez názvu'}"?`)) {
-            return;
-        }
+        if (!confirm(`Naozaj chcete odstrániť miesto "${selectedPlace.name || 'bez názvu'}"?`)) return;
 
         try {
             const placeDocRef = doc(window.db, 'places', selectedPlace.id);
             await deleteDoc(placeDocRef);
-
             console.log("Miesto odstránené:", selectedPlace.id);
             window.showGlobalNotification('Miesto bolo úspešne odstránené', 'success');
-
-            // Zatvor panel a resetuj mapu
             closeDetail();
         } catch (err) {
-            console.error("Chyba pri odstraňovaní miesta:", err);
+            console.error("Chyba pri odstraňovaní:", err);
             window.showGlobalNotification('Nepodarilo sa odstrániť miesto', 'error');
         }
     };
@@ -249,7 +284,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                     ref: mapRef,
                     className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[400px]'
                 }),
-                // Sidebar – detail vybraného miesta
                 selectedPlace && React.createElement(
                     'div',
                     {
@@ -287,7 +321,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 : new Date(selectedPlace.createdAt).toLocaleString('sk-SK')
                         )
                     ),
-                    // Tlačidlo Odstrániť
                     React.createElement(
                         'div',
                         { className: 'p-4 border-t border-gray-200 bg-gray-50' },
@@ -309,8 +342,39 @@ const AddGroupsApp = ({ userProfileData }) => {
                 { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
                 React.createElement(
                     'div',
-                    { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100' },
+                    { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
                     React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Pridať nové miesto'),
+                    
+                    // Nový input na vyhľadávanie adresy
+                    React.createElement('div', { className: 'mb-5 relative' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Vyhľadať adresu'),
+                        React.createElement('input', {
+                            type: 'text',
+                            value: addressSearch,
+                            onChange: (e) => {
+                                setAddressSearch(e.target.value);
+                                searchAddress(e.target.value);
+                            },
+                            placeholder: 'napr. Námestie SNP, Žilina',
+                            className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                        }),
+                        // Dropdown s návrhmi adries
+                        addressSuggestions.length > 0 && React.createElement(
+                            'div',
+                            { className: 'absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto' },
+                            addressSuggestions.map((sug, index) => React.createElement(
+                                'div',
+                                {
+                                    key: index,
+                                    onClick: () => selectAddress(sug),
+                                    className: 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm'
+                                },
+                                sug.display_name
+                            ))
+                        )
+                    ),
+
+                    // Názov miesta
                     React.createElement('div', { className: 'mb-5' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
                         React.createElement('input', {
@@ -321,6 +385,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                             className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                         })
                     ),
+
+                    // Typ miesta
                     React.createElement('div', { className: 'mb-6' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
                         React.createElement('select', {
@@ -335,6 +401,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                             React.createElement('option', { value: 'zastavka' }, 'Zastávka')
                         )
                     ),
+
+                    // Tlačidlá
                     React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                         React.createElement('button', {
                             onClick: () => setShowModal(false),
