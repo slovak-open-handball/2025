@@ -44,7 +44,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [newPlaceName, setNewPlaceName] = useState('');
     const [newPlaceType, setNewPlaceType] = useState('');
     const [places, setPlaces] = useState([]);
-    const [selectedPlace, setSelectedPlace] = useState(null); // ← nový stav pre sidebar
+    const [selectedPlace, setSelectedPlace] = useState(null);
 
     const initialBounds = [
         [49.242758, 18.673885],
@@ -164,14 +164,12 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                 setPlaces(loadedPlaces);
 
-                // Detailný výpis
                 console.groupCollapsed(`Načítaných miest: ${loadedPlaces.length}`);
                 loadedPlaces.forEach((p, i) => {
                     console.log(`#${i+1} → ${p.name || '?'} (${p.type}) @ ${p.lat?.toFixed(5)}, ${p.lng?.toFixed(5)}`);
                 });
                 console.groupEnd();
 
-                // Zobrazenie markerov + klik handler
                 if (leafletMap.current) {
                     if (!placesLayerRef.current) {
                         placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
@@ -183,14 +181,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                     loadedPlaces.forEach(place => {
                         if (typeof place.lat === 'number' && typeof place.lng === 'number') {
                             const marker = L.marker([place.lat, place.lng]);
-
-                            // Klik na marker → zobraz sidebar
                             marker.on('click', () => {
                                 setSelectedPlace(place);
-                                // Centruj mapu na miesto s jemným zoomom
                                 leafletMap.current.setView([place.lat, place.lng], 15, { animate: true });
                             });
-
                             placesLayerRef.current.addLayer(marker);
                         }
                     });
@@ -210,18 +204,64 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, []);
 
     return React.createElement(
-        'div', { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
+        'div',
+        { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
         React.createElement(
-            'div', { className: 'w-full max-w-7xl bg-white rounded-xl shadow-2xl p-3 sm:p-6 md:p-8' },
+            'div',
+            { className: 'w-full max-w-7xl bg-white rounded-xl shadow-2xl p-3 sm:p-6 md:p-8' },
             React.createElement(
-                'div', { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
+                'div',
+                { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
                 React.createElement('h2', { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center' }, 'Mapa')
             ),
-            React.createElement('div', {
-                id: 'map',
-                ref: mapRef,
-                className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[400px]'
-            }),
+            React.createElement(
+                'div',
+                { className: 'relative' },
+                React.createElement('div', {
+                    id: 'map',
+                    ref: mapRef,
+                    className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[400px]'
+                }),
+                // Sidebar – detail vybraného miesta (zarovnaný s mapou)
+                selectedPlace && React.createElement(
+                    'div',
+                    {
+                        className: `
+                            absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[400px]
+                            bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col
+                            transition-all duration-300
+                        `
+                    },
+                    React.createElement(
+                        'div',
+                        { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
+                        React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
+                        React.createElement('button', {
+                            onClick: () => setSelectedPlace(null),
+                            className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
+                        }, '×')
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'p-5 flex-1 overflow-y-auto' },
+                        React.createElement('h4', { className: 'text-xl font-semibold mb-3' }, selectedPlace.name || '(bez názvu)'),
+                        React.createElement('p', { className: 'text-gray-600 mb-4' },
+                            React.createElement('strong', null, 'Typ: '),
+                            selectedPlace.type || '(nevyplnený)'
+                        ),
+                        React.createElement('p', { className: 'text-gray-600 mb-4' },
+                            React.createElement('strong', null, 'Súradnice: '),
+                            `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
+                        ),
+                        selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600' },
+                            React.createElement('strong', null, 'Vytvorené: '),
+                            selectedPlace.createdAt.toDate
+                                ? selectedPlace.createdAt.toDate().toLocaleString('sk-SK')
+                                : new Date(selectedPlace.createdAt).toLocaleString('sk-SK')
+                        )
+                    )
+                )
+            ),
             // Floating + button
             React.createElement('button', {
                 onClick: () => setShowModal(true),
@@ -229,9 +269,11 @@ const AddGroupsApp = ({ userProfileData }) => {
             }, '+'),
             // Modálne okno pre pridanie
             showModal && React.createElement(
-                'div', { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
+                'div',
+                { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
                 React.createElement(
-                    'div', { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100' },
+                    'div',
+                    { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100' },
                     React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Pridať nové miesto'),
                     React.createElement('div', { className: 'mb-5' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
@@ -268,40 +310,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                             className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
                         }, 'Pridať')
                     )
-                )
-            )
-        ),
-
-        // Sidebar – detail vybraného miesta
-        selectedPlace && React.createElement(
-            'div', {
-                className: 'fixed top-0 right-0 z-[1100] w-80 h-full bg-white shadow-2xl transform transition-transform duration-300 translate-x-0 flex flex-col',
-                style: { maxWidth: '90vw' }
-            },
-            React.createElement(
-                'div', { className: 'p-5 border-b border-gray-200 flex justify-between items-center' },
-                React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
-                React.createElement('button', {
-                    onClick: () => setSelectedPlace(null),
-                    className: 'text-gray-500 hover:text-gray-800 text-2xl'
-                }, '×')
-            ),
-            React.createElement(
-                'div', { className: 'p-5 flex-1 overflow-y-auto' },
-                React.createElement('h4', { className: 'text-xl font-semibold mb-2' }, selectedPlace.name || '(bez názvu)'),
-                React.createElement('p', { className: 'text-gray-600 mb-4' },
-                    React.createElement('strong', null, 'Typ: '), 
-                    selectedPlace.type || '(nevyplnený)'
-                ),
-                React.createElement('p', { className: 'text-gray-600 mb-4' },
-                    React.createElement('strong', null, 'Súradnice: '),
-                    `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
-                ),
-                selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600' },
-                    React.createElement('strong', null, 'Vytvorené: '),
-                    selectedPlace.createdAt.toDate 
-                        ? selectedPlace.createdAt.toDate().toLocaleString('sk-SK')
-                        : new Date(selectedPlace.createdAt).toLocaleString('sk-SK')
                 )
             )
         )
@@ -347,17 +355,18 @@ const handleDataUpdateAndRender = (event) => {
             isEmailSyncListenerSetup = true;
         }
 
-        if (rootElement && ReactDOM && React) {
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
             console.log("Aplikácia vykreslená");
         }
     } else {
-        if (rootElement && ReactDOM && React) {
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
                 React.createElement(
-                    'div', { className: 'flex justify-center items-center h-full pt-16' },
+                    'div',
+                    { className: 'flex justify-center items-center h-full pt-16' },
                     React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
                 )
             );
@@ -372,11 +381,12 @@ if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     const rootElement = document.getElementById('root');
-    if (rootElement && ReactDOM && React) {
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
         root.render(
             React.createElement(
-                'div', { className: 'flex justify-center items-center h-full pt-16' },
+                'div',
+                { className: 'flex justify-center items-center h-full pt-16' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
             )
         );
