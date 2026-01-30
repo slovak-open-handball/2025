@@ -547,7 +547,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                   }, 'Uložiť zmeny')
                 )
               )
-            )
+            ),
 
             // Floating + button
             React.createElement('button', {
