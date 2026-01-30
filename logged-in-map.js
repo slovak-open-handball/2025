@@ -99,7 +99,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 // Ak chceš kratšiu verziu, stačí toto:
                 // console.log(`map view → center: [${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}], zoom: ${zoom}`);
             };
-            
+
+            setTimeout(logCurrentView, 500);   // malé oneskorenie, kým sa mapa naozaj vykreslí
+
+            // Poslucháče zmien zobrazenia
+            leafletMap.current.on('moveend', logCurrentView);     // po posunutí / dokončení dragu
+            leafletMap.current.on('zoomend', logCurrentView);     // po zmene zoomu (koleso, +/-, doubleclick...)
+            leafletMap.current.on('resize', logCurrentView);            
 
             // Voliteľné: centruj mapu podľa veľkosti okna po načítaní (už tam bolo)
             setTimeout(() => {
