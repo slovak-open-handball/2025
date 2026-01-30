@@ -70,8 +70,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             if (leafletMap.current) return;
 
             leafletMap.current = window.L.map(mapRef.current).setView(
-                [48.1486, 17.1077], // Bratislava
-                10
+                [49.2232, 18.7394],  // ← Žilina centrum
+                12                   // zoom: 12 = mesto + trocha okolia (11 = širšie, 13 = detailnejšie)
             );
 
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -79,14 +79,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
 
-            // Voliteľné: centruj mapu podľa veľkosti okna po načítaní
+            // Voliteľné: centruj mapu podľa veľkosti okna po načítaní (už tam bolo)
             setTimeout(() => {
                 if (leafletMap.current) {
                     leafletMap.current.invalidateSize();
                 }
             }, 400);
 
-            console.log("Leaflet mapa bola inicializovaná");
+            // Voliteľné: pridaj marker do stredu Žiliny (pre lepšiu orientáciu)
+            // window.L.marker([49.2232, 18.7394])
+            //     .addTo(leafletMap.current)
+            //     .bindPopup('Žilina – centrum')
+            //     .openPopup();
+
+            console.log("Leaflet mapa bola inicializovaná – centrum: Žilina");
         }
 
         return () => {
@@ -102,35 +108,34 @@ const AddGroupsApp = ({ userProfileData }) => {
         { className: 'flex-grow flex justify-center items-center p-2 sm:p-4' },
         React.createElement(
             'div',
-            { 
+            {
                 className: `
-                    w-full max-w-7xl bg-white rounded-xl shadow-2xl 
+                    w-full max-w-7xl bg-white rounded-xl shadow-2xl
                     p-3 sm:p-6 md:p-8 transform transition-all duration-500 hover:scale-[1.005]
-                ` 
+                `
             },
             React.createElement(
                 'div',
-                { 
+                {
                     className: `
-                        flex flex-col items-center justify-center mb-5 md:mb-7 
-                        p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl 
+                        flex flex-col items-center justify-center mb-5 md:mb-7
+                        p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl
                         bg-gradient-to-r from-blue-600 to-indigo-700 text-white
-                    ` 
+                    `
                 },
                 React.createElement(
-                    'h2', 
-                    { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center' }, 
+                    'h2',
+                    { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center' },
                     'Mapa'
                 )
             ),
-            // ── MAPA ───────────────────────────────────────────────
             React.createElement(
                 'div',
                 {
                     id: 'map',
                     ref: mapRef,
                     className: `
-                        w-full rounded-xl shadow-inner border border-gray-200 
+                        w-full rounded-xl shadow-inner border border-gray-200
                         h-[70vh] md:h-[80vh] min-h-[500px]
                     `
                 }
