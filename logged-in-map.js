@@ -85,6 +85,25 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Referencia na globálny dokument nastavení
     const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
 
+    const closeDetail = () => {
+        setSelectedPlace(null);
+        setIsEditingLocation(false);
+        setTempLocation(null);
+        setIsEditingNameAndType(false);
+
+        if (editMarkerRef.current) {
+            if (editMarkerRef.current._clickHandler) {
+                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
+            }
+            editMarkerRef.current.remove();
+            editMarkerRef.current = null;
+        }
+
+        if (leafletMap.current) {
+            leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+        }
+    };
+
     // Načítanie globálneho východzieho zobrazenia
     useEffect(() => {
         if (!window.db) return;
