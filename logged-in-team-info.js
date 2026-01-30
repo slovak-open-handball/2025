@@ -120,6 +120,9 @@ function addHoverListener(span) {
         let teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
 
         let tooltipText = teamName;
+        let category = 'neznáma kategória';
+        let group = 'bez skupiny';
+        let type = 'neznámy typ';
 
         // ak máme kategóriu (z : alebo z hash/DOM), pridáme ju
         if (category && category !== 'neznáma kategória') {
@@ -128,10 +131,6 @@ function addHoverListener(span) {
       
         const li = e.target.closest('li');
         if (!li) return;
-
-        let category = 'neznáma kategória';
-        let group = 'bez skupiny';
-        let type = 'neznámy typ';
 
         // -------------------------------
         // NOVÉ: Najvyššia priorita – formát "Kategória: Názov tímu"
