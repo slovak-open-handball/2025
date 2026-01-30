@@ -43,6 +43,28 @@ window.showGlobalNotification = (message, type = 'success') => {
 const AddGroupsApp = ({ userProfileData }) => {
     const mapRef = useRef(null);
     const leafletMap = useRef(null);
+    const [showModal, setShowModal] = useState(false);
+    const [newPlaceName, setNewPlaceName] = useState('');
+    const [newPlaceType, setNewPlaceType] = useState('');
+
+    const handleAddPlace = () => {
+      if (!newPlaceName.trim() || !newPlaceType) return;
+
+      console.log('Nové miesto:', {
+        name: newPlaceName.trim(),
+        type: newPlaceType,
+        // tu môžeš neskôr pridať aj súradnice z mapy kliknutím
+      });
+
+      // TODO: tu budeš ukladať do Firestore / pridávať marker na mapu
+
+      // Vyčistenie a zatvorenie
+      setNewPlaceName('');
+      setNewPlaceType('');
+      setShowModal(false);
+
+      window.showGlobalNotification('Miesto bolo pridané!', 'success');
+    };
 
     useEffect(() => {
         if (!window.L) {
@@ -114,7 +136,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         .on(link, 'dblclick', L.DomEvent.stopPropagation)
                         .on(link, 'click', L.DomEvent.preventDefault)
                         .on(link, 'click', fn, context);
-                
+
                     return link;
                 }
             });
@@ -173,7 +195,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             'div',
             {
                 className: `
-                    w-full max-w-[1400px] mx-auto bg-white rounded-xl shadow-2xl
+                    w-full max-w-7xl bg-white rounded-xl shadow-2xl
                     p-3 sm:p-6 md:p-8
                 `
             },
@@ -199,9 +221,127 @@ const AddGroupsApp = ({ userProfileData }) => {
                     ref: mapRef,
                     className: `
                         w-full rounded-xl shadow-inner border border-gray-200
-                        h-[70vh] md:h-[70vh] min-h-[400px]
+                        h-[68vh] md:h-[68vh] min-h-[400px]
                     `
                 }
+            ),
+            // Floating + button
+            React.createElement(
+                'button',
+                {
+                    onClick: () => setShowModal(true),
+                    className: `
+                        fixed bottom-6 right-6 z-[1000]
+                        w-14 h-14 rounded-full
+                        bg-blue-600 hover:bg-blue-700
+                        text-white text-3xl font-bold
+                        shadow-lg hover:shadow-xl
+                        transition-all duration-200
+                        flex items-center justify-center
+                        focus:outline-none focus:ring-4 focus:ring-blue-300
+                    `
+                },
+                '+'
+            ),
+            // Modálne okno
+            showModal && React.createElement(
+                'div',
+                { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
+                React.createElement(
+                    'div',
+                    {
+                        className: `
+                            bg-white rounded-2xl shadow-2xl
+                            w-full max-w-md mx-4 p-6
+                            transform transition-all duration-300 scale-100
+                        `
+                    },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold mb-5 text-gray-800' },
+                        'Pridať nové miesto'
+                    ),
+                    // Názov miesta
+                    React.createElement(
+                        'div',
+                        { className: 'mb-5' },
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                            'Názov miesta'
+                        ),
+                        React.createElement(
+                            'input',
+                            {
+                                type: 'text',
+                                value: newPlaceName,
+                                onChange: (e) => setNewPlaceName(e.target.value),
+                                placeholder: 'napr. Športová hala Dúbravka',
+                                className: `
+                                    w-full px-4 py-3 rounded-lg border border-gray-300
+                                    focus:border-blue-500 focus:ring-2 focus:ring-blue-200
+                                    outline-none transition
+                                `
+                            }
+                        )
+                    ),
+                    // Typ miesta
+                    React.createElement(
+                        'div',
+                        { className: 'mb-6' },
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                            'Typ miesta'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                value: newPlaceType,
+                                onChange: (e) => setNewPlaceType(e.target.value),
+                                className: `
+                                    w-full px-4 py-3 rounded-lg border border-gray-300
+                                    focus:border-blue-500 focus:ring-2 focus:ring-blue-200
+                                    outline-none transition bg-white
+                                `
+                            },
+                            React.createElement('option', { value: '' }, 'Vyberte typ'),
+                            React.createElement('option', { value: 'sportova_hala' }, 'Športová hala'),
+                            React.createElement('option', { value: 'ubytovanie' }, 'Ubytovanie'),
+                            React.createElement('option', { value: 'stravovanie' }, 'Stravovanie'),
+                            React.createElement('option', { value: 'zastavka' }, 'Zastávka')
+                        )
+                    ),
+                    // Tlačidlá
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-end gap-3 mt-6' },
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => setShowModal(false),
+                                className: `
+                                    px-5 py-2.5 rounded-lg border border-gray-300
+                                    text-gray-700 hover:bg-gray-100 transition
+                                `
+                            },
+                            'Zrušiť'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: handleAddPlace,
+                                disabled: !newPlaceName.trim() || !newPlaceType,
+                                className: `
+                                    px-6 py-2.5 rounded-lg bg-blue-600 text-white
+                                    hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
+                                    transition font-medium
+                                `
+                            },
+                            'Pridať'
+                        )
+                    )
+                )
             )
         )
     );
