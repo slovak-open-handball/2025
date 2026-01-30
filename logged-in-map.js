@@ -2,18 +2,15 @@
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
-
 // ================ Leaflet CDN importy ================
 const leafletCSS = document.createElement('link');
 leafletCSS.rel = 'stylesheet';
 leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
 document.head.appendChild(leafletCSS);
-
 const leafletJS = document.createElement('script');
 leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
 document.head.appendChild(leafletJS);
 // =====================================================================
-
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -26,9 +23,9 @@ window.showGlobalNotification = (message, type = 'success') => {
     let typeClasses = '';
     switch (type) {
         case 'success': typeClasses = 'bg-green-500 text-white'; break;
-        case 'error':   typeClasses = 'bg-red-500 text-white';   break;
-        case 'info':    typeClasses = 'bg-blue-500 text-white';  break;
-        default:        typeClasses = 'bg-gray-700 text-white';
+        case 'error': typeClasses = 'bg-red-500 text-white'; break;
+        case 'info': typeClasses = 'bg-blue-500 text-white'; break;
+        default: typeClasses = 'bg-gray-700 text-white';
     }
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
@@ -39,7 +36,6 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 };
-
 const AddGroupsApp = ({ userProfileData }) => {
     const mapRef = useRef(null);
     const leafletMap = useRef(null);
@@ -47,57 +43,57 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [newPlaceName, setNewPlaceName] = useState('');
     const [newPlaceType, setNewPlaceType] = useState('');
     const [places, setPlaces] = useState([]);
-
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
-
         try {
             if (!window.db) {
                 throw new Error("Firestore nie je inicializované");
             }
-    
+   
             // Súradnice stredu mapy (alebo môžeš neskôr umožniť kliknúť na mapu)
             const center = leafletMap.current.getCenter();
-    
+   
             const placeData = {
                 name: newPlaceName.trim(),
                 type: newPlaceType,
                 lat: center.lat,
                 lng: center.lng,
                 createdAt: Timestamp.now(),
-                // createdBy: user.uid   ak chceš vedieť kto pridal
+                // createdBy: user.uid ak chceš vedieť kto pridal
             };
-    
+   
             // Uložíme do novej kolekcie 'places'
             await addDoc(collection(window.db, 'places'), placeData);
-    
+   
             console.log("Miesto uložené do Firestore:", placeData);
-
             // Vyčistenie formulára
             setNewPlaceName('');
             setNewPlaceType('');
             setShowModal(false);
-    
+   
             window.showGlobalNotification('Miesto bolo pridané!', 'success');
         } catch (err) {
             console.error("Chyba pri ukladaní miesta:", err);
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
-
     useEffect(() => {
-        if (!window.L) {
-            console.warn("Leaflet sa ešte nenačítal...");
-            const timer = setInterval(() => {
-                if (window.L && mapRef.current && !leafletMap.current) {
-                    initMap();
-                    clearInterval(timer);
-                }
-            }, 300);
-            return () => clearInterval(timer);
-        } else {
-            initMap();
-        }
+        let unsubscribePlaces = null;
+
+        const loadLeaflet = () => {
+            if (!window.L) {
+                console.warn("Leaflet sa ešte nenačítal...");
+                const timer = setInterval(() => {
+                    if (window.L && mapRef.current && !leafletMap.current) {
+                        initMap();
+                        clearInterval(timer);
+                    }
+                }, 300);
+                return () => clearInterval(timer);
+            } else {
+                initMap();
+            }
+        };
 
         function initMap() {
             if (leafletMap.current) return;
@@ -124,46 +120,37 @@ const AddGroupsApp = ({ userProfileData }) => {
                 options: { position: 'topleft' },
                 onAdd: function (map) {
                     const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
-
                     this._zoomInButton = this._createButton(
                         '+', 'Priblížiť', 'leaflet-control-zoom-in', container,
                         () => map.zoomIn(), this
                     );
-
                     this._homeButton = this._createButton(
                         '🏠', 'Návrat na pôvodné zobrazenie', 'leaflet-control-zoom-home', container,
                         () => map.fitBounds(initialBounds), this
                     );
-
                     this._zoomOutButton = this._createButton(
                         '−', 'Oddialiť', 'leaflet-control-zoom-out', container,
                         () => map.zoomOut(), this
                     );
-
                     return container;
                 },
-
                 _createButton: function (html, title, className, container, fn, context) {
                     const link = L.DomUtil.create('a', className, container);
                     link.innerHTML = html;
                     link.href = '#';
                     link.title = title;
-
                     L.DomEvent
                         .on(link, 'click', L.DomEvent.stopPropagation)
                         .on(link, 'mousedown', L.DomEvent.stopPropagation)
                         .on(link, 'dblclick', L.DomEvent.stopPropagation)
                         .on(link, 'click', L.DomEvent.preventDefault)
                         .on(link, 'click', fn, context);
-
                     return link;
                 }
             });
-
             L.control.zoomHome = function (options) {
                 return new L.Control.ZoomHome(options);
             };
-
             L.control.zoomHome().addTo(leafletMap.current);
             // ──────────────────────────────────────────────────────────────
 
@@ -172,98 +159,83 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const center = leafletMap.current.getCenter();
                 const zoom = leafletMap.current.getZoom();
                 const bounds = leafletMap.current.getBounds();
-
                 console.log('╔══════════════════════════════════════════════╗');
                 console.log('║ Aktuálne zobrazenie mapy ║');
                 console.log('╠══════════════════════════════════════════════╣');
                 console.log(`║ Center (lat, lng) : ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
-                console.log(`║ Zoom              : ${zoom}`);
-                console.log(`║ Bounds (lat,lng)  :`);
-                console.log(`║   severozápad     : ${bounds.getNorthWest().lat.toFixed(6)}, ${bounds.getNorthWest().lng.toFixed(6)}`);
-                console.log(`║   juhovýchod      : ${bounds.getSouthEast().lat.toFixed(6)}, ${bounds.getSouthEast().lng.toFixed(6)}`);
+                console.log(`║ Zoom : ${zoom}`);
+                console.log(`║ Bounds (lat,lng) :`);
+                console.log(`║ severozápad : ${bounds.getNorthWest().lat.toFixed(6)}, ${bounds.getNorthWest().lng.toFixed(6)}`);
+                console.log(`║ juhovýchod : ${bounds.getSouthEast().lat.toFixed(6)}, ${bounds.getSouthEast().lng.toFixed(6)}`);
                 console.log('╚══════════════════════════════════════════════╝');
             };
-
             setTimeout(logCurrentView, 500);
-
             leafletMap.current.on('moveend', logCurrentView);
             leafletMap.current.on('zoomend', logCurrentView);
             leafletMap.current.on('resize', logCurrentView);
-
             setTimeout(() => {
                 if (leafletMap.current) {
                     leafletMap.current.invalidateSize();
                 }
             }, 400);
-
             console.log("Leaflet mapa bola inicializovaná – centrum: Žilina");
-
-            if (window.db) {
-                const placesRef = collection(window.db, 'places');
-            
-                // Jednorazové načítanie + listener na zmeny
-                const unsubscribe = onSnapshot(placesRef, (snapshot) => {
-                    const loadedPlaces = [];
-                    snapshot.forEach((doc) => {
-                        const data = doc.data();
-                        loadedPlaces.push({
-                            id: doc.id,
-                            name: data.name,
-                            type: data.type,
-                            lat: data.lat,
-                            lng: data.lng,
-                            // createdAt: data.createdAt?.toDate()  ak chceš čas
-                        });
-                    });
-                    
-                    setPlaces(loadedPlaces);
-                    console.log(`Načítaných miest z DB: ${loadedPlaces.length}`);
-                    
-                    // Vymažeme staré markery (ak existujú) a vytvoríme nové
-                    if (leafletMap.current) {
-                        // Ak chceš mať vrstvu len pre tieto markery, môžeš vytvoriť LayerGroup
-                        if (!window.placesLayer) {
-                            window.placesLayer = L.layerGroup().addTo(leafletMap.current);
-                        } else {
-                            window.placesLayer.clearLayers();
-                        }
-    
-                        loadedPlaces.forEach(place => {
-                            const marker = L.marker([place.lat, place.lng], {
-                                icon: L.divIcon({
-                                    className: 'custom-marker',
-                                    html: '<div style="background:#ef4444;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;border:2px solid white;">•</div>',
-                                    iconSize: [28, 28],
-                                    iconAnchor: [14, 14]
-                                })
-                            });
-    
-                            marker.bindPopup(`
-                                <b>${place.name}</b><br>
-                                <span style="color:#666;">Typ: ${place.type}</span>
-                            `);
-    
-                            window.placesLayer.addLayer(marker);
-                        });
-                    }
-                }, (err) => {
-                    console.error("Chyba pri načítavaní miest:", err);
-                });
-    
-                // Cleanup listener pri unmount
-                return () => unsubscribe();
-            }
-          }
         }
-    
+
+        loadLeaflet();
+
+        // Načítanie miest – až keď mapa existuje
+        if (window.db && leafletMap.current) {
+            const placesRef = collection(window.db, 'places');
+            unsubscribePlaces = onSnapshot(placesRef, (snapshot) => {
+                const loadedPlaces = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    loadedPlaces.push({
+                        id: doc.id,
+                        name: data.name,
+                        type: data.type,
+                        lat: data.lat,
+                        lng: data.lng,
+                    });
+                });
+                setPlaces(loadedPlaces);
+                console.log(`Načítaných miest z DB: ${loadedPlaces.length}`);
+                if (leafletMap.current) {
+                    if (!window.placesLayer) {
+                        window.placesLayer = L.layerGroup().addTo(leafletMap.current);
+                    } else {
+                        window.placesLayer.clearLayers();
+                    }
+                    loadedPlaces.forEach(place => {
+                        const marker = L.marker([place.lat, place.lng], {
+                            icon: L.divIcon({
+                                className: 'custom-marker',
+                                html: '<div style="background:#ef4444;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;border:2px solid white;">•</div>',
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14]
+                            })
+                        });
+                        marker.bindPopup(`
+                            <b>${place.name}</b><br>
+                            <span style="color:#666;">Typ: ${place.type}</span>
+                        `);
+                        window.placesLayer.addLayer(marker);
+                    });
+                }
+            }, (err) => {
+                console.error("Chyba pri načítavaní miest:", err);
+            });
+        }
+
+        // Cleanup
         return () => {
+            if (unsubscribePlaces) unsubscribePlaces();
             if (leafletMap.current) {
                 leafletMap.current.remove();
                 leafletMap.current = null;
             }
         };
     }, []);
-
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center p-2 sm:p-4' },
@@ -422,41 +394,37 @@ const AddGroupsApp = ({ userProfileData }) => {
         )
     );
 };
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Zvyšok kódu (listener, renderovanie, loader) zostáva bez zmeny
 // ──────────────────────────────────────────────────────────────────────────────
-
 let isEmailSyncListenerSetup = false;
-
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
-
     if (userProfileData) {
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
             console.log("logged-in-template.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
-          
+         
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
                         const userProfileRef = doc(window.db, 'users', user.uid);
                         const docSnap = await getDoc(userProfileRef);
-          
+         
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
                                 console.log(`logged-in-map.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-                              
+                             
                                 await updateDoc(userProfileRef, { email: user.email });
-          
+         
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
                                     userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
                                     timestamp: new Date(),
                                 });
-                              
+                             
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
                             } else {
                                 console.log("logged-in-map.js: E-maily sú synchronizované.");
@@ -470,7 +438,6 @@ const handleDataUpdateAndRender = (event) => {
             });
             isEmailSyncListenerSetup = true;
         }
-
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
@@ -490,10 +457,8 @@ const handleDataUpdateAndRender = (event) => {
         }
     }
 };
-
 console.log("logged-in-map.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
 if (window.globalUserProfileData) {
     console.log("logged-in-map.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
