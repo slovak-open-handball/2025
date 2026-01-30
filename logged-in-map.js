@@ -362,47 +362,46 @@ const AddGroupsApp = ({ userProfileData }) => {
             
                     loadedPlaces.forEach(place => {
                         if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
-            
+
                         const typeConfig = typeIcons[place.type] || {
                             icon: 'fa-map-pin',
-                            color: '#6b7280',
-                            bgColor: 'rgba(107,114,128,0.2)'
+                            color: '#6b7280'
                         };
-            
+
                         const markerHtml = `
                             <div style="
-                                background: ${typeConfig.bgColor};
-                                width: 38px;
-                                height: 38px;
-                                border-radius: 50%;
-                                border: 3px solid ${typeConfig.color};
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                box-shadow: 0 3px 6px rgba(0,0,0,0.25);
-                                color: ${typeConfig.color};
-                                font-size: 18px;
-                            ">
-                                <i class="fa-solid ${typeConfig.icon}"></i>
-                            </div>
-                        `;
-            
-                        const customIcon = L.divIcon({
-                            html: markerHtml,
-                            className: 'custom-marker-no-border',  // voliteľné – môžeš definovať v CSS
-                            iconSize: [38, 38],
-                            iconAnchor: [19, 19]
-                        });
-            
-                        const marker = L.marker([place.lat, place.lng], { icon: customIcon });
-            
-                        marker.on('click', () => {
-                            setSelectedPlace(place);
-                            leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-                        });
-            
-                        placesLayerRef.current.addLayer(marker);
+                            background: white;
+                            width: 38px;
+                            height: 38px;
+                            border-radius: 50%;
+                            border: 3px solid ${typeConfig.color};
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            box-shadow: 0 3px 8px rgba(0,0,0,0.30);
+                            color: ${typeConfig.color};
+                            font-size: 18px;
+                        ">
+                            <i class="fa-solid ${typeConfig.icon}"></i>
+                        </div>
+                    `;
+                
+                    const customIcon = L.divIcon({
+                        html: markerHtml,
+                        className: 'custom-marker-no-border',
+                        iconSize: [38, 38],
+                        iconAnchor: [19, 19]           // stred kruhu
                     });
+                
+                    const marker = L.marker([place.lat, place.lng], { icon: customIcon });
+                
+                    marker.on('click', () => {
+                        setSelectedPlace(place);
+                        leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+                    });
+                
+                    placesLayerRef.current.addLayer(marker);
+                });
                 }
             }, err => console.error("onSnapshot error:", err));
         }
