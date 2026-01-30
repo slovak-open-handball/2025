@@ -39,11 +39,12 @@ window.showGlobalNotification = (message, type = 'success') => {
 const AddGroupsApp = ({ userProfileData }) => {
     const mapRef = useRef(null);
     const leafletMap = useRef(null);
-    const placesLayerRef = useRef(null); // ← lepšie ako window, zabráni konfliktom
+    const placesLayerRef = useRef(null);
     const [showModal, setShowModal] = useState(false);
     const [newPlaceName, setNewPlaceName] = useState('');
     const [newPlaceType, setNewPlaceType] = useState('');
     const [places, setPlaces] = useState([]);
+    const [selectedPlace, setSelectedPlace] = useState(null); // ← nový stav pre sidebar
 
     const initialBounds = [
         [49.242758, 18.673885],
@@ -122,7 +123,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 if (!leafletMap.current) return;
                 const center = leafletMap.current.getCenter();
                 const zoom = leafletMap.current.getZoom();
-                const bounds = leafletMap.current.getBounds();
                 console.log(`[MAP VIEW] Center: ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)} | Zoom: ${zoom}`);
             };
 
@@ -132,7 +132,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.log("Mapa inicializovaná");
         };
 
-        // Spustenie inicializácie mapy
         if (!window.L) {
             const timer = setInterval(() => {
                 if (window.L && mapRef.current && !leafletMap.current) {
@@ -145,7 +144,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             initMap();
         }
 
-        // Načítanie miest až po inicializácii mapy
+        // Načítanie miest
         if (window.db && leafletMap.current) {
             const placesRef = collection(window.db, 'places');
             unsubscribePlaces = onSnapshot(placesRef, (snapshot) => {
@@ -172,7 +171,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 });
                 console.groupEnd();
 
-                // Zobrazenie markerov
+                // Zobrazenie markerov + klik handler
                 if (leafletMap.current) {
                     if (!placesLayerRef.current) {
                         placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
@@ -184,7 +183,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                     loadedPlaces.forEach(place => {
                         if (typeof place.lat === 'number' && typeof place.lng === 'number') {
                             const marker = L.marker([place.lat, place.lng]);
-                            marker.bindPopup(`<b>${place.name || '(bez názvu)'}</b><br>Typ: ${place.type || '-'}`);
+
+                            // Klik na marker → zobraz sidebar
+                            marker.on('click', () => {
+                                setSelectedPlace(place);
+                                // Centruj mapu na miesto s jemným zoomom
+                                leafletMap.current.setView([place.lat, place.lng], 15, { animate: true });
+                            });
+
                             placesLayerRef.current.addLayer(marker);
                         }
                     });
@@ -204,7 +210,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, []);
 
     return React.createElement(
-        'div', { className: 'flex-grow flex justify-center items-center p-2 sm:p-4' },
+        'div', { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
         React.createElement(
             'div', { className: 'w-full max-w-7xl bg-white rounded-xl shadow-2xl p-3 sm:p-6 md:p-8' },
             React.createElement(
@@ -216,10 +222,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                 ref: mapRef,
                 className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[400px]'
             }),
+            // Floating + button
             React.createElement('button', {
                 onClick: () => setShowModal(true),
                 className: 'fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-300'
             }, '+'),
+            // Modálne okno pre pridanie
             showModal && React.createElement(
                 'div', { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
                 React.createElement(
@@ -260,6 +268,40 @@ const AddGroupsApp = ({ userProfileData }) => {
                             className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
                         }, 'Pridať')
                     )
+                )
+            )
+        ),
+
+        // Sidebar – detail vybraného miesta
+        selectedPlace && React.createElement(
+            'div', {
+                className: 'fixed top-0 right-0 z-[1100] w-80 h-full bg-white shadow-2xl transform transition-transform duration-300 translate-x-0 flex flex-col',
+                style: { maxWidth: '90vw' }
+            },
+            React.createElement(
+                'div', { className: 'p-5 border-b border-gray-200 flex justify-between items-center' },
+                React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
+                React.createElement('button', {
+                    onClick: () => setSelectedPlace(null),
+                    className: 'text-gray-500 hover:text-gray-800 text-2xl'
+                }, '×')
+            ),
+            React.createElement(
+                'div', { className: 'p-5 flex-1 overflow-y-auto' },
+                React.createElement('h4', { className: 'text-xl font-semibold mb-2' }, selectedPlace.name || '(bez názvu)'),
+                React.createElement('p', { className: 'text-gray-600 mb-4' },
+                    React.createElement('strong', null, 'Typ: '), 
+                    selectedPlace.type || '(nevyplnený)'
+                ),
+                React.createElement('p', { className: 'text-gray-600 mb-4' },
+                    React.createElement('strong', null, 'Súradnice: '),
+                    `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
+                ),
+                selectedPlace.createdAt && React.createElement('p', { className: 'text-gray-600' },
+                    React.createElement('strong', null, 'Vytvorené: '),
+                    selectedPlace.createdAt.toDate 
+                        ? selectedPlace.createdAt.toDate().toLocaleString('sk-SK')
+                        : new Date(selectedPlace.createdAt).toLocaleString('sk-SK')
                 )
             )
         )
