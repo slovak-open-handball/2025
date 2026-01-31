@@ -89,6 +89,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     const tempMarkerRef = useRef(null);
     const moveHandlerRef = useRef(null);
 
+    const addClickHandlerRef = useRef(null);
+
     // ─── Nová funkcia na spustenie režimu pridávania ───
     const startAddingPlace = () => {
         if (isAddingPlace) return;
@@ -97,9 +99,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         setTempAddPosition(null);
         setShowModal(false);
     
-        // Čistenie starých listenerov (pre istotu)
         if (moveHandlerRef.current) {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
+            moveHandlerRef.current = null;
         }
     
         const onMouseMove = (e) => {
@@ -109,22 +111,22 @@ const AddGroupsApp = ({ userProfileData }) => {
         leafletMap.current.on('mousemove', onMouseMove);
         moveHandlerRef.current = onMouseMove;
     
-        // Použijeme .on() namiesto .once() + manuálne odstránenie
+        // ─── HLAVNÁ ZMENA ───
         const onClickConfirm = (e) => {
-            // Extra ochrana – ak už nie sme v režime, ignorujeme
             if (!isAddingPlace) return;
+    
+            console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
     
             const pos = e.latlng;
             setTempAddPosition({ lat: pos.lat, lng: pos.lng });
     
-            // Zastavíme pohyb
             leafletMap.current.off('mousemove', onMouseMove);
             moveHandlerRef.current = null;
     
-            // Zastavíme tento listener (aby sa nespustil opakovane)
+            // Odstránime tento handler (je to tá istá funkcia)
             leafletMap.current.off('click', onClickConfirm);
     
-            // Voliteľne: vytvoríme dočasný marker až po kliknutí
+            // Dočasný marker (červený)
             tempMarkerRef.current = L.marker(pos, {
                 icon: L.divIcon({
                     className: 'adding-marker pointer-events-none',
@@ -133,20 +135,21 @@ const AddGroupsApp = ({ userProfileData }) => {
                     iconAnchor: [14, 14]
                 }),
                 interactive: false,
-                bubblingMouseEvents: false
+                bubblingMouseEvents: false,
+                pane: 'overlayPane'           // nižšia vrstva ako markery miest
             }).addTo(leafletMap.current);
     
-            // Otvoríme modál
             setShowModal(true);
-    
-            // Ukončíme režim
             setIsAddingPlace(false);
         };
     
-        // Pridáme listener NA MAPU s vyššou prioritou
-        leafletMap.current.on('click', onClickConfirm, { priority: 100 });  // priorita funguje v novších verziách Leafletu
+        // Odstránime starý (ak existuje) a pridáme nový
+        if (addClickHandlerRef.current) {
+            leafletMap.current.off('click', addClickHandlerRef.current);
+        }
+        addClickHandlerRef.current = onClickConfirm;
+        leafletMap.current.on('click', onClickConfirm);
     
-        // Extra poistka – ak by sa listener nepridal správne
         console.log("Režim pridávania spustený → čakám na klik");
     };
 
@@ -154,17 +157,18 @@ const AddGroupsApp = ({ userProfileData }) => {
         setIsAddingPlace(false);
         setTempAddPosition(null);
         setShowModal(false);
-  
+    
         if (moveHandlerRef.current) {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
         }
-
-        // DÔLEŽITÉ: odstrániť click listener, ak existuje
-        leafletMap.current?.off('click', () => {});   // toto je trochu hack, ale funguje
-        // lepšie: uložiť referenciu na funkciu
-        // (pretože .off('click', onClickConfirm) vyžaduje presne tú istú funkciu)
-
+    
+        // Odstránime click handler pre pridávanie
+        if (addClickHandlerRef.current) {
+            leafletMap.current?.off('click', addClickHandlerRef.current);
+            addClickHandlerRef.current = null;
+        }
+    
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
@@ -688,9 +692,11 @@ const AddGroupsApp = ({ userProfileData }) => {
           
             const marker = L.marker([place.lat, place.lng], { icon: normalIcon });
           
-            marker.on('click', () => {
-              setSelectedPlace(place);
-              setPlaceHash(place.id);
+            marker.on('click', (e) => {
+                // Zastavíme propagáciu iba ak nechceme, aby map.click bežal
+                // L.DomEvent.stopPropagation(e);   ← toto NEpoužívaj, inak map.click nikdy nefunguje
+                setSelectedPlace(place);
+                setPlaceHash(place.id);
             });
           
             placesLayerRef.current.addLayer(marker);
