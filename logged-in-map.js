@@ -249,28 +249,16 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     useEffect(() => {
         window.goToDefaultView = () => {
-          if (leafletMap.current) {
-              tempMarkerRef.current = L.circleMarker(DEFAULT_CENTER, {
-                  radius: 11,                    // veľkosť ~22×22 px
-                  fillColor: 'red',
-                  color: 'white',
-                  weight: 4,                     // hrúbka okraja
-                  opacity: 1,
-                  fillOpacity: 1,
-                  interactive: false,            // toto teraz funguje perfektne
-                  pane: 'overlayPane'            // alebo 'shadowPane' ak chceš nižšie
-              }).addTo(leafletMap.current);
-          
-              tempMarkerRef.current.setOpacity(0);  // spočiatku skrytý
-          }
+            if (leafletMap.current) {
+                console.log("Klik na domček → idem na:", defaultCenter, defaultZoom);
+                leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+            }
         };
 
         return () => {
             delete window.goToDefaultView;
         };
     }, [defaultCenter, defaultZoom]);
-
-
 
     useEffect(() => {
       if (!leafletMap.current) return;
@@ -446,7 +434,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 zoomDelta: 0.25,
                 wheelPxPerZoomLevel: 100 
               })
-              .setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+              .setView(defaultCenter, defaultZoom)
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
