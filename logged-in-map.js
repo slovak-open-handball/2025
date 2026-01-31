@@ -1034,6 +1034,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     type: 'number',
                                     min: '1',
                                     value: newCapacity,
+                                    onChange: e => setNewCapacity(e.target.value),
                                     placeholder: newPlaceType === 'ubytovanie' ? 'napr. 48' : 'napr. 120',
                                     className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                                     // Poznámka: ak chceš ukladať kapacitu, musíš pridať nový state napr. [newCapacity, setNewCapacity]
