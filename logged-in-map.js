@@ -148,7 +148,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         // TESTOVACÍ HANDLER – NAJ JEDNODUCHŠÍ MOŽNÝ
         const testClickHandler = (e) => {
             console.log("TEST CLICK HANDLER – fungujem! Súradnice:", e.latlng);
-            alert("Klik zachytený! Režim pridávania funguje.");   // ← viditeľný alert
+//            alert("Klik zachytený! Režim pridávania funguje.");   // ← viditeľný alert
             setShowModal(true);   // skúsime priamo
             setIsAddingPlace(false);
         };
