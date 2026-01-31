@@ -81,6 +81,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [hashProcessed, setHashProcessed] = useState(false);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const markersRef = useRef({});
+    const currentSelectedIdRef = useRef(null);
 
     const setPlaceHash = (placeId) => {
       if (placeId) {
@@ -129,25 +130,24 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     useEffect(() => {
       if (!leafletMap.current) return;
-
-      const prevSelectedId = Object.keys(markersRef.current).find(id => {
-        const m = markersRef.current[id];
-        return m.marker.getIcon() === m.selectedIcon; // nájdi starý invertovaný
-      });
     
-      // Reset starého
-      if (prevSelectedId && markersRef.current[prevSelectedId]) {
-        markersRef.current[prevSelectedId].marker.setIcon(
-          markersRef.current[prevSelectedId].normalIcon
+      const prevId = currentSelectedIdRef.current;
+    
+      // Vráť starý marker do normálu
+      if (prevId && prevId !== selectedPlace?.id && markersRef.current[prevId]) {
+        markersRef.current[prevId].marker.setIcon(
+          markersRef.current[prevId].normalIcon
         );
       }
-    
-      // Nastav nový invertovaný
+
+      // Nastav invertovaný na nový
       if (selectedPlace && markersRef.current[selectedPlace.id]) {
         markersRef.current[selectedPlace.id].marker.setIcon(
           markersRef.current[selectedPlace.id].selectedIcon
         );
       }
+
+      currentSelectedIdRef.current = selectedPlace?.id || null;
     }, [selectedPlace]);
   
 
