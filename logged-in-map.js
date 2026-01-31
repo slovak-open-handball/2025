@@ -91,8 +91,6 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const addClickHandlerRef = useRef(null);
 
-    const addClickHandlerRef = useRef(null);
-
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
         if (!isAddingPlace) return;
