@@ -71,6 +71,14 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [defaultCenter, setDefaultCenter] = useState(DEFAULT_CENTER);
     const [defaultZoom, setDefaultZoom] = useState(DEFAULT_ZOOM);
     const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
+
+    const goToDefaultView = () => {
+        if (leafletMap.current) {
+            console.log("Klik na domček → idem na:", defaultCenter, defaultZoom);
+            leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+        }
+    };
+  
     // Načítanie globálneho východzieho zobrazenia
     useEffect(() => {
         const loadGlobalView = async () => {
@@ -229,11 +237,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     this._home.title = 'Pôvodné zobrazenie (z databázy)';
                     L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._home, 'click', () => {
-                        // Použijeme mapu ako parameter + globálny prístup k defaultCenter / defaultZoom
-                        // (pretože closure tu už nemusí byť aktuálny)
-                        if (leafletMap.current) {
-                            leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
-                        }
+                          goToDefaultView();
                     });
                     // − (oddialiť)
                     this._zoomOut = L.DomUtil.create('a', 'leaflet-control-zoom-out', container);
