@@ -296,29 +296,33 @@ const AddGroupsApp = ({ userProfileData }) => {
   
 
     // Načítanie globálneho východzieho zobrazenia
+    // 1. useEffect – načítanie default view z DB (už máš, ale pridáme logiku)
     useEffect(() => {
-        const loadGlobalView = async () => {
-            try {
-                const snap = await getDoc(globalViewRef);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    console.log("NAČÍTANÉ Z FIRESTORE →", data);
-                    if (data.center && typeof data.zoom === 'number') {
-                        const newCenter = [data.center.lat, data.center.lng];
-                        setDefaultCenter(newCenter);
-                        setDefaultZoom(data.zoom);
-                    } else {
-                        console.log("Dokument existuje, ale chýba center alebo zoom");
-                    }
-                } else {
-                    console.log("Dokument 'settings/mapDefaultView' neexistuje!");
-                }
-            } catch (err) {
-                console.error("CHYBA pri čítaní default view:", err);
+      const loadGlobalView = async () => {
+        try {
+          const snap = await getDoc(globalViewRef);
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data.center && typeof data.zoom === 'number') {
+              const newCenter = [data.center.lat, data.center.lng];
+              setDefaultCenter(newCenter);
+              setDefaultZoom(data.zoom);
+              console.log("Načítané default view z DB:", newCenter, data.zoom);
+
+              // Ak mapa už existuje → hneď presuň
+              if (leafletMap.current) {
+                leafletMap.current.setView(newCenter, data.zoom, { animate: true });
+                console.log("Mapa presunutá hneď po načítaní z DB");
+              }
             }
-        };
-        loadGlobalView();
-    }, []);
+          }
+        } catch (err) {
+          console.error("CHYBA pri čítaní default view:", err);
+        }
+      };
+
+      loadGlobalView();
+    }, []);   // ← spustiť iba raz pri mount-e komponentu
 
     // ──────────────────────────────────────────────
     // Pomocné funkcie
@@ -430,9 +434,13 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     // ─── Inicializácia mapy (iba raz) ───
     useEffect(() => {
-        if (leafletMap.current) return;
+        if (leafletMap.current) return;        
 
         const initMap = () => {
+
+            const initialCenter = defaultCenter;
+            const initialZoom = defaultZoom;
+          
             leafletMap.current = L.map(mapRef.current, { 
                 zoomControl: false,
                 zoomDelta: 0.25,
@@ -529,6 +537,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.log("Mapa inicializovaná na fallback súradniciach");
         };
 
+        if (defaultCenter !== DEFAULT_CENTER || defaultZoom !== DEFAULT_ZOOM) {
+          leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+        }
+
         if (window.L) {
             initMap();
         } else if (leafletJS) {
@@ -567,21 +579,21 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, [selectedPlace, leafletMap.current]);   // závislosti: zmena miesta + existencia mapy
     
     // Posun mapy po načítaní default view z DB
-    useEffect(() => {
-        if (!leafletMap.current) return;
-
-        if (!isInitialLoad || selectedPlace || hashProcessed) {
-          console.log("Preskakujem default view – nie je to prvé načítanie alebo niečo je vybrané");
-          return;
-        }
-      
-        console.log("Prvé načítanie – aplikujem default view:", defaultCenter, defaultZoom);
-        leafletMap.current.setView(defaultCenter, defaultZoom, {
-          animate: true,
-          duration: 1.2
-        });
-        setIsInitialLoad(false);
-    }, [defaultCenter, defaultZoom, leafletMap.current, isInitialLoad, selectedPlace, hashProcessed]);
+//    useEffect(() => {
+//        if (!leafletMap.current) return;
+//
+//        if (!isInitialLoad || selectedPlace || hashProcessed) {
+//          console.log("Preskakujem default view – nie je to prvé načítanie alebo niečo je vybrané");
+//          return;
+//        }
+//      
+//        console.log("Prvé načítanie – aplikujem default view:", defaultCenter, defaultZoom);
+//        leafletMap.current.setView(defaultCenter, defaultZoom, {
+//          animate: true,
+//          duration: 1.2
+//        });
+//        setIsInitialLoad(false);
+//    }, [defaultCenter, defaultZoom, leafletMap.current, isInitialLoad, selectedPlace, hashProcessed]);
 
     // Načítanie a filtrovanie miest
     useEffect(() => {
