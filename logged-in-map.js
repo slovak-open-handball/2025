@@ -887,13 +887,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                       ),
 
                       // Kapacita – NOVÉ
-                      (selectedPlace.capacity && 
+                      (selectedPlace.capacity &&
                        (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
-                          React.createElement('p', { className: 'text-gray-700 mb-4 font-medium flex items-center gap-2' },
-                              React.createElement('span', null,
-                                  selectedPlace.type === 'ubytovanie' 
-                                      ? `Počet lôžok: ${selectedPlace.capacity}`
-                                      : `Kapacita: ${selectedPlace.capacity} miest`
+                          React.createElement('p', { className: 'text-gray-700 mb-4 flex items-center gap-2' },
+                              React.createElement('span', { className: 'font-medium' },
+                                  React.createElement('strong', null,
+                                      selectedPlace.type === 'ubytovanie'
+                                          ? 'Počet lôžok: '
+                                          : 'Kapacita: '
+                                  ),
+                                  selectedPlace.type === 'ubytovanie'
+                                      ? ` ${selectedPlace.capacity}`
+                                      : ` ${selectedPlace.capacity} miest`
                               )
                           ),
                                       
