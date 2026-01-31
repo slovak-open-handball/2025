@@ -74,15 +74,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [isEditingNameAndType, setIsEditingNameAndType] = useState(false);
     const [editName, setEditName] = useState('');
     const [editType, setEditType] = useState('');
-
-    // Globálne východzie zobrazenie
     const [defaultCenter, setDefaultCenter] = useState(DEFAULT_CENTER);
     const [defaultZoom, setDefaultZoom] = useState(DEFAULT_ZOOM);
-
-    // NOVÝ STAV – filter kategórií (null = všetky)
     const [activeFilter, setActiveFilter] = useState(null);
-
     const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
+    const [hashProcessed, setHashProcessed] = useState(false);
 
     const setPlaceHash = (placeId) => {
       if (placeId) {
@@ -103,11 +99,12 @@ const AddGroupsApp = ({ userProfileData }) => {
         const place = places.find(p => p.id === placeId);
         if (place) {
           setSelectedPlace(place);
+          setHashProcessed(true);
           leafletMap.current?.setView([place.lat, place.lng], 18, { animate: true });
         }
       };
 
-      handleHashChange();                        // spustiť ihneď
+      handleHashChange();
       window.addEventListener('hashchange', handleHashChange);
     
       return () => window.removeEventListener('hashchange', handleHashChange);
@@ -391,6 +388,12 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Posun mapy po načítaní default view z DB
     useEffect(() => {
         if (!leafletMap.current) return;
+
+        if (hashProcessed) {
+            console.log("Hash už spracovaný → preskakujem default view");
+            return;
+        }
+      
         console.log("DB view načítané → posúvam mapu na", defaultCenter, defaultZoom);
         leafletMap.current.setView(defaultCenter, defaultZoom, {
             animate: true,
