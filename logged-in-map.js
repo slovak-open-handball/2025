@@ -99,6 +99,8 @@ const AddGroupsApp = ({ userProfileData }) => {
         console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
     
         const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
+    
+        // Uložíme do state (pre zobrazenie a budúce použitie)
         setSelectedAddPosition(pos);
         setTempAddPosition(pos);
     
@@ -108,7 +110,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             moveHandlerRef.current = null;
         }
     
-        // Odstránime tento click handler
+        // Odstránime handler
         if (leafletMap.current && addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
             addClickHandlerRef.current = null;
@@ -116,22 +118,17 @@ const AddGroupsApp = ({ userProfileData }) => {
     
         // Dočasný marker
         if (leafletMap.current) {
-            tempMarkerRef.current = L.marker(pos, {
-                icon: L.divIcon({
-                    className: 'adding-marker pointer-events-none',
-                    html: '<div style="background:#ef4444;width:28px;height:28px;border-radius:50%;border:4px solid white;box-shadow:0 0 12px rgba(0,0,0,0.6);"></div>',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                }),
-                interactive: false,
-                bubblingMouseEvents: false,
-                pane: 'overlayPane'
-            }).addTo(leafletMap.current);
+            tempMarkerRef.current = L.marker([pos.lat, pos.lng], { /* ... */ }).addTo(leafletMap.current);
         }
     
+        // Otvoríme modál
         setShowModal(true);
         setIsAddingPlace(false);
-    }, [isAddingPlace]);   // závislosť – re-kreuje sa iba pri zmene isAddingPlace
+    
+        // ← NOVÉ: uložíme pozíciu aj do globálnej premennej (alebo ref), aby sme ju mali vždy čerstvú
+        window.lastAddedPosition = pos;   // ← toto je hack, ale funguje okamžite
+    
+    }, [isAddingPlace]);
     
     
     const startAddingPlace = () => {
@@ -204,11 +201,20 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
     
-        if (!selectedAddPosition) {
+        // Najprv skúsime state
+        let position = selectedAddPosition;
+    
+        // Ak state ešte nie je aktualizovaný (batch), použijeme fallback
+        if (!position && window.lastAddedPosition) {
+            position = window.lastAddedPosition;
+            console.log("Používam fallback z window.lastAddedPosition");
+        }
+
+        if (!position) {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
-    
+
         try {
             const placeData = {
                 name: newPlaceName.trim(),
