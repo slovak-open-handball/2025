@@ -855,28 +855,44 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }),
 
                 selectedPlace && React.createElement(
-                    'div',
+                  'div',
                     {
-                        key: selectedPlace.id,
-                        className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[450px]
-                                    bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300`
-                    },
-                    React.createElement('div', { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
-                        React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
-                        React.createElement('button', {
-                            onClick: closeDetail,
-                            className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
-                        }, '×')
-                    ),
-                    React.createElement('div', { className: 'p-5 flex-1 overflow-y-auto' },
-                        React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
-                        React.createElement('p', { className: 'text-gray-600 mb-3' },
-                            React.createElement('strong', null, 'Typ: '),
-                            typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
-                        ),
-                        React.createElement('p', { className: 'text-gray-600 mb-3' },
-                            React.createElement('strong', null, 'Súradnice: '),
-                            tempLocation
+                      key: selectedPlace.id,
+                      className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[450px]
+                                  bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300`
+                  },
+                  React.createElement('div', { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
+                      React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
+                      React.createElement('button', {
+                          onClick: closeDetail,
+                          className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
+                      }, '×')
+                  ),
+                  React.createElement('div', { className: 'p-5 flex-1 overflow-y-auto' },
+                      // Názov
+                      React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
+                      
+                      // Kapacita – NOVÉ
+                      (selectedPlace.capacity && 
+                       (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
+                          React.createElement('p', { className: 'text-gray-700 mb-4 font-medium flex items-center gap-2' },
+                              React.createElement('i', { className: 'fa-solid fa-users text-indigo-600 text-lg' }),
+                              React.createElement('span', null,
+                                  selectedPlace.type === 'ubytovanie' 
+                                      ? `Počet lôžok: ${selectedPlace.capacity}`
+                                      : `Kapacita: ${selectedPlace.capacity} miest`
+                              )
+                          ),
+              
+                      // Typ
+                      React.createElement('p', { className: 'text-gray-600 mb-3' },
+                          React.createElement('strong', null, 'Typ: '),
+                          typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
+                      ),
+                      // Súradnice
+                      React.createElement('p', { className: 'text-gray-600 mb-3' },
+                          React.createElement('strong', null, 'Súradnice: '),
+                          tempLocation
                                 ? `${tempLocation.lat.toFixed(6)}, ${tempLocation.lng.toFixed(6)} (dočasné)`
                                 : `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
                         )
