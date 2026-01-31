@@ -237,6 +237,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     this._home.title = 'Pôvodné zobrazenie (z databázy)';
                     L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._home, 'click', () => {
+                          console.log("DOMČEK – aktuálne default hodnoty:", defaultCenter, defaultZoom);
                           goToDefaultView();
                     });
                     // − (oddialiť)
