@@ -101,8 +101,8 @@ const AddGroupsApp = ({ userProfileData }) => {
               type: newPlaceType,
               createdAt: Timestamp.now(),
               updatedAt: Timestamp.now(),
-              lat: mapCenter?.lat,
-              lng: mapCenter?.lng,
+              lat: mapCenter?.lat || 49.195340,
+              lng: mapCenter?.lng || 18.786106,
           };
   
           if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
