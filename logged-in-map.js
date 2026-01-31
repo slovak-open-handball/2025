@@ -1024,7 +1024,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       (editType === 'ubytovanie' || editType === 'stravovanie') &&
                           React.createElement('div', { className: 'mb-6' },
                               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
-                                  editType === 'ubytovanie' ? 'Počet lôžok / izieb' : 'Kapacita (miesta / porcie)'
+                                  editType === 'ubytovanie' ? 'Počet lôžok' : 'Kapacita (miesta / porcie)'
                               ),
                               React.createElement('input', {
                                   type: 'number',
@@ -1113,7 +1113,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && 
                             React.createElement('div', { className: 'mb-6' },
                                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 
-                                    newPlaceType === 'ubytovanie' ? 'Počet lôžok / izieb' : 'Kapacita (miesta / porcie)'
+                                    newPlaceType === 'ubytovanie' ? 'Počet lôžok' : 'Kapacita'
                                 ),
                                 React.createElement('input', {
                                     type: 'number',
