@@ -444,6 +444,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement('div', { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
                         React.createElement('button', {
                             onClick: () => {
+                                if (selectedPlace && selectedPlace.lat && selectedPlace.lng) {
+                                    const url = `https://www.google.com/maps/dir/?api=1&destination=${selectedPlace.lat},${selectedPlace.lng}`;
+                                    window.open(url, '_blank', 'noopener,noreferrer');
+                                } else {
+                                    window.showGlobalNotification('Poloha miesta nie je dostupná', 'error');
+                                }
+                            },
+                            className: 'w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center justify-center gap-2'
+                        },
+                            React.createElement('i', { className: 'fa-solid fa-directions text-lg' }),
+                            'Navigovať'
+                        ),
+                        React.createElement('button', {
+                            onClick: () => {
                                 setIsEditingNameAndType(true);
                                 setEditName(selectedPlace.name || '');
                                 setEditType(selectedPlace.type || '');
