@@ -375,6 +375,19 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     }, []);
 
+    // Pridaj tento useEffect niekde za inicializáciu mapy (napr. za useEffect na initMap)
+    useEffect(() => {
+      if (!selectedPlace || !leafletMap.current) return;
+  
+      // Ak máme vybrané miesto a mapa už existuje → priblížime
+      console.log("Automatické priblíženie na miesto z hashu / výberu:", selectedPlace.name);
+      leafletMap.current.setView(
+        [selectedPlace.lat, selectedPlace.lng],
+        18, 
+        { animate: true }
+      );
+    }, [selectedPlace, leafletMap.current]);   // závislosti: zmena miesta + existencia mapy
+    
     // Posun mapy po načítaní default view z DB
     useEffect(() => {
         if (!leafletMap.current) return;
