@@ -79,6 +79,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [activeFilter, setActiveFilter] = useState(null);
     const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
     const [hashProcessed, setHashProcessed] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     const setPlaceHash = (placeId) => {
       if (placeId) {
@@ -389,22 +390,18 @@ const AddGroupsApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!leafletMap.current) return;
 
-        if (selectedPlace || hashProcessed) {
-            console.log("Niečo je vybrané alebo hash spracovaný → preskakujem default view");
-            return;
-        }
-
-        if (hashProcessed) {
-            console.log("Hash už spracovaný → preskakujem default view");
-            return;
+        if (!isInitialLoad || selectedPlace || hashProcessed) {
+          console.log("Preskakujem default view – nie je to prvé načítanie alebo niečo je vybrané");
+          return;
         }
       
-        console.log("DB view načítané → posúvam mapu na", defaultCenter, defaultZoom);
+        console.log("Prvé načítanie – aplikujem default view:", defaultCenter, defaultZoom);
         leafletMap.current.setView(defaultCenter, defaultZoom, {
-            animate: true,
-            duration: 1.2
+          animate: true,
+          duration: 1.2
         });
-    }, [defaultCenter, defaultZoom]);
+        setIsInitialLoad(false);
+    }, [defaultCenter, defaultZoom, leafletMap.current, isInitialLoad, selectedPlace, hashProcessed]);
 
     // Načítanie a filtrovanie miest
     useEffect(() => {
