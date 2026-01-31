@@ -139,24 +139,29 @@ const AddGroupsApp = ({ userProfileData }) => {
         setIsAddingPlace(true);
         setTempAddPosition(null);
         setShowModal(false);
-       
-        // TESTOVACÍ HANDLER – NAJ JEDNODUCHŠÍ MOŽNÝ
-        const ClickHandler = (e) => {
-            console.log("TEST CLICK HANDLER – fungujem! Súradnice:", e.latlng);
-//            alert("Klik zachytený! Režim pridávania funguje.");   // ← viditeľný alert
-            setShowModal(true);
-            setIsAddingPlace(false);
+
+        // Čistenie starého mousemove (ak existuje)
+        if (moveHandlerRef.current) {
+            leafletMap.current?.off('mousemove', moveHandlerRef.current);
+            moveHandlerRef.current = null;
+        }
+    
+        const onMouseMove = (e) => {
+            setTempAddPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
         };
     
-        // Odstránime starý (ak existuje)
+        leafletMap.current.on('mousemove', onMouseMove);
+        moveHandlerRef.current = onMouseMove;
+    
+        // ← TU JE KLÚČOVÁ ZMENA: používaj skutočný handler, nie testovací
         if (addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
         }
     
-        addClickHandlerRef.current = ClickHandler;
-        leafletMap.current.on('click', ClickHandler);
+        addClickHandlerRef.current = handleAddClick;          // ← toto!
+        leafletMap.current.on('click', handleAddClick);       // ← toto!
     
-        console.log("→ TEST click handler pridaný");
+        console.log("→ pridávací click handler (handleAddClick) pridaný");
     };
     
     
