@@ -80,6 +80,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
     const [hashProcessed, setHashProcessed] = useState(false);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const markersRef = useRef({});
 
     const setPlaceHash = (placeId) => {
       if (placeId) {
@@ -123,6 +124,32 @@ const AddGroupsApp = ({ userProfileData }) => {
             delete window.goToDefaultView;
         };
     }, [defaultCenter, defaultZoom]);
+
+
+
+    useEffect(() => {
+      if (!leafletMap.current) return;
+
+      const prevSelectedId = Object.keys(markersRef.current).find(id => {
+        const m = markersRef.current[id];
+        return m.marker.getIcon() === m.selectedIcon; // nájdi starý invertovaný
+      });
+    
+      // Reset starého
+      if (prevSelectedId && markersRef.current[prevSelectedId]) {
+        markersRef.current[prevSelectedId].marker.setIcon(
+          markersRef.current[prevSelectedId].normalIcon
+        );
+      }
+    
+      // Nastav nový invertovaný
+      if (selectedPlace && markersRef.current[selectedPlace.id]) {
+        markersRef.current[selectedPlace.id].marker.setIcon(
+          markersRef.current[selectedPlace.id].selectedIcon
+        );
+      }
+    }, [selectedPlace]);
+  
 
     // Načítanie globálneho východzieho zobrazenia
     useEffect(() => {
@@ -496,7 +523,7 @@ const AddGroupsApp = ({ userProfileData }) => {
       return () => {
         if (unsubscribePlaces) unsubscribePlaces();
       };
-    }, [activeFilter, selectedPlace]);   // ← selectedPlace musí byť tu
+    }, [activeFilter]); 
 
     // ──────────────────────────────────────────────
     // RENDER
