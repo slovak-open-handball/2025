@@ -90,6 +90,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const moveHandlerRef = useRef(null);
 
     const addClickHandlerRef = useRef(null);
+    const [selectedAddPosition, setSelectedAddPosition] = useState(null);
 
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
@@ -97,8 +98,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     
         console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
     
-        const pos = e.latlng;
-        setTempAddPosition({ lat: pos.lat, lng: pos.lng });
+        const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
+        setSelectedAddPosition(pos);
+        setTempAddPosition(pos);
     
         // Zastavíme mousemove
         if (moveHandlerRef.current) {
@@ -169,6 +171,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         setIsAddingPlace(false);
         setTempAddPosition(null);
         setShowModal(false);
+        setSelectedAddPosition(null);
     
         // Odstránenie mousemove
         if (moveHandlerRef.current) {
@@ -201,7 +204,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
     
-        if (!tempAddPosition) {
+        if (!selectedAddPosition) {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
@@ -212,9 +215,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: newPlaceType,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
-                lat: tempAddPosition.lat,
-                lng: tempAddPosition.lng,
-                // location: new GeoPoint(tempAddPosition.lat, tempAddPosition.lng),  // ak používaš GeoPoint
+                lat: selectedAddPosition.lat,
+                lng: selectedAddPosition.lng,
             };
     
             // kapacita...
@@ -235,6 +237,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNewPlaceType('');
             setNewCapacity('');
             setTempAddPosition(null);
+            setSelectedAddPosition(null);
             
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
@@ -966,7 +969,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                         tempAddPosition && React.createElement('div', { className: 'mb-5 text-sm text-gray-600' },
                             React.createElement('strong', null, 'Vybraná poloha: '),
-                                `${tempAddPosition.lat.toFixed(6)}, ${tempAddPosition.lng.toFixed(6)}`
+                            `${tempAddPosition.lat.toFixed(6)}, ${tempAddPosition.lng.toFixed(6)}`
                         ),
                         
                         // Názov
