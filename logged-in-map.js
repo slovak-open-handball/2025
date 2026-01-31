@@ -233,6 +233,14 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
 useEffect(() => {
+
+    if (!leafletMap.current) return;
+
+    if (defaultCenter !== DEFAULT_CENTER || defaultZoom !== DEFAULT_ZOOM) {
+        console.log("Posúvam mapu na DB hodnotu", defaultCenter, defaultZoom);
+        leafletMap.current.setView(defaultCenter, defaultZoom, { animate: false });
+    }
+  
     let unsubscribePlaces = null;
 
     const initMap = () => {
@@ -436,7 +444,7 @@ useEffect(() => {
             editMarkerRef.current = null;
         }
     };
-}, []);  // prázdna závislosť – inicializácia iba raz
+}, [defaultCenter, defaultZoom]);
 
     // ──────────────────────────────────────────────
     // RENDER – tu už všetky funkcie existujú
