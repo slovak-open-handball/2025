@@ -630,18 +630,25 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     }, []);
 
-    // Pridaj tento useEffect niekde za inicializáciu mapy (napr. za useEffect na initMap)
     useEffect(() => {
-      if (!selectedPlace || !leafletMap.current) return;
-  
-      // Ak máme vybrané miesto a mapa už existuje → priblížime
-      console.log("Automatické priblíženie na miesto z hashu / výberu:", selectedPlace.name);
-      leafletMap.current.setView(
-        [selectedPlace.lat, selectedPlace.lng],
-        18, 
-        { animate: true }
-      );
-    }, [selectedPlace, leafletMap.current]);   // závislosti: zmena miesta + existencia mapy
+        if (!leafletMap.current || !selectedPlace) return;
+    
+        const { lat, lng } = selectedPlace;
+    
+        // Čakáme, kým je mapa "ready" (niekedy treba malé oneskorenie)
+        const timer = setTimeout(() => {
+            if (leafletMap.current) {
+                leafletMap.current.setView([lat, lng], 18, {
+                    animate: true,
+                    duration: 1.0,           // jemnejšie
+                    easeLinearity: 0.25
+                });
+                console.log(`Zoom na miesto ${selectedPlace.name} → [${lat.toFixed(6)}, ${lng.toFixed(6)}] zoom 18`);
+            }
+        }, 300);   // 300–600 ms zvyčajne stačí
+
+        return () => clearTimeout(timer);
+    }, [selectedPlace, leafletMap.current]);
     
     // Posun mapy po načítaní default view z DB
 //    useEffect(() => {
