@@ -942,7 +942,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             selectedPlace?.type === 'ubytovanie' || selectedPlace?.type === 'stravovanie'
                                 ? 'Upraviť názov/typ/kapacitu'
                                 : 'Upraviť názov/typ'
-                        )
+                        ),
                         isEditingLocation
                             ? React.createElement('div', { className: 'flex gap-2' },
                                 React.createElement('button', {
