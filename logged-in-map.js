@@ -530,6 +530,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             setTimeout(() => leafletMap.current?.invalidateSize(), 400);
             console.log("Mapa inicializovaná na fallback súradniciach");
+
+            leafletMap.current.on('click', (e) => {
+                console.log("RAW MAP CLICK EVENT FIRED", e.latlng);
+            });
         };
 
         if (defaultCenter !== DEFAULT_CENTER || defaultZoom !== DEFAULT_ZOOM) {
