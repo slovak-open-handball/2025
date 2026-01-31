@@ -932,13 +932,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 setEditName(selectedPlace.name || '');
                                 setEditType(selectedPlace.type || '');
                                 setEditCapacity(
-                                    selectedPlace.capacity != null 
-                                        ? String(selectedPlace.capacity) 
+                                    selectedPlace.capacity != null
+                                        ? String(selectedPlace.capacity)
                                         : ''
                                 );
                             },
                             className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
-                        }, 'Upraviť názov a typ'),
+                        },
+                            selectedPlace?.type === 'ubytovanie' || selectedPlace?.type === 'stravovanie'
+                                ? 'Upraviť názov/typ/kapacitu'
+                                : 'Upraviť názov/typ'
+                        )
                         isEditingLocation
                             ? React.createElement('div', { className: 'flex gap-2' },
                                 React.createElement('button', {
