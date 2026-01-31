@@ -233,14 +233,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                     // + (priblížiť)
                     this._zoomIn = L.DomUtil.create('a', 'leaflet-control-zoom-in', container);
                     this._zoomIn.innerHTML = '+';
-                    this._zoomIn.href = '#';
+                    this._zoomIn.href = '';
                     this._zoomIn.title = 'Priblížiť';
                     L.DomEvent.on(this._zoomIn, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._zoomIn, 'click', () => map.zoomIn());
                     // 🏠 (domov – vždy z databázy / aktuálneho stavu)
                     this._home = L.DomUtil.create('a', 'leaflet-control-zoom-home', container);
                     this._home.innerHTML = '🏠';
-                    this._home.href = '#';
+                    this._home.href = '';
                     this._home.title = 'Pôvodné zobrazenie (z databázy)';
                     L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._home, 'click', () => {
@@ -250,7 +250,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     // − (oddialiť)
                     this._zoomOut = L.DomUtil.create('a', 'leaflet-control-zoom-out', container);
                     this._zoomOut.innerHTML = '−';
-                    this._zoomOut.href = '#';
+                    this._zoomOut.href = '';
                     this._zoomOut.title = 'Oddialiť';
                     L.DomEvent.on(this._zoomOut, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._zoomOut, 'click', () => map.zoomOut());
@@ -268,7 +268,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             const setGlobalHome = L.control({ position: 'topright' });
             setGlobalHome.onAdd = function (map) {
                 const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-                div.innerHTML = '<a href="#" title="Nastaviť aktuálne zobrazenie ako východzie pre všetkých" style="width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;">★</a>';
+                div.innerHTML = '<a href="" title="Nastaviť aktuálne zobrazenie ako východzie pre všetkých" style="width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;">★</a>';
                 div.firstChild.onclick = async function(e) {
                     e.preventDefault();
                     e.stopPropagation();
