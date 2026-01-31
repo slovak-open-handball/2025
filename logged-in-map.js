@@ -95,61 +95,41 @@ const AddGroupsApp = ({ userProfileData }) => {
     
         setIsAddingPlace(true);
         setTempAddPosition(null);
-        setShowModal(false); // istota, že modál nie je otvorený
+        setShowModal(false);
     
-        // Vytvoríme dočasný marker (zatiaľ na default pozícii)
-        if (leafletMap.current) {
-            tempMarkerRef.current = L.marker(DEFAULT_CENTER, {
-                icon: L.divIcon({
-                    className: 'adding-marker pointer-events-none',
-                    html: '<div style="background:red;width:22px;height:22px;border-radius:50%;border:4px solid white;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>',
-                    iconSize: [22, 22],
-                    iconAnchor: [11, 11]
-                }),
-                interactive: false,     // aby neprekážal klikaniu
-                keyboard: false
-            }).addTo(leafletMap.current);
+        // ŽIADNY marker na začiatku
+        // tempMarkerRef.current = null;  // istota
     
-            // Skryjeme ho spočiatku
-            tempMarkerRef.current.setOpacity(0);
-        }
-    
-        // Listener na pohyb myši
         const onMouseMove = (e) => {
-            if (!tempMarkerRef.current) return;
-            tempMarkerRef.current.setLatLng(e.latlng);
-            tempMarkerRef.current.setOpacity(1);
             setTempAddPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
+            // sem môžeš voliteľne ukázať nejaký tooltip alebo kruh v DOM-e mimo Leaflet
         };
     
         leafletMap.current.on('mousemove', onMouseMove);
         moveHandlerRef.current = onMouseMove;
     
-        // Listener na kliknutie → potvrdenie polohy
         const onClickConfirm = (e) => {
             if (!isAddingPlace) return;
     
             const pos = e.latlng;
             setTempAddPosition({ lat: pos.lat, lng: pos.lng });
     
-            // Zastavíme pohyb kurzora
             leafletMap.current.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
     
-            // Môžeme skryť alebo odstrániť dočasný marker (voliteľné)
-            if (tempMarkerRef.current) {
-                tempMarkerRef.current.setOpacity(0.4); // nech ostane viditeľný ako náhľad
-                // alebo: tempMarkerRef.current.remove(); tempMarkerRef.current = null;
+            // Vytvoríme marker až teraz (po kliknutí)
+            if (leafletMap.current) {
+                tempMarkerRef.current = L.marker(pos, {
+                    icon: L.divIcon({ /* tvoj štýl */ }),
+                    interactive: false
+                }).addTo(leafletMap.current);
             }
     
-            // Otvoríme modálne okno
             setShowModal(true);
-    
-            // Ukončíme režim pridávania (už nepotrebujeme pohyb)
-            setIsAddingPlace(false);
+            setIsAddingPlace(false);  // ukončíme režim pridávania
         };
     
-        leafletMap.current.once('click', onClickConfirm); // .once = iba jeden klik
+        leafletMap.current.once('click', onClickConfirm);
     };
 
     const cancelAddingPlace = () => {
