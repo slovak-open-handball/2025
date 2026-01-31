@@ -229,6 +229,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                     this._home.title = 'Pôvodné zobrazenie (z databázy)';
                     L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._home, 'click', () => {
+                        // Použijeme mapu ako parameter + globálny prístup k defaultCenter / defaultZoom
+                        // (pretože closure tu už nemusí byť aktuálny)
                         if (leafletMap.current) {
                             leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
                         }
