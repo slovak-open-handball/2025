@@ -92,6 +92,41 @@ const AddGroupsApp = ({ userProfileData }) => {
       }
     };
 
+    const handleAddPlace = async () => {
+      if (!newPlaceName.trim() || !newPlaceType) return;
+
+      try {
+          const placeData = {
+              name: newPlaceName.trim(),
+              type: newPlaceType,
+              createdAt: Timestamp.now(),
+              updatedAt: Timestamp.now(),
+              lat: mapCenter?.lat,
+              lng: mapCenter?.lng,
+          };
+  
+          if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
+              const cap = parseInt(newCapacity, 10);
+              if (!isNaN(cap) && cap > 0) {
+                  placeData.capacity = cap;
+              }
+          }
+  
+          await addDoc(collection(window.db, 'places'), placeData);
+  
+          window.showGlobalNotification('Miesto bolo pridané', 'success');
+  
+          // Reset a zatvorenie
+          setShowModal(false);
+          setNewPlaceName('');
+          setNewPlaceType('');
+          setNewCapacity('');
+      } catch (err) {
+          console.error("Chyba pri pridávaní:", err);
+          window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
+      }
+  };
+
     useEffect(() => {
       const handleHashChange = () => {
         const hash = window.location.hash;
@@ -793,7 +828,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 type: 'text',
                                 value: newPlaceName,
                                 onChange: e => setNewPlaceName(e.target.value),
-                                placeholder: 'napr. Športová hala na Sídlisku',
+                                placeholder: 'napr. ŠH Rosinská',
                                 className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                             })
                         ),
@@ -823,6 +858,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 React.createElement('input', {
                                     type: 'number',
                                     min: '1',
+                                    value: newCapacity,
                                     placeholder: newPlaceType === 'ubytovanie' ? 'napr. 48' : 'napr. 120',
                                     className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                                     // Poznámka: ak chceš ukladať kapacitu, musíš pridať nový state napr. [newCapacity, setNewCapacity]
@@ -837,19 +873,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             }, 'Zrušiť'),
                             
                             React.createElement('button', {
-                                onClick: () => {
-                                    // Tu by mala byť tvoja logika uloženia nového miesta
-                                    // handleAddPlace()
-                                    console.log('Uložiť miesto:', {
-                                        name: newPlaceName.trim(),
-                                        type: newPlaceType,
-                                        // capacity: newCapacity,   // ak pridáš state
-                                    });
-                                    // Po uložení:
-                                    // setShowModal(false);
-                                    // setNewPlaceName('');
-                                    // setNewPlaceType('');
-                                },
+                                onClick: handleAddPlace,
                                 disabled: !newPlaceName.trim() || !newPlaceType,
                                 className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
                             }, 'Pridať miesto')
