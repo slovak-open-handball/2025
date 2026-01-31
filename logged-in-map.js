@@ -289,8 +289,12 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (leafletMap.current) return;
 
         const initMap = () => {
-            leafletMap.current = L.map(mapRef.current, { zoomControl: false })
-                .setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+            leafletMap.current = L.map(mapRef.current, { 
+                zoomControl: false,
+                zoomDelta: 0.25, o
+                wheelPxPerZoomLevel: 100 
+              })
+              .setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
