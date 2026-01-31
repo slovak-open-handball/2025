@@ -91,14 +91,59 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const addClickHandlerRef = useRef(null);
 
-    // ─── Nová funkcia na spustenie režimu pridávania ───
+    const addClickHandlerRef = useRef(null);
+
+    // Samostatná funkcia – vytvorí sa iba raz
+    const handleAddClick = useCallback((e) => {
+        if (!isAddingPlace) return;
+    
+        console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
+    
+        const pos = e.latlng;
+        setTempAddPosition({ lat: pos.lat, lng: pos.lng });
+    
+        // Zastavíme mousemove
+        if (moveHandlerRef.current) {
+            leafletMap.current?.off('mousemove', moveHandlerRef.current);
+            moveHandlerRef.current = null;
+        }
+    
+        // Odstránime tento click handler
+        if (leafletMap.current && addClickHandlerRef.current) {
+            leafletMap.current.off('click', addClickHandlerRef.current);
+            addClickHandlerRef.current = null;
+        }
+    
+        // Dočasný marker
+        if (leafletMap.current) {
+            tempMarkerRef.current = L.marker(pos, {
+                icon: L.divIcon({
+                    className: 'adding-marker pointer-events-none',
+                    html: '<div style="background:#ef4444;width:28px;height:28px;border-radius:50%;border:4px solid white;box-shadow:0 0 12px rgba(0,0,0,0.6);"></div>',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                }),
+                interactive: false,
+                bubblingMouseEvents: false,
+                pane: 'overlayPane'
+            }).addTo(leafletMap.current);
+        }
+    
+        setShowModal(true);
+        setIsAddingPlace(false);
+    }, [isAddingPlace]);   // závislosť – re-kreuje sa iba pri zmene isAddingPlace
+    
+    
     const startAddingPlace = () => {
         if (isAddingPlace) return;
+    
+        console.log("Spúšťam režim pridávania");
     
         setIsAddingPlace(true);
         setTempAddPosition(null);
         setShowModal(false);
     
+        // Čistenie starého mousemove
         if (moveHandlerRef.current) {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
@@ -111,70 +156,42 @@ const AddGroupsApp = ({ userProfileData }) => {
         leafletMap.current.on('mousemove', onMouseMove);
         moveHandlerRef.current = onMouseMove;
     
-        // ─── HLAVNÁ ZMENA ───
-        const onClickConfirm = (e) => {
-            if (!isAddingPlace) return;
-    
-            console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
-    
-            const pos = e.latlng;
-            setTempAddPosition({ lat: pos.lat, lng: pos.lng });
-    
-            leafletMap.current.off('mousemove', onMouseMove);
-            moveHandlerRef.current = null;
-    
-            // Odstránime tento handler (je to tá istá funkcia)
-            leafletMap.current.off('click', onClickConfirm);
-    
-            // Dočasný marker (červený)
-            tempMarkerRef.current = L.marker(pos, {
-                icon: L.divIcon({
-                    className: 'adding-marker pointer-events-none',
-                    html: '<div style="background:#ef4444;width:28px;height:28px;border-radius:50%;border:4px solid white;box-shadow:0 0 12px rgba(0,0,0,0.6);"></div>',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                }),
-                interactive: false,
-                bubblingMouseEvents: false,
-                pane: 'overlayPane'           // nižšia vrstva ako markery miest
-            }).addTo(leafletMap.current);
-    
-            setShowModal(true);
-            setIsAddingPlace(false);
-        };
-    
-        // Odstránime starý (ak existuje) a pridáme nový
-        if (addClickHandlerRef.current) {
-            leafletMap.current.off('click', addClickHandlerRef.current);
+        // Pridáme click handler (ak ešte nie je)
+        if (leafletMap.current && !addClickHandlerRef.current) {
+            addClickHandlerRef.current = handleAddClick;
+            leafletMap.current.on('click', handleAddClick);
+            console.log("→ pridávací click handler úspešne pridaný");
         }
-        addClickHandlerRef.current = onClickConfirm;
-        leafletMap.current.on('click', onClickConfirm);
-    
-        console.log("Režim pridávania spustený → čakám na klik");
     };
-
+    
+    
     const cancelAddingPlace = () => {
+        console.log("Ruším režim pridávania");
+    
         setIsAddingPlace(false);
         setTempAddPosition(null);
         setShowModal(false);
     
+        // Odstránenie mousemove
         if (moveHandlerRef.current) {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
         }
     
-        // Odstránime click handler pre pridávanie
-        if (addClickHandlerRef.current) {
-            leafletMap.current?.off('click', addClickHandlerRef.current);
+        // Odstránenie click handlera
+        if (leafletMap.current && addClickHandlerRef.current) {
+            leafletMap.current.off('click', addClickHandlerRef.current);
             addClickHandlerRef.current = null;
+            console.log("→ pridávací click handler odstránený");
         }
     
+        // Odstránenie dočasného markera
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
     };
-
+    
     const setPlaceHash = (placeId) => {
       if (placeId) {
         window.history.replaceState(null, '', `#place-${placeId}`);
