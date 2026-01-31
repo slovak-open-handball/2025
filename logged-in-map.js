@@ -389,6 +389,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!leafletMap.current) return;
 
+        if (selectedPlace || hashProcessed) {
+            console.log("Niečo je vybrané alebo hash spracovaný → preskakujem default view");
+            return;
+        }
+
         if (hashProcessed) {
             console.log("Hash už spracovaný → preskakujem default view");
             return;
