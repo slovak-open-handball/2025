@@ -315,7 +315,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     L.DomEvent.on(this._zoomIn, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._zoomIn, 'click', () => {
                         const current = map.getZoom();
-                        map.setZoom(current + 0.25, { animate: true });
+                        map.setZoom(current + 1, { animate: true });
                     });
                     // 🏠
                     this._home = L.DomUtil.create('a', 'leaflet-control-zoom-home', container);
@@ -336,7 +336,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     L.DomEvent.on(this._zoomOut, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._zoomOut, 'click', () => {
                         const current = map.getZoom();
-                        map.setZoom(current - 0.25, { animate: true });
+                        map.setZoom(current - 1, { animate: true });
                     });
                   
                     return container;
