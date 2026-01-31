@@ -86,20 +86,28 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     // Načítanie globálneho východzieho zobrazenia
     useEffect(() => {
-        if (!window.db) return;
         const loadGlobalView = async () => {
             try {
                 const snap = await getDoc(globalViewRef);
                 if (snap.exists()) {
                     const data = snap.data();
+                    console.log("NAČÍTANÉ Z FIRESTORE →", data);
                     if (data.center && typeof data.zoom === 'number') {
-                        setDefaultCenter([data.center.lat, data.center.lng]);
+                        const newCenter = [data.center.lat, data.center.lng];
+                        setDefaultCenter(newCenter);
                         setDefaultZoom(data.zoom);
-                        console.log('Načítané globálne východzie zobrazenie:', data);
+                        // ← tu skús okamžite posunúť mapu, ak už existuje
+                        if (leafletMap.current) {
+                            leafletMap.current.setView(newCenter, data.zoom, { animate: true });
+                        }
+                    } else {
+                        console.log("Dokument existuje, ale chýba center alebo zoom");
                     }
+                } else {
+                    console.log("Dokument 'settings/mapDefaultView' neexistuje!");
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní globálneho zobrazenia:', err);
+                console.error("CHYBA pri čítaní default view:", err);
             }
         };
         loadGlobalView();
