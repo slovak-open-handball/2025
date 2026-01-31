@@ -436,48 +436,62 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
 
                 filteredPlaces.forEach(place => {
-                    if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
-                    const typeConfig = typeIcons[place.type] || {
-                        icon: 'fa-map-pin',
-                        color: '#6b7280'
-                    };
-                    const markerHtml = `
-                        <div style="
-                            background: white;
-                            width: 38px;
-                            height: 38px;
-                            border-radius: 50%;
-                            border: 3px solid ${typeConfig.color};
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            box-shadow: 0 3px 8px rgba(0,0,0,0.30);
-                            color: ${typeConfig.color};
-                            font-size: 18px;
-                        ">
-                            <i class="fa-solid ${typeConfig.icon}"></i>
-                        </div>
-                    `;
-                    const customIcon = L.divIcon({
-                        html: markerHtml,
-                        className: 'custom-marker-no-border',
-                        iconSize: [38, 38],
-                        iconAnchor: [19, 19]
-                    });
-                    const marker = L.marker([place.lat, place.lng], { icon: customIcon });
-                    marker.on('click', () => {
-                        setSelectedPlace(place);
-                        leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-                        setPlaceHash(place.id);
-                    });
-                    placesLayerRef.current.addLayer(marker);
+                  if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
+
+                  const typeConfig = typeIcons[place.type] || {
+                    icon: 'fa-map-pin',
+                    color: '#6b7280'
+                  };
+                
+                  // Ak je toto miesto aktuálne vybrané → invertujeme farby
+                  const isSelected = selectedPlace && selectedPlace.id === place.id;
+                
+                  const backgroundColor = isSelected ? typeConfig.color : 'white';
+                  const borderColor    = isSelected ? 'white' : typeConfig.color;
+                  const iconColor      = isSelected ? 'white' : typeConfig.color;
+                
+                  const markerHtml = `
+                    <div style="
+                      background: ${backgroundColor};
+                      width: 38px;
+                      height: 38px;
+                      border-radius: 50%;
+                      border: 3px solid ${borderColor};
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      box-shadow: 0 3px 8px rgba(0,0,0,0.30);
+                      color: ${iconColor};
+                      font-size: 18px;
+                      transition: all 0.2s ease;
+                    ">
+                      <i class="fa-solid ${typeConfig.icon}"></i>
+                    </div>
+                  `;
+                
+                  const customIcon = L.divIcon({
+                    html: markerHtml,
+                    className: 'custom-marker-no-border',
+                    iconSize: [38, 38],
+                    iconAnchor: [19, 19]
+                  });
+                
+                  const marker = L.marker([place.lat, place.lng], { icon: customIcon });
+                
+                  marker.on('click', () => {
+                    setSelectedPlace(place);
+                    leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+                    setPlaceHash(place.id);
+                  });
+                
+                  placesLayerRef.current.addLayer(marker);
                 });
             }, err => console.error("onSnapshot error:", err));
         }
         return () => {
             if (unsubscribePlaces) unsubscribePlaces();
         };
-    }, [activeFilter]);
+    }, [activeFilter, selectedPlace]);
 
     // ──────────────────────────────────────────────
     // RENDER
