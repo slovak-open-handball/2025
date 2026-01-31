@@ -337,8 +337,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                     L.DomEvent.on(this._zoomOut, 'click', () => {
                         const current = map.getZoom();
                         map.setZoom(current - 0.25, { animate: true });
-                    }););
-
+                    });
+                  
                     return container;
                 }
             });
