@@ -313,8 +313,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                     this._zoomIn.href = '#';
                     this._zoomIn.title = 'Priblížiť';
                     L.DomEvent.on(this._zoomIn, 'click', L.DomEvent.stopPropagation);
-                    L.DomEvent.on(this._zoomIn, 'click', () => map.zoomIn());
-
+                    L.DomEvent.on(this._zoomIn, 'click', () => {
+                        const current = map.getZoom();
+                        map.setZoom(current + 0.25, { animate: true });
+                    });
                     // 🏠
                     this._home = L.DomUtil.create('a', 'leaflet-control-zoom-home', container);
                     this._home.innerHTML = '🏠';
@@ -332,7 +334,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                     this._zoomOut.href = '#';
                     this._zoomOut.title = 'Oddialiť';
                     L.DomEvent.on(this._zoomOut, 'click', L.DomEvent.stopPropagation);
-                    L.DomEvent.on(this._zoomOut, 'click', () => map.zoomOut());
+                    L.DomEvent.on(this._zoomOut, 'click', () => {
+                        const current = map.getZoom();
+                        map.setZoom(current - 0.25, { animate: true });
+                    }););
 
                     return container;
                 }
