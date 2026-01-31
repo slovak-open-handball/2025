@@ -84,6 +84,35 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
 
+    const setPlaceHash = (placeId) => {
+      if (placeId) {
+        window.history.replaceState(null, '', `#place-${placeId}`);
+      } else {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+
+    useEffect(() => {
+      const handleHashChange = () => {
+        const hash = window.location.hash;
+        if (!hash || !hash.startsWith('#place-')) return;
+    
+        const placeId = hash.replace('#place-', '');
+        if (!placeId) return;
+    
+        const place = places.find(p => p.id === placeId);
+        if (place) {
+          setSelectedPlace(place);
+          leafletMap.current?.setView([place.lat, place.lng], 18, { animate: true });
+        }
+      };
+
+      handleHashChange();                        // spustiť ihneď
+      window.addEventListener('hashchange', handleHashChange);
+    
+      return () => window.removeEventListener('hashchange', handleHashChange);
+    }, [places]);
+
     useEffect(() => {
         window.goToDefaultView = () => {
             if (leafletMap.current) {
@@ -140,6 +169,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (leafletMap.current) {
             leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
         }
+        setPlaceHash(null);
     };
 
     const handleSaveNameAndType = async () => {
@@ -422,6 +452,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     marker.on('click', () => {
                         setSelectedPlace(place);
                         leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+                        setPlaceHash(place.id);
                     });
                     placesLayerRef.current.addLayer(marker);
                 });
