@@ -277,25 +277,26 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     useEffect(() => {
-      const handleHashChange = () => {
-        const hash = window.location.hash;
-        if (!hash || !hash.startsWith('#place-')) return;
-    
-        const placeId = hash.replace('#place-', '');
-        if (!placeId) return;
-    
-        const place = places.find(p => p.id === placeId);
-        if (place) {
-          setSelectedPlace(place);
-          setHashProcessed(true);
-          leafletMap.current?.setView([place.lat, place.lng], 18, { animate: true });
-        }
-      };
+        const handleHashChange = () => {
+            const hash = window.location.hash;
+            if (!hash || !hash.startsWith('#place-')) return;
 
-      handleHashChange();
-      window.addEventListener('hashchange', handleHashChange);
+            const placeId = hash.replace('#place-', '');
+            if (!placeId) return;
+
+            const place = places.find(p => p.id === placeId);
+            if (!place) return;
+
+            setSelectedPlace(place);
+            setHashProcessed(true);
+
+            // Nepokúšame sa zoomovať tu – presúvame to do samostatného efektu
+        };
+  
+        handleHashChange();
+        window.addEventListener('hashchange', handleHashChange);
     
-      return () => window.removeEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
     }, [places]);
 
     useEffect(() => {
