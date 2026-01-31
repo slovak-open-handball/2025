@@ -201,28 +201,28 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleAddPlace = async () => {
         if (!newPlaceName.trim() || !newPlaceType) return;
     
-        // Najprv skúsime state
+        // Najprv skúsime state (normálny prípad)
         let position = selectedAddPosition;
     
-        // Ak state ešte nie je aktualizovaný (batch), použijeme fallback
+        // Ak state ešte nie je aktualizovaný (batch / asynchrónnosť), použijeme fallback
         if (!position && window.lastAddedPosition) {
             position = window.lastAddedPosition;
-            console.log("Používam fallback z window.lastAddedPosition");
+            console.log("Používam fallback z window.lastAddedPosition:", position);
         }
-
+    
         if (!position) {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
-
+    
         try {
             const placeData = {
                 name: newPlaceName.trim(),
                 type: newPlaceType,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
-                lat: selectedAddPosition.lat,
-                lng: selectedAddPosition.lng,
+                lat: position.lat,          // ← tu už máme istotu, že position existuje
+                lng: position.lng,
             };
     
             // kapacita...
@@ -244,7 +244,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNewCapacity('');
             setTempAddPosition(null);
             setSelectedAddPosition(null);
-            
+            window.lastAddedPosition = null;           // ← vyčistíme aj fallback
+    
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
                 tempMarkerRef.current = null;
