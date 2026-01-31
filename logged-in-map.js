@@ -84,6 +84,90 @@ const AddGroupsApp = ({ userProfileData }) => {
     const currentSelectedIdRef = useRef(null);
     const [newCapacity, setNewCapacity] = useState('');
 
+    const [isAddingPlace, setIsAddingPlace] = useState(false);
+    const [tempAddPosition, setTempAddPosition] = useState(null); 
+    const tempMarkerRef = useRef(null);
+    const moveHandlerRef = useRef(null);
+
+    // ─── Nová funkcia na spustenie režimu pridávania ───
+    const startAddingPlace = () => {
+        if (isAddingPlace) return;
+    
+        setIsAddingPlace(true);
+        setTempAddPosition(null);
+        setShowModal(false); // istota, že modál nie je otvorený
+    
+        // Vytvoríme dočasný marker (zatiaľ na default pozícii)
+        if (leafletMap.current) {
+            tempMarkerRef.current = L.marker(DEFAULT_CENTER, {
+                icon: L.divIcon({
+                    className: 'adding-marker',
+                    html: '<div style="background:red;width:22px;height:22px;border-radius:50%;border:4px solid white;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>',
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
+                }),
+                interactive: false,     // aby neprekážal klikaniu
+                keyboard: false
+            }).addTo(leafletMap.current);
+    
+            // Skryjeme ho spočiatku
+            tempMarkerRef.current.setOpacity(0);
+        }
+    
+        // Listener na pohyb myši
+        const onMouseMove = (e) => {
+            if (!tempMarkerRef.current) return;
+            tempMarkerRef.current.setLatLng(e.latlng);
+            tempMarkerRef.current.setOpacity(1);
+            setTempAddPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
+        };
+    
+        leafletMap.current.on('mousemove', onMouseMove);
+        moveHandlerRef.current = onMouseMove;
+    
+        // Listener na kliknutie → potvrdenie polohy
+        const onClickConfirm = (e) => {
+            if (!isAddingPlace) return;
+    
+            const pos = e.latlng;
+            setTempAddPosition({ lat: pos.lat, lng: pos.lng });
+    
+            // Zastavíme pohyb kurzora
+            leafletMap.current.off('mousemove', moveHandlerRef.current);
+            moveHandlerRef.current = null;
+    
+            // Môžeme skryť alebo odstrániť dočasný marker (voliteľné)
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.setOpacity(0.4); // nech ostane viditeľný ako náhľad
+                // alebo: tempMarkerRef.current.remove(); tempMarkerRef.current = null;
+            }
+    
+            // Otvoríme modálne okno
+            setShowModal(true);
+    
+            // Ukončíme režim pridávania (už nepotrebujeme pohyb)
+            setIsAddingPlace(false);
+        };
+    
+        leafletMap.current.once('click', onClickConfirm); // .once = iba jeden klik
+    };
+
+    const cancelAddingPlace = () => {
+      setIsAddingPlace(false);
+      setTempAddPosition(null);
+      setShowModal(false);
+  
+      if (moveHandlerRef.current) {
+          leafletMap.current?.off('mousemove', moveHandlerRef.current);
+          moveHandlerRef.current = null;
+      }
+  
+      if (tempMarkerRef.current) {
+          tempMarkerRef.current.remove();
+          tempMarkerRef.current = null;
+      }
+  };
+
     const setPlaceHash = (placeId) => {
       if (placeId) {
         window.history.replaceState(null, '', `#place-${placeId}`);
@@ -93,39 +177,53 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleAddPlace = async () => {
-      if (!newPlaceName.trim() || !newPlaceType) return;
-
-      try {
-          const placeData = {
-              name: newPlaceName.trim(),
-              type: newPlaceType,
-              createdAt: Timestamp.now(),
-              updatedAt: Timestamp.now(),
-              lat: mapCenter?.lat || 49.195340,
-              lng: mapCenter?.lng || 18.786106,
-          };
-  
-          if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
-              const cap = parseInt(newCapacity, 10);
-              if (!isNaN(cap) && cap > 0) {
-                  placeData.capacity = cap;
-              }
-          }
-  
-          await addDoc(collection(window.db, 'places'), placeData);
-  
-          window.showGlobalNotification('Miesto bolo pridané', 'success');
-  
-          // Reset a zatvorenie
-          setShowModal(false);
-          setNewPlaceName('');
-          setNewPlaceType('');
-          setNewCapacity('');
-      } catch (err) {
-          console.error("Chyba pri pridávaní:", err);
-          window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
-      }
-  };
+        if (!newPlaceName.trim() || !newPlaceType) return;
+    
+        if (!tempAddPosition) {
+            window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
+            return;
+        }
+    
+        try {
+            const placeData = {
+                name: newPlaceName.trim(),
+                type: newPlaceType,
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now(),
+                lat: tempAddPosition.lat,
+                lng: tempAddPosition.lng,
+                // location: new GeoPoint(tempAddPosition.lat, tempAddPosition.lng),  // ak používaš GeoPoint
+            };
+    
+            // kapacita...
+            if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
+                const cap = parseInt(newCapacity, 10);
+                if (!isNaN(cap) && cap > 0) {
+                    placeData.capacity = cap;
+                }
+            }
+    
+            await addDoc(collection(window.db, 'places'), placeData);
+    
+            window.showGlobalNotification('Miesto bolo pridané', 'success');
+    
+            // Vyčistenie
+            setShowModal(false);
+            setNewPlaceName('');
+            setNewPlaceType('');
+            setNewCapacity('');
+            setTempAddPosition(null);
+            
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+    
+        } catch (err) {
+            console.error("Chyba pri pridávaní:", err);
+            window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
+        }
+    };
 
     useEffect(() => {
       const handleHashChange = () => {
@@ -807,10 +905,9 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                 // Plávajúce tlačidlo +
                 React.createElement('button', {
-                    onClick: () => setShowModal(true),
+                    onClick: startAddingPlace,           // ← zmena oproti setShowModal(true)
                     className: 'fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full bg-green-600 hover:bg-green-700 text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-green-300'
                 }, '+'),
-
                 // Modal na pridanie miesta (tu len kostra – ak máš logiku pridávania, vlož ju)
                 showModal && React.createElement(
                     'div',
@@ -820,6 +917,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
                         
                         React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Pridať nové miesto'),
+
+                        tempAddPosition && React.createElement('div', { className: 'mb-5 text-sm text-gray-600' },
+                            React.createElement('strong', null, 'Vybraná poloha: '),
+                                `${tempAddPosition.lat.toFixed(6)}, ${tempAddPosition.lng.toFixed(6)}`
+                        ),
                         
                         // Názov
                         React.createElement('div', { className: 'mb-5' },
