@@ -390,29 +390,51 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Názov a typ musia byť vyplnené', 'error');
             return;
         }
+    
         try {
-            const placeRef = doc(window.db, 'places', selectedPlace.id);
-            await updateDoc(placeRef, {
+            const updates = {
                 name: editName.trim(),
                 type: editType,
                 updatedAt: Timestamp.now(),
-            });
+            };
+    
+            // Ak je typ ubytovanie alebo stravovanie → ukladáme kapacitu
+            if (editType === 'ubytovanie' || editType === 'stravovanie') {
+                const cap = parseInt(editCapacity, 10);
+                if (!isNaN(cap) && cap > 0) {
+                    updates.capacity = cap;
+                } else {
+                    // ak je pole prázdne alebo neplatné → môžeme vymazať capacity
+                    updates.capacity = null; // alebo deleteField() ak chceš úplne odstrániť pole
+                }
+            } else {
+                // iné typy → odstránime capacity ak existovalo
+                updates.capacity = null;
+            }
+    
+            const placeRef = doc(window.db, 'places', selectedPlace.id);
+            await updateDoc(placeRef, updates);
+    
+            // Aktualizácia lokálneho stavu
             setSelectedPlace(prev => ({
                 ...prev,
                 name: editName.trim(),
                 type: editType,
+                capacity: updates.capacity
             }));
+    
             setPlaces(prevPlaces =>
                 prevPlaces.map(p =>
                     p.id === selectedPlace.id
-                        ? { ...p, name: editName.trim(), type: editType }
+                        ? { ...p, name: editName.trim(), type: editType, capacity: updates.capacity }
                         : p
                 )
             );
-            window.showGlobalNotification('Názov a typ boli aktualizované', 'success');
+    
+            window.showGlobalNotification('Údaje boli aktualizované', 'success');
             setIsEditingNameAndType(false);
         } catch (err) {
-            console.error("Chyba pri ukladaní názvu a typu:", err);
+            console.error("Chyba pri ukladaní:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
         }
     };
