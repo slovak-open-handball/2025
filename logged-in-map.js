@@ -82,6 +82,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const markersRef = useRef({});
     const currentSelectedIdRef = useRef(null);
+    const [newCapacity, setNewCapacity] = useState('');
 
     const setPlaceHash = (placeId) => {
       if (placeId) {
@@ -782,21 +783,76 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
+                        
                         React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Pridať nové miesto'),
-                        // ... tu by bola tvoja pôvodná logika modalu na pridanie miesta ...
+                        
+                        // Názov
+                        React.createElement('div', { className: 'mb-5' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
+                            React.createElement('input', {
+                                type: 'text',
+                                value: newPlaceName,
+                                onChange: e => setNewPlaceName(e.target.value),
+                                placeholder: 'napr. Športová hala na Sídlisku',
+                                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                            })
+                        ),
+                        
+                        // Typ
+                        React.createElement('div', { className: 'mb-5' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
+                            React.createElement('select', {
+                                value: newPlaceType,
+                                onChange: e => setNewPlaceType(e.target.value),
+                                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
+                            },
+                                React.createElement('option', { value: '' }, 'Vyberte typ'),
+                                React.createElement('option', { value: 'sportova_hala' }, 'Športová hala'),
+                                React.createElement('option', { value: 'ubytovanie' }, 'Ubytovanie'),
+                                React.createElement('option', { value: 'stravovanie' }, 'Stravovanie'),
+                                React.createElement('option', { value: 'zastavka' }, 'Zastávka')
+                            )
+                        ),
+                        
+                        // Kapacita – zobrazí sa len pri Ubytovanie alebo Stravovanie
+                        (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && 
+                            React.createElement('div', { className: 'mb-6' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 
+                                    newPlaceType === 'ubytovanie' ? 'Počet lôžok / izieb' : 'Kapacita (miesta / porcie)'
+                                ),
+                                React.createElement('input', {
+                                    type: 'number',
+                                    min: '1',
+                                    placeholder: newPlaceType === 'ubytovanie' ? 'napr. 48' : 'napr. 120',
+                                    className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                                    // Poznámka: ak chceš ukladať kapacitu, musíš pridať nový state napr. [newCapacity, setNewCapacity]
+                                })
+                            ),
+                        
+                        // Tlačidlá
                         React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                             React.createElement('button', {
                                 onClick: () => setShowModal(false),
                                 className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                             }, 'Zrušiť'),
+                            
                             React.createElement('button', {
                                 onClick: () => {
-                                    // tu vlož svoju funkciu na uloženie nového miesta
+                                    // Tu by mala byť tvoja logika uloženia nového miesta
                                     // handleAddPlace()
+                                    console.log('Uložiť miesto:', {
+                                        name: newPlaceName.trim(),
+                                        type: newPlaceType,
+                                        // capacity: newCapacity,   // ak pridáš state
+                                    });
+                                    // Po uložení:
+                                    // setShowModal(false);
+                                    // setNewPlaceName('');
+                                    // setNewPlaceType('');
                                 },
                                 disabled: !newPlaceName.trim() || !newPlaceType,
                                 className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
-                            }, 'Pridať')
+                            }, 'Pridať miesto')
                         )
                     )
                 )
