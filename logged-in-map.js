@@ -198,6 +198,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const handleAddPlace = async () => {
 
+        console.log("handleAddPlace volané");
+        console.log("selectedAddPosition:", selectedAddPosition);
+        console.log("window.lastAddedPosition:", window.lastAddedPosition);
+
         if (!newPlaceName.trim() || !newPlaceType) return;
     
         // Najprv skúsime state
@@ -208,10 +212,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             position = window.lastAddedPosition;
             console.log("Používam fallback window.lastAddedPosition:", position);
         }
-
-        console.log("handleAddPlace volané");
-        console.log("selectedAddPosition:", selectedAddPosition);
-        console.log("window.lastAddedPosition:", window.lastAddedPosition);
     
         if (!position) {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
