@@ -372,6 +372,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         setIsEditingLocation(false);
         setTempLocation(null);
         setIsEditingNameAndType(false);
+        setEditCapacity('');
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
                 leafletMap.current.off('click', editMarkerRef.current._clickHandler);
@@ -434,6 +435,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             window.showGlobalNotification('Údaje boli aktualizované', 'success');
             setIsEditingNameAndType(false);
+            setEditCapacity('');
         } catch (err) {
             console.error("Chyba pri ukladaní:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
@@ -929,6 +931,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 setIsEditingNameAndType(true);
                                 setEditName(selectedPlace.name || '');
                                 setEditType(selectedPlace.type || '');
+                                setEditCapacity(
+                                    selectedPlace.capacity != null 
+                                        ? String(selectedPlace.capacity) 
+                                        : ''
+                                );
                             },
                             className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
                         }, 'Upraviť názov a typ'),
