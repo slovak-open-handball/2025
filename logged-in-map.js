@@ -249,10 +249,20 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     useEffect(() => {
         window.goToDefaultView = () => {
-            if (leafletMap.current) {
-                console.log("Klik na domček (aktuálne) → idem na:", defaultCenter, defaultZoom);
-                leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
-            }
+          if (leafletMap.current) {
+              tempMarkerRef.current = L.circleMarker(DEFAULT_CENTER, {
+                  radius: 11,                    // veľkosť ~22×22 px
+                  fillColor: 'red',
+                  color: 'white',
+                  weight: 4,                     // hrúbka okraja
+                  opacity: 1,
+                  fillOpacity: 1,
+                  interactive: false,            // toto teraz funguje perfektne
+                  pane: 'overlayPane'            // alebo 'shadowPane' ak chceš nižšie
+              }).addTo(leafletMap.current);
+          
+              tempMarkerRef.current.setOpacity(0);  // spočiatku skrytý
+          }
         };
 
         return () => {
