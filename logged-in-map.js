@@ -291,7 +291,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const initMap = () => {
             leafletMap.current = L.map(mapRef.current, { 
                 zoomControl: false,
-                zoomDelta: 0.25, o
+                zoomDelta: 0.25,
                 wheelPxPerZoomLevel: 100 
               })
               .setView(DEFAULT_CENTER, DEFAULT_ZOOM);
