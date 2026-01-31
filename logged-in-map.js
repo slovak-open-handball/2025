@@ -92,6 +92,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     const addClickHandlerRef = useRef(null);
     const [selectedAddPosition, setSelectedAddPosition] = useState(null);
 
+    const [editCapacity, setEditCapacity] = useState('');
+
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
@@ -652,7 +654,8 @@ const AddGroupsApp = ({ userProfileData }) => {
               type: data.type,
               lat: loc?.latitude ?? data.lat,
               lng: loc?.longitude ?? data.lng,
-              createdAt: data.createdAt
+              createdAt: data.createdAt,
+              capacity: data.capacity || null,
             });
           });
     
@@ -925,48 +928,73 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                 // Edit modál názov + typ
                 isEditingNameAndType && React.createElement(
-                    'div',
-                    { className: 'fixed inset-0 z-[2100] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
-                    React.createElement(
-                        'div',
-                        { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
-                        React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Upraviť názov a typ'),
-                        React.createElement('div', { className: 'mb-5' },
-                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
-                            React.createElement('input', {
-                                type: 'text',
-                                value: editName,
-                                onChange: e => setEditName(e.target.value),
-                                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
-                            })
-                        ),
-                        React.createElement('div', { className: 'mb-6' },
-                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
-                            React.createElement('select', {
-                                value: editType,
-                                onChange: e => setEditType(e.target.value),
-                                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
-                            },
-                                React.createElement('option', { value: '' }, 'Vyberte typ'),
-                                React.createElement('option', { value: 'sportova_hala' }, 'Športová hala'),
-                                React.createElement('option', { value: 'ubytovanie' }, 'Ubytovanie'),
-                                React.createElement('option', { value: 'stravovanie' }, 'Stravovanie'),
-                                React.createElement('option', { value: 'zastavka' }, 'Zastávka')
-                            )
-                        ),
-                        React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
-                            React.createElement('button', {
-                                onClick: () => setIsEditingNameAndType(false),
-                                className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
-                            }, 'Zrušiť'),
-                            React.createElement('button', {
-                                onClick: handleSaveNameAndType,
-                                disabled: !editName.trim() || !editType,
-                                className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
-                            }, 'Uložiť zmeny')
-                        )
-                    )
-                ),
+                  'div',
+                  { className: 'fixed inset-0 z-[2100] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
+                  React.createElement(
+                      'div',
+                      { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
+                      
+                      React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Upraviť údaje miesta'),
+                      
+                      // Názov
+                      React.createElement('div', { className: 'mb-5' },
+                          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
+                          React.createElement('input', {
+                              type: 'text',
+                              value: editName,
+                              onChange: e => setEditName(e.target.value),
+                              className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                          })
+                      ),
+                      
+                      // Typ
+                      React.createElement('div', { className: 'mb-5' },
+                          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
+                          React.createElement('select', {
+                              value: editType,
+                              onChange: e => setEditType(e.target.value),
+                              className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
+                          },
+                              React.createElement('option', { value: '' }, 'Vyberte typ'),
+                              React.createElement('option', { value: 'sportova_hala' }, 'Športová hala'),
+                              React.createElement('option', { value: 'ubytovanie' }, 'Ubytovanie'),
+                              React.createElement('option', { value: 'stravovanie' }, 'Stravovanie'),
+                              React.createElement('option', { value: 'zastavka' }, 'Zastávka')
+                          )
+                      ),
+                      
+                      // Kapacita – zobrazí sa iba pri ubytovanie / stravovanie
+                      (editType === 'ubytovanie' || editType === 'stravovanie') &&
+                          React.createElement('div', { className: 'mb-6' },
+                              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                                  editType === 'ubytovanie' ? 'Počet lôžok / izieb' : 'Kapacita (miesta / porcie)'
+                              ),
+                              React.createElement('input', {
+                                  type: 'number',
+                                  min: '1',
+                                  value: editCapacity,
+                                  onChange: e => setEditCapacity(e.target.value),
+                                  placeholder: editType === 'ubytovanie' ? 'napr. 48' : 'napr. 120',
+                                  className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                              })
+                          )
+                      ,
+                      
+                      // Tlačidlá
+                      React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
+                          React.createElement('button', {
+                              onClick: () => setIsEditingNameAndType(false),
+                              className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
+                          }, 'Zrušiť'),
+                          
+                          React.createElement('button', {
+                              onClick: handleSaveNameAndType,
+                              disabled: !editName.trim() || !editType,
+                              className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
+                          }, 'Uložiť zmeny')
+                      )
+                  )
+              ),
 
                 // Plávajúce tlačidlo +
                 React.createElement('button', {
