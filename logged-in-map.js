@@ -94,13 +94,11 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
-        if (!isAddingPlace) return;
-    
         console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
     
         const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
     
-        // Uložíme do state (pre zobrazenie a budúce použitie)
+        // Uložíme pozíciu
         setSelectedAddPosition(pos);
         setTempAddPosition(pos);
     
@@ -110,7 +108,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             moveHandlerRef.current = null;
         }
     
-        // Odstránime handler
+        // Odstránime tento click handler (už nepotrebujeme ďalšie kliky)
         if (leafletMap.current && addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
             addClickHandlerRef.current = null;
@@ -118,17 +116,27 @@ const AddGroupsApp = ({ userProfileData }) => {
     
         // Dočasný marker
         if (leafletMap.current) {
-            tempMarkerRef.current = L.marker([pos.lat, pos.lng], { /* ... */ }).addTo(leafletMap.current);
+            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
+                icon: L.divIcon({
+                    className: 'adding-marker pointer-events-none',
+                    html: '<div style="background:#ef4444;width:28px;height:28px;border-radius:50%;border:4px solid white;box-shadow:0 0 12px rgba(0,0,0,0.6);"></div>',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                }),
+                interactive: false,
+                bubblingMouseEvents: false,
+                pane: 'overlayPane'
+            }).addTo(leafletMap.current);
         }
     
         // Otvoríme modál
         setShowModal(true);
         setIsAddingPlace(false);
     
-        // ← NOVÉ: uložíme pozíciu aj do globálnej premennej (alebo ref), aby sme ju mali vždy čerstvú
-        window.lastAddedPosition = pos;   // ← toto je hack, ale funguje okamžite
+        // Fallback pre istotu
+        window.lastAddedPosition = pos;
     
-    }, [isAddingPlace]);
+    }, []);  // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace
     
     
     const startAddingPlace = () => {
@@ -172,6 +180,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         setTempAddPosition(null);
         setShowModal(false);
         setSelectedAddPosition(null);
+        window.lastAddedPosition = null;
     
         // Odstránenie mousemove
         if (moveHandlerRef.current) {
