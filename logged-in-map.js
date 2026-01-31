@@ -470,52 +470,81 @@ const AddGroupsApp = ({ userProfileData }) => {
           // Teraz pridáme nové markery s aktuálnym selectedPlace
           filteredPlaces.forEach(place => {
             if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
-    
+          
             const typeConfig = typeIcons[place.type] || {
               icon: 'fa-map-pin',
               color: '#6b7280'
             };
-    
-            const isSelected = selectedPlace && selectedPlace.id === place.id;
-    
-            const backgroundColor = isSelected ? typeConfig.color : 'white';
-            const borderColor    = isSelected ? 'white' : typeConfig.color;
-            const iconColor      = isSelected ? 'white' : typeConfig.color;
-    
-            const markerHtml = `
+          
+            // Normálna ikona
+            const normalHtml = `
               <div style="
-                background: ${backgroundColor};
+                background: white;
                 width: 38px;
                 height: 38px;
                 border-radius: 50%;
-                border: 3px solid ${borderColor};
+                border: 3px solid ${typeConfig.color};
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 box-shadow: 0 3px 8px rgba(0,0,0,0.30);
-                color: ${iconColor};
+                color: ${typeConfig.color};
                 font-size: 18px;
                 transition: all 0.2s ease;
               ">
                 <i class="fa-solid ${typeConfig.icon}"></i>
               </div>
             `;
-    
-            const customIcon = L.divIcon({
-              html: markerHtml,
+          
+            const normalIcon = L.divIcon({
+              html: normalHtml,
               className: 'custom-marker-no-border',
               iconSize: [38, 38],
               iconAnchor: [19, 19]
             });
-    
-            const marker = L.marker([place.lat, place.lng], { icon: customIcon });
-    
+          
+            // Invertovaná ikona (pre vybrané)
+            const selectedHtml = `
+              <div style="
+                background: ${typeConfig.color};
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                border: 3px solid white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 3px 8px rgba(0,0,0,0.30);
+                color: white;
+                font-size: 18px;
+                transition: all 0.2s ease;
+              ">
+                <i class="fa-solid ${typeConfig.icon}"></i>
+              </div>
+            `;
+          
+            const selectedIcon = L.divIcon({
+              html: selectedHtml,
+              className: 'custom-marker-no-border',
+              iconSize: [38, 38],
+              iconAnchor: [19, 19]
+            });
+          
+            const marker = L.marker([place.lat, place.lng], { icon: normalIcon });
+          
             marker.on('click', () => {
               setSelectedPlace(place);
               setPlaceHash(place.id);
             });
-    
+          
             placesLayerRef.current.addLayer(marker);
+          
+            // Ulož obe ikony
+            markersRef.current[place.id] = {
+              marker,
+              normalIcon,
+              selectedIcon
+            };
           });
         }, err => console.error("onSnapshot error:", err));
       }
