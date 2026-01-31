@@ -101,7 +101,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (leafletMap.current) {
             tempMarkerRef.current = L.marker(DEFAULT_CENTER, {
                 icon: L.divIcon({
-                    className: 'adding-marker',
+                    className: 'adding-marker pointer-events-none',
                     html: '<div style="background:red;width:22px;height:22px;border-radius:50%;border:4px solid white;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>',
                     iconSize: [22, 22],
                     iconAnchor: [11, 11]
