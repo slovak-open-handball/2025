@@ -879,24 +879,24 @@ const AddGroupsApp = ({ userProfileData }) => {
                   React.createElement('div', { className: 'p-5 flex-1 overflow-y-auto' },
                       // Názov
                       React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
-                      
-                      // Kapacita – NOVÉ
-                      (selectedPlace.capacity && 
-                       (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
-                          React.createElement('p', { className: 'text-gray-700 mb-4 font-medium flex items-center gap-2' },
-                              React.createElement('i', { className: 'fa-solid fa-users text-indigo-600 text-lg' }),
-                              React.createElement('span', null,
-                                  selectedPlace.type === 'ubytovanie' 
-                                      ? `Počet lôžok: ${selectedPlace.capacity}`
-                                      : `Kapacita: ${selectedPlace.capacity} miest`
-                              )
-                          ),
               
                       // Typ
                       React.createElement('p', { className: 'text-gray-600 mb-3' },
                           React.createElement('strong', null, 'Typ: '),
                           typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
                       ),
+
+                      // Kapacita – NOVÉ
+                      (selectedPlace.capacity && 
+                       (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
+                          React.createElement('p', { className: 'text-gray-700 mb-4 font-medium flex items-center gap-2' },
+                              React.createElement('span', null,
+                                  selectedPlace.type === 'ubytovanie' 
+                                      ? `Počet lôžok: ${selectedPlace.capacity}`
+                                      : `Kapacita: ${selectedPlace.capacity} miest`
+                              )
+                          ),
+                                      
                       // Súradnice
                       React.createElement('p', { className: 'text-gray-600 mb-3' },
                           React.createElement('strong', null, 'Súradnice: '),
