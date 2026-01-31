@@ -892,7 +892,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       (selectedPlace.capacity &&
                        (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
                           React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
-                              React.createElement('span', { className: 'font-medium' },
+                             React.createElement('strong', null, 
                                   selectedPlace.type === 'ubytovanie'
                                       ? 'Počet lôžok:'
                                       : 'Kapacita:'
