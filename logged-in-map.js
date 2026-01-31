@@ -153,20 +153,22 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const cancelAddingPlace = () => {
-      setIsAddingPlace(false);
-      setTempAddPosition(null);
-      setShowModal(false);
-  
-      if (moveHandlerRef.current) {
-          leafletMap.current?.off('mousemove', moveHandlerRef.current);
-          moveHandlerRef.current = null;
-      }
-  
-      if (tempMarkerRef.current) {
-          tempMarkerRef.current.remove();
-          tempMarkerRef.current = null;
-      }
-  };
+        setIsAddingPlace(false);
+        setTempAddPosition(null);
+        setShowModal(false);
+    
+        if (moveHandlerRef.current) {
+            leafletMap.current?.off('mousemove', moveHandlerRef.current);
+            moveHandlerRef.current = null;
+        }
+    
+        if (tempMarkerRef.current) {
+            tempMarkerRef.current.remove();
+            tempMarkerRef.current = null;
+        }
+    
+        setTimeout(() => setIsAddingPlace(false), 100);
+    };
 
     const setPlaceHash = (placeId) => {
       if (placeId) {
@@ -915,9 +917,17 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                 // Plávajúce tlačidlo +
                 React.createElement('button', {
-                    onClick: startAddingPlace,           // ← zmena oproti setShowModal(true)
-                    className: 'fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full bg-green-600 hover:bg-green-700 text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-green-300'
-                }, '+'),
+                    onClick: isAddingPlace ? cancelAddingPlace : startAddingPlace,
+                    className: `fixed bottom-6 right-6 z-[1000] w-14 h-14 rounded-full text-white text-3xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center focus:outline-none focus:ring-4 ${
+                        isAddingPlace
+                            ? 'bg-red-600 hover:bg-red-700 focus:ring-red-300 scale-110'
+                            : 'bg-green-600 hover:bg-green-700 focus:ring-green-300'
+                    }`
+                },
+                    React.createElement('i', {
+                        className: isAddingPlace ? 'fa-solid fa-xmark' : 'fa-solid fa-plus'
+                    })
+                ),
                 // Modal na pridanie miesta (tu len kostra – ak máš logiku pridávania, vlož ju)
                 showModal && React.createElement(
                     'div',
