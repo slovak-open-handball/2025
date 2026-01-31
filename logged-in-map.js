@@ -148,7 +148,7 @@ const AddGroupsApp = ({ userProfileData }) => {
       }
 
       currentSelectedIdRef.current = selectedPlace?.id || null;
-    }, [selectedPlace]);
+    }, [selectedPlace, places.length]);
   
 
     // Načítanie globálneho východzieho zobrazenia
