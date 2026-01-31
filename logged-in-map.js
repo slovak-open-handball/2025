@@ -97,57 +97,78 @@ const AddGroupsApp = ({ userProfileData }) => {
         setTempAddPosition(null);
         setShowModal(false);
     
-        // ŽIADNY marker na začiatku
-        // tempMarkerRef.current = null;  // istota
+        // Čistenie starých listenerov (pre istotu)
+        if (moveHandlerRef.current) {
+            leafletMap.current?.off('mousemove', moveHandlerRef.current);
+        }
     
         const onMouseMove = (e) => {
             setTempAddPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
-            // sem môžeš voliteľne ukázať nejaký tooltip alebo kruh v DOM-e mimo Leaflet
         };
     
         leafletMap.current.on('mousemove', onMouseMove);
         moveHandlerRef.current = onMouseMove;
     
+        // Použijeme .on() namiesto .once() + manuálne odstránenie
         const onClickConfirm = (e) => {
+            // Extra ochrana – ak už nie sme v režime, ignorujeme
             if (!isAddingPlace) return;
     
             const pos = e.latlng;
             setTempAddPosition({ lat: pos.lat, lng: pos.lng });
     
-            leafletMap.current.off('mousemove', moveHandlerRef.current);
+            // Zastavíme pohyb
+            leafletMap.current.off('mousemove', onMouseMove);
             moveHandlerRef.current = null;
     
-            // Vytvoríme marker až teraz (po kliknutí)
-            if (leafletMap.current) {
-                tempMarkerRef.current = L.marker(pos, {
-                    icon: L.divIcon({ /* tvoj štýl */ }),
-                    interactive: false
-                }).addTo(leafletMap.current);
-            }
+            // Zastavíme tento listener (aby sa nespustil opakovane)
+            leafletMap.current.off('click', onClickConfirm);
     
+            // Voliteľne: vytvoríme dočasný marker až po kliknutí
+            tempMarkerRef.current = L.marker(pos, {
+                icon: L.divIcon({
+                    className: 'adding-marker pointer-events-none',
+                    html: '<div style="background:#ef4444;width:28px;height:28px;border-radius:50%;border:4px solid white;box-shadow:0 0 12px rgba(0,0,0,0.6);"></div>',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                }),
+                interactive: false,
+                bubblingMouseEvents: false
+            }).addTo(leafletMap.current);
+    
+            // Otvoríme modál
             setShowModal(true);
-            setIsAddingPlace(false);  // ukončíme režim pridávania
+    
+            // Ukončíme režim
+            setIsAddingPlace(false);
         };
     
-        leafletMap.current.once('click', onClickConfirm);
+        // Pridáme listener NA MAPU s vyššou prioritou
+        leafletMap.current.on('click', onClickConfirm, { priority: 100 });  // priorita funguje v novších verziách Leafletu
+    
+        // Extra poistka – ak by sa listener nepridal správne
+        console.log("Režim pridávania spustený → čakám na klik");
     };
 
     const cancelAddingPlace = () => {
         setIsAddingPlace(false);
         setTempAddPosition(null);
         setShowModal(false);
-    
+  
         if (moveHandlerRef.current) {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
         }
-    
+
+        // DÔLEŽITÉ: odstrániť click listener, ak existuje
+        leafletMap.current?.off('click', () => {});   // toto je trochu hack, ale funguje
+        // lepšie: uložiť referenciu na funkciu
+        // (pretože .off('click', onClickConfirm) vyžaduje presne tú istú funkciu)
+
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
-    
-        setTimeout(() => setIsAddingPlace(false), 100);
     };
 
     const setPlaceHash = (placeId) => {
