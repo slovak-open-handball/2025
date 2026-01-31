@@ -29,6 +29,13 @@ const typeIcons = {
     zastavka: { icon: 'fa-bus', color: '#2563eb' }
 };
 
+const selectedIcon = L.divIcon({
+  html: selectedHtml,
+  className: 'custom-marker-no-border',
+  iconSize: [45, 45],     // väčší
+  iconAnchor: [22.5, 22.5]
+});
+
 const typeLabels = {
     sportova_hala: "Športová hala",
     ubytovanie: "Ubytovanie",
