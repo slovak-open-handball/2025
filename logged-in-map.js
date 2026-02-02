@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc, query, where, getDocs }
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useCallback } = React;
@@ -83,49 +83,16 @@ const AddGroupsApp = ({ userProfileData }) => {
     const markersRef = useRef({});
     const currentSelectedIdRef = useRef(null);
     const [newCapacity, setNewCapacity] = useState('');
+
     const [isAddingPlace, setIsAddingPlace] = useState(false);
     const [tempAddPosition, setTempAddPosition] = useState(null); 
     const tempMarkerRef = useRef(null);
     const moveHandlerRef = useRef(null);
+
     const addClickHandlerRef = useRef(null);
     const [selectedAddPosition, setSelectedAddPosition] = useState(null);
+
     const [editCapacity, setEditCapacity] = useState('');
-
-    const [duplicateError, setDuplicateError] = useState('');
-    const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
-
-    const debounce = (func, wait) => {
-      let timeout;
-      return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), wait);
-      };  
-    };
-
-    const checkDuplicateDebounced = useCallback(
-      debounce(async (name, type) => {
-        if (!name.trim() || !type) {
-          setDuplicateError('');
-          return;
-        }
-    
-        setIsCheckingDuplicate(true);
-        const trimmed = name.trim();
-        const hasDup = await checkDuplicateNameAndType(trimmed, type);
-    
-        if (hasDup) {
-          setDuplicateError(`Miesto "${trimmed}" už existuje v kategórii ${typeLabels[type] || type}!`);
-        } else {
-          setDuplicateError('');
-        }
-        setIsCheckingDuplicate(false);
-      }, 600), // 600 ms oneskorenie
-      []
-    );
-
-    useEffect(() => {
-        console.log("selectedAddPosition sa zmenil na:", selectedAddPosition);
-    }, [selectedAddPosition]);
 
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
@@ -163,18 +130,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                 pane: 'overlayPane'
             }).addTo(leafletMap.current);
         }
-
+    
+        // Otvoríme modál
+        setShowModal(true);
         setIsAddingPlace(false);
-
-//        setTimeout(() => {
-            setShowModal(true);
-//        }, 350);
     
         // Fallback pre istotu
         window.lastAddedPosition = pos;
-        console.log("Pozícia uložená OK:", pos);
     
-    }, []);  // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace    
+    }, []);  // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace
+    
     
     const startAddingPlace = () => {
         if (isAddingPlace) return;
@@ -209,6 +174,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         console.log("→ pridávací click handler (handleAddClick) pridaný");
     };
     
+    
     const cancelAddingPlace = () => {
         console.log("Ruším režim pridávania");
     
@@ -217,13 +183,13 @@ const AddGroupsApp = ({ userProfileData }) => {
         setShowModal(false);
         setSelectedAddPosition(null);
         window.lastAddedPosition = null;
-
+    
         // Odstránenie mousemove
         if (moveHandlerRef.current) {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
         }
-
+    
         // Odstránenie click handlera
         if (leafletMap.current && addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
@@ -231,11 +197,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.log("→ pridávací click handler odstránený");
         }
     
-        // ← Kľúčová zmena: odstránenie dočasného markera
+        // Odstránenie dočasného markera
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
-            console.log("Dočasný červený marker odstránený");
         }
     };
     
@@ -248,53 +213,38 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleAddPlace = async () => {
-        const callId = Date.now() + Math.random();  // unikátny ID pre každé volanie
-        console.log(`handleAddPlace volané [${callId}] – začiatok`);
-  
-        if (!newPlaceName.trim() || !newPlaceType) {
-            console.log(`[${callId}] Končím: názov alebo typ prázdny`);
-            window.showGlobalNotification('Názov a typ sú povinné', 'error');
-            return;
-        }
 
-        const position = window.lastAddedPosition;
+        console.log("handleAddPlace volané");
+        console.log("selectedAddPosition:", selectedAddPosition);
+        console.log("window.lastAddedPosition:", window.lastAddedPosition);
+
+        if (!newPlaceName.trim() || !newPlaceType) return;
     
-        console.log(`[${callId}] Pozícia v handleAddPlace (z window):`, position);
+        // Najprv skúsime state
+        let position = selectedAddPosition;
     
-        if (!position || !position.lat || !position.lng) {
-            console.log(`[${callId}] Končím: pozícia chýba`);
+        // Ak state ešte nie je aktualizovaný → fallback
+        if (!position && window.lastAddedPosition) {
+            position = window.lastAddedPosition;
+            console.log("Používam fallback window.lastAddedPosition:", position);
+        }
+    
+        if (!position) {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
-        }        
-    
-        // Kontrola duplicity – teraz sa už spustí
-        const nameTrimmed = newPlaceName.trim();
-        console.log("Začínam kontrolu duplicity pre:", nameTrimmed, newPlaceType);
-    
-        const hasDuplicate = await checkDuplicateNameAndType(nameTrimmed, newPlaceType);
-    
-        if (hasDuplicate) {
-          console.log("Finálna kontrola: duplikát nájdený → neukladám");
-          window.showGlobalNotification(
-            `Miesto s názvom "${nameTrimmed}" už existuje v kategórii ${typeLabels[newPlaceType] || newPlaceType}!`,
-            'error'
-          );
-          document.querySelector('input[placeholder="napr. ŠH Rosinská"]')?.focus();
-          return;
         }
     
-        // Ukladanie
         try {
             const placeData = {
-                name: nameTrimmed,
-                name_lower: nameTrimmed.toLowerCase(),
+                name: newPlaceName.trim(),
                 type: newPlaceType,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
-                lat: position.lat,
+                lat: position.lat,          // ← tu už máme position z fallbacku
                 lng: position.lng,
             };
     
+            // kapacita...
             if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
                 const cap = parseInt(newCapacity, 10);
                 if (!isNaN(cap) && cap > 0) {
@@ -313,49 +263,16 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNewCapacity('');
             setTempAddPosition(null);
             setSelectedAddPosition(null);
-            window.lastAddedPosition = null;
+            window.lastAddedPosition = null;           // ← dôležité vyčistenie
     
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
                 tempMarkerRef.current = null;
             }
+    
         } catch (err) {
             console.error("Chyba pri pridávaní:", err);
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
-        }
-    };
-
-    const checkDuplicateNameAndType = async (name, type) => {
-        if (!window.db) {
-            console.error("window.db nie je dostupné!");
-            return false;
-        }
-    
-        try {
-            console.log("Kontrolujem duplicitu → názov:", name);
-            console.log("Typ:", type);
-            console.log("Hľadám name_lower == ", name.toLowerCase());
-    
-            const q = query(
-                collection(window.db, 'places'),
-                where('name_lower', '==', name.toLowerCase()),
-                where('type', '==', type)
-            );
-    
-            const snap = await getDocs(q);
-            
-            console.log("Nájdených dokumentov:", snap.size);
-            snap.forEach(doc => {
-                console.log("Nájdené duplicitné miesto:", doc.id, doc.data().name, doc.data().name_lower);
-            });
-    
-            const exists = !snap.empty;
-            console.log("Duplicita existuje?", exists);
-            return exists;
-        } catch (err) {
-            console.error("!!! CHYBA PRI KONTROLE DUPLICITY !!!", err);
-            console.error("Stack:", err.stack);
-            return false;
         }
     };
 
@@ -1175,7 +1092,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 type: 'text',
                                 value: newPlaceName,
                                 onChange: e => setNewPlaceName(e.target.value),
-                                checkDuplicateDebounced(e.target.value, newPlaceType);
                                 placeholder: 'napr. ŠH Rosinská',
                                 className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                             })
@@ -1187,7 +1103,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                             React.createElement('select', {
                                 value: newPlaceType,
                                 onChange: e => setNewPlaceType(e.target.value),
-                                checkDuplicateDebounced(newPlaceName, e.target.value);
                                 className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
                             },
                                 React.createElement('option', { value: '' }, 'Vyberte typ'),
@@ -1218,7 +1133,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         // Tlačidlá
                         React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                             React.createElement('button', {
-                                onClick: cancelAddingPlace,
+                                onClick: () => setShowModal(false),
                                 className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                             }, 'Zrušiť'),
                             
