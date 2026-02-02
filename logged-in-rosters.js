@@ -2846,13 +2846,13 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         { className: 'max-w-4xl mx-auto mb-6 space-y-2 px-2 sm:px-0' },
         React.createElement(
           'div',
-          { className: 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm' },
+          { className: 'bg-white border border-gray-200 rounded-lg p-5 shadow-sm text-center' },
           React.createElement(
             'div',
-            { className: 'space-y-2 text-gray-700' },
+            { className: 'space-y-3 text-gray-700' },
             React.createElement(
               'p',
-              { className: 'font-medium' },
+              { className: 'font-medium text-base' },
               "Úprava údajov tímov/pridanie nového tímu povolené do: ",
               React.createElement(
                 'span',
@@ -2862,7 +2862,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
             ),
             React.createElement(
               'p',
-              { className: 'font-medium' },
+              { className: 'font-medium text-base' },
               "Úprava súpisiek tímov povolená do: ",
               React.createElement(
                 'span',
