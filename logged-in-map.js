@@ -219,22 +219,24 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleAddPlace = async () => {
-        console.log("handleAddPlace volané – začiatok");
-    
+        const callId = Date.now() + Math.random();  // unikátny ID pre každé volanie
+        console.log(`handleAddPlace volané [${callId}] – začiatok`);
+  
         if (!newPlaceName.trim() || !newPlaceType) {
+            console.log(`[${callId}] Končím: názov alebo typ prázdny`);
             window.showGlobalNotification('Názov a typ sú povinné', 'error');
             return;
         }
-    
-        // Použi iba window.lastAddedPosition – je synchronný a spoľahlivý
+
         const position = window.lastAddedPosition;
     
-        console.log("Pozícia v handleAddPlace (z window):", position);
+        console.log(`[${callId}] Pozícia v handleAddPlace (z window):`, position);
     
         if (!position || !position.lat || !position.lng) {
+            console.log(`[${callId}] Končím: pozícia chýba`);
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
-        }
+        }        
     
         // Kontrola duplicity – teraz sa už spustí
         const nameTrimmed = newPlaceName.trim();
