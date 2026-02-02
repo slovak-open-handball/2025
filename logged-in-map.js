@@ -258,7 +258,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         try {
             const placeData = {
                 name: nameTrimmed,
-                name_lower: nameTrimmed.toLowerCase()
+                name_lower: nameTrimmed.toLowerCase(),
                 type: newPlaceType,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
@@ -301,12 +301,10 @@ const AddGroupsApp = ({ userProfileData }) => {
     const checkDuplicateNameAndType = async (name, type) => {
       if (!window.db) return false;
 
-      try {
-          const snapshot = await getDoc(collection(window.db, 'places'));
-        
+      try {        
           const q = query(
               collection(window.db, 'places'),
-              where('name_lower', '==', name.trim().toLowerCase()),
+              where('name_lower', '==', name.toLowerCase()),
               where('type', '==', type)
           );
   
