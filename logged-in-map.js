@@ -274,12 +274,13 @@ const AddGroupsApp = ({ userProfileData }) => {
         const hasDuplicate = await checkDuplicateNameAndType(nameTrimmed, newPlaceType);
     
         if (hasDuplicate) {
-            window.showGlobalNotification(
-                `Miesto s názvom "${nameTrimmed}" už existuje v kategórii ${typeLabels[newPlaceType] || newPlaceType}!`,
-                'error'
-            );
-            document.querySelector('input[placeholder="napr. ŠH Rosinská"]')?.focus();
-            return;
+          console.log("Finálna kontrola: duplikát nájdený → neukladám");
+          window.showGlobalNotification(
+            `Miesto s názvom "${nameTrimmed}" už existuje v kategórii ${typeLabels[newPlaceType] || newPlaceType}!`,
+            'error'
+          );
+          document.querySelector('input[placeholder="napr. ŠH Rosinská"]')?.focus();
+          return;
         }
     
         // Ukladanie
