@@ -130,6 +130,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                 pane: 'overlayPane'
             }).addTo(leafletMap.current);
         }
+
+        setTimeout(() => {
+            setShowModal(true);
+            setIsAddingPlace(false);
+        }, 350);
     
         // Otvoríme modál
         setShowModal(true);
@@ -183,13 +188,13 @@ const AddGroupsApp = ({ userProfileData }) => {
         setShowModal(false);
         setSelectedAddPosition(null);
         window.lastAddedPosition = null;
-    
+
         // Odstránenie mousemove
         if (moveHandlerRef.current) {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
         }
-    
+
         // Odstránenie click handlera
         if (leafletMap.current && addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
@@ -197,10 +202,11 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.log("→ pridávací click handler odstránený");
         }
     
-        // Odstránenie dočasného markera
+        // ← Kľúčová zmena: odstránenie dočasného markera
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
+            console.log("Dočasný červený marker odstránený");
         }
     };
     
@@ -1044,7 +1050,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       // Tlačidlá
                       React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                           React.createElement('button', {
-                              onClick: () => setIsEditingNameAndType(false),
+                              onClick: () => cancelAddingPlace,
                               className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                           }, 'Zrušiť'),
                           
