@@ -2857,7 +2857,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               React.createElement(
                 'span',
                 { className: isRosterEditDeadlinePassed ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold' },
-                formatDateTimeCZ(rosterEditDeadline)
+                formatDateTimeSK(rosterEditDeadline)
               )
             ),
             React.createElement(
@@ -2867,7 +2867,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               React.createElement(
                 'span',
                 { className: isDataEditDeadlinePassed ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold' },
-                formatDateTimeCZ(dataEditDeadline)
+                formatDateTimeSK(dataEditDeadline)
               )
             )
           )
