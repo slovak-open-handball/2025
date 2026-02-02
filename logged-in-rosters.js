@@ -2863,7 +2863,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
             React.createElement(
               'p',
               { className: 'font-medium' },
-              "Úprava údajov tímov/pridanei nového tímu povolené do: ",
+              "Úprava údajov tímov/pridanie nového tímu povolené do: ",
               React.createElement(
                 'span',
                 { className: isDataEditDeadlinePassed ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold' },
