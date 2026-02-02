@@ -94,6 +94,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const [editCapacity, setEditCapacity] = useState('');
 
+    useEffect(() => {
+        console.log("selectedAddPosition sa zmenil na:", selectedAddPosition);
+    }, [selectedAddPosition]);
+
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
@@ -140,8 +144,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         // Fallback pre istotu
         window.lastAddedPosition = pos;
     
-    }, []);  // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace
-    
+    }, []);  // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace    
     
     const startAddingPlace = () => {
         if (isAddingPlace) return;
@@ -175,7 +178,6 @@ const AddGroupsApp = ({ userProfileData }) => {
     
         console.log("→ pridávací click handler (handleAddClick) pridaný");
     };
-    
     
     const cancelAddingPlace = () => {
         console.log("Ruším režim pridávania");
