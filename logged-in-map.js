@@ -131,9 +131,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             }).addTo(leafletMap.current);
         }
 
+        setIsAddingPlace(false);
+
         setTimeout(() => {
             setShowModal(true);
-            setIsAddingPlace(false);
         }, 350);
     
         // Fallback pre istotu
