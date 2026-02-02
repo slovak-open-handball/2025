@@ -1047,7 +1047,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       // Tlačidlá
                       React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                           React.createElement('button', {
-                              onClick={() => setIsEditingNameAndType(false)}
+                              onClick={() => setIsEditingNameAndType(false)},
                               className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                           }, 'Zrušiť'),
                           
@@ -1136,7 +1136,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         // Tlačidlá
                         React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                             React.createElement('button', {
-//                                onClick: cancelAddingPlace,
+/                                onClick: cancelAddingPlace,
                                 className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                             }, 'Zrušiť'),
                             
