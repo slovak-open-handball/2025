@@ -258,6 +258,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         try {
             const placeData = {
                 name: nameTrimmed,
+                name_lower: nameTrimmed.toLowerCase()
                 type: newPlaceType,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
@@ -305,7 +306,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         
           const q = query(
               collection(window.db, 'places'),
-              where('name', '==', name.trim()),
+              where('name_lower', '==', name.trim().toLowerCase()),
               where('type', '==', type)
           );
   
