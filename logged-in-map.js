@@ -133,9 +133,9 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         setIsAddingPlace(false);
 
-        setTimeout(() => {
+//        setTimeout(() => {
             setShowModal(true);
-        }, 350);
+//        }, 350);
     
         // Fallback pre istotu
         window.lastAddedPosition = pos;
@@ -216,55 +216,56 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleAddPlace = async () => {
-        console.log("handleAddPlace volané");
-        console.log("selectedAddPosition:", selectedAddPosition);
-        console.log("window.lastAddedPosition:", window.lastAddedPosition);
-    
-        if (!newPlaceName.trim() || !newPlaceType) {
-            window.showGlobalNotification('Názov a typ sú povinné', 'error');
-            return;
-        }
-    
-        // ----------------- NOVÉ: kontrola duplicity -----------------
-        const nameTrimmed = newPlaceName.trim();
-        const hasDuplicate = await checkDuplicateNameAndType(nameTrimmed, newPlaceType);
-    
-        if (hasDuplicate) {
-            window.showGlobalNotification(
-                `Miesto s názvom "${nameTrimmed}" už existuje v kategórii ${typeLabels[newPlaceType] || newPlaceType}!`,
-                'error'
-            );
-            // voliteľné – focus na input
-            document.querySelector('input[placeholder="napr. ŠH Rosinská"]')?.focus();
-            return;
-        }
-        // -------------------------------------------------------------
-    
-    
-        // Najprv skúsime state
-        let position = selectedAddPosition;
-    
-        // Ak state ešte nie je aktualizovaný → fallback
-        if (!position && window.lastAddedPosition) {
-            position = window.lastAddedPosition;
-            console.log("Používam fallback window.lastAddedPosition:", position);
-        }
-    
-        if (!position) {
-            window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
-            return;
-        }
-    
-        try {
-            const placeData = {
-                name: nameTrimmed,
-                name_lower: nameTrimmed.toLowerCase(),
-                type: newPlaceType,
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-                lat: position.lat,
-                lng: position.lng,
-            };
+      console.log("handleAddPlace volané");
+
+      if (!newPlaceName.trim() || !newPlaceType) {
+          window.showGlobalNotification('Názov a typ sú povinné', 'error');
+          return;
+      }
+  
+      // ──────────────────────────────────────────────
+      // Najprv pozícia – toto je kritické
+      // ──────────────────────────────────────────────
+      let position = selectedAddPosition;
+  
+      if (!position && window.lastAddedPosition) {
+          position = window.lastAddedPosition;
+          console.log("Používam fallback window.lastAddedPosition");
+      }
+
+      if (!position) {
+          window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
+          return;
+      }
+  
+      // AŽ TERAZ kontrola duplicity – keď vieme, že máme platnú pozíciu
+      const nameTrimmed = newPlaceName.trim();
+      console.log("Začínam kontrolu duplicity pre:", nameTrimmed, newPlaceType);
+  
+      const hasDuplicate = await checkDuplicateNameAndType(nameTrimmed, newPlaceType);
+  
+      if (hasDuplicate) {
+          window.showGlobalNotification(
+              `Miesto s názvom "${nameTrimmed}" už existuje v kategórii ${typeLabels[newPlaceType] || newPlaceType}!`,
+              'error'
+          );
+          document.querySelector('input[placeholder="napr. ŠH Rosinská"]')?.focus();
+          return;
+      }
+
+      // ──────────────────────────────────────────────
+      // až tu ideme ukladať
+      // ──────────────────────────────────────────────
+      try {
+          const placeData = {
+              name: nameTrimmed,
+              name_lower: nameTrimmed.toLowerCase(),
+              type: newPlaceType,
+              createdAt: Timestamp.now(),
+              updatedAt: Timestamp.now(),
+              lat: position.lat,
+              lng: position.lng,
+          };
     
             // kapacita...
             if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
