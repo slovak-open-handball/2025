@@ -83,16 +83,45 @@ const AddGroupsApp = ({ userProfileData }) => {
     const markersRef = useRef({});
     const currentSelectedIdRef = useRef(null);
     const [newCapacity, setNewCapacity] = useState('');
-
     const [isAddingPlace, setIsAddingPlace] = useState(false);
     const [tempAddPosition, setTempAddPosition] = useState(null); 
     const tempMarkerRef = useRef(null);
     const moveHandlerRef = useRef(null);
-
     const addClickHandlerRef = useRef(null);
     const [selectedAddPosition, setSelectedAddPosition] = useState(null);
-
     const [editCapacity, setEditCapacity] = useState('');
+
+    const [duplicateError, setDuplicateError] = useState('');
+    const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+
+    const debounce = (func, wait) => {
+      let timeout;
+      return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+      };  
+    };
+
+    const checkDuplicateDebounced = useCallback(
+      debounce(async (name, type) => {
+        if (!name.trim() || !type) {
+          setDuplicateError('');
+          return;
+        }
+    
+        setIsCheckingDuplicate(true);
+        const trimmed = name.trim();
+        const hasDup = await checkDuplicateNameAndType(trimmed, type);
+    
+        if (hasDup) {
+          setDuplicateError(`Miesto "${trimmed}" už existuje v kategórii ${typeLabels[type] || type}!`);
+        } else {
+          setDuplicateError('');
+        }
+        setIsCheckingDuplicate(false);
+      }, 600), // 600 ms oneskorenie
+      []
+    );
 
     useEffect(() => {
         console.log("selectedAddPosition sa zmenil na:", selectedAddPosition);
@@ -1145,6 +1174,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 type: 'text',
                                 value: newPlaceName,
                                 onChange: e => setNewPlaceName(e.target.value),
+                                checkDuplicateDebounced(e.target.value, newPlaceType);
                                 placeholder: 'napr. ŠH Rosinská',
                                 className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                             })
@@ -1156,6 +1186,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             React.createElement('select', {
                                 value: newPlaceType,
                                 onChange: e => setNewPlaceType(e.target.value),
+                                checkDuplicateDebounced(newPlaceName, e.target.value);
                                 className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
                             },
                                 React.createElement('option', { value: '' }, 'Vyberte typ'),
