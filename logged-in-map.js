@@ -136,10 +136,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             setIsAddingPlace(false);
         }, 350);
     
-        // Otvoríme modál
-        setShowModal(true);
-        setIsAddingPlace(false);
-    
         // Fallback pre istotu
         window.lastAddedPosition = pos;
     
