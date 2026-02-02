@@ -234,6 +234,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                 `Miesto s názvom "${nameTrimmed}" už existuje v kategórii ${typeLabels[newPlaceType] || newPlaceType}!`,
                 'error'
             );
+            // voliteľné – focus na input
+            document.querySelector('input[placeholder="napr. ŠH Rosinská"]')?.focus();
             return;
         }
         // -------------------------------------------------------------
@@ -300,9 +302,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
       try {
           const snapshot = await getDoc(collection(window.db, 'places'));
-    
-          const { query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-  
+        
           const q = query(
               collection(window.db, 'places'),
               where('name', '==', name.trim()),
