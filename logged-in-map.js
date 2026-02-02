@@ -216,12 +216,28 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleAddPlace = async () => {
-
         console.log("handleAddPlace volané");
         console.log("selectedAddPosition:", selectedAddPosition);
         console.log("window.lastAddedPosition:", window.lastAddedPosition);
-
-        if (!newPlaceName.trim() || !newPlaceType) return;
+    
+        if (!newPlaceName.trim() || !newPlaceType) {
+            window.showGlobalNotification('Názov a typ sú povinné', 'error');
+            return;
+        }
+    
+        // ----------------- NOVÉ: kontrola duplicity -----------------
+        const nameTrimmed = newPlaceName.trim();
+        const hasDuplicate = await checkDuplicateNameAndType(nameTrimmed, newPlaceType);
+    
+        if (hasDuplicate) {
+            window.showGlobalNotification(
+                `Miesto s názvom "${nameTrimmed}" už existuje v kategórii ${typeLabels[newPlaceType] || newPlaceType}!`,
+                'error'
+            );
+            return;
+        }
+        // -------------------------------------------------------------
+    
     
         // Najprv skúsime state
         let position = selectedAddPosition;
@@ -239,11 +255,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     
         try {
             const placeData = {
-                name: newPlaceName.trim(),
+                name: nameTrimmed,
                 type: newPlaceType,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
-                lat: position.lat,          // ← tu už máme position z fallbacku
+                lat: position.lat,
                 lng: position.lng,
             };
     
@@ -266,7 +282,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNewCapacity('');
             setTempAddPosition(null);
             setSelectedAddPosition(null);
-            window.lastAddedPosition = null;           // ← dôležité vyčistenie
+            window.lastAddedPosition = null;
     
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
@@ -278,6 +294,28 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
+
+    const checkDuplicateNameAndType = async (name, type) => {
+      if (!window.db) return false;
+
+      try {
+          const snapshot = await getDoc(collection(window.db, 'places'));
+    
+          const { query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+  
+          const q = query(
+              collection(window.db, 'places'),
+              where('name', '==', name.trim()),
+              where('type', '==', type)
+          );
+  
+          const snap = await getDocs(q);
+          return !snap.empty; 
+      } catch (err) {
+          console.error("Chyba pri kontrole duplicity:", err);
+          return false; 
+      }
+  };
 
     useEffect(() => {
         const handleHashChange = () => {
