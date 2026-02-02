@@ -299,22 +299,38 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const checkDuplicateNameAndType = async (name, type) => {
-      if (!window.db) return false;
-
-      try {        
-          const q = query(
-              collection(window.db, 'places'),
-              where('name_lower', '==', name.toLowerCase()),
-              where('type', '==', type)
-          );
-  
-          const snap = await getDocs(q);
-          return !snap.empty; 
-      } catch (err) {
-          console.error("Chyba pri kontrole duplicity:", err);
-          return false; 
-      }
-  };
+        if (!window.db) {
+            console.error("window.db nie je dostupné!");
+            return false;
+        }
+    
+        try {
+            console.log("Kontrolujem duplicitu → názov:", name);
+            console.log("Typ:", type);
+            console.log("Hľadám name_lower == ", name.toLowerCase());
+    
+            const q = query(
+                collection(window.db, 'places'),
+                where('name_lower', '==', name.toLowerCase()),
+                where('type', '==', type)
+            );
+    
+            const snap = await getDocs(q);
+            
+            console.log("Nájdených dokumentov:", snap.size);
+            snap.forEach(doc => {
+                console.log("Nájdené duplicitné miesto:", doc.id, doc.data().name, doc.data().name_lower);
+            });
+    
+            const exists = !snap.empty;
+            console.log("Duplicita existuje?", exists);
+            return exists;
+        } catch (err) {
+            console.error("!!! CHYBA PRI KONTROLE DUPLICITY !!!", err);
+            console.error("Stack:", err.stack);
+            return false;
+        }
+    };
 
     useEffect(() => {
         const handleHashChange = () => {
