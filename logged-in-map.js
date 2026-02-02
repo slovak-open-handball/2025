@@ -226,17 +226,17 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
     
-        // KRITICKÁ ZMENA: vždy najprv skús fallback – je synchronný a spoľahlivý
-        let position = window.lastAddedPosition || selectedAddPosition;
+        // Použi iba window.lastAddedPosition – je synchronný a spoľahlivý
+        const position = window.lastAddedPosition;
     
-        console.log("Aktuálna pozícia v handleAddPlace:", position);
+        console.log("Pozícia v handleAddPlace (z window):", position);
     
-        if (!position) {
+        if (!position || !position.lat || !position.lng) {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
     
-        // Teraz už vieme, že máme pozíciu → ideme kontrolovať duplicitu
+        // Kontrola duplicity – teraz sa už spustí
         const nameTrimmed = newPlaceName.trim();
         console.log("Začínam kontrolu duplicity pre:", nameTrimmed, newPlaceType);
     
@@ -247,14 +247,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                 `Miesto s názvom "${nameTrimmed}" už existuje v kategórii ${typeLabels[newPlaceType] || newPlaceType}!`,
                 'error'
             );
-            // focus na input (ak chceš)
             document.querySelector('input[placeholder="napr. ŠH Rosinská"]')?.focus();
             return;
         }
     
-        // ──────────────────────────────────────────────
         // Ukladanie
-        // ──────────────────────────────────────────────
         try {
             const placeData = {
                 name: nameTrimmed,
