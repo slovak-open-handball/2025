@@ -291,6 +291,12 @@ function showLocalNotification(message, type = 'success') {
     }, 5000);
 }
 
+const formatDateTimeSK = (date) => {
+    if (!date || !(date instanceof Date) || isNaN(date)) return '—';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(date.getDate())}. ${pad(date.getMonth()+1)}. ${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
 const formatDateToDMMYYYY = (dateString) => {
     if (!dateString) return '-';
     const [year, month, day] = dateString.split('-');
@@ -2834,6 +2840,39 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
       React.createElement(
         'div',
         { className: 'w-full' },
+
+        userProfileData?.role === 'club' && React.createElement(
+        'div',
+        { className: 'max-w-4xl mx-auto mb-6 space-y-2 px-2 sm:px-0' },
+        React.createElement(
+          'div',
+          { className: 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm' },
+          React.createElement(
+            'div',
+            { className: 'space-y-2 text-gray-700' },
+            React.createElement(
+              'p',
+              { className: 'font-medium' },
+              "Úprava súpisiek tímov povolená do: ",
+              React.createElement(
+                'span',
+                { className: isRosterEditDeadlinePassed ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold' },
+                formatDateTimeCZ(rosterEditDeadline)
+              )
+            ),
+            React.createElement(
+              'p',
+              { className: 'font-medium' },
+              "Úprava údajov tímov/pridanei nového tímu povolené do: ",
+              React.createElement(
+                'span',
+                { className: isDataEditDeadlinePassed ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold' },
+                formatDateTimeCZ(dataEditDeadline)
+              )
+            )
+          )
+        )
+      ),
 
         teamCategories.length > 0 ? (
           React.createElement('div', { className: 'space-y-6 w-full' },
