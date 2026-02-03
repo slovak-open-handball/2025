@@ -84,6 +84,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [selectedAddPosition, setSelectedAddPosition] = useState(null);
     const [editCapacity, setEditCapacity] = useState('');
     const [nameTypeError, setNameTypeError] = useState(null);
+
+    const [accommodationTypes, setAccommodationTypes] = useState([]);
+    const [selectedAccommodationType, setSelectedAccommodationType] = useState('');
+    const [editAccommodationType, setEditAccommodationType] = useState('');
+  
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
@@ -238,9 +243,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: newPlaceType,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
-                lat: position.lat, // ← tu už máme position z fallbacku
+                lat: position.lat,
                 lng: position.lng,
             };
+
+            if (newPlaceType === 'ubytovanie' && selectedAccommodationType) {
+                placeData.accommodationType = selectedAccommodationType;
+            }
    
             // kapacita...
             if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
@@ -273,6 +282,22 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
+
+    useEffect(() => {
+      if (!window.db) return;
+
+      const unsubscribe = onSnapshot(doc(window.db, 'settings', 'accomodation'), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const types = data.types || [];
+          setAccommodationTypes(types);
+        } else {
+          setAccommodationTypes([]);
+        }
+      });
+    
+      return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         if (!showModal && isAddingPlace === false) {
@@ -414,6 +439,28 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: editType,
                 updatedAt: Timestamp.now(),
             };
+
+            if (editType === 'ubytovanie') {
+                if (editAccommodationType) {
+                  updates.accommodationType = editAccommodationType;
+                } else {
+                  updates.accommodationType = null; // alebo deleteField()
+                }
+              } else {
+                updates.accommodationType = null;
+              }
+            
+              if (editType === 'ubytovanie' || editType === 'stravovanie') {
+                const cap = parseInt(editCapacity, 10);
+                if (!isNaN(cap) && cap > 0) {
+                  updates.capacity = cap;
+                } else {
+                  updates.capacity = null;
+                }
+              } else {
+                updates.capacity = null;
+              }
+          
    
             // Ak je typ ubytovanie alebo stravovanie → ukladáme kapacitu
             if (editType === 'ubytovanie' || editType === 'stravovanie') {
@@ -437,13 +484,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                 ...prev,
                 name: editName.trim(),
                 type: editType,
-                capacity: updates.capacity
+                capacity: updates.capacity,
+                accommodationType: updates.accommodationType || undefined,
             }));
    
             setPlaces(prevPlaces =>
                 prevPlaces.map(p =>
                     p.id === selectedPlace.id
-                        ? { ...p, name: editName.trim(), type: editType, capacity: updates.capacity }
+                        ? { ...p, name: editName.trim(), type: editType, capacity: updates.capacity, accommodationType: updates.accommodationType || undefined }
                         : p
                 )
             );
@@ -789,6 +837,7 @@ const AddGroupsApp = ({ userProfileData }) => {
    
       return () => {
         if (unsubscribePlaces) unsubscribePlaces();
+        if (placesLayerRef.current) placesLayerRef.current.clearLayers();
       };
     }, [activeFilter]);
     // ──────────────────────────────────────────────
@@ -923,6 +972,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         ? String(selectedPlace.capacity)
                                         : ''
                                 );
+                                setEditAccommodationType(selectedPlace.accommodationType || '');
                             },
                             className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
                         },
