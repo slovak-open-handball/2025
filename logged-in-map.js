@@ -301,18 +301,38 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
     useEffect(() => {
       if (!window.db) return;
-      const unsubscribe = onSnapshot(doc(window.db, 'settings', 'accomodation'), (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const types = data.types || [];
-          setAccommodationTypes(types);
-        } else {
+    
+      const unsubscribe = onSnapshot(
+        doc(window.db, 'settings', 'accomodation'),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const typesArray = Array.isArray(data.types) ? data.types : [];
+        
+            // Očistenie a validácia
+            const validTypes = typesArray
+              .filter(item => item && typeof item === 'object' && typeof item.type === 'string')
+              .map(item => ({
+                type: item.type.trim(),
+                capacity: Number(item.capacity) || 0
+              }));
+    
+            setAccommodationTypes(validTypes);
+            
+          console.log("Načítané typy ubytovania:", validTypes);
+          } else {
+            console.warn("Dokument settings/accomodation neexistuje");
+            setAccommodationTypes([]);
+          }
+          },
+        (error) => {
+          console.error("Chyba pri načítaní accomodation types:", error);
           setAccommodationTypes([]);
         }
-      });
-   
+      );
+  
       return () => unsubscribe();
-    }, []);
+    },   []);
     useEffect(() => {
         if (!showModal && isAddingPlace === false) {
             // len pre istotu – ak by niekto zavolal setShowModal(false) inak
