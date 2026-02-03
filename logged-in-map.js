@@ -236,7 +236,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         const nameTrimmed = newPlaceName.trim();
         const alreadyExists = places.some(
-            p => p.name.trim() === nameTrimmed && p.type === newPlaceType
+            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() && p.type === newPlaceType
         );
 
         if (alreadyExists) {
@@ -298,7 +298,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const timer = setTimeout(() => {
             const nameTrimmed = newPlaceName.trim();
             const duplicate = places.some(
-                p => p.name.trim() === nameTrimmed && p.type === newPlaceType
+                p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() && p.type === newPlaceType
             );
             if (duplicate) {
                 setNameTypeError(`Názov "${nameTrimmed}" tohto typu už existuje`);
@@ -1179,7 +1179,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             
                             React.createElement('button', {
                                 onClick: handleAddPlace,
-                                disabled: !newPlaceName.trim() || !newPlaceType,
+                                disabled: !newPlaceName.trim() || !newPlaceType || !!nameTypeError,
                                 className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
                             }, 'Pridať miesto')
                         )
