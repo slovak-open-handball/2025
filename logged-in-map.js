@@ -1335,6 +1335,7 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
         )
     )
 );
+}
 // ──────────────────────────────────────────────
 // Inicializácia + listener na globalDataUpdated
 // ──────────────────────────────────────────────
