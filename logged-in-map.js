@@ -303,7 +303,7 @@ const AddGroupsApp = ({ userProfileData }) => {
       if (!window.db) return;
     
       const unsubscribe = onSnapshot(
-        doc(window.db, 'settings', 'accomodation'),
+        doc(window.db, 'settings', 'accommodation'),
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
@@ -321,12 +321,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             
           console.log("Načítané typy ubytovania:", validTypes);
           } else {
-            console.warn("Dokument settings/accomodation neexistuje");
+            console.warn("Dokument settings/accommodation neexistuje");
             setAccommodationTypes([]);
           }
           },
         (error) => {
-          console.error("Chyba pri načítaní accomodation types:", error);
+          console.error("Chyba pri načítaní accommodation types:", error);
           setAccommodationTypes([]);
         }
       );
