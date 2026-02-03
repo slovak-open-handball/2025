@@ -88,6 +88,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [selectedAccommodationType, setSelectedAccommodationType] = useState('');
     const [editAccommodationType, setEditAccommodationType] = useState('');
     const [capacityError, setCapacityError] = useState(null);
+    const [allPlaces, setAllPlaces] = useState([]);
     // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
     const accommodationAvailabilityEdit = useMemo(() => {
       if (!accommodationTypes.length || !selectedPlace) return {};
@@ -273,17 +274,21 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
+      
         const nameTrimmed = newPlaceName.trim();
-        const alreadyExists = places.some(
-            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() && p.type === newPlaceType
-        );
-        if (alreadyExists) {
+      
+        const alreadyExists = allPlaces.some(
+            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() 
+              && p.type === newPlaceType
+          );
+
+          if (alreadyExists) {
             setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
             window.showGlobalNotification('Duplicitné miesto – nepridávam', 'error');
             return;
-        }
-  
-        setNameTypeError(null);
+          }
+
+          setNameTypeError(null);
  
         try {
             const placeData = {
@@ -822,22 +827,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => clearTimeout(timer);
     }, [selectedPlace, leafletMap.current]);
  
-    // Posun mapy po načítaní default view z DB
-// useEffect(() => {
-// if (!leafletMap.current) return;
-//
-// if (!isInitialLoad || selectedPlace || hashProcessed) {
-// console.log("Preskakujem default view – nie je to prvé načítanie alebo niečo je vybrané");
-// return;
-// }
-//
-// console.log("Prvé načítanie – aplikujem default view:", defaultCenter, defaultZoom);
-// leafletMap.current.setView(defaultCenter, defaultZoom, {
-// animate: true,
-// duration: 1.2
-// });
-// setIsInitialLoad(false);
-// }, [defaultCenter, defaultZoom, leafletMap.current, isInitialLoad, selectedPlace, hashProcessed]);
     // Načítanie a filtrovanie miest
     useEffect(() => {
       let unsubscribePlaces = null;
@@ -859,13 +848,15 @@ const AddGroupsApp = ({ userProfileData }) => {
               accommodationType: data.accommodationType || null,
             });
           });
- 
-          // FILTROVANIE podľa activeFilter
+
+          // Uložíme VŠETKY miesta do allPlaces
+          setAllPlaces(loadedPlaces);
+
+          // A filtrovaný zoznam do places (pre mapu)
           let filteredPlaces = loadedPlaces;
           if (activeFilter) {
             filteredPlaces = loadedPlaces.filter(place => place.type === activeFilter);
           }
- 
           setPlaces(filteredPlaces);
  
           if (!leafletMap.current) return;
