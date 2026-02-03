@@ -1176,11 +1176,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 onClick: () => setShowModal(false),
                                 className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                             }, 'Zrušiť'),
-                            
+   
                             React.createElement('button', {
                                 onClick: handleAddPlace,
                                 disabled: !newPlaceName.trim() || !newPlaceType || !!nameTypeError,
-                                className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
+                                className: `
+                                    px-6 py-2.5 rounded-lg font-medium transition
+                                    border-2
+                                    ${!newPlaceName.trim() || !newPlaceType || !!nameTypeError
+                                        ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700'
+                                    }
+                                `
                             }, 'Pridať miesto')
                         )
                     )
