@@ -1015,17 +1015,61 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
 
   React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-10' },
 
-    // Horná hlavička + filtre
-    React.createElement('div', { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
-      React.createElement('h2', { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-6' }, 'Mapa'),
-      React.createElement('div', { className: 'flex flex-wrap justify-center gap-3 sm:gap-4' },
-        // ... filtre (Športové haly, Ubytovanie, Stravovanie, Zastávky) ... bez zmeny
-        React.createElement('button', { /* Športové haly */ }),
-        React.createElement('button', { /* Ubytovanie */ }),
-        React.createElement('button', { /* Stravovanie */ }),
-        React.createElement('button', { /* Zastávky */ }),
+  React.createElement('div', { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
+    React.createElement('h2', { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-6' }, 'Mapa'),
+  
+    // FILTRY – toto je časť, ktorá chýbala
+    React.createElement('div', { className: 'flex flex-wrap justify-center gap-3 sm:gap-4' },
+  
+      React.createElement('button', {
+        onClick: () => setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'),
+        className: `px-5 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
+          activeFilter === 'sportova_hala'
+            ? 'bg-red-600 text-white border-2 border-red-800 scale-105'
+            : 'bg-white text-gray-800 border-2 border-[#dc2626] hover:bg-red-50'
+        }`
+      },
+        React.createElement('i', { className: 'fa-solid fa-futbol' }),
+        'Športové haly'
+      ),
+  
+      React.createElement('button', {
+        onClick: () => setActiveFilter(activeFilter === 'ubytovanie' ? null : 'ubytovanie'),
+        className: `px-5 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
+          activeFilter === 'ubytovanie'
+            ? 'bg-gray-700 text-white border-2 border-gray-900 scale-105'
+            : 'bg-white text-gray-800 border-2 border-[#6b7280] hover:bg-gray-100'
+        }`
+      },
+        React.createElement('i', { className: 'fa-solid fa-bed' }),
+        'Ubytovanie'
+      ),
+  
+      React.createElement('button', {
+        onClick: () => setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie'),
+        className: `px-5 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
+          activeFilter === 'stravovanie'
+            ? 'bg-green-700 text-white border-2 border-green-900 scale-105'
+            : 'bg-white text-gray-800 border-2 border-[#16a34a] hover:bg-green-50'
+        }`
+      },
+        React.createElement('i', { className: 'fa-solid fa-utensils' }),
+        'Stravovanie'
+      ),
+  
+      React.createElement('button', {
+        onClick: () => setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka'),
+        className: `px-5 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
+          activeFilter === 'zastavka'
+            ? 'bg-blue-700 text-white border-2 border-blue-900 scale-105'
+            : 'bg-white text-gray-800 border-2 border-[#2563eb] hover:bg-blue-50'
+        }`
+      },
+        React.createElement('i', { className: 'fa-solid fa-bus' }),
+        'Zastávky'
       )
-    ),
+    )
+  ),
 
     React.createElement('div', { className: 'relative' },
 
