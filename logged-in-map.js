@@ -731,6 +731,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               lng: loc?.longitude ?? data.lng,
               createdAt: data.createdAt,
               capacity: data.capacity || null,
+              accommodationType: data.accommodationType || null,
             });
           });
    
