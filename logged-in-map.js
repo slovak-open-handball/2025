@@ -1190,14 +1190,3 @@ if (window.globalUserProfileData) {
         )
     );
 }
- 
- 
-uprav porsím v tomto kdoe, stále je možné pridať miesto v rovnakom type s rovnakým názvom a vypisuje sa do konzoly iba toto:
- 
-Spúšťam režim pridávania
-logged-in-map.js:176 → pridávací click handler (handleAddClick) pridaný
-logged-in-map.js:607 RAW MAP CLICK EVENT FIRED v {lat: 49.18984583289228, lng: 18.796319107345585}
-logged-in-map.js:99 CLICK NA MAPE zachytený v režime pridávania! v {lat: 49.18984583289228, lng: 18.796319107345585}
-logged-in-map.js:220 handleAddPlace volané
-logged-in-map.js:221 selectedAddPosition: {lat: 49.18984583289228, lng: 18.796319107345585}
-logged-in-map.js:222 window.lastAddedPosition: {lat: 49.18984583289228, lng: 18.796319107345585}
