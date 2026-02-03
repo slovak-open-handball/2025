@@ -1229,7 +1229,6 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
                 React.createElement('i', { className: isAddingPlace ? 'fa-solid fa-xmark' : 'fa-solid fa-plus' })
             ),
 
-            // Modal na pridanie miesta
             showModal && React.createElement(
                 'div',
                 { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
@@ -1241,7 +1240,6 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
                         React.createElement('strong', null, 'Vybraná poloha: '),
                         `${tempAddPosition.lat.toFixed(6)}, ${tempAddPosition.lng.toFixed(6)}`
                     ),
-
                     // Názov
                     React.createElement('div', { className: 'mb-5' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
@@ -1253,7 +1251,6 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
                             className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                         })
                     ),
-
                     // Typ
                     React.createElement('div', { className: 'mb-5' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
@@ -1269,8 +1266,7 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
                             React.createElement('option', { value: 'zastavka' }, 'Zastávka')
                         )
                     ),
-
-                    // Typ ubytovania – len pri ubytovaní
+                    // Typ ubytovania
                     newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ ubytovania'),
                         React.createElement('select', {
@@ -1286,24 +1282,22 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
                                     value: item.type,
                                     disabled: avail.isFull,
                                     className: avail.isFull ? 'text-gray-400 cursor-not-allowed' : ''
-                                }, 
+                                },
                                     `${item.type} (${item.capacity} lôžok celkom)${avail.isFull ? ' (naplnená kapacita)' : ''}`
                                 );
                             })
                         ),
                         selectedAccommodationType && accommodationAvailabilityAdd[selectedAccommodationType] && React.createElement('p', {
                             className: `mt-2 text-sm ${accommodationAvailabilityAdd[selectedAccommodationType].free <= 0 ? 'text-red-600' : 'text-gray-600'}`
-                        }, 
+                        },
                             `Dostupná kapacita: ${accommodationAvailabilityAdd[selectedAccommodationType].free} lôžok`
                         )
                     ),
-
                     nameTypeError && React.createElement(
                         'div',
                         { className: 'mt-3 p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm' },
                         nameTypeError
                     ),
-
                     // Kapacita
                     (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && React.createElement('div', { className: 'mb-6' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
@@ -1318,7 +1312,6 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
                             className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                         })
                     ),
-
                     // Tlačidlá
                     React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                         React.createElement('button', {
