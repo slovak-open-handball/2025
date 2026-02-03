@@ -312,6 +312,24 @@ const AddGroupsApp = ({ userProfileData }) => {
             setCapacityError('Kapacita musí byť kladné číslo');
             return;
         }
+
+        const accommodationAvailabilityAdd = useMemo(() => {
+          if (!accommodationTypes.length) return {};
+          const result = {};
+          accommodationTypes.forEach((accType) => {
+            const total = accType.capacity || 0;
+            const occupied = places
+              .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
+              .reduce((sum, p) => sum + (p.capacity || 0), 0);
+            const free = total - occupied;
+            result[accType.type] = {
+              free,
+              isFull: free <= 0,
+              total,
+            };
+          });
+          return result;
+        }, [accommodationTypes, places]);
     
         const avail = accommodationAvailabilityAdd[selectedAccommodationType];
         if (!avail) {
@@ -960,24 +978,6 @@ const AddGroupsApp = ({ userProfileData }) => {
       }
       return total - occupied;
     }, [editType, editAccommodationType, accommodationTypes, places, selectedPlace]);
-
-    const accommodationAvailabilityAdd = useMemo(() => {
-      if (!accommodationTypes.length) return {};
-      const result = {};
-      accommodationTypes.forEach((accType) => {
-        const total = accType.capacity || 0;
-        const occupied = places
-          .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
-          .reduce((sum, p) => sum + (p.capacity || 0), 0);
-        const free = total - occupied;
-        result[accType.type] = {
-          free,
-          isFull: free <= 0,
-          total,
-        };
-      });
-      return result;
-    }, [accommodationTypes, places]);
 
     // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
     const accommodationAvailabilityEdit = useMemo(() => {
