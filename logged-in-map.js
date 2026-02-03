@@ -465,20 +465,25 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNameTypeError(null);
             return;
         }
-  
+
         const timer = setTimeout(() => {
             const nameTrimmed = newPlaceName.trim();
-            const duplicate = places.some(
-                p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() && p.type === newPlaceType
+    
+            // ← ZMENENÉ: kontrolujeme voči allPlaces, nie places
+            const duplicate = allPlaces.some(
+                p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() 
+                  && p.type === newPlaceType
             );
+
             if (duplicate) {
                 setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
-            } else {
+          } else {
                 setNameTypeError(null);
             }
-        }, 600);
+        }, 100);
+
         return () => clearTimeout(timer);
-    }, [newPlaceName, newPlaceType, showModal, places]);
+    }, [newPlaceName, newPlaceType, showModal, allPlaces]);
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash;
