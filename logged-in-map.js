@@ -927,7 +927,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     className: 'flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition'
                                 }, 'Uložiť novú polohu'),
                                 React.createElement('button', {
-                                    onClick: cancelAddingPlace,
+                                    onClick: () => {
+                                        setShowModal(false);
+                                        cancelAddingPlace();
+                                    },
                                     className: 'flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition'
                                 }, 'Zrušiť')
                             )
@@ -1020,7 +1023,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                       // Tlačidlá
                       React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                           React.createElement('button', {
-                              onClick: cancelAddingPlace,
+                              onClick: () => {
+                                  setShowModal(false);
+                                  cancelAddingPlace();
+                              },
                               className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                           }, 'Zrušiť'),
                          
