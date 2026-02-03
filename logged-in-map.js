@@ -83,6 +83,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const addClickHandlerRef = useRef(null);
     const [selectedAddPosition, setSelectedAddPosition] = useState(null);
     const [editCapacity, setEditCapacity] = useState('');
+    const [nameTypeError, setNameTypeError] = useState(null);
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
@@ -127,8 +128,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         // Fallback pre istotu
         window.lastAddedPosition = pos;
    
-    }, []); // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace
-   
+    }, []); // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace   
    
     const startAddingPlace = () => {
         if (isAddingPlace) return;
@@ -160,8 +160,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         leafletMap.current.on('click', handleAddClick); // ← toto!
    
         console.log("→ pridávací click handler (handleAddClick) pridaný");
-    };
-   
+    };   
    
     const cancelAddingPlace = () => {
         console.log("Ruším režim pridávania");
@@ -199,6 +198,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         window.history.replaceState(null, '', window.location.pathname);
       }
     };
+  
     const handleAddPlace = async () => {
         console.log("handleAddPlace volané");
         console.log("selectedAddPosition:", selectedAddPosition);
@@ -218,6 +218,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
+
+        const nameTrimmed = newPlaceName.trim();
+        const alreadyExists = places.some(
+            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() && p.type === newPlaceType
+        );
+
+        if (alreadyExists) {
+            setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
+            window.showGlobalNotification('Duplicitné miesto – nepridávam', 'error');
+            return;
+        }
+    
+        setNameTypeError(null);
    
         try {
             const placeData = {
@@ -260,6 +273,28 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
+
+    useEffect(() => {
+        if (!newPlaceName.trim() || !newPlaceType || !showModal) {
+            setNameTypeError(null);
+            return;
+        }
+    
+        const timer = setTimeout(() => {
+            const nameTrimmed = newPlaceName.trim();
+            const duplicate = places.some(
+                p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() && p.type === newPlaceType
+            );
+            if (duplicate) {
+                setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
+            } else {
+                setNameTypeError(null);
+            }
+        }, 600);
+  
+        return () => clearTimeout(timer);
+    }, [newPlaceName, newPlaceType, showModal, places]);
+  
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash;
@@ -892,7 +927,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     className: 'flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition'
                                 }, 'Uložiť novú polohu'),
                                 React.createElement('button', {
-                                    onClick: handleCancelEditLocation,
+                                    onClick: cancelAddingPlace,
                                     className: 'flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition'
                                 }, 'Zrušiť')
                             )
@@ -985,7 +1020,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       // Tlačidlá
                       React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                           React.createElement('button', {
-                              onClick: () => setIsEditingNameAndType(false),
+                              onClick: cancelAddingPlace,
                               className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                           }, 'Zrušiť'),
                          
@@ -1051,6 +1086,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 React.createElement('option', { value: 'zastavka' }, 'Zastávka')
                             )
                         ),
+
+                        nameTypeError && React.createElement(
+                            'div',
+                            { className: 'mt-3 p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm' },
+                            nameTypeError
+                        ),
                        
                         // Kapacita – zobrazí sa len pri Ubytovanie alebo Stravovanie
                         (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') &&
@@ -1078,8 +1119,15 @@ const AddGroupsApp = ({ userProfileData }) => {
                            
                             React.createElement('button', {
                                 onClick: handleAddPlace,
-                                disabled: !newPlaceName.trim() || !newPlaceType,
-                                className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
+                                disabled: !newPlaceName.trim() || !newPlaceType || !!nameTypeError,
+                                className: `
+                                    px-6 py-2.5 rounded-lg font-medium transition duration-150
+                                    border-2
+                                    ${(!newPlaceName.trim() || !newPlaceType || !!nameTypeError)
+                                        ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 active:bg-blue-800 active:border-blue-800'
+                                    }
+                                `
                             }, 'Pridať miesto')
                         )
                     )
