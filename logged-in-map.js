@@ -1181,11 +1181,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 onClick: handleAddPlace,
                                 disabled: !newPlaceName.trim() || !newPlaceType || !!nameTypeError,
                                 className: `
-                                    px-6 py-2.5 rounded-lg font-medium transition
+                                    px-6 py-2.5 rounded-lg font-medium transition duration-150
                                     border-2
-                                    ${!newPlaceName.trim() || !newPlaceType || !!nameTypeError
+                                    ${(!newPlaceName.trim() || !newPlaceType || !!nameTypeError)
                                         ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed'
-                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700'
+                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 active:bg-blue-800 active:border-blue-800'
                                     }
                                 `
                             }, 'Pridať miesto')
