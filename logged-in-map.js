@@ -176,7 +176,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         setNameTypeError(null);
         setCapacityError(null);
 
-        setShowModal(true);
+        setTimeout(() => {
+            setShowModal(true);
+        }, 500);
         setIsAddingPlace(false);
  
         // Fallback pre istotu
