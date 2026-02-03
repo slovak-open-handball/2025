@@ -88,6 +88,24 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [selectedAccommodationType, setSelectedAccommodationType] = useState('');
     const [editAccommodationType, setEditAccommodationType] = useState('');
     const [capacityError, setCapacityError] = useState(null);
+
+    const accommodationAvailabilityAdd = useMemo(() => {
+        if (!accommodationTypes.length) return {};
+        const result = {};
+        accommodationTypes.forEach((accType) => {
+          const total = accType.capacity || 0;
+          const occupied = places
+            .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
+            .reduce((sum, p) => sum + (p.capacity || 0), 0);
+          const free = total - occupied;
+          result[accType.type] = {
+            free,
+            isFull: free <= 0,
+            total,
+          };
+        });
+        return result;
+      }, [accommodationTypes, places]);
  
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
@@ -312,24 +330,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             setCapacityError('Kapacita musí byť kladné číslo');
             return;
         }
-
-        const accommodationAvailabilityAdd = useMemo(() => {
-          if (!accommodationTypes.length) return {};
-          const result = {};
-          accommodationTypes.forEach((accType) => {
-            const total = accType.capacity || 0;
-            const occupied = places
-              .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
-              .reduce((sum, p) => sum + (p.capacity || 0), 0);
-            const free = total - occupied;
-            result[accType.type] = {
-              free,
-              isFull: free <= 0,
-              total,
-            };
-          });
-          return result;
-        }, [accommodationTypes, places]);
     
         const avail = accommodationAvailabilityAdd[selectedAccommodationType];
         if (!avail) {
