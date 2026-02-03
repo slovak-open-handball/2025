@@ -94,6 +94,8 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const [editCapacity, setEditCapacity] = useState('');
 
+    const [nameTypeError, setNameTypeError] = useState(null);
+
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
@@ -138,8 +140,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         // Fallback pre istotu
         window.lastAddedPosition = pos;
     
-    }, []);  // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace
-    
+    }, []);  // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace    
     
     const startAddingPlace = () => {
         if (isAddingPlace) return;
@@ -172,8 +173,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         leafletMap.current.on('click', handleAddClick);       // ← toto!
     
         console.log("→ pridávací click handler (handleAddClick) pridaný");
-    };
-    
+    };    
     
     const cancelAddingPlace = () => {
         console.log("Ruším režim pridávania");
@@ -233,6 +233,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
+
+        const nameTrimmed = newPlaceName.trim();
+        const alreadyExists = places.some(
+            p => p.name.trim() === nameTrimmed && p.type === newPlaceType
+        );
+
+        if (alreadyExists) {
+            setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
+            window.showGlobalNotification('Duplicitné miesto – nepridávam', 'error');
+            return;
+        }
+
+        setNameTypeError(null);
     
         try {
             const placeData = {
@@ -275,6 +288,27 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
+
+    useEffect(() => {
+        if (!newPlaceName.trim() || !newPlaceType || !showModal) {
+            setNameTypeError(null);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            const nameTrimmed = newPlaceName.trim();
+            const duplicate = places.some(
+                p => p.name.trim() === nameTrimmed && p.type === newPlaceType
+            );
+            if (duplicate) {
+                setNameTypeError(`Názov "${nameTrimmed}" tohto typu už existuje`);
+            } else {
+                setNameTypeError(null);
+            }
+        }, 600);
+
+        return () => clearTimeout(timer);
+    }, [newPlaceName, newPlaceType, showModal, places]);
 
     useEffect(() => {
         const handleHashChange = () => {
@@ -1111,6 +1145,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 React.createElement('option', { value: 'stravovanie' }, 'Stravovanie'),
                                 React.createElement('option', { value: 'zastavka' }, 'Zastávka')
                             )
+                        ),
+
+                        nameTypeError && React.createElement(
+                            'div',
+                            { className: 'mt-3 p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm' },
+                            nameTypeError
                         ),
                         
                         // Kapacita – zobrazí sa len pri Ubytovanie alebo Stravovanie
