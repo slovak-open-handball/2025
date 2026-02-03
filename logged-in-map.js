@@ -1076,11 +1076,23 @@ const AddGroupsApp = ({ userProfileData }) => {
                       ,
                       
                       // Tlačidlá
-                      React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
-                          React.createElement('button', {
-                              onClick: () => setIsEditingNameAndType(false),
-                              className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
-                          }, 'Zrušiť'),
+                      React.createElement('button', {
+                          onClick: () => {
+                              setShowModal(false);
+                              
+                              // ← NOVÉ: odstránenie dočasného markera pri zrušení
+                              if (tempMarkerRef.current) {
+                                  tempMarkerRef.current.remove();
+                                  tempMarkerRef.current = null;
+                              }
+                              
+                              // voliteľné: vyčistiť aj ďalšie dočasné stavy (pre istotu)
+                              setTempAddPosition(null);
+                              setSelectedAddPosition(null);
+                              window.lastAddedPosition = null;
+                          },
+                          className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
+                      }, 'Zrušiť'),
                           
                           React.createElement('button', {
                               onClick: handleSaveNameAndType,
@@ -1171,11 +1183,23 @@ const AddGroupsApp = ({ userProfileData }) => {
                             ),
                         
                         // Tlačidlá
-                        React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
-                            React.createElement('button', {
-                                onClick: () => setShowModal(false),
-                                className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
-                            }, 'Zrušiť'),
+                        React.createElement('button', {
+                            onClick: () => {
+                                setShowModal(false);
+                                
+                                // ← NOVÉ: odstránenie dočasného markera pri zrušení
+                                if (tempMarkerRef.current) {
+                                    tempMarkerRef.current.remove();
+                                    tempMarkerRef.current = null;
+                                }
+                                
+                                // voliteľné: vyčistiť aj ďalšie dočasné stavy (pre istotu)
+                                setTempAddPosition(null);
+                                setSelectedAddPosition(null);
+                                window.lastAddedPosition = null;
+                            },
+                            className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
+                        }, 'Zrušiť'),
    
                             React.createElement('button', {
                                 onClick: handleAddPlace,
