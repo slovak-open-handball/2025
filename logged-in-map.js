@@ -1022,7 +1022,11 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
     React.createElement('div', { className: 'flex flex-wrap justify-center gap-3 sm:gap-4' },
   
       React.createElement('button', {
-        onClick: () => setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'),
+        onClick: () => {
+            setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala');
+            setSelectedPlace(null);
+            setPlaceHash(null);
+        },
         className: `px-5 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
           activeFilter === 'sportova_hala'
             ? 'bg-red-600 text-white border-2 border-red-800 scale-105'
@@ -1034,7 +1038,11 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
       ),
   
       React.createElement('button', {
-        onClick: () => setActiveFilter(activeFilter === 'ubytovanie' ? null : 'ubytovanie'),
+        onClick: () => {
+            setActiveFilter(activeFilter === 'ubytovanie' ? null : 'ubytovanie');
+            setSelectedPlace(null);
+            setPlaceHash(null);
+        },
         className: `px-5 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
           activeFilter === 'ubytovanie'
             ? 'bg-gray-700 text-white border-2 border-gray-900 scale-105'
@@ -1046,7 +1054,11 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
       ),
   
       React.createElement('button', {
-        onClick: () => setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie'),
+        onClick: () => {
+            setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie');
+            setSelectedPlace(null);
+            setPlaceHash(null);
+        },
         className: `px-5 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
           activeFilter === 'stravovanie'
             ? 'bg-green-700 text-white border-2 border-green-900 scale-105'
@@ -1058,7 +1070,11 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
       ),
   
       React.createElement('button', {
-        onClick: () => setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka'),
+        onClick: () => {
+            setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka');
+            setSelectedPlace(null);
+            setPlaceHash(null);
+        },
         className: `px-5 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
           activeFilter === 'zastavka'
             ? 'bg-blue-700 text-white border-2 border-blue-900 scale-105'
