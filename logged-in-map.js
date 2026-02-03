@@ -954,16 +954,6 @@ const AddGroupsApp = ({ userProfileData }) => {
     // ──────────────────────────────────────────────
     // RENDER
     // ──────────────────────────────────────────────
-    Tu je celá upravená časť RENDER (od // ────────────────────────────────────────────── // RENDER až po koniec komponentu), kde sú selectboxy pre typ ubytovania už upravené podľa tvojich požiadaviek:
-
-disabled, ak je kapacita naplnená (free <= 0)
-text „(naplnená kapacita)“ pri disabled položkách
-červené zobrazenie, ak je dostupná kapacita 0
-pri editácii sa aktuálny typ nikdy nezobrazuje ako disabled (aj keď je momentálne plný)
-
-JavaScript// ──────────────────────────────────────────────
-// RENDER
-// ──────────────────────────────────────────────
 return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
     React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-10' },
         React.createElement('div', { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
