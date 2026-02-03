@@ -275,6 +275,16 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     useEffect(() => {
+        if (!showModal && isAddingPlace === false) {
+            // len pre istotu – ak by niekto zavolal setShowModal(false) inak
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+        }
+    }, [showModal, isAddingPlace]);
+
+    useEffect(() => {
         if (!newPlaceName.trim() || !newPlaceType || !showModal) {
             setNameTypeError(null);
             return;
