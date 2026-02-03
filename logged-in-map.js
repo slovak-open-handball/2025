@@ -169,7 +169,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             }).addTo(leafletMap.current);
         }
  
-        // Otvoríme modál
+        setNewPlaceName('');
+        setNewPlaceType('');
+        setNewCapacity('');
+        setSelectedAccommodationType('');
+        setNameTypeError(null);
+        setCapacityError(null);
+
         setShowModal(true);
         setIsAddingPlace(false);
  
@@ -431,12 +437,20 @@ const AddGroupsApp = ({ userProfileData }) => {
       return () => unsubscribe();
     }, []);
     useEffect(() => {
-        if (!showModal && isAddingPlace === false) {
+        if (!showModal && !isAddingPlace) {
             // len pre istotu – ak by niekto zavolal setShowModal(false) inak
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
                 tempMarkerRef.current = null;
             }
+
+            // ← NOVÉ: vyčistenie formulára pre pridávanie
+            setNewPlaceName('');
+            setNewPlaceType('');
+            setNewCapacity('');
+            setSelectedAccommodationType('');
+            setNameTypeError(null);
+            setCapacityError(null);
         }
     }, [showModal, isAddingPlace]);
     useEffect(() => {
