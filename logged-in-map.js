@@ -1036,7 +1036,6 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
         className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[450px]'
       }),
 
-      // Detail vybraného miesta (sidebar)
       selectedPlace && React.createElement(
         'div',
         {
@@ -1044,11 +1043,120 @@ return React.createElement('div', { className: 'flex-grow flex justify-center it
           className: `absolute top-0 right-0 z-[1100] w-full md:w-80 h-[68vh] md:h-[68vh] min-h-[450px]
                       bg-white shadow-2xl rounded-xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300`
         },
-        // ... obsah detailu bez zmeny ...
-        React.createElement('div', { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' }, /* hlavička */),
-        React.createElement('div', { className: 'p-5 flex-1 overflow-y-auto' }, /* názov, typ, kapacita, súradnice */),
+      
+        // Horná lišta s názvom "Detail miesta" a krížikom
+        React.createElement('div', { className: 'p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50' },
+          React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, 'Detail miesta'),
+          React.createElement('button', {
+            onClick: closeDetail,
+            className: 'text-gray-500 hover:text-gray-800 text-2xl leading-none'
+          }, '×')
+        ),
+      
+        // Hlavný obsah – názov, typ, kapacita, súradnice
+        React.createElement('div', { className: 'p-5 flex-1 overflow-y-auto' },
+          React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
+      
+          React.createElement('p', { className: 'text-gray-600 mb-3' },
+            React.createElement('strong', null, 'Typ: '),
+            typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
+          ),
+      
+          (selectedPlace.capacity &&
+           (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
+            React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
+              React.createElement('strong', null,
+                selectedPlace.type === 'ubytovanie' ? 'Počet lôžok:' : 'Kapacita:'
+              ),
+              ' ',
+              selectedPlace.capacity
+            ),
+      
+          React.createElement('p', { className: 'text-gray-600 mb-3' },
+            React.createElement('strong', null, 'Súradnice: '),
+            tempLocation
+              ? `${tempLocation.lat.toFixed(6)}, ${tempLocation.lng.toFixed(6)} (dočasné)`
+              : `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
+          )
+        ),
+      
+        // Spodná časť s tlačidlami
         React.createElement('div', { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
-          // Navigovať, Upraviť názov/typ/kapacitu, Upraviť polohu, Odstrániť
+      
+          React.createElement('button', {
+            onClick: () => {
+              if (selectedPlace?.lat && selectedPlace?.lng) {
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${selectedPlace.lat},${selectedPlace.lng}`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+              } else {
+                window.showGlobalNotification('Poloha miesta nie je dostupná', 'error');
+              }
+            },
+            className: 'w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center justify-center gap-2'
+          },
+            React.createElement('i', { className: 'fa-solid fa-directions text-lg' }),
+            'Navigovať'
+          ),
+      
+          React.createElement('button', {
+            onClick: () => {
+              setIsEditingNameAndType(true);
+              setEditName(selectedPlace.name || '');
+              setEditType(selectedPlace.type || '');
+              setEditCapacity(selectedPlace.capacity != null ? String(selectedPlace.capacity) : '');
+              setEditAccommodationType(selectedPlace.accommodationType || '');
+            },
+            className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
+          },
+            (selectedPlace?.type === 'ubytovanie' || selectedPlace?.type === 'stravovanie')
+              ? 'Upraviť názov/typ/kapacitu'
+              : 'Upraviť názov/typ'
+          ),
+      
+          isEditingLocation
+            ? React.createElement('div', { className: 'flex gap-2' },
+                React.createElement('button', {
+                  onClick: handleSaveNewLocation,
+                  className: 'flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition'
+                }, 'Uložiť novú polohu'),
+                React.createElement('button', {
+                  onClick: handleCancelEditLocation,
+                  className: 'flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition'
+                }, 'Zrušiť')
+              )
+            : React.createElement('button', {
+                onClick: () => {
+                  setIsEditingLocation(true);
+                  setTempLocation({ lat: selectedPlace.lat, lng: selectedPlace.lng });
+                  if (leafletMap.current) {
+                    editMarkerRef.current = L.marker([selectedPlace.lat, selectedPlace.lng], {
+                      draggable: true,
+                      icon: L.divIcon({
+                        className: 'editing-marker',
+                        html: '<div style="background:red;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>'
+                      })
+                    }).addTo(leafletMap.current);
+      
+                    editMarkerRef.current.on('dragend', e => {
+                      const pos = e.target.getLatLng();
+                      setTempLocation({ lat: pos.lat, lng: pos.lng });
+                    });
+      
+                    const clickHandler = e => {
+                      setTempLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+                      if (editMarkerRef.current) editMarkerRef.current.setLatLng(e.latlng);
+                    };
+                    leafletMap.current.on('click', clickHandler);
+                    editMarkerRef.current._clickHandler = clickHandler;
+                  }
+                },
+                className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
+              }, 'Upraviť polohu'),
+      
+          React.createElement('button', {
+            onClick: handleDeletePlace,
+            className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition'
+          }, 'Odstrániť miesto')
         )
       ),
 
