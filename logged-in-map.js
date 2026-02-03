@@ -89,6 +89,35 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [editAccommodationType, setEditAccommodationType] = useState('');
     const [capacityError, setCapacityError] = useState(null);
 
+    // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
+    const accommodationAvailabilityEdit = useMemo(() => {
+      if (!accommodationTypes.length || !selectedPlace) return {};
+    
+      const result = {};
+      accommodationTypes.forEach((accType) => {
+        const total = accType.capacity || 0;
+        let occupied = places
+          .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
+          .reduce((sum, p) => sum + (p.capacity || 0), 0);
+    
+        // Bezpečnostná kontrola – ak editujeme a máme starý typ
+        if (
+          selectedPlace?.type === 'ubytovanie' &&
+          selectedPlace?.accommodationType === accType.type
+        ) {
+          occupied -= selectedPlace?.capacity || 0;
+        }
+
+        const free = total - occupied;
+        result[accType.type] = {
+          free,
+          isFull: free <= 0,
+          total,
+        };
+      });
+      return result;
+    }, [accommodationTypes, places, selectedPlace]);
+
     const accommodationAvailabilityAdd = useMemo(() => {
         if (!accommodationTypes.length) return {};
         const result = {};
@@ -978,35 +1007,6 @@ const AddGroupsApp = ({ userProfileData }) => {
       }
       return total - occupied;
     }, [editType, editAccommodationType, accommodationTypes, places, selectedPlace]);
-
-    // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
-    const accommodationAvailabilityEdit = useMemo(() => {
-      if (!accommodationTypes.length || !selectedPlace) return {};
-    
-      const result = {};
-      accommodationTypes.forEach((accType) => {
-        const total = accType.capacity || 0;
-        let occupied = places
-          .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
-          .reduce((sum, p) => sum + (p.capacity || 0), 0);
-    
-        // Bezpečnostná kontrola – ak editujeme a máme starý typ
-        if (
-          selectedPlace?.type === 'ubytovanie' &&
-          selectedPlace?.accommodationType === accType.type
-        ) {
-          occupied -= selectedPlace?.capacity || 0;
-        }
-
-        const free = total - occupied;
-        result[accType.type] = {
-          free,
-          isFull: free <= 0,
-          total,
-        };
-      });
-      return result;
-    }, [accommodationTypes, places, selectedPlace]);
   
 // ──────────────────────────────────────────────
 // RENDER
