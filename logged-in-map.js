@@ -466,24 +466,18 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
 
-        const timer = setTimeout(() => {
-            const nameTrimmed = newPlaceName.trim();
+        const nameTrimmed = newPlaceName.trim();
+        const duplicate = allPlaces.some(
+            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() 
+              && p.type === newPlaceType
+        );
     
-            // ← ZMENENÉ: kontrolujeme voči allPlaces, nie places
-            const duplicate = allPlaces.some(
-                p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() 
-                  && p.type === newPlaceType
-            );
-
-            if (duplicate) {
-                setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
-          } else {
-                setNameTypeError(null);
-            }
-        }, 100);
-
-        return () => clearTimeout(timer);
-    }, [newPlaceName, newPlaceType, showModal, allPlaces]);
+        if (duplicate) {
+            setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
+        } else {
+            setNameTypeError(null);
+        }
+    }, [newPlaceName, newPlaceType, showModal, allPlaces, typeLabels]);
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash;
