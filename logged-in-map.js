@@ -197,6 +197,17 @@ const AddGroupsApp = ({ userProfileData }) => {
             riseOnHover: false
         }).addTo(leafletMap.current);
 
+        tempMarkerRef.current.addTo(leafletMap.current);
+
+        // Prinúť refresh
+        setTimeout(() => {
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.setLatLng(tempMarkerRef.current.getLatLng()); // trigger update
+                leafletMap.current.invalidateSize(false);
+                console.log("Prinútený refresh markera");
+            }
+        }, 100);
+
         const ensureMarkerIsVisible = () => {
             if (!tempMarkerRef.current) return false;
             const iconElement = tempMarkerRef.current.getElement();
