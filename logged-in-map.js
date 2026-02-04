@@ -138,68 +138,38 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Samostatná funkcia – vytvorí sa iba raz
 
     const handleAddClick = useCallback((e) => {
-        console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
-
+        console.log("CLICK NA MAPE zachytený!", e.latlng);
         const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
-
-        // Uložíme pozíciu
+    
         setSelectedAddPosition(pos);
         setTempAddPosition(pos);
-
+    
+        // Zruš handlery
         leafletMap.current?.off('mousemove', moveHandlerRef.current);
         leafletMap.current?.off('click', addClickHandlerRef.current);
         moveHandlerRef.current = null;
         addClickHandlerRef.current = null;
-
-//        // Zastavíme mousemove
-//        if (moveHandlerRef.current) {
-//            leafletMap.current?.off('mousemove', moveHandlerRef.current);
-//            moveHandlerRef.current = null;
-//        }
-
-//        // Odstránime tento click handler (už nepotrebujeme ďalšie kliky)
-//        if (leafletMap.current && addClickHandlerRef.current) {
-//            leafletMap.current.off('click', addClickHandlerRef.current);
-//            addClickHandlerRef.current = null;
-//        }
-
-//        if (leafletMap.current) {
-//            if (tempMarkerRef.current) {
-//                tempMarkerRef.current.remove();
-//                tempMarkerRef.current = null;
-//            }
     
-        try {
-            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
-                icon: L.divIcon({
-                    className: 'adding-marker',
-                    html: `
-                        <div style="
-                            background: #ef4444;
-                            width: 36px;
-                            height: 36px;
-                            border-radius: 50%;
-                            border: 5px solid white;
-                            box-shadow: 0 0 15px rgba(0,0,0,0.7);
-                            z-index: 99999 !important;
-                            position: relative;
-                        "></div>
-                    `,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                }),
-                pane: 'markerPane',
-                interactive: false,
-                keyboard: false,
-                riseOnHover: false
-            }).addTo(leafletMap.current);
-    
-            console.log("TEMP MARKER VYTVORENÝ →", tempMarkerRef.current);
-            console.log("Je na mape?", !!tempMarkerRef.current._map);
-        } catch (err) {
-            console.error("CHYBA pri vytváraní temp markera:", err);
+        // Vyčisti starý marker (pre istotu)
+        if (tempMarkerRef.current) {
+            tempMarkerRef.current.remove();
+            tempMarkerRef.current = null;
         }
-    }
+    
+        setNewPlaceName('');
+        setNewPlaceType('');
+        setNewCapacity('');
+        setSelectedAccommodationType('');
+        setNameTypeError(null);
+        setCapacityError(null);
+    
+        setIsAddingPlace(false);
+    
+        // Otvor modál – marker sa vytvorí až v useEffect nižšie
+        setShowModal(true);
+    
+        window.lastAddedPosition = pos;
+    }, []);
 
         setNewPlaceName('');
         setNewPlaceType('');
@@ -235,26 +205,47 @@ const AddGroupsApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
     
-        // Vyčistenie starého markera
+        // Vyčistenie (pre istotu, hoci by nemal byť)
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
     
-        // Pridaj marker až TERAZ (mapa už má správnu veľkosť)
+        // Vytvor marker
         tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
-            icon: L.divIcon({ ... váš červený kruh ... }),
+            icon: L.divIcon({
+                className: 'adding-marker',
+                html: `
+                    <div style="
+                        background: #ef4444;
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 50%;
+                        border: 5px solid white;
+                        box-shadow: 0 0 15px rgba(0,0,0,0.7);
+                        z-index: 99999 !important;
+                        position: relative;
+                    "></div>
+                `,
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            }),
+            pane: 'markerPane',
             interactive: false,
             keyboard: false,
-            pane: 'markerPane',
+            riseOnHover: false
         }).addTo(leafletMap.current);
     
-        // Dôležité: invalidateSize + malé oneskorenie na render
+        // Dôležité – daj prehliadaču čas na reflow + invalidate
         setTimeout(() => {
-            leafletMap.current?.invalidateSize();
-            tempMarkerRef.current?.openPopup?.();   // ak chceš popup
-        }, 50);   // 0–100 ms zvyčajne stačí
+            if (leafletMap.current) {
+                leafletMap.current.invalidateSize(false);  // false = bez animácie
+            }
+            // Voliteľné: ak chceš popup hneď
+            // tempMarkerRef.current?.openPopup();
+        }, 80);   // 50–150 ms funguje najlepšie v 90 % prípadov
     
+        // Cleanup – keď sa modál zatvorí
         return () => {
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
