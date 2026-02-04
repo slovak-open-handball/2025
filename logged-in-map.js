@@ -89,6 +89,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [editAccommodationType, setEditAccommodationType] = useState('');
     const [capacityError, setCapacityError] = useState(null);
     const [allPlaces, setAllPlaces] = useState([]);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [placeToDelete, setPlaceToDelete] = useState(null);
     // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
     const accommodationAvailabilityEdit = useMemo(() => {
       if (!accommodationTypes.length || !selectedPlace) return {};
@@ -759,32 +761,43 @@ const AddGroupsApp = ({ userProfileData }) => {
             editMarkerRef.current = null;
         }
     };
-    const handleDeletePlace = async () => {
-        if (!selectedPlace || !window.db) return;
-        if (!confirm(`Naozaj chcete odstrániť miesto "${selectedPlace.name || 'bez názvu'}"?`)) return;
-    
+    const confirmDeletePlace = async () => {
+        if (!placeToDelete || !window.db) return;
+
         try {
-            const placeToDelete = { ...selectedPlace };
+            const place = { ...placeToDelete };
     
-            await deleteDoc(doc(window.db, 'places', selectedPlace.id));
+            await deleteDoc(doc(window.db, 'places', place.id));
     
-            // Vytvoríme správu – konzistentne ako ostatné notifikácie
-            const deleteMessage = `Odstránené miesto: '''${placeToDelete.name} ${typeLabels[placeToDelete.type] || placeToDelete.type}'` +
-                (placeToDelete.capacity != null ? `, kapacita: ${placeToDelete.capacity}` : '' +
-                (placeToDelete.accommodationType ? `, typ ubytovania: ${placeToDelete.accommodationType}` : '');
-    
+            // Notifikácia – konzistentne ako ostatné
+            const deleteMessage = `Odstránené miesto: "${place.name}" (${typeLabels[place.type] || place.type})` +
+                (place.capacity != null ? `, kapacita: ${place.capacity}` : '') +
+                (place.accommodationType ? `, typ ubytovania: ${place.accommodationType}` : '');
+
             await createPlaceChangeNotification('place_deleted', [deleteMessage], {
-                id: placeToDelete.id,
-                name: placeToDelete.name,
-                type: placeToDelete.type,
+                id: place.id,
+                name: place.name,
+                type: place.type,
             });
-    
+
             window.showGlobalNotification('Miesto bolo odstránené', 'success');
             closeDetail();
         } catch (err) {
             console.error("Chyba pri odstraňovaní:", err);
             window.showGlobalNotification('Nepodarilo sa odstrániť miesto', 'error');
         }
+
+        // Zatvoríme modálne okno
+        setShowDeleteConfirm(false);
+        setPlaceToDelete(null);
+    };
+  
+    const handleDeletePlace = () => {
+        if (!selectedPlace) return;
+        
+        // Uložíme miesto, ktoré chceme vymazať a otvoríme potvrdenie
+        setPlaceToDelete(selectedPlace);
+        setShowDeleteConfirm(true);
     };
     // ─── Inicializácia mapy (iba raz) ───
     useEffect(() => {
