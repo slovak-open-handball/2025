@@ -721,10 +721,13 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             // Notifikácia iba ak sa súradnice zmenili
             if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
-                const changesList = [
-                  `Úprava miesta s názvom: '''${selectedPlace.name || '(bez názvu')}'`,
-                  `Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`
-                ];
+                const changesList = [];
+
+                // prvý riadok – úprava miesta s pôvodným názvom
+                changesList.push(`Úprava miesta s názvom: '''${selectedPlace.name || '(bez názvu)'}'`);
+
+                // druhý riadok – zmena polohy
+                changesList.push(`Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`);
             
                 await createPlaceChangeNotification('place_field_updated', changesList, {
                     id: selectedPlace.id,
