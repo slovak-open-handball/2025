@@ -139,36 +139,20 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený!", e.latlng);
         const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
-   
+    
+        // 1. Najprv uložíme pozíciu
         setSelectedAddPosition(pos);
         setTempAddPosition(pos);
-   
-        // Zruš handlery
-        leafletMap.current?.off('mousemove', moveHandlerRef.current);
-        leafletMap.current?.off('click', addClickHandlerRef.current);
-        moveHandlerRef.current = null;
-        addClickHandlerRef.current = null;
-   
-        // Vyčisti starý marker (pre istotu)
-        if (tempMarkerRef.current) {
-            tempMarkerRef.current.remove();
-            tempMarkerRef.current = null;
-        }
-   
-        setNewPlaceName('');
-        setNewPlaceType('');
-        setNewCapacity('');
-        setSelectedAccommodationType('');
-        setNameTypeError(null);
-        setCapacityError(null);
-   
-        setIsAddingPlace(false);
-   
         window.lastAddedPosition = pos;
-   
-        // ─── Kľúčová zmena ───────────────────────────────────────────────
-        // Najprv vytvoríme marker a dáme mu čas na vykreslenie
+    
+        // 2. Ihneď pridáme dočasný marker
         if (leafletMap.current) {
+            // Vyčistenie starého (pre istotu)
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+    
             tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
                 icon: L.divIcon({
                     className: 'adding-marker',
@@ -192,20 +176,33 @@ const AddGroupsApp = ({ userProfileData }) => {
                 keyboard: false,
                 riseOnHover: false
             }).addTo(leafletMap.current);
-   
-            // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 50–120 ms)
-            setTimeout(() => {
-                if (leafletMap.current) {
-                    leafletMap.current.invalidateSize(false);
-                }
-                // Až teraz otvoríme modálne okno
-                setShowModal(true);
-            }, 250); // ← tu je to oneskorenie, ktoré hľadáš (100 ms je dobrý kompromis)
-        } else {
-            // fallback – ak by mapa nebola pripravená (veľmi nepravdepodobné)
-            setShowModal(true);
+    
+            // Dôležité: dáme Leaflet-u a prehliadaču čas na reflow + vykreslenie
+            leafletMap.current.invalidateSize(false);
         }
-    }, []);
+    
+        // 3. Zrušíme handlery pridávania
+        leafletMap.current?.off('mousemove', moveHandlerRef.current);
+        leafletMap.current?.off('click', addClickHandlerRef.current);
+        moveHandlerRef.current = null;
+        addClickHandlerRef.current = null;
+    
+        // 4. Vyčistíme formulár
+        setNewPlaceName('');
+        setNewPlaceType('');
+        setNewCapacity('');
+        setSelectedAccommodationType('');
+        setNameTypeError(null);
+        setCapacityError(null);
+    
+        setIsAddingPlace(false);
+    
+        // 5. Oneskorené otvorenie modálu – až po tom, ako marker viditeľne pribudol
+        setTimeout(() => {
+            setShowModal(true);
+        }, 180);          // 150–250 ms → najčastejšie funguje spoľahlivo
+    
+    }, [leafletMap]);
     useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
    
