@@ -146,23 +146,28 @@ const AddGroupsApp = ({ userProfileData }) => {
         setSelectedAddPosition(pos);
         setTempAddPosition(pos);
 
-        // Zastavíme mousemove
-        if (moveHandlerRef.current) {
-            leafletMap.current?.off('mousemove', moveHandlerRef.current);
-            moveHandlerRef.current = null;
-        }
+        leafletMap.current?.off('mousemove', moveHandlerRef.current);
+        leafletMap.current?.off('click', addClickHandlerRef.current);
+        moveHandlerRef.current = null;
+        addClickHandlerRef.current = null;
 
-        // Odstránime tento click handler (už nepotrebujeme ďalšie kliky)
-        if (leafletMap.current && addClickHandlerRef.current) {
-            leafletMap.current.off('click', addClickHandlerRef.current);
-            addClickHandlerRef.current = null;
-        }
+//        // Zastavíme mousemove
+//        if (moveHandlerRef.current) {
+//            leafletMap.current?.off('mousemove', moveHandlerRef.current);
+//            moveHandlerRef.current = null;
+//        }
 
-        if (leafletMap.current) {
-            if (tempMarkerRef.current) {
-                tempMarkerRef.current.remove();
-                tempMarkerRef.current = null;
-            }
+//        // Odstránime tento click handler (už nepotrebujeme ďalšie kliky)
+//        if (leafletMap.current && addClickHandlerRef.current) {
+//            leafletMap.current.off('click', addClickHandlerRef.current);
+//            addClickHandlerRef.current = null;
+//        }
+
+//        if (leafletMap.current) {
+//            if (tempMarkerRef.current) {
+//                tempMarkerRef.current.remove();
+//                tempMarkerRef.current = null;
+//            }
     
         try {
             tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
@@ -229,32 +234,27 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
-
-        // Vyčistenie starého (pre istotu)
+    
+        // Vyčistenie starého markera
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
     
-        // Pridáme marker až teraz – mapa by už mala mať správnu veľkosť
+        // Pridaj marker až TERAZ (mapa už má správnu veľkosť)
         tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
+            icon: L.divIcon({ ... váš červený kruh ... }),
+            interactive: false,
+            keyboard: false,
             pane: 'markerPane',
-            interactive: false
         }).addTo(leafletMap.current);
     
-        // Popup otvoríme s malým oneskorením
+        // Dôležité: invalidateSize + malé oneskorenie na render
         setTimeout(() => {
-            if (tempMarkerRef.current) {
-                tempMarkerRef.current
-                    .bindPopup("TEST – mal by som byť viditeľný po modáli")
-                    .openPopup();
-            }
-            leafletMap.current.invalidateSize();     // ešte raz pre istotu
-        }, 150);
+            leafletMap.current?.invalidateSize();
+            tempMarkerRef.current?.openPopup?.();   // ak chceš popup
+        }, 50);   // 0–100 ms zvyčajne stačí
     
-        console.log("Marker pridaný PO otvorení modálu");
-    
-        // Cleanup pri zatvorení modálu
         return () => {
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
