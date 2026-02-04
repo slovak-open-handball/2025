@@ -189,26 +189,49 @@ const AddGroupsApp = ({ userProfileData }) => {
             keyboard: false,
             riseOnHover: false
         }).addTo(leafletMap.current);
-    
-        // Čakáme, kým sa marker naozaj pridá do DOMu a vykreslí
-        tempMarkerRef.current.on('add', () => {
-            // marker je v DOMe → ešte malé oneskorenie na reflow
-            setTimeout(() => {
+
+        const ensureMarkerIsVisible = () => {
+            if (!tempMarkerRef.current) return false;
+
+            // Skontrolujeme, či má marker už nejaký DOM prvok
+            const iconElement = tempMarkerRef.current.getElement();
+            if (iconElement && iconElement.offsetParent !== null) {
+                // Marker je viditeľný v DOM → môžeme otvoriť modál
+                console.log("Marker je v DOMe → otvárame modál");
                 if (leafletMap.current) {
                     leafletMap.current.invalidateSize(false);
                 }
-                // AŽ TERAZ bezpečne otvárame modál
                 setShowModal(true);
-            }, 120);   // 80–150 ms po 'add' evente – veľmi spoľahlivé
-        });
+                return true;
+            }
+            return false;
+        };
+    
+        if (!ensureMarkerIsVisible()) {
+            // Ak nie je ešte v DOMe → skúšame viackrát
+            let attempts = 0;
+            const interval = setInterval(() => {
+                attempts++;
+                if (ensureMarkerIsVisible() || attempts >= 8) {  // max ~400 ms (50ms × 8)
+                    clearInterval(interval);
+                    if (attempts >= 8) {
+                        console.warn("Marker sa nepodarilo detegovať v DOM ani po 400 ms");
+                        // núdzový fallback – otvoríme aj tak
+                        if (leafletMap.current) leafletMap.current.invalidateSize(false);
+                        setShowModal(true);
+                    }
+                }
+            }, 50);
+        }
     
         // núdzový fallback – ak by 'add' event z nejakého dôvodu ne prišiel
         setTimeout(() => {
             if (!showModal && tempMarkerRef.current) {
-                leafletMap.current?.invalidateSize(false);
+                console.log("Fallback timeout – otvárame modál");
+                if (leafletMap.current) leafletMap.current.invalidateSize(false);
                 setShowModal(true);
             }
-        }, 400);
+        }, 600);
     
     }, []);
     const startAddingPlace = () => {
