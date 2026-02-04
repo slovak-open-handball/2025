@@ -139,33 +139,33 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený!", e.latlng);
         const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
-  
+    
         setSelectedAddPosition(pos);
         setTempAddPosition(pos);
-  
+    
         // Zruš handlery
         leafletMap.current?.off('mousemove', moveHandlerRef.current);
         leafletMap.current?.off('click', addClickHandlerRef.current);
         moveHandlerRef.current = null;
         addClickHandlerRef.current = null;
-  
+    
         // Vyčisti starý marker (pre istotu)
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
-  
+    
         setNewPlaceName('');
         setNewPlaceType('');
         setNewCapacity('');
         setSelectedAccommodationType('');
         setNameTypeError(null);
         setCapacityError(null);
-  
+    
         setIsAddingPlace(false);
-  
+    
         window.lastAddedPosition = pos;
-  
+    
         // ─── Kľúčová zmena ───────────────────────────────────────────────
         // Najprv vytvoríme marker a dáme mu čas na vykreslenie
         if (leafletMap.current) {
@@ -192,15 +192,15 @@ const AddGroupsApp = ({ userProfileData }) => {
                 keyboard: false,
                 riseOnHover: false
             }).addTo(leafletMap.current);
-  
-            // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 50–120 ms)
+    
+            // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 250 ms)
             setTimeout(() => {
                 if (leafletMap.current) {
                     leafletMap.current.invalidateSize(false);
                 }
                 // Až teraz otvoríme modálne okno
                 setShowModal(true);
-            }, 250); // ← tu je to oneskorenie, ktoré hľadáš (100 ms je dobrý kompromis)
+            }, 250); // ← tu je oneskorenie 250 ms
         } else {
             // fallback – ak by mapa nebola pripravená (veľmi nepravdepodobné)
             setShowModal(true);
