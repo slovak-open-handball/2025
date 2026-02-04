@@ -331,8 +331,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 placeData.capacity = cap;
             }
  
-            await addDoc(collection(window.db, 'places'), placeData);
-
             const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
 
             await createPlaceChangeNotification('vytvorenie miesta', null, null, {
@@ -763,17 +761,21 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleDeletePlace = async () => {
         if (!selectedPlace || !window.db) return;
         if (!confirm(`Naozaj chcete odstrániť miesto "${selectedPlace.name || 'bez názvu'}"?`)) return;
+    
         try {
+            const placeToDelete = { ...selectedPlace };  // uložíme si dáta pred vymazaním
+    
             await deleteDoc(doc(window.db, 'places', selectedPlace.id));
-          
-            await createPlaceChangeNotification('place_deleted', {
-                id: selectedPlace.id,
-                name: selectedPlace.name,
-                type: selectedPlace.type,
-                capacity: selectedPlace.capacity,
-                oldValues: oldData,
+    
+            // Notifikácia – bez oldValues, stačí aktuálne (mazané) hodnoty
+            await createPlaceChangeNotification('place_deleted', null, null, {
+                id: placeToDelete.id,
+                name: placeToDelete.name,
+                type: placeToDelete.type,
+                capacity: placeToDelete.capacity,
+                accommodationType: placeToDelete.accommodationType || null,
             });
-          
+    
             window.showGlobalNotification('Miesto bolo odstránené', 'success');
             closeDetail();
         } catch (err) {
@@ -1495,32 +1497,42 @@ const AddGroupsApp = ({ userProfileData }) => {
     );
   }
 
-const createPlaceChangeNotification = async (fieldName, oldValue, newValue, placeData) => {
+const createPlaceChangeNotification = async (action, oldValue, newValue, placeData) => {
     if (!window.db) return;
 
-    // Ak sa hodnota nezmenila alebo je undefined/null na oboch stranách → nevytvárame notifikáciu
-    if (oldValue === newValue || (oldValue == null && newValue == null)) {
-        return;
-    }
-
     const currentUserEmail = window.globalUserProfileData?.email || null;
+    let message = '';
 
-    let oldDisplay = oldValue ?? '–';
-    let newDisplay = newValue ?? '–';
+    if (action === 'place_deleted') {
+        message = `Odstránené miesto: "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
+        if (placeData.capacity != null) {
+            message += ` (kapacita: ${placeData.capacity})`;
+        }
+        if (placeData.accommodationType) {
+            message += `, typ ubytovania: ${placeData.accommodationType}`;
+        }
+    } else {
+        // pôvodná logika pre ostatné akcie
+        if (oldValue === newValue || (oldValue == null && newValue == null)) return;
 
-    // Špeciálne zobrazenie pre niektoré polia
-    if (fieldName === 'typ ubytovania') {
-        oldDisplay = oldValue || 'žiadny';
-        newDisplay = newValue || 'žiadny';
-    } else if (fieldName === 'poloha') {
-        oldDisplay = oldValue ? `[${oldValue.lat?.toFixed(6)}, ${oldValue.lng?.toFixed(6)}]` : '–';
-        newDisplay = newValue ? `[${newValue.lat?.toFixed(6)}, ${newValue.lng?.toFixed(6)}]` : '–';
-    } else if (fieldName === 'kapacita') {
-        oldDisplay = oldValue != null ? oldValue : '–';
-        newDisplay = newValue != null ? newValue : '–';
+        const currentUserEmail = window.globalUserProfileData?.email || null;
+
+        let oldDisplay = oldValue ?? '–';
+        let newDisplay = newValue ?? '–';
+    
+        // Špeciálne zobrazenie pre niektoré polia
+        if (fieldName === 'typ ubytovania') {
+            oldDisplay = oldValue || 'žiadny';
+            newDisplay = newValue || 'žiadny';
+        } else if (fieldName === 'poloha') {
+            oldDisplay = oldValue ? `[${oldValue.lat?.toFixed(6)}, ${oldValue.lng?.toFixed(6)}]` : '–';
+            newDisplay = newValue ? `[${newValue.lat?.toFixed(6)}, ${newValue.lng?.toFixed(6)}]` : '–';
+        } else if (fieldName === 'kapacita') {
+            oldDisplay = oldValue != null ? oldValue : '–';
+            newDisplay = newValue != null ? newValue : '–';
+        }
+        const message = `Zmena ${fieldName} z '${oldDisplay}' na '${newDisplay}' pre miesto "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
     }
-
-    const message = `Zmena ${fieldName} z '${oldDisplay}' na '${newDisplay}' pre miesto "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
 
     try {
         await addDoc(collection(window.db, 'notifications'), {
@@ -1535,6 +1547,7 @@ const createPlaceChangeNotification = async (fieldName, oldValue, newValue, plac
             relatedPlaceId: placeData.id || null,
             relatedPlaceName: placeData.name || null,
             relatedPlaceType: placeData.type || null,
+            ...(action !== 'place_deleted' && { oldValue, newValue }),
         });
 
         console.log("[NOTIFIKÁCIA – zmena poľa]", message);
