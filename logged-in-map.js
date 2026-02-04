@@ -165,10 +165,47 @@ const AddGroupsApp = ({ userProfileData }) => {
     
         setIsAddingPlace(false);
     
-        // Otvor modál – marker sa vytvorí až v useEffect nižšie
-        setShowModal(true);
-    
         window.lastAddedPosition = pos;
+    
+        // ─── Kľúčová zmena ───────────────────────────────────────────────
+        // Najprv vytvoríme marker a dáme mu čas na vykreslenie
+        if (leafletMap.current) {
+            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
+                icon: L.divIcon({
+                    className: 'adding-marker',
+                    html: `
+                        <div style="
+                            background: #ef4444;
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 50%;
+                            border: 5px solid white;
+                            box-shadow: 0 0 15px rgba(0,0,0,0.7);
+                            z-index: 99999 !important;
+                            position: relative;
+                        "></div>
+                    `,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
+                }),
+                pane: 'markerPane',
+                interactive: false,
+                keyboard: false,
+                riseOnHover: false
+            }).addTo(leafletMap.current);
+    
+            // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 50–120 ms)
+            setTimeout(() => {
+                if (leafletMap.current) {
+                    leafletMap.current.invalidateSize(false);
+                }
+                // Až teraz otvoríme modálne okno
+                setShowModal(true);
+            }, 250);   // ← tu je to oneskorenie, ktoré hľadáš (100 ms je dobrý kompromis)
+        } else {
+            // fallback – ak by mapa nebola pripravená (veľmi nepravdepodobné)
+            setShowModal(true);
+        }
     }, []);
 
     useEffect(() => {
