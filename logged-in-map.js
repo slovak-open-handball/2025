@@ -157,18 +157,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             addClickHandlerRef.current = null;
         }
  
-    if (leafletMap.current) {
-        if (tempMarkerRef.current) {
-            tempMarkerRef.current.remove();
-            tempMarkerRef.current = null;
-        }
-
-      tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
-          pane: 'markerPane'
-      })
-      .addTo(leafletMap.current)
-      .bindPopup("TEST – mal by som byť viditeľný")
-      .openPopup();
+        if (leafletMap.current) {
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+        
+            // Pridaj marker normálne
+            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
+                pane: 'markerPane'
+            })
+            .addTo(leafletMap.current)
+            .bindPopup("TEST – mal by som byť viditeľný")
+            .openPopup();
     
 //        try {
 //            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
@@ -209,6 +210,20 @@ const AddGroupsApp = ({ userProfileData }) => {
         setSelectedAccommodationType('');
         setNameTypeError(null);
         setCapacityError(null);
+
+        setTimeout(() => {
+            if (leafletMap.current) {
+                leafletMap.current.invalidateSize();
+                console.log("invalidateSize zavolané po 100 ms");
+            }
+        }, 100);
+    
+        // Ešte silnejší test – oneskor popup
+        setTimeout(() => {
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.openPopup();
+            }
+        }, 300);
 
         setTimeout(() => {
             setShowModal(true);
