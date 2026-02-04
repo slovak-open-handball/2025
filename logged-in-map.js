@@ -207,58 +207,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             setShowModal(true);
         }
     }, []);
-
-    useEffect(() => {
-        if (!showModal || !tempAddPosition || !leafletMap.current) return;
-    
-        // Vyčistenie (pre istotu, hoci by nemal byť)
-        if (tempMarkerRef.current) {
-            tempMarkerRef.current.remove();
-            tempMarkerRef.current = null;
-        }
-    
-        // Vytvor marker
-        tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
-            icon: L.divIcon({
-                className: 'adding-marker',
-                html: `
-                    <div style="
-                        background: #ef4444;
-                        width: 36px;
-                        height: 36px;
-                        border-radius: 50%;
-                        border: 5px solid white;
-                        box-shadow: 0 0 15px rgba(0,0,0,0.7);
-                        z-index: 99999 !important;
-                        position: relative;
-                    "></div>
-                `,
-                iconSize: [36, 36],
-                iconAnchor: [18, 18]
-            }),
-            pane: 'markerPane',
-            interactive: false,
-            keyboard: false,
-            riseOnHover: false
-        }).addTo(leafletMap.current);
-    
-        // Dôležité – daj prehliadaču čas na reflow + invalidate
-        setTimeout(() => {
-            if (leafletMap.current) {
-                leafletMap.current.invalidateSize(false);  // false = bez animácie
-            }
-            // Voliteľné: ak chceš popup hneď
-            // tempMarkerRef.current?.openPopup();
-        }, 80);   // 50–150 ms funguje najlepšie v 90 % prípadov
-    
-        // Cleanup – keď sa modál zatvorí
-        return () => {
-            if (tempMarkerRef.current) {
-                tempMarkerRef.current.remove();
-                tempMarkerRef.current = null;
-            }
-        };
-    }, [showModal, tempAddPosition]);
  
     const startAddingPlace = () => {
         if (isAddingPlace) return;
