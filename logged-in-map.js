@@ -203,7 +203,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
                 setShowModal(true);
             }, 80);  // 60–120 ms po zistení, že je v DOMe
-        
+
             return true;
         };
     
@@ -211,13 +211,26 @@ const AddGroupsApp = ({ userProfileData }) => {
             let attempts = 0;
             const interval = setInterval(() => {
                 attempts++;
-                if (ensureMarkerIsVisible() || attempts >= 10) {  // max ~500 ms
+                console.log(`[attempt ${attempts}] Skúšam zistiť, či je marker v DOMe...`);
+                const el = tempMarkerRef.current?.getElement();
+        
+                console.log(
+                    `[attempt ${attempts}] ` +
+                    `Element existuje: ${!!el}, ` +
+                    `offsetParent: ${el ? el.offsetParent !== null : 'N/A'}, ` +
+                    `className: ${el ? el.className : 'žiadny element'}`
+                );
+              
+                const isVisible = ensureMarkerIsVisible();
+
+                if (isVisible) {
+                    console.log(`[attempt ${attempts}] → SUCCESS: Marker je v DOMe → otvárame modál`);
                     clearInterval(interval);
-                    if (attempts >= 10) {
-                        console.warn("Marker detegovaný až po 500 ms – núdzový fallback");
-                        if (leafletMap.current) leafletMap.current.invalidateSize(false);
-                        setShowModal(true);
-                    }
+                } else if (attempts >= 10) {
+                    console.warn(`[attempt ${attempts}] → FAILED: Marker stále nie je detegovaný → núdzový fallback`);
+                    clearInterval(interval);
+                    if (leafletMap.current) leafletMap.current.invalidateSize(false);
+                    setShowModal(true);
                 }
             }, 50);
         }
