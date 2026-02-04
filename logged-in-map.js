@@ -199,7 +199,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         if (!leafletMap.current.getPane('customTopPane')) {
             const customPane = leafletMap.current.createPane('customTopPane');
-            customPane.style.zIndex = 1000;
+            customPane.style.zIndex = 2000;
         }
 
         tempMarkerRef.current.addTo(leafletMap.current);
