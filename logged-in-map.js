@@ -361,19 +361,15 @@ const AddGroupsApp = ({ userProfileData }) => {
               && p.type === newPlaceType
           );
           if (alreadyExists) {
-            setNameTypeError(
-                React.createElement(
-                    'span',
-                    null,
-                    "Miesto s názvom ",
-                    React.createElement('strong', null, nameTrimmed),
-                    " a typom ",
-                    React.createElement('strong', null, typeLabels[newPlaceType] || newPlaceType),
-                    " už existuje."
-                )
-            window.showGlobalNotification('Duplicitné miesto – nepridávam', 'error');
-            return;
-          }
+              setNameTypeError(
+                  <>
+                    Miesto s názvom <strong>{nameTrimmed}</strong> a typom{" "}
+                    <strong>{typeLabels[newPlaceType] || newPlaceType}</strong> už existuje.
+                  </>
+                );
+                window.showGlobalNotification("Duplicitné miesto – nepridávam", "error");
+                return;
+              }
           setNameTypeError(null);
         try {
             const placeData = {
