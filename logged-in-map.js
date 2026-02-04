@@ -770,7 +770,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             // Vytvoríme správu – konzistentne ako ostatné notifikácie
             const deleteMessage = `Odstránené miesto: '''${placeToDelete.name} ${typeLabels[placeToDelete.type] || placeToDelete.type}'` +
-                (placeToDelete.capacity != null ? `, kapacita: ${placeToDelete.capacity})` : '' +
+                (placeToDelete.capacity != null ? `, kapacita: ${placeToDelete.capacity}` : '' +
                 (placeToDelete.accommodationType ? `, typ ubytovania: ${placeToDelete.accommodationType}` : '');
     
             await createPlaceChangeNotification('place_deleted', [deleteMessage], {
