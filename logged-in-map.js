@@ -364,9 +364,9 @@ const AddGroupsApp = ({ userProfileData }) => {
               setNameTypeError(
                   React.createElement('span', null,
                       "Miesto s názvom ",
-                      React.createElement('strong', { className: "font-bold text-gray-900" }, nameTrimmed),
+                      React.createElement('strong', { className: "font-bold text-red-900" }, nameTrimmed),
                       " a typom ",
-                      React.createElement('strong', { className: "font-bold text-gray-900" },
+                      React.createElement('strong', { className: "font-bold text-red-900" },
                           typeLabels[newPlaceType] || newPlaceType
                       ),
                       " už existuje."
@@ -567,9 +567,9 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNameTypeError(
                 React.createElement('span', null,
                     "Miesto s názvom ",
-                    React.createElement('strong', { className: "font-bold text-gray-900" }, nameTrimmed),
+                    React.createElement('strong', { className: "font-bold text-red-900" }, nameTrimmed),
                     " a typom ",
-                    React.createElement('strong', { className: "font-bold text-gray-900" },
+                    React.createElement('strong', { className: "font-bold text-red-900" },
                         typeLabels[newPlaceType] || newPlaceType
                     ),
                     " už existuje."
