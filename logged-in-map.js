@@ -674,13 +674,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 )
             );
  
-            await createPlaceChangeNotification('place_updated_name_type_capacity', {
-                id: selectedPlace.id,
-                name: editName.trim(),
-                type: editType,
-                capacity: updates.capacity,
-                accommodationType: updates.accommodationType || null,
-            });
+//            await createPlaceChangeNotification('place_updated_name_type_capacity', {
+//                id: selectedPlace.id,
+//                name: editName.trim(),
+//                type: editType,
+//                capacity: updates.capacity,
+//                accommodationType: updates.accommodationType || null,
+//            });
             
             window.showGlobalNotification('Údaje boli aktualizované', 'success');
           
@@ -1495,18 +1495,18 @@ const AddGroupsApp = ({ userProfileData }) => {
     );
   }
 
-const createPlaceChangeNotification = async (action, oldValue, newValue, placeData) => {
+const createPlaceChangeNotification = async (changeType, oldValue, newValue, placeData) => {
     if (!window.db) return;
 
     const currentUserEmail = window.globalUserProfileData?.email || null;
     let message = '';
 
-    if (action === 'place_deleted') {
+    if (changeType === 'place_deleted') {
         message = `Odstránené miesto: "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
         if (placeData.capacity != null) message += ` (kapacita: ${placeData.capacity})`;
         if (placeData.accommodationType) message += `, typ ubytovania: ${placeData.accommodationType}`;
     } 
-    else if (action === 'place_created') {
+    else if (changeType === 'place_created') {
         message = `Vytvorené nové miesto: "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
         if (placeData.capacity != null) message += ` (kapacita: ${placeData.capacity})`;
         if (placeData.accommodationType) message += `, typ ubytovania: ${placeData.accommodationType}`;
@@ -1518,18 +1518,18 @@ const createPlaceChangeNotification = async (action, oldValue, newValue, placeDa
         let oldDisplay = oldValue ?? '–';
         let newDisplay = newValue ?? '–';
 
-        if (action === 'typ ubytovania') {
+        if (changeType === 'typ ubytovania') {
             oldDisplay = oldValue || 'žiadny';
             newDisplay = newValue || 'žiadny';
-        } else if (action === 'poloha') {
+        } else if (changeType === 'poloha') {
             oldDisplay = oldValue ? `[${oldValue.lat?.toFixed(6)}, ${oldValue.lng?.toFixed(6)}]` : '–';
             newDisplay = newValue ? `[${newValue.lat?.toFixed(6)}, ${newValue.lng?.toFixed(6)}]` : '–';
-        } else if (action === 'kapacita') {
+        } else if (changeType === 'kapacita') {
             oldDisplay = oldValue != null ? oldValue : '–';
             newDisplay = newValue != null ? newValue : '–';
         }
 
-        message = `Zmena ${action} z '${oldDisplay}' na '${newDisplay}' pre miesto "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
+        message = `Zmena ${changeType} z '${oldDisplay}' na '${newDisplay}' pre miesto "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
     }
 
     try {
@@ -1538,10 +1538,12 @@ const createPlaceChangeNotification = async (action, oldValue, newValue, placeDa
             performedBy: currentUserEmail || null,
             changes: [message],
             timestamp: Timestamp.now(),
-            actionType: action === 'place_deleted' ? 'place_deleted' : 'place_field_updated',
-            fieldChanged: action !== 'place_deleted' && action !== 'place_created' ? action : null,
-            oldValue: action !== 'place_deleted' && action !== 'place_created' ? oldValue : null,
-            newValue: action !== 'place_deleted' && action !== 'place_created' ? newValue : null,
+            actionType: changeType === 'place_deleted' ? 'place_deleted' : 
+                        changeType === 'place_created' ? 'place_created' : 
+                        'place_field_updated',
+            fieldChanged: changeType !== 'place_deleted' && changeType !== 'place_created' ? changeType : null,
+            oldValue: changeType !== 'place_deleted' && changeType !== 'place_created' ? oldValue : null,
+            newValue: changeType !== 'place_deleted' && changeType !== 'place_created' ? newValue : null,
             relatedPlaceId: placeData.id || null,
             relatedPlaceName: placeData.name || null,
             relatedPlaceType: placeData.type || null,
