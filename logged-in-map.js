@@ -157,43 +157,43 @@ const AddGroupsApp = ({ userProfileData }) => {
             addClickHandlerRef.current = null;
         }
  
-        if (leafletMap.current) {
+//        if (leafletMap.current) {
 //            if (tempMarkerRef.current) {
 //                tempMarkerRef.current.remove();
 //                tempMarkerRef.current = null;
 //            }
-    
-        try {
-            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
-                icon: L.divIcon({
-                    className: 'adding-marker',
-                    html: `
-                        <div style="
-                            background: #ef4444;
-                            width: 36px;
-                            height: 36px;
-                            border-radius: 50%;
-                            border: 5px solid white;
-                            box-shadow: 0 0 15px rgba(0,0,0,0.7);
-                            z-index: 99999 !important;
-                            position: relative;
-                        "></div>
-                    `,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                }),
-                pane: 'markerPane',
-                interactive: false,
-                keyboard: false,
-                riseOnHover: false
-            }).addTo(leafletMap.current);
-    
-            console.log("TEMP MARKER VYTVORENÝ →", tempMarkerRef.current);
-            console.log("Je na mape?", !!tempMarkerRef.current._map);
-        } catch (err) {
-            console.error("CHYBA pri vytváraní temp markera:", err);
-        }
-    }
+//    
+//        try {
+//            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
+//                icon: L.divIcon({
+//                    className: 'adding-marker',
+//                    html: `
+//                        <div style="
+//                            background: #ef4444;
+//                            width: 36px;
+//                            height: 36px;
+//                            border-radius: 50%;
+//                            border: 5px solid white;
+//                            box-shadow: 0 0 15px rgba(0,0,0,0.7);
+//                            z-index: 99999 !important;
+//                            position: relative;
+//                        "></div>
+//                    `,
+//                    iconSize: [36, 36],
+//                    iconAnchor: [18, 18]
+//                }),
+//                pane: 'markerPane',
+//                interactive: false,
+//                keyboard: false,
+//                riseOnHover: false
+//            }).addTo(leafletMap.current);
+//    
+//            console.log("TEMP MARKER VYTVORENÝ →", tempMarkerRef.current);
+//            console.log("Je na mape?", !!tempMarkerRef.current._map);
+//        } catch (err) {
+//            console.error("CHYBA pri vytváraní temp markera:", err);
+//        }
+//    }
  
         setNewPlaceName('');
         setNewPlaceType('');
@@ -205,9 +205,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         setTimeout(() => {
             if (leafletMap.current) {
                 leafletMap.current.invalidateSize();
-                console.log("invalidateSize zavolané po 100 ms");
+                console.log("invalidateSize zavolané po 600 ms");
             }
-        }, 100);
+        }, 600);
     
         // Ešte silnejší test – oneskor popup
         setTimeout(() => {
