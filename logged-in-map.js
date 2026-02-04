@@ -191,7 +191,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 iconAnchor: [30, 30],
                 className: ''   // ← vypni defaultný wrapper, necháme len náš div
             }),
-            pane: 'markerPane',
+            pane: 'overlayPane',
             interactive: false,
             keyboard: false,
             riseOnHover: false
