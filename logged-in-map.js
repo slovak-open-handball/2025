@@ -225,6 +225,42 @@ const AddGroupsApp = ({ userProfileData }) => {
         window.lastAddedPosition = pos;
  
     }, []); // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace
+
+    useEffect(() => {
+        if (!showModal || !tempAddPosition || !leafletMap.current) return;
+
+        // Vyčistenie starého (pre istotu)
+        if (tempMarkerRef.current) {
+            tempMarkerRef.current.remove();
+            tempMarkerRef.current = null;
+        }
+    
+        // Pridáme marker až teraz – mapa by už mala mať správnu veľkosť
+        tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
+            pane: 'markerPane',
+            interactive: false
+        }).addTo(leafletMap.current);
+    
+        // Popup otvoríme s malým oneskorením
+        setTimeout(() => {
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current
+                    .bindPopup("TEST – mal by som byť viditeľný po modáli")
+                    .openPopup();
+            }
+            leafletMap.current.invalidateSize();     // ešte raz pre istotu
+        }, 150);
+    
+        console.log("Marker pridaný PO otvorení modálu");
+    
+        // Cleanup pri zatvorení modálu
+        return () => {
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+        };
+    }, [showModal, tempAddPosition]);
  
     const startAddingPlace = () => {
         if (isAddingPlace) return;
