@@ -91,7 +91,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [allPlaces, setAllPlaces] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [placeToDelete, setPlaceToDelete] = useState(null);
-    // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
+// Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
     const accommodationAvailabilityEdit = useMemo(() => {
       if (!accommodationTypes.length || !selectedPlace) return {};
    
@@ -157,20 +157,42 @@ const AddGroupsApp = ({ userProfileData }) => {
             addClickHandlerRef.current = null;
         }
  
-        // Dočasný marker
-        if (leafletMap.current) {
+    if (leafletMap.current) {
+        // Najprv vyčisti starý, ak náhodou existuje
+        if (tempMarkerRef.current) {
+            tempMarkerRef.current.remove();
+            tempMarkerRef.current = null;
+        }
+    
+        try {
             tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
                 icon: L.divIcon({
-                    className: 'adding-marker pointer-events-none',
-                    html: '<div style="background:#ef4444;width:28px;height:28px;border-radius:50%;border:4px solid white;box-shadow:0 0 12px rgba(0,0,0,0.6);"></div>',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
+                    className: 'adding-marker',  // pointer-events-none zatiaľ vynechaj
+                    html: `
+                        <div style="
+                            background: #ef4444;
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 50%;
+                            border: 5px solid white;
+                            box-shadow: 0 0 15px rgba(0,0,0,0.7);
+                            z-index: 99999 !important;
+                            position: relative;
+                        "></div>
+                    `,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
                 }),
-                interactive: false,
-                bubblingMouseEvents: false,
-                pane: 'overlayPane'
+                // pane: 'markerPane'   // skús toto namiesto overlayPane
+                // alebo úplne bez pane
             }).addTo(leafletMap.current);
+    
+            console.log("TEMP MARKER VYTVORENÝ →", tempMarkerRef.current);
+            console.log("Je na mape?", !!tempMarkerRef.current._map);
+        } catch (err) {
+            console.error("CHYBA pri vytváraní temp markera:", err);
         }
+    }
  
         setNewPlaceName('');
         setNewPlaceType('');
