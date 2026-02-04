@@ -183,7 +183,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                     iconSize: [36, 36],
                     iconAnchor: [18, 18]
                 }),
-                // pane: 'markerPane'   // skús toto namiesto overlayPane
+                pane: 'markerPane',
+                interactive: false,
+                keyboard: false,
+                riseOnHover: false
                 // alebo úplne bez pane
             }).addTo(leafletMap.current);
     
