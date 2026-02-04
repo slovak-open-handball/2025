@@ -192,31 +192,29 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         const ensureMarkerIsVisible = () => {
             if (!tempMarkerRef.current) return false;
-
-            // Skontrolujeme, či má marker už nejaký DOM prvok
             const iconElement = tempMarkerRef.current.getElement();
-            if (iconElement && iconElement.offsetParent !== null) {
-                // Marker je viditeľný v DOM → môžeme otvoriť modál
-                console.log("Marker je v DOMe → otvárame modál");
+            if (!iconElement || iconElement.offsetParent === null) return false;
+
+            // Element je v DOMe → ešte malé oneskorenie na paint/reflow
+            setTimeout(() => {
+                console.log("Marker v DOMe + reflow → otvárame modál");
                 if (leafletMap.current) {
                     leafletMap.current.invalidateSize(false);
                 }
                 setShowModal(true);
-                return true;
-            }
-            return false;
+            }, 80);  // 60–120 ms po zistení, že je v DOMe
+        
+            return true;
         };
     
         if (!ensureMarkerIsVisible()) {
-            // Ak nie je ešte v DOMe → skúšame viackrát
             let attempts = 0;
             const interval = setInterval(() => {
                 attempts++;
-                if (ensureMarkerIsVisible() || attempts >= 8) {  // max ~400 ms (50ms × 8)
+                if (ensureMarkerIsVisible() || attempts >= 10) {  // max ~500 ms
                     clearInterval(interval);
-                    if (attempts >= 8) {
-                        console.warn("Marker sa nepodarilo detegovať v DOM ani po 400 ms");
-                        // núdzový fallback – otvoríme aj tak
+                    if (attempts >= 10) {
+                        console.warn("Marker detegovaný až po 500 ms – núdzový fallback");
                         if (leafletMap.current) leafletMap.current.invalidateSize(false);
                         setShowModal(true);
                     }
