@@ -361,7 +361,16 @@ const AddGroupsApp = ({ userProfileData }) => {
               && p.type === newPlaceType
           );
           if (alreadyExists) {
-            setNameTypeError(<span>Miesto s názvom <b>{nameTrimmed}</b> a typom <b>{typeLabels[newPlaceType] || newPlaceType}</b> už existuje.</span>);
+            setNameTypeError(
+                React.createElement(
+                    'span',
+                    null,
+                    "Miesto s názvom ",
+                    React.createElement('strong', null, nameTrimmed),
+                    " a typom ",
+                    React.createElement('strong', null, typeLabels[newPlaceType] || newPlaceType),
+                    " už existuje."
+                )
             window.showGlobalNotification('Duplicitné miesto – nepridávam', 'error');
             return;
           }
@@ -549,7 +558,17 @@ const AddGroupsApp = ({ userProfileData }) => {
         );
   
         if (duplicate) {
-            setNameTypeError(<span>Miesto s názvom <b>{nameTrimmed}</b> a typom <b>{typeLabels[newPlaceType] || newPlaceType}</b> už existuje.</span>);
+            setNameTypeError(
+                React.createElement(
+                    'span',
+                    null,
+                    "Miesto s názvom ",
+                    React.createElement('strong', null, nameTrimmed),
+                    " a typom ",
+                    React.createElement('strong', null, typeLabels[newPlaceType] || newPlaceType),
+                    " už existuje."
+                )
+            );
         } else {
             setNameTypeError(null);
         }
