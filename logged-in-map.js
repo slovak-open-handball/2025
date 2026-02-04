@@ -332,6 +332,18 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
  
             await addDoc(collection(window.db, 'places'), placeData);
+
+            const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
+
+            await createPlaceChangeNotification('vytvorenie miesta', null, null, {
+                id: newPlaceDoc.id,
+                name: newPlaceName.trim(),
+                type: newPlaceType,
+                capacity: placeData.capacity,
+                accommodationType: placeData.accommodationType || null,
+                lat: position.lat,
+                lng: position.lng,
+            });
  
             window.showGlobalNotification('Miesto bolo pridané', 'success');
  
@@ -561,19 +573,20 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Vyberte typ ubytovania', 'error');
             return;
         }
- 
+    
         try {
             const updates = {
                 name: editName.trim(),
                 type: editType,
                 updatedAt: Timestamp.now(),
             };
+    
             if (editType === 'ubytovanie') {
                 updates.accommodationType = editAccommodationType || null;
             } else {
                 updates.accommodationType = null;
             }
-          
+    
             let cap = parseInt(editCapacity, 10);
             if (editType === 'ubytovanie' || editType === 'stravovanie') {
                 if (isNaN(cap) || cap <= 0) {
@@ -606,7 +619,47 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
  
             const placeRef = doc(window.db, 'places', selectedPlace.id);
-            await updateDoc(placeRef, updates);
+
+            const original = {
+                name: selectedPlace.name || '',
+                type: selectedPlace.type || '',
+                capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
+                accommodationType: selectedPlace.accommodationType || null,
+            };
+          
+            await updateDoc(placeRef, updates);     
+
+            if (original.name.trim() !== updates.name.trim()) {
+                await createPlaceChangeNotification('názvu', original.name, updates.name, {
+                    id: selectedPlace.id,
+                    name: updates.name,
+                    type: updates.type,
+                });
+            }
+
+            if (original.type !== updates.type) {
+                await createPlaceChangeNotification('typu miesta', 
+                    typeLabels[original.type] || original.type, 
+                    typeLabels[updates.type] || updates.type, 
+                    { id: selectedPlace.id, name: updates.name, type: updates.type }
+                );
+            }
+    
+            if (original.capacity !== updates.capacity) {
+                await createPlaceChangeNotification('kapacity', original.capacity, updates.capacity, {
+                    id: selectedPlace.id,
+                    name: updates.name,
+                    type: updates.type,
+                });
+            }
+    
+            if (original.accommodationType !== updates.accommodationType) {
+                await createPlaceChangeNotification('typu ubytovania', original.accommodationType, updates.accommodationType, {
+                    id: selectedPlace.id,
+                    name: updates.name,
+                    type: updates.type,
+                });
+            }          
  
             // Aktualizácia lokálneho stavu
             setSelectedPlace(prev => ({
@@ -625,7 +678,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                 )
             );
  
+            await createPlaceChangeNotification('place_updated_name_type_capacity', {
+                id: selectedPlace.id,
+                name: editName.trim(),
+                type: editType,
+                capacity: updates.capacity,
+                accommodationType: updates.accommodationType || null,
+            });
+            
             window.showGlobalNotification('Údaje boli aktualizované', 'success');
+          
             setIsEditingNameAndType(false);
             setEditCapacity('');
         } catch (err) {
@@ -635,20 +697,46 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
     const handleSaveNewLocation = async () => {
         if (!selectedPlace || !tempLocation || !window.db) return;
+    
         try {
             const placeRef = doc(window.db, 'places', selectedPlace.id);
+    
+            const originalLocation = {
+                lat: selectedPlace.lat,
+                lng: selectedPlace.lng,
+            };
+    
+            const newLocation = {
+                lat: tempLocation.lat,
+                lng: tempLocation.lng,
+            };
+    
             await updateDoc(placeRef, {
                 location: new GeoPoint(tempLocation.lat, tempLocation.lng),
+                lat: tempLocation.lat,           // ak ukladáte aj samostatne
+                lng: tempLocation.lng,
                 updatedAt: Timestamp.now(),
             });
+    
+            // Notifikácia iba ak sa súradnice zmenili
+            if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
+                await createPlaceChangeNotification('polohy', originalLocation, newLocation, {
+                    id: selectedPlace.id,
+                    name: selectedPlace.name,
+                    type: selectedPlace.type,
+                });
+            }
+    
             setSelectedPlace(prev => prev ? {
                 ...prev,
                 lat: tempLocation.lat,
                 lng: tempLocation.lng
             } : null);
+    
             window.showGlobalNotification('Poloha bola aktualizovaná', 'success');
             setIsEditingLocation(false);
             setTempLocation(null);
+    
             if (editMarkerRef.current) {
                 if (editMarkerRef.current._clickHandler) {
                     leafletMap.current.off('click', editMarkerRef.current._clickHandler);
@@ -677,6 +765,15 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (!confirm(`Naozaj chcete odstrániť miesto "${selectedPlace.name || 'bez názvu'}"?`)) return;
         try {
             await deleteDoc(doc(window.db, 'places', selectedPlace.id));
+          
+            await createPlaceChangeNotification('place_deleted', {
+                id: selectedPlace.id,
+                name: selectedPlace.name,
+                type: selectedPlace.type,
+                capacity: selectedPlace.capacity,
+                oldValues: oldData,
+            });
+          
             window.showGlobalNotification('Miesto bolo odstránené', 'success');
             closeDetail();
         } catch (err) {
@@ -1397,6 +1494,55 @@ const AddGroupsApp = ({ userProfileData }) => {
       )
     );
   }
+
+const createPlaceChangeNotification = async (fieldName, oldValue, newValue, placeData) => {
+    if (!window.db) return;
+
+    // Ak sa hodnota nezmenila alebo je undefined/null na oboch stranách → nevytvárame notifikáciu
+    if (oldValue === newValue || (oldValue == null && newValue == null)) {
+        return;
+    }
+
+    const currentUserEmail = window.globalUserProfileData?.email || null;
+
+    let oldDisplay = oldValue ?? '–';
+    let newDisplay = newValue ?? '–';
+
+    // Špeciálne zobrazenie pre niektoré polia
+    if (fieldName === 'typ ubytovania') {
+        oldDisplay = oldValue || 'žiadny';
+        newDisplay = newValue || 'žiadny';
+    } else if (fieldName === 'poloha') {
+        oldDisplay = oldValue ? `[${oldValue.lat?.toFixed(6)}, ${oldValue.lng?.toFixed(6)}]` : '–';
+        newDisplay = newValue ? `[${newValue.lat?.toFixed(6)}, ${newValue.lng?.toFixed(6)}]` : '–';
+    } else if (fieldName === 'kapacita') {
+        oldDisplay = oldValue != null ? oldValue : '–';
+        newDisplay = newValue != null ? newValue : '–';
+    }
+
+    const message = `Zmena ${fieldName} z '${oldDisplay}' na '${newDisplay}' pre miesto "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
+
+    try {
+        await addDoc(collection(window.db, 'notifications'), {
+            userEmail: currentUserEmail || "",
+            performedBy: currentUserEmail || null,
+            changes: [message],
+            timestamp: Timestamp.now(),
+            actionType: 'place_field_updated',
+            fieldChanged: fieldName,
+            oldValue: oldValue,
+            newValue: newValue,
+            relatedPlaceId: placeData.id || null,
+            relatedPlaceName: placeData.name || null,
+            relatedPlaceType: placeData.type || null,
+        });
+
+        console.log("[NOTIFIKÁCIA – zmena poľa]", message);
+    } catch (err) {
+        console.error("[CHYBA pri ukladaní notifikácie]", err);
+    }
+};
+
 // ──────────────────────────────────────────────
 // Inicializácia + listener na globalDataUpdated
 // ──────────────────────────────────────────────
