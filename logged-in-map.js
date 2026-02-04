@@ -770,7 +770,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             await deleteDoc(doc(window.db, 'places', place.id));
     
             // Notifikácia – konzistentne ako ostatné
-            const deleteMessage = `Odstránené miesto: "${place.name}" (${typeLabels[place.type] || place.type})` +
+            const deleteMessage = `Odstránené miesto: '''${place.name} (${typeLabels[place.type] || place.type})'` +
                 (place.capacity != null ? `, kapacita: ${place.capacity}` : '') +
                 (place.accommodationType ? `, typ ubytovania: ${place.accommodationType}` : '');
 
