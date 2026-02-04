@@ -613,7 +613,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             } else {
                 updates.capacity = null;
             }
- 
+    
             const placeRef = doc(window.db, 'places', selectedPlace.id);
 
             const original = {
@@ -622,70 +622,71 @@ const AddGroupsApp = ({ userProfileData }) => {
                 capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
                 accommodationType: selectedPlace.accommodationType || null,
             };
-          
-            await updateDoc(placeRef, updates);     
-
+    
+            await updateDoc(placeRef, updates);
+    
+            // ─── TU ZAČÍNA ZBER ZMIEN ───────────────────────────────
+            const changesList = [];
+    
             if (original.name.trim() !== updates.name.trim()) {
-                await createPlaceChangeNotification('názvu', original.name, updates.name, {
-                    id: selectedPlace.id,
-                    name: updates.name,
-                    type: updates.type,
-                });
+                changesList.push(
+                    `Zmena názvu z '${original.name}' na '${updates.name}' pre miesto "${updates.name}" (${typeLabels[updates.type] || updates.type})`
+                );
             }
-
+    
             if (original.type !== updates.type) {
-                await createPlaceChangeNotification('typu miesta', 
-                    typeLabels[original.type] || original.type, 
-                    typeLabels[updates.type] || updates.type, 
-                    { id: selectedPlace.id, name: updates.name, type: updates.type }
+                changesList.push(
+                    `Zmena typu miesta z '${typeLabels[original.type] || original.type}' na '${typeLabels[updates.type] || updates.type}' pre miesto "${updates.name}" (${typeLabels[updates.type] || updates.type})`
                 );
             }
     
             if (original.capacity !== updates.capacity) {
-                await createPlaceChangeNotification('kapacity', original.capacity, updates.capacity, {
+                const oldCapStr = original.capacity != null ? original.capacity : '–';
+                const newCapStr = updates.capacity != null ? updates.capacity : '–';
+                changesList.push(
+                    `Zmena kapacity z '${oldCapStr}' na '${newCapStr}' pre miesto "${updates.name}" (${typeLabels[updates.type] || updates.type})`
+                );
+            }
+    
+            if (original.accommodationType !== updates.accommodationType) {
+                const oldAcc = original.accommodationType || 'žiadny';
+                const newAcc = updates.accommodationType || 'žiadny';
+                changesList.push(
+                    `Zmena typu ubytovania z '${oldAcc}' na '${newAcc}' pre miesto "${updates.name}" (${typeLabels[updates.type] || updates.type})`
+                );
+            }
+            // ──────────────────────────────────────────────────────────
+    
+            // Ak sa niečo zmenilo → uložíme jedno upozornenie s viacerými riadkami
+            if (changesList.length > 0) {
+                await createPlaceChangeNotification('place_field_updated', changesList, {
                     id: selectedPlace.id,
                     name: updates.name,
                     type: updates.type,
                 });
             }
     
-            if (original.accommodationType !== updates.accommodationType) {
-                await createPlaceChangeNotification('typu ubytovania', original.accommodationType, updates.accommodationType, {
-                    id: selectedPlace.id,
-                    name: updates.name,
-                    type: updates.type,
-                });
-            }          
- 
             // Aktualizácia lokálneho stavu
             setSelectedPlace(prev => ({
                 ...prev,
-                name: editName.trim(),
-                type: editType,
+                name: updates.name,
+                type: updates.type,
                 capacity: updates.capacity,
                 accommodationType: updates.accommodationType || undefined,
             }));
- 
+    
             setPlaces(prevPlaces =>
                 prevPlaces.map(p =>
                     p.id === selectedPlace.id
-                        ? { ...p, name: editName.trim(), type: editType, capacity: updates.capacity, accommodationType: updates.accommodationType || undefined }
+                        ? { ...p, name: updates.name, type: updates.type, capacity: updates.capacity, accommodationType: updates.accommodationType || undefined }
                         : p
                 )
             );
- 
-//            await createPlaceChangeNotification('place_updated_name_type_capacity', {
-//                id: selectedPlace.id,
-//                name: editName.trim(),
-//                type: editType,
-//                capacity: updates.capacity,
-//                accommodationType: updates.accommodationType || null,
-//            });
-            
+    
             window.showGlobalNotification('Údaje boli aktualizované', 'success');
-          
             setIsEditingNameAndType(false);
             setEditCapacity('');
+    
         } catch (err) {
             console.error("Chyba pri ukladaní:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
@@ -1495,61 +1496,24 @@ const AddGroupsApp = ({ userProfileData }) => {
     );
   }
 
-const createPlaceChangeNotification = async (changeType, oldValue, newValue, placeData) => {
-    if (!window.db) return;
+const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
+    if (!window.db || !changesArray?.length) return;
 
     const currentUserEmail = window.globalUserProfileData?.email || null;
-    let message = '';
-
-    if (changeType === 'place_deleted') {
-        message = `Odstránené miesto: "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
-        if (placeData.capacity != null) message += ` (kapacita: ${placeData.capacity})`;
-        if (placeData.accommodationType) message += `, typ ubytovania: ${placeData.accommodationType}`;
-    } 
-    else if (changeType === 'place_created') {
-        message = `Vytvorené nové miesto: "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
-        if (placeData.capacity != null) message += ` (kapacita: ${placeData.capacity})`;
-        if (placeData.accommodationType) message += `, typ ubytovania: ${placeData.accommodationType}`;
-    } 
-    else {
-        // Zmena konkrétneho poľa
-        if (oldValue === newValue || (oldValue == null && newValue == null)) return;
-
-        let oldDisplay = oldValue ?? '–';
-        let newDisplay = newValue ?? '–';
-
-        if (changeType === 'typ ubytovania') {
-            oldDisplay = oldValue || 'žiadny';
-            newDisplay = newValue || 'žiadny';
-        } else if (changeType === 'poloha') {
-            oldDisplay = oldValue ? `[${oldValue.lat?.toFixed(6)}, ${oldValue.lng?.toFixed(6)}]` : '–';
-            newDisplay = newValue ? `[${newValue.lat?.toFixed(6)}, ${newValue.lng?.toFixed(6)}]` : '–';
-        } else if (changeType === 'kapacita') {
-            oldDisplay = oldValue != null ? oldValue : '–';
-            newDisplay = newValue != null ? newValue : '–';
-        }
-
-        message = `Zmena ${changeType} z '${oldDisplay}' na '${newDisplay}' pre miesto "${placeData.name}" (${typeLabels[placeData.type] || placeData.type})`;
-    }
 
     try {
         await addDoc(collection(window.db, 'notifications'), {
             userEmail: currentUserEmail || "",
             performedBy: currentUserEmail || null,
-            changes: [message],
+            changes: changesArray,
             timestamp: Timestamp.now(),
-            actionType: changeType === 'place_deleted' ? 'place_deleted' : 
-                        changeType === 'place_created' ? 'place_created' : 
-                        'place_field_updated',
-            fieldChanged: changeType !== 'place_deleted' && changeType !== 'place_created' ? changeType : null,
-            oldValue: changeType !== 'place_deleted' && changeType !== 'place_created' ? oldValue : null,
-            newValue: changeType !== 'place_deleted' && changeType !== 'place_created' ? newValue : null,
+            actionType: actionType, 
             relatedPlaceId: placeData.id || null,
             relatedPlaceName: placeData.name || null,
             relatedPlaceType: placeData.type || null,
         });
 
-        console.log("[NOTIFIKÁCIA]", message);
+        console.log("[NOTIFIKÁCIA – viaceré zmeny]", changesArray);
     } catch (err) {
         console.error("[CHYBA pri ukladaní notifikácie]", err);
     }
