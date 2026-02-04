@@ -1154,7 +1154,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
           )
         ),
-   
+    
         React.createElement('div', { className: 'relative' },
           // Mapa
           React.createElement('div', {
@@ -1162,7 +1162,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             ref: mapRef,
             className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[450px]'
           }),
-   
+    
           // Detail vybraného miesta (sidebar)
           selectedPlace && React.createElement(
             'div',
@@ -1493,6 +1493,35 @@ const AddGroupsApp = ({ userProfileData }) => {
                       : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 active:bg-blue-800 active:border-blue-800'
                     }`
                 }, 'Pridať miesto')
+              )
+            )
+          ),
+
+          showDeleteConfirm && React.createElement(
+            'div',
+            { className: 'fixed inset-0 z-[2200] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
+            React.createElement(
+              'div',
+              { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 transform transition-all duration-300 scale-100 relative' },
+              React.createElement('h3', { className: 'text-2xl font-bold mb-6 text-gray-800 text-center' }, 'Odstrániť miesto'),
+              React.createElement('p', { className: 'text-gray-700 mb-8 text-center' },
+                'Naozaj chcete natrvalo odstrániť miesto',
+                React.createElement('br', null),
+                React.createElement('strong', { className: 'text-gray-900 text-xl' }, `"${placeToDelete?.name || 'bez názvu'}"`),
+                ' ?'
+              ),
+              React.createElement('div', { className: 'flex justify-end gap-4' },
+                React.createElement('button', {
+                  onClick: () => {
+                    setShowDeleteConfirm(false);
+                    setPlaceToDelete(null);
+                  },
+                  className: 'px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition font-medium'
+                }, 'Zrušiť'),
+                React.createElement('button', {
+                  onClick: confirmDeletePlace,
+                  className: 'px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 active:bg-red-800 transition font-medium shadow-md'
+                }, 'Odstrániť')
               )
             )
           ),
