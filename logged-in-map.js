@@ -137,86 +137,36 @@ const AddGroupsApp = ({ userProfileData }) => {
       }, [accommodationTypes, places]);
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback((e) => {
-        console.log("CLICK NA MAPE zachytený!", e.latlng);
+        if (!leafletMap.current) return;
+    
         const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
     
-        setSelectedAddPosition(pos);
-        setTempAddPosition(pos);
-    
-        // Zruš handlery
-        leafletMap.current?.off('mousemove', moveHandlerRef.current);
-        leafletMap.current?.off('click', addClickHandlerRef.current);
-        moveHandlerRef.current = null;
-        addClickHandlerRef.current = null;
-    
-        // Vyčisti starý marker
+        // čistenie starého stavu
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
     
+        setSelectedAddPosition(pos);
+        setTempAddPosition(pos);
         setNewPlaceName('');
         setNewPlaceType('');
         setNewCapacity('');
         setSelectedAccommodationType('');
         setNameTypeError(null);
         setCapacityError(null);
-    
         setIsAddingPlace(false);
     
         window.lastAddedPosition = pos;
     
-        if (leafletMap.current) {
-            // 1. Vytvoríme marker okamžite
-            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
-                icon: L.divIcon({
-                    className: 'adding-marker',
-                    html: `
-                        <div style="
-                            background: #ef4444;
-                            width: 36px;
-                            height: 36px;
-                            border-radius: 50%;
-                            border: 5px solid white;
-                            box-shadow: 0 0 15px rgba(0,0,0,0.7);
-                            z-index: 99999 !important;
-                            position: relative;
-                        "></div>
-                    `,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                }),
-                pane: 'markerPane',
-                interactive: false,
-                keyboard: false,
-                riseOnHover: false
-            }).addTo(leafletMap.current);
+        // Odpoj handlery
+        leafletMap.current.off('mousemove', moveHandlerRef.current);
+        leafletMap.current.off('click', addClickHandlerRef.current);
+        moveHandlerRef.current = null;
+        addClickHandlerRef.current = null;
     
-            // 2. Dáme prehliadaču čas na reflow + vykreslenie markera
-            //    250 ms je veľmi bezpečné číslo
-            setTimeout(() => {
-                if (leafletMap.current) {
-                    leafletMap.current.invalidateSize(false);   // bez animácie
-                }
-                // Až teraz bezpečne otvoríme modál
-                setShowModal(true);
-            }, 250);
-        } else {
-            // fallback – mapa nie je pripravená (veľmi zriedkavé)
-            setShowModal(true);
-        }
-    }, []);
-    useEffect(() => {
-        if (!showModal || !tempAddPosition || !leafletMap.current) return;
-   
-        // Vyčistenie (pre istotu, hoci by nemal byť)
-        if (tempMarkerRef.current) {
-            tempMarkerRef.current.remove();
-            tempMarkerRef.current = null;
-        }
-   
-        // Vytvor marker
-        tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
+        // Vytvoríme marker
+        tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
             icon: L.divIcon({
                 className: 'adding-marker',
                 html: `
@@ -239,24 +189,28 @@ const AddGroupsApp = ({ userProfileData }) => {
             keyboard: false,
             riseOnHover: false
         }).addTo(leafletMap.current);
-   
-        // Dôležité – daj prehliadaču čas na reflow + invalidate
+    
+        // Čakáme, kým sa marker naozaj pridá do DOMu a vykreslí
+        tempMarkerRef.current.on('add', () => {
+            // marker je v DOMe → ešte malé oneskorenie na reflow
+            setTimeout(() => {
+                if (leafletMap.current) {
+                    leafletMap.current.invalidateSize(false);
+                }
+                // AŽ TERAZ bezpečne otvárame modál
+                setShowModal(true);
+            }, 120);   // 80–150 ms po 'add' evente – veľmi spoľahlivé
+        });
+    
+        // núdzový fallback – ak by 'add' event z nejakého dôvodu ne prišiel
         setTimeout(() => {
-            if (leafletMap.current) {
-                leafletMap.current.invalidateSize(false); // false = bez animácie
+            if (!showModal && tempMarkerRef.current) {
+                leafletMap.current?.invalidateSize(false);
+                setShowModal(true);
             }
-            // Voliteľné: ak chceš popup hneď
-            // tempMarkerRef.current?.openPopup();
-        }, 80); // 50–150 ms funguje najlepšie v 90 % prípadov
-   
-        // Cleanup – keď sa modál zatvorí
-        return () => {
-            if (tempMarkerRef.current) {
-                tempMarkerRef.current.remove();
-                tempMarkerRef.current = null;
-            }
-        };
-    }, [showModal, tempAddPosition]);
+        }, 400);
+    
+    }, []);
     const startAddingPlace = () => {
         if (isAddingPlace) return;
         console.log("Spúšťam režim pridávania");
@@ -411,6 +365,23 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
     useEffect(() => {
+        if (!tempAddPosition || !leafletMap.current) return;
+
+        // Ak sa tempAddPosition zmení (napr. počas mousemove), aktualizujeme pozíciu
+        if (tempMarkerRef.current) {
+            tempMarkerRef.current.setLatLng([tempAddPosition.lat, tempAddPosition.lng]);
+        }
+
+        return () => {
+            if (tempMarkerRef.current && !showModal) {
+                // cleanup iba ak modál nie je otvorený (aby marker ostal počas editácie)
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+        };
+    }, [tempAddPosition]);
+    
+    useEffect(() => {
         if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType || !newCapacity) {
             setCapacityError(null);
             return;
@@ -498,12 +469,13 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, []);
     useEffect(() => {
         if (!showModal && !isAddingPlace) {
-            // len pre istotu – ak by niekto zavolal setShowModal(false) inak
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
                 tempMarkerRef.current = null;
             }
-            // ← NOVÉ: vyčistenie formulára pre pridávanie
+            setTempAddPosition(null);
+            setSelectedAddPosition(null);
+            window.lastAddedPosition = null;
             setNewPlaceName('');
             setNewPlaceType('');
             setNewCapacity('');
