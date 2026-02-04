@@ -192,13 +192,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 keyboard: false,
                 riseOnHover: false
             }).addTo(leafletMap.current);
-
-            console.log("Začínam čakať pred otvorením modálu...");
-            let counter = 0;
-            const intervalId = setInterval(() => {
-               counter++;
-                console.log(`ČAKÁM ${counter} (${(counter * 100)} ms)`);
-            }, 100);
    
             // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 50–120 ms)
             setTimeout(() => {
