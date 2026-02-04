@@ -197,6 +197,11 @@ const AddGroupsApp = ({ userProfileData }) => {
             riseOnHover: false
         }).addTo(leafletMap.current);
 
+        if (!leafletMap.current.getPane('customTopPane')) {
+            const customPane = leafletMap.current.createPane('customTopPane');
+            customPane.style.zIndex = 1000;
+        }
+
         tempMarkerRef.current.addTo(leafletMap.current);
 
         // Prinúť refresh
@@ -867,11 +872,6 @@ const AddGroupsApp = ({ userProfileData }) => {
     useEffect(() => {
         if (leafletMap.current) return;
         const initMap = () => {
-
-            if (!leafletMap.current.getPane('customTopPane')) {
-                const customPane = leafletMap.current.createPane('customTopPane');
-                customPane.style.zIndex = 1000;
-            }
           
             const initialCenter = defaultCenter;
             const initialZoom = defaultZoom;
