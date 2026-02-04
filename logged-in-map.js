@@ -94,14 +94,14 @@ const AddGroupsApp = ({ userProfileData }) => {
 // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
     const accommodationAvailabilityEdit = useMemo(() => {
       if (!accommodationTypes.length || !selectedPlace) return {};
-   
+  
       const result = {};
       accommodationTypes.forEach((accType) => {
         const total = accType.capacity || 0;
         let occupied = places
           .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
           .reduce((sum, p) => sum + (p.capacity || 0), 0);
-   
+  
         // Bezpečnostná kontrola – ak editujeme a máme starý typ
         if (
           selectedPlace?.type === 'ubytovanie' &&
@@ -136,37 +136,36 @@ const AddGroupsApp = ({ userProfileData }) => {
         return result;
       }, [accommodationTypes, places]);
     // Samostatná funkcia – vytvorí sa iba raz
-
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený!", e.latlng);
         const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
-    
+   
         setSelectedAddPosition(pos);
         setTempAddPosition(pos);
-    
+   
         // Zruš handlery
         leafletMap.current?.off('mousemove', moveHandlerRef.current);
         leafletMap.current?.off('click', addClickHandlerRef.current);
         moveHandlerRef.current = null;
         addClickHandlerRef.current = null;
-    
+   
         // Vyčisti starý marker (pre istotu)
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
-    
+   
         setNewPlaceName('');
         setNewPlaceType('');
         setNewCapacity('');
         setSelectedAccommodationType('');
         setNameTypeError(null);
         setCapacityError(null);
-    
+   
         setIsAddingPlace(false);
-    
+   
         window.lastAddedPosition = pos;
-    
+   
         // ─── Kľúčová zmena ───────────────────────────────────────────────
         // Najprv vytvoríme marker a dáme mu čas na vykreslenie
         if (leafletMap.current) {
@@ -193,25 +192,74 @@ const AddGroupsApp = ({ userProfileData }) => {
                 keyboard: false,
                 riseOnHover: false
             }).addTo(leafletMap.current);
-    
+   
             // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 50–120 ms)
             setTimeout(() => {
-                requestAnimationFrame(() => {
-                    leafletMap.current?.invalidateSize(false);
-                    setShowModal(true);
-                });
-            }, 250);
+                if (leafletMap.current) {
+                    leafletMap.current.invalidateSize(false);
+                }
+                // Až teraz otvoríme modálne okno
+                setShowModal(true);
+            }, 250); // ← tu je to oneskorenie, ktoré hľadáš (100 ms je dobrý kompromis)
         } else {
             // fallback – ak by mapa nebola pripravená (veľmi nepravdepodobné)
             setShowModal(true);
         }
     }, []);
- 
+    useEffect(() => {
+        if (!showModal || !tempAddPosition || !leafletMap.current) return;
+   
+        // Vyčistenie (pre istotu, hoci by nemal byť)
+        if (tempMarkerRef.current) {
+            tempMarkerRef.current.remove();
+            tempMarkerRef.current = null;
+        }
+   
+        // Vytvor marker
+        tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
+            icon: L.divIcon({
+                className: 'adding-marker',
+                html: `
+                    <div style="
+                        background: #ef4444;
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 50%;
+                        border: 5px solid white;
+                        box-shadow: 0 0 15px rgba(0,0,0,0.7);
+                        z-index: 99999 !important;
+                        position: relative;
+                    "></div>
+                `,
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            }),
+            pane: 'markerPane',
+            interactive: false,
+            keyboard: false,
+            riseOnHover: false
+        }).addTo(leafletMap.current);
+   
+        // Dôležité – daj prehliadaču čas na reflow + invalidate
+        setTimeout(() => {
+            if (leafletMap.current) {
+                leafletMap.current.invalidateSize(false); // false = bez animácie
+            }
+            // Voliteľné: ak chceš popup hneď
+            // tempMarkerRef.current?.openPopup();
+        }, 80); // 50–150 ms funguje najlepšie v 90 % prípadov
+   
+        // Cleanup – keď sa modál zatvorí
+        return () => {
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+        };
+    }, [showModal, tempAddPosition]);
     const startAddingPlace = () => {
         if (isAddingPlace) return;
- 
         console.log("Spúšťam režim pridávania");
- 
         setIsAddingPlace(true);
         setTempAddPosition(null);
         setShowModal(false);
@@ -220,54 +268,43 @@ const AddGroupsApp = ({ userProfileData }) => {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
         }
- 
         const onMouseMove = (e) => {
             setTempAddPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
         };
- 
         leafletMap.current.on('mousemove', onMouseMove);
         moveHandlerRef.current = onMouseMove;
- 
         // ← TU JE KLÚČOVÁ ZMENA: používaj skutočný handler, nie testovací
         if (addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
         }
- 
         addClickHandlerRef.current = handleAddClick; // ← toto!
         leafletMap.current.on('click', handleAddClick); // ← toto!
- 
         console.log("→ pridávací click handler (handleAddClick) pridaný");
     };
- 
     const cancelAddingPlace = () => {
         console.log("Ruším režim pridávania");
- 
         setIsAddingPlace(false);
         setTempAddPosition(null);
         setShowModal(false);
         setSelectedAddPosition(null);
         window.lastAddedPosition = null;
- 
         // Odstránenie mousemove
         if (moveHandlerRef.current) {
             leafletMap.current?.off('mousemove', moveHandlerRef.current);
             moveHandlerRef.current = null;
         }
- 
         // Odstránenie click handlera
         if (leafletMap.current && addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
             addClickHandlerRef.current = null;
             console.log("→ pridávací click handler odstránený");
         }
- 
         // Odstránenie dočasného markera
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
     };
- 
     const setPlaceHash = (placeId) => {
       if (placeId) {
         window.history.replaceState(null, '', `#place-${placeId}`);
@@ -280,36 +317,30 @@ const AddGroupsApp = ({ userProfileData }) => {
         console.log("selectedAddPosition:", selectedAddPosition);
         console.log("window.lastAddedPosition:", window.lastAddedPosition);
         if (!newPlaceName.trim() || !newPlaceType) return;
- 
         // Najprv skúsime state
         let position = selectedAddPosition;
- 
         // Ak state ešte nie je aktualizovaný → fallback
         if (!position && window.lastAddedPosition) {
             position = window.lastAddedPosition;
             console.log("Používam fallback window.lastAddedPosition:", position);
         }
- 
         if (!position) {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
-      
+     
         const nameTrimmed = newPlaceName.trim();
-      
+     
         const alreadyExists = allPlaces.some(
-            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() 
+            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
               && p.type === newPlaceType
           );
-
           if (alreadyExists) {
             setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
             window.showGlobalNotification('Duplicitné miesto – nepridávam', 'error');
             return;
           }
-
           setNameTypeError(null);
- 
         try {
             const placeData = {
                 name: newPlaceName.trim(),
@@ -326,7 +357,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
                 placeData.accommodationType = selectedAccommodationType;
             }
- 
             // kapacita...
             let cap = parseInt(newCapacity, 10);
             if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
@@ -350,21 +380,18 @@ const AddGroupsApp = ({ userProfileData }) => {
             if (!isNaN(cap) && cap > 0) {
                 placeData.capacity = cap;
             }
- 
             const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
-
             const addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} (${typeLabels[newPlaceType] || newPlaceType})'` +
                 (placeData.capacity != null ? `, kapacita: ${placeData.capacity}` : '') +
                 (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '');
-            
+           
             await createPlaceChangeNotification('place_created', [addMessage], {
                 id: newPlaceDoc.id,
                 name: newPlaceName.trim(),
                 type: newPlaceType,
             });
-
             window.showGlobalNotification('Miesto bolo pridané', 'success');
-    
+   
             // Vyčistenie
             setShowModal(false);
             setNewPlaceName('');
@@ -388,19 +415,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             setCapacityError(null);
             return;
         }
-   
+  
         const cap = parseInt(newCapacity, 10);
         if (isNaN(cap) || cap <= 0) {
             setCapacityError('Kapacita musí byť kladné číslo');
             return;
         }
-   
+  
         const avail = accommodationAvailabilityAdd[selectedAccommodationType];
         if (!avail) {
             setCapacityError('Neviem zistiť dostupnú kapacitu');
             return;
         }
-   
+  
         if (cap > avail.free) {
             setCapacityError(`Maximálne môžete zadať ${avail.free} lôžok (voľných je ${avail.free}/${avail.total})`);
         } else {
@@ -412,41 +439,40 @@ const AddGroupsApp = ({ userProfileData }) => {
             setCapacityError(null);
             return;
         }
-   
+  
         if (editType !== 'ubytovanie' || !editAccommodationType || !editCapacity) {
             setCapacityError(null);
             return;
         }
-   
+  
         const cap = parseInt(editCapacity, 10);
         if (isNaN(cap) || cap <= 0) {
             setCapacityError('Kapacita musí byť kladné číslo');
             return;
         }
-   
+  
         const avail = accommodationAvailabilityEdit[editAccommodationType];
         if (!avail) {
             setCapacityError('Neviem zistiť dostupnú kapacitu');
             return;
         }
-   
+  
         if (cap > avail.free) {
             setCapacityError(`Maximálne môžete zadať ${avail.free} lôžok (voľných je ${avail.free}/${avail.total})`);
         } else {
             setCapacityError(null);
         }
     }, [editCapacity, editAccommodationType, editType, isEditingNameAndType, accommodationAvailabilityEdit]);
- 
     useEffect(() => {
       if (!window.db) return;
-   
+  
       const unsubscribe = onSnapshot(
         doc(window.db, 'settings', 'accommodation'),
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             const typesArray = Array.isArray(data.types) ? data.types : [];
-       
+      
             // Očistenie a validácia
             const validTypes = typesArray
               .filter(item => item && typeof item === 'object' && typeof item.type === 'string')
@@ -454,9 +480,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: item.type.trim(),
                 capacity: Number(item.capacity) || 0
               }));
-   
+  
             setAccommodationTypes(validTypes);
-           
+          
           console.log("Načítané typy ubytovania:", validTypes);
           } else {
             console.warn("Dokument settings/accommodation neexistuje");
@@ -468,7 +494,6 @@ const AddGroupsApp = ({ userProfileData }) => {
           setAccommodationTypes([]);
         }
       );
- 
       return () => unsubscribe();
     }, []);
     useEffect(() => {
@@ -478,7 +503,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 tempMarkerRef.current.remove();
                 tempMarkerRef.current = null;
             }
-
             // ← NOVÉ: vyčistenie formulára pre pridávanie
             setNewPlaceName('');
             setNewPlaceType('');
@@ -493,13 +517,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNameTypeError(null);
             return;
         }
-
         const nameTrimmed = newPlaceName.trim();
         const duplicate = allPlaces.some(
-            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase() 
+            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
               && p.type === newPlaceType
         );
-    
+   
         if (duplicate) {
             setNameTypeError(`Miesto s názvom "${nameTrimmed}" a typom "${typeLabels[newPlaceType] || newPlaceType}" už existuje.`);
         } else {
@@ -520,7 +543,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
         handleHashChange();
         window.addEventListener('hashchange', handleHashChange);
- 
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [places]);
     useEffect(() => {
@@ -589,20 +611,20 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Vyberte typ ubytovania', 'error');
             return;
         }
-    
+   
         try {
             const updates = {
                 name: editName.trim(),
                 type: editType,
                 updatedAt: Timestamp.now(),
             };
-    
+   
             if (editType === 'ubytovanie') {
                 updates.accommodationType = editAccommodationType || null;
             } else {
                 updates.accommodationType = null;
             }
-    
+   
             let cap = parseInt(editCapacity, 10);
             if (editType === 'ubytovanie' || editType === 'stravovanie') {
                 if (isNaN(cap) || cap <= 0) {
@@ -633,35 +655,33 @@ const AddGroupsApp = ({ userProfileData }) => {
             } else {
                 updates.capacity = null;
             }
-    
+   
             const placeRef = doc(window.db, 'places', selectedPlace.id);
-
             const original = {
                 name: selectedPlace.name || '',
                 type: selectedPlace.type || '',
                 capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
                 accommodationType: selectedPlace.accommodationType || null,
             };
-    
+   
             await updateDoc(placeRef, updates);
-    
+   
             // ─── TU ZAČÍNA ZBER ZMIEN ───────────────────────────────
             const changesList = [];
-
             changesList.push(`Úprava miesta s názvom: '''${original.name || '(bez názvu)'}'`);
-    
+   
             if (original.name.trim() !== updates.name.trim()) {
                 changesList.push(
                     `Zmena názvu miesta z '${original.name}' na '${updates.name}'`
                 );
             }
-    
+   
             if (original.type !== updates.type) {
                 changesList.push(
                     `Zmena typu miesta z '${typeLabels[original.type] || original.type}' na '${typeLabels[updates.type] || updates.type}'`
                 );
             }
-    
+   
             if (original.capacity !== updates.capacity) {
                 const oldCapStr = original.capacity != null ? original.capacity : '–';
                 const newCapStr = updates.capacity != null ? updates.capacity : '–';
@@ -669,7 +689,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     `Zmena kapacity z '${oldCapStr}' na '${newCapStr}'`
                 );
             }
-    
+   
             if (original.accommodationType !== updates.accommodationType) {
                 const oldAcc = original.accommodationType || '-';
                 const newAcc = updates.accommodationType || '-';
@@ -678,7 +698,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 );
             }
             // ──────────────────────────────────────────────────────────
-    
+   
             // Ak sa niečo zmenilo → uložíme jedno upozornenie s viacerými riadkami
             if (changesList.length > 1) {
                 await createPlaceChangeNotification('place_field_updated', changesList, {
@@ -687,7 +707,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     type: updates.type,
                 });
             }
-    
+   
             // Aktualizácia lokálneho stavu
             setSelectedPlace(prev => ({
                 ...prev,
@@ -696,7 +716,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 capacity: updates.capacity,
                 accommodationType: updates.accommodationType || undefined,
             }));
-    
+   
             setPlaces(prevPlaces =>
                 prevPlaces.map(p =>
                     p.id === selectedPlace.id
@@ -704,11 +724,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                         : p
                 )
             );
-    
+   
             window.showGlobalNotification('Údaje boli aktualizované', 'success');
             setIsEditingNameAndType(false);
             setEditCapacity('');
-    
+   
         } catch (err) {
             console.error("Chyba pri ukladaní:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
@@ -716,54 +736,52 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
     const handleSaveNewLocation = async () => {
         if (!selectedPlace || !tempLocation || !window.db) return;
-    
+   
         try {
             const placeRef = doc(window.db, 'places', selectedPlace.id);
-    
+   
             const originalLocation = {
                 lat: selectedPlace.lat,
                 lng: selectedPlace.lng,
             };
-    
+   
             const newLocation = {
                 lat: tempLocation.lat,
                 lng: tempLocation.lng,
             };
-    
+   
             await updateDoc(placeRef, {
                 location: new GeoPoint(tempLocation.lat, tempLocation.lng),
-                lat: tempLocation.lat,           // ak ukladáte aj samostatne
+                lat: tempLocation.lat, // ak ukladáte aj samostatne
                 lng: tempLocation.lng,
                 updatedAt: Timestamp.now(),
             });
-    
+   
             // Notifikácia iba ak sa súradnice zmenili
             if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
                 const changesList = [];
-
                 // prvý riadok – úprava miesta s pôvodným názvom
                 changesList.push(`Úprava miesta s názvom: '''${selectedPlace.name || '(bez názvu)'}'`);
-
                 // druhý riadok – zmena polohy
                 changesList.push(`Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`);
-            
+           
                 await createPlaceChangeNotification('place_field_updated', changesList, {
                     id: selectedPlace.id,
                     name: selectedPlace.name,
                     type: selectedPlace.type,
                 });
             }
-    
+   
             setSelectedPlace(prev => prev ? {
                 ...prev,
                 lat: tempLocation.lat,
                 lng: tempLocation.lng
             } : null);
-    
+   
             window.showGlobalNotification('Poloha bola aktualizovaná', 'success');
             setIsEditingLocation(false);
             setTempLocation(null);
-    
+   
             if (editMarkerRef.current) {
                 if (editMarkerRef.current._clickHandler) {
                     leafletMap.current.off('click', editMarkerRef.current._clickHandler);
@@ -789,38 +807,34 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
     const confirmDeletePlace = async () => {
         if (!placeToDelete || !window.db) return;
-
         try {
             const place = { ...placeToDelete };
-    
+   
             await deleteDoc(doc(window.db, 'places', place.id));
-    
+   
             // Notifikácia – konzistentne ako ostatné
             const deleteMessage = `Odstránené miesto: '''${place.name} (${typeLabels[place.type] || place.type})'` +
                 (place.capacity != null ? `, kapacita: ${place.capacity}` : '') +
                 (place.accommodationType ? `, typ ubytovania: ${place.accommodationType}` : '');
-
             await createPlaceChangeNotification('place_deleted', [deleteMessage], {
                 id: place.id,
                 name: place.name,
                 type: place.type,
             });
-
             window.showGlobalNotification('Miesto bolo odstránené', 'success');
             closeDetail();
         } catch (err) {
             console.error("Chyba pri odstraňovaní:", err);
             window.showGlobalNotification('Nepodarilo sa odstrániť miesto', 'error');
         }
-
         // Zatvoríme modálne okno
         setShowDeleteConfirm(false);
         setPlaceToDelete(null);
     };
-  
+ 
     const handleDeletePlace = () => {
         if (!selectedPlace) return;
-        
+       
         // Uložíme miesto, ktoré chceme vymazať a otvoríme potvrdenie
         setPlaceToDelete(selectedPlace);
         setShowDeleteConfirm(true);
@@ -831,7 +845,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const initMap = () => {
             const initialCenter = defaultCenter;
             const initialZoom = defaultZoom;
-       
+      
             leafletMap.current = L.map(mapRef.current, {
                 zoomControl: false,
                 zoomDelta: 0.25,
@@ -877,7 +891,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         const current = map.getZoom();
                         map.setZoom(current - 1, { animate: true });
                     });
-               
+              
                     return container;
                 }
             });
@@ -950,9 +964,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, []);
     useEffect(() => {
         if (!leafletMap.current || !selectedPlace) return;
- 
         const { lat, lng } = selectedPlace;
- 
         // Čakáme, kým je mapa "ready" (niekedy treba malé oneskorenie)
         const timer = setTimeout(() => {
             if (leafletMap.current) {
@@ -966,11 +978,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         }, 300); // 300–600 ms zvyčajne stačí
         return () => clearTimeout(timer);
     }, [selectedPlace, leafletMap.current]);
- 
     // Načítanie a filtrovanie miest
     useEffect(() => {
       let unsubscribePlaces = null;
- 
       if (window.db) {
         unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
           const loadedPlaces = [];
@@ -988,35 +998,30 @@ const AddGroupsApp = ({ userProfileData }) => {
               accommodationType: data.accommodationType || null,
             });
           });
-
           // Uložíme VŠETKY miesta do allPlaces
           setAllPlaces(loadedPlaces);
-
           // A filtrovaný zoznam do places (pre mapu)
           let filteredPlaces = loadedPlaces;
           if (activeFilter) {
             filteredPlaces = loadedPlaces.filter(place => place.type === activeFilter);
           }
           setPlaces(filteredPlaces);
- 
           if (!leafletMap.current) return;
- 
           // VŽDY najprv vyčistíme staré markery
           if (placesLayerRef.current) {
             placesLayerRef.current.clearLayers();
           } else {
             placesLayerRef.current = L.layerGroup().addTo(leafletMap.current);
           }
- 
           // Teraz pridáme nové markery s aktuálnym selectedPlace
           filteredPlaces.forEach(place => {
             if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
-       
+      
             const typeConfig = typeIcons[place.type] || {
               icon: 'fa-map-pin',
               color: '#6b7280'
             };
-       
+      
             // Normálna ikona
             const normalHtml = `
               <div style="
@@ -1036,14 +1041,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                 <i class="fa-solid ${typeConfig.icon}"></i>
               </div>
             `;
-       
+      
             const normalIcon = L.divIcon({
               html: normalHtml,
               className: 'custom-marker-no-border',
               iconSize: [38, 38],
               iconAnchor: [19, 19]
             });
-       
+      
             // Invertovaná ikona (pre vybrané)
             const selectedHtml = `
               <div style="
@@ -1063,25 +1068,25 @@ const AddGroupsApp = ({ userProfileData }) => {
                 <i class="fa-solid ${typeConfig.icon}"></i>
               </div>
             `;
-       
+      
             const selectedIcon = L.divIcon({
               html: selectedHtml,
               className: 'custom-marker-no-border',
               iconSize: [38, 38],
               iconAnchor: [19, 19]
             });
-       
+      
             const marker = L.marker([place.lat, place.lng], { icon: normalIcon });
-       
+      
             marker.on('click', (e) => {
                 // Zastavíme propagáciu iba ak nechceme, aby map.click bežal
                 // L.DomEvent.stopPropagation(e); ← toto NEpoužívaj, inak map.click nikdy nefunguje
                 setSelectedPlace(place);
                 setPlaceHash(place.id);
             });
-       
+      
             placesLayerRef.current.addLayer(marker);
-       
+      
             // Ulož obe ikony
             markersRef.current[place.id] = {
               marker,
@@ -1091,7 +1096,6 @@ const AddGroupsApp = ({ userProfileData }) => {
           });
         }, err => console.error("onSnapshot error:", err));
       }
- 
       return () => {
         if (unsubscribePlaces) unsubscribePlaces();
         if (placesLayerRef.current) placesLayerRef.current.clearLayers();
@@ -1107,7 +1111,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         .reduce((sum, p) => sum + (p.capacity || 0), 0);
       return total - occupied;
     }, [newPlaceType, selectedAccommodationType, accommodationTypes, places]);
-   
+  
     const editFreeCapacity = useMemo(() => {
       if (editType !== 'ubytovanie' || !editAccommodationType) return null;
       const selectedTypeConfig = accommodationTypes.find(t => t.type === editAccommodationType);
@@ -1124,7 +1128,6 @@ const AddGroupsApp = ({ userProfileData }) => {
       }
       return total - occupied;
     }, [editType, editAccommodationType, accommodationTypes, places, selectedPlace]);
- 
     // ──────────────────────────────────────────────
     // RENDER
     // ──────────────────────────────────────────────
@@ -1180,7 +1183,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
           )
         ),
-    
+   
         React.createElement('div', { className: 'relative' },
           // Mapa
           React.createElement('div', {
@@ -1188,7 +1191,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             ref: mapRef,
             className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[450px]'
           }),
-    
+   
           // Detail vybraného miesta (sidebar)
           selectedPlace && React.createElement(
             'div',
@@ -1296,7 +1299,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               }, 'Odstrániť miesto')
             )
           ),
-   
+  
           // ──────────────────────────────────────────────
           // Edit modál (názov, typ, kapacita, typ ubytovania)
           // ──────────────────────────────────────────────
@@ -1408,7 +1411,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               )
             )
           ),
-   
+  
           // ──────────────────────────────────────────────
           // Pridať nové miesto modál
           // ──────────────────────────────────────────────
@@ -1522,7 +1525,6 @@ const AddGroupsApp = ({ userProfileData }) => {
               )
             )
           ),
-
           showDeleteConfirm && React.createElement(
             'div',
             { className: 'fixed inset-0 z-[2200] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
@@ -1551,7 +1553,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               )
             )
           ),
-   
+  
           // Plávajúce tlačidlo + / ×
           React.createElement('button', {
             onClick: isAddingPlace ? cancelAddingPlace : startAddingPlace,
@@ -1567,30 +1569,25 @@ const AddGroupsApp = ({ userProfileData }) => {
       )
     );
   }
-
 const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
     if (!window.db || !changesArray?.length) return;
-
     const currentUserEmail = window.globalUserProfileData?.email || null;
-
     try {
         await addDoc(collection(window.db, 'notifications'), {
             userEmail: currentUserEmail || "",
             performedBy: currentUserEmail || null,
             changes: changesArray,
             timestamp: Timestamp.now(),
-            actionType: actionType, 
+            actionType: actionType,
             relatedPlaceId: placeData.id || null,
             relatedPlaceName: placeData.name || null,
             relatedPlaceType: placeData.type || null,
         });
-
         console.log("[NOTIFIKÁCIA – viaceré zmeny]", changesArray);
     } catch (err) {
         console.error("[CHYBA pri ukladaní notifikácie]", err);
     }
 };
-
 // ──────────────────────────────────────────────
 // Inicializácia + listener na globalDataUpdated
 // ──────────────────────────────────────────────
