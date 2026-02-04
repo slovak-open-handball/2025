@@ -764,17 +764,19 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (!confirm(`Naozaj chcete odstrániť miesto "${selectedPlace.name || 'bez názvu'}"?`)) return;
     
         try {
-            const placeToDelete = { ...selectedPlace };  // uložíme si dáta pred vymazaním
+            const placeToDelete = { ...selectedPlace };
     
             await deleteDoc(doc(window.db, 'places', selectedPlace.id));
     
-            // Notifikácia – bez oldValues, stačí aktuálne (mazané) hodnoty
-            await createPlaceChangeNotification('place_deleted', null, null, {
+            // Vytvoríme správu – konzistentne ako ostatné notifikácie
+            const deleteMessage = `Odstránené miesto: "${placeToDelete.name}" (${typeLabels[placeToDelete.type] || placeToDelete.type})` +
+                (placeToDelete.capacity != null ? ` (kapacita: ${placeToDelete.capacity})` : '') +
+                (placeToDelete.accommodationType ? `, typ ubytovania: ${placeToDelete.accommodationType}` : '');
+    
+            await createPlaceChangeNotification('place_deleted', [deleteMessage], {
                 id: placeToDelete.id,
                 name: placeToDelete.name,
                 type: placeToDelete.type,
-                capacity: placeToDelete.capacity,
-                accommodationType: placeToDelete.accommodationType || null,
             });
     
             window.showGlobalNotification('Miesto bolo odstránené', 'success');
