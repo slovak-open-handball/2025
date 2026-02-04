@@ -196,12 +196,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 50–120 ms)
             setTimeout(() => {
-                if (leafletMap.current) {
-                    leafletMap.current.invalidateSize(false);
-                }
-                // Až teraz otvoríme modálne okno
-                setShowModal(true);
-            }, 250);   // ← tu je to oneskorenie, ktoré hľadáš (100 ms je dobrý kompromis)
+                requestAnimationFrame(() => {
+                    leafletMap.current?.invalidateSize(false);
+                    setShowModal(true);
+                });
+            }, 250);
         } else {
             // fallback – ak by mapa nebola pripravená (veľmi nepravdepodobné)
             setShowModal(true);
