@@ -191,7 +191,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 iconAnchor: [30, 30],
                 className: ''   // ← vypni defaultný wrapper, necháme len náš div
             }),
-            pane: 'overlayPane',
+            pane: 'customTopPane',
             interactive: false,
             keyboard: false,
             riseOnHover: false
@@ -856,6 +856,12 @@ const AddGroupsApp = ({ userProfileData }) => {
     useEffect(() => {
         if (leafletMap.current) return;
         const initMap = () => {
+
+            if (!leafletMap.current.getPane('customTopPane')) {
+                const customPane = leafletMap.current.createPane('customTopPane');
+                customPane.style.zIndex = 1000;
+            }
+          
             const initialCenter = defaultCenter;
             const initialZoom = defaultZoom;
       
