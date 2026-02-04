@@ -139,36 +139,35 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleAddClick = useCallback((e) => {
         console.log("CLICK NA MAPE zachytený!", e.latlng);
         const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
-   
+    
         setSelectedAddPosition(pos);
         setTempAddPosition(pos);
-   
+    
         // Zruš handlery
         leafletMap.current?.off('mousemove', moveHandlerRef.current);
         leafletMap.current?.off('click', addClickHandlerRef.current);
         moveHandlerRef.current = null;
         addClickHandlerRef.current = null;
-   
-        // Vyčisti starý marker (pre istotu)
+    
+        // Vyčisti starý marker
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
-   
+    
         setNewPlaceName('');
         setNewPlaceType('');
         setNewCapacity('');
         setSelectedAccommodationType('');
         setNameTypeError(null);
         setCapacityError(null);
-   
+    
         setIsAddingPlace(false);
-   
+    
         window.lastAddedPosition = pos;
-   
-        // ─── Kľúčová zmena ───────────────────────────────────────────────
-        // Najprv vytvoríme marker a dáme mu čas na vykreslenie
+    
         if (leafletMap.current) {
+            // 1. Vytvoríme marker okamžite
             tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
                 icon: L.divIcon({
                     className: 'adding-marker',
@@ -192,17 +191,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                 keyboard: false,
                 riseOnHover: false
             }).addTo(leafletMap.current);
-   
-            // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 50–120 ms)
+    
+            // 2. Dáme prehliadaču čas na reflow + vykreslenie markera
+            //    250 ms je veľmi bezpečné číslo
             setTimeout(() => {
                 if (leafletMap.current) {
-                    leafletMap.current.invalidateSize(false);
+                    leafletMap.current.invalidateSize(false);   // bez animácie
                 }
-                // Až teraz otvoríme modálne okno
+                // Až teraz bezpečne otvoríme modál
                 setShowModal(true);
-            }, 250); // ← tu je to oneskorenie, ktoré hľadáš (100 ms je dobrý kompromis)
+            }, 250);
         } else {
-            // fallback – ak by mapa nebola pripravená (veľmi nepravdepodobné)
+            // fallback – mapa nie je pripravená (veľmi zriedkavé)
             setShowModal(true);
         }
     }, []);
