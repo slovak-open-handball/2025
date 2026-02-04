@@ -649,8 +649,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
     
             if (original.accommodationType !== updates.accommodationType) {
-                const oldAcc = original.accommodationType || 'žiadny';
-                const newAcc = updates.accommodationType || 'žiadny';
+                const oldAcc = original.accommodationType || '-';
+                const newAcc = updates.accommodationType || '-';
                 changesList.push(
                     `Zmena typu ubytovania z '${oldAcc}' na '${newAcc}'`
                 );
