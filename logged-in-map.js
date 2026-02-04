@@ -200,7 +200,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
                 // Až teraz otvoríme modálne okno
                 setShowModal(true);
-            }, 250); // ← tu je oneskorenie 250 ms
+            }, 500); // ← tu je oneskorenie 250 ms
         } else {
             // fallback – ak by mapa nebola pripravená (veľmi nepravdepodobné)
             setShowModal(true);
