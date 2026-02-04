@@ -202,7 +202,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     leafletMap.current.invalidateSize(false);
                 }
                 setShowModal(true);
-            }, 80);  // 60–120 ms po zistení, že je v DOMe
+            }, 400);
 
             return true;
         };
