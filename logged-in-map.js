@@ -271,8 +271,8 @@ const AddGroupsApp = ({ userProfileData }) => {
         setTimeout(() => {
           setIsModalOpening(false); // ukončíme "prípravu"
           setShowModal(true); // až teraz sa otvorí
-        }, 1500); // krátke oneskorenie, aby mapka stihla "reagovať"
-      }, 1500);
+        }, 500); // krátke oneskorenie, aby mapka stihla "reagovať"
+      }, 500);
     
       return () => {
         clearTimeout(timeoutId);
