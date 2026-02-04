@@ -226,28 +226,28 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, []);
     useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
-  
-        // Vyčistenie (pre istotu, hoci by nemal byť)
+    
+        // Vyčistenie starého markera
         if (tempMarkerRef.current) {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
-  
-        // Vytvor marker
+    
+        // Vytvor nový marker
         tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
             icon: L.divIcon({
                 className: 'adding-marker',
                 html: `
-                    <div style="
-                        background: #ef4444;
-                        width: 36px;
-                        height: 36px;
-                        border-radius: 50%;
-                        border: 5px solid white;
-                        box-shadow: 0 0 15px rgba(0,0,0,0.7);
-                        z-index: 99999 !important;
-                        position: relative;
-                    "></div>
+                  <div style="
+                    background: #ef4444;
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    border: 5px solid white;
+                    box-shadow: 0 0 15px rgba(0,0,0,0.7);
+                    z-index: 99999 !important;
+                    position: relative;
+                  "></div>
                 `,
                 iconSize: [36, 36],
                 iconAnchor: [18, 18]
@@ -257,17 +257,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             keyboard: false,
             riseOnHover: false
         }).addTo(leafletMap.current);
-  
-        // Dôležité – daj prehliadaču čas na reflow + invalidate
+    
+        // Počkajte na vizuálne vykreslenie a reflow
         setTimeout(() => {
             if (leafletMap.current) {
-                leafletMap.current.invalidateSize(false); // false = bez animácie
+                leafletMap.current.invalidateSize(false);
             }
-            // Voliteľné: ak chceš popup hneď
-            // tempMarkerRef.current?.openPopup();
-        }, 250); // 50–150 ms funguje najlepšie v 90 % prípadov
-  
-        // Cleanup – keď sa modál zatvorí
+            // Po cca 80 ms otvoríme modálne okno
+            setTimeout(() => {
+                setShowModal(true);
+            }, 250);
+        }, 250);
+    
+        // Cleanup
         return () => {
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
