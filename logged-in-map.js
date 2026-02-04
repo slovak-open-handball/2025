@@ -203,7 +203,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }, 180);          // 150–250 ms → najčastejšie funguje spoľahlivo
     
     }, [leafletMap]);
-/* 
+
     useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
    
@@ -212,7 +212,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
-   
+/*   
         // Vytvor marker
         tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
             icon: L.divIcon({
@@ -254,8 +254,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                 tempMarkerRef.current = null;
             }
         };
+*/
     }, [showModal, tempAddPosition]);
-*/  
+ 
     const startAddingPlace = () => {
         if (isAddingPlace) return;
         console.log("Spúšťam režim pridávania");
