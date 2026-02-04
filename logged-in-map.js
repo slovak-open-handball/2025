@@ -333,7 +333,7 @@ const AddGroupsApp = ({ userProfileData }) => {
  
             const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
 
-            const addMessage = `Vytvorené nové miesto: "${newPlaceName.trim()}" (${typeLabels[newPlaceType] || newPlaceType})` +
+            const addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} (${typeLabels[newPlaceType] || newPlaceType})'` +
                 (placeData.capacity != null ? ` (kapacita: ${placeData.capacity})` : '') +
                 (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '');
             
@@ -769,7 +769,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             await deleteDoc(doc(window.db, 'places', selectedPlace.id));
     
             // Vytvoríme správu – konzistentne ako ostatné notifikácie
-            const deleteMessage = `Odstránené miesto: "${placeToDelete.name}" (${typeLabels[placeToDelete.type] || placeToDelete.type})` +
+            const deleteMessage = `Odstránené miesto: '''${placeToDelete.name} (${typeLabels[placeToDelete.type] || placeToDelete.type})'` +
                 (placeToDelete.capacity != null ? ` (kapacita: ${placeToDelete.capacity})` : '') +
                 (placeToDelete.accommodationType ? `, typ ubytovania: ${placeToDelete.accommodationType}` : '');
     
