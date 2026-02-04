@@ -14,28 +14,6 @@ document.head.appendChild(leafletJS);
 const faCSS = document.createElement('link');
 faCSS.rel = 'stylesheet';
 faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
-
-
-const style = document.createElement('style');
-style.textContent = `
-  .leaflet-popup-pane,
-  .leaflet-marker-pane,
-  .leaflet-marker-icon,
-  .leaflet-popup-content-wrapper,
-  .leaflet-popup-tip {
-    z-index: 9999 !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-  .leaflet-container {
-    position: relative !important;
-    overflow: visible !important;
-  }
-`;
-document.head.appendChild(style);
-
-
-
 document.head.appendChild(faCSS);
 // Globálne predvolené hodnoty (fallback)
 const DEFAULT_CENTER = [49.195340, 18.786106];
