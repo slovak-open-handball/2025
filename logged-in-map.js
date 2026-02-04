@@ -171,37 +171,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         window.lastAddedPosition = pos;
     }, []);
 
-        setNewPlaceName('');
-        setNewPlaceType('');
-        setNewCapacity('');
-        setSelectedAccommodationType('');
-        setNameTypeError(null);
-        setCapacityError(null);
-
-        setTimeout(() => {
-            if (leafletMap.current) {
-                leafletMap.current.invalidateSize();
-                console.log("invalidateSize zavolané po 600 ms");
-            }
-        }, 600);
-    
-        // Ešte silnejší test – oneskor popup
-        setTimeout(() => {
-            if (tempMarkerRef.current) {
-                tempMarkerRef.current.openPopup();
-            }
-        }, 300);
-
-        setTimeout(() => {
-            setShowModal(true);
-        }, 500);
-        setIsAddingPlace(false);
-
-        // Fallback pre istotu
-        window.lastAddedPosition = pos;
-
-    }, []); // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace
-
     useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
     
