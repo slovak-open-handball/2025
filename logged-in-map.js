@@ -361,10 +361,20 @@ const AddGroupsApp = ({ userProfileData }) => {
               && p.type === newPlaceType
           );
           if (alreadyExists) {
-                setNameTypeError(`Miesto s názvom ${nameTrimmed} a typom ${typeLabels[newPlaceType] || newPlaceType} už existuje.`);
-                window.showGlobalNotification("Duplicitné miesto – nepridávam", "error");
-                return;
-              }
+              setNameTypeError(
+                  React.createElement('span', null,
+                      "Miesto s názvom ",
+                      React.createElement('strong', { className: "font-bold text-gray-900" }, nameTrimmed),
+                      " a typom ",
+                      React.createElement('strong', { className: "font-bold text-gray-900" },
+                          typeLabels[newPlaceType] || newPlaceType
+                      ),
+                      " už existuje."
+                  )
+              );
+              window.showGlobalNotification("Duplicitné miesto – nepridávam", "error");
+              return;
+          }
           setNameTypeError(null);
         try {
             const placeData = {
@@ -542,18 +552,33 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNameTypeError(null);
             return;
         }
+    
         const nameTrimmed = newPlaceName.trim();
+    
         const duplicate = allPlaces.some(
             p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
               && p.type === newPlaceType
         );
-  
+    
         if (duplicate) {
-            setNameTypeError(`Miesto s názvom ${nameTrimmed} a typom ${typeLabels[newPlaceType] || newPlaceType} už existuje.`);
+            // ──────────────────────────────────────────────
+            // Tu je zmena – rozdelíme text na časti a dáme bold
+            // ──────────────────────────────────────────────
+            setNameTypeError(
+                React.createElement('span', null,
+                    "Miesto s názvom ",
+                    React.createElement('strong', { className: "font-bold text-gray-900" }, nameTrimmed),
+                    " a typom ",
+                    React.createElement('strong', { className: "font-bold text-gray-900" },
+                        typeLabels[newPlaceType] || newPlaceType
+                    ),
+                    " už existuje."
+                )
+            );
         } else {
             setNameTypeError(null);
         }
-    }, [newPlaceName, newPlaceType, showModal, allPlaces, typeLabels]);
+    }, [newPlaceName, newPlaceType, showModal, allPlaces]);
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash;
@@ -1506,9 +1531,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                 )
               ),
               nameTypeError && React.createElement(
-                'div',
-                { className: 'mt-3 p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm' },
-                nameTypeError
+                  'div',
+                  { 
+                      className: 'mt-3 p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm' 
+                  },
+                  nameTypeError
               ),
               // Kapacita
               (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && React.createElement('div', { className: 'mb-6' },
