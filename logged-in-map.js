@@ -361,12 +361,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               && p.type === newPlaceType
           );
           if (alreadyExists) {
-              setNameTypeError(
-                  <>
-                    Miesto s názvom <strong>{nameTrimmed}</strong> a typom{" "}
-                    <strong>{typeLabels[newPlaceType] || newPlaceType}</strong> už existuje.
-                  </>
-                );
+                setNameTypeError(`Miesto s názvom ${nameTrimmed} a typom ${typeLabels[newPlaceType] || newPlaceType} už existuje.`);
                 window.showGlobalNotification("Duplicitné miesto – nepridávam", "error");
                 return;
               }
