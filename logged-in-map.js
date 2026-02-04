@@ -630,13 +630,13 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             if (original.name.trim() !== updates.name.trim()) {
                 changesList.push(
-                    `Zmena názvu z '${original.name}' na '${updates.name}' pre miesto "${updates.name}" (${typeLabels[updates.type] || updates.type})`
+                    `Zmena názvu z '${original.name}' na '${updates.name}'`
                 );
             }
     
             if (original.type !== updates.type) {
                 changesList.push(
-                    `Zmena typu miesta z '${typeLabels[original.type] || original.type}' na '${typeLabels[updates.type] || updates.type}' pre miesto "${updates.name}" (${typeLabels[updates.type] || updates.type})`
+                    `Zmena typu miesta z '${typeLabels[original.type] || original.type}' na '${typeLabels[updates.type] || updates.type}'`
                 );
             }
     
@@ -644,7 +644,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const oldCapStr = original.capacity != null ? original.capacity : '–';
                 const newCapStr = updates.capacity != null ? updates.capacity : '–';
                 changesList.push(
-                    `Zmena kapacity z '${oldCapStr}' na '${newCapStr}' pre miesto "${updates.name}" (${typeLabels[updates.type] || updates.type})`
+                    `Zmena kapacity z '${oldCapStr}' na '${newCapStr}'`
                 );
             }
     
@@ -652,7 +652,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const oldAcc = original.accommodationType || 'žiadny';
                 const newAcc = updates.accommodationType || 'žiadny';
                 changesList.push(
-                    `Zmena typu ubytovania z '${oldAcc}' na '${newAcc}' pre miesto "${updates.name}" (${typeLabels[updates.type] || updates.type})`
+                    `Zmena typu ubytovania z '${oldAcc}' na '${newAcc}'`
                 );
             }
             // ──────────────────────────────────────────────────────────
@@ -717,7 +717,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             // Notifikácia iba ak sa súradnice zmenili
             if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
-                const changeMsg = `Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]' pre miesto "${selectedPlace.name}" (${typeLabels[selectedPlace.type] || selectedPlace.type})`;
+                const changeMsg = `Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`;
 
                 await createPlaceChangeNotification('place_field_updated', [changeMsg], {
                     id: selectedPlace.id,
