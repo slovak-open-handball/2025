@@ -333,15 +333,15 @@ const AddGroupsApp = ({ userProfileData }) => {
  
             const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
 
-//            await createPlaceChangeNotification('place_created', null, null, {
-//                id: newPlaceDoc.id,
-//                name: newPlaceName.trim(),
-//                type: newPlaceType,
-//                capacity: placeData.capacity,
-//                accommodationType: placeData.accommodationType || null,
-//                lat: position.lat,
-//                lng: position.lng,
-//            });
+            const addMessage = `Vytvorené nové miesto: "${newPlaceName.trim()}" (${typeLabels[newPlaceType] || newPlaceType})` +
+                (placeData.capacity != null ? ` (kapacita: ${placeData.capacity})` : '') +
+                (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '');
+            
+            await createPlaceChangeNotification('place_created', [addMessage], {
+                id: newPlaceDoc.id,
+                name: newPlaceName.trim(),
+                type: newPlaceType,
+            });
 
             window.showGlobalNotification('Miesto bolo pridané', 'success');
     
@@ -717,7 +717,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             // Notifikácia iba ak sa súradnice zmenili
             if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
-                await createPlaceChangeNotification('polohy', originalLocation, newLocation, {
+                const changeMsg = `Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]' pre miesto "${selectedPlace.name}" (${typeLabels[selectedPlace.type] || selectedPlace.type})`;
+
+                await createPlaceChangeNotification('place_field_updated', [changeMsg], {
                     id: selectedPlace.id,
                     name: selectedPlace.name,
                     type: selectedPlace.type,
