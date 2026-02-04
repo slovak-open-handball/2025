@@ -335,7 +335,7 @@ const AddGroupsApp = ({ userProfileData }) => {
  
             const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
 
-            const addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} ${typeLabels[newPlaceType] || newPlaceType}'` +
+            const addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} (${typeLabels[newPlaceType] || newPlaceType})'` +
                 (placeData.capacity != null ? `, kapacita: ${placeData.capacity}` : '') +
                 (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '');
             
