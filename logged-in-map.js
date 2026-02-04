@@ -266,8 +266,8 @@ const AddGroupsApp = ({ userProfileData }) => {
         // Po oneskorení (napr. 80ms) otvorte modálne okno
         setTimeout(() => {
           setShowModal(true);
-        }, 500);
-      }, 500);
+        }, 1500);
+      }, 1500);
     
       // Cleanup pri zatvorení alebo zrušení efektu
       return () => {
