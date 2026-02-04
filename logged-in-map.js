@@ -203,6 +203,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }, 180);          // 150–250 ms → najčastejšie funguje spoľahlivo
     
     }, [leafletMap]);
+/* 
     useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
    
@@ -254,6 +255,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         };
     }, [showModal, tempAddPosition]);
+*/  
     const startAddingPlace = () => {
         if (isAddingPlace) return;
         console.log("Spúšťam režim pridávania");
