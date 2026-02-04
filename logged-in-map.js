@@ -91,6 +91,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [allPlaces, setAllPlaces] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [placeToDelete, setPlaceToDelete] = useState(null);
+    const [isModalOpening, setIsModalOpening] = useState(false);
 // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
 
     const waitForMarkerRender = () => {
@@ -258,18 +259,21 @@ const AddGroupsApp = ({ userProfileData }) => {
         riseOnHover: false
       }).addTo(leafletMap.current);
     
-      // Počkajte na vykreslenie a invalidáciu veľkosti
+      // Na začiatku nastavíme, že modálne okno ešte neotvárame
+      setIsModalOpening(true);
+    
+      // Počkajte na invalidateSize a následne otvorte modálne
       const timeoutId = setTimeout(() => {
         if (leafletMap.current) {
           leafletMap.current.invalidateSize(false);
         }
-        // Po oneskorení (napr. 80ms) otvorte modálne okno
+        // Po `invalidateSize` a krátkom oneskorení skutočne otvoríme
         setTimeout(() => {
-          setShowModal(true);
-        }, 1500);
+          setIsModalOpening(false); // ukončíme "prípravu"
+          setShowModal(true); // až teraz sa otvorí
+        }, 100); // krátke oneskorenie, aby mapka stihla "reagovať"
       }, 1500);
     
-      // Cleanup pri zatvorení alebo zrušení efektu
       return () => {
         clearTimeout(timeoutId);
         if (tempMarkerRef.current) {
@@ -1435,7 +1439,7 @@ const AddGroupsApp = ({ userProfileData }) => {
           // ──────────────────────────────────────────────
           // Pridať nové miesto modál
           // ──────────────────────────────────────────────
-          showModal && React.createElement(
+          (showModal && !isModalOpening) && React.createElement(
             'div',
             { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
             React.createElement(
