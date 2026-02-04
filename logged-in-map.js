@@ -630,7 +630,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             // ─── TU ZAČÍNA ZBER ZMIEN ───────────────────────────────
             const changesList = [];
 
-            changesList.push(`Úprava miesta s názvom: '''${original.name || '(bez názvu')}'`);
+            changesList.push(`Úprava miesta s názvom: '''${original.name || '(bez názvu)'}'`);
     
             if (original.name.trim() !== updates.name.trim()) {
                 changesList.push(
@@ -722,8 +722,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Notifikácia iba ak sa súradnice zmenili
             if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
                 const changesList = [
-                    `Úprava miesta s názvom: '''${selectedPlace.name || '(bez názvu')}'`,
-                    `Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`
+                  `Úprava miesta s názvom: '''${selectedPlace.name || '(bez názvu')}'`,
+                  `Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`
                 ];
             
                 await createPlaceChangeNotification('place_field_updated', changesList, {
