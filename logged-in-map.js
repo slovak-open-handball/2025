@@ -630,7 +630,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             if (original.name.trim() !== updates.name.trim()) {
                 changesList.push(
-                    `Zmena názvu z '${original.name}' na '${updates.name}'`
+                    `Zmena názvu miesta z '${original.name}' na '${updates.name}'`
                 );
             }
     
