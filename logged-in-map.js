@@ -92,6 +92,25 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [placeToDelete, setPlaceToDelete] = useState(null);
 // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
+
+    const waitForMarkerRender = () => {
+      return new Promise((resolve) => {
+        const check = () => {
+          // Ak je marker vykreslený, môžeme pokračovať
+          if (tempMarkerRef.current && mapRef.current && leafletMap.current) {
+            // Voliteľne, môžeme použiť requestAnimationFrame na zabezpečenie, že je vykreslené
+            requestAnimationFrame(() => {
+              resolve();
+            });
+          } else {
+            // Ak marker ešte nie je, počkame a znova skontrolujeme
+            setTimeout(check, 50);
+          }
+        };
+        check();
+      });
+    };
+  
     const accommodationAvailabilityEdit = useMemo(() => {
       if (!accommodationTypes.length || !selectedPlace) return {};
  
@@ -136,75 +155,74 @@ const AddGroupsApp = ({ userProfileData }) => {
         return result;
       }, [accommodationTypes, places]);
     // Samostatná funkcia – vytvorí sa iba raz
-    const handleAddClick = useCallback((e) => {
-        console.log("CLICK NA MAPE zachytený!", e.latlng);
-        const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
+    const handleAddClick = useCallback(async (e) => {
+      console.log("CLICK NA MAPE zachytený!", e.latlng);
+      const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
     
-        setSelectedAddPosition(pos);
-        setTempAddPosition(pos);
+      setSelectedAddPosition(pos);
+      setTempAddPosition(pos);
     
-        // Zruš handlery
-        leafletMap.current?.off('mousemove', moveHandlerRef.current);
-        leafletMap.current?.off('click', addClickHandlerRef.current);
-        moveHandlerRef.current = null;
-        addClickHandlerRef.current = null;
+      // Zruš handlery
+      leafletMap.current?.off('mousemove', moveHandlerRef.current);
+      leafletMap.current?.off('click', addClickHandlerRef.current);
+      moveHandlerRef.current = null;
+      addClickHandlerRef.current = null;
     
-        // Vyčisti starý marker (pre istotu)
-        if (tempMarkerRef.current) {
-            tempMarkerRef.current.remove();
-            tempMarkerRef.current = null;
-        }
+      // Vyčisti starý marker (pre istotu)
+      if (tempMarkerRef.current) {
+        tempMarkerRef.current.remove();
+        tempMarkerRef.current = null;
+      }
     
-        setNewPlaceName('');
-        setNewPlaceType('');
-        setNewCapacity('');
-        setSelectedAccommodationType('');
-        setNameTypeError(null);
-        setCapacityError(null);
+      setNewPlaceName('');
+      setNewPlaceType('');
+      setNewCapacity('');
+      setSelectedAccommodationType('');
+      setNameTypeError(null);
+      setCapacityError(null);
     
-        setIsAddingPlace(false);
+      setIsAddingPlace(false);
+      window.lastAddedPosition = pos;
     
-        window.lastAddedPosition = pos;
+      // Vytvor marker
+      if (leafletMap.current) {
+        tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
+          icon: L.divIcon({
+            className: 'adding-marker',
+            html: `
+              <div style="
+                background: #ef4444;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: 5px solid white;
+                box-shadow: 0 0 15px rgba(0,0,0,0.7);
+                z-index: 99999 !important;
+                position: relative;
+              "></div>
+            `,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+          }),
+          pane: 'markerPane',
+          interactive: false,
+          keyboard: false,
+          riseOnHover: false
+        }).addTo(leafletMap.current);
     
-        // ─── Kľúčová zmena ───────────────────────────────────────────────
-        // Najprv vytvoríme marker a dáme mu čas na vykreslenie
-        if (leafletMap.current) {
-            tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
-                icon: L.divIcon({
-                    className: 'adding-marker',
-                    html: `
-                        <div style="
-                            background: #ef4444;
-                            width: 36px;
-                            height: 36px;
-                            border-radius: 50%;
-                            border: 5px solid white;
-                            box-shadow: 0 0 15px rgba(0,0,0,0.7);
-                            z-index: 99999 !important;
-                            position: relative;
-                        "></div>
-                    `,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                }),
-                pane: 'markerPane',
-                interactive: false,
-                keyboard: false,
-                riseOnHover: false
-            }).addTo(leafletMap.current);
+        // Počkáme, kým sa marker vykreslí a invaliduje veľkosť mapy
+        await waitForMarkerRender();
     
-            // Dáme prehliadaču čas na reflow + vykreslenie (väčšinou stačí 250 ms)
-            setTimeout(() => {
-                if (leafletMap.current) {
-                    leafletMap.current.invalidateSize(false);
-                }
-                // Až teraz otvoríme modálne okno
-                setShowModal(true);
-            }, 500); // ← tu je oneskorenie 250 ms
-        } else {
-            // fallback – ak by mapa nebola pripravená (veľmi nepravdepodobné)
-            setShowModal(true);
-        }
+        // Počkajte na ďalší rámec, aby ste zabezpečili, že je vizuálne vykreslené
+        requestAnimationFrame(() => {
+          if (leafletMap.current) {
+            leafletMap.current.invalidateSize(false);
+          }
+          setShowModal(true);
+        });
+      } else {
+        setShowModal(true);
+      }
     }, []);
     useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
