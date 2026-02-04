@@ -148,10 +148,12 @@ const AddGroupsApp = ({ userProfileData }) => {
         // 2. Ihneď pridáme dočasný marker
         if (leafletMap.current) {
             // Vyčistenie starého (pre istotu)
+/*          
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
                 tempMarkerRef.current = null;
             }
+*/            
     
             tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
                 icon: L.divIcon({
