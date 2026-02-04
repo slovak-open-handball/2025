@@ -14,6 +14,28 @@ document.head.appendChild(leafletJS);
 const faCSS = document.createElement('link');
 faCSS.rel = 'stylesheet';
 faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
+
+
+const style = document.createElement('style');
+style.textContent = `
+  .leaflet-popup-pane,
+  .leaflet-marker-pane,
+  .leaflet-marker-icon,
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    z-index: 9999 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  .leaflet-container {
+    position: relative !important;
+    overflow: visible !important;
+  }
+`;
+document.head.appendChild(style);
+
+
+
 document.head.appendChild(faCSS);
 // Globálne predvolené hodnoty (fallback)
 const DEFAULT_CENTER = [49.195340, 18.786106];
@@ -222,25 +244,25 @@ const AddGroupsApp = ({ userProfileData }) => {
   
 //    const handleAddClick = useCallback((e) => {
 //        console.log("CLICK NA MAPE zachytený v režime pridávania!", e.latlng);
- //
+//
 //        const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
- //
+//
 //        // Uložíme pozíciu
 //        setSelectedAddPosition(pos);
 //        setTempAddPosition(pos);
- //
+//
 //        // Zastavíme mousemove
 //        if (moveHandlerRef.current) {
 //            leafletMap.current?.off('mousemove', moveHandlerRef.current);
 //            moveHandlerRef.current = null;
 //        }
- //
+//
 //        // Odstránime tento click handler (už nepotrebujeme ďalšie kliky)
 //        if (leafletMap.current && addClickHandlerRef.current) {
 //            leafletMap.current.off('click', addClickHandlerRef.current);
 //            addClickHandlerRef.current = null;
 //        }
- //
+//
 ////        if (leafletMap.current) {
 ////            if (tempMarkerRef.current) {
 ////                tempMarkerRef.current.remove();
@@ -278,7 +300,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 ////            console.error("CHYBA pri vytváraní temp markera:", err);
 ////        }
 ////    }
- //
+//
 //        setNewPlaceName('');
 //        setNewPlaceType('');
 //        setNewCapacity('');
@@ -304,10 +326,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 //            setShowModal(true);
 //        }, 500);
 //        setIsAddingPlace(false);
- //
+//
 //        // Fallback pre istotu
 //        window.lastAddedPosition = pos;
- //
+//
 //    }, []); // ← závislosti prázdne, lebo už nepotrebujeme isAddingPlace
 
     useEffect(() => {
