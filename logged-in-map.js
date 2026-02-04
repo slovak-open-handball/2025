@@ -265,7 +265,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
             // Voliteľné: ak chceš popup hneď
             // tempMarkerRef.current?.openPopup();
-        }, 80); // 50–150 ms funguje najlepšie v 90 % prípadov
+        }, 250); // 50–150 ms funguje najlepšie v 90 % prípadov
   
         // Cleanup – keď sa modál zatvorí
         return () => {
