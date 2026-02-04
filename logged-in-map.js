@@ -207,6 +207,16 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, [leafletMap]);
 
     useEffect(() => {
+        return () => {
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+        };
+    }, [showModal]);
+
+/*
+    useEffect(() => {
         if (!showModal || !tempAddPosition || !leafletMap.current) return;
    
         // Vyčistenie (pre istotu, hoci by nemal byť)
@@ -214,7 +224,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             tempMarkerRef.current.remove();
             tempMarkerRef.current = null;
         }
-/*   
+   
         // Vytvor marker
         tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
             icon: L.divIcon({
