@@ -171,18 +171,25 @@ const AddGroupsApp = ({ userProfileData }) => {
                 className: 'adding-marker',
                 html: `
                     <div style="
-                        background: #ef4444;
-                        width: 36px;
-                        height: 36px;
+                        background: #ff0000;
+                        width: 60px;
+                        height: 60px;
                         border-radius: 50%;
-                        border: 5px solid white;
-                        box-shadow: 0 0 15px rgba(0,0,0,0.7);
-                        z-index: 99999 !important;
+                        border: 8px solid yellow;
+                        box-shadow: 0 0 25px red;
+                        z-index: 999999 !important;
                         position: relative;
-                    "></div>
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: 20px;
+                    ">TEST</div>
                 `,
-                iconSize: [36, 36],
-                iconAnchor: [18, 18]
+                iconSize: [60, 60],
+                iconAnchor: [30, 30],
+                className: ''   // ← vypni defaultný wrapper, necháme len náš div
             }),
             pane: 'markerPane',
             interactive: false,
