@@ -549,17 +549,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         );
   
         if (duplicate) {
-            setNameTypeError(
-                React.createElement(
-                    'span',
-                    null,
-                    "Miesto s názvom ",
-                    React.createElement('strong', null, nameTrimmed),
-                    " a typom ",
-                    React.createElement('strong', null, typeLabels[newPlaceType] || newPlaceType),
-                    " už existuje."
-                )
-            );
+            setNameTypeError(`Miesto s názvom ${nameTrimmed} a typom ${typeLabels[newPlaceType] || newPlaceType} už existuje.`);
         } else {
             setNameTypeError(null);
         }
