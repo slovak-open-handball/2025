@@ -225,57 +225,58 @@ const AddGroupsApp = ({ userProfileData }) => {
       }
     }, []);
     useEffect(() => {
-        if (!showModal || !tempAddPosition || !leafletMap.current) return;
+      if (!showModal || !tempAddPosition || !leafletMap.current) return;
+
+      // Vyčistenie starého markera
+      if (tempMarkerRef.current) {
+        tempMarkerRef.current.remove();
+        tempMarkerRef.current = null;
+      }
     
-        // Vyčistenie starého markera
-        if (tempMarkerRef.current) {
-            tempMarkerRef.current.remove();
-            tempMarkerRef.current = null;
+      // Vytvor nový marker
+      tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
+        icon: L.divIcon({
+          className: 'adding-marker',
+          html: `
+            <div style="
+              background: #ef4444;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              border: 5px solid white;
+              box-shadow: 0 0 15px rgba(0,0,0,0.7);
+              z-index: 99999 !important;
+              position: relative;
+            "></div>
+          `,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
+        }),
+        pane: 'markerPane',
+        interactive: false,
+        keyboard: false,
+        riseOnHover: false
+      }).addTo(leafletMap.current);
+    
+      // Počkajte na vykreslenie a invalidáciu veľkosti
+      const timeoutId = setTimeout(() => {
+        if (leafletMap.current) {
+          leafletMap.current.invalidateSize(false);
         }
-    
-        // Vytvor nový marker
-        tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
-            icon: L.divIcon({
-                className: 'adding-marker',
-                html: `
-                  <div style="
-                    background: #ef4444;
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 50%;
-                    border: 5px solid white;
-                    box-shadow: 0 0 15px rgba(0,0,0,0.7);
-                    z-index: 99999 !important;
-                    position: relative;
-                  "></div>
-                `,
-                iconSize: [36, 36],
-                iconAnchor: [18, 18]
-            }),
-            pane: 'markerPane',
-            interactive: false,
-            keyboard: false,
-            riseOnHover: false
-        }).addTo(leafletMap.current);
-    
-        // Počkajte na vizuálne vykreslenie a reflow
+        // Po oneskorení (napr. 80ms) otvorte modálne okno
         setTimeout(() => {
-            if (leafletMap.current) {
-                leafletMap.current.invalidateSize(false);
-            }
-            // Po cca 80 ms otvoríme modálne okno
-            setTimeout(() => {
-                setShowModal(true);
-            }, 250);
-        }, 250);
+          setShowModal(true);
+        }, 500);
+      }, 500);
     
-        // Cleanup
-        return () => {
-            if (tempMarkerRef.current) {
-                tempMarkerRef.current.remove();
-                tempMarkerRef.current = null;
-            }
-        };
+      // Cleanup pri zatvorení alebo zrušení efektu
+      return () => {
+        clearTimeout(timeoutId);
+        if (tempMarkerRef.current) {
+          tempMarkerRef.current.remove();
+          tempMarkerRef.current = null;
+        }
+      };
     }, [showModal, tempAddPosition]);
     const startAddingPlace = () => {
         if (isAddingPlace) return;
