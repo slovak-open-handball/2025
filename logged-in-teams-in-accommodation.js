@@ -59,7 +59,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                     });
                 });
 
-                console.clear();
                 console.log("═══════════════════════════════════════════════════");
                 console.log(`NAČÍTANÉ UBYTOVANIE — ${new Date().toLocaleTimeString('sk-SK')}`);
                 console.log(`Celkový počet: ${places.length}`);
