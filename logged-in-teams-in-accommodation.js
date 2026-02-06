@@ -239,7 +239,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     { className: 'bg-blue-700 text-white px-6 py-4' },
                                     React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto')
                                 ),
-                                // Obsah karty
+                                // Obsah karty – bez ID a bez súradníc
                                 React.createElement(
                                     'div',
                                     { className: 'p-6' },
@@ -255,20 +255,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         place.capacity !== null &&
                                             React.createElement(
                                                 'p',
-                                                { className: 'text-gray-700 font-semibold' },
+                                                { className: 'text-gray-700 font-semibold text-lg' },
                                                 `Kapacita: ${place.capacity} miest`
-                                            ),
-                                        React.createElement(
-                                            'p',
-                                            { className: 'text-sm text-gray-500 mt-4' },
-                                            `ID: ${place.id.slice(0,8)}…`
-                                        ),
-                                        // prípadne ďalšie údaje – napr. súradnice, ak by si chcel
-                                        place.lat !== '?' && place.lng !== '?' &&
-                                            React.createElement(
-                                                'p',
-                                                { className: 'text-sm text-gray-600 mt-2 italic' },
-                                                `Súradnice: ${place.lat}, ${place.lng}`
                                             )
                                     )
                                 )
