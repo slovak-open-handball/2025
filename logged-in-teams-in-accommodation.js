@@ -211,7 +211,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
     
-                // Pravá strana – Ubytovacie miesta – KAŽDÉ S VLASTNÝM HEADEROM
+                // Pravá strana – Ubytovacie miesta
                 React.createElement(
                     'div',
                     { className: 'order-1 lg:order-2 space-y-6' },
@@ -233,31 +233,35 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     key: place.id,
                                     className: 'bg-white rounded-xl shadow-lg overflow-hidden'
                                 },
-                                // Vlastný header pre každú ubytovňu
                                 React.createElement(
                                     'div',
                                     { className: 'bg-blue-700 text-white px-6 py-4' },
                                     React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto')
                                 ),
-                                // Obsah karty – bez ID a bez súradníc
                                 React.createElement(
                                     'div',
                                     { className: 'p-6' },
                                     React.createElement(
                                         'div',
-                                        { className: 'space-y-3' },
+                                        { className: 'space-y-4' },
+                                        // Typ + Kapacita v jednom riadku
                                         React.createElement(
-                                            'p',
-                                            { className: 'text-gray-700' },
-                                            React.createElement('span', { className: 'font-semibold' }, 'Typ: '),
-                                            place.accommodationType || 'neurčený'
-                                        ),
-                                        place.capacity !== null &&
+                                            'div',
+                                            { className: 'flex flex-wrap items-baseline gap-x-6 gap-y-1' },
                                             React.createElement(
                                                 'p',
-                                                { className: 'text-gray-700 font-semibold text-lg' },
-                                                `Kapacita: ${place.capacity} miest`
-                                            )
+                                                { className: 'text-gray-700' },
+                                                React.createElement('span', { className: 'font-semibold' }, 'Typ: '),
+                                                place.accommodationType || 'neurčený'
+                                            ),
+                                            place.capacity !== null &&
+                                                React.createElement(
+                                                    'p',
+                                                    { className: 'text-gray-700' },
+                                                    React.createElement('span', { className: 'font-semibold' }, 'Kapacita: '),
+                                                    `${place.capacity} miest`
+                                                )
+                                        )
                                     )
                                 )
                             )
