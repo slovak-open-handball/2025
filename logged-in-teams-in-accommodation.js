@@ -1,7 +1,6 @@
 // Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
 
 /**
@@ -15,7 +14,6 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
-
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
@@ -31,15 +29,12 @@ window.showGlobalNotification = (message, type = 'success') => {
         default:
             typeClasses = 'bg-gray-700 text-white';
     }
-
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
-
     // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
     }, 10);
-
     // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
@@ -49,27 +44,28 @@ window.showGlobalNotification = (message, type = 'success') => {
 let isEmailSyncListenerSetup = false;
 
 const AddGroupsApp = ({ userProfileData }) => {
-    // ← NOVÉ: real-time načítanie a výpis miest do konzoly
+
+    // ──────────────────────────────────────────────
+    // Real-time log ubytovania (type = "ubytovanie")
+    // ──────────────────────────────────────────────
     useEffect(() => {
         if (!window.db) {
             console.warn("[PLACES LOG] window.db nie je dostupné");
             return;
         }
-    
+
         console.log("[PLACES LOG] Spúšťam real-time sledovanie kolekcie 'places' (iba ubytovanie)");
-    
+
         let previousCount = -1;
-    
-        const unsubscribe = onSnapshot(
+
+        const unsubscribePlaces = onSnapshot(
             collection(window.db, 'places'),
             (snapshot) => {
                 const places = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
-    
-                    // ← FILTRUJEME iba typ "ubytovanie"
                     if (data.type !== "ubytovanie") return;
-    
+
                     places.push({
                         id: doc.id,
                         name: data.name || '(bez názvu)',
@@ -83,15 +79,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                             : '?',
                     });
                 });
-    
-                // Výpis do konzoly
-                console.clear(); // voliteľné
-    
+
+                console.clear(); // voliteľné – ak chceš čistú konzolu
+
                 console.log("═══════════════════════════════════════════════════");
                 console.log(`NAČÍTANÉ UBYTOVANIE (type = "ubytovanie") — ${new Date().toLocaleTimeString('sk-SK')}`);
                 console.log(`Celkový počet: ${places.length} ${previousCount >= 0 ? `(bolo ${previousCount})` : ''}`);
                 console.log("═══════════════════════════════════════════════════");
-    
+
                 if (places.length === 0) {
                     console.log("→ Žiadne ubytovacie miesta v databáze");
                 } else {
@@ -101,34 +96,100 @@ const AddGroupsApp = ({ userProfileData }) => {
                         console.log(` Názov ......... ${place.name}`);
                         console.log(` Typ ........... ${place.type}`);
                         console.log(` Súradnice ..... ${place.lat} , ${place.lng}`);
-    
-                        if (place.accommodationType) {
-                            console.log(` Typ ubyt. ..... ${place.accommodationType}`);
-                        }
-                        if (place.capacity !== null) {
-                            console.log(` Kapacita ...... ${place.capacity}`);
-                        }
+                        if (place.accommodationType) console.log(` Typ ubyt. ..... ${place.accommodationType}`);
+                        if (place.capacity !== null) console.log(` Kapacita ...... ${place.capacity}`);
                         console.log(` Vytvorené ..... ${place.createdAt}`);
                         console.log("───────────────────────────────────────────────");
                     });
                 }
-    
+
                 previousCount = places.length;
             },
             (error) => {
-                console.error("[PLACES LOG] Chyba pri onSnapshot:", error);
+                console.error("[PLACES LOG] Chyba pri onSnapshot places:", error);
             }
         );
-    
-        // Cleanup
+
         return () => {
-            console.log("[PLACES LOG] Zastavujem sledovanie 'places' (ubytovanie filter)");
-            unsubscribe();
+            console.log("[PLACES LOG] Zastavujem sledovanie 'places'");
+            unsubscribePlaces();
         };
-    }, []);   // spustí sa iba raz
+    }, []);
 
     // ──────────────────────────────────────────────
-    // Zvyšok tvojej pôvodnej komponenty (zatiaľ prázdna / placeholder)
+    // NOVÉ: Real-time log všetkých používateľov z kolekcie "users"
+    // ──────────────────────────────────────────────
+    useEffect(() => {
+        if (!window.db) {
+            console.warn("[USERS LOG] window.db nie je dostupné");
+            return;
+        }
+
+        console.log("[USERS LOG] Spúšťam real-time sledovanie celej kolekcie 'users'");
+
+        let previousUsersCount = -1;
+
+        const unsubscribeUsers = onSnapshot(
+            collection(window.db, 'users'),
+            (snapshot) => {
+                const users = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data() || {};
+
+                    users.push({
+                        id: doc.id,
+                        email: data.email || '(bez emailu)',
+                        displayName: data.displayName || data.name || '(bez mena)',
+                        role: data.role || '—',
+                        teamsCount: data.teams ? Object.keys(data.teams).length : 0,
+                        hasTeams: !!data.teams,
+                        createdAt: data.createdAt
+                            ? new Date(data.createdAt.toMillis()).toLocaleString('sk-SK')
+                            : '—',
+                        lastSignIn: data.lastSignInTime
+                            ? new Date(data.lastSignInTime.toMillis()).toLocaleString('sk-SK')
+                            : '—',
+                    });
+                });
+
+                // console.clear();  ← zakomentované – nechceme mazať log ubytovania
+
+                console.log("═══════════════════════════════════════════════════");
+                console.log(`NAČÍTANÍ POUŽÍVATELIA — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log(`Celkový počet: ${users.length} ${previousUsersCount >= 0 ? `(bolo ${previousUsersCount})` : ''}`);
+                console.log("═══════════════════════════════════════════════════");
+
+                if (users.length === 0) {
+                    console.log("→ Žiadni používatelia v databáze");
+                } else {
+                    users.forEach((user, index) => {
+                        console.log(`Používateľ #${index + 1}:`);
+                        console.log(` UID ........... ${user.id}`);
+                        console.log(` Email ......... ${user.email}`);
+                        console.log(` Meno .......... ${user.displayName}`);
+                        console.log(` Rola .......... ${user.role}`);
+                        console.log(` Počet kategórií tímov ... ${user.teamsCount}`);
+                        console.log(` Vytvorený ..... ${user.createdAt}`);
+                        console.log(` Posledné prihlásenie ... ${user.lastSignIn}`);
+                        console.log("───────────────────────────────────────────────");
+                    });
+                }
+
+                previousUsersCount = users.length;
+            },
+            (error) => {
+                console.error("[USERS LOG] Chyba pri onSnapshot users:", error);
+            }
+        );
+
+        return () => {
+            console.log("[USERS LOG] Zastavujem sledovanie 'users'");
+            unsubscribeUsers();
+        };
+    }, []); // spustí sa iba raz
+
+    // ──────────────────────────────────────────────
+    // Zvyšok tvojej pôvodnej komponenty (placeholder)
     // ──────────────────────────────────────────────
     return React.createElement(
         'div',
