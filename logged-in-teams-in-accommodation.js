@@ -124,70 +124,140 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.warn("[USERS LOG] window.db nie je dostupné");
             return;
         }
-
-        console.log("[USERS LOG] Spúšťam real-time sledovanie celej kolekcie 'users'");
-
+    
+        console.log("[USERS LOG] Spúšťam real-time sledovanie kolekcie 'users' + detail tímov");
+    
         let previousUsersCount = -1;
-
+    
         const unsubscribeUsers = onSnapshot(
             collection(window.db, 'users'),
             (snapshot) => {
-                const users = [];
+                const usersSummary = [];
+                let totalTeamsAcrossAllUsers = 0;
+    
                 snapshot.forEach((doc) => {
                     const data = doc.data() || {};
-
-                    users.push({
+    
+                    const userEntry = {
                         id: doc.id,
                         email: data.email || '(bez emailu)',
                         displayName: data.displayName || data.name || '(bez mena)',
                         role: data.role || '—',
-                        teamsCount: data.teams ? Object.keys(data.teams).length : 0,
-                        hasTeams: !!data.teams,
                         createdAt: data.createdAt
                             ? new Date(data.createdAt.toMillis()).toLocaleString('sk-SK')
                             : '—',
                         lastSignIn: data.lastSignInTime
                             ? new Date(data.lastSignInTime.toMillis()).toLocaleString('sk-SK')
                             : '—',
-                    });
+                        teams: [],
+                    };
+    
+                    // Prechádzame všetky kategórie v "teams"
+                    if (data.teams && typeof data.teams === 'object') {
+                        Object.entries(data.teams).forEach(([category, teamArray]) => {
+                            if (!Array.isArray(teamArray)) return;
+    
+                            teamArray.forEach((team, teamIndex) => {
+                                if (!team || !team.teamName) return;
+    
+                                totalTeamsAcrossAllUsers++;
+    
+                                const teamInfo = {
+                                    category,
+                                    teamName: team.teamName,
+                                    groupName: team.groupName || '—',
+                                    players: team.players ?? team._players ?? 0,
+                                    jerseyHome: team.jerseyHomeColor || '—',
+                                    jerseyAway: team.jerseyAwayColor || '—',
+                                    accommodation: team.accommodation?.type || '—',
+                                    arrival: team.arrival
+                                        ? `${team.arrival.type || '?'} ${team.arrival.time || ''}`.trim()
+                                        : '—',
+                                    package: team.packageDetails?.name || '—',
+                                    tshirtsSummary: team.tshirts
+                                        ? team.tshirts
+                                              .map(t => `${t.size}: ${t.quantity} ks`)
+                                              .join(', ')
+                                        : '—',
+                                    menTeamMembers: team.menTeamMembersCount || 0,
+                                    womenTeamMembers: team.womenTeamMembersCount || 0,
+                                    driversMale: team.drivers?.male ?? team._menDriversCount ?? 0,
+                                    driversFemale: team.drivers?.female ?? team._womenDriversCount ?? 0,
+                                };
+    
+                                // Pridáme počet hráčov z poľa detailov (ak existuje)
+                                if (Array.isArray(team.playerDetails)) {
+                                    teamInfo.playersDetailed = team.playerDetails.length;
+                                }
+    
+                                userEntry.teams.push(teamInfo);
+                            });
+                        });
+                    }
+    
+                    usersSummary.push(userEntry);
                 });
-
-                // console.clear();  ← zakomentované – nechceme mazať log ubytovania
-
+    
+                // ─── Výpis ────────────────────────────────────────
+                // console.clear();           ← stále zakomentované
+    
                 console.log("═══════════════════════════════════════════════════");
-                console.log(`NAČÍTANÍ POUŽÍVATELIA — ${new Date().toLocaleTimeString('sk-SK')}`);
-                console.log(`Celkový počet: ${users.length} ${previousUsersCount >= 0 ? `(bolo ${previousUsersCount})` : ''}`);
+                console.log(`POUŽÍVATELIA + TÍMY — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log(`Celkom používateľov: ${usersSummary.length}   |   Celkom tímov: ${totalTeamsAcrossAllUsers}`);
+                console.log(`(predtým: ${previousUsersCount >= 0 ? previousUsersCount : '—'})`);
                 console.log("═══════════════════════════════════════════════════");
-
-                if (users.length === 0) {
+    
+                if (usersSummary.length === 0) {
                     console.log("→ Žiadni používatelia v databáze");
                 } else {
-                    users.forEach((user, index) => {
-                        console.log(`Používateľ #${index + 1}:`);
-                        console.log(` UID ........... ${user.id}`);
-                        console.log(` Email ......... ${user.email}`);
-                        console.log(` Meno .......... ${user.displayName}`);
-                        console.log(` Rola .......... ${user.role}`);
-                        console.log(` Počet kategórií tímov ... ${user.teamsCount}`);
-                        console.log(` Vytvorený ..... ${user.createdAt}`);
-                        console.log(` Posledné prihlásenie ... ${user.lastSignIn}`);
+                    usersSummary.forEach((user, uIndex) => {
+                        console.log(`Používateľ #${uIndex + 1} ──────────────────────────────────────`);
+                        console.log(` UID .............. ${user.id}`);
+                        console.log(` Meno / email ..... ${user.displayName}  (${user.email})`);
+                        console.log(` Rola ............. ${user.role}`);
+                        console.log(` Vytvorený ........ ${user.createdAt}`);
+                        console.log(` Posl. prihlásenie  ${user.lastSignIn}`);
+                        console.log(` Počet tímov ...... ${user.teams.length}`);
+    
+                        if (user.teams.length === 0) {
+                            console.log("   → žiadne tímy");
+                        } else {
+                            user.teams.forEach((team, tIndex) => {
+                                console.log(`   Tím #${tIndex + 1} [${team.category}]`);
+                                console.log(`     • Názov ........ ${team.teamName}`);
+                                console.log(`     • Skupina ...... ${team.groupName}`);
+                                console.log(`     • Hráči ........ ${team.players}${
+                                    team.playersDetailed ? ` (${team.playersDetailed} v detaile)` : ''
+                                }`);
+                                console.log(`     • RT muži ...... ${team.menTeamMembers}`);
+                                console.log(`     • RT ženy ...... ${team.womenTeamMembers}`);
+                                console.log(`     • Vodiči M/Ž ... ${team.driversMale} / ${team.driversFemale}`);
+                                console.log(`     • Dresy domáci . ${team.jerseyHome}`);
+                                console.log(`     • Dresy vonku .. ${team.jerseyAway}`);
+                                console.log(`     • Ubytovanie ... ${team.accommodation}`);
+                                console.log(`     • Príchod ...... ${team.arrival}`);
+                                console.log(`     • Balík ........ ${team.package}`);
+                                console.log(`     • Tričká ....... ${team.tshirtsSummary}`);
+                                console.log("   ───────────────────────────────────────");
+                            });
+                        }
                         console.log("───────────────────────────────────────────────");
                     });
                 }
-
-                previousUsersCount = users.length;
+    
+                previousUsersCount = usersSummary.length;
             },
             (error) => {
                 console.error("[USERS LOG] Chyba pri onSnapshot users:", error);
             }
         );
-
+    
         return () => {
             console.log("[USERS LOG] Zastavujem sledovanie 'users'");
             unsubscribeUsers();
         };
-    }, []); // spustí sa iba raz
-
+    }, []);
+    
     // ──────────────────────────────────────────────
     // Zvyšok tvojej pôvodnej komponenty (placeholder)
     // ──────────────────────────────────────────────
