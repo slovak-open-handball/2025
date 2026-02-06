@@ -155,6 +155,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedAccommodationFilter, setSelectedAccommodationFilter] = useState('');
 
+    const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
+
     // Real-time ubytovanie + headerColor
     useEffect(() => {
         if (!window.db) return;
@@ -243,6 +245,10 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
+    const uniqueTeamNames = [...new Set(allTeams.map(team => team.teamName.trim()))].sort((a, b) => 
+        a.localeCompare(b, 'sk', { sensitivity: 'base' })
+    );
+
     // Funkcia na zoradenie tímov: najprv podľa kategórie (A-Z), potom podľa názvu tímu (A-Z)
     const sortTeams = (teams) => {
         return [...teams].sort((a, b) => {
@@ -267,6 +273,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         // Filtrovanie podľa kategórie
         if (selectedCategory && team.category !== selectedCategory) return false;
         
+        // Filtrovanie podľa názvu tímu (PRIBYL NOVÝ FILTER)
+        if (selectedTeamNameFilter && team.teamName !== selectedTeamNameFilter) return false;
+        
         // Filtrovanie podľa ubytovne (pre tímy bez priradenia sa neaplikuje)
         return true;
     });
@@ -274,6 +283,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Filtrovanie priradených tímov podľa kombinovaných filtrov (len pre zobrazenie)
     const filteredAssignedTeams = assignedTeams.filter(team => {
         if (selectedCategory && team.category !== selectedCategory) return false;
+        
+        // Filtrovanie podľa názvu tímu (PRIBYL NOVÝ FILTER)
+        if (selectedTeamNameFilter && team.teamName !== selectedTeamNameFilter) return false;
         
         if (selectedAccommodationFilter) {
             const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
@@ -325,6 +337,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                     // Aplikujeme filtre
                     if (selectedCategory && team.category !== selectedCategory) return false;
                     
+                    // Filtrovanie podľa názvu tímu (PRIBYL NOVÝ FILTER)
+                    if (selectedTeamNameFilter && team.teamName !== selectedTeamNameFilter) return false;
+        
                     // Filter podľa ubytovne sa už aplikuje vyššie (place filter)
                     return true;
                 })
@@ -341,7 +356,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             };
         })
         .filter(place => {
-            if (selectedCategory && place.filteredAssignedTeams.length === 0) {
+            if ((selectedCategory || selectedTeamNameFilter) && place.filteredAssignedTeams.length === 0) {
                 return false;
             }
             return true;
@@ -578,6 +593,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const resetFilters = () => {
         setSelectedCategory('');
         setSelectedAccommodationFilter('');
+        setSelectedTeamNameFilter('');
     };
 
     // Funkcia na vytvorenie popisu aktívnych filtrov
@@ -589,6 +605,10 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (selectedAccommodationFilter) {
             const accommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
             filters.push(`Ubytovňa: ${accommodation?.name || selectedAccommodationFilter}`);
+        }
+        // PRIDANÉ: Filter podľa názvu tímu
+        if (selectedTeamNameFilter) {
+            filters.push(`Tím: ${selectedTeamNameFilter}`);
         }
         return filters.join(' + ');
     };
@@ -745,6 +765,33 @@ const AddGroupsApp = ({ userProfileData }) => {
                             )
                         )
                     ),
+
+                    // Filter podľa názvu tímu
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement(
+                            'label',
+                            { 
+                                className: 'block text-sm font-medium text-gray-700 mb-2',
+                                htmlFor: 'team-name-filter'
+                            },
+                            'Filtrovať podľa názvu tímu'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                id: 'team-name-filter',
+                                value: selectedTeamNameFilter,
+                                onChange: (e) => setSelectedTeamNameFilter(e.target.value),
+                                className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition'
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky tímy'),
+                            uniqueTeamNames.map(teamName => 
+                                React.createElement('option', { key: teamName, value: teamName }, teamName)
+                            )
+                        )
+                    ),
     
                     // Reset filtrov
                     React.createElement(
@@ -762,7 +809,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 ),
     
                 // Zobrazenie aktívnych filtrov
-                (selectedCategory || selectedAccommodationFilter) && React.createElement(
+                (selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter) && React.createElement(
                     'div',
                     { className: 'mt-6 pt-6 border-t border-gray-200' },
                     React.createElement(
@@ -801,11 +848,24 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     },
                                     '×'
                                 )
+                            ),
+                            // PRIDANÉ: Filter podľa názvu tímu
+                            selectedTeamNameFilter && React.createElement(
+                                'span',
+                                { className: 'px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium flex items-center gap-1' },
+                                `Tím: ${selectedTeamNameFilter}`,
+                                React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => setSelectedTeamNameFilter(''),
+                                        className: 'ml-1 text-purple-600 hover:text-purple-800'
+                                    },
+                                    '×'
+                                )
                             )
                         )
                     )
-                )
-            ),
+                ),
     
             // HLAVNÝ OBSAH S PODMIENKOU PRE ROZLOŽENIE
             React.createElement(
@@ -827,7 +887,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             'div',
                             { className: 'bg-green-700 text-white px-6 py-4' },
                             React.createElement('h2', { className: 'text-xl font-bold' }, 
-                                (selectedCategory || selectedAccommodationFilter) 
+                                (selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter)
                                     ? `Tímy bez priradenia ${getFilterDescription() ? `(${getFilterDescription()})` : ''} (${filteredUnassignedTeams.length})`
                                     : `Tímy bez priradenia (${filteredUnassignedTeams.length})`
                             )
@@ -906,7 +966,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         filteredUnassignedTeams.length === 0 && React.createElement(
                             'h2',
                             { className: 'text-2xl font-bold text-gray-800 mb-4' },
-                            (selectedCategory || selectedAccommodationFilter)
+                            (selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter)
                                 ? `Ubytovacie miesta ${getFilterDescription() ? `(${getFilterDescription()})` : ''}`
                                 : 'Ubytovacie miesta s priradenými tímami'
                         ),
@@ -915,7 +975,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'bg-white rounded-xl shadow-lg p-8 text-center flex-grow' },
                                 React.createElement('p', { className: 'text-gray-500 text-lg' }, 
-                                    selectedCategory || selectedAccommodationFilter
+                                    selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter
                                         ? `Žiadne ubytovacie miesta pre zvolené filtre`
                                         : 'Zatiaľ žiadne ubytovacie miesta...'
                                 )
@@ -1045,7 +1105,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             className: 'font-semibold text-gray-800 mb-2 text-sm flex-shrink-0 whitespace-nowrap overflow-visible',
                                                             style: { textOverflow: 'clip' }
                                                         },
-                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter ? '/' + getFilteredTeamsPeopleCount(place.filteredAssignedTeams) + ' osôb' : ''})`
+                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '/' + getFilteredTeamsPeopleCount(place.filteredAssignedTeams) + ' osôb' : ''})`
                                                     ),
                                                     React.createElement(
                                                         'ul',
