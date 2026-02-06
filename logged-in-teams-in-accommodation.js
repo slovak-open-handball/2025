@@ -46,7 +46,84 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+let isEmailSyncListenerSetup = false;
+
 const AddGroupsApp = ({ userProfileData }) => {
+    // ← NOVÉ: real-time načítanie a výpis miest do konzoly
+    useEffect(() => {
+        if (!window.db) {
+            console.warn("[PLACES LOG] window.db nie je dostupné");
+            return;
+        }
+
+        console.log("[PLACES LOG] Spúšťam real-time sledovanie kolekcie 'places'");
+
+        let previousCount = -1;
+
+        const unsubscribe = onSnapshot(
+            collection(window.db, 'places'),
+            (snapshot) => {
+                const places = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    places.push({
+                        id: doc.id,
+                        name: data.name || '(bez názvu)',
+                        type: data.type || '?',
+                        lat: data.lat ?? data.location?.latitude ?? '?',
+                        lng: data.lng ?? data.location?.longitude ?? '?',
+                        accommodationType: data.accommodationType || null,
+                        capacity: data.capacity ?? null,
+                        createdAt: data.createdAt
+                            ? new Date(data.createdAt.toMillis()).toLocaleString('sk-SK')
+                            : '?',
+                    });
+                });
+
+                // Výpis do konzoly
+                console.clear(); // ← voliteľné: vyčistí konzolu pred novým výpisom
+                console.log("═══════════════════════════════════════════════════");
+                console.log(`NAČÍTANÉ MIESTA (kolekcia 'places') — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log(`Celkový počet: ${places.length} ${previousCount >= 0 ? `(bolo ${previousCount})` : ''}`);
+                console.log("═══════════════════════════════════════════════════");
+
+                if (places.length === 0) {
+                    console.log("→ Žiadne miesta v databáze");
+                } else {
+                    places.forEach((place, index) => {
+                        console.log(`Miesto #${index + 1}:`);
+                        console.log(`  ID ............ ${place.id}`);
+                        console.log(`  Názov ......... ${place.name}`);
+                        console.log(`  Typ ........... ${place.type}`);
+                        console.log(`  Súradnice ..... ${place.lat} , ${place.lng}`);
+                        if (place.accommodationType) {
+                            console.log(`  Typ ubyt. ..... ${place.accommodationType}`);
+                        }
+                        if (place.capacity !== null) {
+                            console.log(`  Kapacita ...... ${place.capacity}`);
+                        }
+                        console.log(`  Vytvorené ..... ${place.createdAt}`);
+                        console.log("───────────────────────────────────────────────");
+                    });
+                }
+
+                previousCount = places.length;
+            },
+            (error) => {
+                console.error("[PLACES LOG] Chyba pri onSnapshot:", error);
+            }
+        );
+
+        // Cleanup
+        return () => {
+            console.log("[PLACES LOG] Zastavujem sledovanie 'places'");
+            unsubscribe();
+        };
+    }, []); // ← spustí sa iba raz pri mount-e komponentu
+
+    // ──────────────────────────────────────────────
+    // Zvyšok tvojej pôvodnej komponenty (zatiaľ prázdna / placeholder)
+    // ──────────────────────────────────────────────
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -57,6 +134,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Ubytovanie tímov')
+            ),
+            React.createElement(
+                'div',
+                { className: 'text-center text-gray-600 mt-8' },
+                'Načítavanie ubytovacích možností pre tímy...'
             )
         )
     );
@@ -70,56 +152,12 @@ let isEmailSyncListenerSetup = false;
  * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
  * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
  */
-const handleDataUpdateAndRender = async (event) => {     // ← async
+const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
 
     if (userProfileData) {
-        // ------------------------------------------------------------------------
-        // NOVÉ: výpis všetkých miest z kolekcie 'places' do konzoly
-        // ------------------------------------------------------------------------
-        if (window.db) {
-            try {
-                console.log("───────────────────────────────────────────────");
-                console.log("NAČÍTANÉ VŠETKY MIESTA Z DATABÁZY (kolekcia 'places'):");
-                console.log("───────────────────────────────────────────────");
-
-                const placesSnapshot = await window.db.collection('places').get();
-                
-                if (placesSnapshot.empty) {
-                    console.log("→ Žiadne miesta v databáze (kolekcia 'places' je prázdna)");
-                } else {
-                    let index = 1;
-                    placesSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        console.log(`Miesto #${index}:`);
-                        console.log(`  ID ............ ${doc.id}`);
-                        console.log(`  Názov ......... ${data.name || '(bez názvu)'}`);
-                        console.log(`  Typ ........... ${data.type || '?'}`);
-                        console.log(`  Súradnice ..... ${data.lat || '?'} , ${data.lng || '?'}`);
-                        if (data.accommodationType) {
-                            console.log(`  Typ ubytovania ${data.accommodationType}`);
-                        }
-                        if (data.capacity != null) {
-                            console.log(`  Kapacita ...... ${data.capacity}`);
-                        }
-                        console.log(`  Vytvorené ..... ${data.createdAt ? new Date(data.createdAt.toMillis()).toLocaleString('sk-SK') : '?'}`);
-                        console.log("─".repeat(50));
-                        index++;
-                    });
-                    console.log(`Celkom miest: ${placesSnapshot.size}`);
-                }
-                console.log("───────────────────────────────────────────────");
-            } catch (err) {
-                console.error("Chyba pri načítaní miest z 'places':", err);
-            }
-        } else {
-            console.warn("window.db nie je dostupné → nemôžem načítať miesta");
-        }
-
-        // ------------------------------------------------------------------------
-        // Pôvodná logika synchronizácie emailu
-        // ------------------------------------------------------------------------
+        // Synchronizácia emailu (pôvodná logika)
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
             console.log("logged-in-teams-in-accomodation.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
             
@@ -132,43 +170,33 @@ const handleDataUpdateAndRender = async (event) => {     // ← async
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-teams-in-accomodation.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-                                
-                                await updateDoc(userProfileRef, {
-                                    email: user.email
-                                });
+                                console.log(`E-mail rozdiel: auth → ${user.email} vs firestore → ${firestoreEmail}`);
+                                await updateDoc(userProfileRef, { email: user.email });
 
-                                const notificationsCollectionRef = collection(window.db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
+                                await addDoc(collection(window.db, 'notifications'), {
                                     userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
                                     timestamp: new Date(),
                                 });
-                                
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-teams-in-accomodation.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
-                            } else {
-                                console.log("logged-in-teams-in-accomodation.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
+
+                                window.showGlobalNotification('E-mail bol automaticky aktualizovaný.', 'success');
                             }
                         }
                     } catch (error) {
-                        console.error("logged-in-teams-in-accomodation.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
-                        window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
+                        console.error("Chyba pri synchronizácii e-mailu:", error);
+                        window.showGlobalNotification('Chyba pri synchronizácii e-mailu.', 'error');
                     }
                 }
             });
+
             isEmailSyncListenerSetup = true;
         }
 
-        // ------------------------------------------------------------------------
-        // Vykreslenie aplikácie
-        // ------------------------------------------------------------------------
+        // Vykreslenie
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
-            console.log("logged-in-teams-in-accomodation.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
-        } else {
-            console.error("logged-in-teams-in-accomodation.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+            console.log("Aplikácia vykreslená (AddGroupsApp)");
         }
     } else {
         // loader ...
@@ -182,7 +210,6 @@ const handleDataUpdateAndRender = async (event) => {     // ← async
                 )
             );
         }
-        console.error("logged-in-teams-in-accomodation.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
     }
 };
 
@@ -190,14 +217,11 @@ const handleDataUpdateAndRender = async (event) => {     // ← async
 console.log("logged-in-teams-in-accomodation.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
-// skontrolujeme, či sú dáta už dostupné.
-console.log("logged-in-teams-in-accomodation.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log("logged-in-teams-in-accomodation.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
+    console.log("Globálne dáta už existujú → vykresľujem okamžite");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
-    // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
+    // loader fallback
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
