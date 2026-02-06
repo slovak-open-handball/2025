@@ -924,39 +924,96 @@ function NotificationsApp() {
                             (() => {
                                 // 1. Pre notifikácie s polom changes (pôvodný formát) - tieto môžu mať apostrofy
                                 if (notification.changes && Array.isArray(notification.changes) && notification.changes.length > 0) {
-                                    return React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
-                                        notification.changes.map((change, index) => {
-                                            // Skontrolujeme, či text obsahuje apostrofy na formátovanie
-                                            const apostropheCount = (change.match(/'/g) || []).length;
-                                            
-                                            // Ak má 4 apostrofy, formátujeme text podobne ako v header.js
-                                            if (apostropheCount >= 4) {
-                                                const parts = change.split("'");
-                                                let formattedParts = [];
-                                                for (let i = 0; i < parts.length; i++) {
-                                                    if (i === 1) {
-                                                        formattedParts.push(React.createElement('em', { 
-                                                            key: i, 
-                                                            className: 'italic text-blue-600' 
-                                                        }, parts[i]));
-                                                    } else if (i === 3) {
-                                                        formattedParts.push(React.createElement('strong', { 
-                                                            key: i, 
-                                                            className: 'font-bold text-green-600' 
-                                                        }, parts[i]));
-                                                    } else if (parts[i]) {
-                                                        formattedParts.push(React.createElement('span', { key: i }, parts[i]));
+                                    // Skontrolujeme, či ide o notifikáciu o ubytovaní podľa obsahu
+                                    const isAccommodationNotification = notification.changes.some(change => 
+                                        change.includes('ubytovania') || change.includes('kapacita') || 
+                                        (notification.type && notification.type.includes('Accommodation'))
+                                    );
+                                    
+                                    if (isAccommodationNotification) {
+                                        // Špeciálne spracovanie pre notifikácie o ubytovaní
+                                        return React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
+                                            notification.changes.map((change, index) => {
+                                                // Skontrolujeme formát "Zmena ubytovania z: X na Y"
+                                                if (change.includes('Zmena ubytovania z:') && change.includes('na')) {
+                                                    const parts = change.split('Zmena ubytovania z:');
+                                                    if (parts.length > 1) {
+                                                        const zmenaText = parts[1];
+                                                        const naIndex = zmenaText.indexOf('na');
+                                                        if (naIndex !== -1) {
+                                                            const fromPart = zmenaText.substring(0, naIndex).trim();
+                                                            const toPart = zmenaText.substring(naIndex + 2).trim();
+                                                            
+                                                            return React.createElement('li', { key: index },
+                                                                React.createElement('span', null, 'Zmena ubytovania z: '),
+                                                                React.createElement('span', { className: 'line-through text-red-500' }, fromPart),
+                                                                React.createElement('span', null, ' na '),
+                                                                React.createElement('span', { className: 'text-green-600 font-semibold' }, toPart)
+                                                            );
+                                                        }
                                                     }
                                                 }
-                                                return React.createElement('li', { key: index }, formattedParts);
-                                            } else {
-                                                return React.createElement('li', { key: index }, renderStyledText(change));
-                                            }
-                                        })
-                                    );
+                                                
+                                                // Ak má apostrofy, formátujeme ich
+                                                const apostropheCount = (change.match(/'/g) || []).length;
+                                                if (apostropheCount >= 4) {
+                                                    const parts = change.split("'");
+                                                    let formattedParts = [];
+                                                    for (let i = 0; i < parts.length; i++) {
+                                                        if (i === 1) {
+                                                            formattedParts.push(React.createElement('em', { 
+                                                                key: i, 
+                                                                className: 'italic text-blue-600' 
+                                                            }, parts[i]));
+                                                        } else if (i === 3) {
+                                                            formattedParts.push(React.createElement('strong', { 
+                                                                key: i, 
+                                                                className: 'font-bold text-green-600' 
+                                                            }, parts[i]));
+                                                        } else if (parts[i]) {
+                                                            formattedParts.push(React.createElement('span', { key: i }, parts[i]));
+                                                        }
+                                                    }
+                                                    return React.createElement('li', { key: index }, formattedParts);
+                                                } else {
+                                                    return React.createElement('li', { key: index }, renderStyledText(change));
+                                                }
+                                            })
+                                        );
+                                    } else {
+                                        // Normálne spracovanie pre ostatné notifikácie s changes
+                                        return React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
+                                            notification.changes.map((change, index) => {
+                                                const apostropheCount = (change.match(/'/g) || []).length;
+                                                
+                                                if (apostropheCount >= 4) {
+                                                    const parts = change.split("'");
+                                                    let formattedParts = [];
+                                                    for (let i = 0; i < parts.length; i++) {
+                                                        if (i === 1) {
+                                                            formattedParts.push(React.createElement('em', { 
+                                                                key: i, 
+                                                                className: 'italic text-blue-600' 
+                                                            }, parts[i]));
+                                                        } else if (i === 3) {
+                                                            formattedParts.push(React.createElement('strong', { 
+                                                                key: i, 
+                                                                className: 'font-bold text-green-600' 
+                                                            }, parts[i]));
+                                                        } else if (parts[i]) {
+                                                            formattedParts.push(React.createElement('span', { key: i }, parts[i]));
+                                                        }
+                                                    }
+                                                    return React.createElement('li', { key: index }, formattedParts);
+                                                } else {
+                                                    return React.createElement('li', { key: index }, renderStyledText(change));
+                                                }
+                                            })
+                                        );
+                                    }
                                 }
                                 
-                                // 2. Pre notifikácie z AccommodationSettings (nový formát)
+                                // 2. Pre notifikácie z AccommodationSettings (nový formát) - tento formát zatiaľ nie je používaný
                                 else if (notification.type && notification.data) {
                                     let notificationContent = null;
                                     
@@ -1051,19 +1108,24 @@ function NotificationsApp() {
                                     }
                                 }
                                 
-                                // 4. Ak nemáme žiadny obsah na zobrazenie
+                                // 4. Debug - zobraziť všetky údaje notifikácie pre diagnostiku
                                 else {
+                                    console.log("Debug notification data:", notification);
                                     return React.createElement('div', { className: 'space-y-2' },
                                         React.createElement('p', { className: 'text-gray-700' }, 
-                                            `Notifikácia od používateľa: ${notification.userEmail || 'Neznámy'}`
+                                            `Notifikácia od: ${notification.userEmail || 'Neznámy'}`
                                         ),
-                                        React.createElement('p', { className: 'text-gray-500 text-sm italic' }, 
-                                            'Podrobnosti o zmene nie sú k dispozícii.'
-                                        )
+                                        notification.type && React.createElement('p', { className: 'text-gray-600 text-sm' }, 
+                                            `Typ: ${notification.type}`
+                                        ),
+                                        React.createElement('pre', { 
+                                            className: 'bg-gray-100 p-2 rounded text-sm overflow-x-auto mt-2',
+                                            style: { whiteSpace: 'pre-wrap', wordWrap: 'break-word', fontSize: '10px' }
+                                        }, JSON.stringify(notification, null, 2))
                                     );
                                 }
                             })(),
-                            
+                                                        
                             notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
                             )
