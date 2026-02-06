@@ -304,7 +304,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
         ),
 
-        // Modálne okno
+        // Modálne okno – len rýchly výber farby textu (biela / čierna)
         isModalOpen &&
         React.createElement(
             'div',
@@ -318,7 +318,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 React.createElement('h3', { className: 'text-xl font-bold mb-6' }, 'Upraviť farbu hlavičky'),
                 React.createElement('p', { className: 'text-gray-600 mb-6' }, selectedPlaceForEdit?.name || 'Ubytovacie miesto'),
         
-                // Farba pozadia
+                // Farba pozadia (color picker ostáva)
                 React.createElement('div', { className: 'mb-8' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Farba pozadia hlavičky'),
                     React.createElement(
@@ -342,50 +342,47 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
         
-                // Farba textu
+                // Farba textu – len dva tlačidlá (bez color pickeru)
                 React.createElement('div', { className: 'mb-8' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Farba textu názvu'),
                     React.createElement(
                         'div',
-                        { className: 'flex flex-col gap-4' },
-                        React.createElement('input', {
-                            type: 'color',
-                            value: newHeaderTextColor,
-                            onChange: (e) => setNewHeaderTextColor(e.target.value),
-                            className: 'w-20 h-20 rounded-lg cursor-pointer border-2 border-gray-300 shadow-sm'
-                        }),
-                        // Rýchly výber biela / čierna
+                        { className: 'flex gap-4' },
                         React.createElement(
-                            'div',
-                            { className: 'flex gap-4' },
-                            React.createElement(
-                                'button',
-                                {
-                                    type: 'button',
-                                    onClick: () => setNewHeaderTextColor('#ffffff'),
-                                    className: `px-4 py-2 rounded border ${newHeaderTextColor === '#ffffff' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`,
-                                    style: { backgroundColor: '#ffffff', color: '#000' }
-                                },
-                                'Biela'
-                            ),
-                            React.createElement(
-                                'button',
-                                {
-                                    type: 'button',
-                                    onClick: () => setNewHeaderTextColor('#000000'),
-                                    className: `px-4 py-2 rounded border ${newHeaderTextColor === '#000000' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`,
-                                    style: { backgroundColor: '#000000', color: '#fff' }
-                                },
-                                'Čierna'
-                            )
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => setNewHeaderTextColor('#ffffff'),
+                                className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
+                                    newHeaderTextColor === '#ffffff' 
+                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                                        : 'border-gray-300 hover:bg-gray-50'
+                                }`,
+                                style: { backgroundColor: '#ffffff', color: '#000000' }
+                            },
+                            'Biela'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => setNewHeaderTextColor('#000000'),
+                                className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
+                                    newHeaderTextColor === '#000000' 
+                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                                        : 'border-gray-300 hover:bg-gray-50'
+                                }`,
+                                style: { backgroundColor: '#000000', color: '#ffffff' }
+                            },
+                            'Čierna'
                         )
                     )
                 ),
         
-                // Tlačidlá
+                // Tlačidlá na spodku
                 React.createElement(
                     'div',
-                    { className: 'flex justify-end gap-4 mt-6' },
+                    { className: 'flex justify-end gap-4 mt-8' },
                     React.createElement(
                         'button',
                         {
