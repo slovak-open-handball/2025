@@ -165,6 +165,42 @@ const AddGroupsApp = ({ userProfileData }) => {
         setSelectedPlaceForEdit(null);
     };
 
+    // Pomocné funkcie na konverziu farieb (pridaj pred return komponentu)
+    const hexToRgb = (hex) => {
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16);
+        const b = parseInt(hex.slice(5,7), 16);
+        return `rgb(${r}, ${g}, ${b})`;
+    };
+    
+    const hexToHsl = (hex) => {
+        let r = parseInt(hex.slice(1,3), 16) / 255;
+        let g = parseInt(hex.slice(3,5), 16) / 255;
+        let b = parseInt(hex.slice(5,7), 16) / 255;
+    
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+    
+        if (max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+    
+        h = Math.round(h * 360);
+        s = Math.round(s * 100);
+        l = Math.round(l * 100);
+        return `hsl(${h}, ${s}%, ${l}%)`;
+    };
+
     // ──────────────────────────────────────────────
     // RENDER
     // ──────────────────────────────────────────────
@@ -304,7 +340,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
         ),
 
-        // Modálne okno – len rýchly výber farby textu (biela / čierna)
+        // Modálne okno
         isModalOpen &&
         React.createElement(
             'div',
@@ -318,33 +354,33 @@ const AddGroupsApp = ({ userProfileData }) => {
                 React.createElement('h3', { className: 'text-xl font-bold mb-6' }, 'Upraviť farbu hlavičky'),
                 React.createElement('p', { className: 'text-gray-600 mb-6' }, selectedPlaceForEdit?.name || 'Ubytovacie miesto'),
         
-                // Farba pozadia (color picker ostáva)
-                React.createElement('div', { className: 'mb-8' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Farba pozadia hlavičky'),
+                // Farba pozadia
+                React.createElement('div', { className: 'mb-10' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba pozadia hlavičky'),
                     React.createElement(
                         'div',
-                        { className: 'flex items-center gap-6' },
+                        { className: 'flex flex-col items-center gap-4' },
+                        // Color picker – väčší pre lepšiu použiteľnosť
                         React.createElement('input', {
                             type: 'color',
                             value: newHeaderColor,
                             onChange: (e) => setNewHeaderColor(e.target.value),
-                            className: 'w-20 h-20 rounded-lg cursor-pointer border-2 border-gray-300 shadow-sm'
+                            className: 'w-32 h-32 rounded-lg cursor-pointer border-2 border-gray-300 shadow-md'
                         }),
+                        // Zobrazenie farby vo všetkých formátoch
                         React.createElement(
                             'div',
-                            null,
-                            React.createElement('div', {
-                                className: 'w-24 h-12 rounded shadow-inner border',
-                                style: { backgroundColor: newHeaderColor }
-                            }),
-                            React.createElement('p', { className: 'text-sm text-gray-500 mt-1 text-center' }, newHeaderColor)
+                            { className: 'w-full text-center text-sm text-gray-600 space-y-1 font-mono' },
+                            React.createElement('div', null, `HEX: ${newHeaderColor}`),
+                            React.createElement('div', null, `RGB: ${hexToRgb(newHeaderColor)}`),
+                            React.createElement('div', null, `HSL: ${hexToHsl(newHeaderColor)}`)
                         )
                     )
                 ),
         
-                // Farba textu – len dva tlačidlá (bez color pickeru)
-                React.createElement('div', { className: 'mb-8' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Farba textu názvu'),
+                // Farba textu – len dva tlačidlá
+                React.createElement('div', { className: 'mb-10' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba textu názvu'),
                     React.createElement(
                         'div',
                         { className: 'flex gap-4' },
@@ -354,8 +390,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 type: 'button',
                                 onClick: () => setNewHeaderTextColor('#ffffff'),
                                 className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
-                                    newHeaderTextColor === '#ffffff' 
-                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                                    newHeaderTextColor === '#ffffff'
+                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                         : 'border-gray-300 hover:bg-gray-50'
                                 }`,
                                 style: { backgroundColor: '#ffffff', color: '#000000' }
@@ -368,8 +404,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 type: 'button',
                                 onClick: () => setNewHeaderTextColor('#000000'),
                                 className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
-                                    newHeaderTextColor === '#000000' 
-                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                                    newHeaderTextColor === '#000000'
+                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                         : 'border-gray-300 hover:bg-gray-50'
                                 }`,
                                 style: { backgroundColor: '#000000', color: '#ffffff' }
@@ -379,7 +415,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
         
-                // Tlačidlá na spodku
+                // Tlačidlá
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-4 mt-8' },
