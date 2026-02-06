@@ -37,6 +37,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [selectedPlaceForEdit, setSelectedPlaceForEdit] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
+    const [newHeaderTextColor, setNewHeaderTextColor] = useState('#ffffff');
 
     // Real-time ubytovanie + headerColor
     useEffect(() => {
@@ -54,6 +55,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         accommodationType: data.accommodationType || null,
                         capacity: data.capacity ?? null,
                         headerColor: data.headerColor || '#1e40af',  // fallback tmavomodrá
+                        headerTextColor: data.headerTextColor || '#ffffff',
                     });
                 });
 
@@ -130,6 +132,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const openEditModal = (place) => {
         setSelectedPlaceForEdit(place);
         setNewHeaderColor(place.headerColor || '#1e40af');
+        setNewHeaderTextColor(place.headerTextColor || '#ffffff');
         setIsModalOpen(true);
     };
 
@@ -139,11 +142,16 @@ const AddGroupsApp = ({ userProfileData }) => {
 
         try {
             const placeRef = doc(window.db, 'places', selectedPlaceForEdit.id);
-            await updateDoc(placeRef, { headerColor: newHeaderColor });
+            await updateDoc(placeRef, { 
+                headerColor: newHeaderColor,
+                headerTextColor: newHeaderTextColor 
+            });
 
             setAccommodations(prev =>
                 prev.map(p =>
-                    p.id === selectedPlaceForEdit.id ? { ...p, headerColor: newHeaderColor } : p
+                    p.id === selectedPlaceForEdit.id 
+                        ? { ...p, headerColor: newHeaderColor, headerTextColor: newHeaderTextColor }
+                        : p
                 )
             );
 
@@ -235,7 +243,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     'div',
                                     {
                                         className: 'text-white px-6 py-4 relative flex items-center justify-between',
-                                        style: { backgroundColor: place.headerColor }
+                                        style: { 
+                                            backgroundColor: place.headerColor,
+                                            color: place.headerTextColor || '#ffffff'
+                                        }
                                     },
                                     React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto'),
                                     React.createElement(
@@ -305,29 +316,76 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
                 React.createElement('h3', { className: 'text-xl font-bold mb-6' }, 'Upraviť farbu hlavičky'),
-                React.createElement('p', { className: 'text-gray-600 mb-4' }, selectedPlaceForEdit?.name || 'Ubytovacie miesto'),
-                React.createElement(
-                    'div',
-                    { className: 'flex items-center gap-6 mb-8' },
-                    React.createElement('input', {
-                        type: 'color',
-                        value: newHeaderColor,
-                        onChange: (e) => setNewHeaderColor(e.target.value),
-                        className: 'w-24 h-24 rounded-lg cursor-pointer border-2 border-gray-300 shadow-sm'
-                    }),
+                React.createElement('p', { className: 'text-gray-600 mb-6' }, selectedPlaceForEdit?.name || 'Ubytovacie miesto'),
+        
+                // Farba pozadia
+                React.createElement('div', { className: 'mb-8' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Farba pozadia hlavičky'),
                     React.createElement(
                         'div',
-                        { className: 'flex-1' },
-                        React.createElement('div', {
-                            className: 'w-full h-16 rounded-lg shadow-inner border border-gray-200',
-                            style: { backgroundColor: newHeaderColor }
+                        { className: 'flex items-center gap-6' },
+                        React.createElement('input', {
+                            type: 'color',
+                            value: newHeaderColor,
+                            onChange: (e) => setNewHeaderColor(e.target.value),
+                            className: 'w-20 h-20 rounded-lg cursor-pointer border-2 border-gray-300 shadow-sm'
                         }),
-                        React.createElement('p', { className: 'text-center text-sm text-gray-600 mt-2 font-mono' }, newHeaderColor)
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement('div', {
+                                className: 'w-24 h-12 rounded shadow-inner border',
+                                style: { backgroundColor: newHeaderColor }
+                            }),
+                            React.createElement('p', { className: 'text-sm text-gray-500 mt-1 text-center' }, newHeaderColor)
+                        )
                     )
                 ),
+        
+                // Farba textu
+                React.createElement('div', { className: 'mb-8' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Farba textu názvu'),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col gap-4' },
+                        React.createElement('input', {
+                            type: 'color',
+                            value: newHeaderTextColor,
+                            onChange: (e) => setNewHeaderTextColor(e.target.value),
+                            className: 'w-20 h-20 rounded-lg cursor-pointer border-2 border-gray-300 shadow-sm'
+                        }),
+                        // Rýchly výber biela / čierna
+                        React.createElement(
+                            'div',
+                            { className: 'flex gap-4' },
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => setNewHeaderTextColor('#ffffff'),
+                                    className: `px-4 py-2 rounded border ${newHeaderTextColor === '#ffffff' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`,
+                                    style: { backgroundColor: '#ffffff', color: '#000' }
+                                },
+                                'Biela'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => setNewHeaderTextColor('#000000'),
+                                    className: `px-4 py-2 rounded border ${newHeaderTextColor === '#000000' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`,
+                                    style: { backgroundColor: '#000000', color: '#fff' }
+                                },
+                                'Čierna'
+                            )
+                        )
+                    )
+                ),
+        
+                // Tlačidlá
                 React.createElement(
                     'div',
-                    { className: 'flex justify-end gap-4' },
+                    { className: 'flex justify-end gap-4 mt-6' },
                     React.createElement(
                         'button',
                         {
