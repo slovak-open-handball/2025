@@ -329,6 +329,7 @@ function getCategoryFromDOM(element) {
 }
 
 // === VYLEPŠENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
+// === VYLEPŠENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
 function addHoverListener(element) {
     // SKONTROLUJEME, CI MÁME POVOLENÉ BUBLINKY
     if (!shouldShowTeamBubbles) {
@@ -413,6 +414,7 @@ function addHoverListener(element) {
             const totalPeople = playerCount + womenCount + menCount + driverMaleCount + driverFemaleCount;
             const packageName = teamData.packageDetails?.name || '—';
             const accommodation = teamData.accommodation?.type || '—';
+            const accommodationName = teamData.accommodation?.name || '—'; // Nová premenná pre názov ubytovne
             const arrivalType = teamData.arrival?.type || '—';
             const arrivalTime = teamData.arrival?.time ? ` (${teamData.arrival.time})` : '';
             const displayCategory = teamData.category || category || 'bez kategórie';
@@ -429,12 +431,14 @@ function addHoverListener(element) {
                 ? teamMemberLines.join('\n')
                 : '  (žiadni členovia tímu v databáze)';
             
+            // Upravený text tooltipu s novým riadkom "Ubytovňa:"
             const tooltipText = `${displayCategory} → ${teamName}
 Počet osôb celkom: ${totalPeople}
 ${membersText}
 
 Balík: ${packageName}
 Ubytovanie: ${accommodation}
+Ubytovňa: ${accommodationName}
 Doprava: ${arrivalType}${arrivalTime}`;
             
             showTooltipUnderElement(tooltipText, li);
