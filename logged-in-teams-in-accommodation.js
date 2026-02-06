@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; // OPRAVENÉ: z /js/ na /js9/
 
 const { useState, useEffect } = React;
@@ -30,6 +30,111 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 let isEmailSyncListenerSetup = false;
+
+// ===============================================
+// NOTIFIKAČNÝ SYSTÉM (ako v druhom kóde)
+// ===============================================
+const listeners = new Set();
+
+const notify = (message, type = 'info') => {
+    const id = Date.now() + Math.random();
+    listeners.forEach(cb => cb({ id, message, type }));
+};
+
+const subscribe = (cb) => {
+    listeners.add(cb);
+    return () => listeners.delete(cb);
+};
+
+// Portál pre stabilné notifikácie
+const NotificationPortal = () => {
+    const [notification, setNotification] = React.useState(null);
+    
+    useEffect(() => {
+        let timer;
+        const unsubscribe = subscribe((notif) => {
+            setNotification(notif);
+            clearTimeout(timer);
+            timer = setTimeout(() => setNotification(null), 5000);
+        });
+        
+        return () => {
+            unsubscribe();
+            clearTimeout(timer);
+        };
+    }, []);
+    
+    if (!notification) return null;
+    
+    const typeClasses = {
+        success: 'bg-green-600',
+        error: 'bg-red-600',
+        info: 'bg-blue-600',
+        default: 'bg-gray-700'
+    }[notification.type || 'default'];
+    
+    return ReactDOM.createPortal(
+        React.createElement(
+            'div',
+            {
+                key: notification.id,
+                className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
+            },
+            notification.message
+        ),
+        document.body
+    );
+};
+
+// Funkcia pre vytváranie notifikácií do databázy
+const createAccommodationNotification = async (action, data) => {
+    if (!window.db) return;
+    
+    const currentUserEmail = window.globalUserProfileData?.email || null;
+    
+    let message = '';
+    const { teamName, accommodationName, category, teamId, userId, totalPeople, oldAccommodation, newAccommodation } = data;
+    
+    switch (action) {
+        case 'assign_accommodation':
+            message = `Tím '${teamName}' (${category}) bol priradený do ubytovne '${accommodationName}' (${totalPeople} osôb)`;
+            break;
+        case 'change_accommodation':
+            message = `Tím '${teamName}' (${category}) bol presunutý z ubytovne '${oldAccommodation}' do '${newAccommodation}'`;
+            break;
+        case 'remove_accommodation':
+            message = `Tím '${teamName}' (${category}) bol odstránený z ubytovne '${oldAccommodation}'`;
+            break;
+        case 'update_accommodation_color':
+            message = `Bola zmenená farba ubytovne '${accommodationName}'`;
+            break;
+        default:
+            message = `Zmena v ubytovaní: ${action}`;
+    }
+    
+    try {
+        const notificationsRef = collection(window.db, 'notifications');
+        await addDoc(notificationsRef, {
+            userEmail: currentUserEmail || "",
+            performedBy: currentUserEmail || null,
+            changes: [message],
+            timestamp: serverTimestamp(),
+            relatedTeamId: teamId || null,
+            relatedUserId: userId || null,
+            relatedCategory: category || null,
+            relatedAccommodation: accommodationName || null,
+            actionType: action,
+            teamName: teamName || null,
+            accommodationName: accommodationName || null,
+            totalPeople: totalPeople || null,
+            oldAccommodation: oldAccommodation || null,
+            newAccommodation: newAccommodation || null
+        });
+        console.log("[NOTIFIKÁCIA UBYTOVANIE] Uložená:", message);
+    } catch (err) {
+        console.error("[NOTIFIKÁCIA UBYTOVANIE] Chyba pri ukladaní:", err);
+    }
+};
 
 const AddGroupsApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
@@ -163,16 +268,13 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (selectedCategory && team.category !== selectedCategory) return false;
         
         // Filtrovanie podľa ubytovne (pre tímy bez priradenia sa neaplikuje)
-        // Tímy bez priradenia nemajú priradenú ubytovňu
         return true;
     });
 
     // Filtrovanie priradených tímov podľa kombinovaných filtrov (len pre zobrazenie)
     const filteredAssignedTeams = assignedTeams.filter(team => {
-        // Filtrovanie podľa kategórie
         if (selectedCategory && team.category !== selectedCategory) return false;
         
-        // Filtrovanie podľa ubytovne
         if (selectedAccommodationFilter) {
             const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
             if (!selectedAccommodation) return false;
@@ -183,12 +285,10 @@ const AddGroupsApp = ({ userProfileData }) => {
     });
 
     // VÝPOČET SKUTOČNEJ KAPACITY - VŽDY S CELKOVÝMI TÍMI BEZ FILTROV
-    // Toto je skutočná obsadenosť bez ohľadu na filtre
     const getActualCapacity = (placeId) => {
         const place = accommodations.find(p => p.id === placeId);
         if (!place) return { used: 0, remaining: null };
         
-        // Vždy počítame so všetkými tímami, nie s filtrovanými
         const allTeamsInPlace = assignedTeams.filter(team => team.assignedPlace === place.name);
         const usedCapacity = allTeamsInPlace.reduce((sum, team) => sum + team.totalPeople, 0);
         const remainingCapacity = place.capacity !== null ? place.capacity - usedCapacity : null;
@@ -202,30 +302,26 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Priradenie tímov ku konkrétnym ubytovniam
     const accommodationsWithTeams = accommodations
         .filter(place => {
-            // Ak je vybraný filter ubytovne, zobrazíme len tú konkrétnu
             if (selectedAccommodationFilter) {
                 return place.id === selectedAccommodationFilter;
             }
             return true;
         })
         .map(place => {
-            // Filtrujeme tímy pre túto ubytovňu podľa kombinovaných filtrov (len pre zobrazenie)
             const teamsInPlace = sortTeams(
                 filteredAssignedTeams.filter(team => team.assignedPlace === place.name)
             );
             
-            // Skutočná kapacita - vždy s celkovými tímami
             const actualCapacity = getActualCapacity(place.id);
             
             return {
                 ...place,
                 assignedTeams: teamsInPlace,
-                usedCapacity: actualCapacity.used, // VŽDY skutočná kapacita
-                remainingCapacity: actualCapacity.remaining // VŽDY skutočná zostávajúca kapacita
+                usedCapacity: actualCapacity.used,
+                remainingCapacity: actualCapacity.remaining
             };
         })
         .filter(place => {
-            // Ak je vybraná kategória a ubytovňa nemá tímy v tejto kategórii, skryjeme ju
             if (selectedCategory && place.assignedTeams.length === 0) {
                 return false;
             }
@@ -259,10 +355,19 @@ const AddGroupsApp = ({ userProfileData }) => {
                 )
             );
 
+            // Vytvorenie notifikácie pre zmenu farby
+            await createAccommodationNotification('update_accommodation_color', {
+                accommodationName: selectedPlaceForEdit.name,
+                newHeaderColor: newHeaderColor,
+                newHeaderTextColor: newHeaderTextColor
+            });
+
             window.showGlobalNotification('Farba hlavičky bola aktualizovaná', 'success');
+            notify('Farba ubytovne bola aktualizovaná', 'success');
         } catch (err) {
             console.error("Chyba pri ukladaní farby:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť farbu', 'error');
+            notify('Nepodarilo sa uložiť farbu ubytovne', 'error');
         }
 
         setIsColorModalOpen(false);
@@ -274,7 +379,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         setSelectedTeam(team);
         setIsLoading(true);
         
-        // Filtrovanie ubytovní podľa typu tímu
         const filteredAccommodations = accommodations.filter(place => 
             place.accommodationType && 
             team.accommodation && 
@@ -283,7 +387,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         setAvailableAccommodations(filteredAccommodations);
         
-        // Ak tímy už má priradenú ubytovňu, nastavíme ju ako predvolenú
         if (team.assignedPlace) {
             const assignedPlace = filteredAccommodations.find(p => p.name === team.assignedPlace);
             if (assignedPlace) {
@@ -319,6 +422,9 @@ const AddGroupsApp = ({ userProfileData }) => {
             const teams = userData.teams || {};
             const teamArray = teams[selectedTeam.category] || [];
 
+            // Uloženie starého ubytovania pre notifikáciu
+            const oldAccommodation = selectedTeam.assignedPlace;
+
             // 2. Aktualizácia konkrétneho tímu
             const updatedTeamArray = teamArray.map(teamItem => {
                 if (teamItem.teamName === selectedTeam.teamName) {
@@ -338,6 +444,32 @@ const AddGroupsApp = ({ userProfileData }) => {
                 [`teams.${selectedTeam.category}`]: updatedTeamArray
             });
 
+            // 4. Vytvorenie notifikácie
+            if (oldAccommodation) {
+                // Zmena ubytovne
+                await createAccommodationNotification('change_accommodation', {
+                    teamName: selectedTeam.teamName,
+                    category: selectedTeam.category,
+                    teamId: selectedTeam.teamId,
+                    userId: selectedTeam.userId,
+                    totalPeople: selectedTeam.totalPeople,
+                    oldAccommodation: oldAccommodation,
+                    newAccommodation: selectedPlace.name
+                });
+                notify(`Tím "${selectedTeam.teamName}" bol presunutý z "${oldAccommodation}" do "${selectedPlace.name}"`, 'success');
+            } else {
+                // Nové priradenie
+                await createAccommodationNotification('assign_accommodation', {
+                    teamName: selectedTeam.teamName,
+                    category: selectedTeam.category,
+                    teamId: selectedTeam.teamId,
+                    userId: selectedTeam.userId,
+                    totalPeople: selectedTeam.totalPeople,
+                    accommodationName: selectedPlace.name
+                });
+                notify(`Tím "${selectedTeam.teamName}" bol priradený do "${selectedPlace.name}"`, 'success');
+            }
+
             window.showGlobalNotification(
                 `Tím "${selectedTeam.teamName}" bol priradený do "${selectedPlace.name}"`,
                 'success'
@@ -351,6 +483,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         } catch (err) {
             console.error("Chyba pri ukladaní priradenia:", err);
             window.showGlobalNotification('Nepodarilo sa priradiť ubytovňu', 'error');
+            notify('Nepodarilo sa priradiť ubytovňu', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -397,14 +530,26 @@ const AddGroupsApp = ({ userProfileData }) => {
                 [`teams.${team.category}`]: updatedTeamArray
             });
 
+            // 4. Vytvorenie notifikácie
+            await createAccommodationNotification('remove_accommodation', {
+                teamName: team.teamName,
+                category: team.category,
+                teamId: team.teamId,
+                userId: team.userId,
+                totalPeople: team.totalPeople,
+                oldAccommodation: team.assignedPlace
+            });
+
             window.showGlobalNotification(
                 `Priradenie tímu "${team.teamName}" bolo odstránené`,
                 'success'
             );
+            notify(`Tím "${team.teamName}" bol odstránený z ubytovne "${team.assignedPlace}"`, 'success');
 
         } catch (err) {
             console.error("Chyba pri odstraňovaní priradenia:", err);
             window.showGlobalNotification('Nepodarilo sa odstrániť priradenie', 'error');
+            notify('Nepodarilo sa odstrániť priradenie tímu', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -465,12 +610,57 @@ const AddGroupsApp = ({ userProfileData }) => {
         return `hsl(${h}, ${s}%, ${l}%)`;
     };
 
+    // Efekt pre manažovanie notifikácií z notify systému
+    const [uiNotification, setUiNotification] = useState(null);
+    useEffect(() => {
+        let timer;
+        const unsubscribe = subscribe((notification) => {
+            setUiNotification(notification);
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                setUiNotification(null);
+            }, 5000);
+        });
+        return () => {
+            unsubscribe();
+            clearTimeout(timer);
+        };
+    }, []);
+
+    // Triedy pre UI notifikácie
+    const uiNotificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out ${
+        uiNotification
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-95 -translate-y-4 pointer-events-none'
+    }`;
+    
+    let typeClasses = '';
+    if (uiNotification) {
+        switch (uiNotification.type) {
+            case 'success': typeClasses = 'bg-green-500'; break;
+            case 'error': typeClasses = 'bg-red-500'; break;
+            case 'info': typeClasses = 'bg-blue-500'; break;
+            default: typeClasses = 'bg-gray-700';
+        }
+    }
+
     // ──────────────────────────────────────────────
     // RENDER
     // ──────────────────────────────────────────────
     return React.createElement(
         'div',
-        { className: 'min-h-screen bg-gray-50 py-8 px-4' },
+        { className: 'min-h-screen bg-gray-50 py-8 px-4 relative' },
+        
+        // UI notifikácie z notify systému
+        uiNotification && React.createElement(
+            'div',
+            { className: `${uiNotificationClasses} ${typeClasses}` },
+            uiNotification.message
+        ),
+        
+        // Portál pre stabilné notifikácie
+        React.createElement(NotificationPortal, null),
+        
         React.createElement(
             'div',
             { className: 'max-w-7xl mx-auto h-full' },
@@ -996,7 +1186,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
         ),
 
-        // Modálne okno – priradenie ubytovne (UPRAVENÉ - správne zobrazenie kapacity)
+        // Modálne okno – priradenie ubytovne
         isAssignModalOpen &&
         React.createElement(
             'div',
@@ -1052,7 +1242,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'space-y-3' },
                                 availableAccommodations.map(place => {
-                                    // V modálnom okne vždy berieme skutočnú kapacitu
                                     const actualCapacity = getActualCapacity(place.id);
                                     const canAccommodate = place.capacity === null || 
                                         (actualCapacity.remaining !== null && actualCapacity.remaining >= (selectedTeam?.totalPeople || 0));
