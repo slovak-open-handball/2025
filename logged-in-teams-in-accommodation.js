@@ -40,6 +40,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
     const [newHeaderTextColor, setNewHeaderTextColor] = useState('#ffffff');
     const [selectedAccommodationForTeam, setSelectedAccommodationForTeam] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Real-time ubytovanie + headerColor + headerTextColor
     useEffect(() => {
