@@ -1416,6 +1416,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
         )
     );
+}
 
 /* ──────────────────────────────────────────────
    Zvyšok kódu (handleDataUpdateAndRender, event listener, loader) ostáva BEZ ZMENY
