@@ -1510,11 +1510,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                   className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
                 },
                   React.createElement('option', { value: '' }, 'Vyberte typ ubytovania'),
-                  accommodationTypes.map(item =>
-                    React.createElement('option', { key: item.type, value: item.type },
-                      `${item.type} (${item.capacity} lôžok celkom)`
-                    )
-                  )
+                  accommodationTypes.map(item => {
+                    const avail = accommodationAvailabilityAdd[item.type] || { isFull: false, free: 0, total: 0 };
+                    const isDisabled = avail.isFull;
+                    const label = `${item.type} (${item.capacity} lôžok celkom)${isDisabled ? ' (naplnená kapacita)' : ''}`;
+              
+                    return React.createElement('option', {
+                      key: item.type,
+                      value: item.type,
+                      disabled: isDisabled,
+                      className: isDisabled ? 'text-gray-400 cursor-not-allowed' : ''
+                    }, label);
+                  })
                 ),
                 selectedAccommodationType && accommodationAvailabilityAdd[selectedAccommodationType] && React.createElement('div', { className: 'mt-3 text-sm flex items-center gap-2' },
                   React.createElement('span', { className: 'font-medium text-gray-700' }, 'Obsadenosť:'),
