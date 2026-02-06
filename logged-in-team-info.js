@@ -12,7 +12,7 @@ let unsubscribeUserSettings = null;
 let customTooltip = null;
 let observer = null;
 
-// === UPRAVENÉ NAČÍTANIE NASTAVENIA ===
+// === GLOBÁLNE NASTAVENIE ZOBRAZOVANIA BUBLÍN ===
 function setupTeamBubblesListener() {
     if (unsubscribeUserSettings) return;
   
@@ -44,11 +44,47 @@ function setupTeamBubblesListener() {
         } else {
             shouldShowTeamBubbles = !!newValue;
             console.log(`[team-info] displayTeamBubbles = ${shouldShowTeamBubbles}`);
+            
+            // AK JE VYPNUTÉ, OKAMŽITE ODSTRÁNIME VŠETKY BUBLINKY A LISTENERY
+            if (!shouldShowTeamBubbles) {
+                console.log("[team-info] Bublinky vypnuté - odstraňujem tooltip a listenery");
+                hideTooltip();
+                removeAllHoverListeners();
+            }
         }
     }, (err) => {
         console.error("[team-info] Chyba pri počúvaní nastavenia bubliniek:", err);
         shouldShowTeamBubbles = true;
     });
+}
+
+// === FUNKCIA NA ODSTRÁNENIE VŠETKÝCH HOVER LISTENEROV ===
+function removeAllHoverListeners() {
+    // Odstrániť tooltip
+    hideTooltip();
+    if (customTooltip && customTooltip.parentNode) {
+        customTooltip.parentNode.removeChild(customTooltip);
+        customTooltip = null;
+    }
+    
+    // Odstrániť všetky listenery
+    const elements = document.querySelectorAll('[data-hover-listener-added]');
+    elements.forEach(el => {
+        el.removeAttribute('data-hover-listener-added');
+        // Vytvoríme nový element bez listenerov
+        const newEl = el.cloneNode(true);
+        if (el.parentNode) {
+            el.parentNode.replaceChild(newEl, el);
+        }
+    });
+    
+    // Zastaviť observer
+    if (observer) {
+        observer.disconnect();
+        observer = null;
+    }
+    
+    console.log("Všetky hover listenery boli odstránené (bublinky vypnuté)");
 }
 
 // === VYLEPŠENÉ VYHĽADÁVANIE V FIRESTORE ===
@@ -169,6 +205,11 @@ function createOrGetTooltip() {
 }
 
 function showTooltipUnderElement(text, element) {
+    // SKONTROLUJEME, CI MÔŽEME ZOBRAZOVAŤ BUBLINKY
+    if (!shouldShowTeamBubbles) {
+        return; // Ak sú bublinky vypnuté, nevytvárame tooltip
+    }
+    
     const tt = createOrGetTooltip();
     tt.textContent = text;
 
@@ -274,11 +315,20 @@ function getCategoryFromDOM(element) {
 
 // === VYLEPŠENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
 function addHoverListener(element) {
+    // SKONTROLUJEME, CI MÁME POVOLENÉ BUBLINKY
+    if (!shouldShowTeamBubbles) {
+        return; // Ak sú bublinky vypnuté, nepridávame listenery
+    }
+    
     if (element.dataset.hoverListenerAdded) return;
     element.dataset.hoverListenerAdded = 'true';
 
     element.addEventListener('mouseover', async e => {
-        if (!shouldShowTeamBubbles) return;
+        // DVOJITÁ KONTROLA PRE ZABEZPEČENIE
+        if (!shouldShowTeamBubbles) {
+            hideTooltip();
+            return;
+        }
         
         // Získame text z elementu
         let visibleText = e.target.textContent.trim();
@@ -337,8 +387,8 @@ function addHoverListener(element) {
         // Získame údaje o tíme
         const teamData = await lookupTeamInFirestore(teamName, category, group);
         
-        // ZMENENÉ: Zobraziť bublinu IBA ak sa našli údaje
-        if (teamData) {
+        // Zobraziť bublinu IBA ak sa našli údaje A SÚ POVOLENÉ BUBLINKY
+        if (teamData && shouldShowTeamBubbles) {
             const playerCount = (teamData.playerDetails || []).length;
             const womenCount = (teamData.womenTeamMemberDetails || []).length;
             const menCount = (teamData.menTeamMemberDetails || []).length;
@@ -373,8 +423,11 @@ Ubytovanie: ${accommodation}
 Doprava: ${arrivalType}${arrivalTime}`;
             
             showTooltipUnderElement(tooltipText, li);
+        } else if (!shouldShowTeamBubbles) {
+            // Ak sú bublinky vypnuté, nespustíme nič
+            console.log("Bublinky sú vypnuté - nezobrazujem tooltip");
         } else {
-            // ZMENENÉ: Názov v konzole, ale NEZOBRAZUJEME bublinu
+            // Ak sa tím nenašiel v databáze
             console.log("→ Tím sa nenašiel v databáze - bublina sa nezobrazí");
         }
         
@@ -388,6 +441,13 @@ Doprava: ${arrivalType}${arrivalTime}`;
 // === OPTIMIZOVANÁ INICIALIZÁCIA ===
 function initTeamHoverListeners() {
     console.log("Inicializujem hover listenery...");
+    
+    // SKONTROLUJEME, CI MÔŽEME INICIALIZOVAŤ
+    if (!shouldShowTeamBubbles) {
+        console.log("Bublinky sú vypnuté - preskakujem inicializáciu listenerov");
+        removeAllHoverListeners();
+        return;
+    }
     
     // Odstránime staré listenery
     const oldSpans = document.querySelectorAll('[data-hover-listener-added]');
@@ -421,11 +481,13 @@ function initTeamHoverListeners() {
     
     console.log(`Nájdených ${allTeams.size} potenciálnych tímov`);
     
-    // Pridáme listenery
-    allTeams.forEach(addHoverListener);
+    // Pridáme listenery IBA AK SÚ POVOLENÉ BUBLINKY
+    if (shouldShowTeamBubbles) {
+        allTeams.forEach(addHoverListener);
+    }
     
-    // Nastavíme MutationObserver pre dynamické zmeny
-    if (!observer) {
+    // Nastavíme MutationObserver pre dynamické zmeny IBA AK SÚ POVOLENÉ BUBLINKY
+    if (!observer && shouldShowTeamBubbles) {
         observer = new MutationObserver((mutations) => {
             let hasNewTeams = false;
             
@@ -440,7 +502,7 @@ function initTeamHoverListeners() {
                 }
             });
             
-            if (hasNewTeams) {
+            if (hasNewTeams && shouldShowTeamBubbles) {
                 // Počkáme 100ms, kým sa DOM stabilizuje
                 setTimeout(() => {
                     // Znova inicializujeme
@@ -474,6 +536,11 @@ function initTeamHoverListeners() {
 let reactInitializationTimer = null;
 
 function reinitializeForReact() {
+    if (!shouldShowTeamBubbles) {
+        console.log("Bublinky sú vypnuté - preskakujem re-inicializáciu pre React");
+        return;
+    }
+    
     if (reactInitializationTimer) {
         clearTimeout(reactInitializationTimer);
     }
@@ -512,25 +579,33 @@ function initApp() {
             console.log("%cwindow.db je dostupné → inicializujem",
                 "color:#10b981; font-weight:bold; font-size:14px; background:#000; padding:6px 12px; border-radius:6px;");
             
-            // Nastavíme listener na používateľské nastavenia
+            // NAJPRV NASTAVÍME LISTENER NA NASTAVENIA (aby sme vedeli či môžeme inicializovať)
             setupTeamBubblesListener();
             
-            // Počkáme chvíľu, kým sa načíta obsah (hlavne pre React)
+            // Počkáme chvíľu, kým sa načítajú nastavenia
             setTimeout(() => {
-                initTeamHoverListeners();
-                
-                // Špeciálna inicializácia pre React aplikácie
-                if (document.getElementById('root') || typeof React !== 'undefined') {
-                    console.log("%cDetekovaná React aplikácia → použijeme špeciálny režim",
-                        "color:#f59e0b; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
-                    
-                    // Re-inicializácia po 2 sekundách (React sa môže načítavať neskôr)
-                    setTimeout(reinitializeForReact, 2000);
-                    
-                    // Event listener pre manuálnu re-inicializáciu
-                    window.addEventListener('reactContentLoaded', reinitializeForReact);
+                // IBA AK SÚ POVOLENÉ BUBLINKY, INICIALIZUJEME LISTENERY
+                if (shouldShowTeamBubbles) {
+                    setTimeout(() => {
+                        initTeamHoverListeners();
+                        
+                        // Špeciálna inicializácia pre React aplikácie
+                        if (document.getElementById('root') || typeof React !== 'undefined') {
+                            console.log("%cDetekovaná React aplikácia → použijeme špeciálny režim",
+                                "color:#f59e0b; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
+                            
+                            // Re-inicializácia po 2 sekundách (React sa môže načítavať neskôr)
+                            setTimeout(reinitializeForReact, 2000);
+                            
+                            // Event listener pre manuálnu re-inicializáciu
+                            window.addEventListener('reactContentLoaded', reinitializeForReact);
+                        }
+                    }, 500);
+                } else {
+                    console.log("%cBublinky sú vypnuté - neinicializujem hover listenery",
+                        "color:#ef4444; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
                 }
-            }, 500);
+            }, 300);
             return;
         }
 
@@ -552,31 +627,39 @@ document.addEventListener('DOMContentLoaded', initApp);
 
 // === PERIODICKÁ KONTROLA A RE-INICIALIZÁCIA ===
 setInterval(() => {
-    // Kontrola nespracovaných tímov
-    const uninitializedTeams = document.querySelectorAll(
-        'li span.font-medium:not([data-hover-listener-added]), ' +
-        'li span.flex-grow:not([data-hover-listener-added]), ' +
-        '.zoom-group-box li span:not([data-hover-listener-added])'
-    );
-    
-    if (uninitializedTeams.length > 0) {
-        console.log(`Periodická kontrola: Pridávam ${uninitializedTeams.length} nových tímov`);
-        uninitializedTeams.forEach(addHoverListener);
-    }
-    
-    // Re-inicializácia, ak sa DOM výrazne zmenil
-    const totalTeams = document.querySelectorAll('li span').length;
-    const initializedTeams = document.querySelectorAll('[data-hover-listener-added]').length;
-    
-    if (totalTeams > 0 && initializedTeams < totalTeams * 0.5) {
-        console.log(`Málo inicializovaných tímov (${initializedTeams}/${totalTeams}) → re-inicializácia`);
-        initTeamHoverListeners();
+    // Kontrola nespracovaných tímov IBA AK SÚ POVOLENÉ BUBLINKY
+    if (shouldShowTeamBubbles) {
+        const uninitializedTeams = document.querySelectorAll(
+            'li span.font-medium:not([data-hover-listener-added]), ' +
+            'li span.flex-grow:not([data-hover-listener-added]), ' +
+            '.zoom-group-box li span:not([data-hover-listener-added])'
+        );
+        
+        if (uninitializedTeams.length > 0) {
+            console.log(`Periodická kontrola: Pridávam ${uninitializedTeams.length} nových tímov`);
+            uninitializedTeams.forEach(addHoverListener);
+        }
+        
+        // Re-inicializácia, ak sa DOM výrazne zmenil
+        const totalTeams = document.querySelectorAll('li span').length;
+        const initializedTeams = document.querySelectorAll('[data-hover-listener-added]').length;
+        
+        if (totalTeams > 0 && initializedTeams < totalTeams * 0.5) {
+            console.log(`Málo inicializovaných tímov (${initializedTeams}/${totalTeams}) → re-inicializácia`);
+            initTeamHoverListeners();
+        }
     }
 }, 5000); // Kontrola každých 5 sekúnd
 
 // === MANUÁLNA RE-INICIALIZÁCIA ===
 if (typeof window !== 'undefined') {
     window.reinitializeTeamHover = function() {
+        // SKONTROLUJEME, CI MÔŽEME RE-INICIALIZOVAŤ
+        if (!shouldShowTeamBubbles) {
+            console.log("Bublinky sú vypnuté - manuálna re-inicializácia ignorovaná");
+            return;
+        }
+        
         console.log("Manuálna re-inicializácia hover listenerov...");
         if (observer) {
             observer.disconnect();
