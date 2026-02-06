@@ -739,21 +739,6 @@ function NotificationsApp() {
     return parts;
   }
 
-  // Pomocná funkcia na formátovanie notifikácií z AccommodationSettings
-  function getAccommodationChangeMessage(notification) {
-      const { type, data } = notification;
-  
-      switch (type) {
-          case 'createAccommodation':
-              return `Pridaný nový typ ubytovania: "${data.type}" (kapacita: ${data.capacity})`;
-          case 'editAccommodation':
-              return `Upravený typ ubytovania: "${data.originalType}" → "${data.newType}" (kapacita: ${data.originalCapacity} → ${data.newCapacity})`;
-          case 'deleteAccommodation':
-              return `Odstránený typ ubytovania: "${data.deletedType}" (kapacita: ${data.deletedCapacity})`;
-          default:
-              return `(neznámy typ zmeny ubytovania: ${type})`;
-      }
-  }
 
   // Display loading state
   if (loading) {
@@ -941,17 +926,9 @@ function NotificationsApp() {
                                         React.createElement('li', { key: index }, renderStyledText(change))
                                     ))
                                 )
-                            ) : notification.type && notification.data ? (
-                                // ← tu pridávame podporu pre nový formát notifikácií z AccommodationSettings
-                                React.createElement('div', { className: 'text-gray-700' },
-                                    getAccommodationChangeMessage(notification)
-                                )
                             ) : (
-                                // fallback – ak nič z vyššie uvedeného nie je k dispozícii
-                                React.createElement('p', { className: 'text-gray-500 italic' },
-                                    '(zmena bez detailov)'
-                                )
-                            )
+                                React.createElement('p', null, 'Chybná notifikácia')
+                            ),
                             notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
                                 `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
                             )
