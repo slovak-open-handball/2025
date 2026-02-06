@@ -3663,7 +3663,7 @@ const clearFilter = (column) => {
             if (!actualCategory) {
                 throw new Error("Pre pridanie/úpravu tímu nebola zadaná kategória.");
             }
-            const currentCategoryTeams = currentDocData.teams?.[actualCategory] || [];
+            const currentCategoryTeams = Array.isArray(currentDocData.teams?.[actualCategory]) ? currentDocData.teams[actualCategory] : [];
         
             let originalTeam = {};
             let updatedTeam = {};
