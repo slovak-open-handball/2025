@@ -1073,6 +1073,7 @@ function NotificationsApp() {
                             );
                           }
                         })()
+                        ),
                         
                         notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
                           `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
