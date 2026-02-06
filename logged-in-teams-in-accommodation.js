@@ -583,10 +583,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             React.createElement(
                 'div',
-                { className: 'grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 h-full' },
+                { className: `grid ${filteredUnassignedTeams.length > 0 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-8 lg:gap-10 h-full` },
 
-                // Ľavá strana – Tímy bez priradenia
-                React.createElement(
+                // Ľavá strana – Tímy bez priradenia (IBÁ AK SÚ TÍMY)
+                filteredUnassignedTeams.length > 0 && React.createElement(
                     'div',
                     { className: 'order-2 lg:order-1 h-full flex flex-col' },
                     React.createElement(
@@ -604,73 +604,71 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { className: 'p-6 flex-grow overflow-y-auto' },
-                            filteredUnassignedTeams.length === 0
-                                ? React.createElement('p', { className: 'text-gray-500 text-center py-12' }, 
-                                    selectedCategory || selectedAccommodationFilter
-                                        ? `Žiadne tímy bez priradenia pre zvolené filtre`
-                                        : 'Všetky tímy už majú priradené ubytovanie'
-                                )
-                                : React.createElement(
-                                    'ul',
-                                    { className: 'space-y-3' },
-                                    filteredUnassignedTeams.map((team, i) =>
+                            React.createElement(
+                                'ul',
+                                { className: 'space-y-3' },
+                                filteredUnassignedTeams.map((team, i) =>
+                                    React.createElement(
+                                        'li',
+                                        {
+                                            key: i,
+                                            className: 'py-3 px-4 bg-gray-50 rounded border-l-4 border-green-500 flex justify-between items-center'
+                                        },
                                         React.createElement(
-                                            'li',
-                                            {
-                                                key: i,
-                                                className: 'py-3 px-4 bg-gray-50 rounded border-l-4 border-green-500 flex justify-between items-center'
-                                            },
+                                            'div',
+                                            null,
+                                            React.createElement('span', { className: 'font-medium' }, `${team.category}: ${team.teamName}`),
+                                            React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} osôb)`)
+                                        ),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-3' },
+                                            React.createElement('span', { className: 'font-medium text-green-700' }, team.accommodation),
                                             React.createElement(
-                                                'div',
-                                                null,
-                                                React.createElement('span', { className: 'font-medium' }, `${team.category}: ${team.teamName}`),
-                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} osôb)`)
-                                            ),
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-3' },
-                                                React.createElement('span', { className: 'font-medium text-green-700' }, team.accommodation),
+                                                'button',
+                                                {
+                                                    onClick: () => openAssignModal(team),
+                                                    className: 'p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors',
+                                                    title: 'Priradiť ubytovňu'
+                                                },
                                                 React.createElement(
-                                                    'button',
-                                                    {
-                                                        onClick: () => openAssignModal(team),
-                                                        className: 'p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors',
-                                                        title: 'Priradiť ubytovňu'
+                                                    'svg',
+                                                    { 
+                                                        className: 'w-5 h-5', 
+                                                        fill: 'none', 
+                                                        stroke: 'currentColor', 
+                                                        viewBox: '0 0 24 24',
+                                                        strokeWidth: '2'
                                                     },
-                                                    React.createElement(
-                                                        'svg',
-                                                        { 
-                                                            className: 'w-5 h-5', 
-                                                            fill: 'none', 
-                                                            stroke: 'currentColor', 
-                                                            viewBox: '0 0 24 24',
-                                                            strokeWidth: '2'
-                                                        },
-                                                        React.createElement('path', {
-                                                            strokeLinecap: 'round',
-                                                            strokeLinejoin: 'round',
-                                                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                                                        })
-                                                    )
+                                                    React.createElement('path', {
+                                                        strokeLinecap: 'round',
+                                                        strokeLinejoin: 'round',
+                                                        d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                    })
                                                 )
                                             )
                                         )
                                     )
                                 )
+                            )
                         )
                     )
                 ),
 
-                // Pravá strana – Ubytovacie miesta s tímami
+                // Pravá strana – Ubytovacie miesta s tímami (vždy zobrazené)
                 React.createElement(
                     'div',
-                    { className: 'order-1 lg:order-2 h-full flex flex-col' },
+                    { 
+                        className: filteredUnassignedTeams.length > 0 
+                            ? 'order-1 lg:order-2 h-full flex flex-col' 
+                            : 'order-1 h-full flex flex-col'
+                    },
                     React.createElement(
                         'div',
                         { className: 'h-full flex flex-col' },
-                        React.createElement(
+                        filteredUnassignedTeams.length === 0 && React.createElement(
                             'h2',
-                            { className: 'text-2xl font-bold text-gray-800 mb-4 lg:hidden' },
+                            { className: 'text-2xl font-bold text-gray-800 mb-4' },
                             (selectedCategory || selectedAccommodationFilter)
                                 ? `Ubytovacie miesta ${getFilterDescription() ? `(${getFilterDescription()})` : ''}`
                                 : 'Ubytovacie miesta s priradenými tímami'
