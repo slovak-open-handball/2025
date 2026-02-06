@@ -35,11 +35,13 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
     const [teamsWithAccom, setTeamsWithAccom] = useState([]);
     const [selectedPlaceForEdit, setSelectedPlaceForEdit] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isPlaceModalOpen, setIsPlaceModalOpen] = useState(false);
+    const [selectedTeamForEdit, setSelectedTeamForEdit] = useState(null);
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
     const [newHeaderTextColor, setNewHeaderTextColor] = useState('#ffffff');
+    const [selectedAccommodationForTeam, setSelectedAccommodationForTeam] = useState('');
 
-    // Real-time ubytovanie + headerColor
+    // Real-time ubytovanie + headerColor + headerTextColor
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
@@ -54,11 +56,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                         name: data.name || '(bez názvu)',
                         accommodationType: data.accommodationType || null,
                         capacity: data.capacity ?? null,
-                        headerColor: data.headerColor || '#1e40af',  // fallback tmavomodrá
+                        headerColor: data.headerColor || '#1e40af',
                         headerTextColor: data.headerTextColor || '#ffffff',
                     });
                 });
-
                 console.clear();
                 console.log("═══════════════════════════════════════════════════");
                 console.log(`NAČÍTANÉ UBYTOVANIE — ${new Date().toLocaleTimeString('sk-SK')}`);
@@ -83,7 +84,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     if (data.teams && typeof data.teams === 'object') {
                         Object.entries(data.teams).forEach(([category, teamArray]) => {
                             if (!Array.isArray(teamArray)) return;
-                            teamArray.forEach((team) => {
+                            teamArray.forEach((team, teamIndex) => {
                                 if (!team?.teamName) return;
                                 const accomType = team.accommodation?.type?.trim?.() || '';
                                 const hasAccommodation = accomType !== '' && accomType.toLowerCase() !== 'bez ubytovania';
@@ -98,9 +99,11 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                                 withAccom.push({
                                     category,
+                                    teamIndex, // ← uložíme index pre neskoršiu úpravu
                                     teamName: team.teamName.trim(),
                                     accommodation: accomType,
                                     totalPeople,
+                                    userId: doc.id, // ← ID používateľa, aby sme vedeli kam ukladať
                                 });
                             });
                         });
@@ -111,16 +114,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 console.log(`TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
                 console.log(`Celkom tímov s prideleným ubytovaním: ${withAccom.length}`);
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
-                if (withAccom.length === 0) {
-                    console.log("Momentálne žiadny tím nemá pridelené ubytovanie");
-                } else {
-                    console.log("Zoznam tímov s ubytovaním:");
-                    withAccom.forEach((t, i) => {
-                        console.log(` [${t.category}] ${t.teamName.padEnd(38)} → ${t.accommodation.padEnd(22)} (ľudia: ${t.totalPeople})`);
-                    });
-                }
-                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
-
                 setTeamsWithAccom(withAccom);
             },
             (err) => console.error("[USERS]", err)
@@ -128,77 +121,84 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // Otvorenie modálu
-    const openEditModal = (place) => {
+    // Otvorenie modálu pre úpravu farby ubytovania
+    const openEditPlaceModal = (place) => {
         setSelectedPlaceForEdit(place);
         setNewHeaderColor(place.headerColor || '#1e40af');
         setNewHeaderTextColor(place.headerTextColor || '#ffffff');
+        setIsPlaceModalOpen(true);
+    };
+
+    // Otvorenie modálu pre priradenie ubytovania tímu
+    const openAssignAccommodationModal = (team) => {
+        setSelectedTeamForEdit(team);
+        setSelectedAccommodationForTeam(team.accommodation || '');
         setIsModalOpen(true);
     };
 
-    // Uloženie farby
-    const saveHeaderColor = async () => {
+    // Uloženie farby ubytovania
+    const savePlaceColors = async () => {
         if (!selectedPlaceForEdit || !window.db) return;
-
         try {
             const placeRef = doc(window.db, 'places', selectedPlaceForEdit.id);
-            await updateDoc(placeRef, { 
+            await updateDoc(placeRef, {
                 headerColor: newHeaderColor,
-                headerTextColor: newHeaderTextColor 
+                headerTextColor: newHeaderTextColor
             });
-
             setAccommodations(prev =>
                 prev.map(p =>
-                    p.id === selectedPlaceForEdit.id 
+                    p.id === selectedPlaceForEdit.id
                         ? { ...p, headerColor: newHeaderColor, headerTextColor: newHeaderTextColor }
                         : p
                 )
             );
-
             window.showGlobalNotification('Farba hlavičky bola aktualizovaná', 'success');
         } catch (err) {
-            console.error("Chyba pri ukladaní farby:", err);
-            window.showGlobalNotification('Nepodarilo sa uložiť farbu', 'error');
+            console.error("Chyba pri ukladaní farieb ubytovania:", err);
+            window.showGlobalNotification('Nepodarilo sa uložiť farby', 'error');
         }
-
-        setIsModalOpen(false);
+        setIsPlaceModalOpen(false);
         setSelectedPlaceForEdit(null);
     };
 
-    // Pomocné funkcie na konverziu farieb (pridaj pred return komponentu)
-    const hexToRgb = (hex) => {
-        const r = parseInt(hex.slice(1,3), 16);
-        const g = parseInt(hex.slice(3,5), 16);
-        const b = parseInt(hex.slice(5,7), 16);
-        return `rgb(${r}, ${g}, ${b})`;
-    };
-    
-    const hexToHsl = (hex) => {
-        let r = parseInt(hex.slice(1,3), 16) / 255;
-        let g = parseInt(hex.slice(3,5), 16) / 255;
-        let b = parseInt(hex.slice(5,7), 16) / 255;
-    
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
-    
-        if (max === min) {
-            h = s = 0;
-        } else {
-            const d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            switch (max) {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
-            }
-            h /= 6;
+    // Uloženie priradeného ubytovania pre tím
+    const saveTeamAccommodation = async () => {
+        if (!selectedTeamForEdit || !window.db) return;
+
+        const { userId, category, teamIndex } = selectedTeamForEdit;
+        const selectedPlace = accommodations.find(p => p.name === selectedAccommodationForTeam);
+
+        if (!selectedPlace) {
+            window.showGlobalNotification('Nevybrali ste žiadne ubytovanie', 'error');
+            return;
         }
-    
-        h = Math.round(h * 360);
-        s = Math.round(s * 100);
-        l = Math.round(l * 100);
-        return `hsl(${h}, ${s}%, ${l}%)`;
+
+        try {
+            const userRef = doc(window.db, 'users', userId);
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) throw new Error("Používateľ neexistuje");
+
+            const userData = userSnap.data();
+            const team = userData.teams?.[category]?.[teamIndex];
+            if (!team) throw new Error("Tím nebol nájdený");
+
+            // Aktualizujeme accommodation.name
+            await updateDoc(userRef, {
+                [`teams.${category}.${teamIndex}.accommodation`]: {
+                    name: selectedPlace.name,
+                    // môžeš pridať aj id, type atď. ak chceš
+                }
+            });
+
+            window.showGlobalNotification(`Tím ${team.teamName} bol priradený k ubytovaniu ${selectedPlace.name}`, 'success');
+        } catch (err) {
+            console.error("Chyba pri priraďovaní ubytovania:", err);
+            window.showGlobalNotification('Nepodarilo sa priradiť ubytovanie', 'error');
+        }
+
+        setIsModalOpen(false);
+        setSelectedTeamForEdit(null);
+        setSelectedAccommodationForTeam('');
     };
 
     // ──────────────────────────────────────────────
@@ -210,12 +210,11 @@ const AddGroupsApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { className: 'max-w-7xl mx-auto' },
-
             React.createElement(
                 'div',
                 { className: 'grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10' },
 
-                // Ľavá strana – Tímy
+                // Ľavá strana – Tímy s ikonou ceruzky
                 React.createElement(
                     'div',
                     { className: 'order-2 lg:order-1' },
@@ -244,11 +243,45 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             },
                                             React.createElement(
                                                 'div',
-                                                null,
-                                                React.createElement('span', { className: 'font-medium' }, `[${team.category}] ${team.teamName}`),
-                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} ľudí)`)
+                                                { className: 'flex items-center gap-3' },
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'font-medium' },
+                                                    `[${team.category}] ${team.teamName}`
+                                                ),
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'text-gray-500 text-sm' },
+                                                    `(${team.totalPeople} ľudí)`
+                                                )
                                             ),
-                                            React.createElement('span', { className: 'font-medium text-green-700' }, team.accommodation)
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-4' },
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'font-medium text-green-700' },
+                                                    team.accommodation
+                                                ),
+                                                // Ikona ceruzky za počet ľudí
+                                                React.createElement(
+                                                    'button',
+                                                    {
+                                                        onClick: () => openAssignAccommodationModal(team),
+                                                        className: 'text-gray-500 hover:text-blue-600 transition-colors'
+                                                    },
+                                                    React.createElement(
+                                                        'svg',
+                                                        { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                                        React.createElement('path', {
+                                                            strokeLinecap: 'round',
+                                                            strokeLinejoin: 'round',
+                                                            strokeWidth: '2',
+                                                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                        })
+                                                    )
+                                                )
+                                            )
                                         )
                                     )
                                 )
@@ -256,7 +289,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
 
-                // Pravá strana – Ubytovacie miesta
+                // Pravá strana – Ubytovacie miesta (bez zmeny)
                 React.createElement(
                     'div',
                     { className: 'order-1 lg:order-2 space-y-6' },
@@ -279,7 +312,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     'div',
                                     {
                                         className: 'text-white px-6 py-4 relative flex items-center justify-between',
-                                        style: { 
+                                        style: {
                                             backgroundColor: place.headerColor,
                                             color: place.headerTextColor || '#ffffff'
                                         }
@@ -288,21 +321,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'button',
                                         {
-                                            onClick: () => openEditModal(place),
+                                            onClick: () => openEditPlaceModal(place),
                                             className: 'flex items-center gap-1.5 px-4 py-1.5 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-sm font-medium rounded-full border border-gray-300 shadow-sm'
                                         },
                                         React.createElement(
                                             'svg',
-                                            { 
-                                                className: 'w-4 h-4', 
-                                                fill: 'none', 
-                                                stroke: 'currentColor', 
-                                                viewBox: '0 0 24 24',
-                                                strokeWidth: '2'
-                                            },
+                                            { className: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                             React.createElement('path', {
                                                 strokeLinecap: 'round',
                                                 strokeLinejoin: 'round',
+                                                strokeWidth: '2',
                                                 d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
                                             })
                                         ),
@@ -335,24 +363,91 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     )
                                 )
                             )
-                      )
+                          )
                 )
             )
         ),
 
-        // Modálne okno – názov miesta hneď za hlavným nadpisom
+        // Modálne okno pre priradenie ubytovania tímu
         isModalOpen &&
         React.createElement(
             'div',
             {
-                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]',
+                className: 'fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[10001]',
                 onClick: (e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }
             },
             React.createElement(
                 'div',
+                { className: 'bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-2xl font-bold mb-2' },
+                    'Priradiť ubytovanie'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-600 mb-6' },
+                    selectedTeamForEdit?.teamName || 'Tím'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-6' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Vyberte ubytovacie miesto'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedAccommodationForTeam,
+                            onChange: (e) => setSelectedAccommodationForTeam(e.target.value),
+                            className: 'w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                        },
+                        React.createElement('option', { value: '' }, '— Vyberte ubytovanie —'),
+                        accommodations.map(place =>
+                            React.createElement(
+                                'option',
+                                { key: place.id, value: place.name },
+                                `${place.name} (${place.capacity || '?'} miest)`
+                            )
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-4 mt-8' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setIsModalOpen(false),
+                            className: 'px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: saveTeamAccommodation,
+                            className: 'px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition'
+                        },
+                        'Priradiť'
+                    )
+                )
+            )
+        ),
+
+        // Modálne okno pre úpravu farieb ubytovania (bez zmeny)
+        isPlaceModalOpen &&
+        React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]',
+                onClick: (e) => { if (e.target === e.currentTarget) setIsPlaceModalOpen(false); }
+            },
+            React.createElement(
+                'div',
                 { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
-                
-                // Hlavný nadpis + názov miesta v jednej línii
                 React.createElement(
                     'div',
                     { className: 'mb-6' },
