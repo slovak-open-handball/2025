@@ -2995,7 +2995,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
-                        accommodationName && React.createElement('p', { className: 'text-md text-gray-700 ml-4' }, `Ubytovňa: ${accommodationName}`),
+                        accommodationName && accommodationType !== 'bez ubytovania' && React.createElement('p', { className: 'text-md text-gray-700 ml-4' }, `Ubytovňa: ${accommodationName}`),
 
                         // ─── FARBY DRESOV ────────────────────────────────────────────────────────
                         React.createElement(
