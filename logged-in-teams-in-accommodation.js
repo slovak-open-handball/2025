@@ -893,19 +893,32 @@ const AddGroupsApp = ({ userProfileData }) => {
                             : React.createElement(
                                 'div',
                                 { 
-                                    className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 flex-grow overflow-y-auto pr-2'
+                                    className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-min' // ZMENENÉ: auto-rows-min namiesto flex-grow
                                 },
-                                accommodationsWithTeams.map((place) =>
-                                    React.createElement(
+                                accommodationsWithTeams.map((place) => {
+                                    // Vypočítame výšku na základe počtu tímov
+                                    const baseHeight = 200; // Základná výška pre hlavičku a informácie
+                                    const teamItemHeight = 60; // Výška jedného tímu
+                                    const minHeight = 400; // Minimálna výška karty
+                                    
+                                    // Vypočítame počet tímov, ktoré sa majú zobraziť
+                                    const teamsToShow = Math.min(place.assignedTeams.length, 10); // Max 10 tímov na zobrazenie
+                                    const calculatedHeight = Math.max(minHeight, baseHeight + (teamsToShow * teamItemHeight));
+                                    
+                                    return React.createElement(
                                         'div',
                                         { 
                                             key: place.id, 
-                                            className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col h-full'
+                                            className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col',
+                                            style: { 
+                                                height: `${calculatedHeight}px`,
+                                                minHeight: `${minHeight}px`
+                                            }
                                         },
                                         React.createElement(
                                             'div',
                                             {
-                                                className: 'text-white px-5 py-3 relative flex items-center justify-between',
+                                                className: 'text-white px-5 py-3 relative flex items-center justify-between flex-shrink-0',
                                                 style: { 
                                                     backgroundColor: place.headerColor,
                                                     color: place.headerTextColor || '#ffffff'
@@ -915,10 +928,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 'div',
                                                 { className: 'flex-grow min-w-0' },
                                                 React.createElement('h3', { 
-                                                    className: 'text-lg font-bold truncate',
+                                                    className: 'text-lg font-bold truncate whitespace-nowrap', // ZMENENÉ: whitespace-nowrap
                                                     title: place.name
                                                 }, place.name || 'Ubytovacie miesto'),
-                                                React.createElement('div', { className: 'text-xs opacity-90 mt-1' },
+                                                React.createElement('div', { className: 'text-xs opacity-90 mt-1 truncate whitespace-nowrap' }, // ZMENENÉ: whitespace-nowrap
                                                     `${place.assignedTeams.length} tímov • ${place.usedCapacity} osôb`
                                                 )
                                             ),
@@ -926,7 +939,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 'button',
                                                 {
                                                     onClick: () => openEditModal(place),
-                                                    className: 'flex-shrink-0 ml-3 flex items-center gap-1 px-3 py-1 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-xs font-medium rounded-full border border-gray-300 shadow-sm',
+                                                    className: 'flex-shrink-0 ml-3 flex items-center gap-1 px-3 py-1 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-xs font-medium rounded-full border border-gray-300 shadow-sm whitespace-nowrap', // ZMENENÉ: whitespace-nowrap
                                                     title: 'Upraviť farby'
                                                 },
                                                 React.createElement(
@@ -949,24 +962,24 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         ),
                                         React.createElement(
                                             'div',
-                                            { className: 'p-5 flex-grow' },
+                                            { className: 'p-5 flex-grow overflow-hidden flex flex-col' },
                                             React.createElement(
                                                 'div',
-                                                { className: 'space-y-4 h-full flex flex-col' },
+                                                { className: 'space-y-4 flex-grow flex flex-col' },
                                                 // Informácie o ubytovni
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'space-y-2' },
+                                                    { className: 'space-y-2 flex-shrink-0' },
                                                     React.createElement(
                                                         'p',
-                                                        { className: 'text-gray-700 text-sm' },
+                                                        { className: 'text-gray-700 text-sm truncate whitespace-nowrap' }, // ZMENENÉ: whitespace-nowrap
                                                         React.createElement('span', { className: 'font-semibold' }, 'Typ: '),
                                                         place.accommodationType || 'neurčený'
                                                     ),
                                                     place.capacity !== null &&
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'text-gray-700 text-sm' },
+                                                            { className: 'text-gray-700 text-sm truncate whitespace-nowrap' }, // ZMENENÉ: whitespace-nowrap
                                                             React.createElement('span', { className: 'font-semibold' }, 'Kapacita: '),
                                                             `${place.usedCapacity} / ${place.capacity} osôb`
                                                         ),
@@ -974,7 +987,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'p',
                                                             { 
-                                                                className: `text-sm ${place.remainingCapacity < 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`,
+                                                                className: `text-sm truncate whitespace-nowrap ${place.remainingCapacity < 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`, // ZMENENÉ: whitespace-nowrap
                                                                 title: place.remainingCapacity < 0 ? 
                                                                     `Kapacita prekročená o ${Math.abs(place.remainingCapacity)} osôb` : 
                                                                     `Zostáva ${place.remainingCapacity} voľných miest`
@@ -988,31 +1001,31 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 place.assignedTeams.length > 0 &&
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'mt-2 flex-grow overflow-hidden' },
+                                                    { className: 'mt-2 flex-grow overflow-hidden flex flex-col' },
                                                     React.createElement(
                                                         'h4',
-                                                        { className: 'font-semibold text-gray-800 mb-2 text-sm' },
+                                                        { className: 'font-semibold text-gray-800 mb-2 text-sm flex-shrink-0 truncate whitespace-nowrap' }, // ZMENENÉ: whitespace-nowrap
                                                         `Priradené tímy ${selectedCategory || selectedAccommodationFilter ? '(filtrované)' : ''} (${place.assignedTeams.length})`
                                                     ),
                                                     React.createElement(
                                                         'ul',
-                                                        { className: 'space-y-1.5 max-h-40 overflow-y-auto pr-1' },
+                                                        { className: 'space-y-1.5 flex-grow overflow-y-auto pr-1' },
                                                         place.assignedTeams.map((team, index) =>
                                                             React.createElement(
                                                                 'li',
                                                                 {
                                                                     key: index,
-                                                                    className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group'
+                                                                    className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group flex-shrink-0'
                                                                 },
                                                                 React.createElement(
                                                                     'div',
                                                                     { className: 'min-w-0 flex-grow' },
                                                                     React.createElement('span', { 
-                                                                        className: 'font-medium text-sm truncate block',
+                                                                        className: 'font-medium text-sm truncate whitespace-nowrap block', // ZMENENÉ: whitespace-nowrap
                                                                         title: `${team.category}: ${team.teamName}`
                                                                     }, `${team.category}: ${team.teamName}`),
                                                                     React.createElement('span', { 
-                                                                        className: 'text-gray-500 text-xs ml-2 whitespace-nowrap'
+                                                                        className: 'text-gray-500 text-xs ml-2 whitespace-nowrap flex-shrink-0' // ZMENENÉ: whitespace-nowrap
                                                                     }, `(${team.totalPeople} osôb)`)
                                                                 ),
                                                                 React.createElement(
@@ -1071,13 +1084,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 )
                                             )
                                         )
-                                    )
-                                )
+                                    );
+                                })
                             )
                     )
-                )
-            )
-        ),
+                ),
 
         // Modálne okno – zmena farieb
         isColorModalOpen &&
