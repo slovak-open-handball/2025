@@ -4737,7 +4737,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                     // Tričká: (textový stĺpec)
                                     React.createElement('td', {
                                         className: 'py-3 px-2 text-right',
-                                        colSpan: 3
+                                        colSpan: 5
                                     }, 'Tričká:'),
                                 
                                     // Veľkosti tričiek
