@@ -340,7 +340,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
         ),
 
-        // Modálne okno
+        // Modálne okno – názov miesta hneď za hlavným nadpisom
         isModalOpen &&
         React.createElement(
             'div',
@@ -351,8 +351,22 @@ const AddGroupsApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
-                React.createElement('h3', { className: 'text-xl font-bold mb-6' }, 'Upraviť farbu hlavičky'),
-                React.createElement('p', { className: 'text-gray-600 mb-6' }, selectedPlaceForEdit?.name || 'Ubytovacie miesto'),
+                
+                // Hlavný nadpis + názov miesta v jednej línii
+                React.createElement(
+                    'div',
+                    { className: 'mb-6' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold text-gray-900 inline' },
+                        'Upraviť farbu hlavičky'
+                    ),
+                    React.createElement(
+                        'span',
+                        { className: 'text-lg font-medium text-gray-600 ml-2' },
+                        '– ' + (selectedPlaceForEdit?.name || 'Ubytovacie miesto')
+                    )
+                ),
         
                 // Farba pozadia
                 React.createElement('div', { className: 'mb-10' },
@@ -360,14 +374,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'flex flex-col items-center gap-4' },
-                        // Color picker – väčší pre lepšiu použiteľnosť
                         React.createElement('input', {
                             type: 'color',
                             value: newHeaderColor,
                             onChange: (e) => setNewHeaderColor(e.target.value),
                             className: 'w-32 h-32 rounded-lg cursor-pointer border-2 border-gray-300 shadow-md'
                         }),
-                        // Zobrazenie farby vo všetkých formátoch
                         React.createElement(
                             'div',
                             { className: 'w-full text-center text-sm text-gray-600 space-y-1 font-mono' },
