@@ -35,9 +35,16 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
     const [teamsWithAccom, setTeamsWithAccom] = useState([]);
     const [selectedPlaceForEdit, setSelectedPlaceForEdit] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isColorModalOpen, setIsColorModalOpen] = useState(false);
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
     const [newHeaderTextColor, setNewHeaderTextColor] = useState('#ffffff');
+    
+    // Nové stavy pre priradenie ubytovne
+    const [selectedTeam, setSelectedTeam] = useState(null);
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [availableAccommodations, setAvailableAccommodations] = useState([]);
+    const [selectedAccommodationId, setSelectedAccommodationId] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     // Real-time ubytovanie + headerColor
     useEffect(() => {
@@ -54,7 +61,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         name: data.name || '(bez názvu)',
                         accommodationType: data.accommodationType || null,
                         capacity: data.capacity ?? null,
-                        headerColor: data.headerColor || '#1e40af',  // fallback tmavomodrá
+                        headerColor: data.headerColor || '#1e40af',
                         headerTextColor: data.headerTextColor || '#ffffff',
                     });
                 });
@@ -102,6 +109,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     totalPeople,
                                     fullTeamData: team,
                                     userId: doc.id,
+                                    teamId: team.teamId || team.teamName.toLowerCase().replace(/\s+/g, '-'),
+                                    assignedPlace: team.accommodation?.name || null, // Nové pole pre priradenú ubytovňu
+                                    teamPath: {
+                                        userId: doc.id,
+                                        category: category,
+                                        teamIndex: teamArray.indexOf(team)
+                                    }
                                 });
                             });
                         });
@@ -112,18 +126,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 console.log(`TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
                 console.log(`Celkom tímov s nepriradeným ubytovaním: ${withAccom.length}`);
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
-                if (withAccom.length === 0) {
-                    console.log("Momentálne žiadny tím nemá pridelené ubytovanie");
-                } else {
-                    console.log("Zoznam tímov s ubytovaním:");
-                    withAccom.forEach((t, i) => {
-                        console.log(` [${t.category}] ${t.teamName.padEnd(38)} → ${t.accommodation.padEnd(22)} (ľudia: ${t.totalPeople})`);
-                        console.log("   └─ Plný objekt z DB:", t.fullTeamData);
-                        console.log("");
-                    });
-                }
-                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
-
                 setTeamsWithAccom(withAccom);
             },
             (err) => console.error("[USERS]", err)
@@ -131,12 +133,12 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // Otvorenie modálu
+    // Otvorenie modálu pre farby
     const openEditModal = (place) => {
         setSelectedPlaceForEdit(place);
         setNewHeaderColor(place.headerColor || '#1e40af');
         setNewHeaderTextColor(place.headerTextColor || '#ffffff');
-        setIsModalOpen(true);
+        setIsColorModalOpen(true);
     };
 
     // Uloženie farby
@@ -164,11 +166,107 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa uložiť farbu', 'error');
         }
 
-        setIsModalOpen(false);
+        setIsColorModalOpen(false);
         setSelectedPlaceForEdit(null);
     };
 
-    // Pomocné funkcie na konverziu farieb (pridaj pred return komponentu)
+    // Otvorenie modálu pre priradenie ubytovne
+    const openAssignModal = async (team) => {
+        setSelectedTeam(team);
+        setIsLoading(true);
+        
+        // Filtrovanie ubytovní podľa typu tímu
+        const filteredAccommodations = accommodations.filter(place => 
+            place.accommodationType && 
+            team.accommodation && 
+            place.accommodationType.toLowerCase().includes(team.accommodation.toLowerCase())
+        );
+        
+        setAvailableAccommodations(filteredAccommodations);
+        
+        // Ak tímy už má priradenú ubytovňu, nastavíme ju ako predvolenú
+        if (team.assignedPlace) {
+            const assignedPlace = filteredAccommodations.find(p => p.name === team.assignedPlace);
+            if (assignedPlace) {
+                setSelectedAccommodationId(assignedPlace.id);
+            }
+        } else {
+            setSelectedAccommodationId('');
+        }
+        
+        setIsLoading(false);
+        setIsAssignModalOpen(true);
+    };
+
+    // Uloženie priradenia ubytovne
+    const saveAccommodationAssignment = async () => {
+        if (!selectedTeam || !selectedAccommodationId || !window.db) return;
+
+        const selectedPlace = availableAccommodations.find(p => p.id === selectedAccommodationId);
+        if (!selectedPlace) return;
+
+        setIsLoading(true);
+
+        try {
+            // 1. Načítanie aktuálnych dát používateľa
+            const userRef = doc(window.db, 'users', selectedTeam.userId);
+            const userDoc = await getDoc(userRef);
+            
+            if (!userDoc.exists()) {
+                throw new Error('Používateľský dokument neexistuje');
+            }
+
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            const teamArray = teams[selectedTeam.category] || [];
+
+            // 2. Aktualizácia konkrétneho tímu
+            const updatedTeamArray = teamArray.map(teamItem => {
+                if (teamItem.teamName === selectedTeam.teamName) {
+                    return {
+                        ...teamItem,
+                        accommodation: {
+                            ...teamItem.accommodation,
+                            name: selectedPlace.name
+                        }
+                    };
+                }
+                return teamItem;
+            });
+
+            // 3. Uloženie späť do Firebase
+            await updateDoc(userRef, {
+                [`teams.${selectedTeam.category}`]: updatedTeamArray
+            });
+
+            // 4. Aktualizácia lokálneho stavu
+            setTeamsWithAccom(prev =>
+                prev.map(t =>
+                    t.teamName === selectedTeam.teamName && t.category === selectedTeam.category
+                        ? { ...t, assignedPlace: selectedPlace.name }
+                        : t
+                )
+            );
+
+            window.showGlobalNotification(
+                `Tím "${selectedTeam.teamName}" bol priradený do "${selectedPlace.name}"`,
+                'success'
+            );
+
+            // 5. Zavretie modálu a reset stavu
+            setIsAssignModalOpen(false);
+            setSelectedTeam(null);
+            setSelectedAccommodationId('');
+
+        } catch (err) {
+            console.error("Chyba pri ukladaní priradenia:", err);
+            window.showGlobalNotification('Nepodarilo sa priradiť ubytovňu', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Pomocné funkcie na konverziu farieb
     const hexToRgb = (hex) => {
         const r = parseInt(hex.slice(1,3), 16);
         const g = parseInt(hex.slice(3,5), 16);
@@ -232,7 +330,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         ),
                         React.createElement(
                             'div',
-                            { className: 'p-6 flex-grow overflow-y-auto' },
+                            { className: 'p-6 flex-grow overflow-y-auto max-h-[600px]' },
                             teamsWithAccom.length === 0
                                 ? React.createElement('p', { className: 'text-gray-500 text-center py-12' }, 'Zatiaľ žiadny tím nemá pridelené ubytovanie')
                                 : React.createElement(
@@ -243,15 +341,48 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             'li',
                                             {
                                                 key: i,
-                                                className: 'flex justify-between items-center py-3 px-4 bg-gray-50 rounded border-l-4 border-green-500'
+                                                className: 'py-3 px-4 bg-gray-50 rounded border-l-4 border-green-500 flex justify-between items-center'
                                             },
                                             React.createElement(
                                                 'div',
                                                 null,
                                                 React.createElement('span', { className: 'font-medium' }, `${team.category}: ${team.teamName}`),
-                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople})`)
+                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} osôb)`),
+                                                team.assignedPlace && React.createElement(
+                                                    'div',
+                                                    { className: 'text-sm text-blue-600 mt-1' },
+                                                    React.createElement('span', { className: 'font-medium' }, 'Priradené: '),
+                                                    team.assignedPlace
+                                                )
                                             ),
-                                            React.createElement('span', { className: 'font-medium text-green-700' }, team.accommodation)
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-3' },
+                                                React.createElement('span', { className: 'font-medium text-green-700' }, team.accommodation),
+                                                React.createElement(
+                                                    'button',
+                                                    {
+                                                        onClick: () => openAssignModal(team),
+                                                        className: 'p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors',
+                                                        title: 'Priradiť ubytovňu'
+                                                    },
+                                                    React.createElement(
+                                                        'svg',
+                                                        { 
+                                                            className: 'w-5 h-5', 
+                                                            fill: 'none', 
+                                                            stroke: 'currentColor', 
+                                                            viewBox: '0 0 24 24',
+                                                            strokeWidth: '2'
+                                                        },
+                                                        React.createElement('path', {
+                                                            strokeLinecap: 'round',
+                                                            strokeLinejoin: 'round',
+                                                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                        })
+                                                    )
+                                                )
+                                            )
                                         )
                                     )
                                 )
@@ -343,19 +474,18 @@ const AddGroupsApp = ({ userProfileData }) => {
             )
         ),
 
-        // Modálne okno – názov miesta hneď za hlavným nadpisom
-        isModalOpen &&
+        // Modálne okno – zmena farieb
+        isColorModalOpen &&
         React.createElement(
             'div',
             {
                 className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]',
-                onClick: (e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }
+                onClick: (e) => { if (e.target === e.currentTarget) setIsColorModalOpen(false); }
             },
             React.createElement(
                 'div',
                 { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
                 
-                // Hlavný nadpis + názov miesta v jednej línii
                 React.createElement(
                     'div',
                     { className: 'mb-6' },
@@ -371,7 +501,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
         
-                // Farba pozadia
                 React.createElement('div', { className: 'mb-10' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba pozadia hlavičky'),
                     React.createElement(
@@ -393,7 +522,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
         
-                // Farba textu – len dva tlačidlá
                 React.createElement('div', { className: 'mb-10' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba textu názvu'),
                     React.createElement(
@@ -430,14 +558,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
         
-                // Tlačidlá
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-4 mt-8' },
                     React.createElement(
                         'button',
                         {
-                            onClick: () => setIsModalOpen(false),
+                            onClick: () => setIsColorModalOpen(false),
                             className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition'
                         },
                         'Zrušiť'
@@ -449,6 +576,109 @@ const AddGroupsApp = ({ userProfileData }) => {
                             className: 'px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition'
                         },
                         'Uložiť'
+                    )
+                )
+            )
+        ),
+
+        // Modálne okno – priradenie ubytovne
+        isAssignModalOpen &&
+        React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]',
+                onClick: (e) => { if (e.target === e.currentTarget) setIsAssignModalOpen(false); }
+            },
+            React.createElement(
+                'div',
+                { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
+                
+                React.createElement(
+                    'div',
+                    { className: 'mb-6' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold text-gray-900 inline' },
+                        'Priradiť ubytovňu'
+                    ),
+                    React.createElement(
+                        'span',
+                        { className: 'text-lg font-medium text-gray-600 ml-2' },
+                        `– ${selectedTeam?.teamName}`
+                    )
+                ),
+
+                React.createElement('div', { className: 'mb-6' },
+                    React.createElement('p', { className: 'text-sm text-gray-600 mb-3' },
+                        `Typ ubytovania tímu: ${selectedTeam?.accommodation}`
+                    )
+                ),
+
+                React.createElement('div', { className: 'mb-8' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Vyberte ubytovňu'),
+                    isLoading
+                        ? React.createElement(
+                            'div',
+                            { className: 'flex justify-center py-8' },
+                            React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500' })
+                        )
+                        : availableAccommodations.length === 0
+                            ? React.createElement(
+                                'div',
+                                { className: 'bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center' },
+                                React.createElement('p', { className: 'text-yellow-700' },
+                                    `Žiadne dostupné ubytovne pre typ "${selectedTeam?.accommodation}"`
+                                )
+                            )
+                            : React.createElement(
+                                'select',
+                                {
+                                    value: selectedAccommodationId,
+                                    onChange: (e) => setSelectedAccommodationId(e.target.value),
+                                    className: 'w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                                },
+                                React.createElement('option', { value: '' }, '-- Vyberte ubytovňu --'),
+                                availableAccommodations.map(place =>
+                                    React.createElement(
+                                        'option',
+                                        { key: place.id, value: place.id },
+                                        `${place.name} (${place.capacity ? place.capacity + ' miest' : 'neurčená kapacita'})`
+                                    )
+                                )
+                            )
+                ),
+
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-4 mt-8' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setIsAssignModalOpen(false),
+                            disabled: isLoading,
+                            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition disabled:opacity-50'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: saveAccommodationAssignment,
+                            disabled: !selectedAccommodationId || isLoading,
+                            className: `px-6 py-2.5 text-white rounded-lg transition ${
+                                selectedAccommodationId && !isLoading
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-green-400 cursor-not-allowed'
+                            }`
+                        },
+                        isLoading
+                            ? React.createElement(
+                                'span',
+                                { className: 'flex items-center gap-2' },
+                                React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
+                                'Ukladám...'
+                            )
+                            : 'Priradiť'
                     )
                 )
             )
