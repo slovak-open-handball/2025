@@ -672,7 +672,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
 
-                // Pravá strana – Ubytovacie miesta s tímami (vždy zobrazené)
+                // Pravá strana – Ubytovacie miesta s tímami (vždy zobrazené) - UPRAVENÉ NA MRIEŽKU
                 React.createElement(
                     'div',
                     { 
@@ -702,15 +702,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                               )
                             : React.createElement(
                                 'div',
-                                { className: 'space-y-6 flex-grow overflow-y-auto pr-2' },
+                                { 
+                                    className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 flex-grow overflow-y-auto pr-2'
+                                },
                                 accommodationsWithTeams.map((place) =>
                                     React.createElement(
                                         'div',
-                                        { key: place.id, className: 'bg-white rounded-xl shadow-lg overflow-hidden relative' },
+                                        { 
+                                            key: place.id, 
+                                            className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col h-full'
+                                        },
                                         React.createElement(
                                             'div',
                                             {
-                                                className: 'text-white px-6 py-4 relative flex items-center justify-between',
+                                                className: 'text-white px-5 py-3 relative flex items-center justify-between',
                                                 style: { 
                                                     backgroundColor: place.headerColor,
                                                     color: place.headerTextColor || '#ffffff'
@@ -718,10 +723,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             },
                                             React.createElement(
                                                 'div',
-                                                null,
-                                                React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto'),
-                                                // POZOR: Tu sa zobrazuje skutočný počet tímov podľa filtrov
-                                                React.createElement('div', { className: 'text-sm opacity-90 mt-1' },
+                                                { className: 'flex-grow min-w-0' },
+                                                React.createElement('h3', { 
+                                                    className: 'text-lg font-bold truncate',
+                                                    title: place.name
+                                                }, place.name || 'Ubytovacie miesto'),
+                                                React.createElement('div', { className: 'text-xs opacity-90 mt-1' },
                                                     `${place.assignedTeams.length} tímov • ${place.usedCapacity} osôb`
                                                 )
                                             ),
@@ -729,12 +736,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 'button',
                                                 {
                                                     onClick: () => openEditModal(place),
-                                                    className: 'flex items-center gap-1.5 px-4 py-1.5 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-sm font-medium rounded-full border border-gray-300 shadow-sm'
+                                                    className: 'flex-shrink-0 ml-3 flex items-center gap-1 px-3 py-1 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-xs font-medium rounded-full border border-gray-300 shadow-sm',
+                                                    title: 'Upraviť farby'
                                                 },
                                                 React.createElement(
                                                     'svg',
                                                     { 
-                                                        className: 'w-4 h-4', 
+                                                        className: 'w-3 h-3', 
                                                         fill: 'none', 
                                                         stroke: 'currentColor', 
                                                         viewBox: '0 0 24 24',
@@ -751,77 +759,86 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         ),
                                         React.createElement(
                                             'div',
-                                            { className: 'p-6' },
+                                            { className: 'p-5 flex-grow' },
                                             React.createElement(
                                                 'div',
-                                                { className: 'space-y-6' },
+                                                { className: 'space-y-4 h-full flex flex-col' },
                                                 // Informácie o ubytovni
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'flex flex-wrap items-baseline gap-x-6 gap-y-1' },
+                                                    { className: 'space-y-2' },
                                                     React.createElement(
                                                         'p',
-                                                        { className: 'text-gray-700' },
+                                                        { className: 'text-gray-700 text-sm' },
                                                         React.createElement('span', { className: 'font-semibold' }, 'Typ: '),
                                                         place.accommodationType || 'neurčený'
                                                     ),
                                                     place.capacity !== null &&
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'text-gray-700' },
-                                                            // DÔLEŽITÉ: Vždy ukazujeme skutočnú kapacitu, nie filtrovanú
+                                                            { className: 'text-gray-700 text-sm' },
                                                             React.createElement('span', { className: 'font-semibold' }, 'Kapacita: '),
-                                                            `${place.usedCapacity} / ${place.capacity} osôb (skutočná obsadenosť)`
+                                                            `${place.usedCapacity} / ${place.capacity} osôb`
                                                         ),
                                                     place.remainingCapacity !== null &&
                                                         React.createElement(
                                                             'p',
-                                                            { className: place.remainingCapacity < 0 ? 'text-red-600 font-semibold' : 'text-gray-700' },
+                                                            { 
+                                                                className: `text-sm ${place.remainingCapacity < 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`,
+                                                                title: place.remainingCapacity < 0 ? 
+                                                                    `Kapacita prekročená o ${Math.abs(place.remainingCapacity)} osôb` : 
+                                                                    `Zostáva ${place.remainingCapacity} voľných miest`
+                                                            },
                                                             React.createElement('span', { className: 'font-semibold' }, 'Zostáva: '),
                                                             `${place.remainingCapacity} osôb`
                                                         )
                                                 ),
                                                 
-                                                // Zoznam priradených tímov (podľa filtrov)
+                                                // Zoznam priradených tímov
                                                 place.assignedTeams.length > 0 &&
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'mt-4' },
+                                                    { className: 'mt-2 flex-grow overflow-hidden' },
                                                     React.createElement(
                                                         'h4',
-                                                        { className: 'font-semibold text-gray-800 mb-3' },
+                                                        { className: 'font-semibold text-gray-800 mb-2 text-sm' },
                                                         `Priradené tímy ${selectedCategory || selectedAccommodationFilter ? '(filtrované)' : ''} (${place.assignedTeams.length})`
                                                     ),
                                                     React.createElement(
                                                         'ul',
-                                                        { className: 'space-y-2' },
+                                                        { className: 'space-y-1.5 max-h-40 overflow-y-auto pr-1' },
                                                         place.assignedTeams.map((team, index) =>
                                                             React.createElement(
                                                                 'li',
                                                                 {
                                                                     key: index,
-                                                                    className: 'py-2 px-3 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100'
+                                                                    className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group'
                                                                 },
                                                                 React.createElement(
                                                                     'div',
-                                                                    null,
-                                                                    React.createElement('span', { className: 'font-medium' }, `${team.category}: ${team.teamName}`),
-                                                                    React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} osôb)`)
+                                                                    { className: 'min-w-0 flex-grow' },
+                                                                    React.createElement('span', { 
+                                                                        className: 'font-medium text-sm truncate block',
+                                                                        title: `${team.category}: ${team.teamName}`
+                                                                    }, `${team.category}: ${team.teamName}`),
+                                                                    React.createElement('span', { 
+                                                                        className: 'text-gray-500 text-xs ml-2 whitespace-nowrap'
+                                                                    }, `(${team.totalPeople} osôb)`)
                                                                 ),
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'flex items-center gap-2' },
+                                                                    { className: 'flex items-center gap-1 flex-shrink-0' },
                                                                     React.createElement(
                                                                         'button',
                                                                         {
                                                                             onClick: () => openAssignModal(team),
-                                                                            className: 'p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors',
+                                                                            className: 'p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
                                                                             title: 'Zmeniť ubytovňu'
                                                                         },
                                                                         React.createElement(
                                                                             'svg',
                                                                             { 
-                                                                                className: 'w-4 h-4', 
+                                                                                className: 'w-3.5 h-3.5', 
                                                                                 fill: 'none', 
                                                                                 stroke: 'currentColor', 
                                                                                 viewBox: '0 0 24 24',
@@ -838,13 +855,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                         'button',
                                                                         {
                                                                             onClick: () => removeTeamAssignment(team),
-                                                                            className: 'p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors',
+                                                                            className: 'p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
                                                                             title: 'Odstrániť priradenie'
                                                                         },
                                                                         React.createElement(
                                                                             'svg',
                                                                             { 
-                                                                                className: 'w-4 h-4', 
+                                                                                className: 'w-3.5 h-3.5', 
                                                                                 fill: 'none', 
                                                                                 stroke: 'currentColor', 
                                                                                 viewBox: '0 0 24 24',
