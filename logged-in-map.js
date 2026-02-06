@@ -1558,18 +1558,27 @@ const AddGroupsApp = ({ userProfileData }) => {
                   onClick: () => setShowModal(false),
                   className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
                 }, 'Zrušiť'),
-                React.createElement('button', {
+              React.createElement('button', {
                   onClick: handleAddPlace,
-                  disabled:
+                  disabled: 
                     !newPlaceName.trim() ||
                     !newPlaceType ||
                     !!nameTypeError ||
                     !!capacityError ||
-                    (newPlaceType === 'ubytovanie' && !selectedAccommodationType),
+                    (newPlaceType === 'ubytovanie' && !selectedAccommodationType) ||
+                    ((newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && 
+                     (!newCapacity.trim() || parseInt(newCapacity, 10) <= 0 || isNaN(parseInt(newCapacity, 10)))),
+              
                   className: `
                     px-6 py-2.5 rounded-lg font-medium transition duration-150 border-2
-                    ${(!newPlaceName.trim() || !newPlaceType || !!nameTypeError || !!capacityError || (newPlaceType === 'ubytovanie' && !selectedAccommodationType))
-                      ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed'
+                    ${(!newPlaceName.trim() || 
+                       !newPlaceType || 
+                       !!nameTypeError || 
+                       !!capacityError || 
+                       (newPlaceType === 'ubytovanie' && !selectedAccommodationType) ||
+                       ((newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && 
+                        (!newCapacity.trim() || parseInt(newCapacity, 10) <= 0 || isNaN(parseInt(newCapacity, 10)))))
+                      ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-60'
                       : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 active:bg-blue-800 active:border-blue-800'
                     }`
                 }, 'Pridať miesto')
