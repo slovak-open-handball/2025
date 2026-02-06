@@ -109,7 +109,7 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
                 console.log(`TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
-                console.log(`Celkom tímov s prideleným ubytovaním: ${withAccom.length}`);
+                console.log(`Celkom tímov s nepriradeným ubytovaním: ${withAccom.length}`);
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
                 if (withAccom.length === 0) {
                     console.log("Momentálne žiadny tím nemá pridelené ubytovanie");
@@ -225,7 +225,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { className: 'bg-green-700 text-white px-6 py-4' },
-                            React.createElement('h2', { className: 'text-xl font-bold' }, `Tímy s prideleným ubytovaním (${teamsWithAccom.length})`)
+                            React.createElement('h2', { className: 'text-xl font-bold' }, `Tímy s nepriradeným ubytovaním (${teamsWithAccom.length})`)
                         ),
                         React.createElement(
                             'div',
