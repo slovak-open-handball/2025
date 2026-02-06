@@ -308,21 +308,36 @@ const AddGroupsApp = ({ userProfileData }) => {
             return true;
         })
         .map(place => {
-            const teamsInPlace = sortTeams(
-                filteredAssignedTeams.filter(team => team.assignedPlace === place.name)
+            // VŠETKY tímy priradené k tejto ubytovni (BEZ FILTROV)
+            const allTeamsInPlace = sortTeams(
+                assignedTeams.filter(team => team.assignedPlace === place.name)
+            );
+            
+            // FILTROVANÉ tímy priradené k tejto ubytovni (PODĽA AKTIVNÝCH FILTROV)
+            const filteredTeamsInPlace = sortTeams(
+                assignedTeams.filter(team => {
+                    if (team.assignedPlace !== place.name) return false;
+                    
+                    // Aplikujeme filtre
+                    if (selectedCategory && team.category !== selectedCategory) return false;
+                    
+                    // Filter podľa ubytovne sa už aplikuje vyššie (place filter)
+                    return true;
+                })
             );
             
             const actualCapacity = getActualCapacity(place.id);
             
             return {
                 ...place,
-                assignedTeams: teamsInPlace,
+                allAssignedTeams: allTeamsInPlace,          // Všetky tímy (pre hlavičku)
+                filteredAssignedTeams: filteredTeamsInPlace, // Filtrované tímy (pre zoznam)
                 usedCapacity: actualCapacity.used,
                 remainingCapacity: actualCapacity.remaining
             };
         })
         .filter(place => {
-            if (selectedCategory && place.assignedTeams.length === 0) {
+            if (selectedCategory && place.filteredAssignedTeams.length === 0) {
                 return false;
             }
             return true;
@@ -914,9 +929,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     const baseHeight = 200; // Základná výška pre hlavičku a informácie
                                     const teamItemHeight = 60; // Výška jedného tímu
                                     const minHeight = 400; // Minimálna výška karty
-                                    
-                                    // Vypočítame počet tímov, ktoré sa majú zobraziť
-                                    const teamsToShow = place.assignedTeams.length;
+
+                                    // Vypočítame počet filtrovaných tímov, ktoré sa majú zobraziť
+                                    const teamsToShow = place.filteredAssignedTeams.length;
                                     const calculatedHeight = Math.max(minHeight, baseHeight + (teamsToShow * teamItemHeight));
                                     
                                     return React.createElement(
@@ -945,7 +960,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 React.createElement('div', { 
                                                     className: 'text-xs opacity-90 mt-1 whitespace-nowrap overflow-visible',
                                                     style: { textOverflow: 'clip' }
-                                                }, `${place.assignedTeams.length} tímov • ${place.usedCapacity} osôb`)
+                                                }, `${place.allAssignedTeams.length} tímov • ${place.usedCapacity} osôb`)
                                             ),
                                             React.createElement(
                                                 'button',
@@ -1022,7 +1037,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 ),
                                                 
                                                 // Zoznam priradených tímov
-                                                place.assignedTeams.length > 0 &&
+                                                place.filteredAssignedTeams.length > 0 &&
                                                 React.createElement(
                                                     'div',
                                                     { className: 'mt-2 flex-grow overflow-hidden flex flex-col min-w-0' },
@@ -1032,12 +1047,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             className: 'font-semibold text-gray-800 mb-2 text-sm flex-shrink-0 whitespace-nowrap overflow-visible',
                                                             style: { textOverflow: 'clip' }
                                                         },
-                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter ? '(filtrované)' : ''} (${place.assignedTeams.length})`
+                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length})`
                                                     ),
                                                     React.createElement(
                                                         'ul',
                                                         { className: 'space-y-1.5 flex-grow overflow-y-auto pr-1 min-w-0' },
-                                                        place.assignedTeams.map((team, index) =>
+                                                        place.filteredAssignedTeams.map((team, index) =>
                                                             React.createElement(
                                                                 'li',
                                                                 {
