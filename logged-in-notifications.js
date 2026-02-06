@@ -893,7 +893,7 @@ function NotificationsApp() {
                 'div',
                 { className: 'space-y-4' },
                 displayedNotifications.map(notification => {
-                    React.createElement(
+                    return React.createElement(
                       'div',
                       { 
                         key: notification.id, 
