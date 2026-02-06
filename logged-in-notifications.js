@@ -893,69 +893,132 @@ function NotificationsApp() {
                 'div',
                 { className: 'space-y-4' },
                 displayedNotifications.map(notification => {
-                    return React.createElement(
+                    React.createElement(
+                      'div',
+                      { 
+                        key: notification.id, 
+                        className: `p-4 rounded-lg shadow-md flex flex-col justify-between items-start 
+                            ${notification.deletedByMe ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' : 
+                               (notification.read ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-800 border border-green-200')}` 
+                      },
+                      React.createElement(
                         'div',
-                        { 
-                            key: notification.id, 
-                            className: `p-4 rounded-lg shadow-md flex flex-col justify-between items-start 
-                                ${notification.deletedByMe ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' : 
-                                   (notification.read ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-800 border border-green-200')}` 
-                        },
-                        React.createElement(
-                            'div',
-                            { className: 'flex-1 mb-2 w-full' },
-                            // Checkbox pre obnovu ak je notifikácia deletedByMe A sme v režime obnovy
-                            notification.deletedByMe && showRestoreView && React.createElement(
-                                'div',
-                                { className: 'flex items-center mb-2' },
-                                React.createElement('input', {
-                                    type: 'checkbox',
-                                    checked: selectedNotificationsToRestore.has(notification.id),
-                                    onChange: (e) => handleNotificationSelectionChange(notification.id, e.target.checked),
-                                    className: 'form-checkbox h-4 w-4 text-indigo-600 mr-2'
-                                }),
-                                React.createElement('p', { className: 'text-sm text-yellow-800' }, 'Vymazané (zaškrtnite pre obnovenie)')
-                            ),
-                            React.createElement('p', { className: 'text-base text-gray-700 mb-2' },
-                                `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
-                            ),
-                            // OPRAVENÁ KONTROLA: Používa Array.isArray pre bezpečné overenie, či je notification.changes pole
-                            Array.isArray(notification.changes) && notification.changes.length > 0 ? (
-                                React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
-                                    notification.changes.map((change, index) => (
-                                        React.createElement('li', { key: index }, renderStyledText(change))
-                                    ))
-                                )
-                            ) : (
-                                React.createElement('p', null, 'Chybná notifikácia')
-                            ),
-                            notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
-                                `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
-                            )
+                        { className: 'flex-1 mb-2 w-full' },
+                        // Checkbox pre obnovu ak je notifikácia deletedByMe A sme v režime obnovy
+                        notification.deletedByMe && showRestoreView && React.createElement(
+                          'div',
+                          { className: 'flex items-center mb-2' },
+                          React.createElement('input', {
+                            type: 'checkbox',
+                            checked: selectedNotificationsToRestore.has(notification.id),
+                            onChange: (e) => handleNotificationSelectionChange(notification.id, e.target.checked),
+                            className: 'form-checkbox h-4 w-4 text-indigo-600 mr-2'
+                          }),
+                          React.createElement('p', { className: 'text-sm text-yellow-800' }, 'Vymazané (zaškrtnite pre obnovenie)')
                         ),
-                        // Tlačidlá sa zobrazia, len ak notifikácia nie je deletedByMe (mimo režimu obnovy)
-                        !notification.deletedByMe && React.createElement(
-                            'div',
-                            { className: 'flex justify-end space-x-2 mt-2 w-full' },
-                            !notification.read && React.createElement(
-                                'button',
-                                {
-                                    onClick: () => handleMarkAsRead(notification.id),
-                                    className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                    disabled: loading,
-                                },
-                                'Označiť ako prečítané'
-                            ),
-                            React.createElement(
-                                'button',
-                                {
-                                    onClick: () => handleDeleteNotification(notification.id),
-                                    className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                    disabled: loading,
-                                },
-                                'Vymazať'
-                            )
+                        React.createElement('p', { className: 'text-base text-gray-700 mb-2' },
+                          `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
+                        ),
+                        
+                        // OPRAVENÁ KONTROLA: Viac flexibilná kontrola pre rôzne typy notifikácií
+                        (() => {
+                          // 1. Pre notifikácie s polom changes (pôvodný formát)
+                          if (notification.changes && Array.isArray(notification.changes) && notification.changes.length > 0) {
+                            return React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
+                              notification.changes.map((change, index) => (
+                                React.createElement('li', { key: index }, renderStyledText(change))
+                              ))
+                            );
+                          }
+                          
+                          // 2. Pre notifikácie z AccommodationSettings (nový formát)
+                          else if (notification.type && notification.data) {
+                            let notificationContent = null;
+                            
+                            switch (notification.type) {
+                              case 'createAccommodation':
+                                notificationContent = React.createElement('div', { className: 'space-y-2' },
+                                  React.createElement('p', { className: 'font-medium text-blue-700' }, 'Pridané nové ubytovanie:'),
+                                  React.createElement('ul', { className: 'list-disc list-inside ml-4' },
+                                    React.createElement('li', null, `Typ: ${notification.data.type}`),
+                                    React.createElement('li', null, `Kapacita: ${notification.data.capacity}`)
+                                  )
+                                );
+                                break;
+                                
+                              case 'editAccommodation':
+                                notificationContent = React.createElement('div', { className: 'space-y-2' },
+                                  React.createElement('p', { className: 'font-medium text-orange-700' }, 'Upravené ubytovanie:'),
+                                  React.createElement('ul', { className: 'list-disc list-inside ml-4' },
+                                    React.createElement('li', null, `Pôvodný typ: ${notification.data.originalType} → Nový typ: ${notification.data.newType}`),
+                                    React.createElement('li', null, `Pôvodná kapacita: ${notification.data.originalCapacity} → Nová kapacita: ${notification.data.newCapacity}`)
+                                  )
+                                );
+                                break;
+                                
+                              case 'deleteAccommodation':
+                                notificationContent = React.createElement('div', { className: 'space-y-2' },
+                                  React.createElement('p', { className: 'font-medium text-red-700' }, 'Odstránené ubytovanie:'),
+                                  React.createElement('ul', { className: 'list-disc list-inside ml-4' },
+                                    React.createElement('li', null, `Typ: ${notification.data.deletedType}`),
+                                    React.createElement('li', null, `Kapacita: ${notification.data.deletedCapacity}`)
+                                  )
+                                );
+                                break;
+                                
+                              default:
+                                notificationContent = React.createElement('div', { className: 'space-y-2' },
+                                  React.createElement('p', { className: 'font-medium text-gray-700' }, 'Zmena nastavení:'),
+                                  React.createElement('pre', { 
+                                    className: 'bg-gray-100 p-2 rounded text-sm overflow-x-auto',
+                                    style: { whiteSpace: 'pre-wrap', wordWrap: 'break-word' }
+                                  }, JSON.stringify(notification.data, null, 2))
+                                );
+                            }
+                            
+                            return notificationContent;
+                          }
+                          
+                          // 3. Pre ostatné notifikácie alebo žiadne zmeny
+                          else {
+                            // Skontrolujme ďalšie možné formáty
+                            if (notification.message) {
+                              return React.createElement('p', { className: 'text-gray-700' }, notification.message);
+                            } else if (notification.content) {
+                              return React.createElement('p', { className: 'text-gray-700' }, notification.content);
+                            } else {
+                              return React.createElement('p', { className: 'text-gray-500 italic' }, 'Žiadne zmeny');
+                            }
+                          }
+                        })(),
+                        
+                        notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
+                          `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
                         )
+                      ),
+                      // Tlačidlá sa zobrazia, len ak notifikácia nie je deletedByMe (mimo režimu obnovy)
+                      !notification.deletedByMe && React.createElement(
+                        'div',
+                        { className: 'flex justify-end space-x-2 mt-2 w-full' },
+                        !notification.read && React.createElement(
+                          'button',
+                          {
+                            onClick: () => handleMarkAsRead(notification.id),
+                            className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                            disabled: loading,
+                          },
+                          'Označiť ako prečítané'
+                        ),
+                        React.createElement(
+                          'button',
+                          {
+                            onClick: () => handleDeleteNotification(notification.id),
+                            className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                            disabled: loading,
+                          },
+                          'Vymazať'
+                        )
+                      )
                     );
                 })
             )
