@@ -82,14 +82,14 @@ function addHoverListener(element) {
         let visibleText = '';
         let teamName = '';
         let categoryFromText = null;
-
-        // ── React verzia (nová stránka) ───────────────────────────────
+        
+        const li = element.closest('li');
+        if (!li) return;
+        
+        // Spoločné čistenie – robíme ho vždy na konci
         if (element.classList.contains('font-medium')) {
-            const li = element.closest('li');
-            if (!li) return;
-
+            // React verzia – nová stránka
             visibleText = element.textContent.trim();
-            // formát: "Kategória: Názov tímu"
             const colonIndex = visibleText.indexOf(':');
             if (colonIndex > 0 && colonIndex < visibleText.length - 1) {
                 categoryFromText = visibleText.substring(0, colonIndex).trim();
@@ -97,25 +97,21 @@ function addHoverListener(element) {
             } else {
                 teamName = visibleText;
             }
+        } else {
+            // Pôvodná verzia – staré stránky
+            visibleText = element.textContent.trim();
+            teamName = visibleText;
         }
-        // ── Pôvodná verzia (staré stránky) ────────────────────────────
-        else {
-            visibleText = e.target.textContent.trim();
-            teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
-
-            const colonIndex = visibleText.indexOf(':');
-            if (colonIndex !== -1 && colonIndex < visibleText.length - 1) {
-                const potentialCategory = visibleText.substring(0, colonIndex).trim();
-                const potentialTeamName = visibleText.substring(colonIndex + 1).trim();
-                if (potentialTeamName && potentialTeamName.length > 1) {
-                    categoryFromText = potentialCategory;
-                    teamName = potentialTeamName.replace(/^\d+\.\s*/, '').trim();
-                }
-            }
-        }
-
-        if (!teamName) return;
-
+        
+        // Spoločné čistenie názvu tímu (od čísel, bodiek, medzier...)
+        teamName = teamName
+            .replace(/^\d+\.\s*/, '')           // 1. , 2. , atď.
+            .replace(/^\d+\s+/, '')             // 1 , 12 , atď. bez bodky
+            .trim();
+        
+        if (!teamName || teamName.length < 2) return;
+        
+        // Ak sme stále nenašli kategóriu z textu, skúsime fallbacky
         let category = categoryFromText || 'neznáma kategória';
         let group = 'bez skupiny';
         let type = 'neznámy typ';
