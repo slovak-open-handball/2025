@@ -223,6 +223,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     'ul',
                                     { className: 'space-y-3' },
                                     teamsWithAccom.map((team, i) =>
+
+                                        console.log(`[ĽAVÝ PANEL] Render tímu #${i+1}:`);
+                                        console.log("   userId       :", team.userId);
+                                        console.log("   category     :", team.category);
+                                        console.log("   teamIndex    :", team.teamIndex);
+                                        console.log("   teamName     :", team.teamName);
+                                        console.log("   accommodation:", team.accommodation);
+                                        console.log("   totalPeople  :", team.totalPeople);
+                                        console.log("   ───────────────────────────────────────");
+                                                       
                                         React.createElement(
                                             'li',
                                             {
