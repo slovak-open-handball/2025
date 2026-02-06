@@ -319,26 +319,24 @@ function hideTooltip() {
 // Inicializácia + MutationObserver
 // ──────────────────────────────────────────────
 function initTeamHoverListeners() {
-    const isAccom = isAccommodationPage();
-    console.log(`[team-info] Detekovaný typ stránky: ${isAccom ? 'ACCOMMODATION' : 'KLASICKÝ'}`);
+    console.log("[team-info] Inicializácia hover listenerov...");
 
-    const selector = isAccom
-        ? 'li span.font-medium'
-        : 'li span.flex-grow';
+    const selector = 'li span.flex-grow';   // ← funguje na oboch verziách stránky
 
     const elements = document.querySelectorAll(selector);
-    console.log(`→ ${elements.length} elementov na pripojenie`);
+    console.log(`→ nájdených ${elements.length} spanov s .flex-grow`);
 
     elements.forEach(addHoverListener);
 
-    // Mutation Observer – dôležitý najmä pre React stránku
+    // MutationObserver ...
     const observer = new MutationObserver(muts => {
         muts.forEach(mut => {
             if (!mut.addedNodes) return;
             mut.addedNodes.forEach(node => {
                 if (node.nodeType !== 1) return;
-                const news = node.querySelectorAll(`${selector}:not([data-hover-listener-added])`);
-                news.forEach(addHoverListener);
+                const newSpans = node.querySelectorAll(`${selector}:not([data-hover-listener-added])`);
+                console.log(`→ pridávam listenery na ${newSpans.length} nových spanov`);
+                newSpans.forEach(addHoverListener);
             });
         });
     });
