@@ -126,9 +126,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
     
-        console.log("[USERS LOG] Spúšťam real-time sledovanie kolekcie 'users' (názov tímu + ubytovanie)");
+        console.log("[USERS LOG] Spúšťam real-time sledovanie kolekcie 'users' (kategória + názov tímu + ubytovanie)");
     
-        let previousUsersCount = -1;
         let previousTeamsCount = -1;
     
         const unsubscribeUsers = onSnapshot(
@@ -139,8 +138,6 @@ const AddGroupsApp = ({ userProfileData }) => {
     
                 snapshot.forEach((doc) => {
                     const data = doc.data() || {};
-                    const displayName = data.displayName || data.name || '(bez mena)';
-                    const email = data.email || '(bez emailu)';
     
                     if (data.teams && typeof data.teams === 'object') {
                         Object.entries(data.teams).forEach(([category, teamArray]) => {
@@ -154,8 +151,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 const teamName = team.teamName.trim();
                                 const accommodation = team.accommodation?.type || '— bez ubytovania —';
     
+                                // Formát:  [U10 D]  ŠA Trenčín A   →   internátne
                                 lines.push(
-                                    `  • ${teamName.padEnd(38)}   →   ${accommodation}`
+                                    `  [${category}]  ${teamName.padEnd(38)} → ${accommodation}`
                                 );
                             });
                         });
@@ -163,24 +161,23 @@ const AddGroupsApp = ({ userProfileData }) => {
                 });
     
                 // ─── Výpis ────────────────────────────────────────
-                console.log("═══════════════════════════════════════════════════════════════");
+                console.log("═══════════════════════════════════════════════════════════════════════");
                 console.log(`TÍMY A UBYTOVANIE — ${new Date().toLocaleTimeString('sk-SK')}`);
-                console.log(`Počet používateľov s tímami: ${snapshot.size}   |   Celkom tímov: ${totalTeams}`);
-                console.log("═══════════════════════════════════════════════════════════════");
+                console.log(`Celkom tímov: ${totalTeams}`);
+                console.log("═══════════════════════════════════════════════════════════════════════");
     
                 if (lines.length === 0) {
                     console.log("Momentálne žiadne tímy v databáze");
                 } else {
-                    console.log("Zoznam všetkých tímov a ich ubytovania:");
+                    console.log("Zoznam všetkých tímov:");
                     console.log("");
                     lines.forEach(line => console.log(line));
                     console.log("");
                 }
     
-                console.log(`Celkový počet tímov sa zmenil z ${previousTeamsCount} na ${totalTeams}`);
-                console.log("═══════════════════════════════════════════════════════════════");
+                console.log(`Počet tímov sa zmenil z ${previousTeamsCount} na ${totalTeams}`);
+                console.log("═══════════════════════════════════════════════════════════════════════");
     
-                previousUsersCount = snapshot.size;
                 previousTeamsCount = totalTeams;
             },
             (error) => {
