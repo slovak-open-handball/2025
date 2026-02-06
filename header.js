@@ -572,6 +572,29 @@ window.loadHeaderAndScripts = async () => {
              updateHeaderLinks(window.globalUserProfileData);
         }
 
+        function setPageScale() {
+            const w = window.innerWidth;
+
+            let scale = 1;           // desktop → 100 %
+
+            if (w <= 768) {
+                scale = 0.5;         // mobily → 50 %
+            } else if (w <= 1024) {
+                scale = 0.8;         // tablety → 80 %
+            }
+
+            // Najkompatibilnejší spôsob (funguje takmer všade)
+            document.documentElement.style.transform = `scale(${scale})`;
+            document.documentElement.style.transformOrigin = "top left";
+            document.documentElement.style.width = `${100 / scale}%`;
+            document.documentElement.style.height = `${100 / scale}%`;
+        }
+
+        setPageScale();
+
+        // Reagujeme na zmenu veľkosti okna / otočenie mobilu
+        window.addEventListener('resize', setPageScale);
+
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
