@@ -153,7 +153,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamRostersLink.classList.remove('hidden');
             teamsInGroupsLink.classList.add('hidden'); 
             mapLink?.classList.add('hidden');
-            teamsAccommodationLink?.classList.remove('hidden');
+            teamsAccommodationLink?.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
