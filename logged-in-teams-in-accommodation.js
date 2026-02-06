@@ -118,7 +118,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, []);
 
     // ──────────────────────────────────────────────
-    // NOVÉ: Real-time log všetkých používateľov z kolekcie "users"
+    // Real-time log používateľov – kategória + názov tímu + ubytovanie + počet ľudí
     // ──────────────────────────────────────────────
     useEffect(() => {
         if (!window.db) {
@@ -126,7 +126,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
     
-        console.log("[USERS LOG] Spúšťam real-time sledovanie kolekcie 'users' (kategória + názov tímu + ubytovanie)");
+        console.log("[USERS LOG] Spúšťam real-time sledovanie kolekcie 'users' (kategória + tím + ubytovanie + počet ľudí)");
     
         let previousTeamsCount = -1;
     
@@ -151,9 +151,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 const teamName = team.teamName.trim();
                                 const accommodation = team.accommodation?.type || '— bez ubytovania —';
     
-                                // Formát:  [U10 D]  ŠA Trenčín A   →   internátne
+                                // Výpočet celkového počtu ľudí v poliach detailov
+                                const playerCount     = Array.isArray(team.playerDetails)          ? team.playerDetails.length          : 0;
+                                const womenRTCount    = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
+                                const menRTCount      = Array.isArray(team.menTeamMemberDetails)   ? team.menTeamMemberDetails.length   : 0;
+                                const femaleDrivers   = Array.isArray(team.driverDetailsFemale)    ? team.driverDetailsFemale.length    : 0;
+                                const maleDrivers     = Array.isArray(team.driverDetailsMale)      ? team.driverDetailsMale.length      : 0;
+    
+                                const totalPeople = playerCount + womenRTCount + menRTCount + femaleDrivers + maleDrivers;
+    
+                                // Formát riadku
                                 lines.push(
-                                    `  [${category}]  ${teamName.padEnd(38)} → ${accommodation}`
+                                    ` [${category}] ${teamName.padEnd(38)} → ${accommodation.padEnd(22)}   (ľudia: ${totalPeople})`
                                 );
                             });
                         });
@@ -161,22 +170,22 @@ const AddGroupsApp = ({ userProfileData }) => {
                 });
     
                 // ─── Výpis ────────────────────────────────────────
-                console.log("═══════════════════════════════════════════════════════════════════════");
-                console.log(`TÍMY A UBYTOVANIE — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
+                console.log(`TÍMY + UBYTOVANIE + POČET ĽUDÍ — ${new Date().toLocaleTimeString('sk-SK')}`);
                 console.log(`Celkom tímov: ${totalTeams}`);
-                console.log("═══════════════════════════════════════════════════════════════════════");
+                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
     
                 if (lines.length === 0) {
                     console.log("Momentálne žiadne tímy v databáze");
                 } else {
-                    console.log("Zoznam všetkých tímov:");
+                    console.log("Zoznam tímov:");
                     console.log("");
                     lines.forEach(line => console.log(line));
                     console.log("");
                 }
     
                 console.log(`Počet tímov sa zmenil z ${previousTeamsCount} na ${totalTeams}`);
-                console.log("═══════════════════════════════════════════════════════════════════════");
+                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
     
                 previousTeamsCount = totalTeams;
             },
