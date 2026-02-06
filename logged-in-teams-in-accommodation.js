@@ -97,7 +97,7 @@ const createAccommodationNotification = async (action, data) => {
     
     switch (action) {
         case 'assign_accommodation':
-            message = `Tím ${teamName} (${category}) bol priradený do ubytovne '''${accommodationName}' (${totalPeople} osôb)`;
+            message = `Tím ${teamName} (${category}) bol priradený do ubytovne '''${accommodationName}'`;
             break;
         case 'change_accommodation':
             message = `Tím ${teamName} (${category}) bol presunutý z ubytovne '${oldAccommodation}' do '${newAccommodation}'`;
