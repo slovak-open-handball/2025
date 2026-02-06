@@ -9,8 +9,34 @@ console.log("%c[logged-in-team-info.js] Skript beží – čakám na window.db",
 
 let shouldShowTeamBubbles = true;
 let unsubscribeUserSettings = null;
+let customTooltip = null;
+let observer = null;
+let isReactAppDetected = false;
+let reactAppRoot = null;
 
-// === NAČÍTANIE NASTAVENIA ZO USER DOKUMENTU ===
+// === FUNKCIE PRE DETEKCIU REACT APLIKÁCIE ===
+function detectReactApp() {
+    // Skontrolujeme, či na stránke existuje React aplikácia
+    const reactRoots = document.querySelectorAll('[id^="root"], [class*="react"], [data-reactroot]');
+    const hasReactDOM = typeof ReactDOM !== 'undefined';
+    const hasReactComponents = document.querySelector('.AddGroupsApp, .react-app, [data-react-class]');
+    
+    return reactRoots.length > 0 || hasReactDOM || hasReactComponents;
+}
+
+function findReactAppContainer() {
+    // Nájde hlavný kontajner React aplikácie
+    const possibleContainers = [
+        document.getElementById('root'),
+        document.querySelector('[data-reactroot]'),
+        document.querySelector('.react-app'),
+        document.querySelector('.App')
+    ];
+    
+    return possibleContainers.find(container => container !== null);
+}
+
+// === UPRAVENÉ NAČÍTANIE NASTAVENIA ===
 function setupTeamBubblesListener() {
     if (unsubscribeUserSettings) return;
   
@@ -24,7 +50,7 @@ function setupTeamBubblesListener() {
 
     console.log(`[team-info] Nastavujem onSnapshot na users/${userId} → sledujem displayTeamBubbles`);
 
-    onSnapshot(userRef, (snap) => {
+    unsubscribeUserSettings = onSnapshot(userRef, (snap) => {
         if (!snap.exists()) {
             console.warn("[team-info] Dokument používateľa neexistuje");
             shouldShowTeamBubbles = true; // fallback
@@ -50,6 +76,7 @@ function setupTeamBubblesListener() {
     });
 }
 
+// === UPRAVENÉ VYHĽADÁVANIE V FIRESTORE (OSTÁVA ROVNAKÉ) ===
 async function lookupTeamInFirestore(teamName, category = null, group = null) {
     if (!window.db) {
         console.warn("Firestore (window.db) nie je dostupné!");
@@ -149,17 +176,68 @@ async function lookupTeamInFirestore(teamName, category = null, group = null) {
     }
 }
 
-// === FUNKCIA NA PRIRADENIE LISTENERA NA JEDEN ELEMENT ===
+// === FUNKCIE PRE TOOLTIP (OSTÁVAJÚ ROVNAKÉ) ===
+function createOrGetTooltip() {
+    if (!customTooltip) {
+        customTooltip = document.createElement('div');
+        customTooltip.id = 'team-custom-tooltip';
+        customTooltip.style.position = 'absolute';
+        customTooltip.style.zIndex = '9999';
+        customTooltip.style.background = 'rgba(129, 220, 163, 0.96)';
+        customTooltip.style.color = '#000000';
+        customTooltip.style.padding = '10px 14px';
+        customTooltip.style.borderRadius = '6px';
+        customTooltip.style.fontSize = '13px';
+        customTooltip.style.fontFamily = 'system-ui, sans-serif';
+        customTooltip.style.boxShadow = '0 4px 16px rgba(0,0,0,0.5)';
+        customTooltip.style.pointerEvents = 'none';
+        customTooltip.style.maxWidth = '400px';
+        customTooltip.style.lineHeight = '1.45';
+        customTooltip.style.whiteSpace = 'pre-wrap';
+        customTooltip.style.display = 'none';
+        customTooltip.style.border = '1px solid #81dca3';
+        document.body.appendChild(customTooltip);
+    }
+    return customTooltip;
+}
+
+function showTooltipUnderElement(text, element) {
+    const tt = createOrGetTooltip();
+
+    tt.textContent = text;
+
+    // Získame pozíciu <li> elementu
+    const rect = element.getBoundingClientRect();
+
+    // Tooltip pod riadkom
+    const tooltipTop  = rect.bottom + window.scrollY + 8;   // 8 px pod spodným okrajom
+    const tooltipLeft = rect.left + window.scrollX + (rect.width / 2) - 80;  // približne na stred
+
+    // Ochrana pred presahom za ľavý okraj obrazovky
+    const finalLeft = Math.max(10, tooltipLeft);
+
+    tt.style.left = finalLeft + 'px';
+    tt.style.top  = tooltipTop + 'px';
+    tt.style.display = 'block';
+}
+
+function hideTooltip() {
+    if (customTooltip) {
+        customTooltip.style.display = 'none';
+    }
+}
+
+// === UPRAVENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
 function addHoverListener(span) {
     if (span.dataset.hoverListenerAdded) return;
     span.dataset.hoverListenerAdded = 'true';
 
     span.addEventListener('mouseover', async e => {
-        // ----------------- NOVÁ KONTROLA -----------------
+        // Kontrola nastavenia používateľa
         if (!shouldShowTeamBubbles) {
-            // nastavenie vypnuté → žiadny tooltip
             return;
         }
+        
         let visibleText = e.target.textContent.trim();
         let teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
     
@@ -342,99 +420,108 @@ Doprava: ${arrivalType}${arrivalTime}`;
     });
 }
 
-// na konci súboru (po všetkých funkciách) alebo pred initTeamHoverListeners
-let customTooltip = null;
-
-function createOrGetTooltip() {
-    if (!customTooltip) {
-        customTooltip = document.createElement('div');
-        customTooltip.id = 'team-custom-tooltip';
-        customTooltip.style.position = 'absolute';
-        customTooltip.style.zIndex = '9999';
-        customTooltip.style.background = 'rgba(129, 220, 163, 0.96)';
-        customTooltip.style.color = '#000000';
-        customTooltip.style.padding = '10px 14px';
-        customTooltip.style.borderRadius = '6px';
-        customTooltip.style.fontSize = '13px';
-        customTooltip.style.fontFamily = 'system-ui, sans-serif';
-        customTooltip.style.boxShadow = '0 4px 16px rgba(0,0,0,0.5)';
-        customTooltip.style.pointerEvents = 'none';
-        customTooltip.style.maxWidth = '400px';
-        customTooltip.style.lineHeight = '1.45';
-        customTooltip.style.whiteSpace = 'pre-wrap';
-        customTooltip.style.display = 'none';
-        customTooltip.style.border = '1px solid #81dca3';
-        document.body.appendChild(customTooltip);
-    }
-    return customTooltip;
-}
-
-function showTooltipUnderElement(text, element) {
-    const tt = createOrGetTooltip();
-
-    tt.textContent = text;
-
-    // Získame pozíciu <li> elementu
-    const rect = element.getBoundingClientRect();
-
-    // Tooltip pod riadkom
-    const tooltipTop  = rect.bottom + window.scrollY + 8;   // 8 px pod spodným okrajom
-    const tooltipLeft = rect.left + window.scrollX + (rect.width / 2) - 80;  // približne na stred
-
-    // Ochrana pred presahom za ľavý okraj obrazovky
-    const finalLeft = Math.max(10, tooltipLeft);
-
-    tt.style.left = finalLeft + 'px';
-    tt.style.top  = tooltipTop + 'px';
-    tt.style.display = 'block';
-}
-
-function hideTooltip() {
-    if (customTooltip) {
-        customTooltip.style.display = 'none';
-    }
-}
-
-// === INICIALIZÁCIA + MUTATION OBSERVER ===
+// === UPRAVENÁ INICIALIZÁCIA ===
 function initTeamHoverListeners() {
     console.log("Inicializujem hover listenery na span.flex-grow...");
-
+    
+    // Ak je prítomná React aplikácia, nastavíme pozorovanie na jej kontajner
+    if (isReactAppDetected && reactAppRoot) {
+        console.log("Detekovaná React aplikácia → nastavujem observer na React root kontajner");
+        setupObserverForReactApp();
+        return;
+    }
+    
+    // Normálna inicializácia pre statické stránky
     const nameSpans = document.querySelectorAll('li span.flex-grow');
     console.log(`Nájdených ${nameSpans.length} spanov s triedou flex-grow pri inicializácii`);
     nameSpans.forEach(addHoverListener);
 
-    // MutationObserver pre dynamické pridávanie tímov
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.addedNodes) {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1) {
-                        const newSpans = node.querySelectorAll('li span.flex-grow:not([data-hover-listener-added])');
-                        newSpans.forEach(addHoverListener);
-                    }
-                });
-            }
+    // MutationObserver pre dynamické pridávanie tímov (len pre statické stránky)
+    if (!observer) {
+        observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes) {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1) {
+                            const newSpans = node.querySelectorAll('li span.flex-grow:not([data-hover-listener-added])');
+                            newSpans.forEach(addHoverListener);
+                        }
+                    });
+                }
+            });
         });
-    });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
 
-    console.log("%c[logged-in-team-info.js] Hover listenery boli úspešne nastavené a sú aktívne (sledovanie zmien DOM)!",
+    console.log("%c[logged-in-team-info.js] Hover listenery boli úspešne nastavené!",
         "color:#10b981; font-weight:bold; font-size:14px; background:#000; padding:6px 12px; border-radius:6px;");
 }
 
-// === ROBUSTNÉ ČAKANIE NA window.db ===
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOMContentLoaded → čakám na window.db...");
+// === ŠPECIÁLNA FUNKCIA PRE REACT APLIKÁCIU ===
+function setupObserverForReactApp() {
+    if (!reactAppRoot || observer) return;
+    
+    console.log("Nastavujem špeciálny MutationObserver pre React aplikáciu");
+    
+    observer = new MutationObserver((mutations) => {
+        // React často mení celé časti DOM naraz, takže musíme byť agresívnejší
+        let shouldCheckAll = false;
+        
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
+                shouldCheckAll = true;
+            }
+        });
+        
+        if (shouldCheckAll) {
+            // Počkáme chvíľu, kým React dokončí renderovanie
+            setTimeout(() => {
+                const nameSpans = reactAppRoot.querySelectorAll('li span.flex-grow');
+                console.log(`React update: Nájdených ${nameSpans.length} spanov po renderovaní`);
+                nameSpans.forEach(addHoverListener);
+            }, 100);
+        }
+    });
+    
+    // Pozorujeme React root kontajner
+    observer.observe(reactAppRoot, { 
+        childList: true, 
+        subtree: true,
+        attributes: false,
+        characterData: false
+    });
+    
+    // Inicializácia existujúcich elementov
+    setTimeout(() => {
+        const nameSpans = reactAppRoot.querySelectorAll('li span.flex-grow');
+        console.log(`Inicializácia: Nájdených ${nameSpans.length} spanov v React aplikácii`);
+        nameSpans.forEach(addHoverListener);
+    }, 500);
+}
 
+// === UPRAVENÉ ČAKANIE NA window.db ===
+function initApp() {
+    console.log("Inicializujem aplikáciu...");
+    
+    // Najprv detekujeme React aplikáciu
+    isReactAppDetected = detectReactApp();
+    reactAppRoot = findReactAppContainer();
+    
+    if (isReactAppDetected) {
+        console.log("%cDetekovaná React aplikácia → použijeme špeciálny režim",
+            "color:#f59e0b; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
+    }
+    
+    // Potom čakáme na window.db
     let attempts = 0;
-    const maxAttempts = 20; // max 10 sekúnd (500 ms × 20)
+    const maxAttempts = 20;
 
     function waitForDb() {
         attempts++;
 
         if (window.db) {
-            console.log("%cwindow.db je dostupné → spúšťam inicializáciu listenerov",
+            console.log("%cwindow.db je dostupné → spúšťam inicializáciu",
                 "color:#10b981; font-weight:bold; font-size:14px; background:#000; padding:6px 12px; border-radius:6px;");
             setupTeamBubblesListener();
             initTeamHoverListeners();
@@ -451,6 +538,42 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(waitForDb, 500);
     }
 
-    // Spustíme čakanie
     waitForDb();
+}
+
+// === UPRAVENÝ EVENT LISTENER ===
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOMContentLoaded → spúšťam inicializáciu");
+    initApp();
 });
+
+// === DODATOČNÁ OCHRANA: AJ KEĎ SA REACT APLIKÁCIA NAČÍTA NESKÔR ===
+// Tento event listener zachytí, ak sa React aplikácia načíta neskôr
+if (typeof window !== 'undefined') {
+    window.addEventListener('reactAppLoaded', () => {
+        console.log("%cZachytený event 'reactAppLoaded' → re-inicializácia pre React",
+            "color:#3b82f6; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
+        
+        isReactAppDetected = true;
+        reactAppRoot = findReactAppContainer();
+        
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+        
+        // Re-inicializácia listenerov
+        setTimeout(() => {
+            initTeamHoverListeners();
+        }, 1000); // Počkáme, kým React úplne vyrenderuje
+    });
+}
+
+// Pridáme aj periodickú kontrolu pre istotu
+setInterval(() => {
+    const nameSpans = document.querySelectorAll('li span.flex-grow:not([data-hover-listener-added])');
+    if (nameSpans.length > 0) {
+        console.log(`Periodická kontrola: Nájdených ${nameSpans.length} nespracovaných spanov → pridávam listenery`);
+        nameSpans.forEach(addHoverListener);
+    }
+}, 5000); // Kontrola každých 5 sekúnd
