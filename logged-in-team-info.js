@@ -245,90 +245,253 @@ function hideTooltip() {
 }
 
 // === VYLEPŠENÁ FUNKCIA NA ZÍSKANIE KATEGÓRIE Z DOM ===
+// === FUNKCIA NA ZÍSKANIE PRESNÉHO NÁZVU KATEGÓRIE Z DOM ===
 function getCategoryFromDOM(element) {
     if (!element) return 'neznáma kategória';
     
-    // Najprv skúsime nájsť kategóriu v texte (ak je formát "Kategória: Tím")
+    // 1. Skúsime nájsť kategóriu v texte (ak je formát "Kategória: Tím")
     const visibleText = element.textContent.trim();
     const colonIndex = visibleText.indexOf(':');
     if (colonIndex !== -1 && colonIndex < visibleText.length - 1) {
         const potentialCategory = visibleText.substring(0, colonIndex).trim();
-        if (potentialCategory && potentialCategory.length < 30) {
+        // Ak je pred dvojbodkou text bez špeciálnych znakov (pravdepodobne kategória)
+        if (potentialCategory && 
+            potentialCategory.length > 2 && 
+            potentialCategory.length < 30 &&
+            !potentialCategory.match(/^\d+$/) &&
+            !potentialCategory.match(/^[A-Za-z0-9]{1,3}$/) &&
+            !potentialCategory.includes('•') &&
+            !potentialCategory.includes('→')) {
             return potentialCategory;
         }
     }
     
-    // Hľadáme najbližší nadpis (h2, h3, h4) v DOM hierarchii
+    // 2. Hľadáme presný nadpis kategórie - pôjdeme hore v DOM hierarchii
     let current = element;
-    let foundHeader = null;
+    let foundExactCategory = null;
+    let searchDepth = 0;
+    const maxDepth = 8;
     
-    // Najprv ideme hore po DOM strome (max 10 úrovní)
-    for (let i = 0; i < 10; i++) {
-        if (!current || current === document.body) break;
-        
-        // Skúsime nájsť nadpis medzi súrodencami
+    while (current && current !== document.body && searchDepth < maxDepth) {
+        // A) Skúsime predchádzajúce elementy (súrodencov a ich deti)
         let sibling = current.previousElementSibling;
-        while (sibling && !foundHeader) {
-            const tagName = sibling.tagName.toUpperCase();
-            if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(tagName)) {
-                const text = sibling.textContent.trim();
-                
-                // Filtrujeme nezmyselné nadpisy
-                if (text && 
-                    !text.startsWith('Základné skupiny') &&
-                    !text.startsWith('Nadstavbové skupiny') &&
-                    !text.startsWith('Skupina') &&
-                    !text.includes('Tímy bez skupiny') &&
-                    !/^[A-Za-z0-9]{1,4}$/.test(text) &&
-                    !/^\d+$/.test(text) &&
-                    text.length > 4) {
-                    
-                    foundHeader = text;
+        let siblingCount = 0;
+        const maxSiblings = 10;
+        
+        while (sibling && siblingCount < maxSiblings && !foundExactCategory) {
+            // Hľadáme nadpisy (h1-h6)
+            const headers = sibling.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            for (const header of headers) {
+                const text = header.textContent.trim();
+                if (isValidCategoryName(text)) {
+                    foundExactCategory = text;
                     break;
                 }
             }
+            
+            // Ak sme nenašli v potomkoch, skúsime priamo text súrodenca
+            if (!foundExactCategory) {
+                const tagName = sibling.tagName.toUpperCase();
+                if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(tagName)) {
+                    const text = sibling.textContent.trim();
+                    if (isValidCategoryName(text)) {
+                        foundExactCategory = text;
+                        break;
+                    }
+                }
+            }
+            
+            // Skúsime špeciálne kontajnery pre kategórie
+            if (!foundExactCategory) {
+                const categoryContainers = sibling.querySelectorAll(
+                    '.category-name, .category-title, [data-category], ' +
+                    '.card-header, .group-header, .section-title, .category-header'
+                );
+                for (const container of categoryContainers) {
+                    const text = container.textContent.trim();
+                    if (isValidCategoryName(text)) {
+                        foundExactCategory = text;
+                        break;
+                    }
+                }
+            }
+            
             sibling = sibling.previousElementSibling;
+            siblingCount++;
         }
         
-        // Ak sme našli nadpis, vrátime ho
-        if (foundHeader) {
-            return foundHeader;
-        }
-        
-        // Skúsime kontajnery, ktoré by mohli obsahovať kategóriu
-        const possibleCategoryContainers = current.querySelectorAll(
-            '.category-name, .category-title, [data-category], .card-header, .group-header'
-        );
-        
-        for (const container of possibleCategoryContainers) {
-            const text = container.textContent.trim();
-            if (text && text.length > 2) {
-                // Vyfiltrujeme krátke texty a čísla
-                if (text.length > 4 && !/^\d+$/.test(text) && !/^[A-Z]{1,4}$/.test(text)) {
-                    return text;
+        // B) Skúsime rodiča - jeho atribúty a CSS triedy
+        if (!foundExactCategory && current.parentElement) {
+            // Skontrolujeme, či rodič nie je kontajner pre kategóriu
+            const parentClasses = current.parentElement.className || '';
+            if (parentClasses.includes('category') || 
+                parentClasses.includes('Category') ||
+                current.parentElement.hasAttribute('data-category')) {
+                
+                // Hľadáme nadpis v tomto kontajneri
+                const containerHeaders = current.parentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+                for (const header of containerHeaders) {
+                    const text = header.textContent.trim();
+                    if (isValidCategoryName(text)) {
+                        foundExactCategory = text;
+                        break;
+                    }
                 }
             }
         }
         
-        // Prejdeme na rodiča
+        // C) Skúsime príbuzné elementy podľa štruktúry
+        if (!foundExactCategory) {
+            // Hľadáme najbližší nadpis bez ohľadu na hierarchiu
+            const nearestHeader = current.closest('div, section, article')?.querySelector('h1, h2, h3, h4, h5, h6');
+            if (nearestHeader) {
+                const text = nearestHeader.textContent.trim();
+                if (isValidCategoryName(text)) {
+                    foundExactCategory = text;
+                }
+            }
+        }
+        
+        // Ak sme našli kategóriu, vrátime ju
+        if (foundExactCategory) {
+            console.log(`Nájdená presná kategória: "${foundExactCategory}" (v úrovni ${searchDepth})`);
+            return foundExactCategory;
+        }
+        
+        // Posunieme sa vyššie v DOM
         current = current.parentElement;
+        searchDepth++;
     }
     
-    // Ak sme nenašli kategóriu v DOM, skúsime URL hash ako fallback
+    // 3. Fallback: URL hash
     if (window.location.hash && window.location.hash.length > 1) {
         const hash = window.location.hash.substring(1);
         const parts = hash.split('/');
         let catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
         
-        if (!/^[A-Za-z0-9]{1,4}$/.test(catNameFromHash) && catNameFromHash.length > 3) {
+        if (isValidCategoryName(catNameFromHash)) {
+            console.log(`Kategória z URL hash: "${catNameFromHash}"`);
             return catNameFromHash;
         }
     }
     
+    // 4. Fallback: skúsime podľa štruktúry stránky
+    if (!foundExactCategory) {
+        // Prehľadáme všetky nadpisy na stránke
+        const allHeaders = document.querySelectorAll('h1, h2, h3');
+        for (const header of allHeaders) {
+            const text = header.textContent.trim();
+            if (isValidCategoryName(text)) {
+                // Skontrolujeme, či sme v správnej časti stránky
+                const distance = getElementDistance(element, header);
+                if (distance < 1000) { // Max vzdialenosť v DOM
+                    console.log(`Fallback kategória: "${text}" (vzdialenosť: ${distance})`);
+                    return text;
+                }
+            }
+        }
+    }
+    
+    console.warn(`Nepodarilo sa nájsť presnú kategóriu pre element: "${visibleText.substring(0, 50)}..."`);
     return 'neznáma kategória';
 }
 
-// === VYLEPŠENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
+// === POMOCNÁ FUNKCIA NA VALIDÁCIU NÁZOV KATEGÓRIE ===
+function isValidCategoryName(text) {
+    if (!text || text.length < 2) return false;
+    
+    // Filtre pre neplatné názvy
+    const invalidPatterns = [
+        /^\d+$/,                          // Čísla
+        /^[A-Za-z0-9]{1,4}$/,             // Krátke kódy
+        /^skupina$/i,                     // "Skupina"
+        /^základné skupiny$/i,            // "Základné skupiny"
+        /^nadstavbové skupiny$/i,         // "Nadstavbové skupiny"
+        /^tímy bez skupiny$/i,            // "Tímy bez skupiny"
+        /^zoznam tímov$/i,                // "Zoznam tímov"
+        /^všetky tímy$/i,                 // "Všetky tímy"
+        /^prehľad$/i,                     // "Prehľad"
+        /^tabuľka$/i,                     // "Tabuľka"
+        /^výsledky$/i,                    // "Výsledky"
+        /^pozri všetky$/i,                // "Pozri všetky"
+        /^navigácia$/i,                   // "Navigácia"
+        /^menu$/i,                        // "Menu"
+        /^filter$/i,                      // "Filter"
+        /^vyhľadávať$/i,                  // "Vyhľadávať"
+        /^hlavná ponuka$/i,               // "Hlavná ponuka"
+        /^logo$/i                         // "Logo"
+    ];
+    
+    // Skontrolujeme všetky neplatné vzory
+    for (const pattern of invalidPatterns) {
+        if (pattern.test(text)) {
+            return false;
+        }
+    }
+    
+    // Skontrolujeme príliš dlhé názvy (pravdepodobne nie sú kategórie)
+    if (text.length > 50) return false;
+    
+    // Skontrolujeme príliš krátke názvy
+    if (text.length < 3) return false;
+    
+    // Dobre vyzerajúce názvy kategórií
+    const validPatterns = [
+        /^[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ][a-záéíóúýčďľňšťž]+(\s+[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ][a-záéíóúýčďľňšťž]+)*$/, // Veľké písmeno na začiatku každého slova
+        /^[A-Z]+$/i,                                                                          // Všetky písmená (napr. "FUTSAL")
+        /^\d+\s*[-–]\s*[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ].*$/i,                                            // "1 - Názov kategórie"
+        /^kategória\s*[:.]?\s*.+$/i                                                          // "Kategória: Názov"
+    ];
+    
+    // Ak vyhovuje aspoň jednému platnému vzoru
+    for (const pattern of validPatterns) {
+        if (pattern.test(text)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// === POMOCNÁ FUNKCIA NA VÝPOČET VZDIALENOSTI MEDZI ELEMENTAMI ===
+function getElementDistance(el1, el2) {
+    let distance = 0;
+    let current1 = el1;
+    let current2 = el2;
+    const path1 = [];
+    const path2 = [];
+    
+    // Získame cestu k root elementu pre prvý element
+    while (current1 && current1 !== document.body) {
+        path1.unshift(current1);
+        current1 = current1.parentElement;
+    }
+    
+    // Získame cestu k root elementu pre druhý element
+    while (current2 && current2 !== document.body) {
+        path2.unshift(current2);
+        current2 = current2.parentElement;
+    }
+    
+    // Nájdeme spoločného predka
+    let commonAncestor = null;
+    for (let i = 0; i < Math.min(path1.length, path2.length); i++) {
+        if (path1[i] === path2[i]) {
+            commonAncestor = path1[i];
+        } else {
+            break;
+        }
+    }
+    
+    if (!commonAncestor) return Infinity;
+    
+    // Vypočítame vzdialenosť
+    distance = (path1.length - path1.indexOf(commonAncestor)) + 
+               (path2.length - path2.indexOf(commonAncestor));
+    
+    return distance;
+}
+
 // === VYLEPŠENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
 function addHoverListener(element) {
     // SKONTROLUJEME, CI MÁME POVOLENÉ BUBLINKY
