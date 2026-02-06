@@ -1,6 +1,6 @@
 // Importy pre Firebase funkcie
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebase/js/11.6.1/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; // OPRAVENÉ: z /js/ na /js9/
 
 const { useState, useEffect } = React;
 
