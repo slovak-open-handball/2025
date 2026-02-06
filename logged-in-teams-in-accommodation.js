@@ -147,7 +147,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 if (!team?.teamName) return;
     
                                 const accommodationRaw = team.accommodation?.type;
-                                if (!accommodationRaw || accommodationRaw.trim() === '') return; // preskočíme bez ubytovania
+                                if (
+                                    !accommodationRaw || 
+                                    accommodationRaw.trim() === '' || 
+                                    accommodationRaw.trim().toLowerCase() === 'bez ubytovania'
+                                ) {
+                                    return;
+                                }
     
                                 totalTeamsWithAccommodation++;
     
