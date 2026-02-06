@@ -894,214 +894,203 @@ function NotificationsApp() {
                 { className: 'space-y-4' },
                 displayedNotifications.map(notification => {
                     return React.createElement(
-                      'div',
-                      { 
-                        key: notification.id, 
-                        className: `p-4 rounded-lg shadow-md flex flex-col justify-between items-start 
-                            ${notification.deletedByMe ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' : 
-                               (notification.read ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-800 border border-green-200')}` 
-                      },
-                      React.createElement(
                         'div',
-                        { className: 'flex-1 mb-2 w-full' },
-                        // Checkbox pre obnovu ak je notifikácia deletedByMe A sme v režime obnovy
-                        notification.deletedByMe && showRestoreView && React.createElement(
-                          'div',
-                          { className: 'flex items-center mb-2' },
-                          React.createElement('input', {
-                            type: 'checkbox',
-                            checked: selectedNotificationsToRestore.has(notification.id),
-                            onChange: (e) => handleNotificationSelectionChange(notification.id, e.target.checked),
-                            className: 'form-checkbox h-4 w-4 text-indigo-600 mr-2'
-                          }),
-                          React.createElement('p', { className: 'text-sm text-yellow-800' }, 'Vymazané (zaškrtnite pre obnovenie)')
-                        ),
-                        React.createElement('p', { className: 'text-base text-gray-700 mb-2' },
-                          `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
-                        ),
-                        
-                        // OPRAVENÁ KONTROLA: Viac flexibilná kontrola pre rôzne typy notifikácií
-                        (() => {
-                          // 1. Pre notifikácie s polom changes (pôvodný formát) - tieto môžu mať apostrofy
-                          if (notification.changes && Array.isArray(notification.changes) && notification.changes.length > 0) {
-                            return React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
-                              notification.changes.map((change, index) => {
-                                // Skontrolujeme, či text obsahuje apostrofy na formátovanie
-                                const apostropheCount = (change.match(/'/g) || []).length;
-                                
-                                // Ak má 4 apostrofy, formátujeme text podobne ako v header.js
-                                if (apostropheCount >= 4) {
-                                  const parts = change.split("'");
-                                  // Text medzi 1. a 2. apostrofom - kurzíva
-                                  // Text medzi 3. a 4. apostrofom - tučné
-                                  let formattedParts = [];
-                                  for (let i = 0; i < parts.length; i++) {
-                                    if (i === 1) {
-                                      formattedParts.push(React.createElement('em', { 
-                                        key: i, 
-                                        className: 'italic text-blue-600' 
-                                      }, parts[i]));
-                                    } else if (i === 3) {
-                                      formattedParts.push(React.createElement('strong', { 
-                                        key: i, 
-                                        className: 'font-bold text-green-600' 
-                                      }, parts[i]));
-                                    } else if (parts[i]) {
-                                      formattedParts.push(React.createElement('span', { key: i }, parts[i]));
-                                    }
-                                  }
-                                  return React.createElement('li', { key: index }, formattedParts);
-                                } else {
-                                  // Inak použijeme pôvodnú funkciu renderStyledText
-                                  return React.createElement('li', { key: index }, renderStyledText(change));
-                                }
-                              })
-                            );
-                          }
-                          
-                          // 2. Pre notifikácie z AccommodationSettings (nový formát)
-                          else if (notification.type && notification.data) {
-                            let notificationContent = null;
-                            
-                            switch (notification.type) {
-                              case 'createAccommodation':
-                                notificationContent = React.createElement('div', { className: 'space-y-2' },
-                                  React.createElement('p', { className: 'font-medium text-blue-700' }, 'Pridané nové ubytovanie:'),
-                                  React.createElement('ul', { className: 'list-disc list-inside ml-4' },
-                                    React.createElement('li', null, `Typ: ${notification.data.type}`),
-                                    React.createElement('li', null, `Kapacita: ${notification.data.capacity}`)
-                                  )
-                                );
-                                break;
-                                
-                              case 'editAccommodation':
-                                notificationContent = React.createElement('div', { className: 'space-y-2' },
-                                  React.createElement('p', { className: 'font-medium text-orange-700' }, 'Upravené ubytovanie:'),
-                                  React.createElement('ul', { className: 'list-disc list-inside ml-4' },
-                                    React.createElement('li', null, 
-                                      React.createElement('span', null, 'Typ: '),
-                                      React.createElement('span', { className: 'line-through text-red-500' }, notification.data.originalType),
-                                      React.createElement('span', null, ' → '),
-                                      React.createElement('span', { className: 'text-green-600 font-semibold' }, notification.data.newType)
-                                    ),
-                                    React.createElement('li', null,
-                                      React.createElement('span', null, 'Kapacita: '),
-                                      React.createElement('span', { className: 'line-through text-red-500' }, notification.data.originalCapacity),
-                                      React.createElement('span', null, ' → '),
-                                      React.createElement('span', { className: 'text-green-600 font-semibold' }, notification.data.newCapacity)
-                                    )
-                                  )
-                                );
-                                break;
-                                
-                              case 'deleteAccommodation':
-                                notificationContent = React.createElement('div', { className: 'space-y-2' },
-                                  React.createElement('p', { className: 'font-medium text-red-700' }, 'Odstránené ubytovanie:'),
-                                  React.createElement('ul', { className: 'list-disc list-inside ml-4' },
-                                    React.createElement('li', null, `Typ: ${notification.data.deletedType}`),
-                                    React.createElement('li', null, `Kapacita: ${notification.data.deletedCapacity}`)
-                                  )
-                                );
-                                break;
-                                
-                              default:
-                                // Pre iné typy notifikácií
-                                if (notification.message) {
-                                  notificationContent = React.createElement('p', { className: 'text-gray-700' }, notification.message);
-                                } else if (notification.content) {
-                                  notificationContent = React.createElement('p', { className: 'text-gray-700' }, notification.content);
-                                } else {
-                                  // Ak máme nejaké dáta, zobrazíme ich
-                                  notificationContent = React.createElement('div', { className: 'space-y-2' },
-                                    React.createElement('p', { className: 'font-medium text-gray-700' }, 'Notifikácia:'),
-                                    React.createElement('pre', { 
-                                      className: 'bg-gray-100 p-2 rounded text-sm overflow-x-auto',
-                                      style: { whiteSpace: 'pre-wrap', wordWrap: 'break-word' }
-                                    }, JSON.stringify(notification.data, null, 2))
-                                  );
-                                }
-                            }
-                            
-                            return notificationContent;
-                          }
-                          
-                          // 3. Pre staršie formáty notifikácií (môžu mať priamy text)
-                          else if (notification.message || notification.content) {
-                            const text = notification.message || notification.content;
-                            
-                            // Skontrolujeme, či text obsahuje apostrofy na formátovanie
-                            const apostropheCount = (text.match(/'/g) || []).length;
-                            
-                            if (apostropheCount >= 4) {
-                              const parts = text.split("'");
-                              const formattedParts = [];
-                              
-                              for (let i = 0; i < parts.length; i++) {
-                                if (i === 1) {
-                                  // Text medzi 1. a 2. apostrofom - kurzíva
-                                  formattedParts.push(React.createElement('em', { 
-                                    key: i, 
-                                    className: 'italic text-blue-600' 
-                                  }, parts[i]));
-                                } else if (i === 3) {
-                                  // Text medzi 3. a 4. apostrofom - tučné
-                                  formattedParts.push(React.createElement('strong', { 
-                                    key: i, 
-                                    className: 'font-bold text-green-600' 
-                                  }, parts[i]));
-                                } else if (parts[i]) {
-                                  formattedParts.push(React.createElement('span', { key: i }, parts[i]));
-                                }
-                              }
-                              
-                              return React.createElement('div', { className: 'text-gray-700' }, formattedParts);
-                            } else {
-                              return React.createElement('p', { className: 'text-gray-700' }, text);
-                            }
-                          }
-                          
-                          // 4. Ak nemáme žiadny obsah na zobrazenie
-                          else {
-                            // Zobraziť aspoň základné informácie o notifikácii
-                            return React.createElement('div', { className: 'space-y-2' },
-                              React.createElement('p', { className: 'text-gray-700' }, 
-                                `Notifikácia od používateľa: ${notification.userEmail || 'Neznámy'}`
-                              ),
-                              React.createElement('p', { className: 'text-gray-500 text-sm italic' }, 
-                                'Podrobnosti o zmene nie sú k dispozícii.'
-                              )
-                            );
-                          }
-                        })()
-                        ),
-                        
-                        notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
-                          `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
-                        )
-                      ),
-                      // Tlačidlá sa zobrazia, len ak notifikácia nie je deletedByMe (mimo režimu obnovy)
-                      !notification.deletedByMe && React.createElement(
-                        'div',
-                        { className: 'flex justify-end space-x-2 mt-2 w-full' },
-                        !notification.read && React.createElement(
-                          'button',
-                          {
-                            onClick: () => handleMarkAsRead(notification.id),
-                            className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                            disabled: loading,
-                          },
-                          'Označiť ako prečítané'
-                        ),
+                        { 
+                            key: notification.id, 
+                            className: `p-4 rounded-lg shadow-md flex flex-col justify-between items-start 
+                                ${notification.deletedByMe ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' : 
+                                   (notification.read ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-800 border border-green-200')}` 
+                        },
                         React.createElement(
-                          'button',
-                          {
-                            onClick: () => handleDeleteNotification(notification.id),
-                            className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                            disabled: loading,
-                          },
-                          'Vymazať'
+                            'div',
+                            { className: 'flex-1 mb-2 w-full' },
+                            // Checkbox pre obnovu ak je notifikácia deletedByMe A sme v režime obnovy
+                            notification.deletedByMe && showRestoreView && React.createElement(
+                                'div',
+                                { className: 'flex items-center mb-2' },
+                                React.createElement('input', {
+                                    type: 'checkbox',
+                                    checked: selectedNotificationsToRestore.has(notification.id),
+                                    onChange: (e) => handleNotificationSelectionChange(notification.id, e.target.checked),
+                                    className: 'form-checkbox h-4 w-4 text-indigo-600 mr-2'
+                                }),
+                                React.createElement('p', { className: 'text-sm text-yellow-800' }, 'Vymazané (zaškrtnite pre obnovenie)')
+                            ),
+                            React.createElement('p', { className: 'text-base text-gray-700 mb-2' },
+                                `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
+                            ),
+                            
+                            // OPRAVENÁ KONTROLA: Viac flexibilná kontrola pre rôzne typy notifikácií
+                            (() => {
+                                // 1. Pre notifikácie s polom changes (pôvodný formát) - tieto môžu mať apostrofy
+                                if (notification.changes && Array.isArray(notification.changes) && notification.changes.length > 0) {
+                                    return React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
+                                        notification.changes.map((change, index) => {
+                                            // Skontrolujeme, či text obsahuje apostrofy na formátovanie
+                                            const apostropheCount = (change.match(/'/g) || []).length;
+                                            
+                                            // Ak má 4 apostrofy, formátujeme text podobne ako v header.js
+                                            if (apostropheCount >= 4) {
+                                                const parts = change.split("'");
+                                                let formattedParts = [];
+                                                for (let i = 0; i < parts.length; i++) {
+                                                    if (i === 1) {
+                                                        formattedParts.push(React.createElement('em', { 
+                                                            key: i, 
+                                                            className: 'italic text-blue-600' 
+                                                        }, parts[i]));
+                                                    } else if (i === 3) {
+                                                        formattedParts.push(React.createElement('strong', { 
+                                                            key: i, 
+                                                            className: 'font-bold text-green-600' 
+                                                        }, parts[i]));
+                                                    } else if (parts[i]) {
+                                                        formattedParts.push(React.createElement('span', { key: i }, parts[i]));
+                                                    }
+                                                }
+                                                return React.createElement('li', { key: index }, formattedParts);
+                                            } else {
+                                                return React.createElement('li', { key: index }, renderStyledText(change));
+                                            }
+                                        })
+                                    );
+                                }
+                                
+                                // 2. Pre notifikácie z AccommodationSettings (nový formát)
+                                else if (notification.type && notification.data) {
+                                    let notificationContent = null;
+                                    
+                                    switch (notification.type) {
+                                        case 'createAccommodation':
+                                            notificationContent = React.createElement('div', { className: 'space-y-2' },
+                                                React.createElement('p', { className: 'font-medium text-blue-700' }, 'Pridané nové ubytovanie:'),
+                                                React.createElement('ul', { className: 'list-disc list-inside ml-4' },
+                                                    React.createElement('li', null, `Typ: ${notification.data.type}`),
+                                                    React.createElement('li', null, `Kapacita: ${notification.data.capacity}`)
+                                                )
+                                            );
+                                            break;
+                                            
+                                        case 'editAccommodation':
+                                            notificationContent = React.createElement('div', { className: 'space-y-2' },
+                                                React.createElement('p', { className: 'font-medium text-orange-700' }, 'Upravené ubytovanie:'),
+                                                React.createElement('ul', { className: 'list-disc list-inside ml-4' },
+                                                    React.createElement('li', null, 
+                                                        React.createElement('span', null, 'Typ: '),
+                                                        React.createElement('span', { className: 'line-through text-red-500' }, notification.data.originalType),
+                                                        React.createElement('span', null, ' → '),
+                                                        React.createElement('span', { className: 'text-green-600 font-semibold' }, notification.data.newType)
+                                                    ),
+                                                    React.createElement('li', null,
+                                                        React.createElement('span', null, 'Kapacita: '),
+                                                        React.createElement('span', { className: 'line-through text-red-500' }, notification.data.originalCapacity),
+                                                        React.createElement('span', null, ' → '),
+                                                        React.createElement('span', { className: 'text-green-600 font-semibold' }, notification.data.newCapacity)
+                                                    )
+                                                )
+                                            );
+                                            break;
+                                            
+                                        case 'deleteAccommodation':
+                                            notificationContent = React.createElement('div', { className: 'space-y-2' },
+                                                React.createElement('p', { className: 'font-medium text-red-700' }, 'Odstránené ubytovanie:'),
+                                                React.createElement('ul', { className: 'list-disc list-inside ml-4' },
+                                                    React.createElement('li', null, `Typ: ${notification.data.deletedType}`),
+                                                    React.createElement('li', null, `Kapacita: ${notification.data.deletedCapacity}`)
+                                                )
+                                            );
+                                            break;
+                                            
+                                        default:
+                                            if (notification.message) {
+                                                notificationContent = React.createElement('p', { className: 'text-gray-700' }, notification.message);
+                                            } else if (notification.content) {
+                                                notificationContent = React.createElement('p', { className: 'text-gray-700' }, notification.content);
+                                            } else {
+                                                notificationContent = React.createElement('div', { className: 'space-y-2' },
+                                                    React.createElement('p', { className: 'font-medium text-gray-700' }, 'Notifikácia:'),
+                                                    React.createElement('pre', { 
+                                                        className: 'bg-gray-100 p-2 rounded text-sm overflow-x-auto',
+                                                        style: { whiteSpace: 'pre-wrap', wordWrap: 'break-word' }
+                                                    }, JSON.stringify(notification.data, null, 2))
+                                                );
+                                            }
+                                    }
+                                    
+                                    return notificationContent;
+                                }
+                                
+                                // 3. Pre staršie formáty notifikácií
+                                else if (notification.message || notification.content) {
+                                    const text = notification.message || notification.content;
+                                    const apostropheCount = (text.match(/'/g) || []).length;
+                                    
+                                    if (apostropheCount >= 4) {
+                                        const parts = text.split("'");
+                                        const formattedParts = [];
+                                        
+                                        for (let i = 0; i < parts.length; i++) {
+                                            if (i === 1) {
+                                                formattedParts.push(React.createElement('em', { 
+                                                    key: i, 
+                                                    className: 'italic text-blue-600' 
+                                                }, parts[i]));
+                                            } else if (i === 3) {
+                                                formattedParts.push(React.createElement('strong', { 
+                                                    key: i, 
+                                                    className: 'font-bold text-green-600' 
+                                                }, parts[i]));
+                                            } else if (parts[i]) {
+                                                formattedParts.push(React.createElement('span', { key: i }, parts[i]));
+                                            }
+                                        }
+                                        
+                                        return React.createElement('div', { className: 'text-gray-700' }, formattedParts);
+                                    } else {
+                                        return React.createElement('p', { className: 'text-gray-700' }, text);
+                                    }
+                                }
+                                
+                                // 4. Ak nemáme žiadny obsah na zobrazenie
+                                else {
+                                    return React.createElement('div', { className: 'space-y-2' },
+                                        React.createElement('p', { className: 'text-gray-700' }, 
+                                            `Notifikácia od používateľa: ${notification.userEmail || 'Neznámy'}`
+                                        ),
+                                        React.createElement('p', { className: 'text-gray-500 text-sm italic' }, 
+                                            'Podrobnosti o zmene nie sú k dispozícii.'
+                                        )
+                                    );
+                                }
+                            })(),
+                            
+                            notification.timestamp && React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 
+                                `Dňa: ${notification.timestamp.toLocaleDateString('sk-SK')} o ${notification.timestamp.toLocaleTimeString('sk-SK')}`
+                            )
+                        ),
+                        // Tlačidlá sa zobrazia, len ak notifikácia nie je deletedByMe (mimo režimu obnovy)
+                        !notification.deletedByMe && React.createElement(
+                            'div',
+                            { className: 'flex justify-end space-x-2 mt-2 w-full' },
+                            !notification.read && React.createElement(
+                                'button',
+                                {
+                                    onClick: () => handleMarkAsRead(notification.id),
+                                    className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                    disabled: loading,
+                                },
+                                'Označiť ako prečítané'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: () => handleDeleteNotification(notification.id),
+                                    className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                    disabled: loading,
+                                },
+                                'Vymazať'
+                            )
                         )
-                      )
                     );
                 })
             )
