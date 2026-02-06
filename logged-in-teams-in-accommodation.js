@@ -119,6 +119,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                     console.log("Zoznam tímov s ubytovaním:");
                     withAccom.forEach((t, i) => {
                         console.log(` [${t.category}] ${t.teamName.padEnd(38)} → ${t.accommodation.padEnd(22)} (ľudia: ${t.totalPeople})`);
+                        console.log("   └─ Plný objekt z DB:", t.fullTeamData);
+                        console.log("");
                     });
                 }
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
