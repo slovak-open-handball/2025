@@ -222,7 +222,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 : React.createElement(
                                     'ul',
                                     { className: 'space-y-3' },
-                                    teamsWithAccom.map((team, i) =>
+                                    teamsWithAccom.map((team, i) => {
 
                                         console.log(`[ĽAVÝ PANEL] Render tímu #${i+1}:`);
                                         console.log("   userId       :", team.userId);
@@ -285,8 +285,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 )
                                             )
                                         )
-                                    )
+                                      }
                                   )
+                             )
                         )
                     )
                 ),
@@ -396,7 +397,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             : React.createElement(
                                                 'ul',
                                                 { className: 'space-y-2' },
-                                                assignedTeams.map((team, idx) =>
+                                                assignedTeams.map((team, idx) => {
+
+                                                    console.log(`[UBYTOVANIE: ${place.name}] Render priradeného tímu #${idx+1}:`);
+                                                    console.log("   category     :", team.category);
+                                                    console.log("   teamIndex    :", team.teamIndex);
+                                                    console.log("   teamName     :", team.teamName);
+                                                    console.log("   userId       :", team.userId);
+                                                    console.log("   accommodation:", team.accommodation);
+                                                    console.log("   totalPeople  :", team.totalPeople);
+                                                    console.log("   ───────────────────────────────────────");
+                                                    
                                                     React.createElement(
                                                         'li',
                                                         {
@@ -414,6 +425,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             `${team.totalPeople} ľudí`
                                                         )
                                                     )
+                                                }
                                                 )
                                               )
                                     )
