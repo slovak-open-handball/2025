@@ -244,17 +244,39 @@ function hideTooltip() {
     }
 }
 
-// === VYLEPŠENÁ FUNKCIA NA ZÍSKANIE KATEGÓRIE Z DOM ===
-// === FUNKCIA NA ZÍSKANIE PRESNÉHO NÁZVU KATEGÓRIE Z DOM ===
+// === PRIORITNÁ FUNKCIA NA ZÍSKANIE KATEGÓRIE Z DOM ===
 function getCategoryFromDOM(element) {
     if (!element) return 'neznáma kategória';
     
-    // 1. Skúsime nájsť kategóriu v texte (ak je formát "Kategória: Tím")
     const visibleText = element.textContent.trim();
+    
+    // 1. PRIORITA: URL HASH (najpresnejšie)
+    if (window.location.hash && window.location.hash.length > 1) {
+        const hash = window.location.hash.substring(1);
+        const parts = hash.split('/');
+        let catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
+        
+        // Očistíme názov kategórie z URL
+        catNameFromHash = cleanCategoryName(catNameFromHash);
+        
+        if (isValidCategoryName(catNameFromHash)) {
+            console.log(`[1. URL HASH] Kategória: "${catNameFromHash}"`);
+            return catNameFromHash;
+        }
+    }
+    
+    // 2. PRIORITA: TEXT PRI HOVER (ak je formát "Kategória: Tím")
     const colonIndex = visibleText.indexOf(':');
     if (colonIndex !== -1 && colonIndex < visibleText.length - 1) {
         const potentialCategory = visibleText.substring(0, colonIndex).trim();
-        // Ak je pred dvojbodkou text bez špeciálnych znakov (pravdepodobne kategória)
+        
+        // Validácia, či je to skutočne kategória
+        if (isValidCategoryName(potentialCategory)) {
+            console.log(`[2. TEXT PRI HOVER] Kategória: "${potentialCategory}"`);
+            return potentialCategory;
+        }
+        
+        // Alternatívne: ak je pred dvojbodkou text, ktorý vyzerá ako kategória
         if (potentialCategory && 
             potentialCategory.length > 2 && 
             potentialCategory.length < 30 &&
@@ -262,57 +284,112 @@ function getCategoryFromDOM(element) {
             !potentialCategory.match(/^[A-Za-z0-9]{1,3}$/) &&
             !potentialCategory.includes('•') &&
             !potentialCategory.includes('→')) {
-            return potentialCategory;
+            
+            const cleaned = cleanCategoryName(potentialCategory);
+            if (cleaned && cleaned.length > 2) {
+                console.log(`[2. TEXT PRI HOVER - fallback] Kategória: "${cleaned}"`);
+                return cleaned;
+            }
         }
     }
     
-    // 2. Hľadáme presný nadpis kategórie - pôjdeme hore v DOM hierarchii
+    // 3. PRIORITA: PRVÝ NADPIS NAD TÍMOM (v DOM hierarchii)
+    const li = element.closest('li');
+    if (li) {
+        // Hľadáme nadpisy nad týmto elementom v DOM hierarchii
+        const parentHeader = findFirstHeaderAboveElement(li);
+        if (parentHeader) {
+            const headerText = parentHeader.textContent.trim();
+            const cleanedHeader = cleanCategoryName(headerText);
+            
+            if (isValidCategoryName(cleanedHeader)) {
+                console.log(`[3. NADPIS NAD TÍMOM] Kategória: "${cleanedHeader}" (z: "${headerText}")`);
+                return cleanedHeader;
+            }
+        }
+        
+        // Fallback: hľadáme v zoom-group-box kontajneri
+        const groupBox = li.closest('.zoom-group-box');
+        if (groupBox) {
+            // Najprv skúsime h3 v group-box (názov skupiny)
+            const groupHeader = groupBox.querySelector('h3, h4, h5');
+            if (groupHeader) {
+                const headerText = groupHeader.textContent.trim();
+                if (headerText && !headerText.toLowerCase().includes('skupina')) {
+                    const cleaned = cleanCategoryName(headerText);
+                    if (isValidCategoryName(cleaned)) {
+                        console.log(`[3. ZOOM-GROUP-BOX] Kategória: "${cleaned}"`);
+                        return cleaned;
+                    }
+                }
+            }
+            
+            // Hľadáme vyššie v hierarchii
+            let parent = groupBox.parentElement;
+            for (let i = 0; i < 5; i++) {
+                if (!parent) break;
+                
+                const headers = parent.querySelectorAll('h1, h2, h3');
+                for (const header of headers) {
+                    const text = header.textContent.trim();
+                    const cleaned = cleanCategoryName(text);
+                    if (isValidCategoryName(cleaned)) {
+                        console.log(`[3. NADRADENÝ KONTAJNER] Kategória: "${cleaned}" (úroveň ${i})`);
+                        return cleaned;
+                    }
+                }
+                parent = parent.parentElement;
+            }
+        }
+    }
+    
+    // 4. FALLBACK: Hľadáme na celej stránke
+    const allHeaders = document.querySelectorAll('h1, h2, h3');
+    for (const header of allHeaders) {
+        const text = header.textContent.trim();
+        const cleaned = cleanCategoryName(text);
+        
+        if (isValidCategoryName(cleaned)) {
+            // Skontrolujeme vzdialenosť od nášho elementu
+            const distance = getElementDistance(element, header);
+            if (distance < 500) { // Max vzdialenosť v DOM
+                console.log(`[4. FALLBACK] Kategória: "${cleaned}" (vzdialenosť: ${distance})`);
+                return cleaned;
+            }
+        }
+    }
+    
+    console.warn(`Nepodarilo sa nájsť kategóriu pre element: "${visibleText.substring(0, 50)}..."`);
+    return 'neznáma kategória';
+}
+
+// === POMOCNÁ FUNKCIA NA NÁJDENIE PRVÉHO NADPISU NAD ELEMENTOM ===
+function findFirstHeaderAboveElement(element) {
     let current = element;
-    let foundExactCategory = null;
     let searchDepth = 0;
-    const maxDepth = 8;
+    const maxDepth = 10;
     
     while (current && current !== document.body && searchDepth < maxDepth) {
-        // A) Skúsime predchádzajúce elementy (súrodencov a ich deti)
+        // Skúsime nájsť nadpisy medzi predchádzajúcimi súrodencami
         let sibling = current.previousElementSibling;
         let siblingCount = 0;
-        const maxSiblings = 10;
+        const maxSiblings = 15;
         
-        while (sibling && siblingCount < maxSiblings && !foundExactCategory) {
-            // Hľadáme nadpisy (h1-h6)
-            const headers = sibling.querySelectorAll('h1, h2, h3, h4, h5, h6');
-            for (const header of headers) {
+        while (sibling && siblingCount < maxSiblings) {
+            // Hľadáme nadpisy priamo v súrodencovi
+            if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(sibling.tagName.toUpperCase())) {
+                const text = sibling.textContent.trim();
+                if (isValidCategoryName(cleanCategoryName(text))) {
+                    return sibling;
+                }
+            }
+            
+            // Hľadáme nadpisy v potomkoch súrodenca
+            const childHeaders = sibling.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            for (const header of childHeaders) {
                 const text = header.textContent.trim();
-                if (isValidCategoryName(text)) {
-                    foundExactCategory = text;
-                    break;
-                }
-            }
-            
-            // Ak sme nenašli v potomkoch, skúsime priamo text súrodenca
-            if (!foundExactCategory) {
-                const tagName = sibling.tagName.toUpperCase();
-                if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(tagName)) {
-                    const text = sibling.textContent.trim();
-                    if (isValidCategoryName(text)) {
-                        foundExactCategory = text;
-                        break;
-                    }
-                }
-            }
-            
-            // Skúsime špeciálne kontajnery pre kategórie
-            if (!foundExactCategory) {
-                const categoryContainers = sibling.querySelectorAll(
-                    '.category-name, .category-title, [data-category], ' +
-                    '.card-header, .group-header, .section-title, .category-header'
-                );
-                for (const container of categoryContainers) {
-                    const text = container.textContent.trim();
-                    if (isValidCategoryName(text)) {
-                        foundExactCategory = text;
-                        break;
-                    }
+                if (isValidCategoryName(cleanCategoryName(text))) {
+                    return header;
                 }
             }
             
@@ -320,91 +397,66 @@ function getCategoryFromDOM(element) {
             siblingCount++;
         }
         
-        // B) Skúsime rodiča - jeho atribúty a CSS triedy
-        if (!foundExactCategory && current.parentElement) {
-            // Skontrolujeme, či rodič nie je kontajner pre kategóriu
-            const parentClasses = current.parentElement.className || '';
-            if (parentClasses.includes('category') || 
-                parentClasses.includes('Category') ||
-                current.parentElement.hasAttribute('data-category')) {
-                
-                // Hľadáme nadpis v tomto kontajneri
-                const containerHeaders = current.parentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
-                for (const header of containerHeaders) {
-                    const text = header.textContent.trim();
-                    if (isValidCategoryName(text)) {
-                        foundExactCategory = text;
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // C) Skúsime príbuzné elementy podľa štruktúry
-        if (!foundExactCategory) {
-            // Hľadáme najbližší nadpis bez ohľadu na hierarchiu
-            const nearestHeader = current.closest('div, section, article')?.querySelector('h1, h2, h3, h4, h5, h6');
-            if (nearestHeader) {
-                const text = nearestHeader.textContent.trim();
-                if (isValidCategoryName(text)) {
-                    foundExactCategory = text;
-                }
-            }
-        }
-        
-        // Ak sme našli kategóriu, vrátime ju
-        if (foundExactCategory) {
-            console.log(`Nájdená presná kategória: "${foundExactCategory}" (v úrovni ${searchDepth})`);
-            return foundExactCategory;
-        }
-        
-        // Posunieme sa vyššie v DOM
+        // Ak sme nenašli medzi súrodencami, skúsime rodiča
         current = current.parentElement;
         searchDepth++;
     }
     
-    // 3. Fallback: URL hash
-    if (window.location.hash && window.location.hash.length > 1) {
-        const hash = window.location.hash.substring(1);
-        const parts = hash.split('/');
-        let catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
-        
-        if (isValidCategoryName(catNameFromHash)) {
-            console.log(`Kategória z URL hash: "${catNameFromHash}"`);
-            return catNameFromHash;
-        }
-    }
-    
-    // 4. Fallback: skúsime podľa štruktúry stránky
-    if (!foundExactCategory) {
-        // Prehľadáme všetky nadpisy na stránke
-        const allHeaders = document.querySelectorAll('h1, h2, h3');
-        for (const header of allHeaders) {
-            const text = header.textContent.trim();
-            if (isValidCategoryName(text)) {
-                // Skontrolujeme, či sme v správnej časti stránky
-                const distance = getElementDistance(element, header);
-                if (distance < 1000) { // Max vzdialenosť v DOM
-                    console.log(`Fallback kategória: "${text}" (vzdialenosť: ${distance})`);
-                    return text;
-                }
-            }
-        }
-    }
-    
-    console.warn(`Nepodarilo sa nájsť presnú kategóriu pre element: "${visibleText.substring(0, 50)}..."`);
-    return 'neznáma kategória';
+    return null;
 }
 
-// === POMOCNÁ FUNKCIA NA VALIDÁCIU NÁZOV KATEGÓRIE ===
+// === FUNKCIA NA ČISTENIE NÁZVU KATEGÓRIE ===
+function cleanCategoryName(name) {
+    if (!name) return '';
+    
+    let cleaned = name.trim();
+    
+    // Odstrániť nechcené prefixy
+    const unwantedPrefixes = [
+        'skupina',
+        'Skupina',
+        'základná skupina',
+        'nadstavbová skupina',
+        'Základné skupiny',
+        'Nadstavbové skupiny',
+        'Tímy bez skupiny'
+    ];
+    
+    for (const prefix of unwantedPrefixes) {
+        if (cleaned.toLowerCase().startsWith(prefix.toLowerCase())) {
+            cleaned = cleaned.substring(prefix.length).trim();
+            // Odstrániť prípadné pomlčky a dvojbodky na začiatku
+            cleaned = cleaned.replace(/^[-–:]\s*/, '').trim();
+            break;
+        }
+    }
+    
+    // Odstrániť čísla skupín (napr. "A", "B", "1", "2")
+    cleaned = cleaned.replace(/^[A-Za-z0-9]\s*[-–]\s*/, '').trim();
+    
+    // Odstrániť príliš dlhé texty (pravdepodobne nie sú kategórie)
+    if (cleaned.length > 50) {
+        // Skúsime nájsť prvú časť oddelenú čiarkou alebo pomlčkou
+        const parts = cleaned.split(/[,–-]/);
+        if (parts[0] && parts[0].length > 2 && parts[0].length < 30) {
+            cleaned = parts[0].trim();
+        }
+    }
+    
+    return cleaned;
+}
+
+// === POMOCNÁ FUNKCIA NA VALIDÁCIU NÁZVU KATEGÓRIE ===
 function isValidCategoryName(text) {
-    if (!text || text.length < 2) return false;
+    if (!text || text.length < 3) return false;
     
     // Filtre pre neplatné názvy
     const invalidPatterns = [
         /^\d+$/,                          // Čísla
-        /^[A-Za-z0-9]{1,4}$/,             // Krátke kódy
+        /^[A-Za-z0-9]{1,3}$/,             // Krátke kódy (A, B, 1, 2, atď.)
         /^skupina$/i,                     // "Skupina"
+        /^základná skupina$/i,            // "Základná skupina"
+        /^nadstavbová skupina$/i,         // "Nadstavbová skupina"
         /^základné skupiny$/i,            // "Základné skupiny"
         /^nadstavbové skupiny$/i,         // "Nadstavbové skupiny"
         /^tímy bez skupiny$/i,            // "Tímy bez skupiny"
@@ -413,13 +465,17 @@ function isValidCategoryName(text) {
         /^prehľad$/i,                     // "Prehľad"
         /^tabuľka$/i,                     // "Tabuľka"
         /^výsledky$/i,                    // "Výsledky"
-        /^pozri všetky$/i,                // "Pozri všetky"
         /^navigácia$/i,                   // "Navigácia"
         /^menu$/i,                        // "Menu"
         /^filter$/i,                      // "Filter"
         /^vyhľadávať$/i,                  // "Vyhľadávať"
         /^hlavná ponuka$/i,               // "Hlavná ponuka"
-        /^logo$/i                         // "Logo"
+        /^logo$/i,                        // "Logo"
+        /^domov$/i,                       // "Domov"
+        /^o nás$/i,                       // "O nás"
+        /^kontakt$/i,                     // "Kontakt"
+        /^prihlásiť sa$/i,                // "Prihlásiť sa"
+        /^odhlásiť sa$/i                  // "Odhlásiť sa"
     ];
     
     // Skontrolujeme všetky neplatné vzory
@@ -429,17 +485,18 @@ function isValidCategoryName(text) {
         }
     }
     
-    // Skontrolujeme príliš dlhé názvy (pravdepodobne nie sú kategórie)
+    // Príliš dlhé názvy pravdepodobne nie sú kategórie
     if (text.length > 50) return false;
     
-    // Skontrolujeme príliš krátke názvy
+    // Príliš krátke názvy
     if (text.length < 3) return false;
     
-    // Dobre vyzerajúce názvy kategórií
+    // Platné vzory pre názvy kategórií
     const validPatterns = [
         /^[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ][a-záéíóúýčďľňšťž]+(\s+[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ][a-záéíóúýčďľňšťž]+)*$/, // Veľké písmeno na začiatku každého slova
-        /^[A-Z]+$/i,                                                                          // Všetky písmená (napr. "FUTSAL")
+        /^[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ]{2,}$/i,                                                          // Všetky písmená (napr. "FUTSAL", "FLORBAL")
         /^\d+\s*[-–]\s*[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ].*$/i,                                            // "1 - Názov kategórie"
+        /^[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ][a-záéíóúýčďľňšťž]+\s*[-–]\s*.+$/i,                              // "Futbal - muži"
         /^kategória\s*[:.]?\s*.+$/i                                                          // "Kategória: Názov"
     ];
     
@@ -450,11 +507,18 @@ function isValidCategoryName(text) {
         }
     }
     
+    // Fallback: obsahuje medzeru a aspoň jedno veľké písmeno
+    if (text.includes(' ') && /[A-ZÁÉÍÓÚÝČĎĽŇŠŤŽ]/.test(text)) {
+        return true;
+    }
+    
     return false;
 }
 
-// === POMOCNÁ FUNKCIA NA VÝPOČET VZDIALENOSTI MEDZI ELEMENTAMI ===
+// === POMOCNÁ FUNKCIA NA VÝPOČET VZDIALENOSTI ===
 function getElementDistance(el1, el2) {
+    if (!el1 || !el2) return Infinity;
+    
     let distance = 0;
     let current1 = el1;
     let current2 = el2;
@@ -491,7 +555,6 @@ function getElementDistance(el1, el2) {
     
     return distance;
 }
-
 // === VYLEPŠENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
 function addHoverListener(element) {
     // SKONTROLUJEME, CI MÁME POVOLENÉ BUBLINKY
