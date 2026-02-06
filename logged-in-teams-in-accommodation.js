@@ -97,16 +97,16 @@ const createAccommodationNotification = async (action, data) => {
     
     switch (action) {
         case 'assign_accommodation':
-            message = `Tím '${teamName}' (${category}) bol priradený do ubytovne '${accommodationName}' (${totalPeople} osôb)`;
+            message = `Tím ${teamName} (${category}) bol priradený do ubytovne '''${accommodationName}' (${totalPeople} osôb)`;
             break;
         case 'change_accommodation':
-            message = `Tím '${teamName}' (${category}) bol presunutý z ubytovne '${oldAccommodation}' do '${newAccommodation}'`;
+            message = `Tím ${teamName} (${category}) bol presunutý z ubytovne '${oldAccommodation}' do '${newAccommodation}'`;
             break;
         case 'remove_accommodation':
-            message = `Tím '${teamName}' (${category}) bol odstránený z ubytovne '${oldAccommodation}'`;
+            message = `Tím ${teamName} (${category}) bol odstránený z ubytovne '''${oldAccommodation}'`;
             break;
         case 'update_accommodation_color':
-            message = `Bola zmenená farba ubytovne '${accommodationName}'`;
+            message = `Bola zmenená farba ubytovne '''${accommodationName}'`;
             break;
         default:
             message = `Zmena v ubytovaní: ${action}`;
