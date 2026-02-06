@@ -33,7 +33,7 @@ let isEmailSyncListenerSetup = false;
 
 const AddGroupsApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
-    const [teamsWithAccom, setTeamsWithAccom] = useState([]);
+    const [allTeams, setAllTeams] = useState([]);
     const [selectedPlaceForEdit, setSelectedPlaceForEdit] = useState(null);
     const [isColorModalOpen, setIsColorModalOpen] = useState(false);
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
@@ -63,6 +63,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         capacity: data.capacity ?? null,
                         headerColor: data.headerColor || '#1e40af',
                         headerTextColor: data.headerTextColor || '#ffffff',
+                        assignedTeams: [] // Pridáme pole pre priradené tímy
                     });
                 });
 
@@ -77,13 +78,13 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // Real-time tímy – iba tímy S ubytovaním
+    // Real-time tímy – všetky tímy s ubytovaním
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
             collection(window.db, 'users'),
             (snapshot) => {
-                const withAccom = [];
+                const teams = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data() || {};
                     if (data.teams && typeof data.teams === 'object') {
@@ -102,7 +103,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 const maleDrivers = Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0;
                                 const totalPeople = playerCount + womenRTCount + menRTCount + femaleDrivers + maleDrivers;
 
-                                withAccom.push({
+                                teams.push({
                                     category,
                                     teamName: team.teamName.trim(),
                                     accommodation: accomType,
@@ -110,7 +111,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     fullTeamData: team,
                                     userId: doc.id,
                                     teamId: team.teamId || team.teamName.toLowerCase().replace(/\s+/g, '-'),
-                                    assignedPlace: team.accommodation?.name || null, // Nové pole pre priradenú ubytovňu
+                                    assignedPlace: team.accommodation?.name || null,
                                     teamPath: {
                                         userId: doc.id,
                                         category: category,
@@ -123,15 +124,30 @@ const AddGroupsApp = ({ userProfileData }) => {
                 });
 
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
-                console.log(`TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
-                console.log(`Celkom tímov s nepriradeným ubytovaním: ${withAccom.length}`);
+                console.log(`VŠETKY TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log(`Celkom tímov: ${teams.length}`);
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
-                setTeamsWithAccom(withAccom);
+                setAllTeams(teams);
             },
             (err) => console.error("[USERS]", err)
         );
         return () => unsubscribe();
     }, []);
+
+    // Rozdelenie tímov na priradené a nepriradené
+    const unassignedTeams = allTeams.filter(team => !team.assignedPlace);
+    const assignedTeams = allTeams.filter(team => team.assignedPlace);
+
+    // Priradenie tímov ku konkrétnym ubytovniam
+    const accommodationsWithTeams = accommodations.map(place => {
+        const teamsInPlace = assignedTeams.filter(team => team.assignedPlace === place.name);
+        return {
+            ...place,
+            assignedTeams: teamsInPlace,
+            usedCapacity: teamsInPlace.reduce((sum, team) => sum + team.totalPeople, 0),
+            remainingCapacity: place.capacity ? place.capacity - teamsInPlace.reduce((sum, team) => sum + team.totalPeople, 0) : null
+        };
+    });
 
     // Otvorenie modálu pre farby
     const openEditModal = (place) => {
@@ -239,15 +255,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 [`teams.${selectedTeam.category}`]: updatedTeamArray
             });
 
-            // 4. Aktualizácia lokálneho stavu
-            setTeamsWithAccom(prev =>
-                prev.map(t =>
-                    t.teamName === selectedTeam.teamName && t.category === selectedTeam.category
-                        ? { ...t, assignedPlace: selectedPlace.name }
-                        : t
-                )
-            );
-
             window.showGlobalNotification(
                 `Tím "${selectedTeam.teamName}" bol priradený do "${selectedPlace.name}"`,
                 'success'
@@ -261,6 +268,60 @@ const AddGroupsApp = ({ userProfileData }) => {
         } catch (err) {
             console.error("Chyba pri ukladaní priradenia:", err);
             window.showGlobalNotification('Nepodarilo sa priradiť ubytovňu', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Odstránenie priradenia tímu
+    const removeTeamAssignment = async (team) => {
+        if (!window.db) return;
+
+        const confirmRemove = window.confirm(`Naozaj chcete odstrániť priradenie tímu "${team.teamName}" z ubytovne "${team.assignedPlace}"?`);
+        if (!confirmRemove) return;
+
+        setIsLoading(true);
+
+        try {
+            // 1. Načítanie aktuálnych dát používateľa
+            const userRef = doc(window.db, 'users', team.userId);
+            const userDoc = await getDoc(userRef);
+            
+            if (!userDoc.exists()) {
+                throw new Error('Používateľský dokument neexistuje');
+            }
+
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            const teamArray = teams[team.category] || [];
+
+            // 2. Odstránenie priradenia ubytovne
+            const updatedTeamArray = teamArray.map(teamItem => {
+                if (teamItem.teamName === team.teamName) {
+                    return {
+                        ...teamItem,
+                        accommodation: {
+                            ...teamItem.accommodation,
+                            name: null
+                        }
+                    };
+                }
+                return teamItem;
+            });
+
+            // 3. Uloženie späť do Firebase
+            await updateDoc(userRef, {
+                [`teams.${team.category}`]: updatedTeamArray
+            });
+
+            window.showGlobalNotification(
+                `Priradenie tímu "${team.teamName}" bolo odstránené`,
+                'success'
+            );
+
+        } catch (err) {
+            console.error("Chyba pri odstraňovaní priradenia:", err);
+            window.showGlobalNotification('Nepodarilo sa odstrániť priradenie', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -316,7 +377,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 { className: 'grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10' },
 
-                // Ľavá strana – Tímy
+                // Ľavá strana – Tímy bez priradenia
                 React.createElement(
                     'div',
                     { className: 'order-2 lg:order-1' },
@@ -326,17 +387,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { className: 'bg-green-700 text-white px-6 py-4' },
-                            React.createElement('h2', { className: 'text-xl font-bold' }, `Tímy s nepriradeným ubytovaním (${teamsWithAccom.length})`)
+                            React.createElement('h2', { className: 'text-xl font-bold' }, `Tímy bez priradenia (${unassignedTeams.length})`)
                         ),
                         React.createElement(
                             'div',
                             { className: 'p-6 flex-grow overflow-y-auto max-h-[600px]' },
-                            teamsWithAccom.length === 0
-                                ? React.createElement('p', { className: 'text-gray-500 text-center py-12' }, 'Zatiaľ žiadny tím nemá pridelené ubytovanie')
+                            unassignedTeams.length === 0
+                                ? React.createElement('p', { className: 'text-gray-500 text-center py-12' }, 'Všetky tímy už majú priradené ubytovanie')
                                 : React.createElement(
                                     'ul',
                                     { className: 'space-y-3' },
-                                    teamsWithAccom.map((team, i) =>
+                                    unassignedTeams.map((team, i) =>
                                         React.createElement(
                                             'li',
                                             {
@@ -347,13 +408,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 'div',
                                                 null,
                                                 React.createElement('span', { className: 'font-medium' }, `${team.category}: ${team.teamName}`),
-                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} osôb)`),
-                                                team.assignedPlace && React.createElement(
-                                                    'div',
-                                                    { className: 'text-sm text-blue-600 mt-1' },
-                                                    React.createElement('span', { className: 'font-medium' }, 'Priradené: '),
-                                                    team.assignedPlace
-                                                )
+                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} osôb)`)
                                             ),
                                             React.createElement(
                                                 'div',
@@ -390,22 +445,22 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 ),
 
-                // Pravá strana – Ubytovacie miesta
+                // Pravá strana – Ubytovacie miesta s tímami
                 React.createElement(
                     'div',
                     { className: 'order-1 lg:order-2 space-y-6' },
                     React.createElement(
                         'h2',
                         { className: 'text-2xl font-bold text-gray-800 mb-4 lg:hidden' },
-                        'Dostupné ubytovacie kapacity'
+                        'Ubytovacie miesta s priradenými tímami'
                     ),
-                    accommodations.length === 0
+                    accommodationsWithTeams.length === 0
                         ? React.createElement(
                             'div',
                             { className: 'bg-white rounded-xl shadow-lg p-8 text-center' },
                             React.createElement('p', { className: 'text-gray-500 text-lg' }, 'Zatiaľ žiadne ubytovacie miesta...')
                           )
-                        : accommodations.map((place) =>
+                        : accommodationsWithTeams.map((place) =>
                             React.createElement(
                                 'div',
                                 { key: place.id, className: 'bg-white rounded-xl shadow-lg overflow-hidden relative' },
@@ -418,7 +473,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             color: place.headerTextColor || '#ffffff'
                                         }
                                     },
-                                    React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto'),
+                                    React.createElement(
+                                        'div',
+                                        null,
+                                        React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto'),
+                                        React.createElement('div', { className: 'text-sm opacity-90 mt-1' },
+                                            `${place.assignedTeams.length} tímov • ${place.usedCapacity} osôb`
+                                        )
+                                    ),
                                     React.createElement(
                                         'button',
                                         {
@@ -448,7 +510,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     { className: 'p-6' },
                                     React.createElement(
                                         'div',
-                                        { className: 'space-y-4' },
+                                        { className: 'space-y-6' },
+                                        // Informácie o ubytovni
                                         React.createElement(
                                             'div',
                                             { className: 'flex flex-wrap items-baseline gap-x-6 gap-y-1' },
@@ -463,8 +526,96 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     'p',
                                                     { className: 'text-gray-700' },
                                                     React.createElement('span', { className: 'font-semibold' }, 'Kapacita: '),
-                                                    `${place.capacity} miest`
+                                                    `${place.usedCapacity} / ${place.capacity} osôb`
+                                                ),
+                                            place.remainingCapacity !== null &&
+                                                React.createElement(
+                                                    'p',
+                                                    { className: place.remainingCapacity < 0 ? 'text-red-600 font-semibold' : 'text-gray-700' },
+                                                    React.createElement('span', { className: 'font-semibold' }, 'Zostáva: '),
+                                                    `${place.remainingCapacity} osôb`
                                                 )
+                                        ),
+                                        
+                                        // Zoznam priradených tímov
+                                        place.assignedTeams.length > 0 &&
+                                        React.createElement(
+                                            'div',
+                                            { className: 'mt-4' },
+                                            React.createElement(
+                                                'h4',
+                                                { className: 'font-semibold text-gray-800 mb-3' },
+                                                `Priradené tímy (${place.assignedTeams.length})`
+                                            ),
+                                            React.createElement(
+                                                'ul',
+                                                { className: 'space-y-2' },
+                                                place.assignedTeams.map((team, index) =>
+                                                    React.createElement(
+                                                        'li',
+                                                        {
+                                                            key: index,
+                                                            className: 'py-2 px-3 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100'
+                                                        },
+                                                        React.createElement(
+                                                            'div',
+                                                            null,
+                                                            React.createElement('span', { className: 'font-medium' }, `${team.category}: ${team.teamName}`),
+                                                            React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} osôb)`)
+                                                        ),
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex items-center gap-2' },
+                                                            React.createElement(
+                                                                'button',
+                                                                {
+                                                                    onClick: () => openAssignModal(team),
+                                                                    className: 'p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors',
+                                                                    title: 'Zmeniť ubytovňu'
+                                                                },
+                                                                React.createElement(
+                                                                    'svg',
+                                                                    { 
+                                                                        className: 'w-4 h-4', 
+                                                                        fill: 'none', 
+                                                                        stroke: 'currentColor', 
+                                                                        viewBox: '0 0 24 24',
+                                                                        strokeWidth: '2'
+                                                                    },
+                                                                    React.createElement('path', {
+                                                                        strokeLinecap: 'round',
+                                                                        strokeLinejoin: 'round',
+                                                                        d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                                    })
+                                                                )
+                                                            ),
+                                                            React.createElement(
+                                                                'button',
+                                                                {
+                                                                    onClick: () => removeTeamAssignment(team),
+                                                                    className: 'p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors',
+                                                                    title: 'Odstrániť priradenie'
+                                                                },
+                                                                React.createElement(
+                                                                    'svg',
+                                                                    { 
+                                                                        className: 'w-4 h-4', 
+                                                                        fill: 'none', 
+                                                                        stroke: 'currentColor', 
+                                                                        viewBox: '0 0 24 24',
+                                                                        strokeWidth: '2'
+                                                                    },
+                                                                    React.createElement('path', {
+                                                                        strokeLinecap: 'round',
+                                                                        strokeLinejoin: 'round',
+                                                                        d: 'M6 18L18 6M6 6l12 12'
+                                                                    })
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
                                         )
                                     )
                                 )
@@ -642,7 +793,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'option',
                                         { key: place.id, value: place.id },
-                                        `${place.name} (${place.capacity ? place.capacity + ' miest' : 'neurčená kapacita'})`
+                                        `${place.name} (${place.usedCapacity || 0}/${place.capacity || '∞'} osôb)`
                                     )
                                 )
                             )
@@ -678,7 +829,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
                                 'Ukladám...'
                             )
-                            : 'Priradiť'
+                            : selectedTeam?.assignedPlace ? 'Zmeniť' : 'Priradiť'
                     )
                 )
             )
