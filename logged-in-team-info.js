@@ -11,6 +11,7 @@ let shouldShowTeamBubbles = true;
 let unsubscribeUserSettings = null;
 let customTooltip = null;
 let observer = null;
+let currentUserId = null;
 
 // === GLOBÁLNE NASTAVENIE ZOBRAZOVANIA BUBLÍN ===
 function setupTeamBubblesListener() {
@@ -21,15 +22,19 @@ function setupTeamBubblesListener() {
         return;
     }
 
-    const userId = window.auth.currentUser.uid;
-    const userRef = doc(window.db, "users", userId);
+    currentUserId = window.auth.currentUser.uid;
+    const userRef = doc(window.db, "users", currentUserId);
 
-    console.log(`[team-info] Nastavujem onSnapshot na users/${userId} → sledujem displayTeamBubbles`);
+    console.log(`[team-info] Nastavujem onSnapshot na users/${currentUserId} → sledujem displayTeamBubbles`);
 
     unsubscribeUserSettings = onSnapshot(userRef, (snap) => {
         if (!snap.exists()) {
             console.warn("[team-info] Dokument používateľa neexistuje");
             shouldShowTeamBubbles = true; // fallback
+            // Inicializácia poľa ak neexistuje (rovnaká logika ako v notifications.js)
+            updateDoc(userRef, { displayTeamBubbles: true })
+                .then(() => console.log("[team-info] Inicializované displayTeamBubbles = true"))
+                .catch(err => console.error("[team-info] Chyba pri init:", err));
             return;
         }
 
@@ -50,6 +55,16 @@ function setupTeamBubblesListener() {
                 console.log("[team-info] Bublinky vypnuté - odstraňujem tooltip a listenery");
                 hideTooltip();
                 removeAllHoverListeners();
+                
+                // Zastaviť observer
+                if (observer) {
+                    observer.disconnect();
+                    observer = null;
+                }
+            } else {
+                // Ak sú bublinky zapnuté, re-inicializujeme listenery
+                console.log("[team-info] Bublinky zapnuté - inicializujem listenery");
+                initTeamHoverListeners();
             }
         }
     }, (err) => {
@@ -575,8 +590,8 @@ function initApp() {
     function waitForDb() {
         attempts++;
 
-        if (window.db) {
-            console.log("%cwindow.db je dostupné → inicializujem",
+        if (window.db && window.auth && window.auth.currentUser) {
+            console.log("%cwindow.db a auth sú dostupné → inicializujem",
                 "color:#10b981; font-weight:bold; font-size:14px; background:#000; padding:6px 12px; border-radius:6px;");
             
             // NAJPRV NASTAVÍME LISTENER NA NASTAVENIA (aby sme vedeli či môžeme inicializovať)
@@ -604,18 +619,23 @@ function initApp() {
                 } else {
                     console.log("%cBublinky sú vypnuté - neinicializujem hover listenery",
                         "color:#ef4444; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
+                    // Zastaviť observer ak existuje
+                    if (observer) {
+                        observer.disconnect();
+                        observer = null;
+                    }
                 }
             }, 300);
             return;
         }
 
         if (attempts >= maxAttempts) {
-            console.error("%c[CHYBA] window.db sa nenačítal",
+            console.error("%c[CHYBA] window.db alebo auth sa nenačítali",
                 "color:#ef4444; font-weight:bold; font-size:14px; background:#000; padding:6px 12px; border-radius:6px;");
             return;
         }
 
-        console.log(`Čakám na window.db... (pokus ${attempts}/${maxAttempts})`);
+        console.log(`Čakám na window.db a auth... (pokus ${attempts}/${maxAttempts})`);
         setTimeout(waitForDb, 500);
     }
 
@@ -647,6 +667,13 @@ setInterval(() => {
         if (totalTeams > 0 && initializedTeams < totalTeams * 0.5) {
             console.log(`Málo inicializovaných tímov (${initializedTeams}/${totalTeams}) → re-inicializácia`);
             initTeamHoverListeners();
+        }
+    } else {
+        // Ak sú bublinky vypnuté, uistíme sa, že nemáme žiadne listenery
+        const hasListeners = document.querySelectorAll('[data-hover-listener-added]').length > 0;
+        if (hasListeners) {
+            console.log("Bublinky sú vypnuté, ale našli sa listenery → odstraňujem");
+            removeAllHoverListeners();
         }
     }
 }, 5000); // Kontrola každých 5 sekúnd
