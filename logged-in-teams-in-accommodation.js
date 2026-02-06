@@ -1,8 +1,8 @@
-
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
+// Importy pre Firebase funkcie
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef, useSyncExternalStore } = React;
+
+const { useState, useEffect } = React;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -18,28 +18,15 @@ window.showGlobalNotification = (message, type = 'success') => {
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
-        case 'success':
-            typeClasses = 'bg-green-500 text-white';
-            break;
-        case 'error':
-            typeClasses = 'bg-red-500 text-white';
-            break;
-        case 'info':
-            typeClasses = 'bg-blue-500 text-white';
-            break;
-        default:
-            typeClasses = 'bg-gray-700 text-white';
+        case 'success': typeClasses = 'bg-green-500 text-white'; break;
+        case 'error':   typeClasses = 'bg-red-500 text-white';   break;
+        case 'info':    typeClasses = 'bg-blue-500 text-white';  break;
+        default:        typeClasses = 'bg-gray-700 text-white';
     }
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
-    // Zobrazenie notifikácie
-    setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
-    }, 10);
-    // Skrytie notifikácie po 5 sekundách
-    setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
-    }, 5000);
+    setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`; }, 10);
+    setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`; }, 5000);
 };
 
 let isEmailSyncListenerSetup = false;
@@ -47,31 +34,26 @@ let isEmailSyncListenerSetup = false;
 const AddGroupsApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
     const [teamsWithAccom, setTeamsWithAccom] = useState([]);
-    // const [teamsWithoutAccom, setTeamsWithoutAccom] = useState([]);  ← už nepotrebujeme
+    const [selectedPlaceForEdit, setSelectedPlaceForEdit] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
 
-    // ──────────────────────────────────────────────
-    // Real-time ubytovanie (type = "ubytovanie") — BEZ ZMENY
-    // ──────────────────────────────────────────────
+    // Real-time ubytovanie + headerColor
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
             collection(window.db, 'places'),
             (snapshot) => {
                 const places = [];
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
                     if (data.type !== "ubytovanie") return;
                     places.push({
-                        id: doc.id,
+                        id: docSnap.id,
                         name: data.name || '(bez názvu)',
-                        type: data.type || '?',
-                        lat: data.lat ?? data.location?.latitude ?? '?',
-                        lng: data.lng ?? data.location?.longitude ?? '?',
                         accommodationType: data.accommodationType || null,
                         capacity: data.capacity ?? null,
-                        createdAt: data.createdAt
-                            ? new Date(data.createdAt.toMillis()).toLocaleString('sk-SK')
-                            : '?',
+                        headerColor: data.headerColor || '#1e40af',  // fallback tmavomodrá
                     });
                 });
 
@@ -80,8 +62,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 console.log(`NAČÍTANÉ UBYTOVANIE — ${new Date().toLocaleTimeString('sk-SK')}`);
                 console.log(`Celkový počet: ${places.length}`);
                 console.log("═══════════════════════════════════════════════════");
-                // ... zvyšok console.log bez zmeny ...
-
                 setAccommodations(places);
             },
             (err) => console.error("[PLACES]", err)
@@ -89,17 +69,13 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // ──────────────────────────────────────────────
     // Real-time tímy – iba tímy S ubytovaním
-    // ──────────────────────────────────────────────
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
             collection(window.db, 'users'),
             (snapshot) => {
                 const withAccom = [];
-                // withoutAccom už nezbierame
-
                 snapshot.forEach((doc) => {
                     const data = doc.data() || {};
                     if (data.teams && typeof data.teams === 'object') {
@@ -107,13 +83,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                             if (!Array.isArray(teamArray)) return;
                             teamArray.forEach((team) => {
                                 if (!team?.teamName) return;
-
                                 const accomType = team.accommodation?.type?.trim?.() || '';
-                                const hasAccommodation =
-                                    accomType !== '' &&
-                                    accomType.toLowerCase() !== 'bez ubytovania';
-
-                                if (!hasAccommodation) return; // ← TU JE HLAVNÁ ZMENA – preskočíme
+                                const hasAccommodation = accomType !== '' && accomType.toLowerCase() !== 'bez ubytovania';
+                                if (!hasAccommodation) return;
 
                                 const playerCount = Array.isArray(team.playerDetails) ? team.playerDetails.length : 0;
                                 const womenRTCount = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
@@ -133,7 +105,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                     }
                 });
 
-                // Console log – zachovaný
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
                 console.log(`TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
                 console.log(`Celkom tímov s prideleným ubytovaním: ${withAccom.length}`);
@@ -149,15 +120,45 @@ const AddGroupsApp = ({ userProfileData }) => {
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
 
                 setTeamsWithAccom(withAccom);
-                // setTeamsWithoutAccom už nevoláme
             },
             (err) => console.error("[USERS]", err)
         );
         return () => unsubscribe();
     }, []);
 
+    // Otvorenie modálu
+    const openEditModal = (place) => {
+        setSelectedPlaceForEdit(place);
+        setNewHeaderColor(place.headerColor || '#1e40af');
+        setIsModalOpen(true);
+    };
+
+    // Uloženie farby
+    const saveHeaderColor = async () => {
+        if (!selectedPlaceForEdit || !window.db) return;
+
+        try {
+            const placeRef = doc(window.db, 'places', selectedPlaceForEdit.id);
+            await updateDoc(placeRef, { headerColor: newHeaderColor });
+
+            setAccommodations(prev =>
+                prev.map(p =>
+                    p.id === selectedPlaceForEdit.id ? { ...p, headerColor: newHeaderColor } : p
+                )
+            );
+
+            window.showGlobalNotification('Farba hlavičky bola aktualizovaná', 'success');
+        } catch (err) {
+            console.error("Chyba pri ukladaní farby:", err);
+            window.showGlobalNotification('Nepodarilo sa uložiť farbu', 'error');
+        }
+
+        setIsModalOpen(false);
+        setSelectedPlaceForEdit(null);
+    };
+
     // ──────────────────────────────────────────────
-    // RENDER – dve stĺpce: vľavo tímy, vpravo ubytovacie miesta (každé s vlastným headerom)
+    // RENDER
     // ──────────────────────────────────────────────
     return React.createElement(
         'div',
@@ -165,12 +166,12 @@ const AddGroupsApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { className: 'max-w-7xl mx-auto' },
-    
+
             React.createElement(
                 'div',
                 { className: 'grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10' },
-    
-                // Ľavá strana – Tímy s ubytovaním (bez zmeny)
+
+                // Ľavá strana – Tímy
                 React.createElement(
                     'div',
                     { className: 'order-2 lg:order-1' },
@@ -210,7 +211,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-    
+
                 // Pravá strana – Ubytovacie miesta
                 React.createElement(
                     'div',
@@ -229,14 +230,23 @@ const AddGroupsApp = ({ userProfileData }) => {
                         : accommodations.map((place) =>
                             React.createElement(
                                 'div',
-                                {
-                                    key: place.id,
-                                    className: 'bg-white rounded-xl shadow-lg overflow-hidden'
-                                },
+                                { key: place.id, className: 'bg-white rounded-xl shadow-lg overflow-hidden relative' },
                                 React.createElement(
                                     'div',
-                                    { className: 'bg-blue-700 text-white px-6 py-4' },
-                                    React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto')
+                                    {
+                                        className: 'text-white px-6 py-4 relative flex items-center justify-between',
+                                        style: { backgroundColor: place.headerColor }
+                                    },
+                                    React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto'),
+                                    React.createElement(
+                                        'button',
+                                        {
+                                            onClick: () => openEditModal(place),
+                                            className: 'flex items-center gap-1.5 text-white hover:text-gray-200 transition-colors text-sm font-medium'
+                                        },
+                                        React.createElement('span', null, '✏️'),
+                                        React.createElement('span', null, 'upraviť')
+                                    )
                                 ),
                                 React.createElement(
                                     'div',
@@ -244,7 +254,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'div',
                                         { className: 'space-y-4' },
-                                        // Typ + Kapacita v jednom riadku
                                         React.createElement(
                                             'div',
                                             { className: 'flex flex-wrap items-baseline gap-x-6 gap-y-1' },
@@ -265,44 +274,93 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     )
                                 )
                             )
-                      )
+                          )
+                )
+            )
+        ),
+
+        // Modálne okno
+        isModalOpen &&
+        React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]',
+                onClick: (e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }
+            },
+            React.createElement(
+                'div',
+                { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
+                React.createElement('h3', { className: 'text-xl font-bold mb-6' }, 'Upraviť farbu hlavičky'),
+                React.createElement('p', { className: 'text-gray-600 mb-4' }, selectedPlaceForEdit?.name || 'Ubytovacie miesto'),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-6 mb-8' },
+                    React.createElement('input', {
+                        type: 'color',
+                        value: newHeaderColor,
+                        onChange: (e) => setNewHeaderColor(e.target.value),
+                        className: 'w-24 h-24 rounded-lg cursor-pointer border-2 border-gray-300 shadow-sm'
+                    }),
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement('div', {
+                            className: 'w-full h-16 rounded-lg shadow-inner border border-gray-200',
+                            style: { backgroundColor: newHeaderColor }
+                        }),
+                        React.createElement('p', { className: 'text-center text-sm text-gray-600 mt-2 font-mono' }, newHeaderColor)
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-4' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setIsModalOpen(false),
+                            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: saveHeaderColor,
+                            className: 'px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition'
+                        },
+                        'Uložiť'
+                    )
                 )
             )
         )
     );
 };
 
-/**
- * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
- * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
- */
+/* ──────────────────────────────────────────────
+   Zvyšok kódu (handleDataUpdateAndRender, event listener, loader) ostáva BEZ ZMENY
+─────────────────────────────────────────────── */
+
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
-
     if (userProfileData) {
-        // Synchronizácia emailu (pôvodná logika)
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
             console.log("logged-in-teams-in-accomodation.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
-            
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
                         const userProfileRef = doc(window.db, 'users', user.uid);
                         const docSnap = await getDoc(userProfileRef);
-
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
                                 console.log(`E-mail rozdiel: auth → ${user.email} vs firestore → ${firestoreEmail}`);
                                 await updateDoc(userProfileRef, { email: user.email });
-
                                 await addDoc(collection(window.db, 'notifications'), {
                                     userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
                                     timestamp: new Date(),
                                 });
-
                                 window.showGlobalNotification('E-mail bol automaticky aktualizovaný.', 'success');
                             }
                         }
@@ -312,18 +370,15 @@ const handleDataUpdateAndRender = (event) => {
                     }
                 }
             });
-
             isEmailSyncListenerSetup = true;
         }
 
-        // Vykreslenie
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
             console.log("Aplikácia vykreslená (AddGroupsApp)");
         }
     } else {
-        // loader ...
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
@@ -337,7 +392,6 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
 console.log("logged-in-teams-in-accomodation.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
@@ -345,7 +399,6 @@ if (window.globalUserProfileData) {
     console.log("Globálne dáta už existujú → vykresľujem okamžite");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
-    // loader fallback
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
