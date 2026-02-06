@@ -572,35 +572,6 @@ window.loadHeaderAndScripts = async () => {
              updateHeaderLinks(window.globalUserProfileData);
         }
 
-    function setPageScale() {
-        const w = window.innerWidth || document.documentElement.clientWidth;
-        let scale = 1;
-    
-        if (w <= 768) {
-            scale = 0.5;      // mobily 50 %
-        } else if (w <= 1024) {
-            scale = 0.8;      // tablety 80 %
-        }
-    
-        const html = document.documentElement;
-    
-        // Najspoľahlivejší spôsob v 2025/2026 – kombinácia
-        html.style.transform     = `scale(${scale})`;
-        html.style.transformOrigin = "top left";
-        html.style.width         = `${100 / scale}vw`;   // lepšie ako % v niektorých prípadoch
-        html.style.height        = `${100 / scale}vh`;
-        html.style.overflowX     = "hidden";             // zabráni horizontálnemu scrollu
-    
-        // Voliteľné: zakáž pinch zoom, ak nechceš, aby používateľ zoomoval ďalej
-        // (nie vždy žiaduce – lepšie nechať zapnuté)
-        // document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-    }
-    
-    // Spustenie + resize + aj orientationchange (otočenie mobilu)
-    setPageScale();
-    window.addEventListener('resize', setPageScale);
-    window.addEventListener('orientationchange', setPageScale)
-
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
