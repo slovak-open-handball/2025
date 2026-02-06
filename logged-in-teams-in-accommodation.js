@@ -134,13 +134,25 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // Rozdelenie tímov na priradené a nepriradené
-    const unassignedTeams = allTeams.filter(team => !team.assignedPlace);
-    const assignedTeams = allTeams.filter(team => team.assignedPlace);
+    // Funkcia na zoradenie tímov: najprv podľa kategórie (A-Z), potom podľa názvu tímu (A-Z)
+    const sortTeams = (teams) => {
+        return [...teams].sort((a, b) => {
+            // Porovnanie kategórií
+            const categoryCompare = a.category.localeCompare(b.category, 'sk', { sensitivity: 'base' });
+            if (categoryCompare !== 0) return categoryCompare;
+            
+            // Ak sú kategórie rovnaké, porovnanie názvov tímov
+            return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
+        });
+    };
+
+    // Rozdelenie tímov na priradené a nepriradené a ich zoradenie
+    const unassignedTeams = sortTeams(allTeams.filter(team => !team.assignedPlace));
+    const assignedTeams = sortTeams(allTeams.filter(team => team.assignedPlace));
 
     // Priradenie tímov ku konkrétnym ubytovniam - UPRAVENÉ pre správne získanie dát
     const accommodationsWithTeams = accommodations.map(place => {
-        const teamsInPlace = assignedTeams.filter(team => team.assignedPlace === place.name);
+        const teamsInPlace = sortTeams(assignedTeams.filter(team => team.assignedPlace === place.name));
         const usedCapacity = teamsInPlace.reduce((sum, team) => sum + team.totalPeople, 0);
         const remainingCapacity = place.capacity !== null ? place.capacity - usedCapacity : null;
         
