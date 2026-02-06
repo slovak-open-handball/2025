@@ -867,7 +867,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 {
                                                     onClick: () => openAssignModal(team),
                                                     className: 'p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0',
-                                                    title: 'Priradiť ubytovňu'
                                                 },
                                                 React.createElement(
                                                     'svg',
@@ -959,7 +958,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 React.createElement('h3', { 
                                                     className: 'text-lg font-bold whitespace-nowrap overflow-visible',
                                                     style: { textOverflow: 'clip' },
-                                                    title: place.name
                                                 }, place.name || 'Ubytovacie miesto'),
                                                 React.createElement('div', { 
                                                     className: 'text-xs opacity-90 mt-1 whitespace-nowrap overflow-visible',
@@ -971,7 +969,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 {
                                                     onClick: () => openEditModal(place),
                                                     className: 'flex-shrink-0 ml-3 flex items-center gap-1 px-3 py-1 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-xs font-medium rounded-full border border-gray-300 shadow-sm whitespace-nowrap',
-                                                    title: 'Upraviť farby'
                                                 },
                                                 React.createElement(
                                                     'svg',
@@ -1031,9 +1028,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             { 
                                                                 className: `text-sm whitespace-nowrap overflow-visible min-w-0 ${place.remainingCapacity < 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`,
                                                                 style: { textOverflow: 'clip' },
-                                                                title: place.remainingCapacity < 0 ? 
-                                                                    `Kapacita prekročená o ${Math.abs(place.remainingCapacity)} osôb` : 
-                                                                    `Zostáva ${place.remainingCapacity} voľných miest`
                                                             },
                                                             React.createElement('span', { className: 'font-semibold' }, 'Zostáva: '),
                                                             `${place.remainingCapacity} osôb`
@@ -1069,7 +1063,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                     React.createElement('span', { 
                                                                         className: 'font-medium text-sm whitespace-nowrap overflow-visible flex-shrink-0',
                                                                         style: { textOverflow: 'clip' },
-                                                                        title: `${team.category}: ${team.teamName}`
                                                                     }, `${team.category}: ${team.teamName}`),
                                                                     React.createElement('span', { 
                                                                         className: 'text-gray-500 text-xs ml-2 whitespace-nowrap flex-shrink-0'
@@ -1083,7 +1076,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                         {
                                                                             onClick: () => openAssignModal(team),
                                                                             className: 'p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
-                                                                            title: 'Zmeniť ubytovňu'
                                                                         },
                                                                         React.createElement(
                                                                             'svg',
@@ -1106,7 +1098,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                         {
                                                                             onClick: () => removeTeamAssignment(team),
                                                                             className: 'p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
-                                                                            title: 'Odstrániť priradenie'
                                                                         },
                                                                         React.createElement(
                                                                             'svg',
