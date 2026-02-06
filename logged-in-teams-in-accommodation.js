@@ -299,6 +299,10 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     };
 
+    const getFilteredTeamsPeopleCount = (teamsArray) => {
+        return teamsArray.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
+    };
+
     // Priradenie tímov ku konkrétnym ubytovniam
     const accommodationsWithTeams = accommodations
         .filter(place => {
@@ -1047,7 +1051,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             className: 'font-semibold text-gray-800 mb-2 text-sm flex-shrink-0 whitespace-nowrap overflow-visible',
                                                             style: { textOverflow: 'clip' }
                                                         },
-                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length})`
+                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter ? '/' + getFilteredTeamsPeopleCount(place.filteredAssignedTeams) + ' osôb' : ''})`
                                                     ),
                                                     React.createElement(
                                                         'ul',
