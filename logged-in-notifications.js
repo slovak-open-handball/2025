@@ -975,7 +975,7 @@ function NotificationsApp() {
                                                                 
                                                                 return React.createElement('li', { key: index },
                                                                     React.createElement('span', null, 'Zmena ubytovania z: '),
-                                                                    React.createElement('span', { className: 'line-through text-red-500' }, fromValue),
+                                                                    React.createElement('span', { className: 'text-red-500' }, fromValue),
                                                                     React.createElement('span', null, ' na '),
                                                                     React.createElement('span', { className: 'text-green-600 font-semibold' }, toValue)
                                                                 );
@@ -1070,13 +1070,13 @@ function NotificationsApp() {
                                                 React.createElement('ul', { className: 'list-disc list-inside ml-4' },
                                                     React.createElement('li', null, 
                                                         React.createElement('span', null, 'Typ: '),
-                                                        React.createElement('span', { className: 'line-through text-red-500' }, notification.data.originalType),
+                                                        React.createElement('span', { className: 'text-red-500' }, notification.data.originalType),
                                                         React.createElement('span', null, ' → '),
                                                         React.createElement('span', { className: 'text-green-600 font-semibold' }, notification.data.newType)
                                                     ),
                                                     React.createElement('li', null,
                                                         React.createElement('span', null, 'Kapacita: '),
-                                                        React.createElement('span', { className: 'line-through text-red-500' }, notification.data.originalCapacity),
+                                                        React.createElement('span', { className: 'text-red-500' }, notification.data.originalCapacity),
                                                         React.createElement('span', null, ' → '),
                                                         React.createElement('span', { className: 'text-green-600 font-semibold' }, notification.data.newCapacity)
                                                     )
