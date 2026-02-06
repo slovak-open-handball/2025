@@ -242,16 +242,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         'button',
                                         {
                                             onClick: () => openEditModal(place),
-                                            className: 'flex items-center gap-1.5 text-white hover:text-gray-200 transition-colors text-sm font-medium'
+                                            className: 'flex items-center gap-1.5 px-4 py-1.5 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-sm font-medium rounded-full border border-gray-300 shadow-sm'
                                         },
-                                        // Nahradili sme emoji ceruzky SVG ikonou
                                         React.createElement(
                                             'svg',
-                                            { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                            { 
+                                                className: 'w-4 h-4', 
+                                                fill: 'none', 
+                                                stroke: 'currentColor', 
+                                                viewBox: '0 0 24 24',
+                                                strokeWidth: '2'
+                                            },
                                             React.createElement('path', {
                                                 strokeLinecap: 'round',
                                                 strokeLinejoin: 'round',
-                                                strokeWidth: '2',
                                                 d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
                                             })
                                         ),
