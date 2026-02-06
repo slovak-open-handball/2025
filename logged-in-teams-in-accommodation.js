@@ -55,17 +55,21 @@ const AddGroupsApp = ({ userProfileData }) => {
             console.warn("[PLACES LOG] window.db nie je dostupné");
             return;
         }
-
-        console.log("[PLACES LOG] Spúšťam real-time sledovanie kolekcie 'places'");
-
+    
+        console.log("[PLACES LOG] Spúšťam real-time sledovanie kolekcie 'places' (iba ubytovanie)");
+    
         let previousCount = -1;
-
+    
         const unsubscribe = onSnapshot(
             collection(window.db, 'places'),
             (snapshot) => {
                 const places = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
+    
+                    // ← FILTRUJEME iba typ "ubytovanie"
+                    if (data.type !== "ubytovanie") return;
+    
                     places.push({
                         id: doc.id,
                         name: data.name || '(bez názvu)',
@@ -79,47 +83,49 @@ const AddGroupsApp = ({ userProfileData }) => {
                             : '?',
                     });
                 });
-
+    
                 // Výpis do konzoly
-                console.clear(); // ← voliteľné: vyčistí konzolu pred novým výpisom
+                console.clear(); // voliteľné
+    
                 console.log("═══════════════════════════════════════════════════");
-                console.log(`NAČÍTANÉ MIESTA (kolekcia 'places') — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log(`NAČÍTANÉ UBYTOVANIE (type = "ubytovanie") — ${new Date().toLocaleTimeString('sk-SK')}`);
                 console.log(`Celkový počet: ${places.length} ${previousCount >= 0 ? `(bolo ${previousCount})` : ''}`);
                 console.log("═══════════════════════════════════════════════════");
-
+    
                 if (places.length === 0) {
-                    console.log("→ Žiadne miesta v databáze");
+                    console.log("→ Žiadne ubytovacie miesta v databáze");
                 } else {
                     places.forEach((place, index) => {
-                        console.log(`Miesto #${index + 1}:`);
-                        console.log(`  ID ............ ${place.id}`);
-                        console.log(`  Názov ......... ${place.name}`);
-                        console.log(`  Typ ........... ${place.type}`);
-                        console.log(`  Súradnice ..... ${place.lat} , ${place.lng}`);
+                        console.log(`Ubytovanie #${index + 1}:`);
+                        console.log(` ID ............ ${place.id}`);
+                        console.log(` Názov ......... ${place.name}`);
+                        console.log(` Typ ........... ${place.type}`);
+                        console.log(` Súradnice ..... ${place.lat} , ${place.lng}`);
+    
                         if (place.accommodationType) {
-                            console.log(`  Typ ubyt. ..... ${place.accommodationType}`);
+                            console.log(` Typ ubyt. ..... ${place.accommodationType}`);
                         }
                         if (place.capacity !== null) {
-                            console.log(`  Kapacita ...... ${place.capacity}`);
+                            console.log(` Kapacita ...... ${place.capacity}`);
                         }
-                        console.log(`  Vytvorené ..... ${place.createdAt}`);
+                        console.log(` Vytvorené ..... ${place.createdAt}`);
                         console.log("───────────────────────────────────────────────");
                     });
                 }
-
+    
                 previousCount = places.length;
             },
             (error) => {
                 console.error("[PLACES LOG] Chyba pri onSnapshot:", error);
             }
         );
-
+    
         // Cleanup
         return () => {
-            console.log("[PLACES LOG] Zastavujem sledovanie 'places'");
+            console.log("[PLACES LOG] Zastavujem sledovanie 'places' (ubytovanie filter)");
             unsubscribe();
         };
-    }, []); // ← spustí sa iba raz pri mount-e komponentu
+    }, []);   // spustí sa iba raz
 
     // ──────────────────────────────────────────────
     // Zvyšok tvojej pôvodnej komponenty (zatiaľ prázdna / placeholder)
