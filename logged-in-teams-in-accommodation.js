@@ -167,7 +167,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         return true;
     });
 
-    // Filtrovanie priradených tímov podľa kombinovaných filtrov
+    // Filtrovanie priradených tímov podľa kombinovaných filtrov (len pre zobrazenie)
     const filteredAssignedTeams = assignedTeams.filter(team => {
         // Filtrovanie podľa kategórie
         if (selectedCategory && team.category !== selectedCategory) return false;
@@ -182,7 +182,24 @@ const AddGroupsApp = ({ userProfileData }) => {
         return true;
     });
 
-    // Priradenie tímov ku konkrétnym ubytovniam - UPRAVENÉ pre správne získanie dát
+    // VÝPOČET SKUTOČNEJ KAPACITY - VŽDY S CELKOVÝMI TÍMI BEZ FILTROV
+    // Toto je skutočná obsadenosť bez ohľadu na filtre
+    const getActualCapacity = (placeId) => {
+        const place = accommodations.find(p => p.id === placeId);
+        if (!place) return { used: 0, remaining: null };
+        
+        // Vždy počítame so všetkými tímami, nie s filtrovanými
+        const allTeamsInPlace = assignedTeams.filter(team => team.assignedPlace === place.name);
+        const usedCapacity = allTeamsInPlace.reduce((sum, team) => sum + team.totalPeople, 0);
+        const remainingCapacity = place.capacity !== null ? place.capacity - usedCapacity : null;
+        
+        return {
+            used: usedCapacity,
+            remaining: remainingCapacity
+        };
+    };
+
+    // Priradenie tímov ku konkrétnym ubytovniam
     const accommodationsWithTeams = accommodations
         .filter(place => {
             // Ak je vybraný filter ubytovne, zobrazíme len tú konkrétnu
@@ -192,19 +209,19 @@ const AddGroupsApp = ({ userProfileData }) => {
             return true;
         })
         .map(place => {
-            // Filtrujeme tímy pre túto ubytovňu podľa kombinovaných filtrov
+            // Filtrujeme tímy pre túto ubytovňu podľa kombinovaných filtrov (len pre zobrazenie)
             const teamsInPlace = sortTeams(
                 filteredAssignedTeams.filter(team => team.assignedPlace === place.name)
             );
             
-            const usedCapacity = teamsInPlace.reduce((sum, team) => sum + team.totalPeople, 0);
-            const remainingCapacity = place.capacity !== null ? place.capacity - usedCapacity : null;
+            // Skutočná kapacita - vždy s celkovými tímami
+            const actualCapacity = getActualCapacity(place.id);
             
             return {
                 ...place,
                 assignedTeams: teamsInPlace,
-                usedCapacity: usedCapacity,
-                remainingCapacity: remainingCapacity
+                usedCapacity: actualCapacity.used, // VŽDY skutočná kapacita
+                remainingCapacity: actualCapacity.remaining // VŽDY skutočná zostávajúca kapacita
             };
         })
         .filter(place => {
@@ -703,6 +720,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 'div',
                                                 null,
                                                 React.createElement('h3', { className: 'text-xl font-bold' }, place.name || 'Ubytovacie miesto'),
+                                                // POZOR: Tu sa zobrazuje skutočný počet tímov podľa filtrov
                                                 React.createElement('div', { className: 'text-sm opacity-90 mt-1' },
                                                     `${place.assignedTeams.length} tímov • ${place.usedCapacity} osôb`
                                                 )
@@ -749,10 +767,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     ),
                                                     place.capacity !== null &&
                                                         React.createElement(
-                                                            'p',
+                                                            'div',
                                                             { className: 'text-gray-700' },
+                                                            // DÔLEŽITÉ: Vždy ukazujeme skutočnú kapacitu, nie filtrovanú
                                                             React.createElement('span', { className: 'font-semibold' }, 'Kapacita: '),
-                                                            `${place.usedCapacity} / ${place.capacity} osôb`
+                                                            `${place.usedCapacity} / ${place.capacity} osôb (skutočná obsadenosť)`
                                                         ),
                                                     place.remainingCapacity !== null &&
                                                         React.createElement(
@@ -763,7 +782,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         )
                                                 ),
                                                 
-                                                // Zoznam priradených tímov
+                                                // Zoznam priradených tímov (podľa filtrov)
                                                 place.assignedTeams.length > 0 &&
                                                 React.createElement(
                                                     'div',
@@ -771,7 +790,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     React.createElement(
                                                         'h4',
                                                         { className: 'font-semibold text-gray-800 mb-3' },
-                                                        `Priradené tímy (${place.assignedTeams.length})`
+                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter ? '(filtrované)' : ''} (${place.assignedTeams.length})`
                                                     ),
                                                     React.createElement(
                                                         'ul',
@@ -1016,8 +1035,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'space-y-3' },
                                 availableAccommodations.map(place => {
+                                    // V modálnom okne vždy berieme skutočnú kapacitu
+                                    const actualCapacity = getActualCapacity(place.id);
                                     const canAccommodate = place.capacity === null || 
-                                        (place.remainingCapacity !== null && place.remainingCapacity >= (selectedTeam?.totalPeople || 0));
+                                        (actualCapacity.remaining !== null && actualCapacity.remaining >= (selectedTeam?.totalPeople || 0));
                                     
                                     return React.createElement(
                                         'div',
@@ -1081,19 +1102,19 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         'div',
                                                         { 
                                                             className: `text-sm font-medium mt-1 ${
-                                                                place.remainingCapacity < 0 ? 'text-red-600' :
-                                                                place.remainingCapacity < (selectedTeam?.totalPeople || 0) ? 'text-orange-600' :
+                                                                actualCapacity.remaining < 0 ? 'text-red-600' :
+                                                                actualCapacity.remaining < (selectedTeam?.totalPeople || 0) ? 'text-orange-600' :
                                                                 'text-green-600'
                                                             }` 
                                                         },
-                                                        `Kapacita: ${place.usedCapacity}/${place.capacity} osôb`,
-                                                        place.remainingCapacity !== null && (
+                                                        `Kapacita: ${actualCapacity.used}/${place.capacity} osôb`,
+                                                        actualCapacity.remaining !== null && (
                                                             React.createElement(
                                                                 'span',
                                                                 { className: 'ml-2' },
-                                                                place.remainingCapacity >= 0 ? 
-                                                                    `(zostáva ${place.remainingCapacity} osôb)` :
-                                                                    `(prekročená o ${Math.abs(place.remainingCapacity)} osôb)`
+                                                                actualCapacity.remaining >= 0 ? 
+                                                                    `(zostáva ${actualCapacity.remaining} osôb)` :
+                                                                    `(prekročená o ${Math.abs(actualCapacity.remaining)} osôb)`
                                                             )
                                                         )
                                                     )
