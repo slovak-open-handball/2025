@@ -4515,6 +4515,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                 React.createElement('th', { className: 'py-2 px-3 text-center whitespace-nowrap min-w-max' }, 'Farba dresov 2'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
+                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovňa'),
                                 React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
                                 (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
                                     React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
@@ -4617,6 +4618,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                             React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyAwayColor || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'),
+                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.name || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'),
                                             (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
                                                 React.createElement('td', { key: `tshirt-data-${teamUniqueId}-${size}`, className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._teamTshirtsMap.get(size) || '-')
@@ -4691,7 +4693,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                     // Tričká: (textový stĺpec)
                                     React.createElement('td', {
                                         className: 'py-3 px-2 text-right',
-                                        colSpan: 5
+                                        colSpan: 6
                                     }, 'Tričká:'),
                                 
                                     // Veľkosti tričiek
