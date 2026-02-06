@@ -101,6 +101,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     teamName: team.teamName.trim(),
                                     accommodation: accomType,
                                     totalPeople,
+                                    fullTeamData: team,
+                                    userId: doc.id,
                                 });
                             });
                         });
