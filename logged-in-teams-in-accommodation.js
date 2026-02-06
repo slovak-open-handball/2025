@@ -126,15 +126,15 @@ const AddGroupsApp = ({ userProfileData }) => {
             return;
         }
     
-        console.log("[USERS LOG] Spúšťam real-time sledovanie kolekcie 'users' (kategória + tím + ubytovanie + počet ľudí)");
+        console.log("[USERS LOG] Spúšťam real-time sledovanie – iba tímy S UBYTOVANÍM");
     
-        let previousTeamsCount = -1;
+        let previousTeamsWithAccommodation = -1;
     
         const unsubscribeUsers = onSnapshot(
             collection(window.db, 'users'),
             (snapshot) => {
                 const lines = [];
-                let totalTeams = 0;
+                let totalTeamsWithAccommodation = 0;
     
                 snapshot.forEach((doc) => {
                     const data = doc.data() || {};
@@ -146,12 +146,15 @@ const AddGroupsApp = ({ userProfileData }) => {
                             teamArray.forEach((team) => {
                                 if (!team?.teamName) return;
     
-                                totalTeams++;
+                                const accommodationRaw = team.accommodation?.type;
+                                if (!accommodationRaw || accommodationRaw.trim() === '') return; // preskočíme bez ubytovania
+    
+                                totalTeamsWithAccommodation++;
     
                                 const teamName = team.teamName.trim();
-                                const accommodation = team.accommodation?.type || '— bez ubytovania —';
+                                const accommodation = accommodationRaw;
     
-                                // Výpočet celkového počtu ľudí v poliach detailov
+                                // Výpočet počtu ľudí
                                 const playerCount     = Array.isArray(team.playerDetails)          ? team.playerDetails.length          : 0;
                                 const womenRTCount    = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
                                 const menRTCount      = Array.isArray(team.menTeamMemberDetails)   ? team.menTeamMemberDetails.length   : 0;
@@ -160,7 +163,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     
                                 const totalPeople = playerCount + womenRTCount + menRTCount + femaleDrivers + maleDrivers;
     
-                                // Formát riadku
+                                // Formát riadku – iba tímy s ubytovaním
                                 lines.push(
                                     ` [${category}] ${teamName.padEnd(38)} → ${accommodation.padEnd(22)}   (ľudia: ${totalPeople})`
                                 );
@@ -171,23 +174,23 @@ const AddGroupsApp = ({ userProfileData }) => {
     
                 // ─── Výpis ────────────────────────────────────────
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
-                console.log(`TÍMY + UBYTOVANIE + POČET ĽUDÍ — ${new Date().toLocaleTimeString('sk-SK')}`);
-                console.log(`Celkom tímov: ${totalTeams}`);
+                console.log(`TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log(`Celkom tímov s prideleným ubytovaním: ${totalTeamsWithAccommodation}`);
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
     
                 if (lines.length === 0) {
-                    console.log("Momentálne žiadne tímy v databáze");
+                    console.log("Momentálne žiadny tím nemá pridelené ubytovanie");
                 } else {
-                    console.log("Zoznam tímov:");
+                    console.log("Zoznam tímov s ubytovaním:");
                     console.log("");
                     lines.forEach(line => console.log(line));
                     console.log("");
                 }
     
-                console.log(`Počet tímov sa zmenil z ${previousTeamsCount} na ${totalTeams}`);
+                console.log(`Počet tímov s ubytovaním sa zmenil z ${previousTeamsWithAccommodation} na ${totalTeamsWithAccommodation}`);
                 console.log("═══════════════════════════════════════════════════════════════════════════════════════");
     
-                previousTeamsCount = totalTeams;
+                previousTeamsWithAccommodation = totalTeamsWithAccommodation;
             },
             (error) => {
                 console.error("[USERS LOG] Chyba pri onSnapshot users:", error);
@@ -195,7 +198,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         );
     
         return () => {
-            console.log("[USERS LOG] Zastavujem sledovanie 'users'");
+            console.log("[USERS LOG] Zastavujem sledovanie 'users' (filter: iba s ubytovaním)");
             unsubscribeUsers();
         };
     }, []);
