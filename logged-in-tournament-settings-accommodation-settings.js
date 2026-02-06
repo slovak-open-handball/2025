@@ -1,9 +1,5 @@
 import { doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Funkcie sú teraz odovzdávané ako props, takže ich už netreba importovať
-// import { showNotification, sendAdminNotification } from './utils.js';
-
-
 export function AccommodationSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
   const [accommodations, setAccommodations] = React.useState([]);
   const [showAccommodationModal, setShowAccommodationModal] = React.useState(false);
@@ -53,7 +49,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     };
 
     fetchAccommodation();
-  }, [db, userProfileData, showNotification]);
+  }, [db, userProfileData, showNotification]); // Pridané showNotification do závislostí
 
   const handleOpenAddAccommodationModal = () => {
     setAccommodationModalMode('add');
