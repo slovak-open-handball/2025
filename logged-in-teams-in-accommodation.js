@@ -154,17 +154,33 @@ const AddGroupsApp = ({ userProfileData }) => {
     const unassignedTeams = sortTeams(allTeams.filter(team => !team.assignedPlace));
     const assignedTeams = sortTeams(allTeams.filter(team => team.assignedPlace));
 
-    // Filtrovanie tímov podľa kategórie
-    const filteredUnassignedTeams = selectedCategory 
-        ? unassignedTeams.filter(team => team.category === selectedCategory)
-        : unassignedTeams;
-
-    const filteredAssignedTeams = selectedCategory 
-        ? assignedTeams.filter(team => team.category === selectedCategory)
-        : assignedTeams;
-
     // Získanie jedinečných kategórií pre select box
     const categories = [...new Set(allTeams.map(team => team.category))].sort();
+
+    // Filtrovanie tímov bez priradenia podľa kombinovaných filtrov
+    const filteredUnassignedTeams = unassignedTeams.filter(team => {
+        // Filtrovanie podľa kategórie
+        if (selectedCategory && team.category !== selectedCategory) return false;
+        
+        // Filtrovanie podľa ubytovne (pre tímy bez priradenia sa neaplikuje)
+        // Tímy bez priradenia nemajú priradenú ubytovňu
+        return true;
+    });
+
+    // Filtrovanie priradených tímov podľa kombinovaných filtrov
+    const filteredAssignedTeams = assignedTeams.filter(team => {
+        // Filtrovanie podľa kategórie
+        if (selectedCategory && team.category !== selectedCategory) return false;
+        
+        // Filtrovanie podľa ubytovne
+        if (selectedAccommodationFilter) {
+            const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
+            if (!selectedAccommodation) return false;
+            return team.assignedPlace === selectedAccommodation.name;
+        }
+        
+        return true;
+    });
 
     // Priradenie tímov ku konkrétnym ubytovniam - UPRAVENÉ pre správne získanie dát
     const accommodationsWithTeams = accommodations
@@ -176,11 +192,9 @@ const AddGroupsApp = ({ userProfileData }) => {
             return true;
         })
         .map(place => {
-            // Filtrujeme tímy pre túto ubytovňu podľa kategórie
+            // Filtrujeme tímy pre túto ubytovňu podľa kombinovaných filtrov
             const teamsInPlace = sortTeams(
-                selectedCategory 
-                    ? assignedTeams.filter(team => team.assignedPlace === place.name && team.category === selectedCategory)
-                    : assignedTeams.filter(team => team.assignedPlace === place.name)
+                filteredAssignedTeams.filter(team => team.assignedPlace === place.name)
             );
             
             const usedCapacity = teamsInPlace.reduce((sum, team) => sum + team.totalPeople, 0);
@@ -192,6 +206,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 usedCapacity: usedCapacity,
                 remainingCapacity: remainingCapacity
             };
+        })
+        .filter(place => {
+            // Ak je vybraná kategória a ubytovňa nemá tímy v tejto kategórii, skryjeme ju
+            if (selectedCategory && place.assignedTeams.length === 0) {
+                return false;
+            }
+            return true;
         });
 
     // Otvorenie modálu pre farby
@@ -237,7 +258,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         setIsLoading(true);
         
         // Filtrovanie ubytovní podľa typu tímu
-        const filteredAccommodations = accommodationsWithTeams.filter(place => 
+        const filteredAccommodations = accommodations.filter(place => 
             place.accommodationType && 
             team.accommodation && 
             place.accommodationType.toLowerCase().includes(team.accommodation.toLowerCase())
@@ -378,6 +399,19 @@ const AddGroupsApp = ({ userProfileData }) => {
         setSelectedAccommodationFilter('');
     };
 
+    // Funkcia na vytvorenie popisu aktívnych filtrov
+    const getFilterDescription = () => {
+        const filters = [];
+        if (selectedCategory) {
+            filters.push(`Kategória: ${selectedCategory}`);
+        }
+        if (selectedAccommodationFilter) {
+            const accommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
+            filters.push(`Ubytovňa: ${accommodation?.name || selectedAccommodationFilter}`);
+        }
+        return filters.join(' + ');
+    };
+
     // Pomocné funkcie na konverziu farieb
     const hexToRgb = (hex) => {
         const r = parseInt(hex.slice(1,3), 16);
@@ -449,13 +483,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             {
                                 id: 'category-filter',
                                 value: selectedCategory,
-                                onChange: (e) => {
-                                    setSelectedCategory(e.target.value);
-                                    // Ak filtrujeme podľa kategórie, zrušíme filter ubytovne
-                                    if (e.target.value) {
-                                        setSelectedAccommodationFilter('');
-                                    }
-                                },
+                                onChange: (e) => setSelectedCategory(e.target.value),
                                 className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition'
                             },
                             React.createElement('option', { value: '' }, 'Všetky kategórie'),
@@ -482,13 +510,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             {
                                 id: 'accommodation-filter',
                                 value: selectedAccommodationFilter,
-                                onChange: (e) => {
-                                    setSelectedAccommodationFilter(e.target.value);
-                                    // Ak filtrujeme podľa ubytovne, zrušíme filter kategórie
-                                    if (e.target.value) {
-                                        setSelectedCategory('');
-                                    }
-                                },
+                                onChange: (e) => setSelectedAccommodationFilter(e.target.value),
                                 className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition'
                             },
                             React.createElement('option', { value: '' }, 'Všetky ubytovne'),
@@ -519,21 +541,41 @@ const AddGroupsApp = ({ userProfileData }) => {
                     { className: 'mt-6 pt-6 border-t border-gray-200' },
                     React.createElement(
                         'div',
-                        { className: 'flex items-center gap-4' },
+                        { className: 'flex flex-col sm:flex-row sm:items-center gap-3' },
                         React.createElement(
                             'span',
                             { className: 'text-gray-600 font-medium' },
                             'Aktívne filtre:'
                         ),
-                        selectedCategory && React.createElement(
-                            'span',
-                            { className: 'px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium' },
-                            `Kategória: ${selectedCategory}`
-                        ),
-                        selectedAccommodationFilter && React.createElement(
-                            'span',
-                            { className: 'px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium' },
-                            `Ubytovňa: ${accommodations.find(a => a.id === selectedAccommodationFilter)?.name || selectedAccommodationFilter}`
+                        React.createElement(
+                            'div',
+                            { className: 'flex flex-wrap gap-2' },
+                            selectedCategory && React.createElement(
+                                'span',
+                                { className: 'px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium flex items-center gap-1' },
+                                `Kategória: ${selectedCategory}`,
+                                React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => setSelectedCategory(''),
+                                        className: 'ml-1 text-blue-600 hover:text-blue-800'
+                                    },
+                                    '×'
+                                )
+                            ),
+                            selectedAccommodationFilter && React.createElement(
+                                'span',
+                                { className: 'px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium flex items-center gap-1' },
+                                `Ubytovňa: ${accommodations.find(a => a.id === selectedAccommodationFilter)?.name || selectedAccommodationFilter}`,
+                                React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => setSelectedAccommodationFilter(''),
+                                        className: 'ml-1 text-green-600 hover:text-green-800'
+                                    },
+                                    '×'
+                                )
+                            )
                         )
                     )
                 )
@@ -554,7 +596,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                             'div',
                             { className: 'bg-green-700 text-white px-6 py-4' },
                             React.createElement('h2', { className: 'text-xl font-bold' }, 
-                                `Tímy bez priradenia ${selectedCategory ? `(${selectedCategory})` : ''} (${filteredUnassignedTeams.length})`
+                                (selectedCategory || selectedAccommodationFilter) 
+                                    ? `Tímy bez priradenia ${getFilterDescription() ? `(${getFilterDescription()})` : ''} (${filteredUnassignedTeams.length})`
+                                    : `Tímy bez priradenia (${filteredUnassignedTeams.length})`
                             )
                         ),
                         React.createElement(
@@ -562,8 +606,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                             { className: 'p-6 flex-grow overflow-y-auto' },
                             filteredUnassignedTeams.length === 0
                                 ? React.createElement('p', { className: 'text-gray-500 text-center py-12' }, 
-                                    selectedCategory 
-                                        ? `V kategórii ${selectedCategory} už všetky tímy majú priradené ubytovanie`
+                                    selectedCategory || selectedAccommodationFilter
+                                        ? `Žiadne tímy bez priradenia pre zvolené filtre`
                                         : 'Všetky tímy už majú priradené ubytovanie'
                                 )
                                 : React.createElement(
@@ -627,20 +671,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement(
                             'h2',
                             { className: 'text-2xl font-bold text-gray-800 mb-4 lg:hidden' },
-                            selectedAccommodationFilter 
-                                ? `Ubytovňa: ${accommodations.find(a => a.id === selectedAccommodationFilter)?.name || 'Vybratá ubytovňa'}`
-                                : `Ubytovacie miesta s priradenými tímami ${selectedCategory ? `(${selectedCategory})` : ''}`
+                            (selectedCategory || selectedAccommodationFilter)
+                                ? `Ubytovacie miesta ${getFilterDescription() ? `(${getFilterDescription()})` : ''}`
+                                : 'Ubytovacie miesta s priradenými tímami'
                         ),
                         accommodationsWithTeams.length === 0
                             ? React.createElement(
                                 'div',
                                 { className: 'bg-white rounded-xl shadow-lg p-8 text-center flex-grow' },
                                 React.createElement('p', { className: 'text-gray-500 text-lg' }, 
-                                    selectedCategory 
-                                        ? `V kategórii ${selectedCategory} zatiaľ žiadne ubytovacie miesta...`
-                                        : selectedAccommodationFilter
-                                            ? 'Vybratá ubytovňa nemá žiadne dáta...'
-                                            : 'Zatiaľ žiadne ubytovacie miesta...'
+                                    selectedCategory || selectedAccommodationFilter
+                                        ? `Žiadne ubytovacie miesta pre zvolené filtre`
+                                        : 'Zatiaľ žiadne ubytovacie miesta...'
                                 )
                               )
                             : React.createElement(
