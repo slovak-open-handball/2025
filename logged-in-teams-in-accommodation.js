@@ -249,8 +249,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 null,
-                                                React.createElement('span', { className: 'font-medium' }, `[${team.category}] ${team.teamName}`),
-                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} ľudí)`)
+                                                React.createElement('span', { className: 'font-medium' }, `${team.category}: ${team.teamName}`),
+                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople})`)
                                             ),
                                             React.createElement('span', { className: 'font-medium text-green-700' }, team.accommodation)
                                         )
