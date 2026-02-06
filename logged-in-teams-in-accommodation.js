@@ -800,7 +800,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 // Ľavá strana – Tímy bez priradenia (IBÁ AK SÚ TÍMY)
                 filteredUnassignedTeams.length > 0 && React.createElement(
                     'div',
-                    { className: 'lg:w-[45%] xl:w-[43%] h-full flex flex-col' },
+                    { className: 'lg:w-[48%] xl:w-[46%] h-full flex flex-col' },
                     React.createElement(
                         'div',
                         { className: 'bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col' },
@@ -879,7 +879,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     'div',
                     { 
                         className: filteredUnassignedTeams.length > 0 
-                            ? 'lg:w-[55%] xl:w-[57%] h-full flex flex-col' 
+                            ? 'lg:w-[52%] xl:w-[54%] h-full flex flex-col' 
                             : 'w-full h-full flex flex-col'
                     },
                     React.createElement(
