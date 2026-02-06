@@ -664,7 +664,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { className: 'max-w-7xl mx-auto h-full' },
-
+    
             // FILTRE
             React.createElement(
                 'div',
@@ -699,7 +699,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-
+    
                     // Filter podľa ubytovne
                     React.createElement(
                         'div',
@@ -726,7 +726,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-
+    
                     // Reset filtrov
                     React.createElement(
                         'div',
@@ -741,7 +741,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-
+    
                 // Zobrazenie aktívnych filtrov
                 (selectedCategory || selectedAccommodationFilter) && React.createElement(
                     'div',
@@ -787,15 +787,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                     )
                 )
             ),
-
+    
+            // HLAVNÝ OBSAH S PODMIENKOU PRE ROZLOŽENIE
             React.createElement(
                 'div',
-                { className: `grid ${filteredUnassignedTeams.length > 0 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-8 lg:gap-10 h-full` },
-
+                { 
+                    className: filteredUnassignedTeams.length > 0 
+                        ? 'flex flex-col lg:flex-row gap-8 lg:gap-10 h-full' 
+                        : 'grid grid-cols-1 h-full'
+                },
+    
                 // Ľavá strana – Tímy bez priradenia (IBÁ AK SÚ TÍMY)
                 filteredUnassignedTeams.length > 0 && React.createElement(
                     'div',
-                    { className: 'order-2 lg:order-1 h-full flex flex-col' },
+                    { className: 'lg:w-1/3 xl:w-1/4 h-full flex flex-col' },
                     React.createElement(
                         'div',
                         { className: 'bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col' },
@@ -868,14 +873,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-
+    
                 // Pravá strana – Ubytovacie miesta s tímami (vždy zobrazené)
                 React.createElement(
                     'div',
                     { 
                         className: filteredUnassignedTeams.length > 0 
-                            ? 'order-1 lg:order-2 h-full flex flex-col' 
-                            : 'order-1 h-full flex flex-col'
+                            ? 'lg:w-2/3 xl:w-3/4 h-full flex flex-col' 
+                            : 'w-full h-full flex flex-col'
                     },
                     React.createElement(
                         'div',
@@ -900,7 +905,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                             : React.createElement(
                                 'div',
                                 { 
-                                    className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6'
+                                    className: filteredUnassignedTeams.length > 0
+                                        ? 'space-y-6'  // KARTY POD SEBOU, keď sú tímy bez priradenia
+                                        : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6'  // MRIEŽKA, keď nie sú tímy bez priradenia
                                 },
                                 accommodationsWithTeams.map((place) => {
                                     // Vypočítame výšku na základe počtu tímov
@@ -1112,7 +1119,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 )
             )
         ),
-
+    
         // Modálne okno – zmena farieb
         isColorModalOpen &&
         React.createElement(
@@ -1219,7 +1226,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 )
             )
         ),
-
+    
         // Modálne okno – priradenie ubytovne
         isAssignModalOpen &&
         React.createElement(
@@ -1246,7 +1253,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         `– ${selectedTeam?.teamName}`
                     )
                 ),
-
+    
                 React.createElement('div', { className: 'mb-6' },
                     React.createElement('p', { className: 'text-sm text-gray-600 mb-3' },
                         `Typ ubytovania tímu: ${selectedTeam?.accommodation}`
@@ -1255,7 +1262,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         `Počet osôb v tíme: ${selectedTeam?.totalPeople || 0}`
                     )
                 ),
-
+    
                 React.createElement('div', { className: 'mb-8' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Vyberte ubytovňu'),
                     isLoading
@@ -1379,7 +1386,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 })
                             )
                 ),
-
+    
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-4 mt-8' },
