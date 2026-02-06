@@ -164,76 +164,90 @@ const AddGroupsApp = ({ userProfileData }) => {
         { className: 'min-h-screen bg-gray-50 py-8 px-4' },
         React.createElement(
             'div',
-            { className: 'max-w-6xl mx-auto space-y-10' },
-            
-            // 1. Ubytovacie miesta – BEZ ZMENY
+            { className: 'max-w-7xl mx-auto' },  // trochu širší kontajner
+    
+            // Hlavný grid – 2 stĺpce na lg+, na menších 1 stĺpec
             React.createElement(
                 'div',
-                { className: 'bg-white rounded-xl shadow-lg overflow-hidden' },
+                { className: 'grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10' },
+    
+                // 1. Ľavá polovica – Tímy s ubytovaním
                 React.createElement(
                     'div',
-                    { className: 'bg-blue-700 text-white px-6 py-4' },
-                    React.createElement('h2', { className: 'text-xl font-bold' }, 'Dostupné ubytovacie kapacity')
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'p-6' },
-                    accommodations.length === 0
-                        ? React.createElement('p', { className: 'text-gray-500 text-center py-8' }, 'Zatiaľ žiadne ubytovacie miesta...')
-                        : React.createElement(
+                    { className: 'order-2 lg:order-1' },  // na mobile dole, na lg hore vľavo
+                    React.createElement(
+                        'div',
+                        { className: 'bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col' },
+                        React.createElement(
                             'div',
-                            { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
-                            accommodations.map((place) =>
-                                React.createElement(
-                                    'div',
-                                    {
-                                        key: place.id,
-                                        className: 'border rounded-lg p-5 hover:shadow-md transition-shadow bg-gray-50'
-                                    },
-                                    React.createElement('h3', { className: 'font-bold text-lg mb-2' }, place.name),
-                                    React.createElement('p', { className: 'text-sm text-gray-600 mb-1' }, `Typ: ${place.accommodationType || 'neurčený'}`),
-                                    place.capacity !== null && React.createElement('p', { className: 'text-sm font-medium' }, `Kapacita: ${place.capacity} miest`),
-                                    React.createElement('p', { className: 'text-xs text-gray-500 mt-3' }, `ID: ${place.id.slice(0,8)}…`)
+                            { className: 'bg-green-700 text-white px-6 py-4' },
+                            React.createElement('h2', { className: 'text-xl font-bold' }, `Tímy s prideleným ubytovaním (${teamsWithAccom.length})`)
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'p-6 flex-grow' },
+                            teamsWithAccom.length === 0
+                                ? React.createElement('p', { className: 'text-gray-500 text-center py-12' }, 'Zatiaľ žiadny tím nemá pridelené ubytovanie')
+                                : React.createElement(
+                                    'ul',
+                                    { className: 'space-y-3' },
+                                    teamsWithAccom.map((team, i) =>
+                                        React.createElement(
+                                            'li',
+                                            {
+                                                key: i,
+                                                className: 'flex justify-between items-center py-3 px-4 bg-gray-50 rounded border-l-4 border-green-500'
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                null,
+                                                React.createElement('span', { className: 'font-medium' }, `[${team.category}] ${team.teamName}`),
+                                                React.createElement('span', { className: 'text-gray-500 ml-3 text-sm' }, `(${team.totalPeople} ľudí)`)
+                                            ),
+                                            React.createElement('span', { className: 'font-medium text-green-700' }, team.accommodation)
+                                        )
+                                    )
                                 )
-                            )
                         )
-                )
-            ),
-
-            // 2. Iba sekcia s tímami, ktoré majú ubytovanie
-            React.createElement(
-                'div',
-                { className: 'bg-white rounded-xl shadow-lg overflow-hidden' },
-                React.createElement(
-                    'div',
-                    { className: 'bg-green-700 text-white px-6 py-4' },
-                    React.createElement('h2', { className: 'text-xl font-bold' }, `Tímy s prideleným ubytovaním (${teamsWithAccom.length})`)
+                    )
                 ),
+    
+                // 2. Pravá polovica – Ubytovacie kapacity
                 React.createElement(
                     'div',
-                    { className: 'p-6' },
-                    teamsWithAccom.length === 0
-                        ? React.createElement('p', { className: 'text-gray-500 text-center py-8' }, 'Zatiaľ žiadny tím nemá pridelené ubytovanie')
-                        : React.createElement(
-                            'ul',
-                            { className: 'space-y-3' },
-                            teamsWithAccom.map((team, i) =>
-                                React.createElement(
-                                    'li',
-                                    {
-                                        key: i,
-                                        className: 'flex justify-between items-center py-2 px-4 bg-gray-50 rounded border-l-4 border-green-500'
-                                    },
-                                    React.createElement(
-                                        'div',
-                                        null,
-                                        React.createElement('span', { className: 'font-medium' }, `[${team.category}] ${team.teamName}`),
-                                        React.createElement('span', { className: 'text-gray-500 ml-3' }, `(${team.totalPeople} ľudí)`)
-                                    ),
-                                    React.createElement('span', { className: 'font-medium text-green-700' }, team.accommodation)
+                    { className: 'order-1 lg:order-2' },  // na mobile hore, na lg vpravo
+                    React.createElement(
+                        'div',
+                        { className: 'bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col' },
+                        React.createElement(
+                            'div',
+                            { className: 'bg-blue-700 text-white px-6 py-4' },
+                            React.createElement('h2', { className: 'text-xl font-bold' }, 'Dostupné ubytovacie kapacity')
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'p-6 flex-grow' },
+                            accommodations.length === 0
+                                ? React.createElement('p', { className: 'text-gray-500 text-center py-12' }, 'Zatiaľ žiadne ubytovacie miesta...')
+                                : React.createElement(
+                                    'div',
+                                    { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },  // vnútorný grid – 2 stĺpce na md+
+                                    accommodations.map((place) =>
+                                        React.createElement(
+                                            'div',
+                                            {
+                                                key: place.id,
+                                                className: 'border rounded-lg p-5 hover:shadow-md transition-shadow bg-gray-50'
+                                            },
+                                            React.createElement('h3', { className: 'font-bold text-lg mb-2' }, place.name),
+                                            React.createElement('p', { className: 'text-sm text-gray-600 mb-1' }, `Typ: ${place.accommodationType || 'neurčený'}`),
+                                            place.capacity !== null && React.createElement('p', { className: 'text-sm font-medium' }, `Kapacita: ${place.capacity} miest`),
+                                            React.createElement('p', { className: 'text-xs text-gray-500 mt-3' }, `ID: ${place.id.slice(0,8)}…`)
+                                        )
+                                    )
                                 )
-                            )
                         )
+                    )
                 )
             )
         )
