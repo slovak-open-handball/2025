@@ -116,7 +116,6 @@ function addHoverListener(element) {
         let group = 'bez skupiny';
         let type = 'neznámy typ';
 
-        const li = element.closest('li');
         if (!li) return;
 
         // ──────────────────────────────────────────────
