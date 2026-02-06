@@ -1,4 +1,4 @@
-import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, getDoc, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
@@ -205,6 +205,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     'arrival.type': 'Typ dopravy',
                     'arrival.time': 'Čas príchodu',
                     'accommodation.type': 'Typ ubytovania',
+                    'accommodation.name': 'Ubytovňa',
                     'packageDetails.name': 'Názov balíka',
                     'packageDetails.price': 'Cena balíka',
                     'firstName': 'Meno',
@@ -2911,6 +2912,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
                     const arrivalType = team.arrival?.type || 'Nezadané';
                     const accommodationType = team.accommodation?.type || 'Nezadané';
+                    const accommodationName = team.accommodation?.name || 'Nepriradené';
                     const packageName = team.packageDetails?.name || 'Nezadané';
 
                     const arrivalTime = (
@@ -2993,6 +2995,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`),
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
+                        accommodationName && React.createElement('p', { className: 'text-md text-gray-700 ml-4' }, `Ubytovňa: ${accommodationName}`),
 
                         // ─── FARBY DRESOV ────────────────────────────────────────────────────────
                         React.createElement(
