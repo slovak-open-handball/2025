@@ -359,7 +359,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement(
                         'h3',
                         { className: 'text-xl font-bold text-gray-900 inline' },
-                        'Upraviť farbu hlavičky'
+                        'Upraviť farby'
                     ),
                     React.createElement(
                         'span',
