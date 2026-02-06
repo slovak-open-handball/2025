@@ -144,10 +144,6 @@ const AddGroupsApp = ({ userProfileData }) => {
     );
 };
 
-
-// Premenná na sledovanie, či bol poslucháč už nastavený
-let isEmailSyncListenerSetup = false;
-
 /**
  * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
  * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
