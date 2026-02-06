@@ -45,15 +45,19 @@ window.showGlobalNotification = (message, type = 'success') => {
 let isEmailSyncListenerSetup = false;
 
 const AddGroupsApp = ({ userProfileData }) => {
-    // ─── Stavy pre dáta ───────────────────────────────────────────────
-    const [accommodations, setAccommodations] = useState([]);
-    const [teamsWithoutAccommodation, setTeamsWithoutAccommodation] = useState([]);
-    const [teamsWithAccommodation, setTeamsWithAccommodation] = useState([]); // voliteľné – ak chceš zobraziť aj priradené
-    const [loading, setLoading] = useState(true);
 
-    // 1. Načítanie ubytovacích miest (places)
+    // ──────────────────────────────────────────────
+    // Real-time log ubytovania (type = "ubytovanie")
+    // ──────────────────────────────────────────────
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) {
+            console.warn("[PLACES LOG] window.db nie je dostupné");
+            return;
+        }
+
+        console.log("[PLACES LOG] Spúšťam real-time sledovanie kolekcie 'places' (iba ubytovanie)");
+
+        let previousCount = -1;
 
         const unsubscribePlaces = onSnapshot(
             collection(window.db, 'places'),
@@ -62,171 +66,167 @@ const AddGroupsApp = ({ userProfileData }) => {
                 snapshot.forEach((doc) => {
                     const data = doc.data();
                     if (data.type !== "ubytovanie") return;
+
                     places.push({
                         id: doc.id,
                         name: data.name || '(bez názvu)',
-                        accommodationType: data.accommodationType || 'neurčený',
-                        capacity: data.capacity ?? '?',
+                        type: data.type || '?',
+                        lat: data.lat ?? data.location?.latitude ?? '?',
+                        lng: data.lng ?? data.location?.longitude ?? '?',
+                        accommodationType: data.accommodationType || null,
+                        capacity: data.capacity ?? null,
+                        createdAt: data.createdAt
+                            ? new Date(data.createdAt.toMillis()).toLocaleString('sk-SK')
+                            : '?',
                     });
                 });
-                setAccommodations(places);
+
+                console.clear(); // voliteľné – ak chceš čistú konzolu
+
+                console.log("═══════════════════════════════════════════════════");
+                console.log(`NAČÍTANÉ UBYTOVANIE (type = "ubytovanie") — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log(`Celkový počet: ${places.length} ${previousCount >= 0 ? `(bolo ${previousCount})` : ''}`);
+                console.log("═══════════════════════════════════════════════════");
+
+                if (places.length === 0) {
+                    console.log("→ Žiadne ubytovacie miesta v databáze");
+                } else {
+                    places.forEach((place, index) => {
+                        console.log(`Ubytovanie #${index + 1}:`);
+                        console.log(` ID ............ ${place.id}`);
+                        console.log(` Názov ......... ${place.name}`);
+                        console.log(` Typ ........... ${place.type}`);
+                        console.log(` Súradnice ..... ${place.lat} , ${place.lng}`);
+                        if (place.accommodationType) console.log(` Typ ubyt. ..... ${place.accommodationType}`);
+                        if (place.capacity !== null) console.log(` Kapacita ...... ${place.capacity}`);
+                        console.log(` Vytvorené ..... ${place.createdAt}`);
+                        console.log("───────────────────────────────────────────────");
+                    });
+                }
+
+                previousCount = places.length;
             },
-            (err) => console.error("Chyba pri načítaní places:", err)
+            (error) => {
+                console.error("[PLACES LOG] Chyba pri onSnapshot places:", error);
+            }
         );
 
-        return () => unsubscribePlaces();
+        return () => {
+            console.log("[PLACES LOG] Zastavujem sledovanie 'places'");
+            unsubscribePlaces();
+        };
     }, []);
 
-    // 2. Načítanie tímov – rozdelenie na s/bez ubytovania
+    // ──────────────────────────────────────────────
+    // Real-time log používateľov – kategória + názov tímu + ubytovanie + počet ľudí
+    // ──────────────────────────────────────────────
     useEffect(() => {
-        if (!window.db) return;
-
+        if (!window.db) {
+            console.warn("[USERS LOG] window.db nie je dostupné");
+            return;
+        }
+    
+        console.log("[USERS LOG] Spúšťam real-time sledovanie – iba tímy S UBYTOVANÍM");
+    
+        let previousTeamsWithAccommodation = -1;
+    
         const unsubscribeUsers = onSnapshot(
             collection(window.db, 'users'),
             (snapshot) => {
-                const without = [];
-                const withAcc = [];
-
+                const lines = [];
+                let totalTeamsWithAccommodation = 0;
+    
                 snapshot.forEach((doc) => {
                     const data = doc.data() || {};
-
+    
                     if (data.teams && typeof data.teams === 'object') {
                         Object.entries(data.teams).forEach(([category, teamArray]) => {
                             if (!Array.isArray(teamArray)) return;
-
+    
                             teamArray.forEach((team) => {
                                 if (!team?.teamName) return;
-
-                                const accType = team.accommodation?.type?.trim() || '';
-                                const hasAccommodation = 
-                                    accType !== '' && 
-                                    accType.toLowerCase() !== 'bez ubytovania';
-
-                                const teamInfo = {
-                                    category,
-                                    name: team.teamName.trim(),
-                                    people: 
-                                        (Array.isArray(team.playerDetails) ? team.playerDetails.length : 0) +
-                                        (Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0) +
-                                        (Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0) +
-                                        (Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0) +
-                                        (Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0),
-                                };
-
-                                if (hasAccommodation) {
-                                    withAcc.push({ ...teamInfo, accommodation: accType });
-                                } else {
-                                    without.push(teamInfo);
+    
+                                const accommodationRaw = team.accommodation?.type;
+                                if (
+                                    !accommodationRaw || 
+                                    accommodationRaw.trim() === '' || 
+                                    accommodationRaw.trim().toLowerCase() === 'bez ubytovania'
+                                ) {
+                                    return;
                                 }
+    
+                                totalTeamsWithAccommodation++;
+    
+                                const teamName = team.teamName.trim();
+                                const accommodation = accommodationRaw;
+    
+                                // Výpočet počtu ľudí
+                                const playerCount     = Array.isArray(team.playerDetails)          ? team.playerDetails.length          : 0;
+                                const womenRTCount    = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
+                                const menRTCount      = Array.isArray(team.menTeamMemberDetails)   ? team.menTeamMemberDetails.length   : 0;
+                                const femaleDrivers   = Array.isArray(team.driverDetailsFemale)    ? team.driverDetailsFemale.length    : 0;
+                                const maleDrivers     = Array.isArray(team.driverDetailsMale)      ? team.driverDetailsMale.length      : 0;
+    
+                                const totalPeople = playerCount + womenRTCount + menRTCount + femaleDrivers + maleDrivers;
+    
+                                // Formát riadku – iba tímy s ubytovaním
+                                lines.push(
+                                    ` [${category}] ${teamName.padEnd(38)} → ${accommodation.padEnd(22)}   (ľudia: ${totalPeople})`
+                                );
                             });
                         });
                     }
                 });
-
-                setTeamsWithoutAccommodation(without);
-                setTeamsWithAccommodation(withAcc); // voliteľné
-                setLoading(false);
+    
+                // ─── Výpis ────────────────────────────────────────
+                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
+                console.log(`TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
+                console.log(`Celkom tímov s prideleným ubytovaním: ${totalTeamsWithAccommodation}`);
+                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
+    
+                if (lines.length === 0) {
+                    console.log("Momentálne žiadny tím nemá pridelené ubytovanie");
+                } else {
+                    console.log("Zoznam tímov s ubytovaním:");
+                    console.log("");
+                    lines.forEach(line => console.log(line));
+                    console.log("");
+                }
+    
+                console.log(`Počet tímov s ubytovaním sa zmenil z ${previousTeamsWithAccommodation} na ${totalTeamsWithAccommodation}`);
+                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
+    
+                previousTeamsWithAccommodation = totalTeamsWithAccommodation;
             },
-            (err) => {
-                console.error("Chyba pri načítaní users:", err);
-                setLoading(false);
+            (error) => {
+                console.error("[USERS LOG] Chyba pri onSnapshot users:", error);
             }
         );
-
-        return () => unsubscribeUsers();
+    
+        return () => {
+            console.log("[USERS LOG] Zastavujem sledovanie 'users' (filter: iba s ubytovaním)");
+            unsubscribeUsers();
+        };
     }, []);
-
-    // ─── Render ───────────────────────────────────────────────────────
-    if (loading) {
-        return React.createElement(
-            'div',
-            { className: 'flex justify-center items-center h-full' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500' })
-        );
-    }
-
+    
+    // ──────────────────────────────────────────────
+    // Zvyšok tvojej pôvodnej komponenty (placeholder)
+    // ──────────────────────────────────────────────
     return React.createElement(
         'div',
-        { className: 'flex-grow p-6 bg-gray-50' },
-        React.createElement(
-            'h2',
-            { className: 'text-3xl font-bold text-center mb-8 text-gray-800' },
-            'Ubytovanie tímov'
-        ),
-
-        // Dva stĺpce
+        { className: 'flex-grow flex justify-center items-center' },
         React.createElement(
             'div',
-            { className: 'grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto' },
-
-            // ─── Ľavý stĺpec: Tímy BEZ ubytovania ──────────────────────
+            { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
             React.createElement(
                 'div',
-                { className: 'bg-white rounded-xl shadow-lg p-6 border border-red-100' },
-                React.createElement(
-                    'h3',
-                    { className: 'text-xl font-semibold mb-4 text-red-700' },
-                    `Tímy bez prideleného ubytovania (${teamsWithoutAccommodation.length})`
-                ),
-                teamsWithoutAccommodation.length === 0
-                    ? React.createElement(
-                        'p',
-                        { className: 'text-gray-500 italic' },
-                        'Všetky tímy už majú ubytovanie ✓'
-                      )
-                    : React.createElement(
-                        'ul',
-                        { className: 'space-y-3' },
-                        teamsWithoutAccommodation.map((team, i) =>
-                            React.createElement(
-                                'li',
-                                { key: i, className: 'flex justify-between items-center bg-red-50 p-3 rounded-lg' },
-                                React.createElement(
-                                    'div',
-                                    null,
-                                    React.createElement('span', { className: 'font-medium' }, `[${team.category}] ${team.name}`),
-                                    React.createElement('span', { className: 'text-sm text-gray-600 ml-3' }, `(${team.people} ľudí)`)
-                                )
-                            )
-                        )
-                      )
+                { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Ubytovanie tímov')
             ),
-
-            // ─── Pravý stĺpec: Dostupné ubytovne ───────────────────────
             React.createElement(
                 'div',
-                { className: 'bg-white rounded-xl shadow-lg p-6 border border-green-100' },
-                React.createElement(
-                    'h3',
-                    { className: 'text-xl font-semibold mb-4 text-green-700' },
-                    `Dostupné ubytovacie miesta (${accommodations.length})`
-                ),
-                accommodations.length === 0
-                    ? React.createElement(
-                        'p',
-                        { className: 'text-gray-500 italic' },
-                        'Žiadne ubytovacie miesta v databáze'
-                      )
-                    : React.createElement(
-                        'ul',
-                        { className: 'space-y-3' },
-                        accommodations.map((place) =>
-                            React.createElement(
-                                'li',
-                                { key: place.id, className: 'flex justify-between items-center bg-green-50 p-3 rounded-lg' },
-                                React.createElement(
-                                    'div',
-                                    null,
-                                    React.createElement('span', { className: 'font-medium' }, place.name),
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-sm text-gray-600 ml-3' },
-                                        `(${place.accommodationType}, kapacita: ${place.capacity})`
-                                    )
-                                )
-                            )
-                        )
-                  )
+                { className: 'text-center text-gray-600 mt-8' },
+                'Načítavanie ubytovacích možností pre tímy...'
             )
         )
     );
