@@ -30,6 +30,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const teamRostersLink = document.getElementById('team-rosters-link'); // NOVINKA: Získanie odkazu na súpisku tímov
     const teamsInGroupsLink = document.getElementById('teams-in-groups-link'); // NOVINKA: Získanie odkazu na Tímy do skupín
     const mapLink = document.getElementById('map-link'); // NOVINKA: Odkaz na mapu
+    const teamsAccommodationLink = document.getElementById('teams-accommodation-link');
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -119,9 +120,10 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             allRegistrationsLink.classList.remove('hidden');
             allUsersLink.classList.remove('hidden');
             notificationsLink.classList.remove('hidden');
-            teamRostersLink.classList.add('hidden'); // Admin nemá vidieť súpisku tímov
-            teamsInGroupsLink.classList.remove('hidden'); // Admin vidí "Tímy do skupín"
+            teamRostersLink.classList.add('hidden');
+            teamsInGroupsLink.classList.remove('hidden');
             mapLink?.classList.remove('hidden');
+            teamsAccommodationLink?.classList.remove('hidden');
 
             const unreadCount = userProfileData.unreadNotificationCount || 0;
             if (notificationsTextWithCount) {
@@ -151,6 +153,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamRostersLink.classList.remove('hidden');
             teamsInGroupsLink.classList.add('hidden'); 
             mapLink?.classList.add('hidden');
+            teamsAccommodationLink?.classList.remove('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
@@ -169,6 +172,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamRostersLink.classList.add('hidden');
             teamsInGroupsLink.classList.add('hidden');
             mapLink?.classList.add('hidden');
+            teamsAccommodationLink?.classList.remove('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
