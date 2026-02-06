@@ -230,9 +230,58 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    const uniqueTeamNames = [...new Set(allTeams.map(team => team.teamName.trim()))].sort((a, b) => 
+    // Funkcia na odstránenie veľkého písmenka na konci názvu tímu (A, B, C)
+    const normalizeTeamName = (teamName) => {
+        if (!teamName) return teamName;
+        
+        // Odstránenie veľkého písmenka na konci s medzerou pred ním
+        // Napríklad: "Názov tímu A" -> "Názov tímu"
+        const trimmed = teamName.trim();
+        
+        // Kontrola, či končí na veľké písmeno (A-Z)
+        const lastChar = trimmed.slice(-1);
+        const secondLastChar = trimmed.slice(-2, -1);
+        
+        // Ak je posledný znak veľké písmeno a predchádza mu medzera
+        if (/^[A-Z]$/.test(lastChar) && secondLastChar === ' ') {
+            return trimmed.slice(0, -2).trim(); // Odstráni medzeru a písmeno
+        }
+        
+        // Ak je posledný znak veľké písmeno bez medzery pred ním
+        if (/^[A-Z]$/.test(lastChar)) {
+            return trimmed.slice(0, -1).trim(); // Odstráni iba písmeno
+        }
+        
+        return trimmed;
+    };
+
+    // Generovanie jedinečných názvov tímov pre select box (bez písmenka na konci)
+    const uniqueTeamNames = [...new Set(allTeams.map(team => {
+        const normalized = normalizeTeamName(team.teamName);
+        return normalized || team.teamName;
+    }))].sort((a, b) => 
         a.localeCompare(b, 'sk', { sensitivity: 'base' })
-    );
+    ).filter(name => name !== ''); // Filtrovanie prázdnych názvov
+
+    // Funkcia na kontrolu, či tím zodpovedá vybranému filtru (vrátane variant s písmenkom)
+    const teamMatchesFilter = (team, filter) => {
+        if (!filter) return true;
+        
+        const normalizedTeamName = normalizeTeamName(team.teamName);
+        const normalizedFilter = normalizeTeamName(filter);
+        
+        // Kontrola či sa normalizované názvy rovnajú
+        if (normalizedTeamName === normalizedFilter) {
+            return true;
+        }
+        
+        // Kontrola či je názov tímu úplne rovnaký ako filter
+        if (team.teamName === filter) {
+            return true;
+        }
+        
+        return false;
+    };
 
     const sortTeams = (teams) => {
         return [...teams].sort((a, b) => {
@@ -249,13 +298,13 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const filteredUnassignedTeams = unassignedTeams.filter(team => {
         if (selectedCategory && team.category !== selectedCategory) return false;
-        if (selectedTeamNameFilter && team.teamName !== selectedTeamNameFilter) return false;
+        if (selectedTeamNameFilter && !teamMatchesFilter(team, selectedTeamNameFilter)) return false;
         return true;
     });
 
     const filteredAssignedTeams = assignedTeams.filter(team => {
         if (selectedCategory && team.category !== selectedCategory) return false;
-        if (selectedTeamNameFilter && team.teamName !== selectedTeamNameFilter) return false;
+        if (selectedTeamNameFilter && !teamMatchesFilter(team, selectedTeamNameFilter)) return false;
         if (selectedAccommodationFilter) {
             const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
             if (!selectedAccommodation) return false;
@@ -298,7 +347,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 assignedTeams.filter(team => {
                     if (team.assignedPlace !== place.name) return false;
                     if (selectedCategory && team.category !== selectedCategory) return false;
-                    if (selectedTeamNameFilter && team.teamName !== selectedTeamNameFilter) return false;
+                    if (selectedTeamNameFilter && !teamMatchesFilter(team, selectedTeamNameFilter)) return false;
                     return true;
                 })
             );
