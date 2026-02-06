@@ -11,19 +11,6 @@ let shouldShowTeamBubbles = true;
 let unsubscribeUserSettings = null;
 let customTooltip = null;
 let observer = null;
-let isReactAppDetected = false;
-let reactAppRoot = null;
-let initializationAttempts = 0;
-const MAX_INIT_ATTEMPTS = 30; // 15 sekúnd
-
-// === ZJEDNODUŠENÁ DETEKCIA REACT APLIKÁCIE ===
-function detectReactApp() {
-    // Skontrolujeme prítomnosť React aplikácie
-    return !!document.getElementById('root') || 
-           typeof ReactDOM !== 'undefined' || 
-           typeof React !== 'undefined' ||
-           !!document.querySelector('[data-reactroot]');
-}
 
 // === UPRAVENÉ NAČÍTANIE NASTAVENIA ===
 function setupTeamBubblesListener() {
@@ -64,7 +51,7 @@ function setupTeamBubblesListener() {
     });
 }
 
-// === VYHĽADÁVANIE V FIRESTORE (OSTÁVA ROVNAKÉ) ===
+// === VYLEPŠENÉ VYHĽADÁVANIE V FIRESTORE ===
 async function lookupTeamInFirestore(teamName, category = null, group = null) {
     if (!window.db) {
         console.warn("Firestore (window.db) nie je dostupné!");
@@ -72,7 +59,7 @@ async function lookupTeamInFirestore(teamName, category = null, group = null) {
     }
 
     let cleanName = teamName.trim();
-    console.log(`Hľadám tím "${cleanName}" (predpokladaná kategória: ${category || 'ľubovoľná'}, skupina: ${group || 'ľubovoľná'})`);
+    console.log(`Hľadám tím "${cleanName}" (kategória: ${category || 'neznáma'}, skupina: ${group || 'ľubovoľná'})`);
 
     try {
         // 1. superstructureGroups
@@ -201,7 +188,91 @@ function hideTooltip() {
     }
 }
 
-// === UNIVERZÁLNA FUNKCIA NA PRIRADENIE LISTENERA ===
+// === VYLEPŠENÁ FUNKCIA NA ZÍSKANIE KATEGÓRIE Z DOM ===
+function getCategoryFromDOM(element) {
+    if (!element) return 'neznáma kategória';
+    
+    // Najprv skúsime nájsť kategóriu v texte (ak je formát "Kategória: Tím")
+    const visibleText = element.textContent.trim();
+    const colonIndex = visibleText.indexOf(':');
+    if (colonIndex !== -1 && colonIndex < visibleText.length - 1) {
+        const potentialCategory = visibleText.substring(0, colonIndex).trim();
+        if (potentialCategory && potentialCategory.length < 30) {
+            return potentialCategory;
+        }
+    }
+    
+    // Hľadáme najbližší nadpis (h2, h3, h4) v DOM hierarchii
+    let current = element;
+    let foundHeader = null;
+    
+    // Najprv ideme hore po DOM strome (max 10 úrovní)
+    for (let i = 0; i < 10; i++) {
+        if (!current || current === document.body) break;
+        
+        // Skúsime nájsť nadpis medzi súrodencami
+        let sibling = current.previousElementSibling;
+        while (sibling && !foundHeader) {
+            const tagName = sibling.tagName.toUpperCase();
+            if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(tagName)) {
+                const text = sibling.textContent.trim();
+                
+                // Filtrujeme nezmyselné nadpisy
+                if (text && 
+                    !text.startsWith('Základné skupiny') &&
+                    !text.startsWith('Nadstavbové skupiny') &&
+                    !text.startsWith('Skupina') &&
+                    !text.includes('Tímy bez skupiny') &&
+                    !/^[A-Za-z0-9]{1,4}$/.test(text) &&
+                    !/^\d+$/.test(text) &&
+                    text.length > 4) {
+                    
+                    foundHeader = text;
+                    break;
+                }
+            }
+            sibling = sibling.previousElementSibling;
+        }
+        
+        // Ak sme našli nadpis, vrátime ho
+        if (foundHeader) {
+            return foundHeader;
+        }
+        
+        // Skúsime kontajnery, ktoré by mohli obsahovať kategóriu
+        const possibleCategoryContainers = current.querySelectorAll(
+            '.category-name, .category-title, [data-category], .card-header, .group-header'
+        );
+        
+        for (const container of possibleCategoryContainers) {
+            const text = container.textContent.trim();
+            if (text && text.length > 2) {
+                // Vyfiltrujeme krátke texty a čísla
+                if (text.length > 4 && !/^\d+$/.test(text) && !/^[A-Z]{1,4}$/.test(text)) {
+                    return text;
+                }
+            }
+        }
+        
+        // Prejdeme na rodiča
+        current = current.parentElement;
+    }
+    
+    // Ak sme nenašli kategóriu v DOM, skúsime URL hash ako fallback
+    if (window.location.hash && window.location.hash.length > 1) {
+        const hash = window.location.hash.substring(1);
+        const parts = hash.split('/');
+        let catNameFromHash = decodeURIComponent(parts[0]).replace(/-/g, ' ').trim();
+        
+        if (!/^[A-Za-z0-9]{1,4}$/.test(catNameFromHash) && catNameFromHash.length > 3) {
+            return catNameFromHash;
+        }
+    }
+    
+    return 'neznáma kategória';
+}
+
+// === VYLEPŠENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
 function addHoverListener(element) {
     if (element.dataset.hoverListenerAdded) return;
     element.dataset.hoverListenerAdded = 'true';
@@ -229,8 +300,10 @@ function addHoverListener(element) {
         const li = e.target.closest('li');
         if (!li) return;
         
-        // Pre React aplikáciu: hľadáme kategóriu v texte
-        let category = 'neznáma kategória';
+        // ZÍSKAME KATEGÓRIU - VYLEPŠENÁ VERZIA
+        let category = getCategoryFromDOM(li);
+        
+        // Ak máme kategóriu v texte, použijeme ju
         if (colonIndex !== -1) {
             const potentialCategory = visibleText.substring(0, colonIndex).trim();
             if (potentialCategory && potentialCategory.length < 30) {
@@ -238,8 +311,31 @@ function addHoverListener(element) {
             }
         }
         
+        // Skupina + typ podľa farby
+        let group = 'bez skupiny';
+        let type = 'tím v základnej skupine';
+        
+        const groupHeader = li.closest('.zoom-group-box')?.querySelector('h3, h4');
+        if (groupHeader) group = groupHeader.textContent.trim();
+        
+        if (li.classList.contains('bg-yellow-50')) {
+            type = 'SUPERSTRUCTURE / nadstavbový tím';
+        } else if (li.closest('.bg-blue-100')) {
+            type = 'tím v nadstavbovej skupine';
+        } else if (li.closest('.bg-gray-100')) {
+            type = 'tím v základnej skupine';
+        }
+        
+        // Konzolový výpis
+        console.groupCollapsed(`%c${teamName || '(bez názvu)'}`, 'color:#10b981; font-weight:bold;');
+        console.log(`Viditeľný text: ${visibleText}`);
+        console.log(`Vyčistený názov: ${teamName}`);
+        console.log(`Kategória: ${category}`);
+        console.log(`Skupina: ${group}`);
+        console.log(`Typ: ${type}`);
+        
         // Získame údaje o tíme
-        const teamData = await lookupTeamInFirestore(teamName, category);
+        const teamData = await lookupTeamInFirestore(teamName, category, group);
         
         if (teamData) {
             const playerCount = (teamData.playerDetails || []).length;
@@ -280,67 +376,92 @@ Doprava: ${arrivalType}${arrivalTime}`;
             const tooltipText = `${teamName || '(bez názvu)'}\n(údaje sa nenašli v databáze)`;
             showTooltipUnderElement(tooltipText, li);
         }
+        
+        console.groupEnd();
     });
 
     element.addEventListener('mouseout', hideTooltip);
     element.addEventListener('mouseleave', hideTooltip);
 }
 
-// === VYLEPŠENÁ INICIALIZÁCIA PRE REACT ===
+// === OPTIMIZOVANÁ INICIALIZÁCIA ===
 function initTeamHoverListeners() {
     console.log("Inicializujem hover listenery...");
     
-    // PRIORITA 1: Pre React aplikáciu - hľadáme tímy v špecifickom formáte
-    const reactTeams = document.querySelectorAll('li span.font-medium');
-    console.log(`Nájdených ${reactTeams.length} React tímov (span.font-medium)`);
-    reactTeams.forEach(addHoverListener);
-    
-    // PRIORITA 2: Pre klasické stránky - pôvodný selektor
-    const classicTeams = document.querySelectorAll('li span.flex-grow');
-    console.log(`Nájdených ${classicTeams.length} klasických tímov (span.flex-grow)`);
-    classicTeams.forEach(addHoverListener);
-    
-    // PRIORITA 3: Všetky ďalšie span v li, ktoré obsahujú názvy tímov
-    const allLiSpans = document.querySelectorAll('li span');
-    allLiSpans.forEach(span => {
-        const text = span.textContent.trim();
-        // Ak span obsahuje text, ktorý vyzerá ako názov tímu
-        if (text.length > 2 && 
-            !text.includes('(') && 
-            !text.includes(')') && 
-            !text.match(/^\d+$/) &&
-            !span.dataset.hoverListenerAdded) {
-            addHoverListener(span);
-        }
+    // Odstránime staré listenery
+    const oldSpans = document.querySelectorAll('[data-hover-listener-added]');
+    oldSpans.forEach(span => {
+        span.removeAttribute('data-hover-listener-added');
     });
     
-    // MutationObserver pre dynamické pridávanie
+    // Nájdeme všetky potenciálne tímy
+    const selectors = [
+        'li span.font-medium',           // React tímy
+        'li span.flex-grow',             // Klasické tímy
+        'li span:first-child',           // Ak je názov tímu v prvom spane
+        '.zoom-group-box li span',       // Tímy v skupinách
+        'li:not(.no-hover) span'         // Všetky ostatné
+    ];
+    
+    let allTeams = new Set();
+    
+    selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+            const text = el.textContent.trim();
+            // Filtrujeme krátke texty a čísla
+            if (text.length > 2 && 
+                !text.match(/^\d+$/) && 
+                !text.match(/^[A-Za-z0-9]{1,3}$/)) {
+                allTeams.add(el);
+            }
+        });
+    });
+    
+    console.log(`Nájdených ${allTeams.size} potenciálnych tímov`);
+    
+    // Pridáme listenery
+    allTeams.forEach(addHoverListener);
+    
+    // Nastavíme MutationObserver pre dynamické zmeny
     if (!observer) {
         observer = new MutationObserver((mutations) => {
-            let shouldReinitialize = false;
+            let hasNewTeams = false;
+            
             mutations.forEach((mutation) => {
                 if (mutation.addedNodes.length > 0) {
-                    shouldReinitialize = true;
+                    hasNewTeams = true;
+                }
+                
+                // Skontrolujeme aj zmeny v texte
+                if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                    hasNewTeams = true;
                 }
             });
             
-            if (shouldReinitialize) {
-                // Počkáme, kým sa DOM stabilizuje
+            if (hasNewTeams) {
+                // Počkáme 100ms, kým sa DOM stabilizuje
                 setTimeout(() => {
-                    // Znova inicializujeme všetky nové elementy
-                    const newReactTeams = document.querySelectorAll('li span.font-medium:not([data-hover-listener-added])');
-                    const newClassicTeams = document.querySelectorAll('li span.flex-grow:not([data-hover-listener-added])');
+                    // Znova inicializujeme
+                    const newTeams = document.querySelectorAll(
+                        'li span.font-medium:not([data-hover-listener-added]), ' +
+                        'li span.flex-grow:not([data-hover-listener-added]), ' +
+                        '.zoom-group-box li span:not([data-hover-listener-added])'
+                    );
                     
-                    console.log(`MutationObserver: Pridávam ${newReactTeams.length + newClassicTeams.length} nových tímov`);
-                    newReactTeams.forEach(addHoverListener);
-                    newClassicTeams.forEach(addHoverListener);
+                    if (newTeams.length > 0) {
+                        console.log(`MutationObserver: Pridávam ${newTeams.length} nových tímov`);
+                        newTeams.forEach(addHoverListener);
+                    }
                 }, 100);
             }
         });
         
         observer.observe(document.body, { 
             childList: true, 
-            subtree: true 
+            subtree: true,
+            characterData: true,
+            attributes: false
         });
     }
     
@@ -348,38 +469,36 @@ function initTeamHoverListeners() {
         "color:#10b981; font-weight:bold; font-size:14px; background:#000; padding:6px 12px; border-radius:6px;");
 }
 
-// === RE-INICIALIZÁCIA AK SA REACT NAČÍTA NESKÔR ===
-function tryInitializeReactApp() {
-    if (initializationAttempts >= MAX_INIT_ATTEMPTS) {
-        console.log("Maximálny počet pokusov na inicializáciu React aplikácie dosiahnutý");
-        return;
+// === RE-INICIALIZÁCIA PRE REACT ===
+let reactInitializationTimer = null;
+
+function reinitializeForReact() {
+    if (reactInitializationTimer) {
+        clearTimeout(reactInitializationTimer);
     }
     
-    initializationAttempts++;
-    
-    // Skontrolujeme, či už React aplikácia existuje
-    const reactTeams = document.querySelectorAll('li span.font-medium');
-    const rootElement = document.getElementById('root');
-    
-    if ((reactTeams.length > 0 || rootElement) && window.db) {
-        console.log(`React aplikácia bola nájdená na pokus ${initializationAttempts} → inicializujem`);
-        setupTeamBubblesListener();
+    reactInitializationTimer = setTimeout(() => {
+        console.log("Re-inicializácia pre React aplikáciu...");
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
         initTeamHoverListeners();
-    } else {
-        console.log(`Čakám na React aplikáciu... (pokus ${initializationAttempts}/${MAX_INIT_ATTEMPTS})`);
-        setTimeout(tryInitializeReactApp, 500);
-    }
+        
+        // Manuálne pridáme listenery na všetky tímy, ktoré sú zobrazené
+        const allTeams = document.querySelectorAll('li span');
+        allTeams.forEach(span => {
+            const text = span.textContent.trim();
+            if (text.length > 2 && !text.match(/^\d+$/) && !span.dataset.hoverListenerAdded) {
+                addHoverListener(span);
+            }
+        });
+    }, 1000); // Počkáme sekundu, kým React vyrenderuje obsah
 }
 
 // === HLAVNÁ INICIALIZÁCIA ===
 function initApp() {
     console.log("Spúšťam inicializáciu...");
-    isReactAppDetected = detectReactApp();
-    
-    if (isReactAppDetected) {
-        console.log("%cDetekovaná React aplikácia",
-            "color:#f59e0b; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
-    }
     
     // Čakáme na window.db
     let attempts = 0;
@@ -389,24 +508,28 @@ function initApp() {
         attempts++;
 
         if (window.db) {
-            console.log("%cwindow.db je dostupné",
+            console.log("%cwindow.db je dostupné → inicializujem",
                 "color:#10b981; font-weight:bold; font-size:14px; background:#000; padding:6px 12px; border-radius:6px;");
             
-            if (isReactAppDetected) {
-                // Pre React: skúsime okamžitú inicializáciu, potom periodickú
-                setTimeout(() => {
-                    setupTeamBubblesListener();
-                    initTeamHoverListeners();
-                    // Ak neboli nájdené žiadne tímy, skúsime znovu neskôr
-                    if (document.querySelectorAll('li span.font-medium').length === 0) {
-                        tryInitializeReactApp();
-                    }
-                }, 1000); // Počkáme sekundu, kým React vyrenderuje
-            } else {
-                // Pre klasické stránky
-                setupTeamBubblesListener();
+            // Nastavíme listener na používateľské nastavenia
+            setupTeamBubblesListener();
+            
+            // Počkáme chvíľu, kým sa načíta obsah (hlavne pre React)
+            setTimeout(() => {
                 initTeamHoverListeners();
-            }
+                
+                // Špeciálna inicializácia pre React aplikácie
+                if (document.getElementById('root') || typeof React !== 'undefined') {
+                    console.log("%cDetekovaná React aplikácia → použijeme špeciálny režim",
+                        "color:#f59e0b; font-weight:bold; font-size:14px; background:#000; padding:4px 8px; border-radius:4px;");
+                    
+                    // Re-inicializácia po 2 sekundách (React sa môže načítavať neskôr)
+                    setTimeout(reinitializeForReact, 2000);
+                    
+                    // Event listener pre manuálnu re-inicializáciu
+                    window.addEventListener('reactContentLoaded', reinitializeForReact);
+                }
+            }, 500);
             return;
         }
 
@@ -426,17 +549,29 @@ function initApp() {
 // === SPUSTENIE ===
 document.addEventListener('DOMContentLoaded', initApp);
 
-// === PERIODICKÁ KONTROLA ===
+// === PERIODICKÁ KONTROLA A RE-INICIALIZÁCIA ===
 setInterval(() => {
-    const uninitializedReactTeams = document.querySelectorAll('li span.font-medium:not([data-hover-listener-added])');
-    const uninitializedClassicTeams = document.querySelectorAll('li span.flex-grow:not([data-hover-listener-added])');
+    // Kontrola nespracovaných tímov
+    const uninitializedTeams = document.querySelectorAll(
+        'li span.font-medium:not([data-hover-listener-added]), ' +
+        'li span.flex-grow:not([data-hover-listener-added]), ' +
+        '.zoom-group-box li span:not([data-hover-listener-added])'
+    );
     
-    if (uninitializedReactTeams.length + uninitializedClassicTeams.length > 0) {
-        console.log(`Periodická kontrola: Pridávam ${uninitializedReactTeams.length + uninitializedClassicTeams.length} nových tímov`);
-        uninitializedReactTeams.forEach(addHoverListener);
-        uninitializedClassicTeams.forEach(addHoverListener);
+    if (uninitializedTeams.length > 0) {
+        console.log(`Periodická kontrola: Pridávam ${uninitializedTeams.length} nových tímov`);
+        uninitializedTeams.forEach(addHoverListener);
     }
-}, 3000);
+    
+    // Re-inicializácia, ak sa DOM výrazne zmenil
+    const totalTeams = document.querySelectorAll('li span').length;
+    const initializedTeams = document.querySelectorAll('[data-hover-listener-added]').length;
+    
+    if (totalTeams > 0 && initializedTeams < totalTeams * 0.5) {
+        console.log(`Málo inicializovaných tímov (${initializedTeams}/${totalTeams}) → re-inicializácia`);
+        initTeamHoverListeners();
+    }
+}, 5000); // Kontrola každých 5 sekúnd
 
 // === MANUÁLNA RE-INICIALIZÁCIA ===
 if (typeof window !== 'undefined') {
@@ -446,16 +581,6 @@ if (typeof window !== 'undefined') {
             observer.disconnect();
             observer = null;
         }
-        initializationAttempts = 0;
         initTeamHoverListeners();
     };
-    
-    // Môžeme spustiť manuálne z React aplikácie
-    window.addEventListener('reactContentLoaded', () => {
-        console.log("Event 'reactContentLoaded' zachytený → re-inicializácia");
-        setTimeout(() => {
-            setupTeamBubblesListener();
-            initTeamHoverListeners();
-        }, 1500);
-    });
 }
