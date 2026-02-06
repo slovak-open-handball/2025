@@ -337,6 +337,7 @@ function addHoverListener(element) {
         // Získame údaje o tíme
         const teamData = await lookupTeamInFirestore(teamName, category, group);
         
+        // ZMENENÉ: Zobraziť bublinu IBA ak sa našli údaje
         if (teamData) {
             const playerCount = (teamData.playerDetails || []).length;
             const womenCount = (teamData.womenTeamMemberDetails || []).length;
@@ -373,8 +374,8 @@ Doprava: ${arrivalType}${arrivalTime}`;
             
             showTooltipUnderElement(tooltipText, li);
         } else {
-            const tooltipText = `${teamName || '(bez názvu)'}\n(údaje sa nenašli v databáze)`;
-            showTooltipUnderElement(tooltipText, li);
+            // ZMENENÉ: Názov v konzole, ale NEZOBRAZUJEME bublinu
+            console.log("→ Tím sa nenašiel v databáze - bublina sa nezobrazí");
         }
         
         console.groupEnd();
