@@ -723,6 +723,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: selectedPlace.type || '',
                 capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
                 accommodationType: selectedPlace.accommodationType || null,
+                note: selectedPlace.note || null,
             };
   
             await updateDoc(placeRef, updates);
