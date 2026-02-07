@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect } = React;
@@ -1391,7 +1391,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement(
                         'span',
                         { className: 'text-lg font-medium text-gray-600 ml-2' },
-                        `– ${selectedTeam?.teamName}`
+                        `– ${selectedTeam?.category}: ${selectedTeam?.teamName}`
                     )
                 ),
     
