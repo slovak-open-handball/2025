@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
+import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
@@ -672,8 +672,66 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     
         try {
+            const oldName = selectedPlace.name;
+            const newName = editName.trim();
+            
+            // Ak sa mení názov ubytovne, aktualizuj všetky priradené tímy
+            if (oldName !== newName && editType === 'ubytovanie') {
+                // 1. Nájdite všetky tímy priradené k starému názvu ubytovne
+                const allUsers = await getDocs(collection(window.db, 'users'));
+                
+                for (const userDoc of allUsers.docs) {
+                    const userData = userDoc.data();
+                    const teams = userData.teams || {};
+                    let needsUpdate = false;
+                    const updatedTeams = { ...teams };
+                    
+                    // Prejdi všetky kategórie tímov
+                    for (const category in teams) {
+                        const teamArray = teams[category];
+                        if (!Array.isArray(teamArray)) continue;
+                        
+                        const updatedTeamArray = teamArray.map(team => {
+                            if (team.accommodation?.name === oldName) {
+                                needsUpdate = true;
+                                return {
+                                    ...team,
+                                    accommodation: {
+                                        ...team.accommodation,
+                                        name: newName
+                                    }
+                                };
+                            }
+                            return team;
+                        });
+                        
+                        if (needsUpdate) {
+                            updatedTeams[category] = updatedTeamArray;
+                        }
+                    }
+                    
+                    // Ak boli zmeny, aktualizuj dokument používateľa
+                    if (needsUpdate) {
+                        await updateDoc(doc(window.db, 'users', userDoc.id), {
+                            teams: updatedTeams
+                        });
+                        
+                        console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] Tímy používateľa ${userDoc.id} boli prenesené z "${oldName}" na "${newName}"`);
+                        
+                        // Notifikácia o zmene
+                        await createPlaceChangeNotification('accommodation_name_updated', [
+                            `Automatická aktualizácia tímov: Tímy boli prenesené z ubytovne "${oldName}" na "${newName}"`
+                        ], {
+                            id: selectedPlace.id,
+                            name: newName,
+                            type: editType
+                        });
+                    }
+                }
+            }
+    
             const updates = {
-                name: editName.trim(),
+                name: newName,
                 type: editType,
                 updatedAt: Timestamp.now(),
             };
@@ -715,7 +773,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 updates.capacity = null;
             }
     
-            // Pridajte poznámku do updates - TOTO MUSÍ BYŤ TU, PO VYTVORENÍ updates
             updates.note = editNote.trim() || null;
     
             const placeRef = doc(window.db, 'places', selectedPlace.id);
@@ -738,6 +795,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 changesList.push(
                     `Zmena názvu miesta z '${original.name}' na '${updates.name}'`
                 );
+                
+                // Pridaj informáciu o automatickom prenesení tímov
+                if (editType === 'ubytovanie') {
+                    changesList.push(
+                        `Automaticky prenesené všetky tímy z ubytovne '${original.name}' na '${updates.name}'`
+                    );
+                }
             }
     
             if (original.type !== updates.type) {
@@ -769,7 +833,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                     `Zmena poznámky z '${oldNote}' na '${newNote}'`
                 );
             }
-            // ──────────────────────────────────────────────
     
             // Ak sa niečo zmenilo → uložíme jedno upozornenie s viacerými riadkami
             if (changesList.length > 1) {
@@ -818,7 +881,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 )
             );
     
-            window.showGlobalNotification('Údaje boli aktualizované', 'success');
+            window.showGlobalNotification('Údaje boli aktualizované a tímy automaticky prenesené', 'success');
             setIsEditingNameAndType(false);
             setEditCapacity('');
             setEditNote('');
