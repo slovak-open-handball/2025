@@ -850,7 +850,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Ak boli prenesené tímy, pošli samostatnú notifikáciu (iba raz)
             if (totalTransferredTeams > 0) {
                 await createPlaceChangeNotification('accommodation_name_updated', [
-                    `Automatická aktualizácia tímov: ${totalTransferredTeams} tímov bolo prenesených z ubytovne "${oldName}" na "${newName}"`
+                    `Automatická aktualizácia tímov: ${totalTransferredTeams} tímov bolo prenesených z ubytovne '${oldName}' do ubytovne '${newName}'`
                 ], {
                     id: selectedPlace.id,
                     name: newName,
