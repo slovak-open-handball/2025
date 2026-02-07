@@ -92,6 +92,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [placeToDelete, setPlaceToDelete] = useState(null);
     const [isModalOpening, setIsModalOpening] = useState(false);
+    const [newPlaceNote, setNewPlaceNote] = useState('');
+    const [editNote, setEditNote] = useState('');
 // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
 
     const waitForMarkerRender = () => {
@@ -353,6 +355,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
             return;
         }
+
+        if (newPlaceNote.trim()) {
+            placeData.note = newPlaceNote.trim();
+        }
     
         const nameTrimmed = newPlaceName.trim();
     
@@ -418,7 +424,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
             const addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} (${typeLabels[newPlaceType] || newPlaceType})'` +
                 (placeData.capacity != null ? `, kapacita: ${placeData.capacity}` : '') +
-                (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '');
+                (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '')+
+                (placeData.note ? `, poznámka: ${placeData.note}` : '');
           
             await createPlaceChangeNotification('place_created', [addMessage], {
                 id: newPlaceDoc.id,
@@ -545,6 +552,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             setSelectedAccommodationType('');
             setNameTypeError(null);
             setCapacityError(null);
+            setNewPlaceNote('');
         }
     }, [showModal, isAddingPlace]);
     useEffect(() => {
@@ -661,6 +669,9 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Vyberte typ ubytovania', 'error');
             return;
         }
+        if (editNote !== undefined) {
+            updates.note = editNote.trim() || null;
+        }
   
         try {
             const updates = {
@@ -747,6 +758,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                     `Zmena typu ubytovania z '${oldAcc}' na '${newAcc}'`
                 );
             }
+
+            if (original.note !== updates.note) {
+                const oldNote = original.note ? `'${original.note}'` : '–';
+                const newNote = updates.note ? `'${updates.note}'` : '–';
+                changesList.push(
+                    `Zmena poznámky z '${oldNote}' na '${newNote}'`
+                );
+            }
             // ──────────────────────────────────────────────────────────
   
             // Ak sa niečo zmenilo → uložíme jedno upozornenie s viacerými riadkami
@@ -765,12 +784,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: updates.type,
                 capacity: updates.capacity,
                 accommodationType: updates.accommodationType || undefined,
+                note: updates.note || undefined,
             }));
   
             setPlaces(prevPlaces =>
                 prevPlaces.map(p =>
                     p.id === selectedPlace.id
-                        ? { ...p, name: updates.name, type: updates.type, capacity: updates.capacity, accommodationType: updates.accommodationType || undefined }
+                        ? { ...p, name: updates.name, type: updates.type, capacity: updates.capacity, accommodationType: updates.accommodationType || undefined, note: updates.note || undefined }
                         : p
                 )
             );
@@ -1045,6 +1065,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               createdAt: data.createdAt,
               capacity: data.capacity || null,
               accommodationType: data.accommodationType || null,
+              note: data.note || null,
             });
           });
           // Uložíme VŠETKY miesta do allPlaces
@@ -1274,7 +1295,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                 tempLocation
                   ? `${tempLocation.lat.toFixed(6)}, ${tempLocation.lng.toFixed(6)} (dočasné)`
                   : `${selectedPlace.lat.toFixed(6)}, ${selectedPlace.lng.toFixed(6)}`
-              )
+              ),
+              selectedPlace.note && React.createElement('div', { className: 'mb-3' },
+                React.createElement('strong', { className: 'block text-gray-700 mb-1' }, 'Poznámka:'),
+                React.createElement('p', { className: 'text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200 whitespace-pre-line' }, 
+                  selectedPlace.note
+                )
+              ),
             ),
             React.createElement('div', { className: 'p-4 border-t border-gray-200 bg-gray-50 space-y-3' },
               React.createElement('button', {
@@ -1298,12 +1325,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                   setEditType(selectedPlace.type || '');
                   setEditCapacity(selectedPlace.capacity != null ? String(selectedPlace.capacity) : '');
                   setEditAccommodationType(selectedPlace.accommodationType || '');
+                  setEditNote(selectedPlace.note || '');
                 },
                 className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
               },
                 (selectedPlace?.type === 'ubytovanie' || selectedPlace?.type === 'stravovanie')
-                  ? 'Upraviť názov/typ/kapacitu'
-                  : 'Upraviť názov/typ'
+                  ? 'Upraviť názov/typ/kapacitu/poznámku'
+                  : 'Upraviť názov/typ/poznámku'
               ),
               isEditingLocation
                 ? React.createElement('div', { className: 'flex gap-2' },
@@ -1443,6 +1471,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }),
                 capacityError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, capacityError)
               ),
+              React.createElement('div', { className: 'mb-6' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Poznámka'),
+                React.createElement('textarea', {
+                  value: editNote,
+                  onChange: e => setEditNote(e.target.value),
+                  placeholder: 'text poznámky, informácia...',
+                  rows: 3,
+                  className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition resize-none'
+                })
+              ),
               // Tlačidlá
               React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
                 React.createElement('button', {
@@ -1558,6 +1596,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                   className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
                 }),
                 capacityError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, capacityError)
+              ),
+              React.createElement('div', { className: 'mb-6' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Poznámka (voliteľné)'),
+                React.createElement('textarea', {
+                  value: newPlaceNote,
+                  onChange: e => setNewPlaceNote(e.target.value),
+                  placeholder: 'text poznámky, informácia...',
+                  rows: 3,
+                  className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition resize-none'
+                })
               ),
               // Tlačidlá
               React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
