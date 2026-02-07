@@ -670,23 +670,20 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.showGlobalNotification('Vyberte typ ubytovania', 'error');
             return;
         }
-        if (editNote !== undefined) {
-            updates.note = editNote.trim() || null;
-        }
-  
+    
         try {
             const updates = {
                 name: editName.trim(),
                 type: editType,
                 updatedAt: Timestamp.now(),
             };
-  
+    
             if (editType === 'ubytovanie') {
                 updates.accommodationType = editAccommodationType || null;
             } else {
                 updates.accommodationType = null;
             }
-  
+    
             let cap = parseInt(editCapacity, 10);
             if (editType === 'ubytovanie' || editType === 'stravovanie') {
                 if (isNaN(cap) || cap <= 0) {
@@ -717,7 +714,10 @@ const AddGroupsApp = ({ userProfileData }) => {
             } else {
                 updates.capacity = null;
             }
-  
+    
+            // Pridajte poznámku do updates - TOTO MUSÍ BYŤ TU, PO VYTVORENÍ updates
+            updates.note = editNote.trim() || null;
+    
             const placeRef = doc(window.db, 'places', selectedPlace.id);
             const original = {
                 name: selectedPlace.name || '',
@@ -726,25 +726,25 @@ const AddGroupsApp = ({ userProfileData }) => {
                 accommodationType: selectedPlace.accommodationType || null,
                 note: selectedPlace.note || null,
             };
-  
+    
             await updateDoc(placeRef, updates);
-  
-            // ─── TU ZAČÍNA ZBER ZMIEN ───────────────────────────────
+    
+            // ─── ZBER ZMIEN ───────────────────────────────
             const changesList = [];
             changesList.push(`Úprava miesta s názvom: '''${original.name || '(bez názvu)'}'`);
-  
+    
             if (original.name.trim() !== updates.name.trim()) {
                 changesList.push(
                     `Zmena názvu miesta z '${original.name}' na '${updates.name}'`
                 );
             }
-  
+    
             if (original.type !== updates.type) {
                 changesList.push(
                     `Zmena typu miesta z '${typeLabels[original.type] || original.type}' na '${typeLabels[updates.type] || updates.type}'`
                 );
             }
-  
+    
             if (original.capacity !== updates.capacity) {
                 const oldCapStr = original.capacity != null ? original.capacity : '–';
                 const newCapStr = updates.capacity != null ? updates.capacity : '–';
@@ -752,7 +752,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     `Zmena kapacity z '${oldCapStr}' na '${newCapStr}'`
                 );
             }
-  
+    
             if (original.accommodationType !== updates.accommodationType) {
                 const oldAcc = original.accommodationType || '-';
                 const newAcc = updates.accommodationType || '-';
@@ -760,16 +760,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                     `Zmena typu ubytovania z '${oldAcc}' na '${newAcc}'`
                 );
             }
-
+    
             if (original.note !== updates.note) {
                 const oldNote = original.note ? `'${original.note}'` : '–';
                 const newNote = updates.note ? `'${updates.note}'` : '–';
                 changesList.push(
-                    `Zmena poznámky z '${oldNote}' na '${newNote}'`
+                    `Zmena poznámky z ${oldNote} na ${newNote}`
                 );
             }
-            // ──────────────────────────────────────────────────────────
-  
+            // ──────────────────────────────────────────────
+    
             // Ak sa niečo zmenilo → uložíme jedno upozornenie s viacerými riadkami
             if (changesList.length > 1) {
                 await createPlaceChangeNotification('place_field_updated', changesList, {
@@ -778,7 +778,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     type: updates.type,
                 });
             }
-  
+    
             // Aktualizácia lokálneho stavu
             setSelectedPlace(prev => ({
                 ...prev,
@@ -788,19 +788,40 @@ const AddGroupsApp = ({ userProfileData }) => {
                 accommodationType: updates.accommodationType || undefined,
                 note: updates.note || undefined,
             }));
-  
+    
             setPlaces(prevPlaces =>
                 prevPlaces.map(p =>
                     p.id === selectedPlace.id
-                        ? { ...p, name: updates.name, type: updates.type, capacity: updates.capacity, accommodationType: updates.accommodationType || undefined, note: updates.note || undefined }
+                        ? { ...p, 
+                            name: updates.name, 
+                            type: updates.type, 
+                            capacity: updates.capacity, 
+                            accommodationType: updates.accommodationType || undefined,
+                            note: updates.note || undefined
+                          }
                         : p
                 )
             );
-  
+    
+            setAllPlaces(prevPlaces =>
+                prevPlaces.map(p =>
+                    p.id === selectedPlace.id
+                        ? { ...p, 
+                            name: updates.name, 
+                            type: updates.type, 
+                            capacity: updates.capacity, 
+                            accommodationType: updates.accommodationType || undefined,
+                            note: updates.note || undefined
+                          }
+                        : p
+                )
+            );
+    
             window.showGlobalNotification('Údaje boli aktualizované', 'success');
             setIsEditingNameAndType(false);
             setEditCapacity('');
-  
+            setEditNote('');
+    
         } catch (err) {
             console.error("Chyba pri ukladaní:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
