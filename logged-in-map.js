@@ -647,6 +647,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         setTempLocation(null);
         setIsEditingNameAndType(false);
         setEditCapacity('');
+        setEditNote('');
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
                 leafletMap.current.off('click', editMarkerRef.current._clickHandler);
