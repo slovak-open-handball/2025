@@ -1324,7 +1324,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 'p',
                                 { className: 'text-sm text-yellow-700' },
                                 React.createElement('strong', null, 'Upozornenie: '),
-                                'Tím sa odstráni z tejto ubytovne, ale zostane v systéme a bude možné ho priradiť do inej ubytovne.'
+                                'tím sa odstráni z tejto ubytovne, ale zostane v systéme a bude možné ho priradiť do inej ubytovne.'
                             )
                         )
                     )
