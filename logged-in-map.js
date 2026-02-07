@@ -1322,7 +1322,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               ),
               selectedPlace.note && React.createElement('div', { className: 'mb-3' },
                 React.createElement('strong', { className: 'block text-gray-700 mb-1' }, 'Poznámka:'),
-                React.createElement('p', { className: 'text-gray-600 p-3 whitespace-pre-line' }, 
+                React.createElement('p', { className: 'text-gray-600 whitespace-pre-line' },  
                   selectedPlace.note
                 )
               ),
