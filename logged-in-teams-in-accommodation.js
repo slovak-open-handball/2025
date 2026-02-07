@@ -1305,7 +1305,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     },
                                     `${teamToRemove?.category}: ${teamToRemove?.teamName}`
                                 ),
-                                ' z ubytovne ',
+                                ' z\u00A0ubytovne ',
                                 React.createElement(
                                     'span',
                                     { 
