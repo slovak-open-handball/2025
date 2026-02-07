@@ -1296,7 +1296,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             'p',
                             { className: 'text-gray-600' },
                             [
-                                'Naozaj chcete odstrániť priradenie tímu ',
+                                'Odstrániť priradenie tímu ',
                                 React.createElement(
                                     'span',
                                     { 
