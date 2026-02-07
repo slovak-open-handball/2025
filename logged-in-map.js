@@ -424,7 +424,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
             const addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} (${typeLabels[newPlaceType] || newPlaceType})'` +
                 (placeData.capacity != null ? `, kapacita: ${placeData.capacity}` : '') +
-                (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '')+
+                (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '') +
                 (placeData.note ? `, poznámka: ${placeData.note}` : '');
           
             await createPlaceChangeNotification('place_created', [addMessage], {
@@ -731,7 +731,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             // ─── ZBER ZMIEN ───────────────────────────────
             const changesList = [];
-            changesList.push(`Úprava miesta s názvom: '''${original.name || '(bez názvu)'}'`);
+            const placeTypeLabel = typeLabels[original.type] || original.type || 'neznámy typ';
+            changesList.push(`Úprava miesta: '''${original.name || '(bez názvu)'} (${placeTypeLabel})'`);
     
             if (original.name.trim() !== updates.name.trim()) {
                 changesList.push(
@@ -853,9 +854,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Notifikácia iba ak sa súradnice zmenili
             if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
                 const changesList = [];
-                // prvý riadok – úprava miesta s pôvodným názvom
-                changesList.push(`Úprava miesta s názvom: '''${selectedPlace.name || '(bez názvu)'}'`);
-                // druhý riadok – zmena polohy
+                const placeTypeLabel = typeLabels[selectedPlace.type] || selectedPlace.type || 'neznámy typ';
+                changesList.push(`Úprava miesta: '''${selectedPlace.name || '(bez názvu)'} (${placeTypeLabel})'`);
                 changesList.push(`Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`);
           
                 await createPlaceChangeNotification('place_field_updated', changesList, {
@@ -908,7 +908,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             // Notifikácia – konzistentne ako ostatné
             const deleteMessage = `Odstránené miesto: '''${place.name} (${typeLabels[place.type] || place.type})'` +
                 (place.capacity != null ? `, kapacita: ${place.capacity}` : '') +
-                (place.accommodationType ? `, typ ubytovania: ${place.accommodationType}` : '');
+                (place.accommodationType ? `, typ ubytovania: ${place.accommodationType}` : '') +
+                (place.note ? `, poznámka: ${place.note}` : '');
             await createPlaceChangeNotification('place_deleted', [deleteMessage], {
                 id: place.id,
                 name: place.name,
@@ -1710,6 +1711,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
     if (!window.db || !changesArray?.length) return;
     const currentUserEmail = window.globalUserProfileData?.email || null;
+    
+    // Získaj typ miesta z placeData alebo z labels
+    const placeType = placeData?.type ? typeLabels[placeData.type] || placeData.type : 'neznámy typ';
+    
     try {
         await addDoc(collection(window.db, 'notifications'), {
             userEmail: currentUserEmail || "",
