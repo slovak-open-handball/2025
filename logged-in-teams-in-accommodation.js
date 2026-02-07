@@ -144,6 +144,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [selectedAccommodationFilter, setSelectedAccommodationFilter] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
 
+    const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+    const [teamToRemove, setTeamToRemove] = useState(null);
+
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
@@ -229,6 +232,8 @@ const AddGroupsApp = ({ userProfileData }) => {
         );
         return () => unsubscribe();
     }, []);
+
+    
 
     // Funkcia na odstránenie veľkého písmenka na konci názvu tímu (A, B, C)
     const normalizeTeamName = (teamName) => {
@@ -517,16 +522,18 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
-    const removeTeamAssignment = async (team) => {
-        if (!window.db) return;
+    const openRemoveConfirmation = (team) => {
+        setTeamToRemove(team);
+        setIsRemoveModalOpen(true);
+    };
 
-        const confirmRemove = window.confirm(`Naozaj chcete odstrániť priradenie tímu "${team.teamName}" z ubytovne "${team.assignedPlace}"?`);
-        if (!confirmRemove) return;
+    const removeTeamAssignment = async () => {
+        if (!teamToRemove || !window.db) return;
 
         setIsLoading(true);
 
         try {
-            const userRef = doc(window.db, 'users', team.userId);
+            const userRef = doc(window.db, 'users', teamToRemove.userId);
             const userDoc = await getDoc(userRef);
             
             if (!userDoc.exists()) {
@@ -535,10 +542,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 
             const userData = userDoc.data();
             const teams = userData.teams || {};
-            const teamArray = teams[team.category] || [];
+            const teamArray = teams[teamToRemove.category] || [];
 
             const updatedTeamArray = teamArray.map(teamItem => {
-                if (teamItem.teamName === team.teamName) {
+                if (teamItem.teamName === teamToRemove.teamName) {
                     return {
                         ...teamItem,
                         accommodation: {
@@ -551,23 +558,26 @@ const AddGroupsApp = ({ userProfileData }) => {
             });
 
             await updateDoc(userRef, {
-                [`teams.${team.category}`]: updatedTeamArray
+                [`teams.${teamToRemove.category}`]: updatedTeamArray
             });
 
             await createAccommodationNotification('remove_accommodation', {
-                teamName: team.teamName,
-                category: team.category,
-                teamId: team.teamId,
-                userId: team.userId,
-                totalPeople: team.totalPeople,
-                oldAccommodation: team.assignedPlace
+                teamName: teamToRemove.teamName,
+                category: teamToRemove.category,
+                teamId: teamToRemove.teamId,
+                userId: teamToRemove.userId,
+                totalPeople: teamToRemove.totalPeople,
+                oldAccommodation: teamToRemove.assignedPlace
             });
 
             window.showGlobalNotification(
-                `Priradenie tímu "${team.teamName}" bolo odstránené`,
+                `Priradenie tímu "${teamToRemove.teamName}" bolo odstránené`,
                 'success'
             );
-            notify(`Tím "${team.teamName}" bol odstránený z ubytovne "${team.assignedPlace}"`, 'success');
+            notify(`Tím "${teamToRemove.teamName}" bol odstránený z ubytovne "${teamToRemove.assignedPlace}"`, 'success');
+
+            setIsRemoveModalOpen(false);
+            setTeamToRemove(null);
 
         } catch (err) {
             console.error("Chyba pri odstraňovaní priradenia:", err);
@@ -1120,7 +1130,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                     React.createElement(
                                                                         'button',
                                                                         {
-                                                                            onClick: () => removeTeamAssignment(team),
+                                                                            onClick: () => openRemoveConfirmation(team),
                                                                             className: 'p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
                                                                         },
                                                                         React.createElement(
@@ -1255,6 +1265,81 @@ const AddGroupsApp = ({ userProfileData }) => {
                             className: 'px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition'
                         },
                         'Uložiť'
+                    )
+                )
+            )
+        ),
+
+        isRemoveModalOpen &&
+        React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]',
+                onClick: (e) => { if (e.target === e.currentTarget) setIsRemoveModalOpen(false); }
+            },
+            React.createElement(
+                'div',
+                { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
+                
+                React.createElement(
+                    'div',
+                    { className: 'mb-6' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold text-gray-900 mb-2' },
+                        'Odstrániť priradenie'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-600' },
+                        `Naozaj chcete odstrániť priradenie tímu "${teamToRemove?.teamName}" z ubytovne "${teamToRemove?.assignedPlace}"?`
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg' },
+                        React.createElement(
+                            'p',
+                            { className: 'text-sm text-yellow-700' },
+                            React.createElement('strong', null, 'Upozornenie: '),
+                            'Tím sa odstráni z tejto ubytovne, ale zostane v systéme a bude možné ho priradiť do inej ubytovne.'
+                        )
+                    )
+                ),
+    
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-4 mt-8' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                setIsRemoveModalOpen(false);
+                                setTeamToRemove(null);
+                            },
+                            disabled: isLoading,
+                            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition disabled:opacity-50'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: removeTeamAssignment,
+                            disabled: isLoading,
+                            className: `px-6 py-2.5 text-white rounded-lg transition ${
+                                !isLoading
+                                    ? 'bg-red-600 hover:bg-red-700'
+                                    : 'bg-red-400 cursor-not-allowed'
+                            }`
+                        },
+                        isLoading
+                            ? React.createElement(
+                                'span',
+                                { className: 'flex items-center gap-2' },
+                                React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
+                                'Odstraňujem...'
+                            )
+                            : 'Áno, odstrániť'
                     )
                 )
             )
