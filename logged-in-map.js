@@ -765,7 +765,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 const oldNote = original.note ? `'${original.note}'` : '–';
                 const newNote = updates.note ? `'${updates.note}'` : '–';
                 changesList.push(
-                    `Zmena poznámky z ${oldNote} na ${newNote}`
+                    `Zmena poznámky z '${oldNote}' na '${newNote}'`
                 );
             }
             // ──────────────────────────────────────────────
