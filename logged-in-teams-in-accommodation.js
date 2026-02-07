@@ -1285,11 +1285,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                     'div',
                     { className: 'mb-6' },
                     React.createElement(
-                        'h3',
-                        { className: 'text-xl font-bold text-gray-900 mb-2' },
-                        'Odstrániť priradenie'
-                    ),
-                    React.createElement(
                         'div',
                         { className: 'mb-6' },
                         React.createElement(
